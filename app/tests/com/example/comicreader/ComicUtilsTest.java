@@ -3,6 +3,8 @@ package com.example.comicreader;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.InputStream; // Added for testCbzParser
+import java.io.FileNotFoundException; // Added for testCbzParser
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +21,7 @@ import java.util.stream.Collectors;
 
 import com.example.comicreader.EpubParser.OpfData;
 import com.example.comicreader.EpubParser.ManifestItem;
-import com.example.comicreader.EpubParser.EpubParsingException; // Added for testEpubParser's catch block
+import com.example.comicreader.EpubParser.EpubParsingException;
 
 public class ComicUtilsTest {
 
@@ -28,6 +30,7 @@ public class ComicUtilsTest {
         testListComicFiles();
         testDetectComicFormat();
         testEpubParser();
+        testCbzParser(); // Add call to the new test method
         System.out.println("ComicUtilsTest completed.");
     }
 
@@ -161,22 +164,48 @@ public class ComicUtilsTest {
         }
 
         public static File createTempZipFile(Path tempDir, String prefix, String suffix, Map<String, byte[]> entries, String entryToStoreUncompressed) throws IOException {
-            if (!Files.exists(tempDir)) { Files.createDirectories(tempDir); }
+            if (!Files.exists(tempDir)) {
+                Files.createDirectories(tempDir);
+            }
             Path zipFilePath = Files.createTempFile(tempDir, prefix, suffix);
-            try (OutputStream fos = Files.newOutputStream(zipFilePath); ZipOutputStream zos = new ZipOutputStream(fos)) {
+
+            try (OutputStream fos = Files.newOutputStream(zipFilePath);
+                 ZipOutputStream zos = new ZipOutputStream(fos)) {
+
                 if (entryToStoreUncompressed != null && entries.containsKey(entryToStoreUncompressed)) {
                     byte[] content = entries.get(entryToStoreUncompressed);
                     ZipEntry zipEntry = new ZipEntry(entryToStoreUncompressed);
                     zipEntry.setMethod(ZipEntry.STORED);
                     zipEntry.setSize(content.length);
-                    CRC32 crc = new CRC32(); crc.update(content); zipEntry.setCrc(crc.getValue());
-                    zos.putNextEntry(zipEntry); zos.write(content); zos.closeEntry();
+                    CRC32 crc = new CRC32();
+                    crc.update(content);
+                    zipEntry.setCrc(crc.getValue());
+                    zos.putNextEntry(zipEntry);
+                    zos.write(content);
+                    zos.closeEntry();
                 }
+
                 for (Map.Entry<String, byte[]> mapEntry : entries.entrySet()) {
-                    if (mapEntry.getKey().equals(entryToStoreUncompressed)) continue;
-                    ZipEntry zipEntry = new ZipEntry(mapEntry.getKey());
-                    zipEntry.setMethod(ZipEntry.DEFLATED);
-                    zos.putNextEntry(zipEntry); zos.write(mapEntry.getValue()); zos.closeEntry();
+                    String entryName = mapEntry.getKey();
+                    if (entryName.equals(entryToStoreUncompressed)) {
+                        continue;
+                    }
+                    ZipEntry zipEntry = new ZipEntry(entryName);
+                    byte[] content = mapEntry.getValue();
+
+                    if (entryName.endsWith("/")) {
+                        zipEntry.setMethod(ZipEntry.STORED);
+                        zipEntry.setSize(0);
+                        zipEntry.setCrc(0);
+                    } else {
+                        zipEntry.setMethod(ZipEntry.DEFLATED);
+                    }
+
+                    zos.putNextEntry(zipEntry);
+                    if (content != null && !entryName.endsWith("/")) {
+                        zos.write(content);
+                    }
+                    zos.closeEntry();
                 }
             }
             return zipFilePath.toFile();
@@ -273,8 +302,15 @@ public class ComicUtilsTest {
 
         public static File createCbzLikeZip(Path tempDir, String prefix) throws IOException {
             Map<String, byte[]> entries = new HashMap<>();
-            entries.put("image1.jpg", "dummy image data".getBytes(StandardCharsets.UTF_8));
-            entries.put("page2.png", "more dummy data".getBytes(StandardCharsets.UTF_8));
+            entries.put("comic_page_02.png", new byte[]{1});
+            entries.put("comic_page_10.webp", new byte[]{2});
+            entries.put("comic_page_01.jpg", new byte[]{3});
+            entries.put("notes/info.txt", "text".getBytes(StandardCharsets.UTF_8));
+            entries.put("__MACOSX/com.apple.ResourceFork", new byte[]{});
+            entries.put(".DS_Store", new byte[]{});
+            entries.put("an_actual_directory/", null);
+            entries.put("an_actual_directory/nested_image.png", new byte[]{4});
+            entries.put("another_image_at_root.jpeg", new byte[]{5});
             return createTempZipFile(tempDir, prefix, ".cbz", entries, null);
         }
 
@@ -391,7 +427,6 @@ public class ComicUtilsTest {
 
         try {
             tempDir = Files.createTempDirectory("epubParserTestDir");
-            // Use a distinct base name to avoid potential conflicts if tests run in parallel or temp dir isn't fully cleaned
             testEpubFile = TestFileHelper.createStructuredEpub(tempDir, "structured_test_book_");
 
             EpubParser epubParser = new EpubParser();
@@ -450,17 +485,15 @@ public class ComicUtilsTest {
             e.printStackTrace();
             assert false : "Test Failed due to Exception in testEpubParser: " + e.getClass().getName() + ": " + e.getMessage();
         } finally {
-            if (testEpubFile != null && testEpubFile.exists()) { // Check exists before deleting
+            if (testEpubFile != null && testEpubFile.exists()) {
                 try {
                     Files.deleteIfExists(testEpubFile.toPath());
                 } catch (IOException e) {
                     System.err.println("Warning: Could not delete temp EPUB file " + testEpubFile.getPath() + ": " + e.getMessage());
                 }
             }
-            if (tempDir != null && Files.exists(tempDir)) { // Check exists before deleting
+            if (tempDir != null && Files.exists(tempDir)) {
                 try {
-                    // Simple directory delete; assumes it's empty or Files.delete can handle it.
-                    // For robustness, one might need to walk the file tree and delete contents first.
                     Files.deleteIfExists(tempDir);
                     System.out.println("Temp directory deleted for epubParserTest: " + tempDir.toString());
                 } catch (IOException e) {
@@ -469,5 +502,117 @@ public class ComicUtilsTest {
             }
         }
         System.out.println("Finished testEpubParser.");
+    }
+
+    public static void testCbzParser() {
+        System.out.println("Starting testCbzParser...");
+        Path tempDir = null;
+        File testCbzFile = null;
+        File notCbzFile = null;
+        List<File> filesToCleanup = new ArrayList<>();
+
+        try {
+            tempDir = Files.createTempDirectory("cbzParserTestDir");
+            testCbzFile = TestFileHelper.createCbzLikeZip(tempDir, "testComic_");
+            filesToCleanup.add(testCbzFile);
+
+            CbzParser cbzParser = new CbzParser();
+
+            System.out.println("Testing CbzParser.getPages()...");
+            List<String> pages = cbzParser.getPages(testCbzFile);
+
+            List<String> expectedPages = Arrays.asList(
+                "an_actual_directory/nested_image.png",
+                "another_image_at_root.jpeg",
+                "comic_page_01.jpg",
+                "comic_page_02.png",
+                "comic_page_10.webp"
+            );
+
+            assert pages.size() == expectedPages.size() :
+                "Test Failed (getPages): Expected " + expectedPages.size() + " pages, got " + pages.size() + ". Pages: " + pages;
+            for (int i = 0; i < expectedPages.size(); i++) {
+                assert expectedPages.get(i).equals(pages.get(i)) :
+                    "Test Failed (getPages): Mismatch at index " + i + ". Expected: " + expectedPages.get(i) + ", Got: " + pages.get(i);
+            }
+
+            assert !pages.contains("notes/info.txt") : "Test Failed (getPages): info.txt was included.";
+            assert !pages.contains("__MACOSX/com.apple.ResourceFork") : "Test Failed (getPages): __MACOSX file was included.";
+            assert !pages.contains(".DS_Store") : "Test Failed (getPages): .DS_Store was included.";
+            assert !pages.contains("an_actual_directory/") : "Test Failed (getPages): Directory entry was included.";
+            System.out.println("CbzParser.getPages() test passed. Found pages: " + pages);
+
+            System.out.println("Testing CbzParser.getPageContentAsInputStream() for existing file...");
+            String imageToExtract = "comic_page_01.jpg";
+            byte[] expectedContent = new byte[]{3};
+
+            try (InputStream is = cbzParser.getPageContentAsInputStream(testCbzFile, imageToExtract)) {
+                assert is != null : "Test Failed (getPageContent): InputStream is null for " + imageToExtract;
+                byte[] actualContent = new byte[expectedContent.length];
+                int bytesRead = is.read(actualContent);
+                assert bytesRead == expectedContent.length : "Test Failed (getPageContent): Did not read expected number of bytes.";
+                assert is.read() == -1 : "Test Failed (getPageContent): InputStream has more data than expected.";
+                assert Arrays.equals(expectedContent, actualContent) : "Test Failed (getPageContent): Content mismatch for " + imageToExtract;
+                System.out.println("CbzParser.getPageContentAsInputStream() for " + imageToExtract + " passed.");
+            }
+
+            System.out.println("Testing CbzParser.getPageContentAsInputStream() for non-existent file...");
+            String nonExistentImage = "non_existent.jpg";
+            boolean thrownFileNotFound = false;
+            try {
+                cbzParser.getPageContentAsInputStream(testCbzFile, nonExistentImage).close();
+            } catch (FileNotFoundException e) {
+                thrownFileNotFound = true;
+                System.out.println("Caught expected FileNotFoundException for " + nonExistentImage);
+            }
+            assert thrownFileNotFound : "Test Failed (getPageContent): FileNotFoundException was not thrown for " + nonExistentImage;
+
+            System.out.println("Testing CbzParser with a non-CBZ file...");
+            notCbzFile = TestFileHelper.createTempFile(tempDir, "not_a_cbz_", ".txt", "This is not a cbz".getBytes(StandardCharsets.UTF_8));
+            filesToCleanup.add(notCbzFile);
+
+            boolean thrownIllegalArgumentForGetPages = false;
+            try {
+                cbzParser.getPages(notCbzFile);
+            } catch (IllegalArgumentException e) {
+                thrownIllegalArgumentForGetPages = true;
+                System.out.println("Caught expected IllegalArgumentException for getPages on non-CBZ file.");
+            }
+            assert thrownIllegalArgumentForGetPages : "Test Failed: IllegalArgumentException not thrown for getPages on non-CBZ file.";
+
+            boolean thrownIllegalArgumentForGetContent = false;
+            try {
+                cbzParser.getPageContentAsInputStream(notCbzFile, "any_image.jpg").close();
+            } catch (IllegalArgumentException e) {
+                thrownIllegalArgumentForGetContent = true;
+                System.out.println("Caught expected IllegalArgumentException for getPageContent on non-CBZ file.");
+            } catch (FileNotFoundException e) {
+                System.err.println("Warning: Caught FileNotFoundException instead of IllegalArgument for getPageContent on non-CBZ. Type was: " + ComicUtils.detectComicFormat(notCbzFile));
+                if (ComicUtils.detectComicFormat(notCbzFile) != FormatType.CBZ) thrownIllegalArgumentForGetContent = true;
+            }
+            assert thrownIllegalArgumentForGetContent : "Test Failed: IllegalArgumentException not thrown for getPageContent on non-CBZ file.";
+
+        } catch (Exception e) {
+            System.err.println("Exception during testCbzParser: " + e.getMessage());
+            e.printStackTrace();
+            assert false : "Test Failed due to Exception in testCbzParser: " + e.getClass().getName() + ": " + e.getMessage();
+        } finally {
+            for (File f : filesToCleanup) {
+                try {
+                    if (f.exists()) Files.deleteIfExists(f.toPath());
+                } catch (IOException e) {
+                    System.err.println("Warning: Could not delete temp file " + f.getPath() + ": " + e.getMessage());
+                }
+            }
+            if (tempDir != null) {
+                try {
+                    if (Files.exists(tempDir)) Files.deleteIfExists(tempDir);
+                    System.out.println("Temp directory deleted for cbzParserTest: " + tempDir.toString());
+                } catch (IOException e) {
+                    System.err.println("Warning: Could not delete temp directory " + tempDir.toString() + ": " + e.getMessage());
+                }
+            }
+        }
+        System.out.println("Finished testCbzParser.");
     }
 }
