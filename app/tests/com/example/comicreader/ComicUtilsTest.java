@@ -3,8 +3,8 @@ package com.example.comicreader;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.InputStream; // Added for testCbzParser
-import java.io.FileNotFoundException; // Added for testCbzParser
+import java.io.InputStream;
+import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +30,8 @@ public class ComicUtilsTest {
         testListComicFiles();
         testDetectComicFormat();
         testEpubParser();
-        testCbzParser(); // Add call to the new test method
+        testCbzParser();
+        testCbrParser(); // Added call to new test method
         System.out.println("ComicUtilsTest completed.");
     }
 
@@ -57,8 +58,26 @@ public class ComicUtilsTest {
             File f_valid_mobi = TestFileHelper.createTempFile(tempDir, "valid_mobi_", ".mobi", TestFileHelper.MOBI_CONTENT);
             tempFilesCreatedForCleanup.add(f_valid_mobi); expectedFileNames.add(f_valid_mobi.getName());
 
-            File f_empty_cbr = TestFileHelper.createEmptyFile(tempDir, "empty_file_", ".cbr");
-            tempFilesCreatedForCleanup.add(f_empty_cbr); expectedFileNames.add(f_empty_cbr.getName());
+            // Use createPlaceholderCbr for testing listComicFiles, as true CBR creation isn't available
+            File f_placeholder_cbr = TestFileHelper.createPlaceholderCbr(tempDir, "placeholder_cbr_", true); // Empty placeholder
+            tempFilesCreatedForCleanup.add(f_placeholder_cbr);
+            // If detectComicFormat with junrar makes empty CBR UNKNOWN, it won't be listed.
+            // If it made it CBR_RAR (e.g. old extension check), it would be listed.
+            // With junrar, an empty file or non-RAR content .cbr is UNKNOWN.
+            // So, this placeholder_cbr should NOT be in expectedFileNames for listComicFiles.
+            // However, the old f_empty_cbr was expected. Let's re-evaluate.
+            // The CbrParser.getPages has a strict check on type being CBR_RAR.
+            // ComicUtils.detectComicFormat (as of step 5) will return CBR_RAR if junrar successfully opens it AND it's not empty/encrypted.
+            // An empty file given to `new Archive(file)` by junrar might throw an error or result in no headers.
+            // If junrar cannot parse an empty file as RAR, detectComicFormat makes it UNKNOWN.
+            // So, f_empty_cbr (using TestFileHelper.createEmptyFile) should result in UNKNOWN.
+            // Let's use a non-empty placeholder for listComicFiles if we want to test the .cbr extension path
+            // assuming detectComicFormat might still use extension as a preliminary filter before junrar.
+            // Given current detectComicFormat, even a non-empty non-RAR .cbr file will become UNKNOWN.
+            // So, for listComicFiles, only REAL CBRs (or files junrar thinks are RAR) will be listed.
+            // The previous f_empty_cbr was based on an older detectComicFormat.
+            // Let's remove f_empty_cbr from expected for now, as it should be UNKNOWN.
+            // We will add a REAL CBR file for testing CbrParser itself in testCbrParser.
 
             Path subdirPath = tempDir.resolve("subdir");
             Files.createDirectory(subdirPath);
@@ -85,11 +104,19 @@ public class ComicUtilsTest {
             File f_empty_docx = TestFileHelper.createEmptyFile(tempDir, "empty_doc_", ".docx");
             tempFilesCreatedForCleanup.add(f_empty_docx); createdButNotExpectedFileNames.add(f_empty_docx.getName());
 
+            // Add a placeholder CBR that detectComicFormat will likely classify as UNKNOWN
+            File nonRarCbr = TestFileHelper.createPlaceholderCbr(tempDir, "non_rar_cbr_", false);
+            tempFilesCreatedForCleanup.add(nonRarCbr); createdButNotExpectedFileNames.add(nonRarCbr.getName());
+            File emptyCbrForList = TestFileHelper.createPlaceholderCbr(tempDir, "empty_cbr_for_list_", true);
+            tempFilesCreatedForCleanup.add(emptyCbrForList); createdButNotExpectedFileNames.add(emptyCbrForList.getName());
+
+
             System.out.println("Test directory for listComicFiles created at: " + tempDir.toString());
 
             List<String> actualListedFiles = comicUtils.listComicFiles(tempDir.toString());
             System.out.println("Files listed by listComicFiles: " + actualListedFiles);
 
+            // Expected count adjusted: empty/placeholder CBRs will be UNKNOWN by junrar-based detectComicFormat
             assert actualListedFiles.size() == expectedFileNames.size() : "Test Failed (listComicFiles): File count mismatch. Expected " + expectedFileNames.size() + " items, got " + actualListedFiles.size() + ".\nListed: " + actualListedFiles + "\nExpected: " + expectedFileNames;
 
             for (String expectedName : expectedFileNames) {
@@ -325,21 +352,32 @@ public class ComicUtilsTest {
             Path filePath = Files.createTempFile(tempDir, prefix, suffix);
             return filePath.toFile();
         }
+
+        public static File createPlaceholderCbr(Path tempDir, String baseName, boolean isEmpty) throws IOException {
+            if (!Files.exists(tempDir)) {
+                Files.createDirectories(tempDir);
+            }
+            Path filePath = Files.createTempFile(tempDir, baseName, ".cbr");
+            if (!isEmpty) {
+                Files.write(filePath, "This is not a real RAR archive.".getBytes(StandardCharsets.UTF_8), StandardOpenOption.WRITE);
+            }
+            return filePath.toFile();
+        }
     }
 
     public static void testDetectComicFormat() {
         System.out.println("Starting testDetectComicFormat...");
         Path tempDir = null;
-        List<File> tempFiles = new ArrayList<>();
+        List<File> tempFiles = new ArrayList<>(); // Renamed from filesToCleanup to match existing var name
         try {
             tempDir = Files.createTempDirectory("formatDetectTestDir");
 
-            File pdfFile = TestFileHelper.createTempFile(tempDir, "test", ".pdf", TestFileHelper.PDF_CONTENT);
+            File pdfFile = TestFileHelper.createTempFile(tempDir, "test_pdf_", ".pdf", TestFileHelper.PDF_CONTENT);
             tempFiles.add(pdfFile);
             assert ComicUtils.detectComicFormat(pdfFile) == FormatType.PDF : "Test Failed: PDF detection";
             System.out.println("PDF detection passed for: " + pdfFile.getName());
 
-            File mobiFile = TestFileHelper.createTempFile(tempDir, "test", ".mobi", TestFileHelper.MOBI_CONTENT);
+            File mobiFile = TestFileHelper.createTempFile(tempDir, "test_mobi_", ".mobi", TestFileHelper.MOBI_CONTENT);
             tempFiles.add(mobiFile);
             assert ComicUtils.detectComicFormat(mobiFile) == FormatType.MOBI : "Test Failed: MOBI detection";
             System.out.println("MOBI detection passed for: " + mobiFile.getName());
@@ -356,7 +394,7 @@ public class ComicUtilsTest {
 
             File genericZipFile = TestFileHelper.createGenericZip(tempDir, "test_generic_zip_");
             tempFiles.add(genericZipFile);
-            assert ComicUtils.detectComicFormat(genericZipFile) == FormatType.CBZ : "Test Failed: Generic ZIP (as CBZ) detection";
+            assert ComicUtils.detectComicFormat(genericZipFile) == FormatType.CBZ : "Test Failed: Generic ZIP (as CBZ) detection"; // Current behavior
             System.out.println("Generic ZIP (as CBZ) detection passed for: " + genericZipFile.getName());
 
             File txtFile = TestFileHelper.createTempFile(tempDir, "test_txt_", ".txt", TestFileHelper.TXT_CONTENT);
@@ -364,15 +402,28 @@ public class ComicUtilsTest {
             assert ComicUtils.detectComicFormat(txtFile) == FormatType.UNKNOWN : "Test Failed: TXT file detection (should be UNKNOWN)";
             System.out.println("TXT file (as UNKNOWN) detection passed for: " + txtFile.getName());
 
-            File cbrFile = TestFileHelper.createEmptyFile(tempDir, "test_cbr_ext_", ".cbr");
-            tempFiles.add(cbrFile);
-            assert ComicUtils.detectComicFormat(cbrFile) == FormatType.CBR_RAR : "Test Failed: CBR (by extension) detection";
-            System.out.println("CBR (by extension) detection passed for: " + cbrFile.getName());
+            // Test for .cbr with actual RAR content (cannot create, so use placeholder)
+            // This test relies on junrar correctly identifying (or failing) the placeholder.
+            // An empty file or a non-RAR file with .cbr extension should be UNKNOWN after junrar integration.
+            File cbrExtEmpty = TestFileHelper.createPlaceholderCbr(tempDir, "empty_cbr_ext_", true);
+            tempFiles.add(cbrExtEmpty);
+            assert ComicUtils.detectComicFormat(cbrExtEmpty) == FormatType.UNKNOWN :
+                "Test Failed: Empty .cbr file (should be UNKNOWN by junrar validation, not CBR_RAR by extension alone)";
+            System.out.println("Empty .cbr file (as UNKNOWN) detection passed.");
 
-            File rarFileExt = TestFileHelper.createEmptyFile(tempDir, "test_rar_ext_", ".rar");
-            tempFiles.add(rarFileExt);
-            assert ComicUtils.detectComicFormat(rarFileExt) == FormatType.CBR_RAR : "Test Failed: RAR (by extension) detection";
-            System.out.println("RAR (by extension) detection passed for: " + rarFileExt.getName());
+            File cbrExtNonRarContent = TestFileHelper.createPlaceholderCbr(tempDir, "not_real_cbr_", false);
+            tempFiles.add(cbrExtNonRarContent);
+            assert ComicUtils.detectComicFormat(cbrExtNonRarContent) == FormatType.UNKNOWN :
+                "Test Failed: .cbr extension with non-RAR content (should be UNKNOWN by junrar validation)";
+            System.out.println(".cbr extension with non-RAR content (as UNKNOWN) detection passed.");
+
+            // Test for .rar with placeholder (similarly should be UNKNOWN)
+            File rarExtNonRarContent = TestFileHelper.createTempFile(tempDir, "not_real_rar_", ".rar", "not rar".getBytes(StandardCharsets.UTF_8));
+            tempFiles.add(rarExtNonRarContent);
+            assert ComicUtils.detectComicFormat(rarExtNonRarContent) == FormatType.UNKNOWN :
+                "Test Failed: .rar extension with non-RAR content (should be UNKNOWN by junrar validation)";
+            System.out.println(".rar extension with non-RAR content (as UNKNOWN) detection passed.");
+
 
             File emptyFile = TestFileHelper.createEmptyFile(tempDir, "empty_dat_", ".dat");
             tempFiles.add(emptyFile);
@@ -410,7 +461,7 @@ public class ComicUtilsTest {
             throw e;
         }
         finally {
-            for (File f : tempFiles) {
+            for (File f : tempFiles) { // Ensure this list name matches declaration
                 try { Files.deleteIfExists(f.toPath()); } catch (IOException e) { System.err.println("Warning: Could not delete temp file " + f.getPath() + ": " + e.getMessage()); }
             }
             if (tempDir != null) {
@@ -586,8 +637,10 @@ public class ComicUtilsTest {
             } catch (IllegalArgumentException e) {
                 thrownIllegalArgumentForGetContent = true;
                 System.out.println("Caught expected IllegalArgumentException for getPageContent on non-CBZ file.");
-            } catch (FileNotFoundException e) {
+            } catch (FileNotFoundException e) { // Should be IllegalArgument due to type check first
                 System.err.println("Warning: Caught FileNotFoundException instead of IllegalArgument for getPageContent on non-CBZ. Type was: " + ComicUtils.detectComicFormat(notCbzFile));
+                 // This path might be taken if detectComicFormat was UNKNOWN and CbzParser tried to open it as ZIP, then failed.
+                 // However, CbzParser explicitly checks format type first.
                 if (ComicUtils.detectComicFormat(notCbzFile) != FormatType.CBZ) thrownIllegalArgumentForGetContent = true;
             }
             assert thrownIllegalArgumentForGetContent : "Test Failed: IllegalArgumentException not thrown for getPageContent on non-CBZ file.";
@@ -614,5 +667,97 @@ public class ComicUtilsTest {
             }
         }
         System.out.println("Finished testCbzParser.");
+    }
+
+    public static void testCbrParser() {
+        System.out.println("Starting testCbrParser...");
+        Path tempDir = null;
+        List<File> filesToCleanup = new ArrayList<>();
+        CbrParser cbrParser = new CbrParser();
+
+        try {
+            tempDir = Files.createTempDirectory("cbrParserTestDir");
+
+            // 1. Test with a non-CBR file (e.g., a .txt file)
+            System.out.println("Testing CbrParser with a .txt file...");
+            File txtFile = TestFileHelper.createTempFile(tempDir, "plain_cbrtest_", ".txt", "hello cbr test".getBytes(StandardCharsets.UTF_8));
+            filesToCleanup.add(txtFile);
+
+            boolean thrownArgExForGetPagesTxt = false;
+            try {
+                cbrParser.getPages(txtFile);
+            } catch (IllegalArgumentException e) {
+                thrownArgExForGetPagesTxt = true;
+                System.out.println("Caught expected IllegalArgumentException for getPages on .txt file.");
+            } catch (IOException e) { // Should be IllegalArgument from type check
+                assert false : "Test Failed (CbrParser with .txt): getPages threw " + e.getClass().getSimpleName() + " instead of IllegalArgumentException: " + e.getMessage();
+            }
+            assert thrownArgExForGetPagesTxt : "Test Failed (CbrParser with .txt): IllegalArgumentException not thrown for getPages.";
+
+            boolean thrownArgExForGetContentTxt = false;
+            try {
+                cbrParser.getPageContentAsInputStream(txtFile, "anypage.jpg").close();
+            } catch (IllegalArgumentException e) {
+                thrownArgExForGetContentTxt = true;
+                System.out.println("Caught expected IllegalArgumentException for getPageContent on .txt file.");
+            } catch (IOException e) { // Should be IllegalArgument from type check
+                 assert false : "Test Failed (CbrParser with .txt): getPageContent threw " + e.getClass().getSimpleName() + " instead of IllegalArgumentException: " + e.getMessage();
+            }
+            assert thrownArgExForGetContentTxt : "Test Failed (CbrParser with .txt): IllegalArgumentException not thrown for getPageContent.";
+            System.out.println("CbrParser tests with .txt file passed.");
+
+            // 2. Test with a .cbr file that is not a valid RAR archive
+            System.out.println("Testing CbrParser with invalid .cbr (non-RAR content)...");
+            File invalidCbr = TestFileHelper.createPlaceholderCbr(tempDir, "invalid_cbr_content_", false);
+            filesToCleanup.add(invalidCbr);
+
+            boolean expectedExForGetPagesInvalid = false;
+            try {
+                cbrParser.getPages(invalidCbr);
+            } catch (IllegalArgumentException e) {
+                // This is expected if ComicUtils.detectComicFormat returns UNKNOWN for this file
+                // (which it should, as junrar won't parse "This is not a real RAR archive.")
+                expectedExForGetPagesInvalid = true;
+                System.out.println("Caught expected IllegalArgumentException for getPages on invalid .cbr (non-RAR content).");
+            } catch (IOException e) {
+                // This might be if detectComicFormat was simpler (e.g. by extension only) and CbrParser itself tried to open
+                System.err.println("Warning (CbrParser with invalid .cbr): getPages threw IOException. Message: " + e.getMessage());
+                 assert false : "Test Failed (CbrParser with invalid .cbr): getPages threw IOException, expected IllegalArgumentException due to UNKNOWN type. " + e.getMessage();
+            }
+            assert expectedExForGetPagesInvalid : "Test Failed (CbrParser with invalid .cbr): Expected exception not thrown for getPages.";
+
+
+            boolean expectedExForGetContentInvalid = false;
+            try {
+                cbrParser.getPageContentAsInputStream(invalidCbr, "anypage.jpg").close();
+            } catch (IllegalArgumentException e) { // Expected, similar to above
+                expectedExForGetContentInvalid = true;
+                System.out.println("Caught expected IllegalArgumentException for getPageContent on invalid .cbr (non-RAR content).");
+            } catch (IOException e) {
+                 System.err.println("Warning (CbrParser with invalid .cbr): getPageContent threw IOException. Message: " + e.getMessage());
+                 assert false : "Test Failed (CbrParser with invalid .cbr): getPageContent threw IOException, expected IllegalArgumentException. " + e.getMessage();
+            }
+            assert expectedExForGetContentInvalid : "Test Failed (CbrParser with invalid .cbr): Expected exception not thrown for getPageContent.";
+            System.out.println("CbrParser tests with invalid .cbr file passed.");
+
+            System.out.println("Note: Positive CbrParser tests (listing/extracting from valid CBR) require a manually provided valid CBR file or rar tool.");
+
+        } catch (Exception e) { // Catch-all for unexpected test failures
+            System.err.println("Exception during testCbrParser: " + e.getMessage());
+            e.printStackTrace();
+            assert false : "Test Failed due to Exception in testCbrParser: " + e.getClass().getName() + ": " + e.getMessage();
+        } finally {
+            for (File f : filesToCleanup) {
+                try {
+                    if (f.exists()) Files.deleteIfExists(f.toPath());
+                } catch (IOException ex) { System.err.println("Cleanup error for file " + f.getName() + ": " + ex.getMessage());}
+            }
+            if (tempDir != null) {
+                try {
+                    if(Files.exists(tempDir)) Files.deleteIfExists(tempDir);
+                } catch (IOException ex) { System.err.println("Cleanup error for tempDir " + tempDir.toString() + ": " + ex.getMessage());}
+            }
+        }
+        System.out.println("Finished testCbrParser.");
     }
 }
