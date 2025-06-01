@@ -23,6 +23,8 @@ public class ComicUtilsTest {
         Path testFileCbr = null;
         Path testFileJpg = null;
         Path testFileTxt = null;
+        Path testFileEpub = null;
+        Path testFileMobi = null;
 
         try {
             // 1. Setup: Create a temporary directory and some files
@@ -32,18 +34,22 @@ public class ComicUtilsTest {
             testFileCbr = Files.createFile(tempDir.resolve("archive.cbr"));
             testFileJpg = Files.createFile(tempDir.resolve("image.jpg"));
             testFileTxt = Files.createFile(tempDir.resolve("textfile.txt"));
+            testFileEpub = Files.createFile(tempDir.resolve("book.epub"));
+            testFileMobi = Files.createFile(tempDir.resolve("anotherbook.mobi"));
             Files.createDirectory(tempDir.resolve("subdir")); // A subdirectory
 
             System.out.println("Test directory created at: " + tempDir.toString());
-            System.out.println("Test files created: comic1.cbz, document.pdf, archive.cbr, image.jpg, textfile.txt, subdir/");
+            System.out.println("Test files created: comic1.cbz, document.pdf, archive.cbr, image.jpg, textfile.txt, book.epub, anotherbook.mobi, subdir/");
 
             // 2. Test case: Valid directory
             System.out.println("Testing with valid directory...");
             List<String> files = comicUtils.listComicFiles(tempDir.toString());
-            assert files.size() == 4 : "Test Failed: Expected 4 items, got " + files.size() + " -> " + files;
+            assert files.size() == 6 : "Test Failed: Expected 6 items, got " + files.size() + " -> " + files;
             assert files.contains("comic1.cbz") : "Test Failed: Missing comic1.cbz";
             assert files.contains("document.pdf") : "Test Failed: Missing document.pdf";
             assert files.contains("archive.cbr") : "Test Failed: Missing archive.cbr";
+            assert files.contains("book.epub") : "Test Failed: Missing book.epub";
+            assert files.contains("anotherbook.mobi") : "Test Failed: Missing anotherbook.mobi";
             assert files.contains("subdir") : "Test Failed: Missing subdir";
             assert !files.contains("image.jpg") : "Test Failed: image.jpg should have been filtered out";
             assert !files.contains("textfile.txt") : "Test Failed: textfile.txt should have been filtered out";
@@ -81,6 +87,8 @@ public class ComicUtilsTest {
                 if (testFileCbr != null) Files.deleteIfExists(testFileCbr);
                 if (testFileJpg != null) Files.deleteIfExists(testFileJpg);
                 if (testFileTxt != null) Files.deleteIfExists(testFileTxt);
+                if (testFileEpub != null) Files.deleteIfExists(testFileEpub);
+                if (testFileMobi != null) Files.deleteIfExists(testFileMobi);
                 if (tempDir != null) {
                     Files.deleteIfExists(tempDir.resolve("subdir")); // delete subdir first
                     Files.deleteIfExists(tempDir);

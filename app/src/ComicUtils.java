@@ -31,7 +31,11 @@ public class ComicUtils {
                     fileNames.add(file.getName());
                 } else {
                     String fileName = file.getName().toLowerCase();
-                    if (fileName.endsWith(".cbz") || fileName.endsWith(".cbr") || fileName.endsWith(".pdf")) {
+                    if (fileName.endsWith(".cbz") ||
+                        fileName.endsWith(".cbr") ||
+                        fileName.endsWith(".pdf") ||
+                        fileName.endsWith(".epub") ||
+                        fileName.endsWith(".mobi")) {
                         fileNames.add(file.getName());
                     }
                 }
