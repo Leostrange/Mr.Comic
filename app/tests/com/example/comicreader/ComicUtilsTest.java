@@ -19,9 +19,21 @@ import java.util.List;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
+// Imports for EpubParser testing
 import com.example.comicreader.EpubParser.OpfData;
 import com.example.comicreader.EpubParser.ManifestItem;
 import com.example.comicreader.EpubParser.EpubParsingException;
+
+// Imports for PDFBox in TestFileHelper.createSimplePdf and PdfParser tests
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.StandardFonts;
+import org.apache.pdfbox.rendering.PDFRenderer; // For PdfParser
+import java.awt.image.BufferedImage; // For PdfParser
+import javax.imageio.ImageIO; // For PdfParser
+
 
 public class ComicUtilsTest {
 
@@ -31,7 +43,8 @@ public class ComicUtilsTest {
         testDetectComicFormat();
         testEpubParser();
         testCbzParser();
-        testCbrParser(); // Added call to new test method
+        testCbrParser();
+        testPdfParser(); // Added call to new test method
         System.out.println("ComicUtilsTest completed.");
     }
 
@@ -46,7 +59,8 @@ public class ComicUtilsTest {
         try {
             tempDir = Files.createTempDirectory("listComicTestDir_Dyn");
 
-            File f_valid_pdf = TestFileHelper.createTempFile(tempDir, "valid_doc_", ".pdf", TestFileHelper.PDF_CONTENT);
+            // For PDF, use the new createSimplePdf to ensure it's a valid PDF for listing
+            File f_valid_pdf = TestFileHelper.createSimplePdf(tempDir, "valid_doc_", 1, false);
             tempFilesCreatedForCleanup.add(f_valid_pdf); expectedFileNames.add(f_valid_pdf.getName());
 
             File f_valid_epub = TestFileHelper.createEpubMinimal(tempDir, "valid_epub_");
@@ -58,33 +72,15 @@ public class ComicUtilsTest {
             File f_valid_mobi = TestFileHelper.createTempFile(tempDir, "valid_mobi_", ".mobi", TestFileHelper.MOBI_CONTENT);
             tempFilesCreatedForCleanup.add(f_valid_mobi); expectedFileNames.add(f_valid_mobi.getName());
 
-            // Use createPlaceholderCbr for testing listComicFiles, as true CBR creation isn't available
-            File f_placeholder_cbr = TestFileHelper.createPlaceholderCbr(tempDir, "placeholder_cbr_", true); // Empty placeholder
-            tempFilesCreatedForCleanup.add(f_placeholder_cbr);
-            // If detectComicFormat with junrar makes empty CBR UNKNOWN, it won't be listed.
-            // If it made it CBR_RAR (e.g. old extension check), it would be listed.
-            // With junrar, an empty file or non-RAR content .cbr is UNKNOWN.
-            // So, this placeholder_cbr should NOT be in expectedFileNames for listComicFiles.
-            // However, the old f_empty_cbr was expected. Let's re-evaluate.
-            // The CbrParser.getPages has a strict check on type being CBR_RAR.
-            // ComicUtils.detectComicFormat (as of step 5) will return CBR_RAR if junrar successfully opens it AND it's not empty/encrypted.
-            // An empty file given to `new Archive(file)` by junrar might throw an error or result in no headers.
-            // If junrar cannot parse an empty file as RAR, detectComicFormat makes it UNKNOWN.
-            // So, f_empty_cbr (using TestFileHelper.createEmptyFile) should result in UNKNOWN.
-            // Let's use a non-empty placeholder for listComicFiles if we want to test the .cbr extension path
-            // assuming detectComicFormat might still use extension as a preliminary filter before junrar.
-            // Given current detectComicFormat, even a non-empty non-RAR .cbr file will become UNKNOWN.
-            // So, for listComicFiles, only REAL CBRs (or files junrar thinks are RAR) will be listed.
-            // The previous f_empty_cbr was based on an older detectComicFormat.
-            // Let's remove f_empty_cbr from expected for now, as it should be UNKNOWN.
-            // We will add a REAL CBR file for testing CbrParser itself in testCbrParser.
-
             Path subdirPath = tempDir.resolve("subdir");
             Files.createDirectory(subdirPath);
             expectedFileNames.add("subdir");
 
-            File f_pdf_in_txt = TestFileHelper.createTempFile(tempDir, "pdf_content_in_", ".txt", TestFileHelper.PDF_CONTENT);
-            tempFilesCreatedForCleanup.add(f_pdf_in_txt); expectedFileNames.add(f_pdf_in_txt.getName());
+            File f_pdf_in_txt = TestFileHelper.createSimplePdf(tempDir, "pdf_content_in_", 1, false); // Create a real PDF
+            File f_pdf_in_txt_renamed = new File(tempDir.toFile(), f_pdf_in_txt.getName().replace(".pdf", ".txt"));
+            Files.move(f_pdf_in_txt.toPath(), f_pdf_in_txt_renamed.toPath());
+            tempFilesCreatedForCleanup.add(f_pdf_in_txt_renamed);
+            expectedFileNames.add(f_pdf_in_txt_renamed.getName());
 
             File f_epub_orig_for_zip = TestFileHelper.createEpubMinimal(tempDir, "epub_orig_for_zip_");
             tempFilesCreatedForCleanup.add(f_epub_orig_for_zip);
@@ -104,19 +100,15 @@ public class ComicUtilsTest {
             File f_empty_docx = TestFileHelper.createEmptyFile(tempDir, "empty_doc_", ".docx");
             tempFilesCreatedForCleanup.add(f_empty_docx); createdButNotExpectedFileNames.add(f_empty_docx.getName());
 
-            // Add a placeholder CBR that detectComicFormat will likely classify as UNKNOWN
             File nonRarCbr = TestFileHelper.createPlaceholderCbr(tempDir, "non_rar_cbr_", false);
             tempFilesCreatedForCleanup.add(nonRarCbr); createdButNotExpectedFileNames.add(nonRarCbr.getName());
             File emptyCbrForList = TestFileHelper.createPlaceholderCbr(tempDir, "empty_cbr_for_list_", true);
             tempFilesCreatedForCleanup.add(emptyCbrForList); createdButNotExpectedFileNames.add(emptyCbrForList.getName());
 
-
             System.out.println("Test directory for listComicFiles created at: " + tempDir.toString());
-
             List<String> actualListedFiles = comicUtils.listComicFiles(tempDir.toString());
             System.out.println("Files listed by listComicFiles: " + actualListedFiles);
 
-            // Expected count adjusted: empty/placeholder CBRs will be UNKNOWN by junrar-based detectComicFormat
             assert actualListedFiles.size() == expectedFileNames.size() : "Test Failed (listComicFiles): File count mismatch. Expected " + expectedFileNames.size() + " items, got " + actualListedFiles.size() + ".\nListed: " + actualListedFiles + "\nExpected: " + expectedFileNames;
 
             for (String expectedName : expectedFileNames) {
@@ -166,10 +158,8 @@ public class ComicUtilsTest {
     }
 
     static class TestFileHelper {
-        public static final byte[] PDF_CONTENT = new byte[] {
-            0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x0A, 0x25,
-            (byte)0xE2, (byte)0xE3, (byte)0xCF, (byte)0xD3, 0x0A, 0x25,
-            0x25, 0x45, 0x4F, 0x46
+        public static final byte[] PDF_CONTENT = new byte[] { // Minimal content for a file named .pdf but not parsable by PDFBox
+            0x25, 0x50, 0x44, 0x46, 0x2D, 'N', 'O', 'T', ' ', 'R', 'E', 'A', 'L'
         };
 
         private static byte[] createMobiContentInternal() {
@@ -186,7 +176,9 @@ public class ComicUtilsTest {
         public static File createTempFile(Path tempDir, String prefix, String suffix, byte[] content) throws IOException {
             if (!Files.exists(tempDir)) { Files.createDirectories(tempDir); }
             Path filePath = Files.createTempFile(tempDir, prefix, suffix);
-            Files.write(filePath, content, StandardOpenOption.WRITE);
+            if (content != null) { // Allow creating empty files by passing null content
+                Files.write(filePath, content, StandardOpenOption.WRITE);
+            }
             return filePath.toFile();
         }
 
@@ -363,19 +355,66 @@ public class ComicUtilsTest {
             }
             return filePath.toFile();
         }
+
+        public static File createSimplePdf(Path tempDir, String baseName, int numPages, boolean addContent) throws IOException {
+            if (numPages < 1) {
+                throw new IllegalArgumentException("Number of pages must be positive.");
+            }
+            if (!Files.exists(tempDir)) {
+                Files.createDirectories(tempDir);
+            }
+            Path filePath = Files.createTempFile(tempDir, baseName, ".pdf");
+
+            try (PDDocument document = new PDDocument()) {
+                for (int i = 0; i < numPages; i++) {
+                    PDPage page = new PDPage();
+                    document.addPage(page);
+                    if (addContent) {
+                        try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                            contentStream.beginText();
+                            contentStream.setFont(new PDType1Font(StandardFonts.HELVETICA), 12);
+                            contentStream.newLineAtOffset(50, 700); // Position from bottom-left
+                            contentStream.showText("Page " + (i + 1) + " of " + numPages);
+                            contentStream.endText();
+                        }
+                    }
+                }
+                document.save(filePath.toFile());
+            }
+            return filePath.toFile();
+        }
     }
 
     public static void testDetectComicFormat() {
         System.out.println("Starting testDetectComicFormat...");
         Path tempDir = null;
-        List<File> tempFiles = new ArrayList<>(); // Renamed from filesToCleanup to match existing var name
+        List<File> tempFiles = new ArrayList<>();
         try {
             tempDir = Files.createTempDirectory("formatDetectTestDir");
 
-            File pdfFile = TestFileHelper.createTempFile(tempDir, "test_pdf_", ".pdf", TestFileHelper.PDF_CONTENT);
-            tempFiles.add(pdfFile);
-            assert ComicUtils.detectComicFormat(pdfFile) == FormatType.PDF : "Test Failed: PDF detection";
-            System.out.println("PDF detection passed for: " + pdfFile.getName());
+            // Valid PDF created by PDFBox
+            System.out.println("Testing valid simple PDF (created by PDFBox)...");
+            File validPdf = TestFileHelper.createSimplePdf(tempDir, "valid_pdfbox_", 2, true);
+            tempFiles.add(validPdf);
+            assert ComicUtils.detectComicFormat(validPdf) == FormatType.PDF :
+                "Test Failed: Valid PDFBox-created PDF not detected as PDF. Got: " + ComicUtils.detectComicFormat(validPdf);
+            System.out.println("Valid PDFBox-created PDF detected as PDF.");
+
+            // .pdf extension with non-PDF text content
+            System.out.println("Testing .pdf extension with non-PDF text content...");
+            File pdfExtTextContent = TestFileHelper.createTempFile(tempDir, "text_is_", ".pdf", TestFileHelper.TXT_CONTENT);
+            tempFiles.add(pdfExtTextContent);
+            assert ComicUtils.detectComicFormat(pdfExtTextContent) == FormatType.UNKNOWN :
+                "Test Failed: .pdf with text content (should be UNKNOWN by PDFBox validation). Got: " + ComicUtils.detectComicFormat(pdfExtTextContent);
+            System.out.println(".pdf with text content detected as UNKNOWN.");
+
+            // Empty .pdf file
+            System.out.println("Testing empty .pdf file...");
+            File emptyPdfFile = TestFileHelper.createEmptyFile(tempDir, "empty_is_", ".pdf");
+            tempFiles.add(emptyPdfFile);
+            assert ComicUtils.detectComicFormat(emptyPdfFile) == FormatType.UNKNOWN :
+                "Test Failed: Empty .pdf file (should be UNKNOWN). Got: " + ComicUtils.detectComicFormat(emptyPdfFile);
+            System.out.println("Empty .pdf file detected as UNKNOWN.");
 
             File mobiFile = TestFileHelper.createTempFile(tempDir, "test_mobi_", ".mobi", TestFileHelper.MOBI_CONTENT);
             tempFiles.add(mobiFile);
@@ -394,7 +433,7 @@ public class ComicUtilsTest {
 
             File genericZipFile = TestFileHelper.createGenericZip(tempDir, "test_generic_zip_");
             tempFiles.add(genericZipFile);
-            assert ComicUtils.detectComicFormat(genericZipFile) == FormatType.CBZ : "Test Failed: Generic ZIP (as CBZ) detection"; // Current behavior
+            assert ComicUtils.detectComicFormat(genericZipFile) == FormatType.CBZ : "Test Failed: Generic ZIP (as CBZ) detection";
             System.out.println("Generic ZIP (as CBZ) detection passed for: " + genericZipFile.getName());
 
             File txtFile = TestFileHelper.createTempFile(tempDir, "test_txt_", ".txt", TestFileHelper.TXT_CONTENT);
@@ -402,9 +441,6 @@ public class ComicUtilsTest {
             assert ComicUtils.detectComicFormat(txtFile) == FormatType.UNKNOWN : "Test Failed: TXT file detection (should be UNKNOWN)";
             System.out.println("TXT file (as UNKNOWN) detection passed for: " + txtFile.getName());
 
-            // Test for .cbr with actual RAR content (cannot create, so use placeholder)
-            // This test relies on junrar correctly identifying (or failing) the placeholder.
-            // An empty file or a non-RAR file with .cbr extension should be UNKNOWN after junrar integration.
             File cbrExtEmpty = TestFileHelper.createPlaceholderCbr(tempDir, "empty_cbr_ext_", true);
             tempFiles.add(cbrExtEmpty);
             assert ComicUtils.detectComicFormat(cbrExtEmpty) == FormatType.UNKNOWN :
@@ -417,13 +453,11 @@ public class ComicUtilsTest {
                 "Test Failed: .cbr extension with non-RAR content (should be UNKNOWN by junrar validation)";
             System.out.println(".cbr extension with non-RAR content (as UNKNOWN) detection passed.");
 
-            // Test for .rar with placeholder (similarly should be UNKNOWN)
             File rarExtNonRarContent = TestFileHelper.createTempFile(tempDir, "not_real_rar_", ".rar", "not rar".getBytes(StandardCharsets.UTF_8));
             tempFiles.add(rarExtNonRarContent);
             assert ComicUtils.detectComicFormat(rarExtNonRarContent) == FormatType.UNKNOWN :
                 "Test Failed: .rar extension with non-RAR content (should be UNKNOWN by junrar validation)";
             System.out.println(".rar extension with non-RAR content (as UNKNOWN) detection passed.");
-
 
             File emptyFile = TestFileHelper.createEmptyFile(tempDir, "empty_dat_", ".dat");
             tempFiles.add(emptyFile);
@@ -434,10 +468,11 @@ public class ComicUtilsTest {
             assert ComicUtils.detectComicFormat(nonExistentFile) == FormatType.UNKNOWN : "Test Failed: Non-existent file detection";
             System.out.println("Non-existent file (as UNKNOWN) detection passed.");
 
-            File pdfExtWrongContent = TestFileHelper.createTempFile(tempDir, "wrong_pdf_", ".pdf", TestFileHelper.TXT_CONTENT);
-            tempFiles.add(pdfExtWrongContent);
-            assert ComicUtils.detectComicFormat(pdfExtWrongContent) == FormatType.UNKNOWN : "Test Failed: PDF extension wrong content (should be UNKNOWN)";
-            System.out.println("PDF extension wrong content (as UNKNOWN) detection passed.");
+            // This one was already present, effectively a duplicate of pdfExtTextContent
+            // File pdfExtWrongContent = TestFileHelper.createTempFile(tempDir, "wrong_pdf_", ".pdf", TestFileHelper.TXT_CONTENT);
+            // tempFiles.add(pdfExtWrongContent);
+            // assert ComicUtils.detectComicFormat(pdfExtWrongContent) == FormatType.UNKNOWN : "Test Failed: PDF extension wrong content (should be UNKNOWN)";
+            // System.out.println("PDF extension wrong content (as UNKNOWN) detection passed.");
 
             File epubExtWrongContent = TestFileHelper.createTempFile(tempDir, "wrong_epub_", ".epub", TestFileHelper.TXT_CONTENT);
             tempFiles.add(epubExtWrongContent);
@@ -461,7 +496,7 @@ public class ComicUtilsTest {
             throw e;
         }
         finally {
-            for (File f : tempFiles) { // Ensure this list name matches declaration
+            for (File f : tempFiles) {
                 try { Files.deleteIfExists(f.toPath()); } catch (IOException e) { System.err.println("Warning: Could not delete temp file " + f.getPath() + ": " + e.getMessage()); }
             }
             if (tempDir != null) {
@@ -637,10 +672,8 @@ public class ComicUtilsTest {
             } catch (IllegalArgumentException e) {
                 thrownIllegalArgumentForGetContent = true;
                 System.out.println("Caught expected IllegalArgumentException for getPageContent on non-CBZ file.");
-            } catch (FileNotFoundException e) { // Should be IllegalArgument due to type check first
+            } catch (FileNotFoundException e) {
                 System.err.println("Warning: Caught FileNotFoundException instead of IllegalArgument for getPageContent on non-CBZ. Type was: " + ComicUtils.detectComicFormat(notCbzFile));
-                 // This path might be taken if detectComicFormat was UNKNOWN and CbzParser tried to open it as ZIP, then failed.
-                 // However, CbzParser explicitly checks format type first.
                 if (ComicUtils.detectComicFormat(notCbzFile) != FormatType.CBZ) thrownIllegalArgumentForGetContent = true;
             }
             assert thrownIllegalArgumentForGetContent : "Test Failed: IllegalArgumentException not thrown for getPageContent on non-CBZ file.";
@@ -678,7 +711,6 @@ public class ComicUtilsTest {
         try {
             tempDir = Files.createTempDirectory("cbrParserTestDir");
 
-            // 1. Test with a non-CBR file (e.g., a .txt file)
             System.out.println("Testing CbrParser with a .txt file...");
             File txtFile = TestFileHelper.createTempFile(tempDir, "plain_cbrtest_", ".txt", "hello cbr test".getBytes(StandardCharsets.UTF_8));
             filesToCleanup.add(txtFile);
@@ -689,7 +721,7 @@ public class ComicUtilsTest {
             } catch (IllegalArgumentException e) {
                 thrownArgExForGetPagesTxt = true;
                 System.out.println("Caught expected IllegalArgumentException for getPages on .txt file.");
-            } catch (IOException e) { // Should be IllegalArgument from type check
+            } catch (IOException e) {
                 assert false : "Test Failed (CbrParser with .txt): getPages threw " + e.getClass().getSimpleName() + " instead of IllegalArgumentException: " + e.getMessage();
             }
             assert thrownArgExForGetPagesTxt : "Test Failed (CbrParser with .txt): IllegalArgumentException not thrown for getPages.";
@@ -700,13 +732,12 @@ public class ComicUtilsTest {
             } catch (IllegalArgumentException e) {
                 thrownArgExForGetContentTxt = true;
                 System.out.println("Caught expected IllegalArgumentException for getPageContent on .txt file.");
-            } catch (IOException e) { // Should be IllegalArgument from type check
+            } catch (IOException e) {
                  assert false : "Test Failed (CbrParser with .txt): getPageContent threw " + e.getClass().getSimpleName() + " instead of IllegalArgumentException: " + e.getMessage();
             }
             assert thrownArgExForGetContentTxt : "Test Failed (CbrParser with .txt): IllegalArgumentException not thrown for getPageContent.";
             System.out.println("CbrParser tests with .txt file passed.");
 
-            // 2. Test with a .cbr file that is not a valid RAR archive
             System.out.println("Testing CbrParser with invalid .cbr (non-RAR content)...");
             File invalidCbr = TestFileHelper.createPlaceholderCbr(tempDir, "invalid_cbr_content_", false);
             filesToCleanup.add(invalidCbr);
@@ -715,12 +746,9 @@ public class ComicUtilsTest {
             try {
                 cbrParser.getPages(invalidCbr);
             } catch (IllegalArgumentException e) {
-                // This is expected if ComicUtils.detectComicFormat returns UNKNOWN for this file
-                // (which it should, as junrar won't parse "This is not a real RAR archive.")
                 expectedExForGetPagesInvalid = true;
                 System.out.println("Caught expected IllegalArgumentException for getPages on invalid .cbr (non-RAR content).");
             } catch (IOException e) {
-                // This might be if detectComicFormat was simpler (e.g. by extension only) and CbrParser itself tried to open
                 System.err.println("Warning (CbrParser with invalid .cbr): getPages threw IOException. Message: " + e.getMessage());
                  assert false : "Test Failed (CbrParser with invalid .cbr): getPages threw IOException, expected IllegalArgumentException due to UNKNOWN type. " + e.getMessage();
             }
@@ -730,7 +758,7 @@ public class ComicUtilsTest {
             boolean expectedExForGetContentInvalid = false;
             try {
                 cbrParser.getPageContentAsInputStream(invalidCbr, "anypage.jpg").close();
-            } catch (IllegalArgumentException e) { // Expected, similar to above
+            } catch (IllegalArgumentException e) {
                 expectedExForGetContentInvalid = true;
                 System.out.println("Caught expected IllegalArgumentException for getPageContent on invalid .cbr (non-RAR content).");
             } catch (IOException e) {
@@ -742,7 +770,7 @@ public class ComicUtilsTest {
 
             System.out.println("Note: Positive CbrParser tests (listing/extracting from valid CBR) require a manually provided valid CBR file or rar tool.");
 
-        } catch (Exception e) { // Catch-all for unexpected test failures
+        } catch (Exception e) {
             System.err.println("Exception during testCbrParser: " + e.getMessage());
             e.printStackTrace();
             assert false : "Test Failed due to Exception in testCbrParser: " + e.getClass().getName() + ": " + e.getMessage();
@@ -760,4 +788,109 @@ public class ComicUtilsTest {
         }
         System.out.println("Finished testCbrParser.");
     }
+
+    public static void testPdfParser() {
+        System.out.println("Starting testPdfParser...");
+        Path tempDir = null;
+        List<File> filesToCleanup = new ArrayList<>();
+        PdfParser pdfParser = new PdfParser();
+
+        try {
+            tempDir = Files.createTempDirectory("pdfParserTestDir");
+
+            System.out.println("Testing PdfParser with a valid 3-page PDF...");
+            File validPdf = TestFileHelper.createSimplePdf(tempDir, "multi_page_", 3, true);
+            filesToCleanup.add(validPdf);
+
+            int pageCount = pdfParser.getPageCount(validPdf);
+            assert pageCount == 3 : "Test Failed (PdfParser getPageCount): Expected 3 pages, got " + pageCount;
+            System.out.println("getPageCount returned correct count: " + pageCount);
+
+            for (int i = 0; i < pageCount; i++) {
+                System.out.println("Testing getPageAsInputStream for page " + i + "...");
+                try (InputStream pageStream = pdfParser.getPageAsInputStream(validPdf, i, 72)) {
+                    assert pageStream != null : "Test Failed (PdfParser getPageAsInputStream): Stream is null for page " + i;
+                    assert pageStream.available() > 100 :
+                        "Test Failed (PdfParser getPageAsInputStream): Stream for page " + i + " seems empty or too small. Available: " + pageStream.available();
+                     System.out.println("getPageAsInputStream for page " + i + " returned a stream with " + pageStream.available() + " available bytes.");
+                }
+            }
+            System.out.println("PdfParser getPageAsInputStream tests for valid PDF passed.");
+
+            System.out.println("Testing getPageAsInputStream with invalid page indices...");
+            boolean thrownIndexLow = false;
+            try {
+                pdfParser.getPageAsInputStream(validPdf, -1, 72).close();
+            } catch (IllegalArgumentException e) {
+                thrownIndexLow = true;
+                System.out.println("Caught expected IllegalArgumentException for pageIndex -1.");
+            }
+            assert thrownIndexLow : "Test Failed: IllegalArgumentException not thrown for pageIndex -1.";
+
+            boolean thrownIndexHigh = false;
+            try {
+                pdfParser.getPageAsInputStream(validPdf, pageCount, 72).close();
+            } catch (IllegalArgumentException e) {
+                thrownIndexHigh = true;
+                System.out.println("Caught expected IllegalArgumentException for pageIndex " + pageCount + ".");
+            }
+            assert thrownIndexHigh : "Test Failed: IllegalArgumentException not thrown for pageIndex " + pageCount + ".";
+            System.out.println("PdfParser invalid pageIndex tests passed.");
+
+            System.out.println("Testing getPageAsInputStream with invalid DPI...");
+            boolean thrownDpiInvalid = false;
+            try {
+                pdfParser.getPageAsInputStream(validPdf, 0, 0).close();
+            } catch (IllegalArgumentException e) {
+                thrownDpiInvalid = true;
+                System.out.println("Caught expected IllegalArgumentException for DPI 0.");
+            }
+            assert thrownDpiInvalid : "Test Failed: IllegalArgumentException not thrown for DPI 0.";
+            System.out.println("PdfParser invalid DPI test passed.");
+
+            System.out.println("Testing PdfParser with a non-PDF (.txt) file...");
+            File txtFile = TestFileHelper.createTempFile(tempDir, "not_a_pdf_", ".txt", "hello".getBytes(StandardCharsets.UTF_8));
+            filesToCleanup.add(txtFile);
+
+            boolean thrownArgExForGetPageCountTxt = false;
+            try {
+                pdfParser.getPageCount(txtFile);
+            } catch (IllegalArgumentException e) {
+                thrownArgExForGetPageCountTxt = true;
+                System.out.println("Caught expected IllegalArgumentException for getPageCount on .txt file.");
+            }
+            assert thrownArgExForGetPageCountTxt : "Test Failed: IllegalArgumentException not thrown for getPageCount on .txt file.";
+
+            boolean thrownArgExForGetContentTxt = false;
+            try {
+                pdfParser.getPageAsInputStream(txtFile, 0, 72).close();
+            } catch (IllegalArgumentException e) {
+                thrownArgExForGetContentTxt = true;
+                System.out.println("Caught expected IllegalArgumentException for getPageAsInputStream on .txt file.");
+            }
+            assert thrownArgExForGetContentTxt : "Test Failed: IllegalArgumentException not thrown for getPageAsInputStream on .txt file.";
+            System.out.println("PdfParser tests with non-PDF file passed.");
+
+            System.out.println("Note: PdfParser test for password-protected PDF requires a manually provided sample file.");
+
+        } catch (Exception e) {
+            System.err.println("Exception during testPdfParser: " + e.getMessage());
+            e.printStackTrace();
+            assert false : "Test Failed due to Exception in testPdfParser: " + e.getClass().getName() + ": " + e.getMessage();
+        } finally {
+            for (File f : filesToCleanup) {
+                try {
+                    if (f.exists()) Files.deleteIfExists(f.toPath());
+                } catch (IOException ex) { System.err.println("Cleanup error in testPdfParser for file " + f.getName() + ": " + ex.getMessage());}
+            }
+            if (tempDir != null) {
+                try {
+                    if (Files.exists(tempDir)) Files.deleteIfExists(tempDir);
+                } catch (IOException ex) { System.err.println("Cleanup error for tempDir in testPdfParser: " + ex.getMessage());}
+            }
+        }
+        System.out.println("Finished testPdfParser.");
+    }
 }
+
+[end of app/tests/com/example/comicreader/ComicUtilsTest.java]
