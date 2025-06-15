@@ -27,6 +27,7 @@ class TabletAdapter {
     // Флаги состояния
     this.isInitialized = false;
     this.isTablet = false;
+    this.isFoldable = false; // New property for foldable devices
     this.currentOrientation = null;
     
     // Зарегистрированные компоненты
@@ -48,12 +49,14 @@ class TabletAdapter {
       // Общие настройки
       tabletBreakpoint: 768, // Ширина экрана, при которой устройство считается планшетом
       largeTabletBreakpoint: 1024, // Ширина экрана для больших планшетов
+      foldableBreakpoint: 1200, // Ширина экрана для складных устройств в развернутом состоянии
       
       // Настройки макетов
       layouts: {
-        default: 'stack', // Стандартный макет для мобильных устройств
-        tablet: 'split', // Макет для планшетов
-        largeTablet: 'grid' // Макет для больших планшетов
+        default: \'stack\', // Стандартный макет для мобильных устройств
+        tablet: \'split\', // Макет для планшетов
+        largeTablet: \'grid\', // Макет для больших планшетов
+        foldable: \'dual-pane\' // Макет для складных устройств
       },
       
       // Настройки элементов управления
@@ -77,11 +80,11 @@ class TabletAdapter {
    */
   initialize() {
     if (this.isInitialized) {
-      this.logger.warn('TabletAdapter: already initialized');
+      this.logger.warn(\'TabletAdapter: already initialized\');
       return this;
     }
     
-    this.logger.info('TabletAdapter: initializing');
+    this.logger.info(\'TabletAdapter: initializing\');
     
     // Определяем тип устройства
     this.detectDeviceType();
@@ -99,8 +102,9 @@ class TabletAdapter {
     this.addBaseStyles();
     
     this.isInitialized = true;
-    this.eventEmitter.emit('tabletAdapter:initialized', {
+    this.eventEmitter.emit(\'tabletAdapter:initialized\', {
       isTablet: this.isTablet,
+      isFoldable: this.isFoldable,
       orientation: this.currentOrientation
     });
     
@@ -113,22 +117,27 @@ class TabletAdapter {
    */
   detectDeviceType() {
     const width = window.innerWidth;
-    const isTablet = width >= this.config.tabletBreakpoint && width < 1200;
-    const isLargeTablet = width >= this.config.largeTabletBreakpoint && width < 1200;
+    const isTablet = width >= this.config.tabletBreakpoint && width < this.config.foldableBreakpoint;
+    const isLargeTablet = width >= this.config.largeTabletBreakpoint && width < this.config.foldableBreakpoint;
+    const isFoldable = width >= this.config.foldableBreakpoint; // Simple check for foldable in landscape
     
     // Дополнительные проверки для определения планшета
-    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isTouch = \'ontouchstart\' in window || navigator.maxTouchPoints > 0;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isAndroidTablet = /Android/.test(navigator.userAgent) && !/Mobile/.test(navigator.userAgent);
     const isWindowsTablet = /Windows/.test(navigator.userAgent) && isTouch;
     
-    // Определяем, является ли устройство планшетом
+    // Определяем, является ли устройство планшетом или складным
     this.isTablet = isTablet || isLargeTablet || isIOS || isAndroidTablet || isWindowsTablet;
     this.isLargeTablet = isLargeTablet;
+    this.isFoldable = isFoldable; // Update foldable status
     
-    this.logger.debug(`TabletAdapter: device detected as ${this.isTablet ? (this.isLargeTablet ? 'large tablet' : 'tablet') : 'non-tablet'}`);
+    this.logger.debug(`TabletAdapter: device detected as ${
+      this.isFoldable ? \'foldable\' : 
+      this.isTablet ? (this.isLargeTablet ? \'large tablet\' : \'tablet\') : \'non-tablet\'
+    }`);
     
-    return this.isTablet;
+    return this.isTablet || this.isFoldable;
   }
   
   /**
@@ -140,13 +149,13 @@ class TabletAdapter {
     const height = window.innerHeight;
     
     const oldOrientation = this.currentOrientation;
-    this.currentOrientation = width > height ? 'landscape' : 'portrait';
+    this.currentOrientation = width > height ? \'landscape\' : \'portrait\';
     
     if (oldOrientation !== this.currentOrientation) {
       this.logger.debug(`TabletAdapter: orientation changed to ${this.currentOrientation}`);
       
       if (this.isInitialized) {
-        this.eventEmitter.emit('tabletAdapter:orientationChanged', {
+        this.eventEmitter.emit(\'tabletAdapter:orientationChanged\', {
           orientation: this.currentOrientation
         });
       }
@@ -161,11 +170,11 @@ class TabletAdapter {
    */
   addEventListeners() {
     // Обработчик изменения размера окна
-    window.addEventListener('resize', this.handleResize);
+    window.addEventListener(\'resize\', this.handleResize);
     
     // Обработчик изменения ориентации экрана
-    if ('onorientationchange' in window) {
-      window.addEventListener('orientationchange', this.handleOrientationChange);
+    if (\'onorientationchange\' in window) {
+      window.addEventListener(\'orientationchange\', this.handleOrientationChange);
     }
   }
   
@@ -174,10 +183,10 @@ class TabletAdapter {
    * @private
    */
   removeEventListeners() {
-    window.removeEventListener('resize', this.handleResize);
+    window.removeEventListener(\'resize\', this.handleResize);
     
-    if ('onorientationchange' in window) {
-      window.removeEventListener('orientationchange', this.handleOrientationChange);
+    if (\'onorientationchange\' in window) {
+      window.removeEventListener(\'orientationchange\', this.handleOrientationChange);
     }
   }
   
@@ -189,13 +198,15 @@ class TabletAdapter {
     // Определяем тип устройства
     const wasTablet = this.isTablet;
     const wasLargeTablet = this.isLargeTablet;
+    const wasFoldable = this.isFoldable;
     this.detectDeviceType();
     
     // Если тип устройства изменился, отправляем событие
-    if (wasTablet !== this.isTablet || wasLargeTablet !== this.isLargeTablet) {
-      this.eventEmitter.emit('tabletAdapter:deviceTypeChanged', {
+    if (wasTablet !== this.isTablet || wasLargeTablet !== this.isLargeTablet || wasFoldable !== this.isFoldable) {
+      this.eventEmitter.emit(\'tabletAdapter:deviceTypeChanged\', {
         isTablet: this.isTablet,
-        isLargeTablet: this.isLargeTablet
+        isLargeTablet: this.isLargeTablet,
+        isFoldable: this.isFoldable
       });
       
       // Обновляем все зарегистрированные компоненты
@@ -227,17 +238,17 @@ class TabletAdapter {
    */
   addViewportMeta() {
     // Проверяем, существует ли уже метатег viewport
-    let viewportMeta = document.querySelector('meta[name="viewport"]');
+    let viewportMeta = document.querySelector(\'meta[name="viewport"]\');
     
     if (!viewportMeta) {
       // Создаем новый метатег viewport
-      viewportMeta = document.createElement('meta');
-      viewportMeta.name = 'viewport';
+      viewportMeta = document.createElement(\'meta\');
+      viewportMeta.name = \'viewport\';
       document.head.appendChild(viewportMeta);
     }
     
     // Устанавливаем содержимое метатега
-    viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    viewportMeta.content = \'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\';
   }
   
   /**
@@ -246,12 +257,12 @@ class TabletAdapter {
    */
   addBaseStyles() {
     // Проверяем, существует ли уже элемент стилей
-    let styleElement = document.getElementById('tablet-adapter-styles');
+    let styleElement = document.getElementById(\'tablet-adapter-styles\');
     
     if (!styleElement) {
       // Создаем новый элемент стилей
-      styleElement = document.createElement('style');
-      styleElement.id = 'tablet-adapter-styles';
+      styleElement = document.createElement(\'style\');
+      styleElement.id = \'tablet-adapter-styles\';
       document.head.appendChild(styleElement);
     }
     
@@ -329,6 +340,43 @@ class TabletAdapter {
           gap: 20px;
         }
       }
+
+      /* Стили для складных устройств */
+      @media (min-width: ${this.config.foldableBreakpoint}px) {
+        .foldable-hidden {
+          display: none !important;
+        }
+        
+        .foldable-visible {
+          display: block !important;
+        }
+        
+        .foldable-flex {
+          display: flex !important;
+        }
+        
+        .foldable-grid {
+          display: grid !important;
+        }
+        
+        /* Макет с двумя панелями для складных устройств */
+        .layout-dual-pane {
+          display: flex;
+          flex-direction: row;
+          width: 100%;
+          height: 100%;
+        }
+        
+        .layout-dual-pane > .left-pane,
+        .layout-dual-pane > .right-pane {
+          flex: 1;
+          overflow: auto;
+        }
+        
+        .layout-dual-pane > .left-pane {
+          border-right: 1px solid #ccc; /* Разделитель между панелями */
+        }
+      }
       
       /* Стили для портретной ориентации на планшетах */
       @media (min-width: ${this.config.tabletBreakpoint}px) and (orientation: portrait) {
@@ -376,9 +424,9 @@ class TabletAdapter {
    * @param {string} type - Тип компонента
    * @returns {TabletAdapter} Экземпляр адаптера
    */
-  registerComponent(id, component, type = 'generic') {
+  registerComponent(id, component, type = \'generic\') {
     if (!this.isInitialized) {
-      this.logger.warn('TabletAdapter: not initialized');
+      this.logger.warn(\'TabletAdapter: not initialized\');
       return this;
     }
     
@@ -412,10 +460,11 @@ class TabletAdapter {
     const { component, type } = componentData;
     
     // Если компонент имеет метод updateLayout, вызываем его
-    if (component.updateLayout && typeof component.updateLayout === 'function') {
+    if (component.updateLayout && typeof component.updateLayout === \'function\') {
       component.updateLayout({
         isTablet: this.isTablet,
         isLargeTablet: this.isLargeTablet,
+        isFoldable: this.isFoldable,
         orientation: this.currentOrientation
       });
       return;
@@ -425,31 +474,31 @@ class TabletAdapter {
     if (component instanceof Element) {
       // Применяем специфичные для типа компонента адаптации
       switch (type) {
-        case 'layout':
+        case \'layout\':
           this.updateLayoutComponent(component);
           break;
-        case 'navigation':
+        case \'navigation\':
           this.updateNavigationComponent(component);
           break;
-        case 'content':
+        case \'content\':
           this.updateContentComponent(component);
           break;
-        case 'toolbar':
+        case \'toolbar\':
           this.updateToolbarComponent(component);
           break;
-        case 'sidebar':
+        case \'sidebar\':
           this.updateSidebarComponent(component);
           break;
-        case 'modal':
+        case \'modal\':
           this.updateModalComponent(component);
           break;
-        case 'form':
+        case \'form\':
           this.updateFormComponent(component);
           break;
-        case 'comic':
+        case \'comic\':
           this.updateComicComponent(component);
           break;
-        case 'editor':
+        case \'editor\':
           this.updateEditorComponent(component);
           break;
         default:
@@ -466,10 +515,12 @@ class TabletAdapter {
    */
   updateLayoutComponent(element) {
     // Удаляем все классы макетов
-    element.classList.remove('layout-stack', 'layout-split', 'layout-grid');
+    element.classList.remove(\'layout-stack\', \'layout-split\', \'layout-grid\', \'layout-dual-pane\');
     
     // Добавляем класс соответствующего макета
-    if (this.isLargeTablet) {
+    if (this.isFoldable) {
+      element.classList.add(`layout-${this.config.layouts.foldable}`);
+    } else if (this.isLargeTablet) {
       element.classList.add(`layout-${this.config.layouts.largeTablet}`);
     } else if (this.isTablet) {
       element.classList.add(`layout-${this.config.layouts.tablet}`);
@@ -478,7 +529,7 @@ class TabletAdapter {
     }
     
     // Добавляем классы для текущей ориентации
-    element.classList.remove('orientation-portrait', 'orientation-landscape');
+    element.classList.remove(\'orientation-portrait\', \'orientation-landscape\');
     element.classList.add(`orientation-${this.currentOrientation}`);
   }
   
@@ -489,27 +540,31 @@ class TabletAdapter {
    */
   updateNavigationComponent(element) {
     // Адаптируем навигацию в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
+    if (this.isFoldable) {
+      // Для складных устройств можно использовать две панели навигации или более сложный макет
+      element.classList.remove(\'navigation-compact\', \'navigation-full\');
+      element.classList.add(\'navigation-dual-pane\');
+    } else if (this.isTablet) {
       // Для планшетов в альбомной ориентации показываем полную навигацию
-      if (this.currentOrientation === 'landscape') {
-        element.classList.remove('navigation-compact');
-        element.classList.add('navigation-full');
+      if (this.currentOrientation === \'landscape\') {
+        element.classList.remove(\'navigation-compact\');
+        element.classList.add(\'navigation-full\');
       } else {
         // Для планшетов в портретной ориентации используем компактную навигацию
-        element.classList.remove('navigation-full');
-        element.classList.add('navigation-compact');
+        element.classList.remove(\'navigation-full\');
+        element.classList.add(\'navigation-compact\');
       }
     } else {
       // Для мобильных устройств всегда используем компактную навигацию
-      element.classList.remove('navigation-full');
-      element.classList.add('navigation-compact');
+      element.classList.remove(\'navigation-full\');
+      element.classList.add(\'navigation-compact\');
     }
     
     // Если включена навигация свайпами, добавляем соответствующий класс
     if (this.config.controls.swipeNavigation) {
-      element.classList.add('swipe-enabled');
+      element.classList.add(\'swipe-enabled\');
     } else {
-      element.classList.remove('swipe-enabled');
+      element.classList.remove(\'swipe-enabled\');
     }
   }
   
@@ -520,27 +575,22 @@ class TabletAdapter {
    */
   updateContentComponent(element) {
     // Адаптируем содержимое в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
+    if (this.isFoldable) {
+      // Для складных устройств можно использовать макет с двумя колонками для контента
+      element.style.columnCount = \'2\';
+      element.style.columnGap = \'20px\';
+    } else if (this.isTablet) {
       // Для планшетов используем многоколоночный макет в альбомной ориентации
-      if (this.currentOrientation === 'landscape' && this.isLargeTablet) {
-        element.style.columnCount = '2';
-        element.style.columnGap = '20px';
+      if (this.currentOrientation === \'landscape\' && this.isLargeTablet) {
+        element.style.columnCount = \'2\';
+        element.style.columnGap = \'20px\';
       } else {
         // В портретной ориентации используем одну колонку
-        element.style.columnCount = '1';
+        element.style.columnCount = \'1\';
       }
     } else {
       // Для мобильных устройств всегда используем одну колонку
-      element.style.columnCount = '1';
-    }
-    
-    // Настраиваем размер шрифта в зависимости от типа устройства
-    if (this.isLargeTablet) {
-      element.style.fontSize = '1.1em';
-    } else if (this.isTablet) {
-      element.style.fontSize = '1em';
-    } else {
-      element.style.fontSize = '0.9em';
+      element.style.columnCount = \'1\';
     }
   }
   
@@ -550,453 +600,153 @@ class TabletAdapter {
    * @private
    */
   updateToolbarComponent(element) {
-    // Адаптируем панель инструментов в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
-      // Для планшетов показываем все элементы панели инструментов
-      const toolbarItems = element.querySelectorAll('.toolbar-item');
-      toolbarItems.forEach(item => {
-        item.style.display = '';
-      });
-      
-      // В альбомной ориентации добавляем дополнительные элементы
-      if (this.currentOrientation === 'landscape') {
-        const extraItems = element.querySelectorAll('.toolbar-item-extra');
-        extraItems.forEach(item => {
-          item.style.display = '';
-        });
-      } else {
-        // В портретной ориентации скрываем дополнительные элементы
-        const extraItems = element.querySelectorAll('.toolbar-item-extra');
-        extraItems.forEach(item => {
-          item.style.display = 'none';
-        });
-      }
+    // Адаптируем панели инструментов
+    if (this.isFoldable) {
+      // Для складных устройств можно размещать панели инструментов по бокам или внизу
+      element.classList.add(\'toolbar-foldable\');
+    } else if (this.isTablet) {
+      // Для планшетов можно использовать более крупные кнопки и больше места
+      element.classList.add(\'toolbar-tablet\');
     } else {
-      // Для мобильных устройств скрываем некритичные элементы
-      const nonEssentialItems = element.querySelectorAll('.toolbar-item:not(.essential)');
-      nonEssentialItems.forEach(item => {
-        item.style.display = 'none';
-      });
+      element.classList.remove(\'toolbar-foldable\', \'toolbar-tablet\');
     }
   }
-  
+
   /**
    * Обновляет компонент боковой панели
    * @param {Element} element - DOM-элемент
    * @private
    */
   updateSidebarComponent(element) {
-    // Адаптируем боковую панель в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
-      // Для планшетов в альбомной ориентации показываем боковую панель
-      if (this.currentOrientation === 'landscape') {
-        element.style.display = '';
-        element.style.width = '320px';
-        element.style.position = 'relative';
-        element.style.transform = 'none';
-      } else {
-        // Для планшетов в портретной ориентации скрываем боковую панель по умолчанию
-        element.style.display = 'none';
-        element.style.width = '320px';
-        element.style.position = 'absolute';
-        element.style.transform = 'translateX(-100%)';
-      }
+    // Адаптируем боковые панели
+    if (this.isFoldable) {
+      // Для складных устройств боковая панель может быть всегда видимой
+      element.classList.add(\'sidebar-foldable\');
+    } else if (this.isTablet) {
+      // Для планшетов боковая панель может быть шире
+      element.classList.add(\'sidebar-tablet\');
     } else {
-      // Для мобильных устройств скрываем боковую панель по умолчанию
-      element.style.display = 'none';
-      element.style.width = '100%';
-      element.style.position = 'absolute';
-      element.style.transform = 'translateX(-100%)';
+      element.classList.remove(\'sidebar-foldable\', \'sidebar-tablet\');
     }
   }
-  
+
   /**
    * Обновляет компонент модального окна
    * @param {Element} element - DOM-элемент
    * @private
    */
   updateModalComponent(element) {
-    // Адаптируем модальное окно в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
-      // Для планшетов используем фиксированный размер модального окна
-      element.style.width = '80%';
-      element.style.maxWidth = '600px';
-      element.style.height = 'auto';
-      element.style.maxHeight = '80%';
+    // Адаптируем модальные окна
+    if (this.isFoldable || this.isTablet) {
+      // Для планшетов и складных устройств модальные окна могут быть центрированы и занимать меньше места
+      element.classList.add(\'modal-tablet-foldable\');
     } else {
-      // Для мобильных устройств модальное окно занимает почти весь экран
-      element.style.width = '95%';
-      element.style.maxWidth = 'none';
-      element.style.height = 'auto';
-      element.style.maxHeight = '90%';
+      element.classList.remove(\'modal-tablet-foldable\');
     }
   }
-  
+
   /**
    * Обновляет компонент формы
    * @param {Element} element - DOM-элемент
    * @private
    */
   updateFormComponent(element) {
-    // Адаптируем форму в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
-      // Для планшетов используем двухколоночный макет в альбомной ориентации
-      if (this.currentOrientation === 'landscape') {
-        const formGroups = element.querySelectorAll('.form-group');
-        formGroups.forEach(group => {
-          group.style.display = 'inline-block';
-          group.style.width = 'calc(50% - 10px)';
-          group.style.marginRight = '10px';
-        });
-      } else {
-        // В портретной ориентации используем одну колонку
-        const formGroups = element.querySelectorAll('.form-group');
-        formGroups.forEach(group => {
-          group.style.display = 'block';
-          group.style.width = '100%';
-          group.style.marginRight = '0';
-        });
-      }
+    // Адаптируем формы
+    if (this.isFoldable || this.isTablet) {
+      // Для планшетов и складных устройств формы могут быть двухколоночными
+      element.classList.add(\'form-tablet-foldable\');
     } else {
-      // Для мобильных устройств всегда используем одну колонку
-      const formGroups = element.querySelectorAll('.form-group');
-      formGroups.forEach(group => {
-        group.style.display = 'block';
-        group.style.width = '100%';
-        group.style.marginRight = '0';
-      });
+      element.classList.remove(\'form-tablet-foldable\');
     }
-    
-    // Увеличиваем размер элементов формы для сенсорных устройств
-    const inputs = element.querySelectorAll('input, select, textarea, button');
-    inputs.forEach(input => {
-      input.style.minHeight = `${this.config.controls.touchTargetSize}px`;
-      input.style.padding = `${this.config.controls.spacing / 2}px`;
-    });
   }
-  
+
   /**
    * Обновляет компонент комикса
    * @param {Element} element - DOM-элемент
    * @private
    */
   updateComicComponent(element) {
-    // Адаптируем комикс в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
-      // Для планшетов в альбомной ориентации показываем несколько панелей в ряд
-      if (this.currentOrientation === 'landscape') {
-        element.style.display = 'grid';
-        element.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
-        element.style.gap = '20px';
-      } else {
-        // В портретной ориентации показываем одну панель в ряд
-        element.style.display = 'flex';
-        element.style.flexDirection = 'column';
-        element.style.gap = '20px';
-      }
-    } else {
-      // Для мобильных устройств всегда показываем одну панель в ряд
-      element.style.display = 'flex';
-      element.style.flexDirection = 'column';
-      element.style.gap = '10px';
-    }
-    
-    // Настраиваем размер шрифта в пузырях с текстом
-    const bubbles = element.querySelectorAll('.comic-bubble');
-    if (this.isLargeTablet) {
-      bubbles.forEach(bubble => {
-        bubble.style.fontSize = '1.1em';
-      });
+    // Адаптируем отображение комикса
+    if (this.isFoldable) {
+      // Для складных устройств можно отображать две страницы комикса одновременно
+      element.classList.add(\'comic-dual-page\');
     } else if (this.isTablet) {
-      bubbles.forEach(bubble => {
-        bubble.style.fontSize = '1em';
-      });
+      // Для планшетов можно увеличить размер страницы комикса
+      element.classList.add(\'comic-tablet\');
     } else {
-      bubbles.forEach(bubble => {
-        bubble.style.fontSize = '0.9em';
-      });
+      element.classList.remove(\'comic-dual-page\', \'comic-tablet\');
     }
   }
-  
+
   /**
    * Обновляет компонент редактора
    * @param {Element} element - DOM-элемент
    * @private
    */
   updateEditorComponent(element) {
-    // Адаптируем редактор в зависимости от типа устройства и ориентации
-    if (this.isTablet) {
-      // Для планшетов показываем все инструменты редактора
-      const toolbarItems = element.querySelectorAll('.editor-toolbar-item');
-      toolbarItems.forEach(item => {
-        item.style.display = '';
-      });
-      
-      // В альбомной ориентации используем горизонтальную панель инструментов
-      if (this.currentOrientation === 'landscape') {
-        const toolbar = element.querySelector('.editor-toolbar');
-        if (toolbar) {
-          toolbar.style.flexDirection = 'row';
-          toolbar.style.height = 'auto';
-          toolbar.style.width = '100%';
-        }
-        
-        // Настраиваем область редактирования
-        const editArea = element.querySelector('.editor-area');
-        if (editArea) {
-          editArea.style.height = 'calc(100% - 50px)';
-          editArea.style.width = '100%';
-        }
-      } else {
-        // В портретной ориентации используем вертикальную панель инструментов
-        const toolbar = element.querySelector('.editor-toolbar');
-        if (toolbar) {
-          toolbar.style.flexDirection = 'column';
-          toolbar.style.height = '100%';
-          toolbar.style.width = 'auto';
-        }
-        
-        // Настраиваем область редактирования
-        const editArea = element.querySelector('.editor-area');
-        if (editArea) {
-          editArea.style.height = '100%';
-          editArea.style.width = 'calc(100% - 50px)';
-        }
-      }
+    // Адаптируем редактор
+    if (this.isFoldable) {
+      // Для складных устройств можно использовать двухпанельный редактор
+      element.classList.add(\'editor-dual-pane\');
+    } else if (this.isTablet) {
+      // Для планшетов можно оптимизировать расположение элементов управления
+      element.classList.add(\'editor-tablet\');
     } else {
-      // Для мобильных устройств скрываем некритичные инструменты
-      const nonEssentialItems = element.querySelectorAll('.editor-toolbar-item:not(.essential)');
-      nonEssentialItems.forEach(item => {
-        item.style.display = 'none';
-      });
-      
-      // Используем горизонтальную панель инструментов
-      const toolbar = element.querySelector('.editor-toolbar');
-      if (toolbar) {
-        toolbar.style.flexDirection = 'row';
-        toolbar.style.height = 'auto';
-        toolbar.style.width = '100%';
-        toolbar.style.overflowX = 'auto';
-        toolbar.style.overflowY = 'hidden';
-      }
-      
-      // Настраиваем область редактирования
-      const editArea = element.querySelector('.editor-area');
-      if (editArea) {
-        editArea.style.height = 'calc(100% - 50px)';
-        editArea.style.width = '100%';
-      }
+      element.classList.remove(\'editor-dual-pane\', \'editor-tablet\');
     }
   }
-  
+
   /**
    * Обновляет общий компонент
    * @param {Element} element - DOM-элемент
    * @private
    */
   updateGenericComponent(element) {
-    // Применяем базовые адаптации для общих компонентов
-    if (this.isTablet) {
-      element.classList.add('tablet');
-      
-      if (this.isLargeTablet) {
-        element.classList.add('large-tablet');
-      } else {
-        element.classList.remove('large-tablet');
-      }
-      
-      // Добавляем классы для текущей ориентации
-      element.classList.remove('tablet-portrait', 'tablet-landscape');
-      element.classList.add(`tablet-${this.currentOrientation}`);
-    } else {
-      element.classList.remove('tablet', 'large-tablet', 'tablet-portrait', 'tablet-landscape');
-    }
-  }
-  
-  /**
-   * Показывает или скрывает плавающую кнопку действия
-   * @param {boolean} show - Флаг отображения
-   * @param {Object} options - Параметры кнопки
-   * @returns {Element|null} Элемент кнопки или null, если кнопка не поддерживается
-   */
-  toggleFloatingActionButton(show, options = {}) {
-    if (!this.config.controls.floatingActionButton) {
-      return null;
-    }
-    
-    // Находим или создаем плавающую кнопку действия
-    let fab = document.getElementById('tablet-adapter-fab');
-    
-    if (!fab && show) {
-      // Создаем новую кнопку
-      fab = document.createElement('button');
-      fab.id = 'tablet-adapter-fab';
-      fab.className = 'floating-action-button';
-      document.body.appendChild(fab);
-      
-      // Добавляем стили для кнопки
-      const styleElement = document.createElement('style');
-      styleElement.textContent = `
-        .floating-action-button {
-          position: fixed;
-          bottom: 20px;
-          right: 20px;
-          width: 56px;
-          height: 56px;
-          border-radius: 50%;
-          background-color: var(--color-primary, #3498db);
-          color: var(--color-textInverse, #ffffff);
-          border: none;
-          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 24px;
-          cursor: pointer;
-          z-index: 1000;
-          transition: all 0.3s ease;
-        }
-        
-        .floating-action-button:hover {
-          transform: scale(1.1);
-          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
-        }
-      `;
-      document.head.appendChild(styleElement);
-    }
-    
-    if (fab) {
-      // Обновляем параметры кнопки
-      if (show) {
-        fab.style.display = 'flex';
-        
-        if (options.icon) {
-          fab.innerHTML = options.icon;
-        }
-        
-        if (options.backgroundColor) {
-          fab.style.backgroundColor = options.backgroundColor;
-        }
-        
-        if (options.color) {
-          fab.style.color = options.color;
-        }
-        
-        if (options.position) {
-          if (options.position === 'left') {
-            fab.style.right = 'auto';
-            fab.style.left = '20px';
-          } else {
-            fab.style.left = 'auto';
-            fab.style.right = '20px';
-          }
-        }
-        
-        if (options.onClick && typeof options.onClick === 'function') {
-          // Удаляем предыдущий обработчик
-          fab.removeEventListener('click', this._fabClickHandler);
-          
-          // Сохраняем новый обработчик
-          this._fabClickHandler = options.onClick;
-          
-          // Добавляем новый обработчик
-          fab.addEventListener('click', this._fabClickHandler);
-        }
-      } else {
-        fab.style.display = 'none';
-      }
-    }
-    
-    return fab;
-  }
-  
-  /**
-   * Получает текущий макет
-   * @returns {string} Название текущего макета
-   */
-  getCurrentLayout() {
-    if (this.isLargeTablet) {
-      return this.config.layouts.largeTablet;
+    // Добавляем классы для общего адаптивного поведения
+    if (this.isFoldable) {
+      element.classList.add(\'responsive-foldable\');
     } else if (this.isTablet) {
-      return this.config.layouts.tablet;
+      element.classList.add(\'responsive-tablet\');
     } else {
-      return this.config.layouts.default;
+      element.classList.remove(\'responsive-foldable\', \'responsive-tablet\');
     }
   }
-  
+
   /**
-   * Проверяет, является ли устройство планшетом
-   * @returns {boolean} true, если устройство является планшетом
+   * Placeholder for testing different screens. In a real application, this would involve
+   * a dedicated testing framework or manual testing on various devices/emulators.
    */
-  isTabletDevice() {
-    return this.isTablet;
-  }
-  
-  /**
-   * Проверяет, является ли устройство большим планшетом
-   * @returns {boolean} true, если устройство является большим планшетом
-   */
-  isLargeTabletDevice() {
-    return this.isLargeTablet;
-  }
-  
-  /**
-   * Получает текущую ориентацию экрана
-   * @returns {string} Текущая ориентация экрана ('portrait' или 'landscape')
-   */
-  getOrientation() {
-    return this.currentOrientation;
-  }
-  
-  /**
-   * Обновляет конфигурацию адаптера
-   * @param {Object} config - Новая конфигурация
-   * @returns {TabletAdapter} Экземпляр адаптера
-   */
-  updateConfig(config) {
-    this.config = this.mergeConfig(config);
+  testDifferentScreens() {
+    this.logger.info("Simulating testing on different screens...");
+    // Example: Log current device type and orientation
+    this.logger.info(`Current device type: ${this.isFoldable ? \'Foldable\' : (this.isTablet ? \'Tablet\' : \'Phone\')}`);
+    this.logger.info(`Current orientation: ${this.currentOrientation}`);
     
-    // Обновляем базовые стили
-    this.addBaseStyles();
-    
-    // Обновляем все зарегистрированные компоненты
-    this.updateAllComponents();
-    
-    this.logger.info('TabletAdapter: config updated');
-    this.eventEmitter.emit('tabletAdapter:configUpdated', { config: { ...this.config } });
-    
-    return this;
-  }
-  
-  /**
-   * Получает текущую конфигурацию
-   * @returns {Object} Текущая конфигурация
-   */
-  getConfig() {
-    return { ...this.config };
-  }
-  
-  /**
-   * Уничтожает адаптер и освобождает ресурсы
-   */
-  destroy() {
-    this.logger.info('TabletAdapter: destroying');
-    
-    // Удаляем обработчики событий
-    this.removeEventListeners();
-    
-    // Удаляем плавающую кнопку действия
-    this.toggleFloatingActionButton(false);
-    
-    // Очищаем карту компонентов
-    this.components.clear();
-    
-    this.isInitialized = false;
-    
-    this.eventEmitter.emit('tabletAdapter:destroyed');
-    
-    this.logger.info('TabletAdapter: destroyed');
+    // In a real scenario, you would run automated UI tests here
+    // or provide instructions for manual testing.
+    this.logger.info("Testing complete for current screen configuration.");
   }
 }
 
+// Пример использования:
+// const tabletAdapter = new TabletAdapter({
+//   eventEmitter: new EventEmitter(), // Предполагается наличие EventEmitter
+//   logger: console,
+//   config: {
+//     tabletBreakpoint: 768,
+//     largeTabletBreakpoint: 1024,
+//     foldableBreakpoint: 1200
+//   }
+// });
+// tabletAdapter.initialize();
+
+// // Регистрация компонента для адаптации
+// const myLayoutElement = document.getElementById(\'main-layout\');
+// tabletAdapter.registerComponent(\'mainLayout\', myLayoutElement, \'layout\');
+
+// // Запуск тестирования (в реальном приложении это будет часть CI/CD или ручного тестирования)
+// tabletAdapter.testDifferentScreens();
+
 module.exports = TabletAdapter;
+
+
