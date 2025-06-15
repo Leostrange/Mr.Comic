@@ -9,6 +9,11 @@ from typing import List, Dict, Tuple
 from dataclasses import dataclass
 import json
 import time
+import logging
+import os
+
+# Configure logging
+logging.basicConfig(level=logging.ERROR, format="% (asctime)s - % (levelname)s - % (message)s")
 
 @dataclass
 class ValidationResult:
@@ -19,13 +24,14 @@ class ValidationResult:
 
 class QualityValidationSystem:
     def __init__(self):
-        pass
+        self.metrics_log_file = "metrics_log.json"
 
     def validate_image_quality(self, image_path: str) -> ValidationResult:
         """Checks image resolution, clarity, and potential artifacts."""
         try:
             img = cv2.imread(image_path)
             if img is None:
+                logging.error(f"Could not load image for quality validation: {image_path}")
                 return ValidationResult("Image Quality", "FAIL", "Could not load image.")
 
             height, width, _ = img.shape
@@ -40,6 +46,7 @@ class QualityValidationSystem:
 
             return ValidationResult("Image Quality", "PASS", "Image quality is acceptable.")
         except Exception as e:
+            logging.error(f"Error processing image for quality validation: {e}")
             return ValidationResult("Image Quality", "FAIL", f"Error processing image: {e}")
 
     def calculate_bleu_score(self, reference_text: str, hypothesis_text: str) -> float:
@@ -78,7 +85,7 @@ class QualityValidationSystem:
 
         return ValidationResult("Translation Accuracy", "PASS", "Translation accuracy check passed (dummy).")
 
-    def validate_ocr_accuracy(self, image_path: str, ocr_text: str) -> ValidationResult:
+    def validate_ocr_accuracy(self, image_path: str, ocr_text: str, ocr_confidence: float = 0.0) -> ValidationResult:
         """Compares OCR output with expected text (if available) or performs sanity checks."""
         if not ocr_text:
             return ValidationResult("OCR Accuracy", "FAIL", "OCR output is empty.")
@@ -88,7 +95,10 @@ class QualityValidationSystem:
         if alphanumeric_ratio < 0.7: # Example threshold
             return ValidationResult("OCR Accuracy", "WARNING", "OCR output contains many non-alphanumeric characters.")
 
-        return ValidationResult("OCR Accuracy", "PASS", "OCR accuracy check passed (dummy).")
+        if ocr_confidence < 0.5: # Example confidence threshold
+            return ValidationResult("OCR Accuracy", "WARNING", f"Low OCR confidence: {ocr_confidence:.2f}")
+
+        return ValidationResult("OCR Accuracy", "PASS", "OCR accuracy check passed (dummy).", {"confidence": ocr_confidence})
 
     def validate_comic_panel_flow(self, panel_order: List[Tuple[int, int, int, int]]) -> ValidationResult:
         """Checks if comic panels are ordered logically (e.g., left-to-right, top-to-bottom)."""
@@ -121,8 +131,11 @@ class QualityValidationSystem:
             if "image_path" in data:
                 results.append(self.validate_image_quality(data["image_path"]))
             if "ocr_text" in data:
-                results.append(self.validate_ocr_accuracy(data.get("image_path", ""), data["ocr_text"]))
+                ocr_confidence = data.get("ocr_confidence", 0.0) # Get OCR confidence if available
+                results.append(self.validate_ocr_accuracy(data.get("image_path", ""), data["ocr_text"], ocr_confidence))
+                metrics["ocr_confidence"] = ocr_confidence # Log OCR confidence
         except Exception as e:
+            logging.error(f"OCR Process Error: {e}")
             errors.append(f"OCR Process Error: {e}")
         ocr_time = time.time() - start_time
         metrics["ocr_processing_time"] = ocr_time
@@ -139,6 +152,7 @@ class QualityValidationSystem:
                 metrics["bleu_score"] = bleu_score
                 results.append(ValidationResult("BLEU Score", "INFO", f"Calculated BLEU score: {bleu_score:.4f}", {"score": bleu_score}))
         except Exception as e:
+            logging.error(f"Translation Process Error: {e}")
             errors.append(f"Translation Process Error: {e}")
         translation_time = time.time() - start_time
         metrics["translation_processing_time"] = translation_time
@@ -151,6 +165,7 @@ class QualityValidationSystem:
             if "overlay_data" in data: # Placeholder for actual overlay operations
                 pass
         except Exception as e:
+            logging.error(f"Overlay Process Error: {e}")
             errors.append(f"Overlay Process Error: {e}")
         overlay_time = time.time() - start_time
         metrics["overlay_processing_time"] = overlay_time
@@ -162,10 +177,11 @@ class QualityValidationSystem:
         # Log metrics to JSON file
         if metrics:
             try:
-                with open("metrics_log.json", "a") as f:
+                with open(self.metrics_log_file, "a") as f:
                     json.dump(metrics, f)
                     f.write("\n")
             except Exception as e:
+                logging.error(f"Error logging metrics to JSON: {e}")
                 results.append(ValidationResult("Metrics Logging", "FAIL", f"Error logging metrics to JSON: {e}"))
         
         # Report errors
@@ -174,5 +190,21 @@ class QualityValidationSystem:
 
         return results
 
+    def export_metrics_log(self, output_path: str) -> bool:
+        """Exports the metrics log file to a specified path."""
+        try:
+            if os.path.exists(self.metrics_log_file):
+                with open(self.metrics_log_file, "r") as infile:
+                    content = infile.read()
+                with open(output_path, "w") as outfile:
+                    outfile.write(content)
+                logging.info(f"Metrics log exported to {output_path}")
+                return True
+            else:
+                logging.warning(f"Metrics log file not found: {self.metrics_log_file}")
+                return False
+        except Exception as e:
+            logging.error(f"Error exporting metrics log: {e}")
+            return False
 
 
