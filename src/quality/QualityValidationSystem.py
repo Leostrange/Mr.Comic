@@ -8,11 +8,12 @@ import numpy as np
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
 import json
+import time
 
 @dataclass
 class ValidationResult:
     check_name: str
-    status: str  # "PASS", "FAIL", "WARNING"
+    status: str  # "PASS", "FAIL", "WARNING", "INFO"
     message: str
     details: Dict = None
 
@@ -112,30 +113,53 @@ class QualityValidationSystem:
         """Runs all available validation checks on provided data."""
         results = []
         metrics = {}
+        errors = []
 
-        if "image_path" in data:
-            results.append(self.validate_image_quality(data["image_path"]))
-        
-        if "original_text" in data and "translated_text" in data:
-            results.append(self.validate_translation_accuracy(
-                data["original_text"], data["translated_text"], data.get("source_lang", "en"), data.get("target_lang", "en")
-            ))
-            # Day 35: BLEU score calculation
-            bleu_score = self.calculate_bleu_score(data["original_text"], data["translated_text"])
-            metrics["bleu_score"] = bleu_score
-            results.append(ValidationResult("BLEU Score", "INFO", f"Calculated BLEU score: {bleu_score:.4f}", {"score": bleu_score}))
+        # Simulate OCR process
+        start_time = time.time()
+        try:
+            if "image_path" in data:
+                results.append(self.validate_image_quality(data["image_path"]))
+            if "ocr_text" in data:
+                results.append(self.validate_ocr_accuracy(data.get("image_path", ""), data["ocr_text"]))
+        except Exception as e:
+            errors.append(f"OCR Process Error: {e}")
+        ocr_time = time.time() - start_time
+        metrics["ocr_processing_time"] = ocr_time
+        results.append(ValidationResult("OCR Process Timing", "INFO", f"OCR processing took {ocr_time:.2f} seconds.", {"time_taken": ocr_time}))
 
-        if "ocr_text" in data:
-            # Assuming OCR confidence is passed in data for logging
-            if "ocr_confidence" in data:
-                metrics["ocr_confidence"] = data["ocr_confidence"]
-                results.append(ValidationResult("OCR Confidence", "INFO", f"OCR Confidence: {data["ocr_confidence"]:.2f}", {"confidence": data["ocr_confidence"]}))
-            results.append(self.validate_ocr_accuracy(data.get("image_path", ""), data["ocr_text"]))
+        # Simulate Translation process
+        start_time = time.time()
+        try:
+            if "original_text" in data and "translated_text" in data:
+                results.append(self.validate_translation_accuracy(
+                    data["original_text"], data["translated_text"], data.get("source_lang", "en"), data.get("target_lang", "en")
+                ))
+                bleu_score = self.calculate_bleu_score(data["original_text"], data["translated_text"])
+                metrics["bleu_score"] = bleu_score
+                results.append(ValidationResult("BLEU Score", "INFO", f"Calculated BLEU score: {bleu_score:.4f}", {"score": bleu_score}))
+        except Exception as e:
+            errors.append(f"Translation Process Error: {e}")
+        translation_time = time.time() - start_time
+        metrics["translation_processing_time"] = translation_time
+        results.append(ValidationResult("Translation Process Timing", "INFO", f"Translation processing took {translation_time:.2f} seconds.", {"time_taken": translation_time}))
+
+        # Simulate Overlay process (assuming it's part of the overall pipeline)
+        start_time = time.time()
+        try:
+            # No specific validation for overlay here, just timing it
+            if "overlay_data" in data: # Placeholder for actual overlay operations
+                pass
+        except Exception as e:
+            errors.append(f"Overlay Process Error: {e}")
+        overlay_time = time.time() - start_time
+        metrics["overlay_processing_time"] = overlay_time
+        results.append(ValidationResult("Overlay Process Timing", "INFO", f"Overlay processing took {overlay_time:.2f} seconds.", {"time_taken": overlay_time}))
 
         if "panel_order" in data:
             results.append(self.validate_comic_panel_flow(data["panel_order"]))
 
-        # Day 35: Log metrics to JSON file
+        # Log metrics to JSON file
         if metrics:
             try:
                 with open("metrics_log.json", "a") as f:
@@ -143,6 +167,10 @@ class QualityValidationSystem:
                     f.write("\n")
             except Exception as e:
                 results.append(ValidationResult("Metrics Logging", "FAIL", f"Error logging metrics to JSON: {e}"))
+        
+        # Report errors
+        if errors:
+            results.append(ValidationResult("Integrated Test Errors", "FAIL", "Errors encountered during integrated test.", {"errors": errors}))
 
         return results
 
