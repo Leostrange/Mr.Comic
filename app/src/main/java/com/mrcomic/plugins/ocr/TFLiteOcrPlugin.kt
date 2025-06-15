@@ -2,6 +2,7 @@ package com.mrcomic.plugins.ocr
 
 import android.graphics.Bitmap
 import com.mrcomic.core.TFLiteManager
+import com.mrcomic.utils.SpellcheckManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
@@ -14,7 +15,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class TFLiteOcrPlugin @Inject constructor(
-    private val tfliteManager: TFLiteManager
+    private val tfliteManager: TFLiteManager,
+    private val spellcheckManager: SpellcheckManager
 ) : OcrPlugin {
     
     private var isInitialized = false
@@ -22,6 +24,7 @@ class TFLiteOcrPlugin @Inject constructor(
     override suspend fun initialize(): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
             tfliteManager.initializeModels()
+            spellcheckManager.initialize()
             isInitialized = true
             true
         } catch (e: Exception) {
@@ -47,7 +50,13 @@ class TFLiteOcrPlugin @Inject constructor(
             val inputBuffer = preprocessBitmap(bitmap)
             
             // Выполнение OCR
-            val recognizedText = tfliteManager.runOcr(inputBuffer)
+            var recognizedText = tfliteManager.runOcr(inputBuffer)
+            
+            // Применение коррекций и восстановление слов
+            recognizedText = spellcheckManager.applyCorrections(recognizedText, language)
+            val words = recognizedText.split(" ")
+            val restoredWords = spellcheckManager.restoreBrokenWords(words)
+            recognizedText = restoredWords.joinToString(" ")
             
             // Анализ текстовых блоков
             val textBlocks = analyzeTextBlocks(bitmap, recognizedText)
@@ -61,6 +70,7 @@ class TFLiteOcrPlugin @Inject constructor(
                 textBlocks = textBlocks,
                 processingTime = processingTime
             )
+            android.util.Log.d("TFLiteOcrPlugin", "OCR Confidence: ${calculateConfidence(recognizedText)}")
             
         } catch (e: Exception) {
             android.util.Log.e("TFLiteOcrPlugin", "OCR failed", e)
