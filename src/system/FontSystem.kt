@@ -77,3 +77,17 @@ class FontSystem(private val context: Context) {
 }
 
 
+
+
+    fun getFontForLanguage(languageCode: String): Typeface {
+        // Placeholder for language-based font selection logic
+        // In a real scenario, this would involve mapping language codes to specific font files
+        // and potentially considering user preferences or comic style.
+        return when (languageCode) {
+            "ja" -> loadFont("JapaneseFont.ttf") ?: Typeface.DEFAULT // Example for Japanese
+            "zh" -> loadFont("ChineseFont.ttf") ?: Typeface.DEFAULT // Example for Chinese
+            else -> Typeface.DEFAULT
+        }
+    }
+
+
