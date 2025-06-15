@@ -28,8 +28,8 @@ class TFLiteManager @Inject constructor(
             // Загрузка OCR модели
             ocrInterpreter = loadModelFromAssets("models/trocr_base.tflite")
             
-            // Загрузка модели перевода
-            translationInterpreter = loadModelFromAssets("models/opus_mt_ja_en.tflite")
+            // Загрузка модели перевода (пример для M2M-100 или NLLB)
+            translationInterpreter = loadModelFromAssets("models/m2m100_418m.tflite") // Или nllb_distilled_600m.tflite
             
         } catch (e: Exception) {
             // Логирование ошибки
@@ -45,7 +45,7 @@ class TFLiteManager @Inject constructor(
         val options = Interpreter.Options().apply {
             setNumThreads(4)
             setUseNNAPI(true)
-            setUseGPU(true)
+            // setUseGPU(true) // Включение GPU может потребовать дополнительных настроек
         }
         return Interpreter(model, options)
     }
@@ -75,21 +75,12 @@ class TFLiteManager @Inject constructor(
     suspend fun runTranslation(inputText: String, fromLang: String, toLang: String): String = withContext(Dispatchers.IO) {
         val interpreter = translationInterpreter ?: throw IllegalStateException("Translation model not initialized")
         
-        // Токенизация входного текста
-        val inputTokens = tokenizeText(inputText)
-        val inputBuffer = prepareTranslationInput(inputTokens)
+        // Простая имитация токенизации и декодирования для демонстрации
+        // В реальном приложении здесь будет сложная логика токенизации и декодирования
+        // для M2M-100 или NLLB моделей.
+        val translatedText = "Translated: $inputText"
         
-        // Подготовка выходного буфера
-        val outputShape = interpreter.getOutputTensor(0).shape()
-        val outputBuffer = ByteBuffer.allocateDirect(outputShape[1] * outputShape[2] * 4).apply {
-            order(ByteOrder.nativeOrder())
-        }
-        
-        // Выполнение инференса
-        interpreter.run(inputBuffer, outputBuffer)
-        
-        // Декодирование результата
-        return@withContext decodeTranslationOutput(outputBuffer)
+        return@withContext translatedText
     }
     
     /**
@@ -99,40 +90,6 @@ class TFLiteManager @Inject constructor(
         // Простая реализация декодирования
         // В реальном проекте здесь должна быть логика декодирования токенов
         return "Распознанный текст"
-    }
-    
-    /**
-     * Токенизация текста для перевода
-     */
-    private fun tokenizeText(text: String): IntArray {
-        // Простая реализация токенизации
-        // В реальном проекте здесь должна быть полноценная токенизация
-        return text.split(" ").mapIndexed { index, _ -> index }.toIntArray()
-    }
-    
-    /**
-     * Подготовка входных данных для модели перевода
-     */
-    private fun prepareTranslationInput(tokens: IntArray): ByteBuffer {
-        val inputBuffer = ByteBuffer.allocateDirect(tokens.size * 4).apply {
-            order(ByteOrder.nativeOrder())
-        }
-        
-        tokens.forEach { token ->
-            inputBuffer.putInt(token)
-        }
-        
-        inputBuffer.rewind()
-        return inputBuffer
-    }
-    
-    /**
-     * Декодирование результата перевода
-     */
-    private fun decodeTranslationOutput(outputBuffer: ByteBuffer): String {
-        // Простая реализация декодирования
-        // В реальном проекте здесь должна быть логика декодирования токенов обратно в текст
-        return "Переведенный текст"
     }
     
     /**
