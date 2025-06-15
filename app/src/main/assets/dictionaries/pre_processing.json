@@ -1,0 +1,28 @@
+{
+  "preprocessing": {
+    "contrast_enhancement": 1.5,
+    "brightness_adjustment": 0.0,
+    "noise_reduction": true,
+    "sharpening": true,
+    "max_image_size": 1920
+  },
+  "text_detection": {
+    "min_text_height": 10,
+    "max_text_height": 200,
+    "confidence_threshold": 0.5,
+    "merge_nearby_boxes": true,
+    "box_merge_distance": 5
+  },
+  "language_specific": {
+    "japanese": {
+      "vertical_text_support": true,
+      "character_spacing": 2,
+      "line_spacing": 5
+    },
+    "english": {
+      "word_spacing": 3,
+      "line_spacing": 8
+    }
+  }
+}
+
