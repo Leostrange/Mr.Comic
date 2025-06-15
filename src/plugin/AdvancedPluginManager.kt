@@ -11,22 +11,35 @@ import java.io.InputStream
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
+import java.util.Date
+
+data class PluginVersionInfo(
+    val version: String,
+    val filePath: String,
+    val timestamp: Long = Date().time
+)
 
 class AdvancedPluginManager(private val context: Context) {
 
     private val pluginDir: File = File(context.filesDir, "plugins")
     private val loadedPlugins: MutableMap<String, Any> = mutableMapOf()
+    private val pluginVersions: MutableMap<String, MutableList<PluginVersionInfo>> = mutableMapOf()
 
     init {
         if (!pluginDir.exists()) {
             pluginDir.mkdirs()
         }
+        // Load existing plugin versions on startup (simplified for this example)
+        loadPluginVersions()
     }
 
     fun installPlugin(pluginUri: Uri, expectedSignature: String? = null): Boolean {
         return try {
-            val pluginFile = File(pluginDir, pluginUri.lastPathSegment ?: "plugin.apk")
-            context.contentResolver.openInputStream(pluginUri)?.use {\n                FileOutputStream(pluginFile).use { outputStream ->
+            val pluginFileName = pluginUri.lastPathSegment ?: "plugin.apk"
+            val pluginFile = File(pluginDir, pluginFileName)
+
+            context.contentResolver.openInputStream(pluginUri)?.use {
+                FileOutputStream(pluginFile).use { outputStream ->
                     it.copyTo(outputStream)
                 }
             }
@@ -39,6 +52,15 @@ class AdvancedPluginManager(private val context: Context) {
                     return false
                 }
             }
+
+            // Assuming we can get the version from the plugin itself after loading or from metadata
+            // For simplicity, let's assume the version is part of the pluginFileName or a default
+            val pluginName = pluginFile.nameWithoutExtension
+            val pluginVersion = "1.0.0" // Placeholder: In a real app, parse from plugin metadata
+
+            val currentVersionInfo = PluginVersionInfo(pluginVersion, pluginFile.absolutePath)
+            pluginVersions.getOrPut(pluginName) { mutableListOf() }.add(currentVersionInfo)
+            savePluginVersions() // Save updated version history
 
             loadPlugin(pluginFile)
             true
@@ -54,6 +76,8 @@ class AdvancedPluginManager(private val context: Context) {
             if (pluginFile.exists()) {
                 pluginFile.delete()
                 loadedPlugins.remove(pluginName)
+                pluginVersions.remove(pluginName) // Clear version history on uninstall
+                savePluginVersions()
                 true
             } else {
                 false
@@ -90,6 +114,62 @@ class AdvancedPluginManager(private val context: Context) {
         return pluginDir.listFiles { file -> file.extension == "apk" }?.map { it.nameWithoutExtension } ?: emptyList()
     }
 
+    fun getPluginHistory(pluginName: String): List<PluginVersionInfo> {
+        return pluginVersions[pluginName]?.sortedByDescending { it.timestamp } ?: emptyList()
+    }
+
+    fun checkForUpdates() {
+        Log.d("PluginManager", "Checking for plugin updates...")
+        // This would typically involve querying a marketplace or update server
+        // For each installed plugin, compare its current version with the latest available version
+        // If a new version is found, download and install it, storing the new version info.
+        // Example: Iterate through installed plugins and call a marketplace API
+        getInstalledPlugins().forEach { pluginName ->
+            Log.d("PluginManager", "Checking for updates for $pluginName")
+            // Simulate finding an update
+            // if (pluginName == "SampleOcrPlugin" && currentVersion < "2.0.0") {
+            //    installPlugin(Uri.parse("https://example.com/SampleOcrPlugin_v2.0.0.apk"))
+            // }
+        }
+    }
+
+    fun rollbackPlugin(pluginName: String, targetVersion: String): Boolean {
+        val history = pluginVersions[pluginName]
+        if (history == null || history.isEmpty()) {
+            Log.e("PluginManager", "No version history found for $pluginName")
+            return false
+        }
+
+        val targetVersionInfo = history.find { it.version == targetVersion }
+        if (targetVersionInfo == null) {
+            Log.e("PluginManager", "Target version $targetVersion not found for $pluginName")
+            return false
+        }
+
+        return try {
+            // Uninstall current version
+            val currentPluginFile = File(pluginDir, "$pluginName.apk")
+            if (currentPluginFile.exists()) {
+                currentPluginFile.delete()
+                loadedPlugins.remove(pluginName)
+            }
+
+            // Copy the target version file to the active plugin directory
+            val sourceFile = File(targetVersionInfo.filePath)
+            val destinationFile = File(pluginDir, "$pluginName.apk")
+            sourceFile.copyTo(destinationFile, overwrite = true)
+
+            // Reload the plugin
+            loadPlugin(destinationFile)
+
+            Log.i("PluginManager", "Plugin $pluginName rolled back to version $targetVersion successfully.")
+            true
+        } catch (e: Exception) {
+            Log.e("PluginManager", "Error rolling back plugin $pluginName to version $targetVersion: ${e.message}", e)
+            false
+        }
+    }
+
     private fun getPluginSignature(pluginFile: File): String? {
         return try {
             val packageInfo = context.packageManager.getPackageArchiveInfo(
@@ -110,6 +190,21 @@ class AdvancedPluginManager(private val context: Context) {
             Log.e("PluginManager", "Error getting plugin signature: ${e.message}", e)
             null
         }
+    }
+
+    // Simplified persistence for plugin versions
+    private fun savePluginVersions() {
+        // In a real app, this would use SharedPreferences or a database
+        Log.d("PluginManager", "Saving plugin versions: $pluginVersions")
+    }
+
+    private fun loadPluginVersions() {
+        // In a real app, this would load from SharedPreferences or a database
+        Log.d("PluginManager", "Loading plugin versions.")
+        // Example: Simulate loading a previous state
+        // pluginVersions["SampleOcrPlugin"] = mutableListOf(
+        //    PluginVersionInfo("1.0.0", "/data/data/com.mrcomic/files/plugins/SampleOcrPlugin.apk", 1678886400000L)
+        // )
     }
 
     fun validatePlugin(pluginFile: File): Boolean {

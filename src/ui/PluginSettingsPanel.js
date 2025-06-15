@@ -9,6 +9,7 @@ class PluginSettingsPanel {
      * @param {Object} options.pluginManager - Менеджер плагинов
      * @param {HTMLElement} options.container - DOM-элемент для рендера панели
      * @param {Object} [options.logger] - Логгер
+     * @param {Object} options.pluginMarketplace - Менеджер маркетплейса плагинов
      */
     constructor(options) {
         this.pluginManager = options.pluginManager;
@@ -16,6 +17,8 @@ class PluginSettingsPanel {
         this.logger = options.logger || console;
         this.stateKey = \'activePlugins\';
         this.activePlugins = new Set();
+        this.pluginMarketplace = options.pluginMarketplace; // Добавляем маркетплейс
+        this.currentCategoryFilter = \'\';
     }
 
     /**
@@ -137,24 +140,23 @@ class PluginSettingsPanel {
         tabs.style.display = \'flex\';
         tabs.style.marginBottom = \'12px\';
         const tabPlugins = document.createElement(\'button\');
-        tabPlugins.textContent = \'Плагины\';
+        tabPlugins.textContent = \'Установленные плагины\';
         tabPlugins.className = this.activeTab === \'plugins\' ? \'active\' : \'\';
         tabPlugins.style.marginRight = \'8px\';
         tabPlugins.onclick = () => { this.activeTab = \'plugins\'; this.render(); };
+        const tabMarketplace = document.createElement(\'button\');
+        tabMarketplace.textContent = \'Каталог плагинов\';
+        tabMarketplace.className = this.activeTab === \'marketplace\' ? \'active\' : \'\';
+        tabMarketplace.style.marginRight = \'8px\';
+        tabMarketplace.onclick = () => { this.activeTab = \'marketplace\'; this.render(); };
         const tabUpdates = document.createElement(\'button\');
         tabUpdates.textContent = \'Обновления\';
         tabUpdates.className = this.activeTab === \'updates\' ? \'active\' : \'\';
         tabUpdates.onclick = () => { this.activeTab = \'updates\'; this.render(); };
         tabs.appendChild(tabPlugins);
+        tabs.appendChild(tabMarketplace);
         tabs.appendChild(tabUpdates);
         this.container.appendChild(tabs);
-
-        // Кнопка установки плагина
-        const installButton = document.createElement(\'button\');
-        installButton.textContent = \'Установить новый плагин\';
-        installButton.onclick = () => this.installPlugin();
-        installButton.style.marginLeft = \'10px\';
-        tabs.appendChild(installButton);
 
         // Контент
         const content = document.createElement(\'div\');
@@ -164,7 +166,9 @@ class PluginSettingsPanel {
         content.style.padding = \'16px\';
         content.style.background = \'#fafbfc\';
         if (this.activeTab === \'plugins\') {
-            this.renderPlugins(content);
+            this.renderInstalledPlugins(content);
+        } else if (this.activeTab === \'marketplace\') {
+            await this.renderMarketplace(content);
         } else {
             this.renderUpdates(content);
         }
@@ -181,14 +185,15 @@ class PluginSettingsPanel {
             .plugin-settings-tabs button.active { background: #fff; border-bottom: 2px solid #0078d7; color: #0078d7; font-weight: bold; }
             .plugin-settings-content { min-height: 200px; }
             .plugin-dependencies { font-size: 0.8em; color: #666; margin-top: 4px; }
+            .plugin-rating { color: gold; }
         `;
         this.container.appendChild(style);
     }
 
     /**
-     * Рендер вкладки \'Плагины\'
+     * Рендер вкладки \'Установленные плагины\'
      */
-    renderPlugins(panel) {
+    renderInstalledPlugins(panel) {
         const plugins = this.getAllPlugins().slice().sort((a, b) => (a.name || \'\').localeCompare(b.name || \'\'));
         // Фильтр/поиск
         const searchBox = document.createElement(\'input\');
@@ -199,10 +204,59 @@ class PluginSettingsPanel {
         let filter = \'\';
         searchBox.addEventListener(\'input\', () => {
             filter = searchBox.value.trim().toLowerCase();
-            this.renderFiltered(panel, plugins, filter);
+            this.renderFilteredPlugins(panel, plugins, filter);
         });
         // Первая отрисовка
-        this.renderFiltered(panel, plugins, filter);
+        this.renderFilteredPlugins(panel, plugins, filter);
+    }
+
+    /**
+     * Рендер вкладки \'Каталог плагинов\'
+     */
+    async renderMarketplace(panel) {
+        const marketplacePlugins = await this.pluginMarketplace.searchPlugins(\'\', this.currentCategoryFilter); // Получаем все плагины из маркетплейса
+        const categories = await this.pluginMarketplace.getPluginCategories();
+
+        // Панель управления (поиск, фильтр по категориям)
+        const controls = document.createElement(\'div\');
+        controls.style.marginBottom = \'10px\';
+        controls.style.display = \'flex\';
+        controls.style.gap = \'10px\';
+
+        const searchBox = document.createElement(\'input\');
+        searchBox.type = \'text\';
+        searchBox.placeholder = \'Поиск по каталогу...\';
+        searchBox.style.flex = \'1\';
+        controls.appendChild(searchBox);
+
+        const categorySelect = document.createElement(\'select\');
+        const allCategoriesOption = document.createElement(\'option\');
+        allCategoriesOption.value = \'\';
+        allCategoriesOption.textContent = \'Все категории\';
+        categorySelect.appendChild(allCategoriesOption);
+
+        categories.forEach(cat => {
+            const option = document.createElement(\'option\');
+            option.value = cat;
+            option.textContent = cat;
+            categorySelect.appendChild(option);
+        });
+        categorySelect.value = this.currentCategoryFilter;
+        categorySelect.addEventListener(\'change\', async (e) => {
+            this.currentCategoryFilter = e.target.value;
+            await this.renderMarketplace(panel); // Перерендерим маркетплейс с новым фильтром
+        });
+        controls.appendChild(categorySelect);
+        panel.appendChild(controls);
+
+        let filter = \'\';
+        searchBox.addEventListener(\'input\', async () => {
+            filter = searchBox.value.trim().toLowerCase();
+            const filteredMarketplacePlugins = await this.pluginMarketplace.searchPlugins(filter, this.currentCategoryFilter);
+            this.renderFilteredMarketplacePlugins(panel, filteredMarketplacePlugins);
+        });
+
+        this.renderFilteredMarketplacePlugins(panel, marketplacePlugins);
     }
 
     /**
@@ -228,9 +282,9 @@ class PluginSettingsPanel {
     }
 
     /**
-     * Рендер с учётом фильтра
+     * Рендер установленных плагинов с учётом фильтра
      */
-    renderFiltered(panel, plugins, filter) {
+    renderFilteredPlugins(panel, plugins, filter) {
         // Удаляем старые строки (кроме поиска)
         while (panel.children.length > 1) panel.removeChild(panel.lastChild);
         const filtered = !filter ? plugins : plugins.filter(plugin =>
@@ -321,6 +375,55 @@ class PluginSettingsPanel {
     }
 
     /**
+     * Рендер плагинов маркетплейса с учётом фильтра
+     */
+    renderFilteredMarketplacePlugins(panel, plugins) {
+        // Удаляем старые строки (кроме поиска и фильтра)
+        while (panel.children.length > 1) panel.removeChild(panel.lastChild);
+
+        if (plugins.length === 0) {
+            const empty = document.createElement(\'div\');
+            empty.textContent = \'Нет подходящих плагинов в каталоге.\';
+            panel.appendChild(empty);
+        } else {
+            plugins.forEach(plugin => {
+                const row = document.createElement(\'div\');
+                row.className = \'plugin-row\';
+                const info = document.createElement(\'div\');
+                info.className = \'plugin-info\';
+                info.innerHTML = `<b>${plugin.name}</b> <span style=\"color: #888;\">v${plugin.version || \'\'}</span><br><small>${plugin.description || \'\'} </small>`;
+                
+                // Рейтинг
+                if (plugin.rating) {
+                    const ratingDiv = document.createElement(\'div\');
+                    ratingDiv.className = \'plugin-rating\';
+                    ratingDiv.textContent = `Рейтинг: ${plugin.rating.toFixed(1)}/5`;
+                    info.appendChild(ratingDiv);
+                }
+
+                // Категории
+                if (plugin.categories && plugin.categories.length > 0) {
+                    const categoriesDiv = document.createElement(\'div\');
+                    categoriesDiv.className = \'plugin-categories\';
+                    categoriesDiv.textContent = `Категории: ${plugin.categories.join(\", \")}`;
+                    info.appendChild(categoriesDiv);
+                }
+
+                info.innerHTML += `<br><small>Разработчик: ${plugin.developerId || \'-\'}</small>`;
+                row.appendChild(info);
+
+                // Кнопка "Установить"
+                const installBtn = document.createElement(\'button\');
+                installBtn.textContent = \'Установить\';
+                installBtn.onclick = () => this.pluginMarketplace.downloadPlugin(plugin); // Используем downloadPlugin из маркетплейса
+                row.appendChild(installBtn);
+
+                panel.appendChild(row);
+            });
+        }
+    }
+
+    /**
      * Открыть настройки плагина (заглушка)
      */
     openPluginSettings(pluginId) {
@@ -335,5 +438,6 @@ class PluginSettingsPanel {
     }
 }
 
-module.exports = PluginSettingsPanel; 
+module.exports = PluginSettingsPanel;
+
 
