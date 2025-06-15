@@ -273,19 +273,19 @@ class RevolutionaryOCRSystem:
     def extract_text_trocr(self, image: np.ndarray, api_key: str) -> List[TextRegion]:
         """Extract text using TrOCR via Hugging Face API"""
         # Convert image to base64
-        _, buffer = cv2.imencode(\".jpg\", image)
-        image_base64 = base64.b64encode(buffer).decode(\'utf-8\')
+        _, buffer = cv2.imencode(".jpg", image)
+        image_base64 = base64.b64encode(buffer).decode("utf-8")
         
         # TrOCR API call
-        headers = {\"Authorization\": f\"Bearer {api_key}\"}
+        headers = {"Authorization": f"Bearer {api_key}"}
         
-        # Use Microsoft\'s TrOCR model
-        url = \"https://api-inference.huggingface.co/models/microsoft/trocr-base-printed\"
+        # Use Microsoft's TrOCR model
+        url = "https://api-inference.huggingface.co/models/microsoft/trocr-base-printed"
         
         response = requests.post(
             url,
             headers=headers,
-            json={\"inputs\": image_base64}
+            json={"inputs": image_base64}
         )
         
         text_regions = []
@@ -293,10 +293,10 @@ class RevolutionaryOCRSystem:
         if response.status_code == 200:
             result = response.json()
             if isinstance(result, list) and result:
-                text = result[0].get(\'generated_text\', \'\')
+                text = result[0].get("generated_text", "")
                 
                 if text.strip():
-                    # Since TrOCR doesn\'t provide coordinates, use full image
+                    # Since TrOCR doesn't provide coordinates, use full image
                     h, w = image.shape[:2]
                     text_regions.append(TextRegion(
                         x=0, y=0, width=w, height=h,
@@ -306,6 +306,20 @@ class RevolutionaryOCRSystem:
         
         return text_regions
     
+    def remove_text_inpainting(self, image: np.ndarray, text_regions: List[TextRegion]) -> np.ndarray:
+        """Removes text from an image using inpainting based on detected text regions."""
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        for region in text_regions:
+            x, y, w, h = region.x, region.y, region.width, region.height
+            # Expand the mask slightly to cover text fully
+            mask[max(0, y-5):min(image.shape[0], y+h+5), max(0, x-5):min(image.shape[1], x+w+5)] = 255
+        
+        # Apply inpainting
+        # TELEA algorithm is generally better for larger areas
+        # NS (Navier-Stokes) algorithm is good for smaller, more detailed areas
+        inpainted_image = cv2.inpaint(image, mask, 3, cv2.INPAINT_TELEA)
+        return inpainted_image
+
     def extract_text(self, image: np.ndarray, api_key: Optional[str] = None) -> List[TextRegion]:
         """Extract text using configured OCR engine"""
         if self.config.engine == OCREngine.TESSERACT:
@@ -377,4 +391,6 @@ class RevolutionaryOCRSystem:
         ]
         
         return info
+
+
 

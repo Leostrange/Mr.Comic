@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
+import json
 
 @dataclass
 class ValidationResult:
@@ -39,6 +40,30 @@ class QualityValidationSystem:
             return ValidationResult("Image Quality", "PASS", "Image quality is acceptable.")
         except Exception as e:
             return ValidationResult("Image Quality", "FAIL", f"Error processing image: {e}")
+
+    def calculate_bleu_score(self, reference_text: str, hypothesis_text: str) -> float:
+        """Calculates the BLEU score between a reference and hypothesis text.
+        This is a simplified implementation for demonstration purposes.
+        A full BLEU implementation would require more sophisticated tokenization and n-gram matching.
+        """
+        if not reference_text or not hypothesis_text:
+            return 0.0
+
+        ref_tokens = reference_text.lower().split()
+        hyp_tokens = hypothesis_text.lower().split()
+
+        # Simple precision calculation (unigram)
+        match_count = 0
+        for token in hyp_tokens:
+            if token in ref_tokens:
+                match_count += 1
+                ref_tokens.remove(token) # Remove to avoid double counting
+        
+        precision = match_count / len(hyp_tokens) if len(hyp_tokens) > 0 else 0
+        
+        # For a true BLEU score, you'd also need brevity penalty and n-grams (up to 4 or more)
+        # This is a very basic approximation.
+        return precision
 
     def validate_translation_accuracy(self, original_text: str, translated_text: str, source_lang: str, target_lang: str) -> ValidationResult:
         """Compares original and translated text for accuracy (placeholder for actual NLP)."""
@@ -86,18 +111,40 @@ class QualityValidationSystem:
     def run_all_validations(self, data: Dict) -> List[ValidationResult]:
         """Runs all available validation checks on provided data."""
         results = []
+        metrics = {}
 
         if "image_path" in data:
             results.append(self.validate_image_quality(data["image_path"]))
+        
         if "original_text" in data and "translated_text" in data:
             results.append(self.validate_translation_accuracy(
                 data["original_text"], data["translated_text"], data.get("source_lang", "en"), data.get("target_lang", "en")
             ))
-        if "image_path" in data and "ocr_text" in data:
-            results.append(self.validate_ocr_accuracy(data["image_path"], data["ocr_text"]))
+            # Day 35: BLEU score calculation
+            bleu_score = self.calculate_bleu_score(data["original_text"], data["translated_text"])
+            metrics["bleu_score"] = bleu_score
+            results.append(ValidationResult("BLEU Score", "INFO", f"Calculated BLEU score: {bleu_score:.4f}", {"score": bleu_score}))
+
+        if "ocr_text" in data:
+            # Assuming OCR confidence is passed in data for logging
+            if "ocr_confidence" in data:
+                metrics["ocr_confidence"] = data["ocr_confidence"]
+                results.append(ValidationResult("OCR Confidence", "INFO", f"OCR Confidence: {data["ocr_confidence"]:.2f}", {"confidence": data["ocr_confidence"]}))
+            results.append(self.validate_ocr_accuracy(data.get("image_path", ""), data["ocr_text"]))
+
         if "panel_order" in data:
             results.append(self.validate_comic_panel_flow(data["panel_order"]))
 
+        # Day 35: Log metrics to JSON file
+        if metrics:
+            try:
+                with open("metrics_log.json", "a") as f:
+                    json.dump(metrics, f)
+                    f.write("\n")
+            except Exception as e:
+                results.append(ValidationResult("Metrics Logging", "FAIL", f"Error logging metrics to JSON: {e}"))
+
         return results
+
 
 
