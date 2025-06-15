@@ -1,43 +1,41 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+# Gradle
+.gradle/
+/build/
 
-# Test data
-test_data/
-
-# Models (too large for git)
-local-translation-models/
-
-# Virtual environments
-venv/
-env/
-ENV/
-
-# IDE
-.vscode/
+# Local configuration
+local.properties
 .idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
-Thumbs.db
+
+# Android-specific
+*.apk
+*.aar
+*.ap_ 
+*.dex
+*.class
+*.jar
+
+# Keystore files
+*.jks
+*.keystore
+
+# Crashlytics/Fabric
+fabric/
+
+# External native build files
+.externalNativeBuild/
+
+# Kotlin
+.kotlin/
+
+# Room
+*.db
+*.db-wal
+*.db-shm
+
+# Other
+*.iml
+*.bak
+*.swp
+*~
 
