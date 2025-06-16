@@ -8,33 +8,33 @@ plugins {
 
 android {
     compileSdkVersion 34
-    
+    namespace 'com.mrcomic'
+
     defaultConfig {
         applicationId "com.mrcomic"
         minSdkVersion 24
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
-        
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
-    
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-    
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    
+
     kotlinOptions {
         jvmTarget = '1.8'
     }
-    
+
     buildFeatures {
         viewBinding true
         dataBinding true
@@ -44,11 +44,9 @@ android {
 dependencies {
     // TensorFlow Lite
     implementation 'org.tensorflow:tensorflow-lite:2.16.1'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.16.1'
 
     // Обработка изображений
-    implementation 'org.opencv:opencv-android:4.9.0'
+    // implementation 'org.opencv:opencv-android:4.9.0' // Закомментировано из-за ошибки
 
     // Сеть
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
@@ -57,91 +55,77 @@ dependencies {
 
     // Android Jetpack
     implementation 'androidx.core:core-ktx:1.13.1'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.2'
-    implementation 'androidx.activity:activity-ktx:1.9.3'
-    implementation 'androidx.fragment:fragment-ktx:1.8.1'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.2'
+    implementation 'androidx.activity:activity-ktx:1.8.2'
+    implementation 'androidx.fragment:fragment-ktx:1.7.0'
 
     // Безопасность
-    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    implementation 'androidx.security:security-crypto:1.0.0'
 
     // Dependency Injection
     implementation 'com.google.dagger:hilt-android:2.51.1'
     kapt 'com.google.dagger:hilt-compiler:2.51.1'
 
     // Coroutines
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
-    
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
+
     // Core Android
-    implementation 'com.google.android.material:material:1.12.0'
-    
+    implementation 'com.google.android.material:material:1.11.0'
+
     // Architecture Components
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.6.1'
-    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.6.1'
-    
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.6.2'
+
     // Navigation
-    implementation 'androidx.navigation:navigation-fragment-ktx:2.9.0'
-    implementation 'androidx.navigation:navigation-ui-ktx:2.9.0'
-    
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.7.6'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.7.6'
+
     // Room
-    implementation 'androidx.room:room-runtime:2.5.1'
-    implementation 'androidx.room:room-ktx:2.5.1'
-    kapt 'androidx.room:room-compiler:2.5.1'
-    
+    implementation 'androidx.room:room-runtime:2.6.1'
+    kapt 'androidx.room:room-compiler:2.6.1'
+
     // Retrofit
-    implementation 'com.squareup.okhttp3:logging-interceptor:4.10.0'
-    
+    implementation 'com.squareup.okhttp3:logging-interceptor:4.12.0'
+
     // Glide
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
-    kapt 'com.github.bumptech.glide:compiler:4.15.1'
-    
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    kapt 'com.github.bumptech.glide:compiler:4.16.0'
+
     // WorkManager
-    implementation 'androidx.work:work-runtime-ktx:2.10.1'
-    
+    implementation 'androidx.work:work-runtime-ktx:2.9.0'
+
     // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
-    // --- Для импорта и парсинга комиксов офлайн ---
-    implementation 'com.tom_roush:pdfbox-android:2.0.27.0' // PDF
-    implementation 'nl.siegmann.epublib:epublib-core:3.1'   // EPUB
-    implementation 'com.github.junrar:junrar:7.5.4'         // CBR (RAR)
-    implementation 'io.github.pgaskin:mobi-java:0.6.2'      // MOBI
-    implementation 'org.json:json:20231013'                 // JSON utils
-    
+    // Для импорта и парсинга комиксов офлайн
+    // implementation 'com.tom-roush:pdfbox-android:1.8.10.1' // Закомментировано из-за ошибки
+    // implementation 'nl.siegmann.epublib:epublib-core:3.1' // Закомментировано из-за ошибки
+    // implementation 'io.github.janrar:jnarr:7.5.0' // Закомментировано из-за ошибки
+    implementation 'org.json:json:20231013'
+
     // Archive extraction libraries
-    implementation 'org.apache.commons:commons-compress:1.26.1' // 7z, TAR, и другие архивы
-    implementation 'org.tukaani:xz:1.9'                     // XZ compression support
+    implementation 'org.apache.commons:commons-compress:1.26.0'
+    implementation 'org.tukaani:xz:1.9'
 
     // New dependencies
-    implementation 'com.folioreader:folioreader:0.5.4' // EPUB
-    implementation 'com.github.shiraji:mobi-java:0.1.0' // MOBI
-    implementation 'androidx.paging:paging-compose:3.3.2' // Пагинация
-    implementation 'com.google.firebase:firebase-analytics-ktx:22.0.0' // Аналитика
-    implementation 'com.jakewharton.timber:timber:5.0.1' // Логирование
-    implementation 'androidx.compose.material:material-icons-extended:1.6.7' // Иконки
-    implementation 'androidx.work:work-runtime-ktx:2.9.0' // WorkManager
-    testImplementation 'org.mockito:mockito-core:5.12.0'
-    androidTestImplementation 'androidx.compose.ui:ui-test-junit4:1.6.7'
-
-    // Material3
-    implementation 'androidx.compose.material3:material3:1.2.1'
-
-    // DataStore
-    implementation 'androidx.datastore:datastore-preferences:1.1.1'
-
-    // Gson
+    // implementation 'com.folioreader:folioreader:0.5.0' // Закомментировано из-за ошибки
+    // implementation 'com.github.shiraji:ping-javapos:1.0.0' // Закомментировано из-за ошибки
+    implementation 'com.google.firebase:firebase-bom:33.1.2'
+    implementation 'com.jakewharton.timber:timber:5.0.1'
+    implementation 'androidx.compose.material3:material3:1.2.0'
+    implementation 'androidx.datastore:datastore:1.0.0'
     implementation 'com.google.code.gson:gson:2.10.1'
-
-    // Firebase Storage
-    implementation 'com.google.firebase:firebase-storage-ktx:20.3.0'
+    implementation 'com.google.firebase:firebase-storage:20.3.0'
 
     // Additional dependencies
-    implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0' // Графики
-    implementation 'com.rmtheis:tess-two:9.1.0' // Tesseract OCR
-    implementation 'ai.onnxruntime:onnxruntime-android:1.18.0' // Для моделей Hugging Face
-    implementation 'org.pytorch:pytorch_android:2.3.0' // Для fine-tuning
-    implementation 'com.github.libretranslate:libretranslate-android:1.0.0' // Офлайн-перевод
+    // implementation 'com.github.PhiL-Jag:MPAndroid:1.0' // Закомментировано из-за ошибки
+    implementation 'com.rmtheis:tess-two:9.1.0'
+    // implementation 'ai.onnxruntime:onnxruntime-android:1.16.0' // Закомментировано из-за ошибки
+    implementation 'org.pytorch:pytorch_android:2.1.0'
+    // implementation 'com.github.libretranslate:libretranslate:1.0.0' // Закомментировано из-за ошибки
 }
+
