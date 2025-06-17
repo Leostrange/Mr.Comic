@@ -26,7 +26,7 @@ class AdvancedPluginManager(private val context: Context) {
     fun installPlugin(pluginUri: Uri, expectedSignature: String? = null): Boolean {
         return try {
             val pluginFile = File(pluginDir, pluginUri.lastPathSegment ?: "plugin.apk")
-            context.contentResolver.openInputStream(pluginUri)?.use {\n                FileOutputStream(pluginFile).use { outputStream ->
+            context.contentResolver.openInputStream(pluginUri)?.use {                FileOutputStream(pluginFile).use { outputStream ->
                     it.copyTo(outputStream)
                 }
             }

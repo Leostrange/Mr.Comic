@@ -163,7 +163,7 @@ class TranslationManager @Inject constructor(
 
     private fun loadGlossary() {
         try {
-            context.assets.open("dictionaries/glossary.json").use {\n                val reader = InputStreamReader(it)
+            context.assets.open("dictionaries/glossary.json").use {                val reader = InputStreamReader(it)
                 glossary = gson.fromJson(reader, Glossary::class.java)
             }
         } catch (e: Exception) {

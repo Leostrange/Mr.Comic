@@ -470,7 +470,7 @@ object SettingsManager {
     /**
      * Сохранение настроек
      */
-    suspend fun saveSettings(context: Context, settings: ComprehensiveSettings) {
+    suspend fun saveSettings(context: Context, settings: ComprehensiveSettings)s) {
         val updatedSettings = settings.copy(
             metadata = settings.metadata.copy(
                 lastModified = System.currentTimeMillis(),
