@@ -5,112 +5,6 @@ import java.util.List;
 import java.util.ArrayList;
 
 /**
- * Модель коллаборативной сессии
- */
-public class CollaborationSession {
-    private String id;
-    private String comicId;
-    private String name;
-    private String description;
-    private String ownerId;
-    private CollaborationPermissions permissions;
-    private List<SessionParticipant> participants;
-    private CollaborationStatus status;
-    private Date createdAt;
-    private Date updatedAt;
-    private Date expiresAt;
-    
-    public CollaborationSession() {
-        this.participants = new ArrayList<>();
-        this.status = CollaborationStatus.ACTIVE;
-        this.createdAt = new Date();
-        this.updatedAt = new Date();
-    }
-    
-    // Геттеры и сеттеры
-    
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    
-    public String getComicId() { return comicId; }
-    public void setComicId(String comicId) { this.comicId = comicId; }
-    
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    
-    public String getOwnerId() { return ownerId; }
-    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
-    
-    public CollaborationPermissions getPermissions() { return permissions; }
-    public void setPermissions(CollaborationPermissions permissions) { this.permissions = permissions; }
-    
-    public List<SessionParticipant> getParticipants() { return participants; }
-    public void setParticipants(List<SessionParticipant> participants) { this.participants = participants; }
-    
-    public CollaborationStatus getStatus() { return status; }
-    public void setStatus(CollaborationStatus status) { this.status = status; }
-    
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
-    
-    public Date getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
-    
-    public Date getExpiresAt() { return expiresAt; }
-    public void setExpiresAt(Date expiresAt) { this.expiresAt = expiresAt; }
-    
-    // Вспомогательные методы
-    
-    public void addParticipant(SessionParticipant participant) {
-        if (participants == null) {
-            participants = new ArrayList<>();
-        }
-        participants.add(participant);
-        this.updatedAt = new Date();
-    }
-    
-    public void removeParticipant(String userId) {
-        if (participants != null) {
-            participants.removeIf(p -> p.getUserId().equals(userId));
-            this.updatedAt = new Date();
-        }
-    }
-    
-    public SessionParticipant getParticipant(String userId) {
-        if (participants != null) {
-            return participants.stream()
-                .filter(p -> p.getUserId().equals(userId))
-                .findFirst()
-                .orElse(null);
-        }
-        return null;
-    }
-    
-    public boolean isParticipant(String userId) {
-        return getParticipant(userId) != null;
-    }
-    
-    public boolean isOwner(String userId) {
-        return ownerId != null && ownerId.equals(userId);
-    }
-    
-    public int getParticipantCount() {
-        return participants != null ? participants.size() : 0;
-    }
-    
-    public boolean isExpired() {
-        return expiresAt != null && expiresAt.before(new Date());
-    }
-    
-    public boolean isActive() {
-        return status == CollaborationStatus.ACTIVE && !isExpired();
-    }
-}
-
-/**
  * Участник коллаборативной сессии
  */
 class SessionParticipant {
@@ -455,20 +349,17 @@ class RealtimeChange {
 class AnnotationComment {
     private String id;
     private long annotationId;
-    private String authorId;
-    private String authorName;
-    private String authorAvatar;
-    private String content;
+    private String userId;
+    private String userName;
+    private String text;
     private Date createdAt;
     private Date updatedAt;
-    private String sessionId;
-    private List<String> mentions;
-    private boolean isResolved;
+    private CommentStatus status;
     
     public AnnotationComment() {
         this.createdAt = new Date();
-        this.mentions = new ArrayList<>();
-        this.isResolved = false;
+        this.updatedAt = new Date();
+        this.status = CommentStatus.ACTIVE;
     }
     
     // Геттеры и сеттеры
@@ -479,17 +370,14 @@ class AnnotationComment {
     public long getAnnotationId() { return annotationId; }
     public void setAnnotationId(long annotationId) { this.annotationId = annotationId; }
     
-    public String getAuthorId() { return authorId; }
-    public void setAuthorId(String authorId) { this.authorId = authorId; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
     
-    public String getAuthorName() { return authorName; }
-    public void setAuthorName(String authorName) { this.authorName = authorName; }
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
     
-    public String getAuthorAvatar() { return authorAvatar; }
-    public void setAuthorAvatar(String authorAvatar) { this.authorAvatar = authorAvatar; }
-    
-    public String getContent() { return content; }
-    public void setContent(String content) { this.content = content; }
+    public String getText() { return text; }
+    public void setText(String text) { this.text = text; }
     
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
@@ -497,254 +385,65 @@ class AnnotationComment {
     public Date getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
     
-    public String getSessionId() { return sessionId; }
-    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
-    
-    public List<String> getMentions() { return mentions; }
-    public void setMentions(List<String> mentions) { this.mentions = mentions; }
-    
-    public boolean isResolved() { return isResolved; }
-    public void setResolved(boolean resolved) { isResolved = resolved; }
+    public CommentStatus getStatus() { return status; }
+    public void setStatus(CommentStatus status) { this.status = status; }
     
     // Вспомогательные методы
     
-    public boolean isEdited() {
-        return updatedAt != null && !updatedAt.equals(createdAt);
-    }
-    
-    public void addMention(String userId) {
-        if (mentions == null) {
-            mentions = new ArrayList<>();
-        }
-        if (!mentions.contains(userId)) {
-            mentions.add(userId);
-        }
+    public boolean isActive() {
+        return status == CommentStatus.ACTIVE;
     }
 }
 
 /**
- * Общий проект
+ * Статус коллаборативной сессии
  */
-class SharedProject {
-    private String id;
-    private String name;
-    private String description;
-    private String ownerId;
-    private List<String> comicIds;
-    private List<SessionParticipant> members;
-    private CollaborationPermissions defaultPermissions;
-    private ProjectStatus status;
-    private Date createdAt;
-    private Date updatedAt;
-    
-    public SharedProject() {
-        this.comicIds = new ArrayList<>();
-        this.members = new ArrayList<>();
-        this.createdAt = new Date();
-        this.updatedAt = new Date();
-        this.status = ProjectStatus.ACTIVE;
-    }
-    
-    // Геттеры и сеттеры
-    
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
-    
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-    
-    public String getOwnerId() { return ownerId; }
-    public void setOwnerId(String ownerId) { this.ownerId = ownerId; }
-    
-    public List<String> getComicIds() { return comicIds; }
-    public void setComicIds(List<String> comicIds) { this.comicIds = comicIds; }
-    
-    public List<SessionParticipant> getMembers() { return members; }
-    public void setMembers(List<SessionParticipant> members) { this.members = members; }
-    
-    public CollaborationPermissions getDefaultPermissions() { return defaultPermissions; }
-    public void setDefaultPermissions(CollaborationPermissions defaultPermissions) { this.defaultPermissions = defaultPermissions; }
-    
-    public ProjectStatus getStatus() { return status; }
-    public void setStatus(ProjectStatus status) { this.status = status; }
-    
-    public Date getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
-    
-    public Date getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Date updatedAt) { this.updatedAt = updatedAt; }
-    
-    // Вспомогательные методы
-    
-    public void addComic(String comicId) {
-        if (comicIds == null) {
-            comicIds = new ArrayList<>();
-        }
-        if (!comicIds.contains(comicId)) {
-            comicIds.add(comicId);
-            this.updatedAt = new Date();
-        }
-    }
-    
-    public void removeComic(String comicId) {
-        if (comicIds != null) {
-            comicIds.remove(comicId);
-            this.updatedAt = new Date();
-        }
-    }
-    
-    public void addMember(SessionParticipant member) {
-        if (members == null) {
-            members = new ArrayList<>();
-        }
-        members.add(member);
-        this.updatedAt = new Date();
-    }
-    
-    public void removeMember(String userId) {
-        if (members != null) {
-            members.removeIf(m -> m.getUserId().equals(userId));
-            this.updatedAt = new Date();
-        }
-    }
-    
-    public boolean isMember(String userId) {
-        return members != null && members.stream().anyMatch(m -> m.getUserId().equals(userId));
-    }
-    
-    public boolean isOwner(String userId) {
-        return ownerId != null && ownerId.equals(userId);
-    }
-    
-    public int getMemberCount() {
-        return members != null ? members.size() : 0;
-    }
-    
-    public int getComicCount() {
-        return comicIds != null ? comicIds.size() : 0;
-    }
-}
-
-/**
- * Результат синхронизации
- */
-class SyncResult {
-    private boolean success;
-    private int localChangesCount;
-    private int remoteChangesCount;
-    private int conflictsCount;
-    private String errorMessage;
-    private Date syncedAt;
-    
-    public SyncResult() {
-        this.syncedAt = new Date();
-    }
-    
-    // Геттеры и сеттеры
-    
-    public boolean isSuccess() { return success; }
-    public void setSuccess(boolean success) { this.success = success; }
-    
-    public int getLocalChangesCount() { return localChangesCount; }
-    public void setLocalChangesCount(int localChangesCount) { this.localChangesCount = localChangesCount; }
-    
-    public int getRemoteChangesCount() { return remoteChangesCount; }
-    public void setRemoteChangesCount(int remoteChangesCount) { this.remoteChangesCount = remoteChangesCount; }
-    
-    public int getConflictsCount() { return conflictsCount; }
-    public void setConflictsCount(int conflictsCount) { this.conflictsCount = conflictsCount; }
-    
-    public String getErrorMessage() { return errorMessage; }
-    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
-    
-    public Date getSyncedAt() { return syncedAt; }
-    public void setSyncedAt(Date syncedAt) { this.syncedAt = syncedAt; }
-}
-
-/**
- * Разрешение конфликтов
- */
-class ConflictResolution {
-    private List<com.example.mrcomic.annotations.model.Annotation> changesToApply;
-    private List<AnnotationConflict> conflicts;
-    
-    public ConflictResolution() {
-        this.changesToApply = new ArrayList<>();
-        this.conflicts = new ArrayList<>();
-    }
-    
-    public List<com.example.mrcomic.annotations.model.Annotation> getChangesToApply() { return changesToApply; }
-    public void setChangesToApply(List<com.example.mrcomic.annotations.model.Annotation> changesToApply) { this.changesToApply = changesToApply; }
-    
-    public List<AnnotationConflict> getConflicts() { return conflicts; }
-    public void setConflicts(List<AnnotationConflict> conflicts) { this.conflicts = conflicts; }
-}
-
-/**
- * Конфликт аннотации
- */
-class AnnotationConflict {
-    private long annotationId;
-    private com.example.mrcomic.annotations.model.Annotation localVersion;
-    private com.example.mrcomic.annotations.model.Annotation remoteVersion;
-    private ConflictType type;
-    private String description;
-    
-    // Геттеры и сеттеры
-    
-    public long getAnnotationId() { return annotationId; }
-    public void setAnnotationId(long annotationId) { this.annotationId = annotationId; }
-    
-    public com.example.mrcomic.annotations.model.Annotation getLocalVersion() { return localVersion; }
-    public void setLocalVersion(com.example.mrcomic.annotations.model.Annotation localVersion) { this.localVersion = localVersion; }
-    
-    public com.example.mrcomic.annotations.model.Annotation getRemoteVersion() { return remoteVersion; }
-    public void setRemoteVersion(com.example.mrcomic.annotations.model.Annotation remoteVersion) { this.remoteVersion = remoteVersion; }
-    
-    public ConflictType getType() { return type; }
-    public void setType(ConflictType type) { this.type = type; }
-    
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-}
-
-// Перечисления
-
 enum CollaborationStatus {
-    ACTIVE, PAUSED, ENDED, EXPIRED
+    ACTIVE, PAUSED, COMPLETED, CANCELLED
 }
 
+/**
+ * Роль участника коллаборации
+ */
 enum CollaborationRole {
-    OWNER, EDITOR, CONTRIBUTOR, VIEWER
+    OWNER, EDITOR, VIEWER, CONTRIBUTOR
 }
 
+/**
+ * Статус участника сессии
+ */
 enum ParticipantStatus {
-    ACTIVE, INACTIVE, BANNED, LEFT
+    ACTIVE, INACTIVE, KICKED, BANNED
 }
 
+/**
+ * Статус приглашения
+ */
 enum InviteStatus {
-    PENDING, ACCEPTED, DECLINED, EXPIRED, CANCELLED
+    PENDING, ACCEPTED, DECLINED, EXPIRED
 }
 
-enum UserPresenceStatus {
-    ONLINE, AWAY, BUSY, OFFLINE
-}
-
+/**
+ * Тип изменения в реальном времени
+ */
 enum RealtimeChangeType {
-    ANNOTATION_CREATED, ANNOTATION_UPDATED, ANNOTATION_DELETED,
-    COMMENT_ADDED, COMMENT_UPDATED, COMMENT_DELETED,
-    USER_JOINED, USER_LEFT, USER_TYPING,
-    SESSION_STARTED, SESSION_ENDED
+    ANNOTATION_ADD, ANNOTATION_UPDATE, ANNOTATION_DELETE,
+    COMMENT_ADD, COMMENT_UPDATE, COMMENT_DELETE,
+    USER_JOINED, USER_LEFT, USER_ACTIVITY
 }
 
-enum ProjectStatus {
-    ACTIVE, ARCHIVED, DELETED
+/**
+ * Статус присутствия пользователя
+ */
+enum UserPresenceStatus {
+    ONLINE, OFFLINE, AWAY, BUSY
 }
 
-enum ConflictType {
-    CONTENT_CONFLICT, DELETE_CONFLICT, MOVE_CONFLICT, PERMISSION_CONFLICT
+/**
+ * Статус комментария
+ */
+enum CommentStatus {
+    ACTIVE, DELETED, SPAM
 }
+
 
