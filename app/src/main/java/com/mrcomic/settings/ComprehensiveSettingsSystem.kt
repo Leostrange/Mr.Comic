@@ -1,4 +1,4 @@
-package com.example.mrcomic.settings
+package com.mrcomic.settings
 
 import android.content.Context
 import androidx.compose.runtime.*
