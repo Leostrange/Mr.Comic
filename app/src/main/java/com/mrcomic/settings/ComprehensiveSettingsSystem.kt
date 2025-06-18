@@ -1,16 +1,12 @@
 package com.mrcomic.settings
 
 import android.content.Context
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.decodeFromString
 
 /**
  * Комплексная система настроек и предпочтений для Mr.Comic
@@ -470,239 +466,148 @@ object SettingsManager {
     /**
      * Сохранение настроек
      */
-    suspend fun saveSettings(context: Context, settings: ComprehensiveSettings)s) {
-        val updatedSettings = settings.copy(
-            metadata = settings.metadata.copy(
-                lastModified = System.currentTimeMillis(),
-                modificationCount = settings.metadata.modificationCount + 1
-            )
-        )
-        
-        context.settingsDataStore.edit { preferences ->
-            preferences[SETTINGS_KEY] = json.encodeToString(updatedSettings)
+    suspend fun saveSettings(context: Context, settings: ComprehensiveSettings) {
+        context.settingsDataStore.edit {
+            it[SETTINGS_KEY] = json.encodeToString(settings)
         }
-        
-        // Сохраняем в историю
-        saveToHistory(context, updatedSettings)
     }
     
     /**
      * Получение настроек по умолчанию
      */
-    private fun getDefaultSettings(): ComprehensiveSettings {
+    fun getDefaultSettings(): ComprehensiveSettings {
         return ComprehensiveSettings()
     }
     
     /**
-     * Сохранение в историю
+     * Резервное копирование настроек
      */
-    private suspend fun saveToHistory(context: Context, settings: ComprehensiveSettings) {
-        context.settingsDataStore.edit { preferences ->
-            val historyJson = preferences[SETTINGS_HISTORY_KEY] ?: "[]"
-            val history = try {
-                json.decodeFromString<List<ComprehensiveSettings>>(historyJson).toMutableList()
-            } catch (e: Exception) {
-                mutableListOf<ComprehensiveSettings>()
+    suspend fun backupSettings(context: Context) {
+        context.settingsDataStore.data.firstOrNull()?.let {
+            val currentSettingsJson = it[SETTINGS_KEY]
+            if (currentSettingsJson != null) {
+                context.settingsDataStore.edit {\n                    it[SETTINGS_BACKUP_KEY] = currentSettingsJson
+                }
             }
-            
-            history.add(0, settings)
-            if (history.size > 10) {
-                history.removeAt(history.size - 1)
-            }
-            
-            preferences[SETTINGS_HISTORY_KEY] = json.encodeToString(history)
         }
-    }
-    
-    /**
-     * Создание резервной копии настроек
-     */
-    suspend fun backupSettings(context: Context): String {
-        val settings = getSettings(context).first()
-        val backupData = json.encodeToString(settings)
-        
-        context.settingsDataStore.edit { preferences ->
-            preferences[SETTINGS_BACKUP_KEY] = backupData
-        }
-        
-        return backupData
     }
     
     /**
      * Восстановление настроек из резервной копии
      */
-    suspend fun restoreSettings(context: Context, backupData: String): Boolean {
-        return try {
-            val settings = json.decodeFromString<ComprehensiveSettings>(backupData)
-            saveSettings(context, settings)
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    /**
-     * Сброс настроек к значениям по умолчанию
-     */
-    suspend fun resetSettings(context: Context) {
-        val defaultSettings = getDefaultSettings()
-        saveSettings(context, defaultSettings)
-    }
-    
-    /**
-     * Экспорт настроек
-     */
-    suspend fun exportSettings(context: Context): String {
-        val settings = getSettings(context).first()
-        return json.encodeToString(settings)
-    }
-    
-    /**
-     * Импорт настроек
-     */
-    suspend fun importSettings(context: Context, settingsJson: String): Boolean {
-        return try {
-            val settings = json.decodeFromString<ComprehensiveSettings>(settingsJson)
-            saveSettings(context, settings)
-            true
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    /**
-     * Валидация настроек
-     */
-    fun validateSettings(settings: ComprehensiveSettings): List<String> {
-        val errors = mutableListOf<String>()
-        
-        // Проверка диапазонов значений
-        if (settings.interface.fontScale < 0.5f || settings.interface.fontScale > 3.0f) {
-            errors.add("Font scale must be between 0.5 and 3.0")
-        }
-        
-        if (settings.reading.maxZoomLevel < settings.reading.minZoomLevel) {
-            errors.add("Max zoom level must be greater than min zoom level")
-        }
-        
-        if (settings.library.gridColumns < 1 || settings.library.gridColumns > 10) {
-            errors.add("Grid columns must be between 1 and 10")
-        }
-        
-        if (settings.performance.memoryLimit < 64 || settings.performance.memoryLimit > 2048) {
-            errors.add("Memory limit must be between 64 and 2048 MB")
-        }
-        
-        return errors
-    }
-    
-    /**
-     * Миграция настроек
-     */
-    suspend fun migrateSettings(context: Context, fromVersion: Int, toVersion: Int) {
-        val settings = getSettings(context).first()
-        
-        // Здесь будет логика миграции между версиями
-        val migratedSettings = when {
-            fromVersion < 2 && toVersion >= 2 -> {
-                // Миграция с версии 1 на версию 2
-                settings.copy(
-                    metadata = settings.metadata.copy(
-                        migrationVersion = 2
-                    )
-                )
+    suspend fun restoreSettings(context: Context) {
+        context.settingsDataStore.data.firstOrNull()?.let {
+            val backupSettingsJson = it[SETTINGS_BACKUP_KEY]
+            if (backupSettingsJson != null) {
+                context.settingsDataStore.edit {
+                    it[SETTINGS_KEY] = backupSettingsJson
+                }
             }
-            else -> settings
         }
-        
-        saveSettings(context, migratedSettings)
     }
     
     /**
-     * Поиск настроек
+     * Сохранение истории изменений настроек
      */
-    fun searchSettings(settings: ComprehensiveSettings, query: String): List<SettingItem> {
-        val results = mutableListOf<SettingItem>()
-        val lowerQuery = query.lowercase()
-        
-        // Здесь будет логика поиска по всем настройкам
-        // Возвращаем список найденных настроек
-        
-        return results
+    suspend fun saveSettingsHistory(context: Context, historyEntry: String) {
+        context.settingsDataStore.edit {
+            val currentHistory = it[SETTINGS_HISTORY_KEY]?.split("\n")?.toMutableList() ?: mutableListOf()
+            currentHistory.add("${System.currentTimeMillis()}: $historyEntry")
+            it[SETTINGS_HISTORY_KEY] = currentHistory.joinToString("\n")
+        }
     }
     
     /**
-     * Получение категорий настроек
+     * Получение истории изменений настроек
      */
-    fun getSettingsCategories(): List<SettingsCategory> {
-        return listOf(
-            SettingsCategory("general", "Основные", "Основные настройки приложения"),
-            SettingsCategory("interface", "Интерфейс", "Настройки внешнего вида"),
-            SettingsCategory("reading", "Чтение", "Настройки процесса чтения"),
-            SettingsCategory("library", "Библиотека", "Настройки библиотеки"),
-            SettingsCategory("sync", "Синхронизация", "Настройки синхронизации"),
-            SettingsCategory("security", "Безопасность", "Настройки безопасности"),
-            SettingsCategory("accessibility", "Доступность", "Настройки доступности"),
-            SettingsCategory("performance", "Производительность", "Настройки производительности"),
-            SettingsCategory("notifications", "Уведомления", "Настройки уведомлений"),
-            SettingsCategory("backup", "Резервные копии", "Настройки резервного копирования"),
-            SettingsCategory("experimental", "Экспериментальные", "Экспериментальные функции")
-        )
+    fun getSettingsHistory(context: Context): Flow<List<String>> {
+        return context.settingsDataStore.data.map {
+            it[SETTINGS_HISTORY_KEY]?.split("\n") ?: emptyList()
+        }
     }
 }
 
 /**
- * Элемент настройки
- */
-data class SettingItem(
-    val key: String,
-    val title: String,
-    val description: String,
-    val category: String,
-    val type: String, // boolean, string, int, float, list
-    val value: Any,
-    val defaultValue: Any,
-    val options: List<String> = emptyList(),
-    val min: Float? = null,
-    val max: Float? = null,
-    val step: Float? = null,
-    val unit: String? = null,
-    val dependencies: List<String> = emptyList(),
-    val experimental: Boolean = false,
-    val requiresRestart: Boolean = false
-)
-
-/**
- * Категория настроек
- */
-data class SettingsCategory(
-    val id: String,
-    val title: String,
-    val description: String,
-    val icon: String? = null,
-    val order: Int = 0
-)
-
-/**
- * Composable для настроек
+ * Composable функция для доступа к настройкам
  */
 @Composable
-fun SettingsProvider(
-    content: @Composable (ComprehensiveSettings) -> Unit
-) {
+fun rememberSettings(): ComprehensiveSettings {
     val context = LocalContext.current
-    val settings by SettingsManager.getSettings(context).collectAsState(
-        initial = ComprehensiveSettings()
-    )
-    
-    content(settings)
+    val settings by SettingsManager.getSettings(context).collectAsState(initial = SettingsManager.getDefaultSettings())
+    return settings
 }
 
 /**
- * Хук для работы с настройками
+ * Composable функция для сохранения настроек
  */
 @Composable
-fun rememberSettingsManager(): SettingsManager {
-    return remember { SettingsManager }
+fun rememberSaveSettings(): suspend (ComprehensiveSettings) -> Unit {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    return {
+        coroutineScope.launch {
+            SettingsManager.saveSettings(context, it)
+        }
+    }
 }
+
+/**
+ * Composable функция для получения настроек по умолчанию
+ */
+@Composable
+fun rememberDefaultSettings(): ComprehensiveSettings {
+    return SettingsManager.getDefaultSettings()
+}
+
+/**
+ * Composable функция для резервного копирования настроек
+ */
+@Composable
+fun rememberBackupSettings(): suspend () -> Unit {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    return {
+        coroutineScope.launch {
+            SettingsManager.backupSettings(context)
+        }
+    }
+}
+
+/**
+ * Composable функция для восстановления настроек
+ */
+@Composable
+fun rememberRestoreSettings(): suspend () -> Unit {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    return {
+        coroutineScope.launch {
+            SettingsManager.restoreSettings(context)
+        }
+    }
+}
+
+/**
+ * Composable функция для сохранения истории настроек
+ */
+@Composable
+fun rememberSaveSettingsHistory(): suspend (String) -> Unit {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    return {
+        coroutineScope.launch {
+            SettingsManager.saveSettingsHistory(context, it)
+        }
+    }
+}
+
+/**
+ * Composable функция для получения истории настроек
+ */
+@Composable
+fun rememberSettingsHistory(): State<List<String>> {
+    val context = LocalContext.current
+    return SettingsManager.getSettingsHistory(context).collectAsState(initial = emptyList())
+}
+
 
