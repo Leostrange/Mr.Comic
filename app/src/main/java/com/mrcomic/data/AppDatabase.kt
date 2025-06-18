@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.mrcomic.data.model.Comic
+import com.mrcomic.theme.data.model.Comic
 import com.example.mrcomic.data.model.ComicDao
 
 @Database(entities = [Comic::class], version = 1, exportSchema = false)
