@@ -28,7 +28,7 @@ data class ComprehensiveSettings(
     val general: GeneralSettings = GeneralSettings(),
     
     // Настройки интерфейса
-    val interface: InterfaceSettings = InterfaceSettings(),
+    val interfaceSettings: InterfaceSettings = InterfaceSettings(),
     
     // Настройки чтения
     val reading: ReadingSettings = ReadingSettings(),
