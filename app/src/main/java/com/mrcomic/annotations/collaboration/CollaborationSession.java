@@ -1,8 +1,11 @@
-package com.example.mrcomic.annotations.collaboration;
+package com.mrcomic.annotations.collaboration;
 
 import java.util.Date;
 import java.util.List;
 import java.util.ArrayList;
+
+import com.mrcomic.annotations.collaboration.CollaborationPermissions;
+import com.mrcomic.annotations.collaboration.SessionParticipant;
 
 /**
  * Модель коллаборативной сессии
@@ -109,4 +112,5 @@ public class CollaborationSession {
         return status == CollaborationStatus.ACTIVE && !isExpired();
     }
 }
+
 
