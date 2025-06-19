@@ -7,11 +7,14 @@ enum class CommentStatus {
 }
 
 data class AnnotationComment(
-    val id: String,
-    val sessionId: String,
-    val userId: String,
-    val content: String,
-    val status: CommentStatus = CommentStatus.ACTIVE,
-    val createdAt: Date = Date(),
-    val updatedAt: Date = Date()
-) 
+    var id: String? = null,
+    var annotationId: Long? = null,
+    var userId: String? = null,
+    var userName: String? = null,
+    var text: String? = null,
+    var createdAt: Date = Date(),
+    var updatedAt: Date = Date(),
+    var status: CommentStatus = CommentStatus.ACTIVE
+) {
+    fun isActive(): Boolean = status == CommentStatus.ACTIVE
+} 
