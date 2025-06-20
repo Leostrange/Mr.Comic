@@ -1,0 +1,33 @@
+{
+  "corrections": {
+    "japanese_common_mistakes": {
+      "こんにちわ": "こんにちは",
+      "ありがとうございました": "ありがとうございます",
+      "すいません": "すみません"
+    },
+    "english_common_mistakes": {
+      "teh": "the",
+      "recieve": "receive",
+      "seperate": "separate",
+      "definately": "definitely"
+    },
+    "context_corrections": {
+      "comic_specific": {
+        "バン": "バーン",
+        "ドカ": "ドカーン",
+        "ガシャ": "ガシャーン"
+      }
+    }
+  },
+  "confidence_adjustments": {
+    "high_confidence_words": [
+      "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+      "は", "が", "を", "に", "で", "と", "から", "まで", "より", "へ"
+    ],
+    "low_confidence_patterns": [
+      "^[0-9]+$",
+      "^[!@#$%^&*()]+$"
+    ]
+  }
+}
+
