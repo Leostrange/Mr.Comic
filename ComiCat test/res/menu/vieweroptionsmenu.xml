@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:comicat="http://schemas.android.com/apk/res-auto">
+    <item android:icon="@drawable/a2_action_settings" android:id="@id/viewerSettings" android:title="@string/settings" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a9_av_make_available_offline" android:id="@id/bookmark" android:title="@string/bookmark" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a7_location_directions" android:id="@id/gotoPage" android:title="@string/goTo" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a9_av_return_from_full_screen" android:id="@id/setFrame" android:title="@string/setFrame" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a10_device_access_location_found" android:id="@id/touchOptions" android:title="@string/touchOptions" />
+    <item android:icon="@drawable/a6_social_chat" android:id="@id/fullscreen" android:title="@string/hideTitle" />
+    <item android:icon="@drawable/ic_action_share" android:id="@id/share" android:title="@string/share" />
+    <item android:icon="@drawable/ic_action_share" android:id="@id/save" android:title="@string/save" />
+    <item android:icon="@drawable/a5_content_picture" android:id="@id/makeWallpaper" android:title="@string/setAsWallpaper" />
+    <item android:icon="@drawable/a5_content_undo" android:id="@id/restart" android:title="@string/restart" />
+    <item android:icon="@drawable/ic_action_next" android:id="@id/openNext" android:visible="false" android:title="@string/previousComic" />
+    <item android:icon="@drawable/ic_action_previous" android:id="@id/openPrevious" android:visible="false" android:title="@string/nextComic" />
+    <item android:icon="@drawable/ic_action_back1" android:id="@id/exit" android:visible="false" android:title="@string/backToCatalog" />
+</menu>

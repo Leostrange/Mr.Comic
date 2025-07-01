@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout android:gravity="left" android:orientation="vertical" android:id="@id/body" android:layout_width="fill_parent" android:layout_height="wrap_content">
+        <LinearLayout android:orientation="vertical" android:id="@id/placeholder" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="12.0dip" />
+        <ImageView android:gravity="fill_horizontal" android:id="@id/title_separator" android:layout_width="fill_parent" android:layout_height="wrap_content" android:src="@android:drawable/divider_horizontal_dark" android:scaleType="fitXY" android:layout_weight="1.0" />
+        <TextView android:textStyle="bold" android:id="@id/issued_to_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="12.0dip" android:layout_marginBottom="7.0dip" android:text="@string/boxsdk_issued_to" />
+        <TextView android:id="@id/to_common_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_common_name" />
+        <TextView android:id="@id/to_common" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:id="@id/to_org_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_org_name" />
+        <TextView android:id="@id/to_org" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:id="@id/to_org_unit_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_org_unit" />
+        <TextView android:id="@id/to_org_unit" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:textStyle="bold" android:id="@id/issued_by_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="12.0dip" android:layout_marginBottom="7.0dip" android:text="@string/boxsdk_issued_by" />
+        <TextView android:id="@id/by_common_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_common_name" />
+        <TextView android:id="@id/by_common" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:id="@id/by_org_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_org_name" />
+        <TextView android:id="@id/by_org" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:id="@id/by_org_unit_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_org_unit" />
+        <TextView android:id="@id/by_org_unit" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:textStyle="bold" android:id="@id/validity_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginTop="12.0dip" android:layout_marginBottom="7.0dip" android:text="@string/boxsdk_validity_period" />
+        <TextView android:id="@id/issued_on_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_issued_on" />
+        <TextView android:id="@id/issued_on" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+        <TextView android:id="@id/expires_on_header" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/boxsdk_expires_on" />
+        <TextView android:id="@id/expires_on" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_marginBottom="7.0dip" />
+    </LinearLayout>
+</ScrollView>

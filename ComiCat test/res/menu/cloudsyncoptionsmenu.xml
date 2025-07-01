@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:comicat="http://schemas.android.com/apk/res-auto">
+    <item android:icon="@drawable/a5_content_new" android:id="@id/addService" android:title="@string/addService" comicat:showAsAction="always|withText" />
+    <item android:icon="@drawable/a2_action_settings" android:id="@id/downloadSettings" android:title="@string/settings" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a9_av_download" android:id="@id/activeDownloads" android:title="@string/activeDownloads" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a1_navigation_refresh" android:id="@id/syncAll" android:title="@string/syncAll" comicat:showAsAction="ifRoom" />
+</menu>

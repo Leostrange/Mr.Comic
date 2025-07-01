@@ -1,0 +1,34 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.mrcomic.feature.ocr.feature-ocr-mergeReleaseResources-38:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\xmeta\\.gradle\\caches\\8.13\\transforms\\0ef2f513ab8c16ca53cc366987098d6a\\transformed\\jetified-material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "com.mrcomic.feature.ocr.feature-ocr-merged_res-40:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\xmeta\\.gradle\\caches\\8.13\\transforms\\0ef2f513ab8c16ca53cc366987098d6a\\transformed\\jetified-material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

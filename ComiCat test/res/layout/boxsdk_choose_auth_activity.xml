@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:background="@color/box_background" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout android:gravity="center" android:layout_gravity="center" android:orientation="vertical" android:background="@color/box_logo_background" android:layout_width="fill_parent" android:layout_height="wrap_content">
+        <ImageView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="32.0dip" android:layout_marginBottom="14.0dip" android:src="@drawable/boxlogo_white" />
+        <TextView android:textSize="16.0sp" android:textColor="@color/box_logo_description" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="32.0dip" android:text="@string/boxsdk_Select_an_account_to_use" />
+    </LinearLayout>
+    <ListView android:id="@id/boxsdk_accounts_list" android:layout_width="fill_parent" android:layout_height="fill_parent" />
+</LinearLayout>

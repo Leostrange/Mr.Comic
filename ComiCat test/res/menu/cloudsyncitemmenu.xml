@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@id/sync" android:title="@string/sync" />
+    <item android:id="@id/reauthorize" android:title="@string/reauthorize" />
+    <item android:id="@id/deactivate" android:title="@string/delete" />
+    <item android:id="@id/instructions" android:title="@string/instructions" />
+</menu>

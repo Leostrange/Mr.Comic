@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@id/startReading" android:title="@string/startReading" />
+    <item android:id="@id/continueReading" android:title="@string/continueReading" />
+    <item android:id="@id/addToReadingList" android:title="@string/addToReadingList" />
+    <item android:id="@id/markRead" android:title="@string/markRead" />
+    <item android:id="@id/recreateCovers" android:title="@string/recreateThumbnails" />
+    <item android:id="@id/rename" android:title="@string/rename" />
+    <item android:id="@id/makeLocalCopies" android:visible="false" android:title="@string/makeLocalCopy" />
+    <item android:id="@id/removeLocalCopies" android:visible="false" android:title="@string/removeLocalCopy" />
+    <item android:id="@id/excludeFolder" android:title="@string/excludeFolderFromCatalog" />
+    <item android:id="@id/hide" android:title="@string/markPrivate" />
+    <item android:id="@id/delete" android:title="@string/deleteFolderTitle" />
+    <item android:id="@id/removeFromCatalog" android:title="@string/removeFromCatalog" />
+</menu>

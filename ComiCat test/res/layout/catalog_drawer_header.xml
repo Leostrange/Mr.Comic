@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:theme="@style/ThemeOverlay.AppCompat.Dark" android:gravity="bottom" android:orientation="vertical" android:background="@drawable/side_nav_bar" android:paddingLeft="@dimen/activity_horizontal_margin" android:paddingTop="@dimen/activity_vertical_margin" android:paddingRight="@dimen/activity_horizontal_margin" android:paddingBottom="@dimen/activity_vertical_margin" android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <ImageView android:id="@id/imageView" android:paddingTop="@dimen/nav_header_vertical_spacing" android:layout_width="wrap_content" android:layout_height="wrap_content" android:src="@drawable/icon" />
+    <TextView android:textAppearance="@style/TextAppearance.AppCompat.Body1" android:paddingTop="@dimen/nav_header_vertical_spacing" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/app_name" />
+    <TextView android:id="@id/textView" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="support@meanlabs.com" />
+    <LinearLayout android:orientation="vertical" android:id="@id/statusBar" style="@style/DrawerStatusBar">
+        <TextView android:textSize="14.0sp" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/lastSynced" />
+        <TextView android:textSize="14.0sp" android:id="@id/lastSyncTime" android:layout_width="fill_parent" android:layout_height="wrap_content" />
+    </LinearLayout>
+</LinearLayout>

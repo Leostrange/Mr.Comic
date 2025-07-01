@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout android:paddingRight="@dimen/actionbar_search_view_right_padding" android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <EditText android:textColorHint="#ffcccccc" android:id="@id/comicSearch" android:layout_width="fill_parent" android:layout_height="wrap_content" android:hint="@string/searchTip" android:singleLine="true" android:layout_toLeftOf="@id/searchPrefix" android:layout_alignParentLeft="true" android:layout_centerVertical="true" android:layout_alignWithParentIfMissing="true" android:inputType="textFilter" />
+    <CheckBox android:id="@id/searchPrefix" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/prefix" android:layout_alignBaseline="@id/comicSearch" android:layout_alignParentRight="true" android:layout_centerVertical="true" />
+</RelativeLayout>

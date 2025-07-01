@@ -1,0 +1,19 @@
+<lint-module
+    format="1"
+    dir="C:\Users\xmeta\projects\Mr.Comic\core"
+    name=":core"
+    type="LIBRARY"
+    maven="MrComic:core:"
+    agpVersion="8.1.1"
+    buildFolder="build"
+    bootClassPath="C:\Android\platforms\android-35\android.jar;C:\Android\build-tools\33.0.1\core-lambda-stubs.jar"
+    javaSourceLevel="1.8"
+    compileTarget="android-35"
+    neverShrinking="true">
+  <lintOptions
+      abortOnError="true"
+      absolutePaths="true"
+      checkReleaseBuilds="true"
+      explainIssues="true"/>
+  <variant name="debug"/>
+</lint-module>

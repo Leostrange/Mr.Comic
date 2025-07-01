@@ -1,0 +1,16 @@
+-- Merging decision tree log ---
+manifest
+ADDED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml:2:13-83
+INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml:2:13-83
+	package
+		INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml
+	xmlns:android
+		ADDED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml:2:23-81
+uses-sdk
+INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml reason: use-sdk injection requested
+INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml
+INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml
+	android:targetSdkVersion
+		INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-library\build\intermediates\tmp\ProcessLibraryManifest\release\tempAndroidManifest5436222332358125487.xml

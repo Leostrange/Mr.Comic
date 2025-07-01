@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:comicat="http://schemas.android.com/apk/res-auto">
+    <item android:icon="@drawable/a5_content_undo" android:id="@id/reset" android:title="@string/reset" comicat:showAsAction="always|withText" />
+    <item android:icon="@drawable/a9_av_add_to_queue" android:id="@id/selectAll" android:title="@string/selectAll" comicat:showAsAction="always|withText" />
+    <item android:icon="@drawable/a1_navigation_cancel" android:id="@id/deselectAll" android:title="@string/deselectAll" comicat:showAsAction="always|withText" />
+</menu>

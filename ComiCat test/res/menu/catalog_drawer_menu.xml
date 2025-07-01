@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <group>
+        <item android:icon="@drawable/wrench" android:id="@id/settings" android:title="@string/settings" />
+        <item android:icon="@drawable/sync" android:id="@id/sync" android:title="@string/sync" />
+        <item android:icon="@drawable/cloud_drive" android:id="@id/cloud_sync" android:title="@string/cloudSync" />
+        <item android:icon="@drawable/private_box" android:id="@id/hidden" android:title="@string/showPrivateFolders" />
+        <item android:icon="@drawable/download_box" android:id="@id/downloads" android:title="@string/activeDownloads" />
+        <item android:icon="@drawable/tools" android:id="@id/tools" android:title="@string/catalogTools" />
+        <item android:icon="@drawable/khelpcenter" android:id="@id/help" android:title="@string/help" />
+    </group>
+    <item android:id="@id/reading_history" android:title="@string/readingHistory">
+        <menu>
+            <item android:id="@id/history1" android:title="" />
+            <item android:id="@id/history2" android:title="" />
+            <item android:id="@id/history3" android:title="" />
+            <item android:id="@id/history4" android:title="" />
+        </menu>
+    </item>
+    <item android:id="@id/recently_completed" android:title="@string/recentlyCompleted">
+        <menu>
+            <item android:id="@id/completed1" android:title="" />
+            <item android:id="@id/completed2" android:title="" />
+            <item android:id="@id/completed3" android:title="" />
+            <item android:id="@id/completed4" android:title="" />
+        </menu>
+    </item>
+</menu>

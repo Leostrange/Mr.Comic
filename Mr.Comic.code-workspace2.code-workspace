@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"java.configuration.updateBuildConfiguration": "automatic",
+		"devicesManage.emulatorPathWindows": "C:\\Android",
+		"gigacode.common.predictByWord": true,
+		"gigacode.common.contextManager": true
+	}
+}

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textColor="#ffff0000" android:id="@id/message" android:layout_width="fill_parent" android:layout_height="30.0dip" />
+    <EditText android:id="@id/textInput" android:layout_width="fill_parent" android:layout_height="wrap_content" android:digits="0123456789" android:inputType="textPassword"
+      xmlns:android="http://schemas.android.com/apk/res/android" />
+</LinearLayout>

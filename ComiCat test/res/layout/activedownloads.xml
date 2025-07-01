@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <TextView android:textSize="@dimen/downloads_list_status_message_font_size" android:id="@id/downloadStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="5.0dip" />
+    <FrameLayout android:layout_width="fill_parent" android:layout_height="fill_parent">
+        <ListView android:id="@id/downloadQueue" android:layout_width="fill_parent" android:layout_height="fill_parent" android:keepScreenOn="true" />
+        <TextView android:id="@android:id/empty" android:text="@string/noDownloadsInQueue" style="@style/EmptyListText" />
+    </FrameLayout>
+</LinearLayout>

@@ -34,4 +34,8 @@
     <string name="double_page_mode">Двухстраничный режим</string>
     <string name="error_log">Лог ошибок</string>
     <string name="export_errors">Экспортировать ошибки</string>
+    <string name="dark_mode">Dark Mode</string>
+    <string name="notifications">Notifications</string>
+    <string name="back">Back</string>
+    <string name="next">Next</string>
 </resources>

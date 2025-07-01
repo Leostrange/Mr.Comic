@@ -1,0 +1,97 @@
+package com.example.feature.library.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.core.data.repository.ComicRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class LibraryViewModel @Inject constructor(
+    private val comicRepository: ComicRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(LibraryUiState())
+    val uiState = _uiState.asStateFlow()
+
+    fun onPermissionsGranted() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                // This will scan the file system only if the database is empty
+                comicRepository.refreshComicsIfEmpty()
+
+                // Now, start listening to the database for updates
+                comicRepository.getComics().collectLatest { comics ->
+                    _uiState.update {
+                        it.copy(isLoading = false, comics = comics)
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.message ?: "An unknown error occurred"
+                    )
+                }
+            }
+        }
+    }
+
+    fun onComicSelected(comicId: String) {
+        _uiState.update { currentState ->
+            val selectedIds = currentState.selectedComicIds.toMutableSet()
+            if (selectedIds.contains(comicId)) {
+                selectedIds.remove(comicId)
+            } else {
+                selectedIds.add(comicId)
+            }
+            // Если последний элемент снят с выбора, выходим из режима выбора
+            val inSelectionMode = selectedIds.isNotEmpty()
+            currentState.copy(
+                selectedComicIds = selectedIds,
+                inSelectionMode = inSelectionMode
+            )
+        }
+    }
+
+    fun onEnterSelectionMode(initialComicId: String) {
+        _uiState.update {
+            it.copy(inSelectionMode = true, selectedComicIds = setOf(initialComicId))
+        }
+    }
+
+    fun onClearSelection() {
+        _uiState.update { it.copy(inSelectionMode = false, selectedComicIds = emptySet()) }
+    }
+
+    fun onDeleteRequest() {
+        val selectedIds = _uiState.value.selectedComicIds
+        if (selectedIds.isEmpty()) return
+
+        _uiState.update {
+            it.copy(
+                pendingDeletionIds = it.pendingDeletionIds + selectedIds,
+                inSelectionMode = false,
+                selectedComicIds = emptySet()
+            )
+        }
+    }
+
+    fun onUndoDelete() {
+        _uiState.update { it.copy(pendingDeletionIds = emptySet()) }
+    }
+
+    fun onDeletionTimeout() {
+        viewModelScope.launch {
+            comicRepository.deleteComics(_uiState.value.pendingDeletionIds)
+            _uiState.update { it.copy(pendingDeletionIds = emptySet()) }
+        }
+    }
+}

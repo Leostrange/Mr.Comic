@@ -1,0 +1,241 @@
+<body>
+	<p>
+		<strong>Settings and options for ComiCat</strong>
+	</p>
+	<div class="topic">
+		<h2>General Settings</h2>
+		<h3>Start application in</h3>
+		<p>Controls whether the app will be re-launched in catalog view or the comic that your were reading when you closed the application.</p>
+		<h3>Open comics from</h3>
+		<p>
+			When opened, a comic can be set to open from:
+			<ul>
+				<li>Last read page: This is the last page you read before closing the comics</li>
+				<li>Bookmark: It works like a traditional bookmark. You can place a manual bookmark in the comic and then open it from there. Alternatively, you can open a comic from bookmark through the context menu in catalog view.</li>
+				<li>Start: Open from start regardless of where you left the comic or placed a bookmark.</li>
+			</ul>
+		</p>
+		<h3>Password protect</h3>
+		<p>You can protect your comic collection from unwanted access by password protecting ComiCat. You will be asked to choose a numerical code as your password. You would need to enter that code to unlock the application on each re-launch.&nbsp; 
+		There is a grace period of around 8 seconds within which you can re-launch the app without password prompt.&nbsp; 
+		Please choose a password that you can easily remember as there is no way to recover a lost password. You would need to re-install the app if you forget the password. Unchecking this will disable the password protection.</p>		
+	</div>
+	<div class="topic">
+		<h2>Viewer Settings</h2>
+		<h3>Orientation</h3>
+		<p>
+			This option controls the viewer layout with respect to device orientation:
+			<ul>
+				<li>Sensor (Default): Viewer window responds to device rotation and sets itself in portrait or landscape mode depending on the device orientation.</li>
+				<li>Portrait: Lock the layout in portrait mode and do not respond to device rotation.</li>
+				<li>Landscape: Lock the layout in landscape mode and do not respond to device rotation.</li>
+			</ul>
+		</p>
+		<h3>View mode</h3>
+		<p>
+			This option controls how comic pages fit inside the viewer window:
+			<ul>
+				<li>Fit Visible: Resize the comic page so that height and width are contained within the viewable region. Page aspect ratio is maintained.</li>
+				<li>Fill Visible: Stretch the comic page to occupy all available space on screen. Page aspect ratio is not maintained.</li>
+				<li>Fit Width: Resize the comic page so that the width matches the width of the viewing region. Page can be scrolled vertically if the scaled height is more than the height of viewing region.</li>
+				<li>Fit Height: Resize the comic page so that the height matches the height of the viewing region. Page can be scrolled horizontally if the scaled width is more than the width of viewing region.</li>
+				<li>Original Size: Do no resize the page and show it in the actual dimensions. Page can be scrolled in any direction if the page dimensions are larger than the dimensions of the viewing region.</li>
+			</ul>
+		</p>
+		<h3>Page Transitions</h3>
+		<p>The animation that is displayed when you move from one page to another. Options are
+			<ul>
+				<li>Page Curl</li>
+				<li>Page Shift</li>
+				<li>Page Slide</li>
+			</ul>
+		</p>
+		<h3>Fit width on rotation</h3>
+		<p>When you rotate your device to landscape mode this option automatically changes the view mode to 'Fit width' for best reading experience.</p>		
+		<h3>Crop comic page margins</h3>
+		<p>Some comics have white margins around the pages. On devices this dead space takes up otherwise useful screen real estate.&nbsp;
+		   Turning on this option will detect and crop the white margins on the fly to give you more viewing space for your panels.
+		   Please note, only the extracted image is cropped, ComiCat doesn't modify the comic file itself.
+	    </p>
+		<h3>Image Enhancer</h3>
+		<p>A tool for improving scans of olden comics. It cleans up image, enhances color, brightness and removes paleness.</p>	    
+		<h3>Double Page Spreads</h3>
+		<p>
+			Some comic files have all or some pages as double page spreads. Reading such comics on devices with limited screen space is not a very pleasant experience. This preference determines what ComiCat shall do in this case.
+			<ul>
+				<li>Split to single page spreads: Double page spreads will be split into single page spreads for display.</li>
+				<li>Split only in Portrait mode: Split into single page spreads only when the device orientation is portrait.</li>
+				<li>Do Nothing: Don't split.</li>
+			</ul>				
+		</p>
+		<h3>Always hide titlebar</h3>
+		<p>Keeps the top bar containing title and page number hidden by default. This gives you more reading space. You can also do the same temporarily using 'Hide Title' menu item in the Viewer's options menu. That change lasts only for that reading session.</p>		
+		<h3>Right to left reading</h3>
+		<p>Traditionally, manga stories flow from top to bottom and from right to left. This option configures the reader for reading unflipped manga comics.</p>
+		<h3>Limit gesture zone</h3>
+		<p>Sets the screen area where tap, fling, swipe and double tap gestures will work. Pinch to zoom and panning always works across the screen. Options are:
+			<ul>
+				<li>Don't Limit (default): Gestures will work on entire screen area.</li>
+				<li>Bottom 25 percent: Gestures will only work on bottom 25 percent of the screen.</li>
+				<li>Top 25 percent: Gestures will only work on top 25 percent of the screen.</li>
+			</ul>			
+		</p>			
+		<h3>Disable swipe on zoom</h3>
+		<p>When reading a comic in zoom mode, one often pans and flings the panel to move across page regions. Sometimes these gestures are recognized as swipe gesture and page is changed in response.&nbsp;
+		 If this is bothering you, you can turn this option 'ON' to disable swipe gesture for page change. You can change the page by tapping on the screen.</p>
+		<h3>Brightness level</h3>
+		<p>
+			By default the brightness level of the screen is managed by device preferences. You can however, set a fixed brightness level for the Viewer window using this option.
+			<ol>
+				<li>Tap on the option to bring up the 'Brightness Picker' dialog.</li>
+				<li>In the dialog, select 'Manage Brightness Level' to turn this on. This will also enable the slider.</li>
+				<li>Move the slider by dragging, screen brightness will change in response.</li>
+				<li>Dismiss the dialog once you have set the slider to desired brightness level.</li>
+				<li>To turn off, deselect 'Manage Brightness Level' option in the dialog.</li>					
+			</ol>
+		</p>
+		<h3>Use volume Controls</h3>
+		<p>Turning this on allows you to use volume controls for page navigation.</p>		
+		<h3>Swipe Senstivity</h3>
+		<p>When set to high, even a slight swipe will be recognized as a page change swipe gesture while a more explicit swipe will be required in low senstivity mode.</p>
+	</div>
+	<div class="topic">
+		<h2>Viewer menu Options</h2>
+		<h3>Settings <img src="file:///android_res/drawable/a2_action_settings.png"/></h3>
+		<p>Brings up the settings screen.</p>
+		<h3>Bookmark <img src="file:///android_res/drawable/a9_av_make_available_offline.png"/></h3>
+		<p>Sets a bookmark at the currently opened page, this bookmark can later be used to open the comic directly from this page.</p>
+		<h3>Go To <img src="file:///android_res/drawable/a7_location_directions.png"/></h3>
+		<p>Displays a scrollable list of page thumbs at the bottom of the screen, you can tap on a page thumb to quickly jump to it.</p>
+		<h3>Set Frame <img src="file:///android_res/drawable/a9_av_return_from_full_screen.png"/></h3>
+		<p>When this option is on all new pages are presented with the same zoom level and scroll position as it was when frame was set. This can be used for setting manual zoom level, setting initial page position or both.</p>		
+		<h3>Touch Options <img src="file:///android_res/drawable/a10_device_access_location_found.png"/></h3>
+		<p>Brings up a dialog where you can turn certain gestures on and off. Options are
+			<ul>
+				<li>Swipe for page turn: Enable/disable swipe gesture for page navigation.</li>
+				<li>Tap for page turn: Enable/disable tap gesture for page navigation.</li>
+				<li>Double tap to toggle view mode: Enable/disable double tap gesture for cycling through the available page view modes.</li>
+				<li>Longpress at bottom for fast seek: When enabled, tap and hold at the bottom right will fast forward and bottom left will revind the comic.</li>
+				<li>Disable swipe on zoom: If in zoom mode your page panning gestures are frequently being recongnized as page change then you should turn this option on. This will disable swipe gesture as soon as you use pinch to zoom on a page.</li>
+				<li>Tap and hold - Menu for page options: Tap and hold will bring up the menu and action bar.</li>
+				<li>Left edge swipe - Settings: Enables/disables the gesture for bringing up the settings drawer.</li>
+			</ul>
+		</p>
+		<h3>Hide Title <img src="file:///android_res/drawable/a6_social_chat.png"/></h3>
+		<p>Hides the title and page number that is displayed at the top of the page. The change only remains in effect for one reading session.</p>
+		<h3>Set Wallpaper <img src="file:///android_res/drawable/a5_content_picture.png"/></h3>
+		<p>Sets the current page image as the device background. This option is not available on devices that don't support setting wallpapers.</p>
+		<h3>Restart <img src="file:///android_res/drawable/a5_content_undo.png"/></h3>
+		<p>Restarts the comic from page one.</p>	
+	</div>
+	<div class="topic">
+		<h2>Catalog Settings</h2>
+		<h3>Resync Catalog</h3>
+		<p>Triggers a re-scan where it reconciles the changes made to the on-disk comic collection. It will scan for new comics and deletions. Old comics and their reading history, bookmarks, visibility etc will be preserved.</p>
+		<h3>Include Zip, Rar, PDF format files</h3>
+		<p>
+			<ul>
+				<li>Always Include: All the zip, rar, 7zip, pdf extension files will be scanned and added to your catalog.</li>
+				<li>Include only if inside comic folder: Only the files that are inside a folder containing "comic" in its name or also have cbz, cbr files will be included.</li>
+				<li>Don't Include: Files with these format extensions will not be included.</li>
+			</ul>
+		</p>
+		<h3>Rescan on start</h3>
+		<p>Convenience function to do a re-scan every time the app launches. This keeps your catalog up-to-date without the need for manual resync. Turn this on if you frequently make catalog changes.</p>		
+		<h3>Fix file extensions</h3>
+		<p>Some comic files have the wrong extension. for example cbz format files will have cbr extension and vice-versa. These files can be opened by ComiCat but they take a little longer than what they will with the right extension. Check this option to check and fix the extensions while scanning.</p>
+		<h3>Exclusions</h3>
+		<p>You can see and manage what all files and folders you have chosen to exclude from you catalog.</p>
+		<h3>Group Comics By Folders</h3>
+		<p>Selecting this option creates a 2 level catalog shelf, on the first level there are your folders and selecting the folder will show the comics in that folder. 
+		Please note, this does not replicate the hierarchy you have on your storage, it displays all the folders at one level.</p>				
+		<h3>Sort by</h3>
+		<p>Default sort order for catalog display. This can also be changed from catalog options menu.</p>
+		<h3>Catalog Theme</h3>
+		<p>ComiCat comes with multiple catalog themes. The default is the wooden theme. You can also try Steel Mesh, Titanium and Cool Blue and Black Wood themes. If you want the plain vanilla look, please choose the Black theme.</p>
+		<h3>Display Large Thumbnails</h3>
+		<p>Selecting this will enable large thumbnail display on your shelf, particularly useful for big screen devices.</p>		
+		<h3>Clear bookmarks on finish</h3>
+		<p>Once you have finished reading the comics and have marked it read, setting this option to 'ON' will automatically clear any bookmark that you might have placed.</p>
+		<h3>Retain Deleted Comic Data</h3>
+		<p>When this option is set the information for deleted comics is not removed from the database. So when the same comic is added later, all its reading history, bookmarks, hidden state etc is retained. This is helpful for people having multiple SD cards or USB drives containing their comic collection.</p>
+	</div>
+	<div class="topic">
+		<h2>Performance Settings</h2>
+		<h3>Max image size</h3>
+		<p>	Every app has a max memory limit that it can use for its working.&nbsp;
+			If the comic page image is too large it can cause the app to exceed that limit and the app may crash.&nbsp;
+			For the stability of ComiCat we keep this maximum limit and any image beyond this limit is resized to lower resolution.&nbsp;
+			Default value is good unless you are getting crashes while viewing comics.</p>		
+		<h3>Show transitions</h3>
+		<p>Controls whether page change animation shall be displayed. Disabling transitions reduces the amount of images ComiCat needs to cache at any given point.&nbsp;
+		By default it is enabled. Turn off only if you are getting crashes or you don't want to see the transitions at all.</p>
+		<h3>Aggressive caching</h3>
+		<p>Cache more objects for increased speed and performance. This option is not available on devices with lower memory limit.</p>
+	</div>
+	<div class="topic">
+		<h2>Private Folders</h2>
+		<h3>Enable private folders</h3>
+		<p>	This option can be used to hide any set of comics that you don't want your kids or other people to see.&nbsp; 
+			When you enable private folders you are asked to pick a numerical password that will be used to control any change to private folder settings and showing/hiding of private folders.&nbsp;
+			You need to pick a password that you can easily remember, there is no way to recover a lost password.</p>
+		<h3>Select private folders</h3>
+		<p>Select folders containing comics that you want to hide. When hidden, these folders will not be visible in the folder selector drop down. Any comics in private folders will not show up in the catalog or search results unless the folders are set to visible.</p>
+		<h3>Hide on re-launch</h3>
+		<p>Controls whether the private folders will be automatically hidden on application re-launch.&nbsp;
+		It's safer as you would not need to remember to hide the folders each time you give your device to somebody who shouldn't see the private folders and the comics in them.</p>		
+		<h3>Currently Hidden</h3>
+		<p>Makes private folders visible or invisible. If you have set 'Hide on re-launch' to false than you would need to manually hide the folders by selecting this option.</p>
+	</div>
+	<div class="topic">
+		<h2>Facebook Settings</h2>
+		<h3>Authorize ComiCat</h3>
+		<p>This is where you authorize ComiCat to post comments and messages to your Facebook feed on your behalf.</p>
+		<h3>Post Update when I start a Comic</h3>
+		<p>This will post a message to your Facebook status when you start reading a new comic book. Network connection is required for this operation to be successful.</p>
+		<h3>Post Update when I finish a Comic</h3>
+		<p>When you are done reading a comic this will update your Facebook status.</p>		
+		<h3>Post Images</h3>
+		<p>Selecting this option will post low resolution comic covers and page images along with statuses and your comments.</p>
+	</div>
+	<div class="topic">
+		<h2>Cloud Sync Settings</h2>
+		<h3>Include Zip, Rar, PDF format files</h3>
+		<p>
+			<ul>
+				<li>Always Include: All the zip, rar, 7zip, pdf extension files will be scanned and downloaded.</li>
+				<li>Include only if inside comic folder: Only the files that are inside a folder containing "comic" in its pathname.</li>
+				<li>Don't Include: Files with these format extensions will not be included.</li>
+			</ul>
+		</p>		
+		<h3>Maximum Parallel Downloads</h3>
+		<p>Maximum number of concurrent downloads. If you are on a high speed network, setting it to maximum will give you best results.</p>
+		<h3>Enqueue Comics as Paused</h3>
+		<p>New comics found on your network will be added to your download queue. If this option is selected then these will be added as paused. You can then review and select the ones you want to download and start the download by resuming them.</p>
+		<h3>Use only Wifi for downloads</h3>
+		<p>Turn this on if you don't want mobile data network to be used for downloads.</p>
+		<h3>Don't Download while roaming</h3>
+		<p>If data downloads on roaming costs you more then you can turn this option on to avoid accidental downloads while roaming.</p>
+		<h3>Auto clear completed downloads</h3>
+		<p>Remove downloads from the list as soon as they are completed.</p>
+		<h3>Download Completed Notifications</h3>
+		<p>
+			<ol>
+				<li>No Notification: No notification will be posted on system notification bar.</li>
+				<li>Text Only: Text message will be posted to system notification bar.</li>
+				<li>Text and Notification tone: Text message will be posted to system notification bar and the device will play the alert tone.</li>
+			</ol>
+		</p>
+		<h3>Maintain Download History</h3>
+		<p>ComiCat will maintain a history of all files download from cloud storage services. This prevents ComiCat from re-downloading a comic file 
+		that has been deleted from the device after downloading. Turn this off if you want to force re-download all deleted comic files.</p>
+	</div>
+	<hr />
+	<div class="topic">
+		<p>
+			Team Meanlabs thanks you for using ComiCat. We strive to keep our apps bug free and look for ways to improve them.&nbsp;
+			For any complaints, suggestions or feedback please contact us on <a href="mailto:support@meanlabs.com">support@meanlabs.com</a>.&nbsp; 
+			We look forward to connect with you.
+		</p>
+	</div>
+</body>

@@ -1,0 +1,65 @@
+<style type="text/css">
+	body
+	{
+		margin: 10px 5px;
+		font-family: 'Comic Sans MS', 'Lucida Casual';
+		color: #333;
+	}
+	
+	h2
+	{
+		margin: 10px 0 5px 0;
+		border-bottom: 1px solid #ccc;
+		color: #999;
+		font-size: 1.2em;
+	}
+	
+	h3
+	{
+		margin: 5px 0 2px 0;
+		color: #444;
+		font-size: 1.0em;
+		font-style: italic;
+	}
+	
+	p
+	{
+		font-size: 0.8em;
+		margin: 2px 5px 12px 1px;
+		text-align: justify;
+	}
+	
+	span
+	{
+		font-size: 0.8em;
+		text-align: justify;
+	}
+	
+	.topic
+	{
+		font-size: 0.8em;
+		margin: 0 5px 20px 5px; 
+	}
+	
+	ul, ol
+	{
+		margin: -5px 2px 2px 2px;
+	 	padding-left: 18px;				
+	}
+	
+	li 
+	{
+	 	font-size: 0.8em;
+	 	margin-bottom: 4px;
+	}
+	
+	hr
+	{
+		margin: 0 2px;
+	}
+	
+	strong
+	{
+		margin-right: 5px;
+	}	
+</style>

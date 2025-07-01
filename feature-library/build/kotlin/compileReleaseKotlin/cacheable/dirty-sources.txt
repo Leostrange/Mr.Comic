@@ -1,0 +1,6 @@
+C:\Users\xmeta\projects\Mr.Comic\feature-library\src\main\java\com\example\feature\library\data\LibraryDatabase.kt
+C:\Users\xmeta\projects\Mr.Comic\feature-library\src\main\java\com\example\feature\library\di\LibraryModule.kt
+C:\Users\xmeta\projects\Mr.Comic\feature-library\src\main\java\com\example\feature\library\LibraryRepository.kt
+C:\Users\xmeta\projects\Mr.Comic\feature-library\src\main\java\com\example\feature\library\data\ComicEntity.kt
+C:\Users\xmeta\projects\Mr.Comic\feature-library\src\main\java\com\example\feature\library\data\ComicDao.kt
+C:\Users\xmeta\projects\Mr.Comic\feature-library\src\main\java\com\example\feature\library\LibraryViewModel.kt

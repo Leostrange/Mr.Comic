@@ -1,0 +1,1694 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.11.0" type="incidents">
+
+    <incident
+        id="DefaultLocale"
+        severity="warning"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/ui/ReaderScreen.kt"
+            line="204"
+            column="52"
+            startOffset="8442"
+            endLine="204"
+            endColumn="84"
+            endOffset="8474"/>
+    </incident>
+
+    <incident
+        id="OldTargetApi"
+        severity="warning"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details.">
+        <fix-replace
+            description="Update targetSdkVersion to 36"
+            oldString="34"
+            replacement="36"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="15"
+            column="9"
+            startOffset="326"
+            endLine="15"
+            endColumn="23"
+            endOffset="340"/>
+    </incident>
+
+    <incident
+        id="PropertyEscape"
+        severity="error"
+        message="Windows file separators (`\`) and drive letter separators (&apos;:&apos;) must be escaped (`\\`) in property files; use C\\:\\\\Android">
+        <fix-replace
+            description="Escape"
+            oldString=":"
+            replacement="\:"
+            priority="0"/>
+        <location
+            file="$HOME/projects/Mr.Comic/local.properties"
+            line="9"
+            column="10"
+            startOffset="385"
+            endLine="9"
+            endColumn="11"
+            endOffset="386"/>
+    </incident>
+
+    <incident
+        id="UseSwitchCompatOrMaterialXml"
+        severity="warning"
+        message="Use `SwitchCompat` from AppCompat or `SwitchMaterial` from Material library">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="153"
+            column="21"
+            startOffset="6108"
+            endLine="157"
+            endColumn="50"
+            endOffset="6350"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of `compileSdkVersion` than 34 is available: 36">
+        <fix-replace
+            description="Set compileSdkVersion to 36"
+            oldString="34"
+            replacement="36"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="10"
+            column="5"
+            startOffset="215"
+            endLine="10"
+            endColumn="20"
+            endOffset="230"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.core:core-ktx than 1.12.0 is available: 1.16.0">
+        <fix-replace
+            description="Change to 1.16.0"
+            family="Update versions"
+            oldString="1.12.0"
+            replacement="1.16.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="64"
+            column="20"
+            startOffset="1392"
+            endLine="64"
+            endColumn="51"
+            endOffset="1423"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.7.0 is available: 2.9.1">
+        <fix-replace
+            description="Change to 2.9.1"
+            family="Update versions"
+            oldString="2.7.0"
+            replacement="2.9.1"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="65"
+            column="20"
+            startOffset="1444"
+            endLine="65"
+            endColumn="68"
+            endOffset="1492"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.activity:activity-compose than 1.8.2 is available: 1.10.1">
+        <fix-replace
+            description="Change to 1.10.1"
+            family="Update versions"
+            oldString="1.8.2"
+            replacement="1.10.1"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="66"
+            column="20"
+            startOffset="1513"
+            endLine="66"
+            endColumn="62"
+            endOffset="1555"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.compose:compose-bom than 2024.05.00 is available: 2025.06.01">
+        <fix-replace
+            description="Change to 2025.06.01"
+            family="Update versions"
+            oldString="2024.05.00"
+            replacement="2025.06.01"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="67"
+            column="20"
+            startOffset="1576"
+            endLine="67"
+            endColumn="71"
+            endOffset="1627"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.compose.material3:material3 than 1.2.1 is available: 1.3.2">
+        <fix-replace
+            description="Change to 1.3.2"
+            family="Update versions"
+            oldString="1.2.1"
+            replacement="1.3.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="71"
+            column="20"
+            startOffset="1808"
+            endLine="71"
+            endColumn="64"
+            endOffset="1852"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.navigation:navigation-compose than 2.7.6 is available: 2.9.0">
+        <fix-replace
+            description="Change to 2.9.0"
+            family="Update versions"
+            oldString="2.7.6"
+            replacement="2.9.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="75"
+            column="20"
+            startOffset="2070"
+            endLine="75"
+            endColumn="66"
+            endOffset="2116"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of com.google.android.material:material than 1.11.0 is available: 1.12.0">
+        <fix-replace
+            description="Change to 1.12.0"
+            family="Update versions"
+            oldString="1.11.0"
+            replacement="1.12.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="81"
+            column="20"
+            startOffset="2276"
+            endLine="81"
+            endColumn="65"
+            endOffset="2321"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.hilt:hilt-navigation-compose than 1.1.0 is available: 1.2.0">
+        <fix-replace
+            description="Change to 1.2.0"
+            family="Update versions"
+            oldString="1.1.0"
+            replacement="1.2.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="86"
+            column="20"
+            startOffset="2477"
+            endLine="86"
+            endColumn="65"
+            endOffset="2522"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.7.2">
+        <fix-replace
+            description="Change to 2.7.2"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.7.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="92"
+            column="20"
+            startOffset="2745"
+            endLine="92"
+            endColumn="54"
+            endOffset="2779"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.7.2">
+        <fix-replace
+            description="Change to 2.7.2"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.7.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="93"
+            column="20"
+            startOffset="2800"
+            endLine="93"
+            endColumn="50"
+            endOffset="2830"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.7.2">
+        <fix-replace
+            description="Change to 2.7.2"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.7.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="94"
+            column="10"
+            startOffset="2841"
+            endLine="94"
+            endColumn="45"
+            endOffset="2876"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.test.ext:junit than 1.1.5 is available: 1.2.1">
+        <fix-replace
+            description="Change to 1.2.1"
+            family="Update versions"
+            oldString="1.1.5"
+            replacement="1.2.1"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="103"
+            column="31"
+            startOffset="3199"
+            endLine="103"
+            endColumn="62"
+            endOffset="3230"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.test.espresso:espresso-core than 3.5.1 is available: 3.6.1">
+        <fix-replace
+            description="Change to 3.6.1"
+            family="Update versions"
+            oldString="3.5.1"
+            replacement="3.6.1"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="104"
+            column="31"
+            startOffset="3262"
+            endLine="104"
+            endColumn="75"
+            endOffset="3306"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.compose:compose-bom than 2024.05.00 is available: 2025.06.01">
+        <fix-replace
+            description="Change to 2025.06.01"
+            family="Update versions"
+            oldString="2024.05.00"
+            replacement="2025.06.01"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="105"
+            column="31"
+            startOffset="3338"
+            endLine="105"
+            endColumn="82"
+            endOffset="3389"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of io.coil-kt:coil-compose than 2.5.0 is available: 2.7.0">
+        <fix-replace
+            description="Change to 2.7.0"
+            family="Update versions"
+            oldString="2.5.0"
+            replacement="2.7.0"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="78"
+            column="20"
+            startOffset="2179"
+            endLine="78"
+            endColumn="51"
+            endOffset="2210"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.dagger:hilt-android than 2.51.1 is available: 2.56.2">
+        <fix-replace
+            description="Change to 2.56.2"
+            family="Update versions"
+            oldString="2.51.1"
+            replacement="2.56.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="84"
+            column="20"
+            startOffset="2366"
+            endLine="84"
+            endColumn="59"
+            endOffset="2405"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.dagger:hilt-compiler than 2.51.1 is available: 2.56.2">
+        <fix-replace
+            description="Change to 2.56.2"
+            family="Update versions"
+            oldString="2.51.1"
+            replacement="2.56.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="85"
+            column="10"
+            startOffset="2416"
+            endLine="85"
+            endColumn="50"
+            endOffset="2456"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.dagger:hilt-android-testing than 2.51.1 is available: 2.56.2">
+        <fix-replace
+            description="Change to 2.56.2"
+            family="Update versions"
+            oldString="2.51.1"
+            replacement="2.56.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="88"
+            column="31"
+            startOffset="2591"
+            endLine="88"
+            endColumn="78"
+            endOffset="2638"/>
+    </incident>
+
+    <incident
+        id="NewerVersionAvailable"
+        severity="warning"
+        message="A newer version of com.google.dagger:hilt-compiler than 2.51.1 is available: 2.56.2">
+        <fix-replace
+            description="Change to 2.56.2"
+            family="Update versions"
+            oldString="2.51.1"
+            replacement="2.56.2"
+            priority="0"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="89"
+            column="21"
+            startOffset="2660"
+            endLine="89"
+            endColumn="61"
+            endOffset="2700"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;welcome_message&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="16"
+            column="13"
+            startOffset="703"
+            endLine="16"
+            endColumn="35"
+            endOffset="725"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;action_settings&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="17"
+            column="13"
+            startOffset="768"
+            endLine="17"
+            endColumn="35"
+            endOffset="790"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;menu_home&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="18"
+            column="13"
+            startOffset="822"
+            endLine="18"
+            endColumn="29"
+            endOffset="838"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;menu_settings&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="19"
+            column="13"
+            startOffset="866"
+            endLine="19"
+            endColumn="33"
+            endOffset="886"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;start_drawing&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="20"
+            column="13"
+            startOffset="918"
+            endLine="20"
+            endColumn="33"
+            endOffset="938"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;save_drawing&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="21"
+            column="13"
+            startOffset="978"
+            endLine="21"
+            endColumn="32"
+            endOffset="997"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;extract_text&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="22"
+            column="13"
+            startOffset="1038"
+            endLine="22"
+            endColumn="32"
+            endOffset="1057"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;translation_settings&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="23"
+            column="13"
+            startOffset="1094"
+            endLine="23"
+            endColumn="40"
+            endOffset="1121"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;import_model&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="24"
+            column="13"
+            startOffset="1163"
+            endLine="24"
+            endColumn="32"
+            endOffset="1182"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;analytics_title&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="25"
+            column="13"
+            startOffset="1226"
+            endLine="25"
+            endColumn="35"
+            endOffset="1248"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;export_csv&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="26"
+            column="13"
+            startOffset="1281"
+            endLine="26"
+            endColumn="30"
+            endOffset="1298"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;customization_settings&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="27"
+            column="13"
+            startOffset="1335"
+            endLine="27"
+            endColumn="42"
+            endOffset="1364"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;import_theme&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="28"
+            column="13"
+            startOffset="1400"
+            endLine="28"
+            endColumn="32"
+            endOffset="1419"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;training_title&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="29"
+            column="13"
+            startOffset="1461"
+            endLine="29"
+            endColumn="34"
+            endOffset="1482"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;export_training_data&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="30"
+            column="13"
+            startOffset="1526"
+            endLine="30"
+            endColumn="40"
+            endOffset="1553"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;start_training&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="31"
+            column="13"
+            startOffset="1608"
+            endLine="31"
+            endColumn="34"
+            endOffset="1629"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;metadata_title&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="32"
+            column="13"
+            startOffset="1671"
+            endLine="32"
+            endColumn="34"
+            endOffset="1692"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;import_metadata&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="33"
+            column="13"
+            startOffset="1735"
+            endLine="33"
+            endColumn="35"
+            endOffset="1757"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;double_page_mode&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="34"
+            column="13"
+            startOffset="1805"
+            endLine="34"
+            endColumn="36"
+            endOffset="1828"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;error_log&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="35"
+            column="13"
+            startOffset="1872"
+            endLine="35"
+            endColumn="29"
+            endOffset="1888"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;export_errors&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="36"
+            column="13"
+            startOffset="1922"
+            endLine="36"
+            endColumn="33"
+            endOffset="1942"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;dark_mode&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="37"
+            column="13"
+            startOffset="1987"
+            endLine="37"
+            endColumn="29"
+            endOffset="2003"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;notifications&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="38"
+            column="13"
+            startOffset="2036"
+            endLine="38"
+            endColumn="33"
+            endOffset="2056"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;back&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="39"
+            column="13"
+            startOffset="2093"
+            endLine="39"
+            endColumn="24"
+            endOffset="2104"/>
+    </incident>
+
+    <incident
+        id="MissingTranslation"
+        severity="error"
+        message="&quot;next&quot; is not translated in &quot;ru&quot; (Russian) or &quot;es&quot; (Spanish)">
+        <fix-attribute
+            description="Mark non-translatable"
+            attribute="translatable"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/values/strings.xml"
+            line="40"
+            column="13"
+            startOffset="2132"
+            endLine="40"
+            endColumn="24"
+            endOffset="2143"/>
+    </incident>
+
+    <incident
+        id="KaptUsageInsteadOfKsp"
+        severity="warning"
+        message="This library supports using KSP instead of kapt, which greatly improves performance. Learn more: https://developer.android.com/studio/build/migrate-to-ksp">
+        <show-url
+            description="Learn about how to enable KSP and use the KSP processor for this dependency instead"
+            url="https://developer.android.com/studio/build/migrate-to-ksp"/>
+        <location
+            file="${:app*projectDir}/build.gradle.kts"
+            line="94"
+            column="5"
+            startOffset="2836"
+            endLine="94"
+            endColumn="46"
+            endOffset="2877"/>
+    </incident>
+
+    <incident
+        id="AutoboxingStateCreation"
+        severity="informational"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`">
+        <fix-replace
+            description="Replace with mutableFloatStateOf"
+            replacement="androidx.compose.runtime.mutableFloatStateOf"
+            shortenNames="true"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/ui/ReaderScreen.kt"
+                startOffset="1821"
+                endOffset="1835"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/ui/ReaderScreen.kt"
+            line="45"
+            column="33"
+            startOffset="1821"
+            endLine="45"
+            endColumn="47"
+            endOffset="1835"/>
+    </incident>
+
+    <incident
+        id="DisableBaselineAlignment"
+        severity="warning"
+        message="Set `android:baselineAligned=&quot;false&quot;` on this element for better performance">
+        <fix-attribute
+            description="Set baselineAligned=&quot;false&quot;"
+            robot="true"
+            independent="true"
+            namespace="http://schemas.android.com/apk/res/android"
+            attribute="baselineAligned"
+            value="false"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="91"
+            column="18"
+            startOffset="3468"
+            endLine="91"
+            endColumn="30"
+            endOffset="3480"/>
+    </incident>
+
+    <incident
+        id="Overdraw"
+        severity="warning"
+        message="Possible overdraw: Root element paints background `@android:color/white` with a theme that also paints a background (inferred theme is `@style/Theme.MrComic`)">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/widget_layout.xml"
+            line="6"
+            column="5"
+            startOffset="237"
+            endLine="6"
+            endColumn="46"
+            endOffset="278"/>
+    </incident>
+
+    <incident
+        id="IconLauncherShape"
+        severity="warning"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-hdpi/ic_launcher_round.png"/>
+    </incident>
+
+    <incident
+        id="IconLauncherShape"
+        severity="warning"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-mdpi/ic_launcher_round.png"/>
+    </incident>
+
+    <incident
+        id="IconLauncherShape"
+        severity="warning"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xhdpi/ic_launcher_round.png"/>
+    </incident>
+
+    <incident
+        id="IconLauncherShape"
+        severity="warning"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xxhdpi/ic_launcher_round.png"/>
+    </incident>
+
+    <incident
+        id="IconLauncherShape"
+        severity="warning"
+        message="Launcher icon used as round icon did not have a circular shape">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xxxhdpi/ic_launcher_round.png"/>
+    </incident>
+
+    <incident
+        id="IconDuplicates"
+        severity="warning"
+        message="The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-hdpi/ic_launcher_round.png"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-hdpi/ic_launcher.png"/>
+    </incident>
+
+    <incident
+        id="IconDuplicates"
+        severity="warning"
+        message="The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-mdpi/ic_launcher_round.png"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-mdpi/ic_launcher.png"/>
+    </incident>
+
+    <incident
+        id="IconDuplicates"
+        severity="warning"
+        message="The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xhdpi/ic_launcher_round.png"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xhdpi/ic_launcher.png"/>
+    </incident>
+
+    <incident
+        id="IconDuplicates"
+        severity="warning"
+        message="The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xxhdpi/ic_launcher_round.png"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xxhdpi/ic_launcher.png"/>
+    </incident>
+
+    <incident
+        id="IconDuplicates"
+        severity="warning"
+        message="The following unrelated icon files have identical contents: ic_launcher.png, ic_launcher_round.png">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xxxhdpi/ic_launcher_round.png"/>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/mipmap-xxxhdpi/ic_launcher.png"/>
+    </incident>
+
+    <incident
+        id="ButtonStyle"
+        severity="warning"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)">
+        <fix-composite
+            description="Make borderless">
+            <fix-attribute
+                description="Set style=&quot;?android:attr/buttonBarStyle&quot;"
+                attribute="style"
+                value="?android:attr/buttonBarStyle">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+                    startOffset="947"
+                    endOffset="1805"/>
+            </fix-attribute>
+            <fix-attribute
+                description="Set style=&quot;?android:attr/buttonBarButtonStyle&quot;"
+                attribute="style"
+                value="?android:attr/buttonBarButtonStyle">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+                    startOffset="1170"
+                    endOffset="1467"/>
+            </fix-attribute>
+            <fix-attribute
+                description="Set style=&quot;?android:attr/buttonBarButtonStyle&quot;"
+                attribute="style"
+                value="?android:attr/buttonBarButtonStyle">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+                    startOffset="1483"
+                    endOffset="1778"/>
+            </fix-attribute>
+        </fix-composite>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="32"
+            column="14"
+            startOffset="1171"
+            endLine="32"
+            endColumn="20"
+            endOffset="1177"/>
+    </incident>
+
+    <incident
+        id="ButtonStyle"
+        severity="warning"
+        message="Buttons in button bars should be borderless; use `style=&quot;?android:attr/buttonBarButtonStyle&quot;` (and `?android:attr/buttonBarStyle` on the parent)">
+        <fix-composite
+            description="Make borderless">
+            <fix-attribute
+                description="Set style=&quot;?android:attr/buttonBarStyle&quot;"
+                attribute="style"
+                value="?android:attr/buttonBarStyle">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+                    startOffset="947"
+                    endOffset="1805"/>
+            </fix-attribute>
+            <fix-attribute
+                description="Set style=&quot;?android:attr/buttonBarButtonStyle&quot;"
+                attribute="style"
+                value="?android:attr/buttonBarButtonStyle">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+                    startOffset="1170"
+                    endOffset="1467"/>
+            </fix-attribute>
+            <fix-attribute
+                description="Set style=&quot;?android:attr/buttonBarButtonStyle&quot;"
+                attribute="style"
+                value="?android:attr/buttonBarButtonStyle">
+                <range
+                    file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+                    startOffset="1483"
+                    endOffset="1778"/>
+            </fix-attribute>
+        </fix-composite>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="40"
+            column="14"
+            startOffset="1484"
+            endLine="40"
+            endColumn="20"
+            endOffset="1490"/>
+    </incident>
+
+    <incident
+        id="SmallSp"
+        severity="warning"
+        message="Avoid using sizes smaller than `11sp`: `10sp`">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="48"
+            column="17"
+            startOffset="1913"
+            endLine="48"
+            endColumn="40"
+            endOffset="1936"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `String.toUri` instead?">
+        <fix-replace
+            description="Replace with the toUri extension function"
+            family="Replace with the toUri extension function"
+            robot="true"
+            independent="true"
+            oldString="Uri.parse(uriString)"
+            replacement="uriString.toUri()"
+            reformat="value"
+            imports="androidx.core.net.toUri"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/ui/AddComicViewModel.kt"
+                startOffset="1206"
+                endOffset="1226"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/ui/AddComicViewModel.kt"
+            line="39"
+            column="27"
+            startOffset="1206"
+            endLine="39"
+            endColumn="47"
+            endOffset="1226"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `Bitmap.scale` instead?">
+        <fix-replace
+            description="Replace with the scale extension function"
+            family="Replace with the scale extension function"
+            robot="true"
+            independent="true"
+            oldString="Bitmap.createScaledBitmap(it, size, size, true)"
+            replacement="it.scale(size, size)"
+            reformat="value"
+            imports="androidx.core.graphics.scale"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/data/ComicPageProvider.kt"
+                startOffset="248"
+                endOffset="295"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/data/ComicPageProvider.kt"
+            line="9"
+            column="9"
+            startOffset="248"
+            endLine="9"
+            endColumn="56"
+            endOffset="295"/>
+    </incident>
+
+    <incident
+        id="UseKtx"
+        severity="warning"
+        message="Use the KTX extension function `Bitmap.scale` instead?">
+        <fix-replace
+            description="Replace with the scale extension function"
+            family="Replace with the scale extension function"
+            robot="true"
+            independent="true"
+            oldString="Bitmap.createScaledBitmap(it, size, size, true)"
+            replacement="it.scale(size, size)"
+            reformat="value"
+            imports="androidx.core.graphics.scale"
+            priority="0">
+            <range
+                file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/data/ComicPageProvider.kt"
+                startOffset="1095"
+                endOffset="1142"/>
+        </fix-replace>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*javaDir*0}/com/example/mrcomic/data/ComicPageProvider.kt"
+            line="29"
+            column="13"
+            startOffset="1095"
+            endLine="29"
+            endColumn="60"
+            endOffset="1142"/>
+    </incident>
+
+    <incident
+        id="ContentDescription"
+        severity="warning"
+        message="Missing `contentDescription` attribute on image">
+        <fix-alternatives>
+            <fix-attribute
+                description="Set contentDescription"
+                namespace="http://schemas.android.com/apk/res/android"
+                attribute="contentDescription"
+                value="TODO"
+                point="4"
+                mark="0"/>
+            <fix-attribute
+                description="Set importantForAccessibility=&quot;no&quot;"
+                namespace="http://schemas.android.com/apk/res/android"
+                attribute="importantForAccessibility"
+                value="no"/>
+        </fix-alternatives>
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_comic_page.xml"
+            line="2"
+            column="2"
+            startOffset="41"
+            endLine="2"
+            endColumn="11"
+            endOffset="50"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Scan Comics&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_main.xml"
+            line="12"
+            column="9"
+            startOffset="450"
+            endLine="12"
+            endColumn="35"
+            endOffset="476"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Comic Translation&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="19"
+            column="13"
+            startOffset="691"
+            endLine="19"
+            endColumn="45"
+            endOffset="723"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Select Image&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="37"
+            column="17"
+            startOffset="1389"
+            endLine="37"
+            endColumn="44"
+            endOffset="1416"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Take Photo&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="45"
+            column="17"
+            startOffset="1700"
+            endLine="45"
+            endColumn="42"
+            endOffset="1725"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Image preview&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="64"
+            column="17"
+            startOffset="2431"
+            endLine="64"
+            endColumn="59"
+            endOffset="2473"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Translation Settings&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="85"
+            column="21"
+            startOffset="3223"
+            endLine="85"
+            endColumn="56"
+            endOffset="3258"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;From:&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="107"
+            column="29"
+            startOffset="4219"
+            endLine="107"
+            endColumn="49"
+            endOffset="4239"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;To:&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="127"
+            column="29"
+            startOffset="5086"
+            endLine="127"
+            endColumn="47"
+            endOffset="5104"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Offline Mode&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="150"
+            column="25"
+            startOffset="6005"
+            endLine="150"
+            endColumn="52"
+            endOffset="6032"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Translate&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="170"
+            column="13"
+            startOffset="6677"
+            endLine="170"
+            endColumn="37"
+            endOffset="6701"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Recognized Text&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="200"
+            column="21"
+            startOffset="7812"
+            endLine="200"
+            endColumn="51"
+            endOffset="7842"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;No text recognized yet&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="209"
+            column="21"
+            startOffset="8219"
+            endLine="209"
+            endColumn="58"
+            endOffset="8256"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Translation Results&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/activity_translation.xml"
+            line="235"
+            column="21"
+            startOffset="9184"
+            endLine="235"
+            endColumn="55"
+            endOffset="9218"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Библиотека пуста&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/fragment_comic_library.xml"
+            line="20"
+            column="9"
+            startOffset="831"
+            endLine="20"
+            endColumn="40"
+            endOffset="862"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Добавить комикс&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/fragment_comic_library.xml"
+            line="32"
+            column="9"
+            startOffset="1365"
+            endLine="32"
+            endColumn="53"
+            endOffset="1409"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Обложка комикса&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_comic.xml"
+            line="13"
+            column="9"
+            startOffset="502"
+            endLine="13"
+            endColumn="53"
+            endOffset="546"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Название комикса&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_comic.xml"
+            line="22"
+            column="9"
+            startOffset="862"
+            endLine="22"
+            endColumn="40"
+            endOffset="893"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Автор&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_comic.xml"
+            line="34"
+            column="9"
+            startOffset="1336"
+            endLine="34"
+            endColumn="29"
+            endOffset="1356"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Offline mode&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="40"
+            column="17"
+            startOffset="1574"
+            endLine="40"
+            endColumn="58"
+            endOffset="1615"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Original:&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="64"
+            column="17"
+            startOffset="2481"
+            endLine="64"
+            endColumn="41"
+            endOffset="2505"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Translation:&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="92"
+            column="17"
+            startOffset="3559"
+            endLine="92"
+            endColumn="44"
+            endOffset="3586"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Error:&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="142"
+            column="17"
+            startOffset="5496"
+            endLine="142"
+            endColumn="38"
+            endOffset="5517"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Copy&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="170"
+            column="17"
+            startOffset="6575"
+            endLine="170"
+            endColumn="36"
+            endOffset="6594"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Share&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/item_translation_result.xml"
+            line="179"
+            column="17"
+            startOffset="6948"
+            endLine="179"
+            endColumn="37"
+            endOffset="6968"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;Последние комиксы&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/widget_layout.xml"
+            line="13"
+            column="9"
+            startOffset="464"
+            endLine="13"
+            endColumn="41"
+            endOffset="496"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;-&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/widget_layout.xml"
+            line="21"
+            column="9"
+            startOffset="725"
+            endLine="21"
+            endColumn="25"
+            endOffset="741"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;-&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/widget_layout.xml"
+            line="28"
+            column="9"
+            startOffset="936"
+            endLine="28"
+            endColumn="25"
+            endOffset="952"/>
+    </incident>
+
+    <incident
+        id="HardcodedText"
+        severity="warning"
+        message="Hardcoded string &quot;-&quot;, should use `@string` resource">
+        <location
+            file="${:app*debug*MAIN*sourceProvider*0*resDir*0}/layout/widget_layout.xml"
+            line="35"
+            column="9"
+            startOffset="1147"
+            endLine="35"
+            endColumn="25"
+            endOffset="1163"/>
+    </incident>
+
+</incidents>

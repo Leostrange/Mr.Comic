@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:comicat="http://schemas.android.com/apk/res-auto">
+    <item android:icon="@drawable/a2_action_settings" android:id="@id/settings" android:title="@string/settings" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a2_action_search" android:id="@id/search" android:title="@string/search" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a5_content_import_export" android:id="@id/sortBy" android:title="@string/sortCatalog" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a10_device_access_network_cell" android:id="@id/showStats" android:title="@string/showStats" />
+    <item android:icon="@drawable/a1_navigation_refresh" android:id="@id/resync" android:title="@string/resync" comicat:showAsAction="ifRoom" />
+    <item android:icon="@drawable/a5_content_discard" android:id="@id/deleteRead" android:title="@string/deleteRead" />
+</menu>

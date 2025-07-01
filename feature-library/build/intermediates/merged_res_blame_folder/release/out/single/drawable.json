@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.example.feature.library.feature-library-merged_res-49:/drawable/notification_tile_bg.xml",
+        "source": "com.example.feature.library.feature-library-core-1.13.1-42:/drawable/notification_tile_bg.xml"
+    },
+    {
+        "merged": "com.example.feature.library.feature-library-merged_res-49:/drawable/notification_bg.xml",
+        "source": "com.example.feature.library.feature-library-core-1.13.1-42:/drawable/notification_bg.xml"
+    },
+    {
+        "merged": "com.example.feature.library.feature-library-merged_res-49:/drawable/notification_icon_background.xml",
+        "source": "com.example.feature.library.feature-library-core-1.13.1-42:/drawable/notification_icon_background.xml"
+    },
+    {
+        "merged": "com.example.feature.library.feature-library-merged_res-49:/drawable/notification_bg_low.xml",
+        "source": "com.example.feature.library.feature-library-core-1.13.1-42:/drawable/notification_bg_low.xml"
+    }
+]

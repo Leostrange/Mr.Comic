@@ -1,0 +1,18 @@
+[
+    {
+        "merged": "com.mrcomic.feature.ocr.feature-ocr-merged_res-40:/drawable/notification_tile_bg.xml",
+        "source": "com.mrcomic.feature.ocr.feature-ocr-core-1.13.1-34:/drawable/notification_tile_bg.xml"
+    },
+    {
+        "merged": "com.mrcomic.feature.ocr.feature-ocr-merged_res-40:/drawable/notification_bg.xml",
+        "source": "com.mrcomic.feature.ocr.feature-ocr-core-1.13.1-34:/drawable/notification_bg.xml"
+    },
+    {
+        "merged": "com.mrcomic.feature.ocr.feature-ocr-merged_res-40:/drawable/notification_bg_low.xml",
+        "source": "com.mrcomic.feature.ocr.feature-ocr-core-1.13.1-34:/drawable/notification_bg_low.xml"
+    },
+    {
+        "merged": "com.mrcomic.feature.ocr.feature-ocr-merged_res-40:/drawable/notification_icon_background.xml",
+        "source": "com.mrcomic.feature.ocr.feature-ocr-core-1.13.1-34:/drawable/notification_icon_background.xml"
+    }
+]

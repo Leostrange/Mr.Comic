@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:comicat="http://schemas.android.com/apk/res-auto">
+    <group>
+        <item android:icon="@drawable/a9_av_pause" android:id="@id/pauseAll" android:title="@string/pauseAll" />
+        <item android:icon="@drawable/a9_av_play" android:id="@id/resumeAll" android:title="@string/resumeAll" />
+        <item android:icon="@drawable/a1_navigation_cancel" android:id="@id/cancelAll" android:title="@string/cancelAll" />
+    </group>
+    <item android:icon="@drawable/a1_navigation_cancel" android:id="@id/retryFailed" android:title="@string/retryFailed" />
+    <item android:icon="@drawable/a1_navigation_cancel" android:id="@id/removeAll" android:title="@string/removeAll" />
+    <item android:icon="@drawable/a1_navigation_accept" android:id="@id/clearDownloaded" android:title="@string/clearCompleted" comicat:showAsAction="always|withText" />
+    <item android:icon="@drawable/a5_content_import_export" android:id="@id/sortDownloads" android:title="@string/sort" comicat:showAsAction="always" />
+    <item android:icon="@drawable/a2_action_settings" android:id="@id/downloadSettings" android:title="@string/settings" comicat:showAsAction="always" />
+</menu>

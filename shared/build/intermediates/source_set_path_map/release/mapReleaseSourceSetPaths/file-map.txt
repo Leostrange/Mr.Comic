@@ -1,0 +1,7 @@
+com.mrcomic.shared-pngs-0 C:\Users\xmeta\projects\Mr.Comic\shared\build\generated\res\pngs\release
+com.mrcomic.shared-resValues-1 C:\Users\xmeta\projects\Mr.Comic\shared\build\generated\res\resValues\release
+com.mrcomic.shared-mergeReleaseResources-2 C:\Users\xmeta\projects\Mr.Comic\shared\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
+com.mrcomic.shared-mergeReleaseResources-3 C:\Users\xmeta\projects\Mr.Comic\shared\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
+com.mrcomic.shared-release-4 C:\Users\xmeta\projects\Mr.Comic\shared\build\intermediates\merged_res\release\mergeReleaseResources
+com.mrcomic.shared-main-5 C:\Users\xmeta\projects\Mr.Comic\shared\src\main\res
+com.mrcomic.shared-release-6 C:\Users\xmeta\projects\Mr.Comic\shared\src\release\res
