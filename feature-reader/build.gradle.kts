@@ -38,3 +38,7 @@ dependencies {
     // Zoomable Image support
     implementation(libs.telephoto.zoomable.image)
 }
+
+
+    implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
+

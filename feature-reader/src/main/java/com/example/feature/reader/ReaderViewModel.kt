@@ -1,6 +1,7 @@
 package com.example.feature.reader
 
-import android.graphics.Bitmap
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -12,11 +13,12 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.mrcomic.reader.AdvancedComicReaderEngine
-import java.io.File
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
-    private val repository: ReaderRepository
+    private val repository: ReaderRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(Pair("", 1))
     val state: StateFlow<Pair<String, Int>> = _state.asStateFlow()
@@ -32,7 +34,7 @@ class ReaderViewModel @Inject constructor(
     private val _totalPages = MutableStateFlow(0)
     val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
 
-    private val engine = AdvancedComicReaderEngine()
+    private lateinit var engine: AdvancedComicReaderEngine
     private var loaded = false
 
     enum class ReadingMode {
@@ -43,6 +45,7 @@ class ReaderViewModel @Inject constructor(
     val readingMode: StateFlow<ReadingMode> = _readingMode.asStateFlow()
 
     init {
+        engine = AdvancedComicReaderEngine(context)
         initLoad()
     }
 
@@ -64,12 +67,27 @@ class ReaderViewModel @Inject constructor(
                 if (repository is RoomReaderRepository) {
                     repository.getStateFlow().collectLatest { (comic, page) ->
                         if (comic.isBlank()) throw Exception("Нет выбранного комикса!")
-                        _uiState.value = ReaderUiState.Success(comic, page)
+                        val comicUri = Uri.parse(comic) // Assuming comic is now a URI string
+                        if (engine.loadComic(comicUri)) {
+                            loaded = true
+                            _totalPages.value = engine.getTotalPages()
+                            goToPage(page)
+                            _uiState.value = ReaderUiState.Success(comic, page)
+                        } else {
+                            throw Exception("Не удалось загрузить комикс: $comic")
+                        }
                     }
                 } else {
-                    val (comic, page) = repository.getCurrentComic() to 1
-                    if (comic.isBlank()) throw Exception("Нет выбранного комикса!")
-                    _uiState.value = ReaderUiState.Success(comic, page)
+                    val comicUri = Uri.parse(repository.getCurrentComic()) // Assuming comic is now a URI string
+                    if (comicUri.toString().isBlank()) throw Exception("Нет выбранного комикса!")
+                    if (engine.loadComic(comicUri)) {
+                        loaded = true
+                        _totalPages.value = engine.getTotalPages()
+                        goToPage(1)
+                        _uiState.value = ReaderUiState.Success(comicUri.toString(), 1)
+                    } else {
+                        throw Exception("Не удалось загрузить комикс: $comicUri")
+                    }
                 }
             } catch (e: Exception) {
                 _uiState.value = ReaderUiState.Error(e.message ?: "Неизвестная ошибка")
@@ -77,9 +95,9 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun loadTestComic(pages: List<File>) {
+    fun loadComicFromUri(uri: Uri) {
         viewModelScope.launch {
-            if (engine.loadComic(pages)) {
+            if (engine.loadComic(uri)) {
                 loaded = true
                 _totalPages.value = engine.getTotalPages()
                 goToPage(0)
@@ -122,5 +140,10 @@ class ReaderViewModel @Inject constructor(
 
     fun setReadingMode(mode: ReadingMode) {
         _readingMode.value = mode
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        engine.releaseResources()
     }
 } 

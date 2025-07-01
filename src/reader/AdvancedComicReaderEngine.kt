@@ -1,49 +1,74 @@
 package com.mrcomic.reader
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RectF
+import android.net.Uri
 import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
-class AdvancedComicReaderEngine {
+class AdvancedComicReaderEngine(private val context: Context) {
 
     private var currentPageBitmap: Bitmap? = null
-    private var comicPages: MutableList<File> = mutableListOf()
     private var currentPageIndex: Int = -1
+    private var totalPages: Int = 0
 
-    fun loadComic(comicFiles: List<File>): Boolean {
-        if (comicFiles.isEmpty()) {
-            Log.e("ComicReaderEngine", "No comic files provided.")
-            return false
+    private var pdfPageExtractor: PdfPageExtractor? = null
+    private var cbzPageExtractor: CbzPageExtractor? = null
+
+    fun loadComic(uri: Uri): Boolean {
+        releaseResources()
+        val extension = context.contentResolver.getType(uri)?.substringAfterLast("/") ?: uri.lastPathSegment?.substringAfterLast(".")
+
+        return when (extension?.lowercase()) {
+            "pdf" -> {
+                pdfPageExtractor = PdfPageExtractor(context)
+                totalPages = pdfPageExtractor?.openPdf(uri) ?: 0
+                if (totalPages > 0) {
+                    goToPage(0)
+                    true
+                } else {
+                    Log.e("ComicReaderEngine", "Failed to load PDF: $uri")
+                    false
+                }
+            }
+            "cbz" -> {
+                cbzPageExtractor = CbzPageExtractor(context)
+                totalPages = cbzPageExtractor?.openCbz(uri) ?: 0
+                if (totalPages > 0) {
+                    goToPage(0)
+                    true
+                } else {
+                    Log.e("ComicReaderEngine", "Failed to load CBZ: $uri")
+                    false
+                }
+            }
+            // TODO: Add CBR support here
+            else -> {
+                Log.e("ComicReaderEngine", "Unsupported file type: $extension")
+                false
+            }
         }
-        comicPages.clear()
-        comicPages.addAll(comicFiles)
-        currentPageIndex = -1
-        return true
     }
 
     fun goToPage(pageIndex: Int): Bitmap? {
-        if (pageIndex < 0 || pageIndex >= comicPages.size) {
+        if (pageIndex < 0 || pageIndex >= totalPages) {
             Log.e("ComicReaderEngine", "Page index out of bounds: $pageIndex")
             return null
         }
-        try {
-            val pageFile = comicPages[pageIndex]
-            FileInputStream(pageFile).use { fis ->
-                currentPageBitmap = BitmapFactory.decodeStream(fis)
-                currentPageIndex = pageIndex
-                return currentPageBitmap
-            }
-        } catch (e: IOException) {
-            Log.e("ComicReaderEngine", "Error loading page $pageIndex: ${e.message}", e)
-            return null
+        val bitmap = pdfPageExtractor?.getPage(pageIndex) ?: cbzPageExtractor?.getPage(pageIndex)
+        if (bitmap != null) {
+            currentPageBitmap = bitmap
+            currentPageIndex = pageIndex
+            return currentPageBitmap
         }
+        return null
     }
 
     fun getNextPage(): Bitmap? {
@@ -63,7 +88,7 @@ class AdvancedComicReaderEngine {
     }
 
     fun getTotalPages(): Int {
-        return comicPages.size
+        return totalPages
     }
 
     fun zoomPage(scaleFactor: Float): Bitmap? {
@@ -112,7 +137,6 @@ class AdvancedComicReaderEngine {
         val colorMatrix = android.graphics.ColorMatrix()
         colorMatrix.setSaturation(0f)
         val filter = android.graphics.ColorMatrixColorFilter(colorMatrix)
-        paint.colorFilter = filter
         canvas.drawBitmap(bmp, 0f, 0f, paint)
         return grayscaleBitmap
     }
@@ -164,10 +188,13 @@ class AdvancedComicReaderEngine {
     fun releaseResources() {
         currentPageBitmap?.recycle()
         currentPageBitmap = null
-        comicPages.clear()
+        pdfPageExtractor?.closePdf()
+        pdfPageExtractor = null
+        cbzPageExtractor?.closeCbz()
+        cbzPageExtractor = null
         currentPageIndex = -1
+        totalPages = 0
         Log.d("ComicReaderEngine", "Resources released.")
     }
 }
-
 
