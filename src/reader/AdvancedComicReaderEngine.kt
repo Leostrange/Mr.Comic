@@ -21,6 +21,7 @@ class AdvancedComicReaderEngine(private val context: Context) {
 
     private var pdfPageExtractor: PdfPageExtractor? = null
     private var cbzPageExtractor: CbzPageExtractor? = null
+    private var cbrPageExtractor: CbrPageExtractor? = null
 
     fun loadComic(uri: Uri): Boolean {
         releaseResources()
@@ -49,7 +50,17 @@ class AdvancedComicReaderEngine(private val context: Context) {
                     false
                 }
             }
-            // TODO: Add CBR support here
+            "cbr" -> {
+                cbrPageExtractor = CbrPageExtractor(context)
+                totalPages = cbrPageExtractor?.openCbr(uri) ?: 0
+                if (totalPages > 0) {
+                    goToPage(0)
+                    true
+                } else {
+                    Log.e("ComicReaderEngine", "Failed to load CBR: $uri")
+                    false
+                }
+            }
             else -> {
                 Log.e("ComicReaderEngine", "Unsupported file type: $extension")
                 false
@@ -62,7 +73,7 @@ class AdvancedComicReaderEngine(private val context: Context) {
             Log.e("ComicReaderEngine", "Page index out of bounds: $pageIndex")
             return null
         }
-        val bitmap = pdfPageExtractor?.getPage(pageIndex) ?: cbzPageExtractor?.getPage(pageIndex)
+        val bitmap = pdfPageExtractor?.getPage(pageIndex) ?: cbzPageExtractor?.getPage(pageIndex) ?: cbrPageExtractor?.getPage(pageIndex)
         if (bitmap != null) {
             currentPageBitmap = bitmap
             currentPageIndex = pageIndex
@@ -192,6 +203,8 @@ class AdvancedComicReaderEngine(private val context: Context) {
         pdfPageExtractor = null
         cbzPageExtractor?.closeCbz()
         cbzPageExtractor = null
+        cbrPageExtractor?.closeCbr()
+        cbrPageExtractor = null
         currentPageIndex = -1
         totalPages = 0
         Log.d("ComicReaderEngine", "Resources released.")

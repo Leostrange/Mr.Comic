@@ -42,3 +42,7 @@ dependencies {
 
     implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
 
+
+
+    implementation("com.github.junrar:junrar:7.5.0")
+
