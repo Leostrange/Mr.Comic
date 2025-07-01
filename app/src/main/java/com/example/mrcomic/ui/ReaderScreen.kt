@@ -7,6 +7,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -15,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -25,8 +28,9 @@ import com.example.mrcomic.R
 import com.example.mrcomic.data.CbzPageProvider
 import com.example.mrcomic.data.CbzUtils
 import kotlinx.coroutines.delay
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.border
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -55,7 +59,9 @@ fun ReaderScreen(
 ) {
     var showControls by remember { mutableStateOf(true) }
     var readingMode by remember { mutableStateOf("page") } // page, continuous, webtoon
-    var zoomLevel by remember { mutableStateOf(1.0f) }
+    var scale by remember { mutableStateOf(1f) }
+    var rotation by remember { mutableStateOf(0f) }
+    var offset by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
 
     val comic by viewModel.comic.collectAsState()
     val filePath = comic?.filePath ?: ""
@@ -71,28 +77,60 @@ fun ReaderScreen(
     val currentPage by viewModel.currentPage.collectAsState()
     val isBookmarked = bookmarks.any { it.page == currentPage }
     var showBookmarksDialog by remember { mutableStateOf(false) }
+    var showSearchDialog by remember { mutableStateOf(false) }
+    var searchText by remember { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<Int>>(emptyList()) }
+    var currentSearchResultIndex by remember { mutableStateOf(0) }
 
+    val lazyListState = rememberLazyListState()
+
+    // Асинхронная загрузка текущей страницы для режима 'page'
     var imageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    // Асинхронная загрузка текущей страницы
-    LaunchedEffect(currentPage, provider) {
-        withContext(Dispatchers.IO) {
-            if (provider != null && !PageCache.has(currentPage)) {
-                provider.getPage(currentPage)?.let { PageCache.put(currentPage, it) }
+    LaunchedEffect(currentPage, provider, readingMode) {
+        if (readingMode == "page" && provider != null) {
+            withContext(Dispatchers.IO) {
+                if (!PageCache.has(currentPage)) {
+                    provider.getPage(currentPage)?.let { PageCache.put(currentPage, it) }
+                }
+                imageBitmap = PageCache.get(currentPage)
             }
-            imageBitmap = PageCache.get(currentPage)
         }
     }
-    // Предзагрузка соседних страниц
-    LaunchedEffect(currentPage, provider) {
-        withContext(Dispatchers.IO) {
-            if (provider != null) {
+
+    // Предзагрузка соседних страниц для режима 'page'
+    LaunchedEffect(currentPage, provider, readingMode) {
+        if (readingMode == "page" && provider != null) {
+            withContext(Dispatchers.IO) {
                 listOf(currentPage - 1, currentPage + 1)
                     .filter { it in 0 until totalPages && !PageCache.has(it) }
                     .forEach { preloadPage ->
                         provider.getPage(preloadPage)?.let { PageCache.put(preloadPage, it) }
                     }
             }
+        }
+    }
+
+    // Обновление currentPage при прокрутке LazyColumn
+    LaunchedEffect(lazyListState, readingMode) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .collect { index ->
+                if (readingMode != "page") {
+                    viewModel.setPage(index)
+                }
+            }
+    }
+
+    // Прокрутка LazyColumn к текущей странице при изменении currentPage
+    LaunchedEffect(currentPage, readingMode) {
+        if (readingMode != "page") {
+            lazyListState.scrollToItem(currentPage)
+        }
+    }
+
+    // Сохранение текущей страницы при выходе из ReaderScreen
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.saveCurrentPage(currentPage)
         }
     }
 
@@ -109,8 +147,14 @@ fun ReaderScreen(
             showControls = false
         }
     }
-    
-        Column(
+
+    val state = rememberTransformableState { zoomChange, panChange, rotationChange ->
+        scale *= zoomChange
+        rotation += rotationChange
+        offset += panChange
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
@@ -144,6 +188,13 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showSearchDialog = true }) { // Кнопка поиска
+                        Text(
+                            text = "🔍",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                     IconButton(onClick = { /* TODO: Настройки */ }) {
                         Text(
                             text = "⚙️",
@@ -157,33 +208,137 @@ fun ReaderScreen(
                 )
             )
         }
-        
+
         // Область для изображения комикса
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(8.dp)
-                .background(Color.DarkGray),
-            contentAlignment = Alignment.Center
-        ) {
-            if (imageBitmap != null) {
-                AndroidView(
-                    factory = { ctx ->
-                        ImageView(ctx).apply {
-                            scaleType = ImageView.ScaleType.FIT_CENTER
-                            setImageBitmap(imageBitmap)
+        when (readingMode) {
+            "page" -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(8.dp)
+                        .background(Color.DarkGray)
+                        .transformable(state = state)
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            rotationZ = rotation,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageBitmap != null) {
+                        AndroidView(
+                            factory = { ctx ->
+                                ImageView(ctx).apply {
+                                    scaleType = ImageView.ScaleType.FIT_CENTER
+                                    setImageBitmap(imageBitmap)
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        CircularProgressIndicator()
+                    }
+                }
+            }
+            "continuous" -> {
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 8.dp) // Добавляем горизонтальный паддинг
+                        .background(Color.DarkGray)
+                        .transformable(state = state)
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            rotationZ = rotation,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    itemsIndexed(List(totalPages) { it }) { index, _ ->
+                        // Асинхронная загрузка страницы для LazyColumn
+                        var pageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+                        LaunchedEffect(index, provider) {
+                            withContext(Dispatchers.IO) {
+                                if (provider != null && !PageCache.has(index)) {
+                                    provider.getPage(index)?.let { PageCache.put(index, it) }
+                                }
+                                pageBitmap = PageCache.get(index)
+                            }
                         }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                CircularProgressIndicator()
+
+                        if (pageBitmap != null) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    ImageView(ctx).apply {
+                                        scaleType = ImageView.ScaleType.FIT_WIDTH
+                                        setImageBitmap(pageBitmap)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                        }
+                    }
+                }
+            }
+            "webtoon" -> {
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 8.dp) // Убираем вертикальный паддинг для вебтуна
+                        .background(Color.Black) // Черный фон для вебтуна
+                        .transformable(state = state)
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            rotationZ = rotation,
+                            translationX = offset.x,
+                            translationY = offset.y
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    itemsIndexed(List(totalPages) { it }) { index, _ ->
+                        // Асинхронная загрузка страницы для LazyColumn
+                        var pageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+                        LaunchedEffect(index, provider) {
+                            withContext(Dispatchers.IO) { // Исправлено: withWithContext на withContext
+                                if (provider != null && !PageCache.has(index)) {
+                                    provider.getPage(index)?.let { PageCache.put(index, it) }
+                                }
+                                pageBitmap = PageCache.get(index)
+                            }
+                        }
+
+                        if (pageBitmap != null) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    ImageView(ctx).apply {
+                                        scaleType = ImageView.ScaleType.FIT_WIDTH // Изменено на FIT_WIDTH для вебтуна
+                                        setImageBitmap(pageBitmap)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        } else {
+                            CircularProgressIndicator(modifier = Modifier.padding(16.dp))
+                        }
+                    }
+                }
             }
         }
-        
+
         // Нижняя панель с элементами управления
-            AnimatedVisibility(
+        AnimatedVisibility(
             visible = showControls,
             enter = slideInVertically { it },
             exit = slideOutVertically { it }
@@ -212,7 +367,7 @@ fun ReaderScreen(
                         )
                     }
                 }
-                
+
                 // Кнопки навигации
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -226,7 +381,7 @@ fun ReaderScreen(
                     ) {
                         Text("← Предыдущая")
                     }
-                    
+
                     // Информация о странице
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -242,7 +397,7 @@ fun ReaderScreen(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    
+
                     // Кнопка "Следующая страница"
                     Button(
                         onClick = { viewModel.setPage(currentPage + 1) },
@@ -251,9 +406,9 @@ fun ReaderScreen(
                         Text("Следующая →")
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 // Дополнительные элементы управления
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -277,7 +432,7 @@ fun ReaderScreen(
                                 }
                             )
                         }
-                        
+
                         ExposedDropdownMenu(
                             expanded = readingModeExpanded,
                             onDismissRequest = { readingModeExpanded = false }
@@ -305,21 +460,21 @@ fun ReaderScreen(
                             )
                         }
                     }
-                    
+
                     // Масштабирование
                     IconButton(
-                        onClick = { zoomLevel = if (zoomLevel < 2.0f) zoomLevel + 0.1f else 1.0f }
+                        onClick = { scale = if (scale < 2.0f) scale + 0.1f else 1.0f }
                     ) {
                         Text("🔍", style = MaterialTheme.typography.titleMedium)
                     }
-                    
+
                     // Поворот
                     IconButton(
-                        onClick = { /* Поворот */ }
+                        onClick = { rotation = (rotation + 90f) % 360f }
                     ) {
                         Text("🔄", style = MaterialTheme.typography.titleMedium)
                     }
-                    
+
                     // Закладка
                     IconButton(
                         onClick = {
@@ -336,7 +491,7 @@ fun ReaderScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
-                    
+
                     // Быстрая навигация по закладкам
                     IconButton(
                         onClick = { showBookmarksDialog = true }
@@ -344,7 +499,7 @@ fun ReaderScreen(
                         Text("⭐", style = MaterialTheme.typography.titleMedium)
                     }
                 }
-                
+
                 // Дополнительные кнопки
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -355,13 +510,13 @@ fun ReaderScreen(
                     ) {
                         Text("⏮️ В начало")
                     }
-                    
+
                     OutlinedButton(
                         onClick = { viewModel.setPage(totalPages / 2) }
                     ) {
                         Text("⏸️ Середина")
                     }
-                    
+
                     OutlinedButton(
                         onClick = { viewModel.setPage(totalPages - 1) }
                     ) {
@@ -410,11 +565,36 @@ fun ReaderScreen(
         )
     }
 
-    DisposableEffect(Unit) {
-        viewModel.onStartReading()
-        onDispose {
-            viewModel.onStopReading()
-        }
+    if (showSearchDialog) {
+        AlertDialog(
+            onDismissRequest = { showSearchDialog = false },
+            title = { Text("Поиск текста") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = searchText,
+                        onValueChange = { searchText = it },
+                        label = { Text("Текст для поиска") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Найдено: ${searchResults.size}", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    TextButton(onClick = { /* TODO: Предыдущий результат */ }) {
+                        Text("←")
+                    }
+                    TextButton(onClick = { /* TODO: Поиск */ }) {
+                        Text("Поиск")
+                    }
+                    TextButton(onClick = { /* TODO: Следующий результат */ }) {
+                        Text("→")
+                    }
+                }
+            }
+        )
     }
 }
 

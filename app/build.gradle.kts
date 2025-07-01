@@ -196,3 +196,6 @@ tasks.withType<org.gradle.api.tasks.testing.Test> {
     implementation("com.folioreader:folioreader:0.5.4") //JitPack
 
 
+
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
+

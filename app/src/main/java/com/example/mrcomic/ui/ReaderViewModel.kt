@@ -15,11 +15,19 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.example.mrcomic.data.PdfTextExtractor
+import com.example.mrcomic.data.CbrTextExtractor
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @HiltViewModel
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class ReaderViewModel @Inject constructor(
-    private val repository: ComicRepository
+    private val repository: ComicRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _currentPage = MutableStateFlow(0)
     val currentPage: StateFlow<Int> = _currentPage.asStateFlow()
@@ -39,6 +47,9 @@ class ReaderViewModel @Inject constructor(
         initialValue = null
     )
 
+    private val _indexedText = MutableStateFlow<List<String>>(emptyList())
+    val indexedText: StateFlow<List<String>> = _indexedText.asStateFlow()
+
     fun init(comicId: Long, startPage: Int, totalPages: Int) {
         this.comicId = comicId
         _comicId.value = comicId
@@ -47,7 +58,19 @@ class ReaderViewModel @Inject constructor(
         loadBookmarks()
         viewModelScope.launch {
             repository.updateLastOpened(comicId)
+            comic.value?.filePath?.let { path ->
+                indexComicText(File(path))
+            }
         }
+    }
+
+    private suspend fun indexComicText(file: File) = withContext(Dispatchers.IO) {
+        val texts = when (file.extension.lowercase()) {
+            "pdf" -> PdfTextExtractor.extractTextFromPdf(context, file)
+            "cbr" -> CbrTextExtractor.extractTextFromCbr(context, file)
+            else -> emptyList()
+        }
+        _indexedText.value = texts
     }
 
     fun setPage(page: Int) {
@@ -101,4 +124,6 @@ class ReaderViewModel @Inject constructor(
         }
         readingStart = 0L
     }
-} 
+}
+
+

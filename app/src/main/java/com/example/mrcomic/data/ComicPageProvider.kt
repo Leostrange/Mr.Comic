@@ -14,6 +14,9 @@ import androidx.annotation.RequiresApi
 import java.util.zip.ZipFile
 import java.util.zip.ZipEntry
 import android.graphics.BitmapFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
 
 interface PageProvider {
     val pageCount: Int
@@ -119,8 +122,28 @@ fun createPageProvider(context: Context, file: File): PageProvider? {
             CbzPageProvider(zipFile, entries)
         }
         "cbr" -> {
-            // Распаковка, если нужно, должна быть выполнена заранее
-            val tempDir = File(file.absolutePath + "_cbr_cache")
+            val tempDir = File(context.cacheDir, file.nameWithoutExtension + "_cbr_cache")
+            if (!tempDir.exists()) {
+                tempDir.mkdirs()
+                try {
+                    val archive = Archive(file.absolutePath)
+                    for (header in archive.fileHeaders) {
+                        if (header.fileName.endsWith(".jpg", true) || header.fileName.endsWith(".png", true)) {
+                            val outputFile = File(tempDir, header.fileName.replace("\\", "/"))
+                            if (!outputFile.parentFile.exists()) {
+                                outputFile.parentFile.mkdirs()
+                            }
+                            val outputStream = FileOutputStream(outputFile)
+                            archive.extractFile(header, outputStream)
+                            outputStream.close()
+                        }
+                    }
+                    archive.close()
+                } catch (e: Exception) {
+                    Log.e("createPageProvider", "Error extracting CBR: ${e.message}", e)
+                    return null
+                }
+            }
             val imageFiles = tempDir.listFiles()?.filter {
                 it.name.endsWith(".jpg", true) || it.name.endsWith(".png", true)
             }?.sortedBy { it.name } ?: emptyList()
@@ -134,4 +157,5 @@ fun createPageProvider(context: Context, file: File): PageProvider? {
         else -> null
     }
 }
+
 

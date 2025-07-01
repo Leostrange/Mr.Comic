@@ -77,7 +77,11 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
                 }
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) {
                     when (it) {
-                        0 -> LibraryScreen(onBookClick = { /*TODO*/ }, onAddClick = { /*TODO*/ }, onSettingsClick = { /*TODO*/ })
+                        0 -> LibraryScreen(
+                            onBookClick = { uriString -> navController.navigate(Screen.Reader.createRoute(uriString)) },
+                            onAddClick = { navController.navigate(Screen.AddComic.route) },
+                            onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                        )
                         1 -> CloudScreen()
                         2 -> AnnotationsScreen()
                         3 -> PluginsScreen()

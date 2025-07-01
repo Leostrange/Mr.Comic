@@ -7,7 +7,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.example.feature.library.ui.LibraryScreen
+import com.example.mrcomic.ui.LibraryScreen
 import com.example.mrcomic.ui.screens.add_comic.AddComicScreen
 import com.example.feature.reader.ui.ReaderScreen
 import com.example.feature.settings.ui.SettingsScreen

@@ -8,12 +8,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 @Composable
-fun LibraryScreen() {
+fun LibraryScreen(
+    onBookClick: (filePath: String) -> Unit,
+    onAddClick: () -> Unit,
+    onSettingsClick: () -> Unit
+) {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("Library Screen Content")
+        Text("Library Screen Content (Placeholder)")
     }
 }
 
