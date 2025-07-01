@@ -133,4 +133,5 @@ fun createPageProvider(context: Context, file: File): PageProvider? {
         }
         else -> null
     }
-} 
+}
+
