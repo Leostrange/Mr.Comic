@@ -21,6 +21,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.KeyboardOptions
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -42,6 +44,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.example.mrcomic.data.createPageProvider
 import java.io.File
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import com.example.mrcomic.data.TextWithCoordinates
 
 object PageCache {
     private val cache = LruCache<Int, Bitmap>(50)
@@ -80,19 +86,51 @@ fun ReaderScreen(
     var showSearchDialog by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
     val searchResults by viewModel.searchResults.collectAsState()
+    val indexedTextWithCoords by viewModel.indexedTextWithCoords.collectAsState()
     var currentSearchResultIndex by remember { mutableStateOf(0) }
+    var showGoToPageDialog by remember { mutableStateOf(false) } // State for Go to Page dialog
+    var goToPageInput by remember { mutableStateOf("") }
 
     val lazyListState = rememberLazyListState()
 
     // Асинхронная загрузка текущей страницы для режима 'page'
     var imageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(currentPage, provider, readingMode) {
+    LaunchedEffect(currentPage, provider, readingMode, searchResults) {
         if (readingMode == "page" && provider != null) {
             withContext(Dispatchers.IO) {
-                if (!PageCache.has(currentPage)) {
+                val originalBitmap = if (!PageCache.has(currentPage)) {
                     provider.getPage(currentPage)?.let { PageCache.put(currentPage, it) }
+                    PageCache.get(currentPage)
+                } else {
+                    PageCache.get(currentPage)
                 }
-                imageBitmap = PageCache.get(currentPage)
+
+                if (originalBitmap != null && searchResults.contains(currentPage)) {
+                    val mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                    val canvas = Canvas(mutableBitmap)
+                    val paint = Paint().apply {
+                        color = android.graphics.Color.YELLOW
+                        alpha = 128 // Полупрозрачный желтый
+                    }
+
+                    val pageTexts = indexedTextWithCoords.getOrNull(currentPage) ?: emptyList()
+                    val query = searchText.lowercase()
+
+                    pageTexts.forEach { textWithCoords ->
+                        if (textWithCoords.text.lowercase().contains(query)) {
+                            val rect = RectF(
+                                textWithCoords.x,
+                                textWithCoords.y,
+                                textWithCoords.x + textWithCoords.width,
+                                textWithCoords.y + textWithCoords.height
+                            )
+                            canvas.drawRect(rect, paint)
+                        }
+                    }
+                    imageBitmap = mutableBitmap
+                } else {
+                    imageBitmap = originalBitmap
+                }
             }
         }
     }
@@ -195,6 +233,13 @@ fun ReaderScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
+                    IconButton(onClick = { showGoToPageDialog = true }) { // Кнопка "Перейти к странице"
+                        Text(
+                            text = "📄",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                     IconButton(onClick = { /* TODO: Настройки */ }) {
                         Text(
                             text = "⚙️",
@@ -264,12 +309,41 @@ fun ReaderScreen(
                     itemsIndexed(List(totalPages) { it }) { index, _ ->
                         // Асинхронная загрузка страницы для LazyColumn
                         var pageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-                        LaunchedEffect(index, provider) {
+                        LaunchedEffect(index, provider, searchResults) {
                             withContext(Dispatchers.IO) {
-                                if (provider != null && !PageCache.has(index)) {
+                                val originalBitmap = if (!PageCache.has(index)) {
                                     provider.getPage(index)?.let { PageCache.put(index, it) }
+                                    PageCache.get(index)
+                                } else {
+                                    PageCache.get(index)
                                 }
-                                pageBitmap = PageCache.get(index)
+
+                                if (originalBitmap != null && searchResults.contains(index)) {
+                                    val mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                                    val canvas = Canvas(mutableBitmap)
+                                    val paint = Paint().apply {
+                                        color = android.graphics.Color.YELLOW
+                                        alpha = 128 // Полупрозрачный желтый
+                                    }
+
+                                    val pageTexts = indexedTextWithCoords.getOrNull(index) ?: emptyList()
+                                    val query = searchText.lowercase()
+
+                                    pageTexts.forEach { textWithCoords ->
+                                        if (textWithCoords.text.lowercase().contains(query)) {
+                                            val rect = RectF(
+                                                textWithCoords.x,
+                                                textWithCoords.y,
+                                                textWithCoords.x + textWithCoords.width,
+                                                textWithCoords.y + textWithCoords.height
+                                            )
+                                            canvas.drawRect(rect, paint)
+                                        }
+                                    }
+                                    pageBitmap = mutableBitmap
+                                } else {
+                                    pageBitmap = originalBitmap
+                                }
                             }
                         }
 
@@ -310,12 +384,41 @@ fun ReaderScreen(
                     itemsIndexed(List(totalPages) { it }) { index, _ ->
                         // Асинхронная загрузка страницы для LazyColumn
                         var pageBitmap by remember { mutableStateOf<Bitmap?>(null) }
-                        LaunchedEffect(index, provider) {
+                        LaunchedEffect(index, provider, searchResults) {
                             withContext(Dispatchers.IO) { // Исправлено: withWithContext на withContext
-                                if (provider != null && !PageCache.has(index)) {
+                                val originalBitmap = if (!PageCache.has(index)) {
                                     provider.getPage(index)?.let { PageCache.put(index, it) }
+                                    PageCache.get(index)
+                                } else {
+                                    PageCache.get(index)
                                 }
-                                pageBitmap = PageCache.get(index)
+
+                                if (originalBitmap != null && searchResults.contains(index)) {
+                                    val mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                                    val canvas = Canvas(mutableBitmap)
+                                    val paint = Paint().apply {
+                                        color = android.graphics.Color.YELLOW
+                                        alpha = 128 // Полупрозрачный желтый
+                                    }
+
+                                    val pageTexts = indexedTextWithCoords.getOrNull(index) ?: emptyList()
+                                    val query = searchText.lowercase()
+
+                                    pageTexts.forEach { textWithCoords ->
+                                        if (textWithCoords.text.lowercase().contains(query)) {
+                                            val rect = RectF(
+                                                textWithCoords.x,
+                                                textWithCoords.y,
+                                                textWithCoords.x + textWithCoords.width,
+                                                textWithCoords.y + textWithCoords.height
+                                            )
+                                            canvas.drawRect(rect, paint)
+                                        }
+                                    }
+                                    pageBitmap = mutableBitmap
+                                } else {
+                                    pageBitmap = originalBitmap
+                                }
                             }
                         }
 
@@ -609,6 +712,46 @@ fun ReaderScreen(
                     }) {
                         Text("→")
                     }
+                }
+            }
+        )
+    }
+
+    if (showGoToPageDialog) {
+        AlertDialog(
+            onDismissRequest = { showGoToPageDialog = false },
+            title = { Text("Перейти к странице") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = goToPageInput,
+                        onValueChange = { newValue ->
+                            goToPageInput = newValue.filter { it.isDigit() }
+                        },
+                        label = { Text("Номер страницы") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Всего страниц: $totalPages", style = MaterialTheme.typography.bodySmall)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val pageNumber = goToPageInput.toIntOrNull()
+                    if (pageNumber != null && pageNumber > 0 && pageNumber <= totalPages) {
+                        viewModel.setPage(pageNumber - 1) // -1 потому что страницы начинаются с 0
+                        showGoToPageDialog = false
+                    } else {
+                        // TODO: Показать ошибку пользователю
+                    }
+                }) {
+                    Text("Перейти")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGoToPageDialog = false }) {
+                    Text("Отмена")
                 }
             }
         )

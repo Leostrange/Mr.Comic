@@ -22,6 +22,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.mrcomic.data.TextWithCoordinates
 
 @HiltViewModel
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -47,8 +48,8 @@ class ReaderViewModel @Inject constructor(
         initialValue = null
     )
 
-    private val _indexedText = MutableStateFlow<List<String>>(emptyList())
-    val indexedText: StateFlow<List<String>> = _indexedText.asStateFlow()
+    private val _indexedTextWithCoords = MutableStateFlow<List<List<TextWithCoordinates>>>(emptyList())
+    val indexedTextWithCoords: StateFlow<List<List<TextWithCoordinates>>> = _indexedTextWithCoords.asStateFlow()
 
     private val _searchResults = MutableStateFlow<List<Int>>(emptyList())
     val searchResults: StateFlow<List<Int>> = _searchResults.asStateFlow()
@@ -68,12 +69,16 @@ class ReaderViewModel @Inject constructor(
     }
 
     private suspend fun indexComicText(file: File) = withContext(Dispatchers.IO) {
-        val texts = when (file.extension.lowercase()) {
-            "pdf" -> PdfTextExtractor.extractTextFromPdf(context, file)
-            "cbr" -> CbrTextExtractor.extractTextFromCbr(context, file)
+        val textsWithCoords = when (file.extension.lowercase()) {
+            "pdf" -> PdfTextExtractor.extractTextAndCoordinatesFromPdf(context, file)
+            // Для CBR пока извлекаем только текстовые файлы, не текст с изображений
+            "cbr" -> CbrTextExtractor.extractTextFromCbr(context, file).map { text ->
+                // Для CBR без координат, создаем заглушки
+                listOf(TextWithCoordinates(text = text, x = 0f, y = 0f, width = 0f, height = 0f))
+            }
             else -> emptyList()
         }
-        _indexedText.value = texts
+        _indexedTextWithCoords.value = textsWithCoords
     }
 
     fun search(query: String) {
@@ -83,8 +88,8 @@ class ReaderViewModel @Inject constructor(
                 return@launch
             }
             val results = mutableListOf<Int>()
-            _indexedText.value.forEachIndexed { pageIndex, pageText ->
-                if (pageText.contains(query, ignoreCase = true)) {
+            _indexedTextWithCoords.value.forEachIndexed { pageIndex, pageTexts ->
+                if (pageTexts.any { it.text.contains(query, ignoreCase = true) }) {
                     results.add(pageIndex)
                 }
             }
