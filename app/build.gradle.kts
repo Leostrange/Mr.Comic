@@ -111,7 +111,8 @@ dependencies {
     implementation(project(":core:ui"))
     // implementation(project(":feature-library"))
     // implementation(project(":feature-settings"))
-    // implementation(project(":feature-reader"))
+      implementation(project(":feature-reader"))
+    implementation(project(":feature-themes")))
     
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

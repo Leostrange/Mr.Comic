@@ -1,6 +1,12 @@
 package com.example.mrcomic.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -8,26 +14,76 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.mrcomic.ui.theme.MrComicTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+import com.example.feature.library.ui.LibraryScreen
+import com.example.feature.themes.ui.ThemesScreen
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun MainScreen(modifier: Modifier = Modifier) {
+fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rememberNavController()) {
+    val coroutineScope = rememberCoroutineScope()
+    val tabs = listOf("Библиотека", "Облако", "Аннотации", "Плагины", "Темы")
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val pagerState = rememberPagerState { tabs.size }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mr. Comic") }
+                title = { Text("Mr. Comic") },
+                actions = {
+                    IconButton(onClick = { navController.navigate("account") }) {
+                        Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
+                    }
+                }
             )
         },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
+                    label = { Text("Домой") },
+                    selected = selectedTabIndex == 0,
+                    onClick = { selectedTabIndex = 0; coroutineScope.launch { pagerState.animateScrollToPage(0) } }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.MenuBook, contentDescription = "Reading") },
+                    label = { Text("Чтение") },
+                    selected = selectedTabIndex == 1,
+                    onClick = { selectedTabIndex = 1; coroutineScope.launch { pagerState.animateScrollToPage(1) } }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Translate, contentDescription = "Translate") },
+                    label = { Text("Переводы") },
+                    selected = selectedTabIndex == 2,
+                    onClick = { selectedTabIndex = 2; coroutineScope.launch { pagerState.animateScrollToPage(2) } }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
+                    label = { Text("Настройки") },
+                    selected = selectedTabIndex == 3,
+                    onClick = { selectedTabIndex = 3; coroutineScope.launch { pagerState.animateScrollToPage(3) } }
+                )
+            }
+        },
         content = { paddingValues ->
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                Text("Welcome to Mr. Comic!", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-                // Placeholder for content based on mockups
-                Text("This is a placeholder for the main screen content.")
+            Column(modifier = Modifier.padding(paddingValues)) {
+                TabRow(selectedTabIndex = selectedTabIndex) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index; coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                            text = { Text(title) }
+                        )
+                    }
+                }
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) {
+                    when (it) {
+                        0 -> LibraryScreen(onBookClick = { /*TODO*/ }, onAddClick = { /*TODO*/ }, onSettingsClick = { /*TODO*/ })
+                        1 -> CloudScreen()
+                        2 -> AnnotationsScreen()
+                        3 -> PluginsScreen()
+                        4 -> ThemesScreen()
+                    }
+                }
             }
         }
     )

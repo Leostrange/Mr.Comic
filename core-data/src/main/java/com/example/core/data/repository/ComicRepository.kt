@@ -23,7 +23,9 @@ interface ComicRepository {
     fun getComics(sortOrder: SortOrder): Flow<List<ComicBook>>
     suspend fun refreshComicsIfEmpty()
     suspend fun deleteComics(comicIds: Set<String>)
-}
+    suspend fun addComic(comic: ComicBook)
+    suspend fun updateProgress(comicId: String, currentPage: Int)
+    suspend fun clearCache()
 
 class ComicRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -99,6 +101,24 @@ class ComicRepositoryImpl @Inject constructor(
             }
             // Наконец, удаляем записи из базы данных
             comicDao.deleteComicsByFilePaths(comicIds.toList())
+        }
+    }
+
+    override suspend fun addComic(comic: ComicBook) {
+        withContext(Dispatchers.IO) {
+            val comicEntity = ComicEntity(
+                filePath = comic.filePath,
+                title = comic.title,
+                coverPath = comic.coverUrl,
+                dateAdded = System.currentTimeMillis()
+            )
+            comicDao.insertAll(listOf(comicEntity))
+        }
+    }
+
+    override suspend fun updateProgress(comicId: String, currentPage: Int) {
+        withContext(Dispatchers.IO) {
+            comicDao.updateProgress(comicId, currentPage, System.currentTimeMillis())
         }
     }
 

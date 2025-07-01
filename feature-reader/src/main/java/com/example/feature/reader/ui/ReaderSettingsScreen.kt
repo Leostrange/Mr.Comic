@@ -1,4 +1,4 @@
-package com.example.mrcomic.ui
+package com.example.feature.reader.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,12 +8,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 @Composable
-fun LibraryScreen() {
+fun ReaderSettingsScreen() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Text("Library Screen Content")
+        Text("Reader Settings Screen Placeholder")
     }
 }
 

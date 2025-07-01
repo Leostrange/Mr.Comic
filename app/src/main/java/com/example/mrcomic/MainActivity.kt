@@ -32,6 +32,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.example.mrcomic.ui.ComicReaderScreen
 import com.example.mrcomic.ui.theme.MrComicTheme
+import com.example.feature.themes.ui.ThemesViewModel
+import com.example.feature.themes.ui.AppTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import com.example.mrcomic.viewmodel.ComicViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -47,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.mrcomic.ui.screens.add_comic.AddComicScreen
 import com.example.feature.library.ui.LibraryScreen
+import com.example.feature.themes.ui.ThemesScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -54,23 +59,23 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MrComicTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    MrComicApp()
-                }
-            }
+            MrComicApp()
         }
     }
 }
 
 @Composable
 fun MrComicApp() {
-    val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "library") {
-        composable("library") {
+    val themesViewModel: ThemesViewModel = hiltViewModel()
+    val selectedTheme by themesViewModel.selectedTheme.collectAsState()
+
+    MrComicTheme(darkTheme = when (selectedTheme) {
+        AppTheme.LIGHT -> false
+        AppTheme.DARK -> true
+        AppTheme.SYSTEM -> isSystemInDarkTheme()
+    }) {
+        val navController = rememberNavController()
+        NavHost(navController = navController, startDestination = "library") {
             LibraryScreen(
                 onBookClick = { filePath ->
                     val encodedPath = Uri.encode(filePath)

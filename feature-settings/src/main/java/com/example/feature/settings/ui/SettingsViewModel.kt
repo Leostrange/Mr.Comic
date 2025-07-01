@@ -46,4 +46,10 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.removeLibraryFolder(folderUri)
         }
     }
+
+    fun clearCache() {
+        viewModelScope.launch {
+            settingsRepository.clearCache()
+        }
+    }
 }

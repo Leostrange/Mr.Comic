@@ -20,7 +20,7 @@ interface SettingsRepository {
     val libraryFolders: Flow<Set<String>>
     suspend fun addLibraryFolder(folderUri: String)
     suspend fun removeLibraryFolder(folderUri: String)
-}
+    suspend fun clearCache()}
 
 class SettingsRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
@@ -71,6 +71,12 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { preferences ->
             val currentFolders = preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
             preferences[PreferencesKeys.LIBRARY_FOLDERS] = currentFolders - folderUri
+        }
+    }
+
+    override suspend fun clearCache() {
+        dataStore.edit { preferences ->
+            preferences.clear()
         }
     }
 }

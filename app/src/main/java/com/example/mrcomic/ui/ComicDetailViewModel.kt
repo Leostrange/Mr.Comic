@@ -41,7 +41,12 @@ class ComicDetailViewModel @Inject constructor(
         }
     }
 
-    fun deleteComic() {
-        // TODO: Реализовать удаление и навигацию назад
+    fun deleteComic(onComicDeleted: () -> Unit) {
+        _comic.value?.let { currentComic ->
+            viewModelScope.launch {
+                repository.deleteComics(setOf(currentComic.id.toString()))
+                onComicDeleted()
+            }
+        }
     }
 } 

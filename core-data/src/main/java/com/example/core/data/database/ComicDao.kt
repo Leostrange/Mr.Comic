@@ -28,4 +28,6 @@ interface ComicDao {
 
     @Query("DELETE FROM comics WHERE filePath IN (:filePaths)")
     suspend fun deleteComicsByFilePaths(filePaths: List<String>)
-}
+
+    @Query("DELETE FROM comics")
+    suspend fun clearAll()}

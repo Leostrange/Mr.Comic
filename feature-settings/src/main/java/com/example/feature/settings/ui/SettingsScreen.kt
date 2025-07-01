@@ -76,6 +76,13 @@ private fun SettingsScreenContent(
                     onRemoveFolder = onRemoveFolder
                 )
             }
+            item {
+                MrComicPrimaryButton(
+                    onClick = { viewModel.clearCache() },
+                    text = "Clear Cache",
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
         }
     }
 }

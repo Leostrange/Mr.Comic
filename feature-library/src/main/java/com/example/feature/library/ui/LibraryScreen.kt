@@ -178,12 +178,21 @@ private fun LibraryScreenContent(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
+            FloatingActionButton(onClick = { showAddComicDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Comic")
             }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
+        if (showAddComicDialog) {
+            AddComicDialog(
+                onDismiss = { showAddComicDialog = false },
+                onConfirm = { title, author, coverPath ->
+                    viewModel.addComic(title, author, coverPath)
+                    showAddComicDialog = false
+                }
+            )
+        }
         Box(
             modifier = Modifier.fillMaxSize().padding(paddingValues),
             contentAlignment = Alignment.Center
