@@ -1,5 +1,7 @@
 # Mr.Comic
 
+![Mr.Comic Preview](video_preview.gif)
+
 Revolutionary comic reading app built for ultimate customization, AI-powered translation, and advanced user interaction. This document outlines the technologies, architecture, and roadmap based on the 99.9% perfection plan.
 
 ## ✨ Key Features
@@ -115,3 +117,4 @@ MIT License. See `LICENSE.md`.
 - 🌐 Translation: @linguist
 
 Join the journey to perfection. 
+
