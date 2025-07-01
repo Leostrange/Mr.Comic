@@ -20,7 +20,7 @@ import java.io.File
 import javax.inject.Inject
 
 interface ComicRepository {
-    fun getComics(sortOrder: SortOrder): Flow<List<ComicBook>>
+    fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<ComicBook>>
     suspend fun refreshComicsIfEmpty()
     suspend fun deleteComics(comicIds: Set<String>)
     suspend fun addComic(comic: ComicBook)
@@ -36,11 +36,11 @@ class ComicRepositoryImpl @Inject constructor(
 
     private val supportedExtensions = setOf("cbr", "cbz", "pdf", "djvu", "djv")
 
-    override fun getComics(sortOrder: SortOrder): Flow<List<ComicBook>> {
+    override fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<ComicBook>> {
         val comicsFlow = when (sortOrder) {
-            SortOrder.TITLE_ASC -> comicDao.getComicsSortedByTitleAsc()
-            SortOrder.TITLE_DESC -> comicDao.getComicsSortedByTitleDesc()
-            SortOrder.DATE_ADDED_DESC -> comicDao.getComicsSortedByDateDesc()
+            SortOrder.TITLE_ASC -> comicDao.getComicsSortedByTitleAsc(searchQuery)
+            SortOrder.TITLE_DESC -> comicDao.getComicsSortedByTitleDesc(searchQuery)
+            SortOrder.DATE_ADDED_DESC -> comicDao.getComicsSortedByDateDesc(searchQuery)
         }
         return comicsFlow.map { entities ->
             entities.map { entity ->

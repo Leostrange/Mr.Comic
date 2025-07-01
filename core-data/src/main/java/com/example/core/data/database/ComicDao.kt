@@ -8,14 +8,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ComicDao {
-    @Query("SELECT * FROM comics ORDER BY title COLLATE NOCASE ASC")
-    fun getComicsSortedByTitleAsc(): Flow<List<ComicEntity>>
+    @Query("SELECT * FROM comics WHERE title LIKE '%' || :searchQuery || '%' ORDER BY title COLLATE NOCASE ASC")
+    fun getComicsSortedByTitleAsc(searchQuery: String): Flow<List<ComicEntity>>
 
-    @Query("SELECT * FROM comics ORDER BY title COLLATE NOCASE DESC")
-    fun getComicsSortedByTitleDesc(): Flow<List<ComicEntity>>
+    @Query("SELECT * FROM comics WHERE title LIKE '%' || :searchQuery || '%' ORDER BY title COLLATE NOCASE DESC")
+    fun getComicsSortedByTitleDesc(searchQuery: String): Flow<List<ComicEntity>>
 
-    @Query("SELECT * FROM comics ORDER BY dateAdded DESC")
-    fun getComicsSortedByDateDesc(): Flow<List<ComicEntity>>
+    @Query("SELECT * FROM comics WHERE title LIKE '%' || :searchQuery || '%' ORDER BY dateAdded DESC")
+    fun getComicsSortedByDateDesc(searchQuery: String): Flow<List<ComicEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(comics: List<ComicEntity>)

@@ -22,19 +22,27 @@ class LibraryViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState = _uiState.asStateFlow()
 
+    init {
+        observeComics()
+    }
+
+    private fun observeComics() {
+        viewModelScope.launch {
+            _uiState.collectLatest { uiState ->
+                comicRepository.getComics(uiState.sortOrder, uiState.searchQuery).collectLatest {
+                    _uiState.update { currentState ->
+                        currentState.copy(isLoading = false, comics = it)
+                    }
+                }
+            }
+        }
+    }
+
     fun onPermissionsGranted() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                // This will scan the file system only if the database is empty
                 comicRepository.refreshComicsIfEmpty()
-
-                // Now, start listening to the database for updates
-                comicRepository.getComics().collectLatest { comics ->
-                    _uiState.update {
-                        it.copy(isLoading = false, comics = comics)
-                    }
-                }
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -44,6 +52,18 @@ class LibraryViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun onToggleSearch() {
+        _uiState.update { it.copy(isSearchActive = !it.isSearchActive, searchQuery = "") }
+    }
+
+    fun onSortOrderChange(sortOrder: SortOrder) {
+        _uiState.update { it.copy(sortOrder = sortOrder) }
     }
 
     fun onComicSelected(comicId: String) {
