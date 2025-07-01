@@ -79,7 +79,7 @@ fun ReaderScreen(
     var showBookmarksDialog by remember { mutableStateOf(false) }
     var showSearchDialog by remember { mutableStateOf(false) }
     var searchText by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf<List<Int>>(emptyList()) }
+    val searchResults by viewModel.searchResults.collectAsState()
     var currentSearchResultIndex by remember { mutableStateOf(0) }
 
     val lazyListState = rememberLazyListState()
@@ -566,6 +566,7 @@ fun ReaderScreen(
     }
 
     if (showSearchDialog) {
+        val searchResultsState by viewModel.searchResults.collectAsState()
         AlertDialog(
             onDismissRequest = { showSearchDialog = false },
             title = { Text("Поиск текста") },
@@ -578,18 +579,34 @@ fun ReaderScreen(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Найдено: ${searchResults.size}", style = MaterialTheme.typography.bodySmall)
+                    Text("Найдено: ${searchResultsState.size}", style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    TextButton(onClick = { /* TODO: Предыдущий результат */ }) {
+                    TextButton(onClick = {
+                        if (searchResultsState.isNotEmpty()) {
+                            currentSearchResultIndex = (currentSearchResultIndex - 1 + searchResultsState.size) % searchResultsState.size
+                            viewModel.setPage(searchResultsState[currentSearchResultIndex])
+                        }
+                    }) {
                         Text("←")
                     }
-                    TextButton(onClick = { /* TODO: Поиск */ }) {
+                    TextButton(onClick = {
+                        viewModel.search(searchText)
+                        currentSearchResultIndex = 0 // Сброс индекса при новом поиске
+                        if (searchResultsState.isNotEmpty()) {
+                            viewModel.setPage(searchResultsState[currentSearchResultIndex])
+                        }
+                    }) {
                         Text("Поиск")
                     }
-                    TextButton(onClick = { /* TODO: Следующий результат */ }) {
+                    TextButton(onClick = {
+                        if (searchResultsState.isNotEmpty()) {
+                            currentSearchResultIndex = (currentSearchResultIndex + 1) % searchResultsState.size
+                            viewModel.setPage(searchResultsState[currentSearchResultIndex])
+                        }
+                    }) {
                         Text("→")
                     }
                 }

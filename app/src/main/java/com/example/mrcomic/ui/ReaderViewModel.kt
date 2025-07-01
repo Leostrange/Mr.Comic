@@ -50,6 +50,9 @@ class ReaderViewModel @Inject constructor(
     private val _indexedText = MutableStateFlow<List<String>>(emptyList())
     val indexedText: StateFlow<List<String>> = _indexedText.asStateFlow()
 
+    private val _searchResults = MutableStateFlow<List<Int>>(emptyList())
+    val searchResults: StateFlow<List<Int>> = _searchResults.asStateFlow()
+
     fun init(comicId: Long, startPage: Int, totalPages: Int) {
         this.comicId = comicId
         _comicId.value = comicId
@@ -71,6 +74,22 @@ class ReaderViewModel @Inject constructor(
             else -> emptyList()
         }
         _indexedText.value = texts
+    }
+
+    fun search(query: String) {
+        viewModelScope.launch(Dispatchers.Default) {
+            if (query.isBlank()) {
+                _searchResults.value = emptyList()
+                return@launch
+            }
+            val results = mutableListOf<Int>()
+            _indexedText.value.forEachIndexed { pageIndex, pageText ->
+                if (pageText.contains(query, ignoreCase = true)) {
+                    results.add(pageIndex)
+                }
+            }
+            _searchResults.value = results
+        }
     }
 
     fun setPage(page: Int) {
