@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu
-  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:comicat="http://schemas.android.com/apk/res-auto">
-    <item android:icon="@drawable/btn_plus_default" android:id="@id/increaseFontSize" android:title="@string/zoomIn" comicat:showAsAction="always|withText" />
-    <item android:icon="@drawable/btn_minus_default" android:id="@id/decreaseFontSize" android:title="@string/zoomOut" comicat:showAsAction="always|withText" />
-</menu>

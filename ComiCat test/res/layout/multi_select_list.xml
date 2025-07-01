@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout android:layout_width="fill_parent" android:layout_height="fill_parent"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <LinearLayout android:orientation="horizontal" android:id="@id/buttonBar" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_alignParentBottom="true">
-        <Button android:id="@id/cancel" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@android:string/cancel" android:layout_weight="0.5" />
-        <Button android:id="@id/delete" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@string/delete" android:layout_weight="0.5" />
-    </LinearLayout>
-    <ListView android:id="@id/comicList" android:layout_width="fill_parent" android:layout_height="fill_parent" android:layout_above="@id/buttonBar" android:layout_alignParentTop="true" />
-</RelativeLayout>

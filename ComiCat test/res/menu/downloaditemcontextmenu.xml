@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@id/pause" android:title="@string/pauseDownload" />
-    <item android:id="@id/start" android:title="@string/resumeDownload" />
-    <item android:id="@id/cancel" android:title="@string/cancelDownload" />
-    <item android:id="@id/cancelAndIgnore" android:title="@string/cancelAndIgnore" />
-    <item android:id="@id/priority" android:title="@string/setHighPriority" />
-</menu>

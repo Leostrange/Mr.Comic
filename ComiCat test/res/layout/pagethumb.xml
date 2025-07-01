@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout android:orientation="vertical" android:background="@android:color/transparent" android:layout_width="100.0dip" android:layout_height="wrap_content"
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <meanlabs.comicreader.ui.AsyncPageThumbView android:layout_gravity="center" android:id="@id/thumbImage" android:layout_width="@dimen/page_thumb_width" android:layout_height="@dimen/page_thumb_height" android:scaleType="fitCenter" />
-    <TextView android:textSize="12.0sp" android:textColor="#ffffffff" android:gravity="center" android:layout_gravity="center" android:id="@id/thumbTitle" android:background="@drawable/circle" android:layout_width="24.0dip" android:layout_height="24.0dip" android:layout_marginTop="2.0dip" />
-</FrameLayout>

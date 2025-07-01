@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:id="@id/bookmark" android:title="@string/bookmark" />
-    <item android:id="@id/setAsWallpaper" android:title="@string/setAsWallpaper" />
-</menu>

@@ -190,3 +190,8 @@ tasks.withType<org.gradle.api.tasks.testing.Test> {
         enabled = false
     }
 } 
+
+    //FolioReader для EPUB
+    implementation("com.folioreader:folioreader:0.5.4") //JitPack
+
+
