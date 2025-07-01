@@ -24,39 +24,38 @@ class ArchivePageExtractor(private val context: Context, private val uri: Uri) :
     init {
         try {
             val scheme = uri.scheme
-            val path = if (scheme == "content") {
-                // For content URIs, we might need to copy to a temp file first
-                // This is a simplified approach, a more robust solution might be needed
+            val file: File? = if (scheme == "content") {
+                // For content URIs, copy to a temp file
                 val inputStream = context.contentResolver.openInputStream(uri)
-                val tempFile = File(context.cacheDir, "temp_comic_${System.currentTimeMillis()}.${uri.lastPathSegment?.substringAfterLast('.')}")
-                FileOutputStream(tempFile).use { outputStream ->
-                    inputStream?.copyTo(outputStream)
+                val tempFile = File(context.cacheDir, "temp_comic_${System.currentTimeMillis()}.${uri.lastPathSegment?.substringAfterLast(".")}")
+                inputStream?.use { input ->
+                    FileOutputStream(tempFile).use { output ->
+                        input.copyTo(output)
+                    }
                 }
-                tempFile.absolutePath
+                tempFile
             } else {
-                uri.path
+                uri.path?.let { File(it) }
             }
 
-            val file = path?.let { File(it) }
-
             if (file == null || !file.exists()) {
-                Log.e(TAG, "File does not exist: $uri")
-                throw IllegalArgumentException("File does not exist: $uri")
+                Log.e(TAG, "File does not exist or could not be created: $uri")
+                throw IllegalArgumentException("File does not exist or could not be created: $uri")
             }
 
             when (file.extension.lowercase()) {
                 "cbz" -> {
                     zipFile = ZipFile(file)
-                    imageEntries = zipFile?.entries()?.toList()?.filter { it.name.endsWith(".jpg", true) || it.name.endsWith(".png", true) }?.sortedBy { it.name } ?: emptyList()
+                    imageEntries = zipFile?.entries()?.toList()?.filter { it.name.endsWith(".jpg", true) || it.name.endsWith(".png", true) || it.name.endsWith(".jpeg", true) }?.sortedBy { it.name } ?: emptyList()
+                    Log.d(TAG, "CBZ initialized with ${imageEntries.size} entries.")
                 }
                 "cbr" -> {
-                    // For CBR, we need to extract to a temporary directory
                     tempDir = File(context.cacheDir, "cbr_cache_${file.nameWithoutExtension}_${System.currentTimeMillis()}")
                     if (!tempDir!!.exists()) {
                         tempDir!!.mkdirs()
                     }
                     rarArchive = Archive(file)
-                    imageEntries = rarArchive?.fileHeaders?.filter { !it.isDirectory && (it.fileName.endsWith(".jpg", true) || it.fileName.endsWith(".png", true)) }?.sortedBy { it.fileName } ?: emptyList()
+                    imageEntries = rarArchive?.fileHeaders?.filter { !it.isDirectory && (it.fileName.endsWith(".jpg", true) || it.fileName.endsWith(".png", true) || it.fileName.endsWith(".jpeg", true)) }?.sortedBy { it.fileName } ?: emptyList()
 
                     // Extract all images to tempDir
                     for (header in imageEntries) {
@@ -67,6 +66,7 @@ class ArchivePageExtractor(private val context: Context, private val uri: Uri) :
                             }
                         }
                     }
+                    Log.d(TAG, "CBR initialized with ${imageEntries.size} entries. Extracted to ${tempDir?.absolutePath}")
                 }
                 else -> throw IllegalArgumentException("Unsupported archive type: ${file.extension}")
             }
@@ -95,7 +95,6 @@ class ArchivePageExtractor(private val context: Context, private val uri: Uri) :
                     BitmapFactory.decodeStream(inputStream)
                 }
                 is FileHeader -> {
-                    // For CBR, images are already extracted to tempDir
                     val imageFile = File(tempDir, entry.fileName)
                     BitmapFactory.decodeFile(imageFile.absolutePath)
                 }
@@ -112,6 +111,7 @@ class ArchivePageExtractor(private val context: Context, private val uri: Uri) :
             zipFile?.close()
             rarArchive?.close()
             tempDir?.deleteRecursively() // Clean up temporary CBR extraction directory
+            Log.d(TAG, "ArchivePageExtractor closed and temp files cleaned.")
         } catch (e: Exception) {
             Log.e(TAG, "Error closing ArchivePageExtractor", e)
         }

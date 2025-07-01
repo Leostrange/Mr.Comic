@@ -46,8 +46,13 @@ class PdfPageExtractor(private val context: Context, private val uri: Uri) : Pag
         var bitmap: Bitmap? = null
         try {
             page = pdfRenderer!!.openPage(pageIndex)
+            // Calculate optimal width and height based on screen size or a reasonable default
+            // For now, let's use a fixed size or page's original size for simplicity
+            // A more robust solution would involve getting screen dimensions.
             val width = page.width
             val height = page.height
+
+            // Create a mutable bitmap for rendering
             bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
             Log.d(TAG, "Successfully rendered PDF page $pageIndex ($width x $height)")
