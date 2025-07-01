@@ -29,6 +29,20 @@ import coil.compose.AsyncImage
 import com.example.feature.library.LibraryViewModel
 import com.example.feature.library.UiState
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -153,7 +167,7 @@ fun LibraryScreen(
                             Text("Библиотека пуста")
                         }
                     } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        LazyVerticalGrid(columns = GridCells.Fixed(2), verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(comics) { comic ->
                                 var showDeleteDialog by remember { mutableStateOf(false) }
                                 if (showDeleteDialog) {
@@ -224,34 +238,41 @@ fun ComicCard(
         modifier = modifier
             .fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column {
             if (!comic.coverPath.isNullOrBlank()) {
                 AsyncImage(
                     model = comic.coverPath,
                     contentDescription = "Обложка",
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(3f / 4f)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(Icons.Default.Book, contentDescription = "Обложка", modifier = Modifier.size(48.dp))
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(comic.title, style = MaterialTheme.typography.titleMedium)
-                Text(comic.author, style = MaterialTheme.typography.bodyMedium)
-            }
-            IconButton(onClick = onDetailClick) {
-                Icon(Icons.Default.Info, contentDescription = "Детали")
-            }
-            IconButton(
-                onClick = { onFavoriteToggle(!comic.isFavorite) }
-            ) {
-                Icon(
-                    imageVector = if (comic.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = if (comic.isFavorite) "Убрать из избранного" else "В избранное"
+                Icon(Icons.Default.Book, contentDescription = "Обложка", modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(3f / 4f)
+                    .clip(RoundedCornerShape(8.dp)),
+                    tint = Color.Gray
                 )
+            }
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(comic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(comic.author, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("${comic.currentPage}/${comic.pageCount}", style = MaterialTheme.typography.bodySmall)
+                    IconButton(
+                        onClick = { onFavoriteToggle(!comic.isFavorite) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (comic.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (comic.isFavorite) "Убрать из избранного" else "В избранное",
+                            tint = if (comic.isFavorite) Color.Red else Color.Gray
+                        )
+                    }
+                }
             }
         }
     }
@@ -311,61 +332,6 @@ fun AddComicDialog(
             }
         }
     )
-} 
-package com.example.mrcomic.ui
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.mrcomic.ui.theme.MrComicTheme
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun LibraryScreen(
-    onNavigateToReader: (Long) -> Unit,
-    onNavigateToDetail: (Long) -> Unit,
-    onNavigateToSettings: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Library") }
-            )
-        },
-        content = { paddingValues ->
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                Text("This is the Library Screen.", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-                // Placeholder for comic list based on mockups
-                Text("List of comics will go here.")
-            }
-        }
-    )
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
-@Composable
-fun LibraryScreenVerticalPreview() {
-    MrComicTheme {
-        LibraryScreen(onNavigateToReader = {}, onNavigateToDetail = {}, onNavigateToSettings = {})
-    }
-}
-
-@Preview(showBackground = true, widthDp = 640, heightDp = 360)
-@Composable
-fun LibraryScreenHorizontalPreview() {
-    MrComicTheme {
-        LibraryScreen(onNavigateToReader = {}, onNavigateToDetail = {}, onNavigateToSettings = {})
-    }
 }
 
 

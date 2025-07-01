@@ -54,7 +54,6 @@ fun ComicDetailScreen(
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Обложка
                 if (!currentComic.coverPath.isNullOrBlank()) {
                     AsyncImage(
                         model = currentComic.coverPath,
@@ -92,7 +91,6 @@ fun ComicDetailScreen(
                 currentComic.description?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
                 Spacer(modifier = Modifier.height(24.dp))
                 
-                // Кнопки действий
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -169,73 +167,6 @@ fun ActionButton(
         )
     ) {
         Text(text)
-    }
-}
-
-package com.example.mrcomic.ui
-
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.example.mrcomic.ui.theme.MrComicTheme
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun ComicDetailScreen(
-    comicId: Long,
-    onNavigateBack: () -> Unit,
-    onNavigateToReader: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Comic Detail") },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
-        content = { paddingValues ->
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp)
-            ) {
-                Text("Details for Comic ID: $comicId", style = MaterialTheme.typography.headlineMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-                // Placeholder for comic details based on mockups
-                Text("Comic cover, description, and other details will go here.")
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { onNavigateToReader(comicId) }) {
-                    Text("Read Comic")
-                }
-            }
-        }
-    )
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
-@Composable
-fun ComicDetailScreenVerticalPreview() {
-    MrComicTheme {
-        ComicDetailScreen(comicId = 1L, onNavigateBack = {}, onNavigateToReader = {})
-    }
-}
-
-@Preview(showBackground = true, widthDp = 640, heightDp = 360)
-@Composable
-fun ComicDetailScreenHorizontalPreview() {
-    MrComicTheme {
-        ComicDetailScreen(comicId = 1L, onNavigateBack = {}, onNavigateToReader = {})
     }
 }
 
