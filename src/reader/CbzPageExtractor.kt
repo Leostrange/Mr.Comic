@@ -1,11 +1,10 @@
-package com.mrcomic.reader
-
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import java.io.File
+import java.io.FileInputStream
 import java.io.IOException
-import java.io.InputStream
 import java.util.zip.ZipInputStream
 import android.content.Context
 
@@ -13,25 +12,31 @@ class CbzPageExtractor(private val context: Context) {
 
     private var pageBitmaps: MutableList<Bitmap> = mutableListOf()
     private var totalPages: Int = 0
+    private var tempFile: File? = null
 
     fun openCbz(uri: Uri): Int {
         try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val zipInputStream = ZipInputStream(inputStream)
-                var zipEntry = zipInputStream.nextEntry
-                while (zipEntry != null) {
-                    if (!zipEntry.isDirectory && isImageFile(zipEntry.name)) {
-                        val bitmap = BitmapFactory.decodeStream(zipInputStream)
-                        bitmap?.let { pageBitmaps.add(it) }
+            tempFile = FileUtils.copyUriToTempFile(context, uri, "temp_cbz_comic.cbz")
+            tempFile?.let {
+                FileInputStream(it).use { fileInputStream ->
+                    val zipInputStream = ZipInputStream(fileInputStream)
+                    var zipEntry = zipInputStream.nextEntry
+                    while (zipEntry != null) {
+                        if (!zipEntry.isDirectory && isImageFile(zipEntry.name)) {
+                            val bitmap = BitmapFactory.decodeStream(zipInputStream)
+                            bitmap?.let { pageBitmaps.add(it) }
+                        }
+                        zipInputStream.closeEntry()
+                        zipEntry = zipInputStream.nextEntry
                     }
-                    zipInputStream.closeEntry()
-                    zipEntry = zipInputStream.nextEntry
+                    totalPages = pageBitmaps.size
+                    return totalPages
                 }
-                totalPages = pageBitmaps.size
-                return totalPages
             }
         } catch (e: IOException) {
             Log.e("CbzPageExtractor", "Error opening CBZ: ${e.message}", e)
+        } finally {
+            tempFile?.delete()
         }
         return 0
     }
@@ -47,6 +52,8 @@ class CbzPageExtractor(private val context: Context) {
         pageBitmaps.forEach { it.recycle() }
         pageBitmaps.clear()
         totalPages = 0
+        tempFile?.delete()
+        tempFile = null
     }
 
     private fun isImageFile(fileName: String): Boolean {
@@ -58,5 +65,3 @@ class CbzPageExtractor(private val context: Context) {
                 lowerCaseFileName.endsWith(".bmp")
     }
 }
-
-

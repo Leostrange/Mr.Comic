@@ -7,6 +7,7 @@ import android.util.Log
 import com.github.junrar.Archive
 import com.github.junrar.rarfile.FileHeader
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import android.content.Context
 
@@ -15,11 +16,13 @@ class CbrPageExtractor(private val context: Context) {
     private var archive: Archive? = null
     private var fileHeaders: MutableList<FileHeader> = mutableListOf()
     private var totalPages: Int = 0
+    private var tempFile: File? = null
 
     fun openCbr(uri: Uri): Int {
         try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                archive = Archive(inputStream)
+            tempFile = FileUtils.copyUriToTempFile(context, uri, "temp_cbr_comic.cbr")
+            tempFile?.let {
+                archive = Archive(it)
                 fileHeaders.clear()
                 for (header in archive!!.fileHeaders) {
                     if (!header.isDirectory && isImageFile(header.fileNameString)) {
@@ -33,6 +36,8 @@ class CbrPageExtractor(private val context: Context) {
             Log.e("CbrPageExtractor", "Error opening CBR: ${e.message}", e)
         } catch (e: Exception) {
             Log.e("CbrPageExtractor", "Error opening CBR: ${e.message}", e)
+        } finally {
+            tempFile?.delete()
         }
         return 0
     }
@@ -62,6 +67,8 @@ class CbrPageExtractor(private val context: Context) {
         archive = null
         fileHeaders.clear()
         totalPages = 0
+        tempFile?.delete()
+        tempFile = null
     }
 
     private fun isImageFile(fileName: String): Boolean {
@@ -73,5 +80,3 @@ class CbrPageExtractor(private val context: Context) {
                 lowerCaseFileName.endsWith(".bmp")
     }
 }
-
-
