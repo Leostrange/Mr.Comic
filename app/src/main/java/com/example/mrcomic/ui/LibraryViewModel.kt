@@ -21,55 +21,41 @@ class LibraryViewModel @Inject constructor(
     private val repository: ComicRepository
 ) : ViewModel() {
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _filter = MutableStateFlow("All")
+    val filter: StateFlow<String> = _filter.asStateFlow()
+
+    private val _sortOrder = MutableStateFlow("Title")
+    val sortOrder: StateFlow<String> = _sortOrder.asStateFlow()
+
     val comics: StateFlow<List<ComicEntity>> = repository.getAllComics()
+        .combine(_searchQuery) { comics, query ->
+            if (query.isBlank()) {
+                comics
+            } else {
+                comics.filter { it.title.contains(query, ignoreCase = true) }
+            }
+        }
+        .combine(_filter) { comics, filter ->
+            when (filter) {
+                "Favorites" -> comics.filter { it.isFavorite }
+                "Read" -> comics.filter { it.currentPage > 0 }
+                "Unread" -> comics.filter { it.currentPage == 0 }
+                else -> comics
+            }
+        }
+        .combine(_sortOrder) { comics, sortOrder ->
+            when (sortOrder) {
+                "Title" -> comics.sortedBy { it.title }
+                "Author" -> comics.sortedBy { it.author }
+                "Last Read" -> comics.sortedByDescending { it.lastRead }
+                else -> comics
+            }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
-        )
-    
-    private val _uiState = MutableStateFlow<LibraryUiState>(LibraryUiState.Idle)
-    val uiState = _uiState.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _recentComics = MutableStateFlow<List<ComicEntity>>(emptyList())
-    val recentComics: StateFlow<List<ComicEntity>> = _recentComics.asStateFlow()
-
-    init {
-        loadRecentComics()
-    }
-
-    fun addComicFromUri(uri: Uri) {
-        viewModelScope.launch {
-            _uiState.value = LibraryUiState.Importing
-            try {
-                repository.importComicFromUri(uri)
-                _uiState.value = LibraryUiState.Idle
-            } catch (e: Exception) {
-                _uiState.value = LibraryUiState.Error("Не удалось импортировать комикс: ${e.localizedMessage}")
-            }
-        }
-    }
-    
-    fun dismissError() {
-        _uiState.value = LibraryUiState.Idle
-    }
-
-    fun toggleFavorite(comicId: Long, isFavorite: Boolean) {
-        viewModelScope.launch {
-            repository.setFavorite(comicId, isFavorite)
-        }
-    }
-
-    private fun loadRecentComics() {
-        viewModelScope.launch {
-            _recentComics.value = repository.getRecentComics(5)
-        }
-    }
-
-    fun deleteComic(comicId: Long) {
-        // Implementation of deleteComic function
-    }
-} 
+        ) 

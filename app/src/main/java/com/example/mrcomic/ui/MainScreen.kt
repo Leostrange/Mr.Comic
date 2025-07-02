@@ -43,7 +43,7 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Библиотека") },
+                    icon = { Icon(Icons.Filled.MenuBook, contentDescription = "Библиотека") },
                     label = { Text("Библиотека") },
                     selected = selectedTabIndex == 0,
                     onClick = { selectedTabIndex = 0; coroutineScope.launch { pagerState.animateScrollToPage(0) } }
@@ -71,8 +71,7 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
                     label = { Text("Темы") },
                     selected = selectedTabIndex == 4,
                     onClick = { selectedTabIndex = 4; coroutineScope.launch { pagerState.animateScrollToPage(4) } }
-                )            }
-        },
+                )},
         content = { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
                 TabRow(selectedTabIndex = selectedTabIndex) {
