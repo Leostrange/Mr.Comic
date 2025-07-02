@@ -46,3 +46,11 @@ dependencies {
 
     implementation("com.github.junrar:junrar:7.5.0")
 
+
+
+    implementation("net.sf.sevenzipjbinding:sevenzipjbinding:16.02-2.01")
+
+
+
+    implementation("org.apache.commons:commons-compress:1.26.0")
+

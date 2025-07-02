@@ -61,6 +61,28 @@ class AdvancedComicReaderEngine(private val context: Context) {
                     false
                 }
             }
+            "cb7", "7z" -> {
+                cb7PageExtractor = Cb7PageExtractor(context)
+                totalPages = cb7PageExtractor?.openCb7(uri) ?: 0
+                if (totalPages > 0) {
+                    goToPage(0)
+                    true
+                } else {
+                    Log.e("ComicReaderEngine", "Failed to load CB7/7z: $uri")
+                    false
+                }
+            }
+            "cbt", "tar" -> {
+                cbtPageExtractor = CbtPageExtractor(context)
+                totalPages = cbtPageExtractor?.openCbt(uri) ?: 0
+                if (totalPages > 0) {
+                    goToPage(0)
+                    true
+                } else {
+                    Log.e("ComicReaderEngine", "Failed to load CBT/TAR: $uri")
+                    false
+                }
+            }
             else -> {
                 Log.e("ComicReaderEngine", "Unsupported file type: $extension")
                 false
@@ -73,7 +95,7 @@ class AdvancedComicReaderEngine(private val context: Context) {
             Log.e("ComicReaderEngine", "Page index out of bounds: $pageIndex")
             return null
         }
-        val bitmap = pdfPageExtractor?.getPage(pageIndex) ?: cbzPageExtractor?.getPage(pageIndex) ?: cbrPageExtractor?.getPage(pageIndex)
+        val bitmap = pdfPageExtractor?.getPage(pageIndex) ?: cbzPageExtractor?.getPage(pageIndex) ?: cbrPageExtractor?.getPage(pageIndex) ?: cb7PageExtractor?.getPage(pageIndex) ?: cbtPageExtractor?.getPage(pageIndex)
         if (bitmap != null) {
             currentPageBitmap = bitmap
             currentPageIndex = pageIndex
@@ -205,9 +227,12 @@ class AdvancedComicReaderEngine(private val context: Context) {
         cbzPageExtractor = null
         cbrPageExtractor?.closeCbr()
         cbrPageExtractor = null
+        cb7PageExtractor?.closeCb7()
+        cb7PageExtractor = null
+        cbtPageExtractor?.closeCbt()
+        cbtPageExtractor = null
         currentPageIndex = -1
         totalPages = 0
         Log.d("ComicReaderEngine", "Resources released.")
     }
 }
-
