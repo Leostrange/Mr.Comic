@@ -15,9 +15,13 @@ import javax.inject.Inject
 import com.mrcomic.reader.AdvancedComicReaderEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 
+import com.example.mrcomic.data.BookmarkDao
+import com.example.mrcomic.data.BookmarkEntity
+
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
+    private val bookmarkDao: BookmarkDao,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _state = MutableStateFlow(Pair("", 1))
@@ -68,11 +72,12 @@ class ReaderViewModel @Inject constructor(
                     repository.getStateFlow().collectLatest { (comic, page) ->
                         if (comic.isBlank()) throw Exception("Нет выбранного комикса!")
                         val comicUri = Uri.parse(comic) // Assuming comic is now a URI string
+                        val lastReadPage = loadBookmark(comic) // Load last read page
                         if (engine.loadComic(comicUri)) {
                             loaded = true
                             _totalPages.value = engine.getTotalPages()
-                            goToPage(page)
-                            _uiState.value = ReaderUiState.Success(comic, page)
+                            goToPage(lastReadPage)
+                            _uiState.value = ReaderUiState.Success(comic, lastReadPage)
                         } else {
                             throw Exception("Не удалось загрузить комикс: $comic")
                         }
@@ -80,11 +85,12 @@ class ReaderViewModel @Inject constructor(
                 } else {
                     val comicUri = Uri.parse(repository.getCurrentComic()) // Assuming comic is now a URI string
                     if (comicUri.toString().isBlank()) throw Exception("Нет выбранного комикса!")
+                    val lastReadPage = loadBookmark(comicUri.toString())
                     if (engine.loadComic(comicUri)) {
                         loaded = true
                         _totalPages.value = engine.getTotalPages()
-                        goToPage(1)
-                        _uiState.value = ReaderUiState.Success(comicUri.toString(), 1)
+                        goToPage(lastReadPage)
+                        _uiState.value = ReaderUiState.Success(comicUri.toString(), lastReadPage)
                     } else {
                         throw Exception("Не удалось загрузить комикс: $comicUri")
                     }
@@ -112,7 +118,26 @@ class ReaderViewModel @Inject constructor(
             if (bmp != null) {
                 _pageBitmap.value = bmp
                 _currentPageIndex.value = engine.getCurrentPageIndex()
+                // Save bookmark when page changes
+                saveBookmark(repository.getCurrentComic(), engine.getCurrentPageIndex())
             }
+        }
+    }
+
+    private fun saveBookmark(comicUri: String, page: Int) {
+        viewModelScope.launch {
+            if (comicUri.isNotBlank()) {
+                val bookmark = BookmarkEntity(comicId = comicUri, page = page)
+                bookmarkDao.insertBookmark(bookmark)
+            }
+        }
+    }
+
+    private suspend fun loadBookmark(comicUri: String): Int {
+        return if (comicUri.isNotBlank()) {
+            bookmarkDao.getBookmarkAtPage(comicUri, 0)?.page ?: 0 // Assuming we want to load the first bookmark for the comic
+        } else {
+            0
         }
     }
 
@@ -123,6 +148,7 @@ class ReaderViewModel @Inject constructor(
             if (bmp != null) {
                 _pageBitmap.value = bmp
                 _currentPageIndex.value = engine.getCurrentPageIndex()
+                saveBookmark(repository.getCurrentComic(), engine.getCurrentPageIndex())
             }
         }
     }
@@ -134,6 +160,7 @@ class ReaderViewModel @Inject constructor(
             if (bmp != null) {
                 _pageBitmap.value = bmp
                 _currentPageIndex.value = engine.getCurrentPageIndex()
+                saveBookmark(repository.getCurrentComic(), engine.getCurrentPageIndex())
             }
         }
     }
