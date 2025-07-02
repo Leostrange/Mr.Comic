@@ -3,8 +3,12 @@ package com.example.mrcomic.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
@@ -39,30 +43,35 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-                    label = { Text("Домой") },
+                    icon = { Icon(Icons.Filled.Home, contentDescription = "Библиотека") },
+                    label = { Text("Библиотека") },
                     selected = selectedTabIndex == 0,
                     onClick = { selectedTabIndex = 0; coroutineScope.launch { pagerState.animateScrollToPage(0) } }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.MenuBook, contentDescription = "Reading") },
-                    label = { Text("Чтение") },
+                    icon = { Icon(Icons.Filled.Cloud, contentDescription = "Облако") },
+                    label = { Text("Облако") },
                     selected = selectedTabIndex == 1,
                     onClick = { selectedTabIndex = 1; coroutineScope.launch { pagerState.animateScrollToPage(1) } }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Translate, contentDescription = "Translate") },
-                    label = { Text("Переводы") },
+                    icon = { Icon(Icons.Filled.EditNote, contentDescription = "Аннотации") },
+                    label = { Text("Аннотации") },
                     selected = selectedTabIndex == 2,
                     onClick = { selectedTabIndex = 2; coroutineScope.launch { pagerState.animateScrollToPage(2) } }
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Filled.Settings, contentDescription = "Settings") },
-                    label = { Text("Настройки") },
+                    icon = { Icon(Icons.Filled.Extension, contentDescription = "Плагины") },
+                    label = { Text("Плагины") },
                     selected = selectedTabIndex == 3,
                     onClick = { selectedTabIndex = 3; coroutineScope.launch { pagerState.animateScrollToPage(3) } }
                 )
-            }
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Palette, contentDescription = "Темы") },
+                    label = { Text("Темы") },
+                    selected = selectedTabIndex == 4,
+                    onClick = { selectedTabIndex = 4; coroutineScope.launch { pagerState.animateScrollToPage(4) } }
+                )            }
         },
         content = { paddingValues ->
             Column(modifier = Modifier.padding(paddingValues)) {
