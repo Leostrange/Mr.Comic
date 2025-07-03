@@ -1,4 +1,4 @@
- pluginManagement {
+pluginManagement {
     repositories {
         gradlePluginPortal()
         google()
@@ -33,3 +33,5 @@ include(":feature-library")
 include(":feature-ocr")
 include(":feature-settings")
 include(":shared")
+
+
