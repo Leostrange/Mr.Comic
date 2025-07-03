@@ -1,0 +1,18 @@
+.favorite-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px;
+  padding: 5px;
+  transition: transform 0.2s ease-in-out;
+}
+
+.favorite-button:hover {
+  transform: scale(1.2);
+}
+
+.favorite-button.favorite {
+  color: red; /* Or any other color for favorited state */
+}
+
+
