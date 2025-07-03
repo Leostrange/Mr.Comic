@@ -1,0 +1,162 @@
+.search-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.search-page-header {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 24px 0;
+  margin-bottom: 24px;
+}
+
+.search-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.search-page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  margin: 0 0 24px 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.search-page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.search-sidebar {
+  position: sticky;
+  top: 24px;
+}
+
+.search-main {
+  min-height: 400px;
+}
+
+/* Адаптивность */
+@media (max-width: 1024px) {
+  .search-page-content {
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+  }
+  
+  .search-container {
+    padding: 0 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-page-header {
+    padding: 20px 0;
+    margin-bottom: 20px;
+  }
+  
+  .search-page-title {
+    font-size: 28px;
+    margin-bottom: 20px;
+  }
+  
+  .search-page-content {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding: 0 15px;
+  }
+  
+  .search-sidebar {
+    position: static;
+    order: 2;
+  }
+  
+  .search-main {
+    order: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-page-header {
+    padding: 16px 0;
+    margin-bottom: 16px;
+  }
+  
+  .search-page-title {
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+  
+  .search-container {
+    padding: 0 12px;
+  }
+  
+  .search-page-content {
+    padding: 0 12px;
+    gap: 12px;
+  }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.search-page-content {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Улучшения для мобильных устройств */
+@media (max-width: 768px) {
+  .search-sidebar {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+  }
+}
+
+/* Состояния загрузки */
+.search-page.loading {
+  cursor: wait;
+}
+
+.search-page.loading * {
+  pointer-events: none;
+}
+
+/* Скроллбар для всей страницы */
+.search-page::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-page::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.search-page::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.search-page::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+

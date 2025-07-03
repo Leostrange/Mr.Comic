@@ -1,0 +1,255 @@
+.search-bar-container {
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  padding: 0 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-input-wrapper:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+}
+
+.search-icon {
+  font-size: 18px;
+  color: #6c757d;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 16px 0;
+  font-size: 16px;
+  color: #333;
+  background: transparent;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.search-input.loading {
+  padding-right: 40px;
+}
+
+.clear-button {
+  background: none;
+  border: none;
+  color: #6c757d;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.clear-button:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.search-loading {
+  position: absolute;
+  right: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.loading-spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e1e5e9;
+  border-top: 2px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e1e5e9;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  margin-top: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.suggestions-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 0;
+}
+
+.suggestion-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f1f3f4;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+  background-color: #f8f9fa;
+}
+
+.suggestion-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.suggestion-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-author {
+  font-size: 14px;
+  color: #6c757d;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-genres {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .search-bar-container {
+    max-width: 100%;
+  }
+  
+  .search-input-wrapper {
+    padding: 0 16px;
+  }
+  
+  .search-input {
+    padding: 14px 0;
+    font-size: 16px; /* Предотвращает зум на iOS */
+  }
+  
+  .suggestions-dropdown {
+    max-height: 300px;
+  }
+  
+  .suggestion-content {
+    gap: 10px;
+  }
+  
+  .suggestion-image {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .suggestion-title {
+    font-size: 14px;
+  }
+  
+  .suggestion-author {
+    font-size: 13px;
+  }
+  
+  .suggestion-genres {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-input-wrapper {
+    padding: 0 12px;
+  }
+  
+  .search-input {
+    padding: 12px 0;
+  }
+  
+  .search-icon {
+    font-size: 16px;
+    margin-right: 10px;
+  }
+  
+  .suggestion-item {
+    padding: 10px 12px;
+  }
+}
+
+/* Анимации */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Скроллбар для подсказок */
+.suggestions-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
