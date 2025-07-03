@@ -10,13 +10,7 @@ plugins {
     id("jacoco")
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
-    }
-}
+// Репозитории теперь централизованы в settings.gradle.kts
 
 subprojects {
     apply(plugin = "com.diffplug.spotless")
@@ -29,3 +23,5 @@ subprojects {
         }
     }
 }
+
+

@@ -23,6 +23,4 @@ ext {
     nav_version = "2.7.5"
 }
 
-allprojects {
-    // Репозитории теперь централизованы в settings.gradle.kts
-}
+
