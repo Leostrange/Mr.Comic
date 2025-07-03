@@ -1,120 +1,132 @@
-# Mr.Comic
+# Mr.Comic - Приложение для чтения комиксов
 
-![Mr.Comic Preview](video_preview.gif)
+## Описание проекта
 
-Revolutionary comic reading app built for ultimate customization, AI-powered translation, and advanced user interaction. This document outlines the technologies, architecture, and roadmap based on the 99.9% perfection plan.
+Mr.Comic - это современное веб-приложение для чтения комиксов, разработанное с использованием React. Приложение предоставляет пользователям удобный интерфейс для просмотра, поиска и управления коллекцией комиксов.
 
-## ✨ Key Features
-- 📚 Import CBZ, CBR, PDF, EPUB, MOBI, WebP, AVIF, HEIC, RAR5, 7za
-- 📖 Multi-mode reader: single/double page, scroll, webtoon, manga RTL
-- 🧠 AI-powered OCR + contextual translation (offline & online)
-- 🎨 Theme & font customization (Material You, Dynamic Color)с
-- ☁️ Sync, backup, and encryption with cloud providers
-- 🔌 Plugin system with secure sandboxing and public store
+## Текущее состояние проекта
 
----
+Проект находится на начальной стадии разработки. В рамках ветки `feat/initial-project-setup` реализованы базовые модули:
 
-## 🏗 Architecture
+### Реализованные модули
 
-### 📐 Clean Architecture
-- **Presentation**: Jetpack Compose, ViewModel, StateFlow
-- **Domain**: UseCases, Interactors
-- **Data**: Room, DataStore, Remote APIs
+#### 1. Модуль аутентификации/авторизации
+- **Интерфейс**: Компоненты форм входа и регистрации с современным дизайном
+- **Функционал**: Валидация форм, обработка ошибок, состояния загрузки
+- **Логика**: Сервис аутентификации с поддержкой JWT токенов, автоматическое обновление токенов
 
-### 🧱 Modular Design
+**Файлы:**
+- `src/components/auth/LoginForm.js` - Компонент формы входа
+- `src/components/auth/LoginForm.css` - Стили формы входа
+- `src/components/auth/RegisterForm.js` - Компонент формы регистрации
+- `src/components/auth/RegisterForm.css` - Стили формы регистрации
+- `src/services/authService.js` - Сервис для работы с аутентификацией
+
+#### 2. Модуль просмотра комиксов
+- **Интерфейс**: Компоненты списка комиксов и карточек отдельных комиксов
+- **Функционал**: Отображение комиксов в виде сетки, пагинация, добавление в избранное
+- **Логика**: Сервис для работы с API комиксов, обработка изображений, фильтрация
+
+**Файлы:**
+- `src/components/comics/ComicsList.js` - Компонент списка комиксов
+- `src/components/comics/ComicsList.css` - Стили списка комиксов
+- `src/components/comics/ComicCard.js` - Компонент карточки комикса
+- `src/components/comics/ComicCard.css` - Стили карточки комикса
+- `src/services/comicsService.js` - Сервис для работы с комиксами
+
+#### 3. Общие компоненты
+- `src/components/common/LoadingSpinner.js` - Компонент индикатора загрузки
+- `src/components/common/LoadingSpinner.css` - Стили индикатора загрузки
+
+## Структура проекта
+
 ```
-:app
-│
-├── core-ui         # Shared UI components
-├── library         # Comic importer and metadata engine
-├── reader          # Reading engine with gesture nav
-├── ocr             # OCR models and inference logic
-├── translation     # Translation layer + models
-├── plugins         # Plugin SDK and loader
-├── analytics       # Event logging and user analytics
-└── themes          # Theme engine and store
-```
-
----
-
-## 🧰 Technologies
-
-| Area            | Technology                                        |
-|-----------------|---------------------------------------------------|
-| Language        | Kotlin                                            |
-| UI              | Jetpack Compose, Material You                    |
-| DB              | Room, DataStore, FTS                             |
-| Async           | Coroutines + Flow                                |
-| OCR             | Tesseract 5, EasyOCR, PaddleOCR, TrOCR           |
-| Translation     | HuggingFace Transformers, M2M-100, OPUS-MT       |
-| ML Inference    | ONNX Runtime, TensorFlow Lite                    |
-| Archives        | libarchive, Zip4j, unrar                         |
-| PDF             | PDFium, MuPDF, PDFBox                            |
-| Metadata        | ExifInterface, ColorThief                        |
-| Backup          | Google Drive API, WebDAV, ZIP+AES                |
-| Analytics       | Firebase, custom pipeline                        |
-| Plugins         | Dynamic classloader + TypeScript definitions     |
-
----
-
-## 📆 Roadmap Overview
-
-| Phase | Focus                          | Time Frame   |
-|-------|---------------------------------|--------------|
-| 1     | 📚 Library & Import             | Months 1–2   |
-| 2     | 📖 Navigation & Reading         | Months 2–3   |
-| 4     | 🌐 OCR & Translation            | Months 3–4   |
-| 3     | 🎨 Interface Customization      | Months 5–6   |
-| 5     | ☁ Backup & Sync                 | Months 6–7   |
-| 8     | 🔌 Plugin Platform              | Months 7–8   |
-| 6     | 📝 Notes & Annotations          | Months 9–10  |
-| 7     | ✨ Community Themes & Store     | Months 11–12 |
-| 9     | 📊 Analytics & Feedback         | Months 13–14 |
-| 10    | 📱 Android System Integration   | Months 15–18 |
-
----
-
-## 🔒 Security
-- AES-256 / RSA-4096 encryption for backups
-- Scoped Storage & SAF for file handling
-- Plugin sandboxing and permission auditing
-
----
-
-## 🧠 AI Modules
-- **Tagging & Categorization**: MobileNet / CLIP
-- **Face & character recognition**: FaceNet
-- **Translation memory**: TM + glossary engine
-- **Text segmentation**: UNet-based panel detection
-
----
-
-## 🔌 Plugins & Themes
-- Public plugin store with sandboxing
-- JSON-based themes with live preview
-- CLI + SDK for plugin developers
-
----
-
-## 🚀 Getting Started
-    ```bash
-git clone https://github.com/yourname/mrcomic
-cd mrcomic
-./gradlew installDebug
+src/
+├── components/
+│   ├── auth/
+│   │   ├── LoginForm.js
+│   │   ├── LoginForm.css
+│   │   ├── RegisterForm.js
+│   │   └── RegisterForm.css
+│   ├── comics/
+│   │   ├── ComicsList.js
+│   │   ├── ComicsList.css
+│   │   ├── ComicCard.js
+│   │   └── ComicCard.css
+│   └── common/
+│       ├── LoadingSpinner.js
+│       └── LoadingSpinner.css
+├── pages/
+│   ├── auth/
+│   └── comics/
+├── services/
+│   ├── authService.js
+│   └── comicsService.js
+├── utils/
+└── assets/
+    └── images/
 ```
 
----
+## Особенности реализации
 
-## 📄 License
-MIT License. See `LICENSE.md`.
+### Аутентификация
+- Использование JWT токенов для авторизации
+- Автоматическое обновление токенов при истечении срока действия
+- Сохранение состояния авторизации в localStorage
+- Универсальный метод для API запросов с автоматической обработкой авторизации
 
----
+### Интерфейс комиксов
+- Адаптивная сетка для отображения комиксов
+- Ленивая загрузка изображений с индикаторами состояния
+- Поддержка избранного с визуальной обратной связью
+- Пагинация с возможностью "загрузить еще"
+- Обработка состояний ошибок и пустых результатов
 
-## 🏁 Contributors
-- 🧑‍💻 Core: @yourname
-- 🎨 UI/UX: @designer
-- 🤖 AI/NLP: @mlengineer
-- 🌐 Translation: @linguist
+### Дизайн
+- Современный градиентный дизайн
+- Анимации и переходы для улучшения UX
+- Адаптивность для мобильных устройств
+- Консистентная цветовая схема
 
-Join the journey to perfection. 
+## Следующие этапы разработки
+
+1. **Модуль поиска и фильтрации**
+2. **Модуль закладок/избранного**
+3. **Модуль профиля пользователя**
+4. **Административная панель**
+5. **Интеграция с backend API**
+6. **Тестирование и оптимизация**
+
+## Технологии
+
+- **Frontend**: React 18, CSS3, HTML5
+- **Роутинг**: React Router DOM
+- **Состояние**: React Hooks
+- **Стилизация**: CSS Modules, Flexbox, Grid
+- **API**: Fetch API с обработкой ошибок
+
+## Установка и запуск
+
+```bash
+# Установка зависимостей
+npm install
+
+# Запуск в режиме разработки
+npm start
+
+# Сборка для продакшена
+npm run build
+```
+
+## Переменные окружения
+
+Создайте файл `.env` в корне проекта:
+
+```
+REACT_APP_API_URL=http://localhost:3001/api
+```
+
+## Лицензия
+
+MIT License
 
