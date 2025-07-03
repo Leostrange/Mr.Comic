@@ -25,3 +25,13 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
 } 
+
+    implementation("com.google.mlkit:text-recognition:16.0.0")
+    implementation("com.google.mlkit:text-recognition-common:16.0.0")
+
+
+
+
+    implementation(project(":shared"))
+
+
