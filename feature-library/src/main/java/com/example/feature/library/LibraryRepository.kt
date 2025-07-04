@@ -11,7 +11,7 @@ interface LibraryRepository {
     fun getAllComics(): Flow<List<ComicEntity>>
     fun getComicById(comicId: Long): Flow<ComicEntity?>
     suspend fun addComic(comic: ComicEntity)
-    suspend fun deleteComic(id: Long)
+    suspend fun deleteComic(id: String)
     suspend fun searchComics(query: String): List<ComicEntity>
     suspend fun updateFavorite(id: Long, isFavorite: Boolean)
     suspend fun setFavorite(comicId: Long, isFavorite: Boolean)
@@ -32,7 +32,7 @@ class RoomLibraryRepository @Inject constructor(
     override fun getAllComics(): Flow<List<ComicEntity>> = dao.getAllComics()
     override fun getComicById(comicId: Long): Flow<ComicEntity?> = dao.getComicById(comicId)
     override suspend fun addComic(comic: ComicEntity) = dao.insertComic(comic)
-    override suspend fun deleteComic(id: Long) = dao.deleteComicById(id)
+    override suspend fun deleteComic(id: String) = dao.deleteComicById(id.toLong())
     override suspend fun searchComics(query: String): List<ComicEntity> = dao.searchComics("%$query%")
     override suspend fun updateFavorite(id: Long, isFavorite: Boolean) = dao.updateFavorite(id, isFavorite)
     override suspend fun setFavorite(comicId: Long, isFavorite: Boolean) = dao.updateFavorite(comicId, isFavorite)
@@ -53,4 +53,5 @@ class RoomLibraryRepository @Inject constructor(
         // TODO: Implement bookmark functionality
         return emptyList()
     }
-} 
+}
+
