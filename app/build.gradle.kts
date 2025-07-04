@@ -60,8 +60,6 @@ android {
         includeInApk = true
         includeInBundle = true
     }
-    ndkVersion = "29.0.13599879 rc2"
-    buildToolsVersion = "36.0.0"
 }
 
 kapt {
@@ -194,6 +192,5 @@ tasks.withType<org.gradle.api.tasks.testing.Test> {
         enabled = false
     }
 }
-
 
 
