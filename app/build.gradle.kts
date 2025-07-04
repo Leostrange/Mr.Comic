@@ -74,19 +74,6 @@ configurations.all {
 }
 
 dependencies {
-<<<<<<< HEAD
-    implementation("androidx.core:core-ktx:1.16.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.1")
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation("androidx.compose.ui:ui-graphics")    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material")
-    implementation(libs.androidx.compose.material.icons.core)
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.9.0")
-=======
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -99,7 +86,6 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
     
     // Coil для загрузки изображений
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -125,11 +111,7 @@ dependencies {
     implementation(project(":core-ui"))
     // implementation(project(":feature-library"))
     // implementation(project(":feature-settings"))
-<<<<<<< HEAD
-      implementation(project(":feature-reader"))
-=======
     implementation(project(":feature-reader"))
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
     implementation(project(":feature-themes"))
     
     testImplementation(libs.test.junit)
@@ -213,10 +195,6 @@ tasks.withType<org.gradle.api.tasks.testing.Test> {
     if (name.contains("UnitTest")) {
         enabled = false
     }
-<<<<<<< HEAD
-} 
-=======
 }
 
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
 

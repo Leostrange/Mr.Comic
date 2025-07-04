@@ -1,14 +1,15 @@
 [versions]
 # Android
-<<<<<<< HEAD
 androidApplication = "8.7.0"
+androidLibrary = "8.4.1"
 compileSdk = "34"
 minSdk = "26"
+targetSdk = "34"
 
 # Kotlin
 kotlinAndroid = "1.9.23"
 ksp = "1.9.23-1.0.20"
-kotlinCompilerExtension = "1.5.8"
+kotlinCompilerExtension = "1.5.14"
 jvmTarget = "17"
 
 # AndroidX
@@ -19,7 +20,7 @@ room = "2.7.2"
 datastore = "1.1.7"
 
 # DI
-hilt = "2.48"
+hilt = "2.51.1"
 
 # Testing
 junit = "4.13.2"
@@ -29,7 +30,7 @@ truth = "1.4.4"
 mockitoKotlin = "5.4.0"
 
 # Tooling
-spotless = "6.25.0"
+spotless = "6.26.1"
 ktlintGradle = "11.6.1"
 
 # Archives
@@ -38,101 +39,37 @@ junrar = "7.5.5"
 pdfiumAndroid = "1.9.2"
 djvuAndroid = "1.0.0-beta.11"
 telephoto = "0.13.0"
-=======
-androidApplication = "8.4.1"
-androidLibrary = "8.4.1"
-compileSdk = "34"
-minSdk = "23"
-targetSdk = "34"
-
-# Kotlin
-kotlinAndroid = "1.9.0"
-kotlinCompilerExtension = "1.5.14"
-
-# Compose
-composeBom = "2025.06.01"
-
-# Lifecycle
-lifecycle = "2.8.0"
-
-# Room
-room = "2.6.1"
-
-# DataStore
-datastore = "1.1.1"
-
-# Hilt
-hilt = "2.51.1"
-
-# Testing
-junit = "4.13.2"
-kotlinxCoroutinesTest = "1.8.0"
-mockitoCore = "5.11.0"
-truth = "1.4.2"
-mockitoKotlin = "5.3.1"
-
-# Archives
-zip4j = "2.11.5"
-junrar = "7.5.2"
-
-# PDF
-pdfiumAndroid = "1.9.0"
-
-# DJVU
-djvuAndroid = "1.0.0"
-
-# Zoomable Image
-telephoto = "0.10.0"
+sevenzip4j = "16.02-2.01"
+commonsCompress = "1.26.0"
 
 # Custom
 folioreader = "0.3.0"
 pdfboxAndroid = "2.0.27.0"
-
-# Navigation
-navigation = "2.7.7"
-
-# KSP
-ksp = "1.9.0-1.0.13"
-
-# Spotless
-spotless = "6.26.1"
-
-# Ktlint Gradle
-ktlintGradle = "11.6.1"
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
 
 [libraries]
 # AndroidX Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-<<<<<<< HEAD
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
-
-=======
-androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material-icons-extended = { group = "androidx.compose", name = "material-icons-extended" }
 androidx-compose-material = { group = "androidx.compose.material", name = "material" }
-androidx-compose-material-icons-core = { group = "androidx.compose", name = "material-icons-core" }
 
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx" }
 
 # AndroidX Lifecycle
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
-androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 # AndroidX Activity
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose" }
 
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
 # AndroidX Navigation
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 
@@ -146,12 +83,9 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 
 # DI - Hilt
 google-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
-google-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
-<<<<<<< HEAD
-=======
+google-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose" }
 google-hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
 
 # Testing
 test-junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -163,6 +97,8 @@ test-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", v
 # Archives
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
+sevenzip4j = { group = "com.github.SevenZip4j", name = "SevenZip4j", version.ref = "sevenzip4j" }
+commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
 
 # PDF
 pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfiumAndroid" }
@@ -173,13 +109,10 @@ djvu-android = { group = "com.github.Djvu-Android", name = "Djvu-Android", versi
 # Zoomable Image
 telephoto-zoomable-image = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
 
-<<<<<<< HEAD
-=======
 # Custom
 folioreader = { group = "com.folioreader", name = "folioreader", version.ref = "folioreader" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview"]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
@@ -192,9 +125,7 @@ hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinAndroid" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
-<<<<<<< HEAD
-=======
 ktlint-gradle = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
->>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
+
 
 

@@ -23,8 +23,7 @@ dependencyResolutionManagement {
 rootProject.name = "MrComic"
 
 include(":app")
-include(":core:ui")
-project(":core:ui").projectDir = file("core/core-ui")
+include(":core-ui")
 include(":core-data")
 include(":core-reader")
 include(":core-model")
