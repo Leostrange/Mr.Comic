@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Leostrange/Mr.Comic/feat/initial-project-setup/media/video_preview.gif" alt="Mr.Comic Preview">
+  <img src="media/video_optimized.gif" alt="Mr.Comic Preview">
 </p>
 
 # Mr.Comic: Многофункциональный Просмотрщик Комиксов, Манги и Книг
@@ -103,6 +103,8 @@ Mr.Comic разработан с учетом расширяемости, поз
 ## Лицензия
 
 Этот проект распространяется под лицензией MIT. Подробности см. в файле LICENSE (будет добавлен).
+
+
 
 
 
