@@ -7,12 +7,13 @@ plugins {
 
 android {
     namespace = "com.example.mrcomic"
-    compileSdk = 35
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
         applicationId = "com.example.mrcomic"
-        minSdk = 26
-        targetSdk = 35
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
+
         versionCode = 1
         versionName = "1.0"
 
@@ -36,14 +37,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = libs.versions.jvmTarget.get()
     }
     buildFeatures {
         compose = true
         viewBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
+        kotlinCompilerExtensionVersion = libs.versions.kotlinCompilerExtension.get()
     }
     packaging {
         resources {
@@ -146,9 +147,6 @@ dependencies {
     implementation("androidx.media3:media3-ui:1.7.1")
     implementation("androidx.media3:media3-session:1.7.1")
 
-    // For rememberLauncherForActivityResult
-    implementation("androidx.activity:activity-compose:1.10.1")
-
     // Libarchive needs this
     implementation("androidx.exifinterface:exifinterface:1.4.1")
     
@@ -196,5 +194,6 @@ tasks.withType<org.gradle.api.tasks.testing.Test> {
         enabled = false
     }
 }
+
 
 
