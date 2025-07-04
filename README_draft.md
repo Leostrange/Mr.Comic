@@ -1,4 +1,6 @@
-![video_preview.gif](/media/video_preview.gif)
+<p align="center">
+  <img src="/media/video_preview.gif" alt="Mr.Comic Preview">
+</p>
 
 # Mr.Comic: Многофункциональный Просмотрщик Комиксов, Манги и Книг
 
