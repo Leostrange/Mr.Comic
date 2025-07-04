@@ -22,13 +22,21 @@ android {
         kotlinCompilerExtensionVersion = libs.versions.kotlinCompilerExtension.get()
     }
     kotlinOptions {
+<<<<<<< HEAD
         jvmTarget = "17"
+=======
+        jvmTarget = libs.versions.jvmTarget.get()
+>>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
     }
 }
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+<<<<<<< HEAD
     implementation(project(":core:ui"))
+=======
+    implementation(project(":core-ui"))
+>>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
     implementation(project(":core-data"))
     implementation(project(":core-model"))
     implementation(libs.bundles.compose)
@@ -37,4 +45,9 @@ dependencies {
     kapt(libs.google.hilt.compiler)
     testImplementation(libs.bundles.test.unit)
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+<<<<<<< HEAD
 }
+=======
+}
+
+>>>>>>> bcc513e42b28e6e535fb2251e79fc3420a26a624
