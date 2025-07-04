@@ -27,11 +27,11 @@ fun CloudScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            text = "Cloud Storage Coming Soon!",
+            text = "Cloud Storage Integration is Under Development!",
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Access your comics from anywhere.",
+            text = "Soon you'll be able to access your comics from cloud services.",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 8.dp)
         )

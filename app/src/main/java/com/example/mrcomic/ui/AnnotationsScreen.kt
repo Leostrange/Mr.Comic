@@ -27,11 +27,11 @@ fun AnnotationsScreen() {
             modifier = Modifier.padding(bottom = 16.dp)
         )
         Text(
-            text = "Annotations Feature Coming Soon!",
+            text = "Annotation Features are Under Development!",
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Highlight, add notes, and organize your thoughts.",
+            text = "Highlight text, add notes, and organize your thoughts within comics.",
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(top = 8.dp)
         )
