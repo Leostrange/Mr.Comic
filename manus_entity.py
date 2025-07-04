@@ -38,6 +38,10 @@ class ManusEntity:
         self.persona = new_persona
         self._save_state()
 
+    def update_session_data(self, key: str, value: any):
+        self.session_data[key] = value
+        self._save_state()
+
     def interact(self, prompt: str) -> str:
         response = ""
         if "привет" in prompt.lower():
@@ -67,6 +71,15 @@ if __name__ == "__main__":
     # print(entity.interact("Привет, Manus!"))
     # print(entity.interact("Спасибо за помощь."))
     # print(entity.interact("Какая следующая задача?"))
+
+    # Обновление данных сессии
+    entity.update_session_data("current_task", "Исправлено отображение GIF в README_draft.md.")
+    entity.update_session_data("completed_subtask", "Исправлено отображение GIF в README_draft.md.")
+    entity.update_session_data("next_subtask", "Реализация предварительной обработки изображений для OCR в модуле feature-ocr.")
+
+
+
+
 
 
 

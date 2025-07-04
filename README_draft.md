@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="/media/video_preview.gif" alt="Mr.Comic Preview">
+  <img src="https://raw.githubusercontent.com/Leostrange/Mr.Comic/feat/initial-project-setup/media/video_preview.gif" alt="Mr.Comic Preview">
 </p>
 
 # Mr.Comic: Многофункциональный Просмотрщик Комиксов, Манги и Книг
