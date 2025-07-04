@@ -74,18 +74,18 @@ configurations.all {
 }
 
 dependencies {
-    implementation("androidx.core:core-ktx:1.16.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.1")
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation(platform("androidx.compose:compose-bom:2025.06.01"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material")
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.navigation:navigation-compose:2.9.0")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material)
+    implementation(libs.androidx.compose.material.icons.core)
+    implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.navigation.compose)
     
     // Coil для загрузки изображений
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -94,30 +94,30 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     
     // Hilt с kapt
-    implementation("com.google.dagger:hilt-android:2.56.2")
-    kapt("com.google.dagger:hilt-compiler:2.56.2")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation(libs.google.hilt.android)
+    kapt(libs.google.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
     // Зависимости для Hilt в тестах
-    androidTestImplementation("com.google.dagger:hilt-android-testing:2.56.2")
-    kaptAndroidTest("com.google.dagger:hilt-compiler:2.56.2")
+    androidTestImplementation(libs.google.hilt.android.testing)
+    kaptAndroidTest(libs.google.hilt.compiler)
     
     // Room с kapt
-    implementation("androidx.room:room-runtime:2.7.2")
-    implementation("androidx.room:room-ktx:2.7.2")
-    kapt("androidx.room:room-compiler:2.7.2")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    kapt(libs.androidx.room.compiler)
     
     // Feature modules - пока только shared
     implementation(project(":shared"))
-    implementation(project(":core:ui"))
+    implementation(project(":core-ui"))
     // implementation(project(":feature-library"))
     // implementation(project(":feature-settings"))
-      implementation(project(":feature-reader"))
-    implementation(project(":feature-themes")))
+    implementation(project(":feature-reader"))
+    implementation(project(":feature-themes"))
     
-    testImplementation("junit:junit:4.13.2")
+    testImplementation(libs.test.junit)
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2025.06.01"))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.8.3")
@@ -125,7 +125,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-viewbinding:1.8.3")
 
     // Junrar для CBR (RAR)
-    implementation("com.github.junrar:junrar:7.5.5")
+    implementation(libs.junrar)
 
     // Archive support
     implementation("me.zhanghai.android.libarchive:library:1.1.6")
@@ -154,7 +154,12 @@ dependencies {
     
     // Comic Book formats
     // implementation "com.github.siegfriedstech:cbr-android:1.0.3" // We replaced this
-    implementation("com.github.junrar:junrar:7.5.5")
+    implementation(libs.junrar)
+
+    //FolioReader для EPUB
+    implementation(libs.folioreader)
+
+    implementation(libs.pdfbox.android)
 }
 
 // Jacoco coverage report
@@ -190,12 +195,6 @@ tasks.withType<org.gradle.api.tasks.testing.Test> {
     if (name.contains("UnitTest")) {
         enabled = false
     }
-} 
+}
 
-    //FolioReader для EPUB
-    implementation("com.folioreader:folioreader:0.5.4") //JitPack
-
-
-
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 

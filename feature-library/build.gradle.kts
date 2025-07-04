@@ -28,7 +28,7 @@ android {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
-    implementation(project(":core:ui"))
+    implementation(project(":core-ui"))
     implementation(project(":core-data"))
     implementation(project(":core-model"))
     implementation(libs.bundles.compose)
@@ -38,3 +38,4 @@ dependencies {
     testImplementation(libs.bundles.test.unit)
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 }
+
