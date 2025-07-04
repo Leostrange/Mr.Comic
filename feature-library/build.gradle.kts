@@ -22,7 +22,7 @@ android {
         kotlinCompilerExtensionVersion = libs.versions.kotlinCompilerExtension.get()
     }
     kotlinOptions {
-        jvmTarget = libs.versions.jvmTarget.get()
+        jvmTarget = "17"
     }
 }
 

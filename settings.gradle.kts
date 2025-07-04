@@ -24,7 +24,7 @@ rootProject.name = "MrComic"
 
 include(":app")
 include(":core:ui")
-project(":core:ui").projectDir = file("core/ui")
+project(":core:ui").projectDir = file("core/core-ui")
 include(":core-data")
 include(":core-reader")
 include(":core-model")
@@ -32,6 +32,14 @@ include(":feature-reader")
 include(":feature-library")
 include(":feature-ocr")
 include(":feature-settings")
+include(":feature-themes")
 include(":shared")
+include(":plugins")
+include(":reports")
+include(":scripts")
+include(":themes_store")
+include(":mrcomic-api")
+include(":mrcomic-ocr-translation")
+include(":mrcomic-processing-pipeline")
 
 

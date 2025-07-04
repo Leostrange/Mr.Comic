@@ -31,5 +31,4 @@ dependencies {
     implementation(libs.zip4j)
     implementation(libs.junrar)
     implementation(libs.pdfium.android)
-    implementation(libs.djvu.android)
-}
+    implementation(libs.djvuAndroid)}
