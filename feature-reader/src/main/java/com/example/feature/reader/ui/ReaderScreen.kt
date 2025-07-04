@@ -1,5 +1,6 @@
 package com.example.feature.reader.ui
 
+import android.graphics.Bitmap
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
@@ -59,7 +60,7 @@ fun ReaderScreen(
         onNextPage = viewModel::goToNextPage,
         onPreviousPage = viewModel::goToPreviousPage,
         onSetReadingMode = viewModel::setReadingMode,
-        viewModel = viewModel
+        onLoadComic = viewModel::loadComicFromUri
     )
 }
 
@@ -77,7 +78,7 @@ private fun ReaderScreenContent(
     onNextPage: () -> Unit,
     onPreviousPage: () -> Unit,
     onSetReadingMode: (ReadingMode) -> Unit,
-    viewModel: ReaderViewModel
+    onLoadComic: (String) -> Unit
 ) {
     Scaffold(
         bottomBar = {
@@ -108,7 +109,7 @@ private fun ReaderScreenContent(
         ) {
             when (uiState.readingMode) {
                 ReadingMode.PAGE -> PagedReader(uiState, onNextPage, onPreviousPage)
-                ReadingMode.WEBTOON -> WebtoonReader(uiState, viewModel)
+                ReadingMode.WEBTOON -> WebtoonReader(uiState, onLoadComic)
             }
 
             if (uiState.isLoading && uiState.readingMode == ReadingMode.PAGE) {
@@ -176,14 +177,14 @@ private fun PagedReader(
 @Composable
 private fun WebtoonReader(
     uiState: ReaderUiState,
-    viewModel: ReaderViewModel
+    onLoadComic: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         items(uiState.pageCount) { pageIndex ->
-            WebtoonPageItem(pageIndex = pageIndex, viewModel = viewModel)
+            WebtoonPageItem(pageIndex = pageIndex, uiState = uiState, onLoadComic = onLoadComic)
         }
     }
 }
@@ -191,18 +192,15 @@ private fun WebtoonReader(
 @Composable
 private fun WebtoonPageItem(
     pageIndex: Int,
-    viewModel: ReaderViewModel
+    uiState: ReaderUiState,
+    onLoadComic: (String) -> Unit
 ) {
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-
-    LaunchedEffect(pageIndex) {
-        bitmap = viewModel.getPage(pageIndex)
-    }
+    val bitmap = uiState.bitmaps[pageIndex]
 
     if (bitmap != null) {
         val zoomableState = rememberZoomableState()
         Image(
-            painter = remember(bitmap) { BitmapPainter(bitmap!!.asImageBitmap()) },
+            painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
             contentDescription = "Page ${pageIndex + 1}",
             modifier = Modifier
                 .fillMaxWidth()
@@ -221,3 +219,5 @@ private fun WebtoonPageItem(
         }
     }
 }
+
+

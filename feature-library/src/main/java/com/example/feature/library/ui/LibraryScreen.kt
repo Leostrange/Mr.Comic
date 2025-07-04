@@ -83,7 +83,11 @@ fun LibraryScreen(
         onDeletionTimeout = viewModel::onDeletionTimeout,
         onSortOrderChange = viewModel::onSortOrderChange,
         onSearchQueryChange = viewModel::onSearchQueryChange,
-        onToggleSearch = viewModel::onToggleSearch
+        onToggleSearch = viewModel::onToggleSearch,
+        onAddComicClick = viewModel::onAddComicClick,
+        onDismissAddComicDialog = viewModel::onDismissAddComicDialog,
+        onConfirmAddComicDialog = viewModel::onConfirmAddComicDialog,
+        onPermissionRequest = { viewModel.onPermissionRequest() }
     )
 }
 
@@ -102,7 +106,11 @@ private fun LibraryScreenContent(
     onDeletionTimeout: () -> Unit,
     onSortOrderChange: (SortOrder) -> Unit,
     onSearchQueryChange: (String) -> Unit,
-    onToggleSearch: () -> Unit
+    onToggleSearch: () -> Unit,
+    onAddComicClick: () -> Unit,
+    onDismissAddComicDialog: () -> Unit,
+    onConfirmAddComicDialog: (title: String, author: String, coverPath: String) -> Unit,
+    onPermissionRequest: () -> Unit
 ) {
     // Placeholder for bottom navigation state
     var currentRoute by remember { mutableStateOf("library") }
@@ -111,10 +119,6 @@ private fun LibraryScreenContent(
         BottomNavItem("Settings", Icons.Default.Settings, "settings")
     )
 
-    // On Android 13+, READ_EXTERNAL_STORAGE is deprecated.
-    // A more granular permission like READ_MEDIA_IMAGES would be needed,
-    // but for non-media files, MANAGE_EXTERNAL_STORAGE or SAF is required.
-    // For simplicity, we use the older permission for now.
     val storagePermissionState = rememberPermissionState(Manifest.permission.READ_EXTERNAL_STORAGE)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -136,6 +140,12 @@ private fun LibraryScreenContent(
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(storagePermissionState.status.isGranted) {
+        if (storagePermissionState.status.isGranted) {
+            onGrantPermission()
         }
     }
 
@@ -178,30 +188,23 @@ private fun LibraryScreenContent(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showAddComicDialog = true }) {
+            FloatingActionButton(onClick = onAddComicClick) {
                 Icon(Icons.Default.Add, contentDescription = "Add Comic")
             }
         },
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
-        if (showAddComicDialog) {
+        if (uiState.showAddComicDialog) {
             AddComicDialog(
-                onDismiss = { showAddComicDialog = false },
-                onConfirm = { title, author, coverPath ->
-                    viewModel.addComic(title, author, coverPath)
-                    showAddComicDialog = false
-                }
+                onDismiss = onDismissAddComicDialog,
+                onConfirm = onConfirmAddComicDialog
             )
         }
         Box(
             modifier = Modifier.fillMaxSize().padding(paddingValues),
             contentAlignment = Alignment.Center
         ) {
-            if (storagePermissionState.status.isGranted) {
-                LaunchedEffect(Unit) {
-                    onGrantPermission()
-                }
-
+            if (uiState.hasStoragePermission) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator()
                 } else if (uiState.error != null) {
@@ -332,5 +335,5 @@ private fun SortMenu(
         }
     }
 }
-}
-}
+
+

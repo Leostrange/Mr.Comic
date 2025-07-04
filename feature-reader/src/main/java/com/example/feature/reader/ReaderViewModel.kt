@@ -1,22 +1,35 @@
 package com.example.feature.reader
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.mrcomic.reader.AdvancedComicReaderEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.mrcomic.reader.AdvancedComicReaderEngine
-import dagger.hilt.android.qualifiers.ApplicationContext
 
 import com.example.mrcomic.data.BookmarkDao
 import com.example.mrcomic.data.BookmarkEntity
+
+data class ReaderUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val currentPageIndex: Int = 0,
+    val pageCount: Int = 0,
+    val readingMode: ReadingMode = ReadingMode.PAGE,
+    val currentPageBitmap: Bitmap? = null,
+    val bitmaps: Map<Int, Bitmap> = emptyMap()
+)
+
+enum class ReadingMode {
+    PAGE, WEBTOON
+}
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -24,104 +37,73 @@ class ReaderViewModel @Inject constructor(
     private val bookmarkDao: BookmarkDao,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
-    private val _state = MutableStateFlow(Pair("", 1))
-    val state: StateFlow<Pair<String, Int>> = _state.asStateFlow()
 
-    private val _uiState = MutableStateFlow<ReaderUiState>(ReaderUiState.Loading)
+    private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    private val _pageBitmap = MutableStateFlow<Bitmap?>(null)
-    val pageBitmap: StateFlow<Bitmap?> = _pageBitmap.asStateFlow()
-
-    private val _currentPageIndex = MutableStateFlow(-1)
-    val currentPageIndex: StateFlow<Int> = _currentPageIndex.asStateFlow()
-    private val _totalPages = MutableStateFlow(0)
-    val totalPages: StateFlow<Int> = _totalPages.asStateFlow()
-
     private lateinit var engine: AdvancedComicReaderEngine
-    private var loaded = false
-
-    enum class ReadingMode {
-        SINGLE_PAGE, DOUBLE_PAGE, WEBTOON, MANGA_RTL
-    }
-
-    private val _readingMode = MutableStateFlow(ReadingMode.SINGLE_PAGE)
-    val readingMode: StateFlow<ReadingMode> = _readingMode.asStateFlow()
 
     init {
         engine = AdvancedComicReaderEngine(context)
-        initLoad()
     }
 
-    fun setState(comicTitle: String, page: Int) {
-        if (repository is RoomReaderRepository) {
-            viewModelScope.launch { repository.setState(comicTitle, page) }
-        }
-    }
-
-    fun retry() {
-        initLoad()
-    }
-
-    private fun initLoad() {
+    fun loadComicFromUri(uriString: String) {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                _uiState.value = ReaderUiState.Loading
-                delay(1000) // имитация загрузки
-                if (repository is RoomReaderRepository) {
-                    repository.getStateFlow().collectLatest { (comic, page) ->
-                        if (comic.isBlank()) throw Exception("Нет выбранного комикса!")
-                        val comicUri = Uri.parse(comic) // Assuming comic is now a URI string
-                        val lastReadPage = loadBookmark(comic) // Load last read page
-                        if (engine.loadComic(comicUri)) {
-                            loaded = true
-                            _totalPages.value = engine.getTotalPages()
-                            goToPage(lastReadPage)
-                            _uiState.value = ReaderUiState.Success(comic, lastReadPage)
-                        } else {
-                            throw Exception("Не удалось загрузить комикс: $comic")
-                        }
-                    }
+                val uri = Uri.parse(uriString)
+                if (engine.loadComic(uri)) {
+                    val totalPages = engine.getTotalPages()
+                    val lastReadPage = loadBookmark(uriString)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        pageCount = totalPages,
+                        currentPageIndex = lastReadPage
+                    )
+                    goToPage(lastReadPage)
                 } else {
-                    val comicUri = Uri.parse(repository.getCurrentComic()) // Assuming comic is now a URI string
-                    if (comicUri.toString().isBlank()) throw Exception("Нет выбранного комикса!")
-                    val lastReadPage = loadBookmark(comicUri.toString())
-                    if (engine.loadComic(comicUri)) {
-                        loaded = true
-                        _totalPages.value = engine.getTotalPages()
-                        goToPage(lastReadPage)
-                        _uiState.value = ReaderUiState.Success(comicUri.toString(), lastReadPage)
-                    } else {
-                        throw Exception("Не удалось загрузить комикс: $comicUri")
-                    }
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = "Не удалось загрузить комикс: $uriString")
                 }
             } catch (e: Exception) {
-                _uiState.value = ReaderUiState.Error(e.message ?: "Неизвестная ошибка")
+                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка")
             }
         }
     }
 
-    fun loadComicFromUri(uri: Uri) {
+    fun goToNextPage() {
         viewModelScope.launch {
-            if (engine.loadComic(uri)) {
-                loaded = true
-                _totalPages.value = engine.getTotalPages()
-                goToPage(0)
+            val nextPageIndex = _uiState.value.currentPageIndex + 1
+            if (nextPageIndex < _uiState.value.pageCount) {
+                goToPage(nextPageIndex)
             }
         }
     }
 
-    fun goToPage(index: Int) {
+    fun goToPreviousPage() {
         viewModelScope.launch {
-            if (!loaded) return@launch
+            val prevPageIndex = _uiState.value.currentPageIndex - 1
+            if (prevPageIndex >= 0) {
+                goToPage(prevPageIndex)
+            }
+        }
+    }
+
+    private fun goToPage(index: Int) {
+        viewModelScope.launch {
             val bmp = engine.goToPage(index)
             if (bmp != null) {
-                _pageBitmap.value = bmp
-                _currentPageIndex.value = engine.getCurrentPageIndex()
-                // Save bookmark when page changes
-                saveBookmark(repository.getCurrentComic(), engine.getCurrentPageIndex())
+                _uiState.value = _uiState.value.copy(
+                    currentPageIndex = index,
+                    currentPageBitmap = bmp,
+                    bitmaps = _uiState.value.bitmaps.toMutableMap().apply { put(index, bmp) }
+                )
+                saveBookmark(repository.getCurrentComic(), index)
             }
         }
+    }
+
+    fun getPage(pageIndex: Int): Bitmap? {
+        return _uiState.value.bitmaps[pageIndex]
     }
 
     private fun saveBookmark(comicUri: String, page: Int) {
@@ -135,42 +117,20 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun loadBookmark(comicUri: String): Int {
         return if (comicUri.isNotBlank()) {
-            bookmarkDao.getBookmarkAtPage(comicUri, 0)?.page ?: 0 // Assuming we want to load the first bookmark for the comic
+            bookmarkDao.getBookmarkAtPage(comicUri, 0)?.page ?: 0
         } else {
             0
         }
     }
 
-    fun nextPage() {
-        viewModelScope.launch {
-            if (!loaded) return@launch
-            val bmp = engine.getNextPage()
-            if (bmp != null) {
-                _pageBitmap.value = bmp
-                _currentPageIndex.value = engine.getCurrentPageIndex()
-                saveBookmark(repository.getCurrentComic(), engine.getCurrentPageIndex())
-            }
-        }
-    }
-
-    fun prevPage() {
-        viewModelScope.launch {
-            if (!loaded) return@launch
-            val bmp = engine.getPreviousPage()
-            if (bmp != null) {
-                _pageBitmap.value = bmp
-                _currentPageIndex.value = engine.getCurrentPageIndex()
-                saveBookmark(repository.getCurrentComic(), engine.getCurrentPageIndex())
-            }
-        }
-    }
-
     fun setReadingMode(mode: ReadingMode) {
-        _readingMode.value = mode
+        _uiState.value = _uiState.value.copy(readingMode = mode)
     }
 
     override fun onCleared() {
         super.onCleared()
         engine.releaseResources()
     }
-} 
+}
+
+

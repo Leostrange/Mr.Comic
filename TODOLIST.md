@@ -81,9 +81,9 @@
 
 [x] Создать модули core-* и feature-*
 
-[ ] Вынести бизнес-логику из Composable в feature-library
+[x] Вынести бизнес-логику из Composable в feature-library
 
-[ ] Вынести бизнес-логику из feature-reader
+[x] Вынести бизнес-логику из feature-reader
 
 [ ] Добавить AddComicUseCase и DeleteComicUseCase в core-domain
 
@@ -98,4 +98,6 @@
 
 
 ---
+
+
 
