@@ -1,4 +1,4 @@
-![video_preview.gif](/media/video_preview.gif)
+<video src="/media/video_preview.mp4" controls></video>
 
 # Mr.Comic: Многофункциональный Просмотрщик Комиксов, Манги и Книг
 
