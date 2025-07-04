@@ -42,3 +42,6 @@ include(":mrcomic-ocr-translation")
 include(":mrcomic-processing-pipeline")
 
 
+
+include(":core-domain")
+

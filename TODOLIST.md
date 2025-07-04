@@ -85,9 +85,9 @@
 
 [x] Вынести бизнес-логику из feature-reader
 
-[ ] Добавить AddComicUseCase и DeleteComicUseCase в core-domain
+[x] Добавить AddComicUseCase и DeleteComicUseCase в core-domain
 
-[ ] Написать OcrEngine интерфейс и адаптеры в feature-ocr
+[x] Написать OcrEngine интерфейс и адаптеры в feature-ocr
 
 [ ] Подключить UseCase-уровень к ViewModel-ам через Hilt
 
@@ -98,6 +98,8 @@
 
 
 ---
+
+
 
 
 
