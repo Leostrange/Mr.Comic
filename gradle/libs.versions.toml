@@ -36,11 +36,11 @@ ktlintGradle = "11.6.1"
 # Archives
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfiumAndroid = "1.9.2"
-djvuAndroid = "1.0.0-beta.11"
+pdfium-android = "1.9.2"
+djvu-android = "1.0.0-beta.11"
 telephoto = "0.13.0"
 sevenzip4j = "16.02-2.01"
-commonsCompress = "1.26.0"
+commons-compress = "1.26.0"
 
 # Custom
 folioreader = "0.3.0"
@@ -98,13 +98,13 @@ test-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", v
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
 sevenzip4j = { group = "com.github.SevenZip4j", name = "SevenZip4j", version.ref = "sevenzip4j" }
-commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
+commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons-compress" }
 
 # PDF
-pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfiumAndroid" }
+pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium-android" }
 
 # DJVU
-djvu-android = { group = "com.github.Djvu-Android", name = "Djvu-Android", version.ref = "djvuAndroid" }
+djvu-android = { group = "com.github.Djvu-Android", name = "Djvu-Android", version.ref = "djvu-android" }
 
 # Zoomable Image
 telephoto-zoomable-image = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
@@ -126,6 +126,8 @@ kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinAndroid" 
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 ktlint-gradle = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
+
+
 
 
 

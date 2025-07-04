@@ -30,10 +30,10 @@ dependencies {
     // Archive and document format support
     implementation(libs.zip4j)
     implementation(libs.junrar)
-    implementation(libs.pdfiumAndroid)
-    implementation(libs.djvuAndroid)
-    implementation(libs.sevenzip4j)
-    implementation(libs.commonsCompress)
+    implementation(libs.pdfium-android)
+     implementation(libs.djvu-android)    implementation(libs.sevenzip4j)
+    implementation(libs.commons-compress)
 }
+
 
 
