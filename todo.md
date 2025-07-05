@@ -1,10 +1,10 @@
-## Remaining Tasks
+## TODOLIST.md - Обновленный план задач
 
-- [x] Исправить `core-reader/build.gradle.kts`
-- [x] Исправить `app/build.gradle.kts`
-- [x] Исправить `build.gradle.kts`
-- [x] Обновить документ с оставшимися задачами
-- [ ] Коммит изменений
-- [ ] Пуш изменений в репозиторий
-
+- [ ] Вынести бизнес-логику из Composable в feature-library
+- [ ] Вынести бизнес-логику из feature-reader
+- [x] Добавить AddComicUseCase и DeleteComicUseCase в core-domain
+- [x] Написать OcrEngine интерфейс и адаптеры в feature-ocr
+- [ ] Подключить UseCase-уровень к ViewModel-ам через Hilt
+- [ ] В LibraryScreen заменить заглушки на реальные данные из Room
+- [ ] В ReaderScreen реализовать режимы чтения и сохранение прогресса
 
