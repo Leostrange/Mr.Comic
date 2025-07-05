@@ -85,6 +85,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+
+    // Networking - Retrofit, Gson, OkHttp Logging Interceptor
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor) // For logging API calls
+    implementation(libs.google.gson)
     
     // Coil для загрузки изображений
     implementation("io.coil-kt:coil-compose:2.7.0")

@@ -6,6 +6,11 @@ compileSdk = "34"
 minSdk = "26"
 targetSdk = "34"
 
+# Networking
+retrofit = "2.11.0"
+okhttp = "4.12.0"
+gson = "2.11.0"
+
 # Kotlin
 kotlinAndroid = "1.9.23"
 ksp = "1.9.23-1.0.20"
@@ -47,6 +52,12 @@ folioreader = "0.3.0"
 pdfboxAndroid = "2.0.27.0"
 
 [libraries]
+# Networking
+retrofit-core = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-converter-gson = { group = "com.squareup.retrofit2", name = "converter-gson", version.ref = "retrofit" }
+okhttp-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
 # AndroidX Compose
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
