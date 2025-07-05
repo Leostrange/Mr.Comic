@@ -2,8 +2,6 @@ package com.example.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core.domain.AddComicUseCase
-import com.example.core.domain.DeleteComicUseCase
 import com.example.feature.library.data.ComicEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -35,9 +33,7 @@ data class LibraryUiState(
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val repository: LibraryRepository,
-    private val addComicUseCase: AddComicUseCase,
-    private val deleteComicUseCase: DeleteComicUseCase
+    private val repository: LibraryRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
@@ -62,7 +58,7 @@ class LibraryViewModel @Inject constructor(
     fun addComic(title: String, author: String, coverPath: String) {
         viewModelScope.launch {
             try {
-                addComicUseCase(ComicEntity(title = title, author = author, filePath = coverPath))
+                repository.addComic(ComicEntity(title = title, author = author, filePath = coverPath))
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message ?: "Ошибка добавления")
             }
@@ -81,7 +77,7 @@ class LibraryViewModel @Inject constructor(
     fun onDeletionTimeout() {
         viewModelScope.launch {
             _uiState.value.pendingDeletionIds.forEach { comicId ->
-                deleteComicUseCase(comicId)
+                repository.deleteComic(comicId)
             }
             _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
         }
@@ -150,5 +146,6 @@ class LibraryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showAddComicDialog = false)
     }
 }
+
 
 
