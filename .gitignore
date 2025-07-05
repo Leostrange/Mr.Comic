@@ -1,2 +1,13 @@
 .manus_persona.json
 __pycache__/
+
+
+# Build artifacts
+build/
+.gradle/
+.idea/
+local.properties
+*.iml
+.DS_Store
+
+
