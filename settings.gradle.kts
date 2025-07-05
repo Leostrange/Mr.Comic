@@ -13,35 +13,33 @@ dependencyResolutionManagement {
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
     }
-    versionCatalogs {
-        create("libs") {
-            from(files("gradle/libs.versions.toml"))
-        }
-    }
 }
 
 rootProject.name = "MrComic"
 
 include(":app")
-include(":core-ui")
+include(":core")
 include(":core-data")
-include(":core-reader")
 include(":core-model")
-include(":feature-reader")
+include(":core-reader")
+include(":core-ui")
 include(":feature-library")
 include(":feature-ocr")
+include(":feature-reader")
 include(":feature-settings")
 include(":feature-themes")
-include(":shared")
-include(":plugins")
-include(":reports")
-include(":scripts")
-include(":themes_store")
 include(":mrcomic-api")
 include(":mrcomic-ocr-translation")
 include(":mrcomic-processing-pipeline")
-
-
-
+include(":plugins")
+include(":reader")
+include(":reports")
+include(":scripts")
+include(":shared")
+include(":src")
+include(":themes_store")
 include(":core-domain")
+
+
+
 
