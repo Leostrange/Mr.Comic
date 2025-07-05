@@ -2,9 +2,12 @@ package com.example.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.feature.library.data.ComicEntity
+import com.example.core.domain.usecase.AddComicUseCase
+import com.example.core.domain.usecase.DeleteComicUseCase
+import com.example.core.data.repository.ComicRepository
+import com.example.core.model.Comic
+import com.example.core.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,15 +15,9 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-sealed class UiState {
-    object Loading : UiState()
-    data class Success(val comics: List<ComicEntity>) : UiState()
-    data class Error(val message: String) : UiState()
-}
-
 data class LibraryUiState(
     val isLoading: Boolean = false,
-    val comics: List<ComicEntity> = emptyList(),
+    val comics: List<Comic> = emptyList(),
     val error: String? = null,
     val inSelectionMode: Boolean = false,
     val selectedComicIds: Set<String> = emptySet(),
@@ -28,12 +25,15 @@ data class LibraryUiState(
     val isSearchActive: Boolean = false,
     val searchQuery: String = "",
     val showAddComicDialog: Boolean = false,
-    val hasStoragePermission: Boolean = false
+    val hasStoragePermission: Boolean = false,
+    val sortOrder: SortOrder = SortOrder.DATE_ADDED_DESC
 )
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val repository: LibraryRepository
+    private val comicRepository: ComicRepository,
+    private val addComicUseCase: AddComicUseCase,
+    private val deleteComicUseCase: DeleteComicUseCase
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
@@ -46,7 +46,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                repository.getComicsFlow().collectLatest { comics ->
+                comicRepository.getComics(_uiState.value.sortOrder, _uiState.value.searchQuery).collectLatest { comics ->
                     _uiState.value = _uiState.value.copy(isLoading = false, comics = comics)
                 }
             } catch (e: Exception) {
@@ -58,7 +58,7 @@ class LibraryViewModel @Inject constructor(
     fun addComic(title: String, author: String, coverPath: String) {
         viewModelScope.launch {
             try {
-                repository.addComic(ComicEntity(title = title, author = author, filePath = coverPath))
+                addComicUseCase(Comic(title = title, author = author, filePath = coverPath))
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message ?: "Ошибка добавления")
             }
@@ -76,26 +76,26 @@ class LibraryViewModel @Inject constructor(
 
     fun onDeletionTimeout() {
         viewModelScope.launch {
-            _uiState.value.pendingDeletionIds.forEach { comicId ->
-                repository.deleteComic(comicId)
-            }
+            deleteComicUseCase(_uiState.value.pendingDeletionIds)
             _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
         }
     }
 
-    fun onSortOrderChange(sortOrder: com.example.core.model.SortOrder) {
-        // Logic for sort order change
+    fun onSortOrderChange(sortOrder: SortOrder) {
+        _uiState.value = _uiState.value.copy(sortOrder = sortOrder)
+        loadComics()
     }
 
     fun onSearchQueryChange(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
-        // Implement search logic here
+        loadComics()
     }
 
     fun onToggleSearch() {
         _uiState.value = _uiState.value.copy(isSearchActive = !_uiState.value.isSearchActive)
         if (!_uiState.value.isSearchActive) {
             _uiState.value = _uiState.value.copy(searchQuery = "")
+            loadComics()
         }
     }
 
@@ -105,8 +105,6 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onPermissionRequest() {
-        // This function can be used to trigger permission request from UI if needed
-        // For now, it just updates the state if permission is already granted
         if (_uiState.value.hasStoragePermission) {
             loadComics()
         }
@@ -146,6 +144,5 @@ class LibraryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(showAddComicDialog = false)
     }
 }
-
 
 
