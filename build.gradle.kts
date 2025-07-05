@@ -11,17 +11,7 @@ plugins {
 
 // Репозитории теперь централизованы в settings.gradle.kts
 
-subprojects {
-    apply(plugin = "com.diffplug.spotless")
 
-    spotless {
-        kotlin {
-            target("**/*.kt")
-            ktlint("1.2.1")
-            licenseHeaderFile(rootProject.file("spotless.license.kt"))
-        }
-    }
-}
 
 
 
