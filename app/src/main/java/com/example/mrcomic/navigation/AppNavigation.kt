@@ -35,7 +35,7 @@ sealed class Screen(val route: String) {
  * Главный навигационный хост приложения.
  */
 @Composable
-fun AppNavHost(navController: NavHostController) {
+fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Unit) {
     NavHost(navController = navController, startDestination = Screen.Onboarding.route) {
         composable(route = Screen.Library.route) {
             LibraryScreen(
@@ -63,7 +63,7 @@ fun AppNavHost(navController: NavHostController) {
         }
 
         composable(route = Screen.Onboarding.route) {
-            OnboardingScreen()
+            OnboardingScreen(onOnboardingComplete = onOnboardingComplete)
         }
     }
 }

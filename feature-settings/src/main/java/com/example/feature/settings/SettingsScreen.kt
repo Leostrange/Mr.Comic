@@ -16,10 +16,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.feature.themes.ui.AppTheme
+import com.example.feature.themes.ui.ThemesViewModel
+import androidx.compose.runtime.collectAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(themesViewModel: ThemesViewModel = hiltViewModel()) {
+    val selectedTheme by themesViewModel.selectedTheme.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -30,7 +36,11 @@ fun SettingsScreen() {
         // Управление темами
         var expandedTheme by remember { mutableStateOf(false) }
         val themes = listOf("Светлая", "Темная", "Системная")
-        var selectedThemeText by remember { mutableStateOf(themes[0]) }
+        var selectedThemeText by remember { mutableStateOf(when(selectedTheme) {
+            AppTheme.LIGHT -> "Светлая"
+            AppTheme.DARK -> "Темная"
+            AppTheme.SYSTEM -> "Системная"
+        }) }
 
         ExposedDropdownMenuBox(
             expanded = expandedTheme,
@@ -56,6 +66,11 @@ fun SettingsScreen() {
                         text = { Text(text = item) },
                         onClick = {
                             selectedThemeText = item
+                            themesViewModel.selectTheme(when(item) {
+                                "Светлая" -> AppTheme.LIGHT
+                                "Темная" -> AppTheme.DARK
+                                else -> AppTheme.SYSTEM
+                            })
                             expandedTheme = false
                         }
                     )
