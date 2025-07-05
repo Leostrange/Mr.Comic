@@ -8,10 +8,12 @@ import com.example.core.data.repository.ComicRepository
 import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,6 +31,11 @@ data class LibraryUiState(
     val sortOrder: SortOrder = SortOrder.DATE_ADDED_DESC
 )
 
+sealed class LibraryEvent {
+    data class ShowSnackbar(val message: String, val actionLabel: String?, val duration: Long) : LibraryEvent()
+    object HideSnackbar : LibraryEvent()
+}
+
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val comicRepository: ComicRepository,
@@ -37,6 +44,9 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    private val _events = Channel<LibraryEvent>()
+    val events = _events.receiveAsFlow()
 
     init {
         // No need to load comics here, as it will be triggered by onPermissionsGranted
@@ -68,10 +78,18 @@ class LibraryViewModel @Inject constructor(
     fun onDeleteRequest() {
         _uiState.value = _uiState.value.copy(pendingDeletionIds = _uiState.value.selectedComicIds)
         _uiState.value = _uiState.value.copy(inSelectionMode = false, selectedComicIds = emptySet())
+        viewModelScope.launch {
+            _events.send(LibraryEvent.ShowSnackbar(
+                message = "${_uiState.value.pendingDeletionIds.size} item(s) will be deleted",
+                actionLabel = "Undo",
+                duration = 5000L // 5 seconds
+            ))
+        }
     }
 
     fun onUndoDelete() {
         _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
+        viewModelScope.launch { _events.send(LibraryEvent.HideSnackbar) }
     }
 
     fun onDeletionTimeout() {

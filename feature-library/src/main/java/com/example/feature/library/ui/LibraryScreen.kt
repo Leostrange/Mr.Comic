@@ -63,6 +63,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
 import com.example.core.model.Comic
+import com.example.feature.library.LibraryEvent
 
 @Composable
 fun LibraryScreen(
@@ -72,24 +73,49 @@ fun LibraryScreen(
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.events.collect {
+            when (it) {
+                is LibraryEvent.ShowSnackbar -> {
+                    val result = snackbarHostState.showSnackbar(
+                        message = it.message,
+                        actionLabel = it.actionLabel,
+                        duration = SnackbarDuration.Long
+                    )
+                    when (result) {
+                        SnackbarResult.ActionPerformed -> {
+                            viewModel.onUndoDelete()
+                        }
+                        SnackbarResult.Dismissed -> {
+                            viewModel.onDeletionTimeout()
+                        }
+                    }
+                }
+                is LibraryEvent.HideSnackbar -> {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                }
+            }
+        }
+    }
+
     LibraryScreenContent(
         uiState = uiState,
         onBookClick = onBookClick,
-        onGrantPermission = viewModel::onPermissionsGranted,
         onEnterSelectionMode = viewModel::onEnterSelectionMode,
         onComicSelected = viewModel::onComicSelected,
         onClearSelection = viewModel::onClearSelection,
         onDeleteRequest = viewModel::onDeleteRequest,
-        onUndoDelete = viewModel::onUndoDelete,
-        onDeletionTimeout = viewModel::onDeletionTimeout,
         onSortOrderChange = viewModel::onSortOrderChange,
         onSearchQueryChange = viewModel::onSearchQueryChange,
         onToggleSearch = viewModel::onToggleSearch,
         onAddComicClick = viewModel::onAddComicClick,
         onDismissAddComicDialog = viewModel::onDismissAddComicDialog,
         onConfirmAddComicDialog = viewModel::onConfirmAddComicDialog,
-        onPermissionRequest = { viewModel.onPermissionRequest() },
-        onSettingsClick = onSettingsClick
+        onSettingsClick = onSettingsClick,
+        snackbarHostState = snackbarHostState
     )
 }
 
@@ -97,23 +123,19 @@ fun LibraryScreen(
 @Composable
 private fun LibraryScreenContent(
     uiState: LibraryUiState,
-    onAddClick: () -> Unit,
     onBookClick: (filePath: String) -> Unit,
-    onGrantPermission: () -> Unit,
     onEnterSelectionMode: (comicId: String) -> Unit,
     onComicSelected: (comicId: String) -> Unit,
     onClearSelection: () -> Unit,
     onDeleteRequest: () -> Unit,
-    onUndoDelete: () -> Unit,
-    onDeletionTimeout: () -> Unit,
     onSortOrderChange: (SortOrder) -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onToggleSearch: () -> Unit,
     onAddComicClick: () -> Unit,
     onDismissAddComicDialog: () -> Unit,
     onConfirmAddComicDialog: (title: String, author: String, coverPath: String) -> Unit,
-    onPermissionRequest: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    snackbarHostState: SnackbarHostState
 ) {
     // Placeholder for bottom navigation state
     var currentRoute by remember { mutableStateOf("library") }
@@ -123,32 +145,10 @@ private fun LibraryScreenContent(
     )}
 
     val storagePermissionState = rememberPermissionState(Manifest.permission.READ_EXTERNAL_STORAGE)
-    val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(uiState.pendingDeletionIds) {
-        if (uiState.pendingDeletionIds.isNotEmpty()) {
-            scope.launch {
-                val result = snackbarHostState.showSnackbar(
-                    message = "${uiState.pendingDeletionIds.size} item(s) will be deleted",
-                    actionLabel = "Undo",
-                    duration = SnackbarDuration.Long
-                )
-                when (result) {
-                    SnackbarResult.ActionPerformed -> {
-                        onUndoDelete()
-                    }
-                    SnackbarResult.Dismissed -> {
-                        onDeletionTimeout()
-                    }
-                }
-            }
-        }
-    }
 
     LaunchedEffect(storagePermissionState.status.isGranted) {
         if (storagePermissionState.status.isGranted) {
-            onGrantPermission()
+            // Permission granted, ViewModel will handle loading comics
         }
     }
 
