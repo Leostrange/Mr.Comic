@@ -5,6 +5,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.feature.themes.ui.AppTheme
+import com.example.feature.themes.ui.ThemesViewModel
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -23,9 +28,13 @@ fun MrComicTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+    val themesViewModel: ThemesViewModel = hiltViewModel()
+    val selectedTheme by themesViewModel.selectedTheme.collectAsState()
+
+    val colorScheme = when (selectedTheme) {
+        AppTheme.LIGHT -> LightColorScheme
+        AppTheme.DARK -> DarkColorScheme
+        AppTheme.SYSTEM -> if (isSystemInDarkTheme()) DarkColorScheme else LightColorScheme
     }
 
     MaterialTheme(
@@ -33,4 +42,6 @@ fun MrComicTheme(
         typography = Typography,
         content = content
     )
-} 
+}
+
+
