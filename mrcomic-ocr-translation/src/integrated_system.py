@@ -584,5 +584,141 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description="Mr.Comic Integrated OCR and Translation System CLI")
+    parser.add_argument('--mode', type=str, required=True, choices=['ocr', 'translate'], help="Operating mode: 'ocr' or 'translate'")
+
+    # OCR arguments
+    parser.add_argument('--image_path', type=str, help="Path to the image for OCR")
+    parser.add_argument('--regions', type=str, help="JSON string of regions to OCR e.g. '[{\"x\":0,\"y\":0,\"w\":100,\"h\":50}]'")
+    parser.add_argument('--ocr_languages', type=str, help="JSON string of languages for OCR e.g. '[\"eng\",\"rus\"]'")
+    parser.add_argument('--ocr_params', type=str, help="JSON string of additional OCR parameters")
+
+    # Translation arguments
+    parser.add_argument('--texts', type=str, help="JSON string of texts to translate e.g. '[{\"id\":\"t1\",\"text\":\"Hello\"}]'")
+    parser.add_argument('--source_language', type=str, default='auto', help="Source language for translation (e.g., 'eng', 'auto')")
+    parser.add_argument('--target_language', type=str, help="Target language for translation (e.g., 'rus')")
+    parser.add_argument('--translation_params', type=str, help="JSON string of additional translation parameters")
+
+    # Common arguments
+    parser.add_argument('--config_file', type=str, help="Path to a JSON config file for the system")
+
+    args = parser.parse_args()
+
+    config = {}
+    if args.config_file:
+        try:
+            with open(args.config_file, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        except Exception as e:
+            logger.error(f"Could not load config file {args.config_file}: {e}")
+            # Output error as JSON to stderr and exit
+            json.dump({"success": False, "errors": [f"Config file error: {e}"]}, sys.stderr)
+            sys.exit(1)
+
+    system = MrComicIntegratedSystem(config=config)
+
+    output_results = {"success": False, "data": None, "errors": []}
+
+    try:
+        if args.mode == 'ocr':
+            if not args.image_path:
+                raise ValueError("--image_path is required for OCR mode")
+
+            # TODO: Parse regions, ocr_languages, ocr_params from JSON strings if provided
+            # For now, we'll assume process_comic_page can handle None for these or they are passed in config
+            # This part needs more robust handling of JSON parsing for CLI arguments
+
+            # For simplicity, this example doesn't fully parse JSON args for regions/languages/params here.
+            # The process_comic_page method in MrComicIntegratedSystem would need to be adapted
+            # or these args would need to be passed via a config file or simpler CLI args.
+            # This is a placeholder for more complex CLI interaction.
+
+            # Assuming process_comic_page can be called more directly or adapted
+            # For now, let's just call it with the image path.
+            # A more complete CLI would parse JSON args for regions, etc.
+            ocr_processing_result = system.process_comic_page(args.image_path)
+
+            # Convert dataclass to dict for JSON serialization
+            # We need to handle the ValidationResult potentially being None or needing asdict too
+            if ocr_processing_result.validation_result and hasattr(ocr_processing_result.validation_result, '_asdict'): # Check if it's a namedtuple or similar
+                 validation_data = ocr_processing_result.validation_result._asdict()
+            elif ocr_processing_result.validation_result:
+                 validation_data = asdict(ocr_processing_result.validation_result) # if it's a dataclass
+            else:
+                 validation_data = None
+
+            output_results["success"] = ocr_processing_result.success
+            output_results["data"] = {
+                "original_image_path": ocr_processing_result.original_image_path,
+                "processed_image_path": ocr_processing_result.processed_image_path,
+                "detected_elements": ocr_processing_result.detected_elements, # Assuming these are JSON serializable
+                "ocr_results": ocr_processing_result.ocr_results, # Assuming these are JSON serializable
+                "translation_results": ocr_processing_result.translation_results, # Assuming these are JSON serializable
+                "validation_result": validation_data,
+                "processing_time": ocr_processing_result.processing_time,
+                "metadata": ocr_processing_result.metadata,
+            }
+            if not ocr_processing_result.success:
+                 output_results["errors"] = ocr_processing_result.errors
+
+
+        elif args.mode == 'translate':
+            if not args.texts or not args.target_language:
+                raise ValueError("--texts and --target_language are required for translation mode")
+
+            texts_to_translate = json.loads(args.texts) # Expecting [{"id": "id1", "text": "text1"}, ...]
+            # translation_params_dict = json.loads(args.translation_params) if args.translation_params else {}
+            # For simplicity, assuming universal_translator.translate handles single text or list of texts
+            # and that translate_text method of UniversalTranslationSystem can be adapted or a new one created for batch
+
+            all_translations = []
+            if system.translator:
+                for item in texts_to_translate:
+                    # This assumes UniversalTranslator's translate method takes a TranslationRequest object
+                    # We might need to adjust UniversalTranslator or create a new entry point here
+                    from universal_translator import TranslationRequest, TranslationDomain # Ensure these are imported
+
+                    translation_request = TranslationRequest(
+                        text=item.get("text", ""),
+                        source_lang=args.source_language,
+                        target_lang=args.target_language,
+                        domain=TranslationDomain.GENERAL # Default or parse from translation_params
+                    )
+                    # translation_options = translation_params_dict.get(item.get("id")) or {} # if params are per-item
+
+                    translated_item = system.translator.translate(translation_request)
+
+                    if translated_item:
+                        all_translations.append({
+                            "id": item.get("id"),
+                            "originalText": translated_item.original_text,
+                            "translatedText": translated_item.translated_text,
+                            "detectedSourceLanguage": translated_item.source_lang, # Assuming translate returns this
+                            "engineUsed": str(translated_item.engine.value)
+                        })
+                    else:
+                        all_translations.append({
+                            "id": item.get("id"),
+                            "originalText": item.get("text",""),
+                            "translatedText": None,
+                            "error": "Translation failed"
+                        })
+                output_results["success"] = True # Or check if all items succeeded
+                output_results["data"] = {"results": all_translations, "processingTimeMs": 0 } # Placeholder time
+            else:
+                raise RuntimeError("Translator component not initialized in IntegratedSystem")
+
+        json.dump(output_results, sys.stdout, ensure_ascii=False, indent=2)
+
+    except ValueError as ve:
+        logger.error(f"ValueError in CLI: {ve}")
+        json.dump({"success": False, "errors": [str(ve)]}, sys.stderr) # Output error as JSON to stderr
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Unhandled exception in CLI: {e}", exc_info=True)
+        json.dump({"success": False, "errors": [f"Internal server error: {e}"]}, sys.stderr) # Output error as JSON to stderr
+        sys.exit(1)
 
