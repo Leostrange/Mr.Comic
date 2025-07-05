@@ -24,7 +24,7 @@ object FakeBuildConfig {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object NetworkModule {
+object AppModule { // Переименовано из NetworkModule
 
     @Provides
     @Singleton
@@ -79,5 +79,15 @@ object NetworkModule {
     @Singleton
     fun provideMrComicApiService(retrofit: Retrofit): MrComicApiService {
         return retrofit.create(MrComicApiService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideOcrTranslationRepository(
+        mrComicApiService: MrComicApiService,
+        @ApplicationContext context: Context,
+        gson: Gson
+    ): OcrTranslationRepository {
+        return OcrTranslationRepository(mrComicApiService, context, gson)
     }
 }
