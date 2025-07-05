@@ -62,6 +62,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import kotlinx.coroutines.launch
+import com.example.core.model.Comic
 
 @Composable
 fun LibraryScreen(
@@ -87,7 +88,8 @@ fun LibraryScreen(
         onAddComicClick = viewModel::onAddComicClick,
         onDismissAddComicDialog = viewModel::onDismissAddComicDialog,
         onConfirmAddComicDialog = viewModel::onConfirmAddComicDialog,
-        onPermissionRequest = { viewModel.onPermissionRequest() }
+        onPermissionRequest = { viewModel.onPermissionRequest() },
+        onSettingsClick = onSettingsClick
     )
 }
 
@@ -110,14 +112,15 @@ private fun LibraryScreenContent(
     onAddComicClick: () -> Unit,
     onDismissAddComicDialog: () -> Unit,
     onConfirmAddComicDialog: (title: String, author: String, coverPath: String) -> Unit,
-    onPermissionRequest: () -> Unit
+    onPermissionRequest: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     // Placeholder for bottom navigation state
     var currentRoute by remember { mutableStateOf("library") }
     val bottomNavItems = remember { listOf(
         BottomNavItem("Library", Icons.Default.Home, "library"),
         BottomNavItem("Settings", Icons.Default.Settings, "settings")
-    )
+    )}
 
     val storagePermissionState = rememberPermissionState(Manifest.permission.READ_EXTERNAL_STORAGE)
     val scope = rememberCoroutineScope()
@@ -210,7 +213,7 @@ private fun LibraryScreenContent(
                 } else if (uiState.error != null) {
                     Text(text = uiState.error)
                 } else {
-                    val visibleComics = uiState.comics.filter { it.id !in uiState.pendingDeletionIds }
+                    val visibleComics = uiState.comics.filter { it.filePath !in uiState.pendingDeletionIds }
                     if (visibleComics.isEmpty()) {
                         Text("No comics found.")
                     }
@@ -221,18 +224,18 @@ private fun LibraryScreenContent(
                         verticalArrangement = Arrangement.spacedBy(PaddingMedium),
                         horizontalArrangement = Arrangement.spacedBy(PaddingMedium)
                     ) {
-                        items(visibleComics, key = { it.id }) { comic ->
+                        items(visibleComics, key = { it.filePath }) { comic ->
                             ComicCoverCard(
-                                comicBook = comic,
-                                isSelected = uiState.selectedComicIds.contains(comic.id),
+                                comic = comic,
+                                isSelected = uiState.selectedComicIds.contains(comic.filePath),
                                 onClick = {
                                     if (uiState.inSelectionMode) {
-                                        onComicSelected(comic.id)
+                                        onComicSelected(comic.filePath)
                                     } else {
                                         onBookClick(comic.filePath)
                                     }
                                 },
-                                onLongClick = { onEnterSelectionMode(comic.id) }
+                                onLongClick = { onEnterSelectionMode(comic.filePath) }
                             )
                         }
                     }

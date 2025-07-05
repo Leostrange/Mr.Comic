@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
-import com.example.core.model.ComicBook
+import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 import com.example.core.data.database.ComicDao
 import com.example.core.data.database.ComicEntity
@@ -20,12 +20,13 @@ import java.io.File
 import javax.inject.Inject
 
 interface ComicRepository {
-    fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<ComicBook>>
+    fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<Comic>>
     suspend fun refreshComicsIfEmpty()
     suspend fun deleteComics(comicIds: Set<String>)
-    suspend fun addComic(comic: ComicBook)
+    suspend fun addComic(comic: Comic)
     suspend fun updateProgress(comicId: String, currentPage: Int)
     suspend fun clearCache()
+}
 
 class ComicRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -36,7 +37,7 @@ class ComicRepositoryImpl @Inject constructor(
 
     private val supportedExtensions = setOf("cbr", "cbz", "pdf", "djvu", "djv")
 
-    override fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<ComicBook>> {
+    override fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<Comic>> {
         val comicsFlow = when (sortOrder) {
             SortOrder.TITLE_ASC -> comicDao.getComicsSortedByTitleAsc(searchQuery)
             SortOrder.TITLE_DESC -> comicDao.getComicsSortedByTitleDesc(searchQuery)
@@ -44,11 +45,11 @@ class ComicRepositoryImpl @Inject constructor(
         }
         return comicsFlow.map { entities ->
             entities.map { entity ->
-                ComicBook(
-                    id = entity.filePath,
+                Comic(
                     title = entity.title,
-                    coverUrl = entity.coverPath,
-                    filePath = entity.filePath
+                    author = "Unknown", // Assuming author is not in ComicEntity for now
+                    filePath = entity.filePath,
+                    coverPath = entity.coverPath
                 )
             }
         }
@@ -104,12 +105,12 @@ class ComicRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun addComic(comic: ComicBook) {
+    override suspend fun addComic(comic: Comic) {
         withContext(Dispatchers.IO) {
             val comicEntity = ComicEntity(
                 filePath = comic.filePath,
                 title = comic.title,
-                coverPath = comic.coverUrl,
+                coverPath = comic.coverPath,
                 dateAdded = System.currentTimeMillis()
             )
             comicDao.insertAll(listOf(comicEntity))
@@ -140,7 +141,9 @@ class ComicRepositoryImpl @Inject constructor(
             if (doc.isDirectory) {
                 scanDocumentTree(doc.uri, uriList)
             } else if (doc.isFile) {
-                val extension = doc.name?.substringAfterLast('.', "")?.lowercase()
+                val extension = doc.name?.substringAfterLast(
+'.
+', "")?.lowercase()
                 if (supportedExtensions.contains(extension)) {
                     uriList.add(doc.uri)
                 }
@@ -149,6 +152,9 @@ class ComicRepositoryImpl @Inject constructor(
     }
 
     private fun getFileName(uri: Uri): String? {
-        return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast('.')
+        return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast(
+'.
+')
     }
 }
+

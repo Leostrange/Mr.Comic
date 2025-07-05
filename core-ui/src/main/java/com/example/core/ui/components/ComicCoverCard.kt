@@ -10,11 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
-import com.example.core.model.ComicBook
+import com.example.core.model.Comic
 
 @Composable
 fun ComicCoverCard(
-    comicBook: ComicBook,
+    comic: Comic,
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit
@@ -27,15 +27,15 @@ fun ComicCoverCard(
     ) {
         Column {
             Image(
-                painter = rememberAsyncImagePainter(comicBook.coverUrl),
-                contentDescription = comicBook.title,
+                painter = rememberAsyncImagePainter(comic.coverPath),
+                contentDescription = comic.title,
                 modifier = Modifier
                     .height(200.dp)
                     .fillMaxWidth(),
                 contentScale = ContentScale.Crop
             )
             Text(
-                text = comicBook.title,
+                text = comic.title,
                 modifier = Modifier.padding(8.dp)
             )
         }
