@@ -103,3 +103,11 @@ java -cp out com.example.comicreader.ComicTest
 
 *   **`com.github.barteksc:android-pdf-viewer`**: для отображения PDF-файлов. ([Ссылка на GitHub](https://github.com/barteksc/AndroidPdfViewer))
 *   **`com.github.junrar:junrar`**: для чтения RAR-архивов (CBR-файлы). ([Ссылка на GitHub](https://github.com/junrar/junrar))
+
+
+
+## Детализированная Дорожная Карта
+
+Для подробного плана разработки, включая архитектуру, интерфейс и логику, пожалуйста, ознакомьтесь с [Детализированной Дорожной Картой](refined_roadmap.md).
+
+
