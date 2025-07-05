@@ -5,7 +5,10 @@ import android.graphics.Bitmap
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mrcomic.reader.AdvancedComicReaderEngine
+import com.example.core.domain.usecase.GetComicPagesUseCase
+import com.example.core.domain.usecase.LoadComicUseCase
+import com.example.core.domain.usecase.SaveReadingProgressUseCase
+import com.example.core.domain.usecase.GetReadingProgressUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,9 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-import com.example.mrcomic.data.BookmarkDao
-import com.example.mrcomic.data.BookmarkEntity
-
 data class ReaderUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -24,7 +24,8 @@ data class ReaderUiState(
     val pageCount: Int = 0,
     val readingMode: ReadingMode = ReadingMode.PAGE,
     val currentPageBitmap: Bitmap? = null,
-    val bitmaps: Map<Int, Bitmap> = emptyMap()
+    val bitmaps: Map<Int, Bitmap> = emptyMap(),
+    val comicUri: String = ""
 )
 
 enum class ReadingMode {
@@ -33,37 +34,29 @@ enum class ReadingMode {
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
-    private val repository: ReaderRepository,
-    private val bookmarkDao: BookmarkDao,
+    private val loadComicUseCase: LoadComicUseCase,
+    private val getComicPagesUseCase: GetComicPagesUseCase,
+    private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    private lateinit var engine: AdvancedComicReaderEngine
-
-    init {
-        engine = AdvancedComicReaderEngine(context)
-    }
-
-    fun loadComicFromUri(uriString: String) {
+    fun loadComic(uriString: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, comicUri = uriString)
             try {
-                val uri = Uri.parse(uriString)
-                if (engine.loadComic(uri)) {
-                    val totalPages = engine.getTotalPages()
-                    val lastReadPage = loadBookmark(uriString)
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        pageCount = totalPages,
-                        currentPageIndex = lastReadPage
-                    )
-                    goToPage(lastReadPage)
-                } else {
-                    _uiState.value = _uiState.value.copy(isLoading = false, error = "Не удалось загрузить комикс: $uriString")
-                }
+                loadComicUseCase(Uri.parse(uriString))
+                val totalPages = getComicPagesUseCase.getTotalPages()
+                val lastReadPage = getReadingProgressUseCase(uriString)
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    pageCount = totalPages,
+                    currentPageIndex = lastReadPage
+                )
+                goToPage(lastReadPage)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка")
             }
@@ -90,14 +83,14 @@ class ReaderViewModel @Inject constructor(
 
     private fun goToPage(index: Int) {
         viewModelScope.launch {
-            val bmp = engine.goToPage(index)
+            val bmp = getComicPagesUseCase.getPage(index)
             if (bmp != null) {
                 _uiState.value = _uiState.value.copy(
                     currentPageIndex = index,
                     currentPageBitmap = bmp,
                     bitmaps = _uiState.value.bitmaps.toMutableMap().apply { put(index, bmp) }
                 )
-                saveBookmark(repository.getCurrentComic(), index)
+                saveReadingProgressUseCase(_uiState.value.comicUri, index)
             }
         }
     }
@@ -106,30 +99,13 @@ class ReaderViewModel @Inject constructor(
         return _uiState.value.bitmaps[pageIndex]
     }
 
-    private fun saveBookmark(comicUri: String, page: Int) {
-        viewModelScope.launch {
-            if (comicUri.isNotBlank()) {
-                val bookmark = BookmarkEntity(comicId = comicUri, page = page)
-                bookmarkDao.insertBookmark(bookmark)
-            }
-        }
-    }
-
-    private suspend fun loadBookmark(comicUri: String): Int {
-        return if (comicUri.isNotBlank()) {
-            bookmarkDao.getBookmarkAtPage(comicUri, 0)?.page ?: 0
-        } else {
-            0
-        }
-    }
-
     fun setReadingMode(mode: ReadingMode) {
         _uiState.value = _uiState.value.copy(readingMode = mode)
     }
 
     override fun onCleared() {
         super.onCleared()
-        engine.releaseResources()
+        loadComicUseCase.releaseResources()
     }
 }
 

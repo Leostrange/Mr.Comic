@@ -52,15 +52,19 @@ import me.saket.telephoto.zoomable.zoomable
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel = hiltViewModel(),
+    filePath: String
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(filePath) {
+        viewModel.loadComic(filePath)
+    }
 
     ReaderScreenContent(
         uiState = uiState,
         onNextPage = viewModel::goToNextPage,
         onPreviousPage = viewModel::goToPreviousPage,
-        onSetReadingMode = viewModel::setReadingMode,
-        onLoadComic = viewModel::loadComicFromUri
+        onSetReadingMode = viewModel::setReadingMode
     )
 }
 
@@ -77,8 +81,7 @@ private fun ReaderScreenContent(
     uiState: ReaderUiState,
     onNextPage: () -> Unit,
     onPreviousPage: () -> Unit,
-    onSetReadingMode: (ReadingMode) -> Unit,
-    onLoadComic: (String) -> Unit
+    onSetReadingMode: (ReadingMode) -> Unit
 ) {
     Scaffold(
         bottomBar = {
@@ -109,7 +112,7 @@ private fun ReaderScreenContent(
         ) {
             when (uiState.readingMode) {
                 ReadingMode.PAGE -> PagedReader(uiState, onNextPage, onPreviousPage)
-                ReadingMode.WEBTOON -> WebtoonReader(uiState, onLoadComic)
+                ReadingMode.WEBTOON -> WebtoonReader(uiState)
             }
 
             if (uiState.isLoading && uiState.readingMode == ReadingMode.PAGE) {
@@ -176,15 +179,14 @@ private fun PagedReader(
 
 @Composable
 private fun WebtoonReader(
-    uiState: ReaderUiState,
-    onLoadComic: (String) -> Unit
+    uiState: ReaderUiState
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        items(uiState.pageCount) { pageIndex ->
-            WebtoonPageItem(pageIndex = pageIndex, uiState = uiState, onLoadComic = onLoadComic)
+        items(uiState.pageCount, key = { it }) { pageIndex ->
+            WebtoonPageItem(pageIndex = pageIndex, uiState = uiState)
         }
     }
 }
@@ -192,8 +194,7 @@ private fun WebtoonReader(
 @Composable
 private fun WebtoonPageItem(
     pageIndex: Int,
-    uiState: ReaderUiState,
-    onLoadComic: (String) -> Unit
+    uiState: ReaderUiState
 ) {
     val bitmap = uiState.bitmaps[pageIndex]
 
