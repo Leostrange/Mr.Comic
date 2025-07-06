@@ -58,8 +58,10 @@ public class JsPluginHost {
                     webView.loadData("<html><body><h1>Plugin UI not found</h1><p>Could not load " + indexHtml.getName() + " for plugin " + pluginId + "</p></body></html>", "text/html", "UTF-8");
                 }
 
-                // На следующих этапах здесь будет добавлена регистрация JavascriptInterface
-                // webView.addJavascriptInterface(new AndroidPluginBridge(context, pluginId), "MrComicNativeHost");
+                // Регистрация JavascriptInterface
+                AndroidPluginBridge bridge = new AndroidPluginBridge(context, pluginId);
+                webView.addJavascriptInterface(bridge, "MrComicNativeHost");
+                Log.d(TAG, "JavascriptInterface 'MrComicNativeHost' added for plugin: " + pluginId);
 
                 // WebView пока не добавляется ни в какой Layout, он просто создается.
                 // Это для проверки базовой загрузки.
