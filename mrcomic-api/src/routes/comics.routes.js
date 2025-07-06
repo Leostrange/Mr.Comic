@@ -173,23 +173,14 @@ router.get('/:id/chapters', passport.authenticate('jwt', { session: false }), as
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
     
-    // В реальном приложении здесь был бы запрос к модели Chapter
-    // Для примера используем фиктивные данные
-    const chapters = [];
-    const total = comic.chaptersCount || 0;
-    
-    // Генерация фиктивных данных для примера
-    for (let i = skip + 1; i <= Math.min(skip + limit, total); i++) {
-      chapters.push({
-        id: `chapter_${i}`,
-        comicId: comic._id,
-        title: `Глава ${i}`,
-        number: i,
-        releaseDate: new Date(Date.now() - i * 86400000), // Каждая глава на день раньше
-        pagesCount: Math.floor(Math.random() * 20) + 10,
-        thumbnailUrl: `https://example.com/comics/${comic._id}/chapters/${i}/thumbnail.jpg`
-      });
-    }
+const Chapter = require("../models/Chapter");
+
+    const chapters = await Chapter.find({ comicId: req.params.id })
+      .sort({ number: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Chapter.countDocuments({ comicId: req.params.id });
     
     res.json({
       chapters,
