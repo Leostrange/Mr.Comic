@@ -1,0 +1,11 @@
+{
+  "id": "test-js-plugin",
+  "name": "Test JavaScript Plugin",
+  "version": "0.1.0",
+  "description": "A simple plugin to test JS host functionality.",
+  "author": "AI Developer",
+  "main": {
+    "frontend": "frontend/index.html"
+  },
+  "permissions": []
+}
