@@ -260,4 +260,40 @@ public class AndroidPluginBridge {
             runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
         }
     }
+
+    // --- Image API ---
+    @JavascriptInterface
+    public void imageGetImage(String pluginIdFromJs, String imageId, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "imageGetImage called for imageId: " + imageId + " cbId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
+            return;
+        }
+        // TODO: Проверка разрешения 'read_image' для pluginId
+        // TODO: Реализовать реальную логику получения данных изображения по imageId (например, из БД или файловой системы)
+
+        // Заглушка: возвращаем моковые данные
+        try {
+            JSONObject imageData = new JSONObject();
+            imageData.put("id", imageId);
+            imageData.put("path", "/storage/emulated/0/Pictures/mock_" + imageId + ".png"); // Пример пути
+            imageData.put("width", 800);
+            imageData.put("height", 600);
+            imageData.put("mimeType", "image/png");
+            // Можно добавить другие поля, например, base64 превью, если нужно
+            // imageData.put("previewBase64", "...");
+
+            // Оборачиваем данные изображения в объект с ключом "value", как ожидает JS Promise resolve
+            JSONObject result = new JSONObject();
+            result.put("value", imageData);
+            runJsCallback(callbackId, true, result.toString());
+        } catch (JSONException e) {
+            Log.e(TAG_PREFIX + pluginId, "Error creating JSON for imageGetImage", e);
+            runJsCallback(callbackId, false, createErrorJson("json_creation_error", "Failed to create JSON response for image data."));
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in imageGetImage for imageId " + imageId, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+    // TODO: imageSaveImage, imageRegisterFilter, imageApplyFilter
 }

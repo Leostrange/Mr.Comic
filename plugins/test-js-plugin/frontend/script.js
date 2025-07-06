@@ -242,4 +242,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Запускаем тесты после небольшой задержки, чтобы убедиться, что MrComicNativeHost мог инициализироваться
     setTimeout(testSettingsAndFs, 1000);
 
+    async function testImageApi() {
+        if (!messageElement) return;
+        messageElement.textContent += "\n\n--- Testing Image API ---\n";
+        mockPluginContext.log.info("JS: Attempting image.getImage('testImage123')");
+        try {
+            const imageDetails = await mockPluginContext.image.getImage("testImage123");
+            messageElement.textContent += `image.getImage result: ${JSON.stringify(imageDetails)}\n`;
+            mockPluginContext.log.info(`JS: image.getImage result: ${JSON.stringify(imageDetails)}`);
+            if (imageDetails && imageDetails.value && imageDetails.value.id === "testImage123") {
+                 messageElement.textContent += "Image API test successful (mocked data).\n";
+                 mockPluginContext.log.info("JS: Image API test successful (mocked data).");
+            } else {
+                messageElement.textContent += "Image API test structure mismatch.\n";
+                mockPluginContext.log.error("JS: Image API test structure mismatch.");
+            }
+        } catch (error) {
+            messageElement.textContent += `Error during Image API test: ${JSON.stringify(error)}\n`;
+            mockPluginContext.log.error(`JS: Error during Image API test: ${JSON.stringify(error)}`);
+        }
+    }
+    // Запускаем тест Image API также с задержкой
+    setTimeout(testImageApi, 1500);
+
 });

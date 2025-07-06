@@ -32,7 +32,6 @@ class PluginContext {
     // Логирование (должно быть доступно до проверки разрешений для самого логгера)
     this.log = {
       debug: (message, ...args) => {
-        // console.debug(`[${this._pluginId}] ${message}`, ...args); // Используем нативный логгер
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.logMessage === 'function') {
             window.MrComicNativeHost.logMessage(this._pluginId, "DEBUG", message + (args.length > 0 ? " " + JSON.stringify(args) : ""));
         } else {
@@ -64,38 +63,56 @@ class PluginContext {
 
     // API для работы с изображениями
     this.image = {
-      getImage: async (imageId) => {
-        this._checkPermission('read_image');
-        this.log.warn("image.getImage is not fully implemented with native bridge yet.");
-        return Promise.resolve({ id: imageId, data: {} }); // Заглушка
+      getImage: (imageId) => { // Убрал async, возвращаем Promise
+        this._checkPermission('read_image'); // Предполагаем, что такое разрешение есть
+        if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.imageGetImage !== 'function') {
+          this.log.error("MrComicNativeHost.imageGetImage is not available.");
+          return Promise.reject({ code: "native_bridge_error", message: "Native imageGetImage not found." });
+        }
+
+        return new Promise((resolve, reject) => {
+          const callbackId = generateCallbackId(); // Эта функция должна быть глобально доступна
+          window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+
+          try {
+            this.log.debug(`JS: Calling MrComicNativeHost.imageGetImage for imageId: ${imageId}, cbId: ${callbackId}`);
+            window.MrComicNativeHost.imageGetImage(this._pluginId, imageId, callbackId);
+          } catch (e) {
+            this.log.error("JS: Error calling MrComicNativeHost.imageGetImage:", e);
+            delete window.mrComicPluginCallbacks[callbackId]; // Важно очистить, если вызов упал
+            reject({ code: "native_call_error", message: "Failed to call native imageGetImage: " + e.message });
+          }
+        });
       },
-      saveImage: async (imageData, options = {}) => {
+      saveImage: (imageData, options = {}) => { // Возвращаем Promise
         this._checkPermission('write_image');
         this.log.warn("image.saveImage is not fully implemented with native bridge yet.");
+        // TODO: Реализовать через MrComicNativeHost.imageSaveImage(pluginId, imageData, optionsJson, callbackId)
         return Promise.resolve({ id: 'new-image-id', path: '/path/to/image' }); // Заглушка
       },
       registerFilter: (filterId, filterFn, options = {}) => {
         this.log.warn("image.registerFilter is not fully implemented with native bridge yet.");
         this._addDisposable(() => {});
       },
-      applyFilter: async (imageId, filterId, options = {}) => {
+      applyFilter: (imageId, filterId, options = {}) => { // Возвращаем Promise
         this._checkPermission('modify_image');
         this.log.warn("image.applyFilter is not fully implemented with native bridge yet.");
+        // TODO: Реализовать через MrComicNativeHost.imageApplyFilter(pluginId, imageId, filterId, optionsJson, callbackId)
         return Promise.resolve({ id: imageId, data: {} }); // Заглушка
       }
     };
 
-    // API для работы с текстом
+    // API для работы с текстом (оставляем заглушки, как были)
     this.text = {
       getText: async (textId) => {
         this._checkPermission('read_text');
         this.log.warn("text.getText is not fully implemented with native bridge yet.");
-        return Promise.resolve('Sample text'); // Заглушка
+        return Promise.resolve('Sample text');
       },
       setText: async (textId, text) => {
         this._checkPermission('modify_text');
         this.log.warn("text.setText is not fully implemented with native bridge yet.");
-        return Promise.resolve(true); // Заглушка
+        return Promise.resolve(true);
       },
       registerTextHandler: (handlerId, handlerFn, options = {}) => {
         this.log.warn("text.registerTextHandler is not fully implemented with native bridge yet.");
@@ -103,11 +120,11 @@ class PluginContext {
       },
       spellCheck: async (text, options = {}) => {
         this.log.warn("text.spellCheck is not fully implemented with native bridge yet.");
-        return Promise.resolve({ errors: [] }); // Заглушка
+        return Promise.resolve({ errors: [] });
       }
     };
 
-    // API для экспорта
+    // API для экспорта (оставляем заглушки, как были)
     this.export = {
       registerExportFormat: (formatId, exportFn, options = {}) => {
         this.log.warn("export.registerExportFormat is not fully implemented with native bridge yet.");
@@ -130,7 +147,7 @@ class PluginContext {
       }
     };
 
-    // API для пользовательского интерфейса
+    // API для пользовательского интерфейса (showNotification уже использует мост)
     this.ui = {
       registerMenuItem: (menuId, itemId, options = {}) => {
         this.log.warn("ui.registerMenuItem is not fully implemented with native bridge yet.");
@@ -140,39 +157,33 @@ class PluginContext {
         this.log.warn("ui.registerPanel is not fully implemented with native bridge yet.");
         this._addDisposable(() => {});
       },
-      showNotification: (message, options = {}) => { // Сделаем синхронным вызовом, если Toast не требует Promise
-        // this._checkPermission('show_notification'); // Разрешение может быть не нужно для простых уведомлений
+      showNotification: (message, options = {}) => {
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.showToast === 'function') {
-            const duration = (options && options.type === 'long') ? 1 : 0; // 0 for short, 1 for long
+            const duration = (options && options.type === 'long') ? 1 : 0;
             window.MrComicNativeHost.showToast(this._pluginId, message, duration);
         } else {
             this.log.error("MrComicNativeHost.showToast is not available.");
-            alert(`[${this._pluginId}] Notification: ${message}`); // Fallback
+            alert(`[${this._pluginId}] Notification: ${message}`);
         }
-        // Не возвращаем Promise, так как Toast обычно fire-and-forget
       },
       showDialog: async (options = {}) => {
         this.log.warn("ui.showDialog is not fully implemented with native bridge yet.");
-        return Promise.resolve({ result: 'ok' }); // Заглушка
+        return Promise.resolve({ result: 'ok' });
       }
     };
 
-    // API для настроек
+    // API для настроек (уже реализовано с коллбэками)
     this.settings = {
       get: (key, defaultValue) => {
-        this._checkPermission('read_settings'); // Предполагаем, что такое разрешение есть
+        this._checkPermission('read_settings');
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.settingsGet !== 'function') {
           this.log.error("MrComicNativeHost.settingsGet is not available. Returning defaultValue.");
-          return Promise.resolve(defaultValue); // Возвращаем defaultValue если мост не доступен
+          return Promise.resolve(defaultValue);
         }
-
         return new Promise((resolve, reject) => {
-          const callbackId = generateCallbackId(); // Эта функция должна быть глобально доступна
+          const callbackId = generateCallbackId();
           window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
-
           try {
-            // defaultValue должно быть сериализуемо в JSON. Если это сложный объект, JSON.stringify может упасть.
-            // Для простоты, ожидаем, что defaultValue это примитив или простой объект.
             const defaultValueJson = JSON.stringify(defaultValue);
             this.log.debug(`JS: Calling MrComicNativeHost.settingsGet for key: ${key}, cbId: ${callbackId}`);
             window.MrComicNativeHost.settingsGet(this._pluginId, key, defaultValueJson, callbackId);
@@ -183,18 +194,15 @@ class PluginContext {
           }
         });
       },
-
       set: (key, value) => {
-        this._checkPermission('write_settings'); // Предполагаем, что такое разрешение есть
+        this._checkPermission('write_settings');
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.settingsSet !== 'function') {
           this.log.error("MrComicNativeHost.settingsSet is not available.");
           return Promise.reject({ code: "native_bridge_error", message: "Native settingsSet not found." });
         }
-
         return new Promise((resolve, reject) => {
           const callbackId = generateCallbackId();
           window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
-
           try {
             const valueJson = JSON.stringify(value);
             this.log.debug(`JS: Calling MrComicNativeHost.settingsSet for key: ${key}, cbId: ${callbackId}`);
@@ -206,12 +214,11 @@ class PluginContext {
           }
         });
       },
-
-      remove: (key) => { // Сделаем асинхронным по аналогии
+      remove: (key) => {
         this._checkPermission('write_settings');
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.settingsRemove !== 'function') {
           this.log.warn("MrComicNativeHost.settingsRemove is not available. Operation skipped.");
-          return Promise.resolve(false); // или reject
+          return Promise.resolve(false);
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
@@ -228,9 +235,9 @@ class PluginContext {
       }
     };
 
-    // API для файловой системы
+    // API для файловой системы (уже реализовано с коллбэками)
     this.fs = {
-      readFile: (path) => { // Возвращает Promise<string> или Promise<ArrayBuffer>
+      readFile: (path) => {
         this._checkPermission('read_file');
          if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.fsReadFile !== 'function') {
           this.log.error("MrComicNativeHost.fsReadFile is not available.");
@@ -241,8 +248,6 @@ class PluginContext {
             window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
             try {
                 this.log.debug(`JS: Calling MrComicNativeHost.fsReadFile for path: ${path}, cbId: ${callbackId}`);
-                // Предполагаем, что нативный метод может вернуть base64 для бинарных или строку для текстовых
-                // и что он вызовет коллбэк с объектом { success: true, data: "content", encoding: "utf8" | "base64" }
                 window.MrComicNativeHost.fsReadFile(this._pluginId, path, callbackId);
             } catch (e) {
                 this.log.error("JS: Error calling MrComicNativeHost.fsReadFile:", e);
@@ -251,7 +256,7 @@ class PluginContext {
             }
         });
       },
-      writeFile: (path, data) => { // data может быть строкой или ArrayBuffer/Blob
+      writeFile: (path, data) => {
          this._checkPermission('write_file');
          if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.fsWriteFile !== 'function') {
           this.log.error("MrComicNativeHost.fsWriteFile is not available.");
@@ -266,7 +271,6 @@ class PluginContext {
                 if (typeof data === 'string') {
                     dataString = data;
                 } else if (data instanceof ArrayBuffer) {
-                    // Конвертируем ArrayBuffer в base64 строку для передачи
                     const bytes = new Uint8Array(data);
                     let binary = '';
                     bytes.forEach((byte) => binary += String.fromCharCode(byte));
@@ -306,6 +310,7 @@ class PluginContext {
     };
   }
 
+  // ... (остальные методы PluginContext без изменений: registerCommand, checkPermission, _checkPermission, requestPermission, _addDisposable, dispose)
   registerCommand(commandId, commandFn, options = {}) {
     this.log.warn("context.registerCommand is a stub and not fully implemented with native bridge yet.");
     const dispose = () => {};
@@ -316,7 +321,7 @@ class PluginContext {
   checkPermission(permission) {
     if (!this._permissionManager) {
       this.log.warn(`PermissionManager not available in context, cannot check permission: ${permission}`);
-      return false; // Или true, если хотим быть более разрешительными в среде без менеджера
+      return false;
     }
     return this._permissionManager.hasPermission(this._pluginId, permission);
   }
@@ -325,19 +330,14 @@ class PluginContext {
     if (!this.checkPermission(permission)) {
       const errorMsg = `Permission '${permission}' is required for this operation by plugin '${this._pluginId}'.`;
       this.log.error(errorMsg);
-      throw new Error(errorMsg); // Это остановит выполнение JS плагина
+      throw new Error(errorMsg);
     }
   }
 
   async requestPermission(permission) {
-    // Эта функция должна быть асинхронной и использовать мост, если нужно запросить у пользователя
     this.log.warn("context.requestPermission is a stub and not fully implemented with native bridge yet.");
     if (!this._permissionManager) return false;
-    // В реальном сценарии: вызов MrComicNativeHost.requestPermission(pluginId, permission, callbackId)
-    // и возврат Promise, который разрешится ответом от нативной стороны.
-    // Пока что, если разрешение уже есть, вернем true, иначе false.
     if (this._permissionManager.hasPermission(this._pluginId, permission)) return true;
-    // Иначе, для заглушки, предположим, что оно не предоставлено
     return false;
   }
 
