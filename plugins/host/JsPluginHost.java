@@ -15,10 +15,11 @@ public class JsPluginHost {
     private Context context;
     private File pluginDir;
     private WebView webView;
-    private String pluginId; // Может понадобиться для идентификации
+    private String pluginId;
+    private AndroidPluginBridge bridge; // Сохраним ссылку на бридж
 
     public JsPluginHost(Context context, File pluginDir, String pluginId) {
-        this.context = context.getApplicationContext(); // Используем application context
+        this.context = context.getApplicationContext();
         this.pluginDir = pluginDir;
         this.pluginId = pluginId;
         Log.d(TAG, "JsPluginHost created for plugin: " + pluginId + " at " + pluginDir.getAbsolutePath());
@@ -59,7 +60,8 @@ public class JsPluginHost {
                 }
 
                 // Регистрация JavascriptInterface
-                AndroidPluginBridge bridge = new AndroidPluginBridge(context, pluginId);
+                // Теперь AndroidPluginBridge принимает WebView в конструкторе
+                bridge = new AndroidPluginBridge(context, pluginId, webView);
                 webView.addJavascriptInterface(bridge, "MrComicNativeHost");
                 Log.d(TAG, "JavascriptInterface 'MrComicNativeHost' added for plugin: " + pluginId);
 

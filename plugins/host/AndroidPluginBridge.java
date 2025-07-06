@@ -1,76 +1,263 @@
 package com.mrcomic.plugins.host;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
 import android.widget.Toast;
+
+import org.json.JSONException;
+import org.json.JSONObject; // Для формирования JSON ответов
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
+import android.util.Base64; // Для base64
 
 public class AndroidPluginBridge {
     private static final String TAG_PREFIX = "JsPlugin-";
     private Context context;
     private String pluginId;
+    private WebView webView; // Ссылка на WebView для вызова evaluateJavascript
+    private Handler mainHandler;
 
-    public AndroidPluginBridge(Context context, String pluginId) {
-        this.context = context.getApplicationContext(); // Важно использовать application context для Toast, если он показывается не из Activity
+    public AndroidPluginBridge(Context context, String pluginId, WebView webView) {
+        this.context = context.getApplicationContext();
         this.pluginId = pluginId;
+        this.webView = webView;
+        this.mainHandler = new Handler(Looper.getMainLooper());
     }
 
-    /**
-     * Метод для логирования сообщений из JavaScript плагина в Android Logcat.
-     * @param pluginIdFromJs ID плагина, переданный из JS (для сверки или доп. информации)
-     * @param level Уровень логирования (INFO, DEBUG, WARN, ERROR)
-     * @param message Сообщение для логирования
-     */
+    private SharedPreferences getPluginPreferences() {
+        return context.getSharedPreferences("plugin_settings_" + pluginId, Context.MODE_PRIVATE);
+    }
+
+    private void runJsCallback(String callbackId, boolean success, String jsonResult) {
+        // Убедимся, что jsonResult это валидная строка для JS, особенно если это строка JSON
+        // Оборачиваем строку результата в кавычки, если это не null и не boolean/number literal
+        String jsResultArg;
+        if (jsonResult == null) {
+            jsResultArg = "null";
+        } else if (jsonResult.trim().startsWith("{") || jsonResult.trim().startsWith("[")) {
+            jsResultArg = jsonResult; // Уже JSON объект/массив
+        } else if (jsonResult.equalsIgnoreCase("true") || jsonResult.equalsIgnoreCase("false")) {
+            jsResultArg = jsonResult.toLowerCase(); // boolean literal
+        } else {
+            try {
+                // Пробуем как число
+                Double.parseDouble(jsonResult);
+                jsResultArg = jsonResult; // number literal
+            } catch (NumberFormatException e) {
+                // Если не число, то это строка, которую нужно обернуть
+                jsResultArg = "\"" + jsonResult.replace("\"", "\\\"") + "\"";
+            }
+        }
+
+        final String script = "if(window.mrComicResolvePluginCallback) { window.mrComicResolvePluginCallback('" + callbackId + "', " + success + ", " + jsResultArg + "); } else { console.error('mrComicResolvePluginCallback not found for " + callbackId + "'); }";
+        Log.d(TAG_PREFIX + pluginId, "Evaluating JS: " + script);
+        mainHandler.post(() -> webView.evaluateJavascript(script, null));
+    }
+
+    private String createErrorJson(String code, String message) {
+        try {
+            return new JSONObject().put("code", code).put("message", message).toString();
+        } catch (JSONException e) {
+            return "{\"code\":\"json_creation_error\",\"message\":\"Failed to create error JSON\"}";
+        }
+    }
+
+    private String createSuccessJson(Object value) {
+         try {
+            JSONObject response = new JSONObject();
+            response.put("value", value); // Оборачиваем значение в объект с ключом "value"
+            return response.toString();
+        } catch (JSONException e) {
+            return "{\"value\":null, \"error\":\"Failed to create success JSON\"}";
+        }
+    }
+
     @JavascriptInterface
     public void logMessage(String pluginIdFromJs, String level, String message) {
-        String logTag = TAG_PREFIX + this.pluginId; // Используем pluginId, переданный при создании Bridge
+        // ... (реализация без изменений)
+        String logTag = TAG_PREFIX + this.pluginId;
         if (!this.pluginId.equals(pluginIdFromJs)) {
             Log.w(logTag, "pluginId mismatch in logMessage. Expected: " + this.pluginId + ", Got: " + pluginIdFromJs);
-            // Можно добавить дополнительную логику или просто логировать с ID из Bridge
         }
-
         switch (level.toUpperCase()) {
-            case "DEBUG":
-                Log.d(logTag, message);
-                break;
-            case "WARN":
-                Log.w(logTag, message);
-                break;
-            case "ERROR":
-                Log.e(logTag, message);
-                break;
-            case "INFO":
-            default:
-                Log.i(logTag, message);
-                break;
+            case "DEBUG": Log.d(logTag, message); break;
+            case "WARN": Log.w(logTag, message); break;
+            case "ERROR": Log.e(logTag, message); break;
+            default: Log.i(logTag, message); break;
         }
     }
 
-    /**
-     * Метод для показа Android Toast сообщения из JavaScript плагина.
-     * @param pluginIdFromJs ID плагина (для сверки)
-     * @param message Сообщение для Toast
-     * @param duration Длительность показа (0 для Toast.LENGTH_SHORT, 1 для Toast.LENGTH_LONG)
-     */
     @JavascriptInterface
     public void showToast(String pluginIdFromJs, String message, int duration) {
+        // ... (реализация без изменений)
         final String toastMessage = "[" + this.pluginId + "] " + message;
         final int toastDuration = (duration == Toast.LENGTH_LONG) ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT;
-
-        // Toast должен показываться в UI потоке
-        new Handler(Looper.getMainLooper()).post(() -> {
-            Toast.makeText(context, toastMessage, toastDuration).show();
-        });
+        mainHandler.post(() -> Toast.makeText(context, toastMessage, toastDuration).show());
         Log.d(TAG_PREFIX + this.pluginId, "showToast called: " + message);
     }
 
-    // Сюда в будущем будут добавляться другие методы,
-    // реализующие PluginAPI из core/PluginContext.js:
-    // - работа с файловой системой (fs)
-    // - работа с настройками (settings)
-    // - UI (диалоги, панели - более сложные, чем Toast)
-    // - Экспорт
-    // - Работа с изображениями и текстом (могут требовать асинхронных коллбэков)
+    // --- Settings API ---
+    @JavascriptInterface
+    public void settingsGet(String pluginIdFromJs, String key, String defaultValueJson, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "settingsGet called for key: " + key + " with callbackId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
+            return;
+        }
+        // TODO: Проверка разрешений 'read_settings' для pluginId
+        try {
+            SharedPreferences prefs = getPluginPreferences();
+            String valueJson = prefs.getString(key, defaultValueJson); // defaultValueJson уже строка JSON
+            runJsCallback(callbackId, true, valueJson); // Передаем JSON строку как есть
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in settingsGet for key " + key, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+
+    @JavascriptInterface
+    public void settingsSet(String pluginIdFromJs, String key, String valueJson, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "settingsSet called for key: " + key + " with valueJson: " + valueJson + " callbackId: " + callbackId);
+         if (!this.pluginId.equals(pluginIdFromJs)) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
+            return;
+        }
+        // TODO: Проверка разрешений 'write_settings' для pluginId
+        try {
+            SharedPreferences prefs = getPluginPreferences();
+            prefs.edit().putString(key, valueJson).apply();
+            runJsCallback(callbackId, true, createSuccessJson(true)); // Ответ: { "value": true }
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in settingsSet for key " + key, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+
+    @JavascriptInterface
+    public void settingsRemove(String pluginIdFromJs, String key, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "settingsRemove called for key: " + key + " callbackId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
+            return;
+        }
+        // TODO: Проверка разрешений 'write_settings' для pluginId
+        try {
+            SharedPreferences prefs = getPluginPreferences();
+            prefs.edit().remove(key).apply();
+            runJsCallback(callbackId, true, createSuccessJson(true));
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in settingsRemove for key " + key, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+
+    // --- File System (fs) API ---
+    // Базовая реализация. Требует тщательной проработки безопасности и разрешений.
+    // Пути должны быть ограничены директорией плагина.
+
+    private File getSafePluginFile(String relativePath) throws SecurityException {
+        // TODO: Реализовать проверку, что path не выходит за пределы директории плагина!
+        // Например, new File(pluginDir, relativePath).getCanonicalPath().startsWith(pluginDir.getCanonicalPath())
+        File pluginDataDir = new File(context.getFilesDir(), "plugin_data/" + pluginId);
+        if (!pluginDataDir.exists()) {
+            pluginDataDir.mkdirs();
+        }
+        File targetFile = new File(pluginDataDir, relativePath);
+        // Проверка, что путь не пытается выйти из песочницы плагина
+        if (!targetFile.getAbsoluteFile().toPath().normalize().startsWith(pluginDataDir.getAbsoluteFile().toPath().normalize())) {
+            throw new SecurityException("Attempt to access file outside plugin directory: " + relativePath);
+        }
+        return targetFile;
+    }
+
+    @JavascriptInterface
+    public void fsReadFile(String pluginIdFromJs, String path, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "fsReadFile called for path: " + path + " cbId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
+        // TODO: Проверка 'read_file'
+        try {
+            File file = getSafePluginFile(path);
+            if (file.exists() && file.isFile()) {
+                FileInputStream fis = new FileInputStream(file);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
+                reader.close();
+                fis.close();
+                // Для простоты возвращаем как строку. Для бинарных данных нужна была бы base64.
+                // JS ожидает объект { success: true, data: "content", encoding: "utf8" | "base64" }
+                JSONObject result = new JSONObject();
+                result.put("data", sb.toString());
+                result.put("encoding", "utf8");
+                runJsCallback(callbackId, true, result.toString());
+            } else {
+                runJsCallback(callbackId, false, createErrorJson("file_not_found", "File not found or is a directory: " + path));
+            }
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in fsReadFile for path " + path, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+
+    @JavascriptInterface
+    public void fsWriteFile(String pluginIdFromJs, String path, String dataString, String encoding, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "fsWriteFile called for path: " + path + " cbId: " + callbackId);
+         if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
+        // TODO: Проверка 'write_file'
+        try {
+            File file = getSafePluginFile(path);
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            FileOutputStream fos = new FileOutputStream(file);
+            if ("base64".equalsIgnoreCase(encoding)) {
+                byte[] decodedBytes = Base64.decode(dataString, Base64.DEFAULT);
+                fos.write(decodedBytes);
+            } else { // utf8 по умолчанию
+                OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8);
+                writer.write(dataString);
+                writer.flush();
+                writer.close();
+            }
+            fos.close();
+            runJsCallback(callbackId, true, createSuccessJson(true));
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in fsWriteFile for path " + path, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+
+    @JavascriptInterface
+    public void fsExists(String pluginIdFromJs, String path, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "fsExists called for path: " + path + " cbId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
+        // TODO: Проверка 'read_file' (или специальное разрешение на проверку существования)
+        try {
+            File file = getSafePluginFile(path); // getSafePluginFile может выбросить SecurityException
+            boolean exists = file.exists();
+            runJsCallback(callbackId, true, createSuccessJson(exists));
+        } catch (SecurityException se) { // Ловим SecurityException от getSafePluginFile
+             Log.w(TAG_PREFIX + pluginId, "SecurityException in fsExists for path " + path, se);
+             runJsCallback(callbackId, true, createSuccessJson(false)); // Если путь небезопасен, считаем что не существует
+        }
+        catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in fsExists for path " + path, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
 }
