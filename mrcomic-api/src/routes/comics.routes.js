@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 const Comic = require('../models/Comic');
+const Chapter = require('../models/Chapter'); // Импортируем модель Chapter
 const authUtils = require('../utils/auth');
 
 /**
@@ -23,23 +24,23 @@ router.get('/', passport.authenticate('jwt', { session: false }), async (req, re
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    
+
     // Параметры фильтрации
     const filter = {};
     if (req.query.genre) {
       filter.genres = req.query.genre;
     }
-    
+
     // Параметры поиска
     if (req.query.search) {
       filter.$text = { $search: req.query.search };
     }
-    
+
     // Параметры сортировки
     let sort = {};
     const sortField = req.query.sort || 'popularity';
     const sortOrder = req.query.order === 'asc' ? 1 : -1;
-    
+
     switch (sortField) {
       case 'title':
         sort.title = sortOrder;
@@ -62,10 +63,10 @@ router.get('/', passport.authenticate('jwt', { session: false }), async (req, re
       .sort(sort)
       .skip(skip)
       .limit(limit);
-    
+
     // Получение общего количества комиксов
     const total = await Comic.countDocuments(filter);
-    
+
     res.json({
       comics: comics.map(comic => ({
         id: comic._id,
@@ -113,14 +114,13 @@ router.get('/:id', passport.authenticate('jwt', { session: false }), async (req,
     }
 
     const comic = await Comic.findById(req.params.id);
-    
     if (!comic) {
       return res.status(404).json({
         code: 'not_found',
         message: 'Комикс не найден'
       });
     }
-    
+
     res.json({
       id: comic._id,
       title: comic.title,
@@ -167,28 +167,36 @@ router.get('/:id/chapters', passport.authenticate('jwt', { session: false }), as
         message: 'Комикс не найден'
       });
     }
-    
+
     // Параметры пагинации
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    
-const Chapter = require("../models/Chapter");
 
-    const chapters = await Chapter.find({ comicId: req.params.id })
-      .sort({ number: 1 })
+    // Получение глав комикса
+    const chaptersData = await Chapter.find({ comicId: req.params.id })
+      .sort({ number: 1 }) // Сортировка по номеру главы
       .skip(skip)
       .limit(limit);
 
-    const total = await Chapter.countDocuments({ comicId: req.params.id });
-    
+    // Получение общего количества глав
+    const totalChapters = await Chapter.countDocuments({ comicId: req.params.id });
+
     res.json({
-      chapters,
+      chapters: chaptersData.map(chapter => ({
+        id: chapter._id,
+        comicId: chapter.comicId,
+        title: chapter.title,
+        number: chapter.number,
+        releaseDate: chapter.releaseDate,
+        pagesCount: chapter.pagesCount,
+        thumbnailUrl: chapter.thumbnailUrl
+      })),
       pagination: {
-        total,
+        total: totalChapters,
         page,
         limit,
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(totalChapters / limit)
       }
     });
   } catch (error) {
