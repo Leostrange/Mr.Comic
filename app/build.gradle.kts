@@ -85,6 +85,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+
+    // Networking - Retrofit, Gson, OkHttp Logging Interceptor
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor) // For logging API calls
+    implementation(libs.google.gson)
     
     // Coil для загрузки изображений
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -129,10 +135,12 @@ dependencies {
     // Archive support
     implementation("me.zhanghai.android.libarchive:library:1.1.6")
 
-    // EPUB (Maven Central)
-    implementation("com.positiondev.epublib:epublib-core:3.1") {
+    // EPUB (Siegmann's repo)
+    implementation(libs.epublib.core.siegmann) {
+        exclude(group = "org.slf4j") // Как рекомендовано в документации epublib
         exclude(group = "xmlpull", module = "xmlpull")
     }
+    implementation(libs.slf4j.android) // Рекомендованная реализация SLF4J для Android
 
     // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
