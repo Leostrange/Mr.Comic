@@ -114,7 +114,6 @@ router.get('/:id', passport.authenticate('jwt', { session: false }), async (req,
     }
 
     const comic = await Comic.findById(req.params.id);
-
     if (!comic) {
       return res.status(404).json({
         code: 'not_found',
@@ -174,13 +173,13 @@ router.get('/:id/chapters', passport.authenticate('jwt', { session: false }), as
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
 
-    // Запрос к модели Chapter для получения глав указанного комикса
+    // Получение глав комикса
     const chaptersData = await Chapter.find({ comicId: req.params.id })
       .sort({ number: 1 }) // Сортировка по номеру главы
       .skip(skip)
       .limit(limit);
 
-    // Получение общего количества глав для комикса
+    // Получение общего количества глав
     const totalChapters = await Chapter.countDocuments({ comicId: req.params.id });
 
     res.json({

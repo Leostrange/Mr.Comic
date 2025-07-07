@@ -1,33 +1,42 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
-const multer = require('multer'); // Для обработки multipart/form-data (загрузки файлов)
+const multer = require('multer');
+const { spawn } = require('child_process');
+const fs = require('fs').promises;
+const path = require('path');
+const os = require('os');
+const authUtils = require('../../utils/auth');
 
-// Настройка multer для загрузки изображений (можно вынести в отдельный middleware/config)
-const storage = multer.memoryStorage(); // Храним файл в памяти (можно изменить на diskStorage)
+// Настройка multer для загрузки изображения в память
+const storage = multer.memoryStorage();
 const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // Ограничение размера файла (например, 10MB)
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // макс 10МБ
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Not an image! Please upload an image file.'), false);
-    }
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Not an image! Please upload an image file.'), false);
   }
 });
 
 /**
  * @route   POST /api/ocr/process_image
- * @desc    Распознавание текста на изображении
- * @access  Private (защищено JWT)
+ * @desc    Обработка изображения для OCR
+ * @access  Private
  */
 router.post(
   '/process_image',
   passport.authenticate('jwt', { session: false }),
-  upload.single('image'), // Middleware для загрузки одного файла с именем 'image'
+  upload.single('image'),
   async (req, res) => {
     try {
+      if (!authUtils.checkScopes(['ocr:process'], req.user.scopes)) {
+        return res.status(403).json({
+          code: 'insufficient_scope',
+          message: 'Недостаточно прав для выполнения OCR',
+        });
+      }
+
       if (!req.file) {
         return res.status(400).json({
           success: false,
@@ -35,122 +44,122 @@ router.post(
         });
       }
 
-      const imageBuffer = req.file.buffer;
+      // Сохраняем файл во временную папку
+      const tempFileName = `ocr_temp_${Date.now()}_${req.file.originalname}`;
+      const tempFilePath = path.join(os.tmpdir(), tempFileName);
+      await fs.writeFile(tempFilePath, req.file.buffer);
+
+      // Опциональные параметры (если передаются в теле запроса)
       const regions = req.body.regions ? JSON.parse(req.body.regions) : undefined;
       const languages = req.body.languages ? JSON.parse(req.body.languages) : undefined;
       const ocrParams = req.body.ocrParams ? JSON.parse(req.body.ocrParams) : undefined;
 
-      const { spawn } = require('child_process');
-      const fs = require('fs').promises;
-      const path = require('path');
-      const os = require('os');
-
-      // 1. Сохранить буфер изображения во временный файл
-      const tempFileName = `ocr_temp_${Date.now()}_${req.file.originalname}`;
-      const tempFilePath = path.join(os.tmpdir(), tempFileName);
-      await fs.writeFile(tempFilePath, imageBuffer);
-
-      // 2. Сформировать аргументы для Python-скрипта
+      // Путь к Python скрипту - настройте под ваш проект
       const pythonScriptPath = path.resolve(__dirname, '../../../mrcomic-ocr-translation/src/integrated_system.py');
       const scriptArgs = [
         pythonScriptPath,
         '--mode', 'ocr',
-        '--image_path', tempFilePath
+        '--image_path', tempFilePath,
       ];
 
-      if (regions) {
-        scriptArgs.push('--regions', JSON.stringify(regions));
-      }
-      if (languages) {
-        scriptArgs.push('--ocr_languages', JSON.stringify(languages));
-      }
-      if (ocrParams) {
-        scriptArgs.push('--ocr_params', JSON.stringify(ocrParams));
-      }
+      if (regions) scriptArgs.push('--regions', JSON.stringify(regions));
+      if (languages) scriptArgs.push('--ocr_languages', JSON.stringify(languages));
+      if (ocrParams) scriptArgs.push('--ocr_params', JSON.stringify(ocrParams));
 
-      // Путь к конфигурационному файлу Python системы (если он нужен и его путь известен)
-      // const pythonConfigPath = path.resolve(__dirname, '../../../mrcomic-ocr-translation/config.json'); // Пример
-      // if (await fs.access(pythonConfigPath).then(() => true).catch(() => false)) {
-      // scriptArgs.push('--config_file', pythonConfigPath);
-      // }
-
-      console.log('Executing Python OCR script with args:', scriptArgs);
-
-      // 3. Запустить Python-процесс
       const pythonProcess = spawn('python3', scriptArgs);
 
       let stdoutData = '';
       let stderrData = '';
 
-      pythonProcess.stdout.on('data', (data) => {
+      pythonProcess.stdout.on('data', data => {
         stdoutData += data.toString();
       });
 
-      pythonProcess.stderr.on('data', (data) => {
+      pythonProcess.stderr.on('data', data => {
         stderrData += data.toString();
       });
 
       pythonProcess.on('close', async (code) => {
-        // 4. Удалить временный файл
+        // Удаляем временный файл
         try {
           await fs.unlink(tempFilePath);
-        } catch (unlinkError) {
-          console.error('Error deleting temp OCR image file:', unlinkError);
+        } catch (err) {
+          console.error('Ошибка удаления временного файла OCR:', err);
         }
 
         if (stderrData) {
-          console.error(`Python OCR script stderr (code ${code}):`, stderrData);
+          console.error(`Python stderr (code ${code}):`, stderrData);
           try {
             const errorJson = JSON.parse(stderrData);
-            return res.status(500).json({ success: false, error: errorJson.errors ? errorJson.errors[0] : "Python script execution error", details: stderrData });
-          } catch (e) {
-            return res.status(500).json({ success: false, error: 'Python script execution error and failed to parse stderr.', details: stderrData });
+            return res.status(500).json({
+              success: false,
+              error: errorJson.errors ? errorJson.errors[0] : 'Ошибка выполнения Python скрипта',
+              details: stderrData
+            });
+          } catch {
+            return res.status(500).json({
+              success: false,
+              error: 'Ошибка выполнения Python скрипта и парсинга stderr',
+              details: stderrData
+            });
           }
         }
 
         if (code !== 0) {
-          console.error(`Python OCR script exited with code ${code}`);
-          return res.status(500).json({ success: false, error: `Python script exited with code ${code}.`, details: stdoutData });
+          console.error(`Python скрипт завершился с кодом ${code}`);
+          return res.status(500).json({
+            success: false,
+            error: `Python скрипт завершился с кодом ${code}`,
+            details: stdoutData
+          });
         }
 
         try {
           const result = JSON.parse(stdoutData);
           if (result.success && result.data) {
-            // Обогащаем ответ API дополнительной информацией, если нужно
-            res.json({
+            return res.json({
               success: true,
-              processingTimeMs: result.data.processing_time || 0, // Python скрипт должен вернуть это
-              results: result.data.ocr_results || result.data // В зависимости от структуры ответа Python
+              processingTimeMs: result.data.processing_time || 0,
+              results: result.data.ocr_results || result.data
             });
           } else {
-            res.status(500).json({ success: false, error: 'OCR processing failed in Python script.', details: result.errors || stdoutData });
+            return res.status(500).json({
+              success: false,
+              error: 'Ошибка в OCR обработке Python скрипта',
+              details: result.errors || stdoutData
+            });
           }
         } catch (parseError) {
-          console.error('Error parsing Python OCR script output:', parseError, "Raw output:", stdoutData);
-          res.status(500).json({ success: false, error: 'Error parsing Python script output.', details: stdoutData });
+          console.error('Ошибка парсинга JSON из Python:', parseError, stdoutData);
+          return res.status(500).json({
+            success: false,
+            error: 'Ошибка парсинга ответа Python скрипта',
+            details: stdoutData
+          });
         }
       });
 
-      pythonProcess.on('error', async (err) => {
-        console.error('Failed to start Python OCR script:', err);
+      pythonProcess.on('error', async err => {
+        console.error('Не удалось запустить Python скрипт OCR:', err);
         try {
           await fs.unlink(tempFilePath);
-        } catch (unlinkError) {
-          console.error('Error deleting temp OCR image file on spawn error:', unlinkError);
+        } catch (unlinkErr) {
+          console.error('Ошибка удаления временного файла при ошибке запуска:', unlinkErr);
         }
-        res.status(500).json({ success: false, error: 'Failed to start Python script.', details: err.message });
+        res.status(500).json({
+          success: false,
+          error: 'Не удалось запустить Python скрипт',
+          details: err.message
+        });
       });
 
     } catch (error) {
       console.error('Ошибка OCR:', error);
       if (error.message.startsWith('Not an image!')) {
-          return res.status(400).json({ success: false, error: { code: 'invalid_file_type', message: error.message } });
-      }
-      try { // Пытаемся распарсить JSON ошибки, если они есть
-        const bodyError = JSON.parse(error.message); // Если ошибка из-за парсинга JSON
-        if(bodyError && bodyError.code) return res.status(400).json({ success: false, error: bodyError });
-      } catch (e) {
-        // Ошибка не JSON, возвращаем стандартную
+        return res.status(400).json({
+          success: false,
+          error: { code: 'invalid_file_type', message: error.message }
+        });
       }
       res.status(500).json({
         success: false,

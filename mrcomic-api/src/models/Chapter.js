@@ -17,7 +17,8 @@ const ChapterSchema = new Schema({
     required: true
   },
   releaseDate: {
-    type: Date
+    type: Date,
+    default: Date.now
   },
   pagesCount: {
     type: Number,
@@ -43,8 +44,5 @@ ChapterSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
-
-// Для поддержки текстового поиска по названию главы, если потребуется в будущем
-// ChapterSchema.index({ title: 'text' });
 
 module.exports = mongoose.model('Chapter', ChapterSchema);

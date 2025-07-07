@@ -1,17 +1,27 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
+const authUtils = require('../../utils/auth');
+const { spawn } = require('child_process');
+const path = require('path');
 
 /**
  * @route   POST /api/translation/translate_text
  * @desc    Перевод текста
- * @access  Private (защищено JWT)
+ * @access  Private (JWT)
  */
 router.post(
   '/translate_text',
   passport.authenticate('jwt', { session: false }),
   async (req, res) => {
     try {
+      if (!authUtils.checkScopes(['translate:text'], req.user.scopes)) {
+        return res.status(403).json({
+          code: 'insufficient_scope',
+          message: 'Недостаточно прав для перевода текста',
+        });
+      }
+
       const { texts, sourceLanguage, targetLanguage, translationParams } = req.body;
 
       if (!texts || !Array.isArray(texts) || texts.length === 0) {
@@ -20,6 +30,7 @@ router.post(
           error: { code: 'missing_texts', message: 'Массив текстов для перевода не предоставлен или пуст.' }
         });
       }
+
       if (!targetLanguage) {
         return res.status(400).json({
           success: false,
@@ -27,15 +38,11 @@ router.post(
         });
       }
 
-      const { spawn } = require('child_process');
-      const path = require('path');
-
-      // 1. Сформировать аргументы для Python-скрипта
       const pythonScriptPath = path.resolve(__dirname, '../../../mrcomic-ocr-translation/src/integrated_system.py');
       const scriptArgs = [
         pythonScriptPath,
         '--mode', 'translate',
-        '--texts', JSON.stringify(texts), // Передаем массив текстов как JSON-строку
+        '--texts', JSON.stringify(texts),
         '--target_language', targetLanguage
       ];
 
@@ -46,15 +53,8 @@ router.post(
         scriptArgs.push('--translation_params', JSON.stringify(translationParams));
       }
 
-      // Путь к конфигурационному файлу Python системы (если он нужен)
-      // const pythonConfigPath = path.resolve(__dirname, '../../../mrcomic-ocr-translation/config.json'); // Пример
-      // if (/* fs.existsSync(pythonConfigPath) */ false) { // Проверка существования файла
-      //   scriptArgs.push('--config_file', pythonConfigPath);
-      // }
-
       console.log('Executing Python translation script with args:', scriptArgs);
 
-      // 2. Запустить Python-процесс
       const pythonProcess = spawn('python3', scriptArgs);
 
       let stdoutData = '';
@@ -70,44 +70,68 @@ router.post(
 
       pythonProcess.on('close', (code) => {
         if (stderrData) {
-          console.error(`Python translation script stderr (code ${code}):`, stderrData);
-           try {
+          console.error(`Python stderr (code ${code}):`, stderrData);
+          try {
             const errorJson = JSON.parse(stderrData);
-            return res.status(500).json({ success: false, error: errorJson.errors ? errorJson.errors[0] : "Python script execution error", details: stderrData });
-          } catch (e) {
-            return res.status(500).json({ success: false, error: 'Python script execution error and failed to parse stderr.', details: stderrData });
+            return res.status(500).json({
+              success: false,
+              error: errorJson.errors ? errorJson.errors[0] : 'Ошибка выполнения Python скрипта',
+              details: stderrData
+            });
+          } catch {
+            return res.status(500).json({
+              success: false,
+              error: 'Ошибка выполнения Python скрипта и парсинга stderr',
+              details: stderrData
+            });
           }
         }
 
         if (code !== 0) {
-          console.error(`Python translation script exited with code ${code}`);
-          return res.status(500).json({ success: false, error: `Python script exited with code ${code}.`, details: stdoutData });
+          console.error(`Python script exited with code ${code}`);
+          return res.status(500).json({
+            success: false,
+            error: `Python script exited with code ${code}`,
+            details: stdoutData
+          });
         }
 
         try {
           const result = JSON.parse(stdoutData);
-           if (result.success && result.data && result.data.results) {
+          if (result.success && result.data && result.data.results) {
             res.json({
               success: true,
-              processingTimeMs: result.data.processingTimeMs || 0, // Python скрипт должен вернуть это
+              processingTimeMs: result.data.processingTimeMs || 0,
               results: result.data.results
             });
           } else {
-             res.status(500).json({ success: false, error: 'Translation processing failed in Python script.', details: result.errors || stdoutData });
+            res.status(500).json({
+              success: false,
+              error: 'Ошибка обработки перевода в Python скрипте',
+              details: result.errors || stdoutData
+            });
           }
         } catch (parseError) {
-          console.error('Error parsing Python translation script output:', parseError, "Raw output:", stdoutData);
-          res.status(500).json({ success: false, error: 'Error parsing Python script output.', details: stdoutData });
+          console.error('Ошибка парсинга вывода Python скрипта:', parseError, stdoutData);
+          res.status(500).json({
+            success: false,
+            error: 'Ошибка парсинга ответа Python скрипта',
+            details: stdoutData
+          });
         }
       });
 
       pythonProcess.on('error', (err) => {
-        console.error('Failed to start Python translation script:', err);
-        res.status(500).json({ success: false, error: 'Failed to start Python script.', details: err.message });
+        console.error('Не удалось запустить Python скрипт перевода:', err);
+        res.status(500).json({
+          success: false,
+          error: 'Не удалось запустить Python скрипт',
+          details: err.message
+        });
       });
 
     } catch (error) {
-      console.error('Ошибка перевода:', error);
+      console.error('Ошибка перевода текста:', error);
       res.status(500).json({
         success: false,
         error: { code: 'server_error', message: 'Внутренняя ошибка сервера при выполнении перевода.' }
