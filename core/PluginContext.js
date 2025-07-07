@@ -29,150 +29,100 @@ class PluginContext {
    * @private
    */
   _initializeAPI() {
-    // Логирование (должно быть доступно до проверки разрешений для самого логгера)
+    // Логирование
     this.log = {
       debug: (message, ...args) => {
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.logMessage === 'function') {
             window.MrComicNativeHost.logMessage(this._pluginId, "DEBUG", message + (args.length > 0 ? " " + JSON.stringify(args) : ""));
-        } else {
-            console.debug(`[${this._pluginId}] ${message}`, ...args);
-        }
+        } else { console.debug(`[${this._pluginId}] ${message}`, ...args); }
       },
       info: (message, ...args) => {
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.logMessage === 'function') {
             window.MrComicNativeHost.logMessage(this._pluginId, "INFO", message + (args.length > 0 ? " " + JSON.stringify(args) : ""));
-        } else {
-            console.info(`[${this._pluginId}] ${message}`, ...args);
-        }
+        } else { console.info(`[${this._pluginId}] ${message}`, ...args); }
       },
       warn: (message, ...args) => {
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.logMessage === 'function') {
             window.MrComicNativeHost.logMessage(this._pluginId, "WARN", message + (args.length > 0 ? " " + JSON.stringify(args) : ""));
-        } else {
-            console.warn(`[${this._pluginId}] ${message}`, ...args);
-        }
+        } else { console.warn(`[${this._pluginId}] ${message}`, ...args); }
       },
       error: (message, ...args) => {
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.logMessage === 'function') {
             window.MrComicNativeHost.logMessage(this._pluginId, "ERROR", message + (args.length > 0 ? " " + JSON.stringify(args) : ""));
-        } else {
-            console.error(`[${this._pluginId}] ${message}`, ...args);
-        }
+        } else { console.error(`[${this._pluginId}] ${message}`, ...args); }
       }
     };
 
     // API для работы с изображениями
     this.image = {
-      getImage: (imageId) => { // Убрал async, возвращаем Promise
-        this._checkPermission('read_image'); // Предполагаем, что такое разрешение есть
+      getImage: (imageId) => {
+        this._checkPermission('read_image');
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.imageGetImage !== 'function') {
           this.log.error("MrComicNativeHost.imageGetImage is not available.");
           return Promise.reject({ code: "native_bridge_error", message: "Native imageGetImage not found." });
         }
-
         return new Promise((resolve, reject) => {
-          const callbackId = generateCallbackId(); // Эта функция должна быть глобально доступна
-          window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
-
+          const callbackId = generateCallbackId();
+          window.mrComicPluginCallbacks[callbackId] = {
+            resolve: (result) => resolve(result.value), // Извлекаем данные из result.value
+            reject
+          };
           try {
             this.log.debug(`JS: Calling MrComicNativeHost.imageGetImage for imageId: ${imageId}, cbId: ${callbackId}`);
             window.MrComicNativeHost.imageGetImage(this._pluginId, imageId, callbackId);
           } catch (e) {
             this.log.error("JS: Error calling MrComicNativeHost.imageGetImage:", e);
-            delete window.mrComicPluginCallbacks[callbackId]; // Важно очистить, если вызов упал
+            delete window.mrComicPluginCallbacks[callbackId];
             reject({ code: "native_call_error", message: "Failed to call native imageGetImage: " + e.message });
           }
         });
       },
-      saveImage: (imageData, options = {}) => { // Возвращаем Promise
+      saveImage: (imageData, options = {}) => {
         this._checkPermission('write_image');
         this.log.warn("image.saveImage is not fully implemented with native bridge yet.");
-        // TODO: Реализовать через MrComicNativeHost.imageSaveImage(pluginId, imageData, optionsJson, callbackId)
-        return Promise.resolve({ id: 'new-image-id', path: '/path/to/image' }); // Заглушка
+        return Promise.resolve({ id: 'new-image-id', path: '/path/to/image' });
       },
       registerFilter: (filterId, filterFn, options = {}) => {
         this.log.warn("image.registerFilter is not fully implemented with native bridge yet.");
         this._addDisposable(() => {});
       },
-      applyFilter: (imageId, filterId, options = {}) => { // Возвращаем Promise
+      applyFilter: (imageId, filterId, options = {}) => {
         this._checkPermission('modify_image');
         this.log.warn("image.applyFilter is not fully implemented with native bridge yet.");
-        // TODO: Реализовать через MrComicNativeHost.imageApplyFilter(pluginId, imageId, filterId, optionsJson, callbackId)
-        return Promise.resolve({ id: imageId, data: {} }); // Заглушка
+        return Promise.resolve({ id: imageId, data: {} });
       }
     };
 
-    // API для работы с текстом (оставляем заглушки, как были)
-    this.text = {
-      getText: async (textId) => {
-        this._checkPermission('read_text');
-        this.log.warn("text.getText is not fully implemented with native bridge yet.");
-        return Promise.resolve('Sample text');
-      },
-      setText: async (textId, text) => {
-        this._checkPermission('modify_text');
-        this.log.warn("text.setText is not fully implemented with native bridge yet.");
-        return Promise.resolve(true);
-      },
-      registerTextHandler: (handlerId, handlerFn, options = {}) => {
-        this.log.warn("text.registerTextHandler is not fully implemented with native bridge yet.");
-        this._addDisposable(() => {});
-      },
-      spellCheck: async (text, options = {}) => {
-        this.log.warn("text.spellCheck is not fully implemented with native bridge yet.");
-        return Promise.resolve({ errors: [] });
-      }
+    // API для работы с текстом
+    this.text = { // Остаются заглушками
+      getText: async (textId) => { this._checkPermission('read_text'); this.log.warn("text.getText not implemented."); return 'Sample text'; },
+      setText: async (textId, text) => { this._checkPermission('modify_text'); this.log.warn("text.setText not implemented."); return true; },
+      registerTextHandler: (handlerId, handlerFn, options = {}) => { this.log.warn("text.registerTextHandler not implemented."); this._addDisposable(()=>{}); },
+      spellCheck: async (text, options = {}) => { this.log.warn("text.spellCheck not implemented."); return { errors: [] }; }
     };
 
-    // API для экспорта (оставляем заглушки, как были)
-    this.export = {
-      registerExportFormat: (formatId, exportFn, options = {}) => {
-        this.log.warn("export.registerExportFormat is not fully implemented with native bridge yet.");
-        this._addDisposable(() => {});
-      },
-      exportToPdf: async (projectId, options = {}) => {
-        this._checkPermission('read_file'); this._checkPermission('write_file');
-        this.log.warn("export.exportToPdf is not fully implemented with native bridge yet.");
-        return Promise.resolve({ success: true, path: `/exports/${projectId}/export.pdf` });
-      },
-      exportToImage: async (projectId, format, options = {}) => {
-        this._checkPermission('read_file'); this._checkPermission('write_file');
-        this.log.warn("export.exportToImage is not fully implemented with native bridge yet.");
-        return Promise.resolve({ success: true, path: `/exports/${projectId}/export.${format}` });
-      },
-      exportToText: async (projectId, format, options = {}) => {
-        this._checkPermission('read_file'); this._checkPermission('write_file');
-        this.log.warn("export.exportToText is not fully implemented with native bridge yet.");
-        return Promise.resolve({ success: true, path: `/exports/${projectId}/export.${format}` });
-      }
+    // API для экспорта
+    this.export = { // Остаются заглушками
+      registerExportFormat: (formatId, exportFn, options = {}) => { this.log.warn("export.registerExportFormat not implemented."); this._addDisposable(()=>{}); },
+      exportToPdf: async (projectId, options={}) => { this._checkPermission('read_file'); this._checkPermission('write_file'); this.log.warn("export.exportToPdf not implemented."); return { success: true, path: `/exports/${projectId}/export.pdf` }; },
+      exportToImage: async (projectId, format, options={}) => { this._checkPermission('read_file'); this._checkPermission('write_file'); this.log.warn("export.exportToImage not implemented."); return { success: true, path: `/exports/${projectId}/export.${format}` }; },
+      exportToText: async (projectId, format, options={}) => { this._checkPermission('read_file'); this._checkPermission('write_file'); this.log.warn("export.exportToText not implemented."); return { success: true, path: `/exports/${projectId}/export.${format}` }; }
     };
 
-    // API для пользовательского интерфейса (showNotification уже использует мост)
-    this.ui = {
-      registerMenuItem: (menuId, itemId, options = {}) => {
-        this.log.warn("ui.registerMenuItem is not fully implemented with native bridge yet.");
-        this._addDisposable(() => {});
-      },
-      registerPanel: (panelId, renderFn, options = {}) => {
-        this.log.warn("ui.registerPanel is not fully implemented with native bridge yet.");
-        this._addDisposable(() => {});
-      },
+    // API для пользовательского интерфейса
+    this.ui = { // showNotification использует мост, остальное заглушки
+      registerMenuItem: (menuId, itemId, options = {}) => { this.log.warn("ui.registerMenuItem not implemented."); this._addDisposable(()=>{}); },
+      registerPanel: (panelId, renderFn, options = {}) => { this.log.warn("ui.registerPanel not implemented."); this._addDisposable(()=>{}); },
       showNotification: (message, options = {}) => {
         if (window.MrComicNativeHost && typeof window.MrComicNativeHost.showToast === 'function') {
             const duration = (options && options.type === 'long') ? 1 : 0;
             window.MrComicNativeHost.showToast(this._pluginId, message, duration);
-        } else {
-            this.log.error("MrComicNativeHost.showToast is not available.");
-            alert(`[${this._pluginId}] Notification: ${message}`);
-        }
+        } else { this.log.error("MrComicNativeHost.showToast is not available."); alert(`[${this._pluginId}] Notification: ${message}`); }
       },
-      showDialog: async (options = {}) => {
-        this.log.warn("ui.showDialog is not fully implemented with native bridge yet.");
-        return Promise.resolve({ result: 'ok' });
-      }
+      showDialog: async (options = {}) => { this.log.warn("ui.showDialog not implemented."); return { result: 'ok' }; }
     };
 
-    // API для настроек (уже реализовано с коллбэками)
+    // API для настроек
     this.settings = {
       get: (key, defaultValue) => {
         this._checkPermission('read_settings');
@@ -182,7 +132,10 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
           const callbackId = generateCallbackId();
-          window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+          window.mrComicPluginCallbacks[callbackId] = {
+            resolve: (result) => resolve(result.value), // Извлекаем из result.value
+            reject
+          };
           try {
             const defaultValueJson = JSON.stringify(defaultValue);
             this.log.debug(`JS: Calling MrComicNativeHost.settingsGet for key: ${key}, cbId: ${callbackId}`);
@@ -202,7 +155,10 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
           const callbackId = generateCallbackId();
-          window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+          window.mrComicPluginCallbacks[callbackId] = {
+            resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
+            reject
+          };
           try {
             const valueJson = JSON.stringify(value);
             this.log.debug(`JS: Calling MrComicNativeHost.settingsSet for key: ${key}, cbId: ${callbackId}`);
@@ -222,7 +178,10 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+            window.mrComicPluginCallbacks[callbackId] = {
+                resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
+                reject
+            };
             try {
                 this.log.debug(`JS: Calling MrComicNativeHost.settingsRemove for key: ${key}, cbId: ${callbackId}`);
                 window.MrComicNativeHost.settingsRemove(this._pluginId, key, callbackId);
@@ -235,7 +194,7 @@ class PluginContext {
       }
     };
 
-    // API для файловой системы (уже реализовано с коллбэками)
+    // API для файловой системы
     this.fs = {
       readFile: (path) => {
         this._checkPermission('read_file');
@@ -245,7 +204,20 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+            // Нативный AndroidPluginBridge.fsReadFile вызывает коллбэк с JSON.stringify({ value: { data: "...", encoding: "..." } })
+            // Поэтому result здесь будет { value: { data: "...", encoding: "..." } }
+            // Мы хотим, чтобы Promise разрешался объектом { data: "...", encoding: "..." }
+            window.mrComicPluginCallbacks[callbackId] = {
+                resolve: (result) => {
+                    if (result && result.value && typeof result.value.data !== 'undefined' && typeof result.value.encoding !== 'undefined') {
+                        resolve(result.value); // Возвращаем { data, encoding }
+                    } else {
+                        this.log.error("JS: fsReadFile callback received malformed result object", result);
+                        reject({ code: "native_response_error", message: "Malformed result from native fsReadFile", data: result });
+                    }
+                },
+                reject
+            };
             try {
                 this.log.debug(`JS: Calling MrComicNativeHost.fsReadFile for path: ${path}, cbId: ${callbackId}`);
                 window.MrComicNativeHost.fsReadFile(this._pluginId, path, callbackId);
@@ -264,7 +236,10 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+            window.mrComicPluginCallbacks[callbackId] = {
+                resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
+                reject
+            };
             try {
                 let dataString;
                 let encoding = "utf8";
@@ -276,8 +251,13 @@ class PluginContext {
                     bytes.forEach((byte) => binary += String.fromCharCode(byte));
                     dataString = window.btoa(binary);
                     encoding = "base64";
-                } else {
-                     throw new Error("Unsupported data type for writeFile. Expected string or ArrayBuffer.");
+                } else if (typeof data === 'object' && data !== null) { // Попытка сериализовать объект в JSON, если это не строка/ArrayBuffer
+                    dataString = JSON.stringify(data);
+                    this.log.debug("JS: fsWriteFile received an object, serializing to JSON string.");
+                }
+                 else {
+                     this.log.error("JS: fsWriteFile unsupported data type. Expected string, ArrayBuffer or JSON serializable object.");
+                     return reject({ code: "invalid_data_type", message: "Unsupported data type for writeFile."});
                 }
                 this.log.debug(`JS: Calling MrComicNativeHost.fsWriteFile for path: ${path}, cbId: ${callbackId}`);
                 window.MrComicNativeHost.fsWriteFile(this._pluginId, path, dataString, encoding, callbackId);
@@ -289,14 +269,17 @@ class PluginContext {
         });
       },
       exists: (path) => {
-        this._checkPermission('read_file');
+        this._checkPermission('read_file'); // или другое разрешение, если нужно
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.fsExists !== 'function') {
           this.log.warn("MrComicNativeHost.fsExists is not available. Returning false.");
           return Promise.resolve(false);
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = { resolve, reject };
+            window.mrComicPluginCallbacks[callbackId] = {
+                resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
+                reject
+            };
             try {
                 this.log.debug(`JS: Calling MrComicNativeHost.fsExists for path: ${path}, cbId: ${callbackId}`);
                 window.MrComicNativeHost.fsExists(this._pluginId, path, callbackId);
@@ -310,55 +293,29 @@ class PluginContext {
     };
   }
 
-  // ... (остальные методы PluginContext без изменений: registerCommand, checkPermission, _checkPermission, requestPermission, _addDisposable, dispose)
+  // ... (остальные методы PluginContext: registerCommand, checkPermission, _checkPermission, requestPermission, _addDisposable, dispose)
   registerCommand(commandId, commandFn, options = {}) {
     this.log.warn("context.registerCommand is a stub and not fully implemented with native bridge yet.");
-    const dispose = () => {};
-    this._addDisposable(dispose);
-    return dispose;
+    const dispose = () => {}; this._addDisposable(dispose); return dispose;
   }
-
   checkPermission(permission) {
-    if (!this._permissionManager) {
-      this.log.warn(`PermissionManager not available in context, cannot check permission: ${permission}`);
-      return false;
-    }
+    if (!this._permissionManager) { this.log.warn(`PermissionManager not available, cannot check permission: ${permission}`); return false; }
     return this._permissionManager.hasPermission(this._pluginId, permission);
   }
-
   _checkPermission(permission) {
-    if (!this.checkPermission(permission)) {
-      const errorMsg = `Permission '${permission}' is required for this operation by plugin '${this._pluginId}'.`;
-      this.log.error(errorMsg);
-      throw new Error(errorMsg);
-    }
+    if (!this.checkPermission(permission)) { const errorMsg = `Permission '${permission}' is required by plugin '${this._pluginId}'.`; this.log.error(errorMsg); throw new Error(errorMsg); }
   }
-
   async requestPermission(permission) {
-    this.log.warn("context.requestPermission is a stub and not fully implemented with native bridge yet.");
-    if (!this._permissionManager) return false;
-    if (this._permissionManager.hasPermission(this._pluginId, permission)) return true;
-    return false;
+    this.log.warn("context.requestPermission is a stub."); if (!this._permissionManager) return false;
+    if (this._permissionManager.hasPermission(this._pluginId, permission)) return true; return false;
   }
-
   _addDisposable(disposable) {
-    if (typeof disposable === 'function') {
-      this._subscriptions.push({ dispose: disposable });
-    } else if (disposable && typeof disposable.dispose === 'function') {
-      this._subscriptions.push(disposable);
-    }
+    if (typeof disposable === 'function') { this._subscriptions.push({ dispose: disposable });
+    } else if (disposable && typeof disposable.dispose === 'function') { this._subscriptions.push(disposable); }
   }
-
   dispose() {
-    for (const subscription of this._subscriptions) {
-      try {
-        subscription.dispose();
-      } catch (error) {
-        this.log.error(`Error disposing subscription:`, error);
-      }
-    }
-    this._subscriptions = [];
-    this.log.info(`PluginContext for ${this._pluginId} disposed.`);
+    for (const subscription of this._subscriptions) { try { subscription.dispose(); } catch (error) { this.log.error(`Error disposing subscription:`, error);}}
+    this._subscriptions = []; this.log.info(`PluginContext for ${this._pluginId} disposed.`);
   }
 }
 

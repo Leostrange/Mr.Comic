@@ -198,12 +198,41 @@ public class AndroidPluginBridge {
                 }
                 reader.close();
                 fis.close();
-                // Для простоты возвращаем как строку. Для бинарных данных нужна была бы base64.
-                // JS ожидает объект { success: true, data: "content", encoding: "utf8" | "base64" }
-                JSONObject result = new JSONObject();
-                result.put("data", sb.toString());
-                result.put("encoding", "utf8");
-                runJsCallback(callbackId, true, result.toString());
+                // Определяем, как читать файл: как текст или как base64
+                String fileExtension = "";
+                int lastDot = path.lastIndexOf('.');
+                if (lastDot > 0 && lastDot < path.length() - 1) {
+                    fileExtension = path.substring(lastDot + 1).toLowerCase();
+                }
+
+                JSONObject fileData = new JSONObject();
+                boolean readAsText = fileExtension.equals("txt") || fileExtension.equals("json") ||
+                                     fileExtension.equals("md") || fileExtension.equals("html") ||
+                                     fileExtension.equals("js") || fileExtension.equals("css");
+
+                if (readAsText) {
+                    FileInputStream fis = new FileInputStream(file);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line).append("\n");
+                    }
+                    reader.close();
+                    fis.close();
+                    fileData.put("data", sb.toString());
+                    fileData.put("encoding", "utf8");
+                } else {
+                    // Читаем как бинарный файл и кодируем в Base64
+                    FileInputStream fis = new FileInputStream(file);
+                    byte[] fileBytes = new byte[(int) file.length()];
+                    fis.read(fileBytes);
+                    fis.close();
+                    String base64Data = Base64.encodeToString(fileBytes, Base64.NO_WRAP);
+                    fileData.put("data", base64Data);
+                    fileData.put("encoding", "base64");
+                }
+                runJsCallback(callbackId, true, createSuccessJson(fileData)); // Оборачиваем fileData в { "value": fileData }
             } else {
                 runJsCallback(callbackId, false, createErrorJson("file_not_found", "File not found or is a directory: " + path));
             }

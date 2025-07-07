@@ -222,16 +222,77 @@ document.addEventListener('DOMContentLoaded', () => {
             // FS Read File
             messageElement.textContent += `Attempting fs.readFile('${testFilePath}')...\n`;
             mockPluginContext.log.info(`JS: Attempting fs.readFile('${testFilePath}')`);
-            const readFileResult = await mockPluginContext.fs.readFile(testFilePath);
-            messageElement.textContent += `fs.readFile result: ${JSON.stringify(readFileResult)}\n`;
-            mockPluginContext.log.info(`JS: fs.readFile result: ${JSON.stringify(readFileResult)}`);
-            if (readFileResult && readFileResult.value && readFileResult.value.data === fileContent) {
-                 messageElement.textContent += "File content matches! FS test successful.\n";
-                 mockPluginContext.log.info("JS: File content matches! FS test successful.");
+            const readFileResult = await mockPluginContext.fs.readFile(testFilePath); // Ожидаем { data: "...", encoding: "..." }
+            messageElement.textContent += `fs.readFile result for ${testFilePath}: ${JSON.stringify(readFileResult)}\n`;
+            mockPluginContext.log.info(`JS: fs.readFile result for ${testFilePath}: ${JSON.stringify(readFileResult)}`);
+            if (readFileResult && readFileResult.data === fileContent && readFileResult.encoding === "utf8") {
+                 messageElement.textContent += `อ่าน ${testFilePath} content matches! FS text test successful.\n`;
+                 mockPluginContext.log.info(`JS: Read ${testFilePath} content matches! FS text test successful.`);
             } else {
-                 messageElement.textContent += "File content MISMATCH or error! FS test failed.\n";
-                 mockPluginContext.log.error("JS: File content MISMATCH or error! FS test failed.");
+                 messageElement.textContent += `Read ${testFilePath} content MISMATCH or error! FS text test failed. Received: ${JSON.stringify(readFileResult)}\n`;
+                 mockPluginContext.log.error(`JS: Read ${testFilePath} content MISMATCH or error! FS text test failed.`);
             }
+
+            // FS Write File (binary as base64)
+            const testBinaryFilePath = "testBinaryFile.bin";
+            // Простая base64 строка (например, "SGVsbG8=" -> "Hello")
+            const base64Content = "SGVsbG8gd29ybGQh"; // "Hello world!"
+            messageElement.textContent += `Attempting fs.writeFile('${testBinaryFilePath}' as base64)...\n`;
+            mockPluginContext.log.info(`JS: Attempting fs.writeFile('${testBinaryFilePath}' as base64)`);
+            // Для передачи как base64, нам нужно чтобы fs.writeFile корректно определял это.
+            // Сейчас он передает строку и encoding 'utf8'. Нужно либо модифицировать fs.writeFile в PluginContext
+            // чтобы он принимал encoding, либо AndroidPluginBridge должен умнее определять.
+            // Пока что AndroidPluginBridge.fsWriteFile принимает dataString и encoding.
+            // Изменим вызов в mockPluginContext.fs.writeFile для передачи encoding.
+            // Это потребует изменения mockPluginContext.fs.writeFile.
+            // Для текущего теста, предположим, что мы передаем ArrayBuffer, который PluginContext конвертирует в base64.
+            const buffer = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0)).buffer;
+            await mockPluginContext.fs.writeFile(testBinaryFilePath, buffer); // PluginContext должен это обработать в base64
+            messageElement.textContent += `fs.writeFile('${testBinaryFilePath}') called for binary.\n`;
+            mockPluginContext.log.info(`JS: fs.writeFile('${testBinaryFilePath}') called for binary.`);
+
+            // FS Read File (binary as base64)
+            messageElement.textContent += `Attempting fs.readFile('${testBinaryFilePath}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting fs.readFile('${testBinaryFilePath}')`);
+            const readBinaryFileResult = await mockPluginContext.fs.readFile(testBinaryFilePath);
+            messageElement.textContent += `fs.readFile result for ${testBinaryFilePath}: ${JSON.stringify(readBinaryFileResult)}\n`;
+            mockPluginContext.log.info(`JS: fs.readFile result for ${testBinaryFilePath}: ${JSON.stringify(readBinaryFileResult)}`);
+            if (readBinaryFileResult && readBinaryFileResult.data === base64Content && readBinaryFileResult.encoding === "base64") {
+                 messageElement.textContent += `Read ${testBinaryFilePath} base64 content matches! FS binary test successful.\n`;
+                 mockPluginContext.log.info(`JS: Read ${testBinaryFilePath} base64 content matches! FS binary test successful.`);
+            } else {
+                 messageElement.textContent += `Read ${testBinaryFilePath} base64 content MISMATCH or error! FS binary test failed. Received: ${JSON.stringify(readBinaryFileResult)}\n`;
+                 mockPluginContext.log.error(`JS: Read ${testBinaryFilePath} base64 content MISMATCH or error! FS binary test failed.`);
+            }
+
+            // FS Exists (существующий файл)
+            messageElement.textContent += `Attempting fs.exists('${testFilePath}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting fs.exists('${testFilePath}')`);
+            const existsResult1 = await mockPluginContext.fs.exists(testFilePath); // Ожидаем true
+            messageElement.textContent += `fs.exists result for ${testFilePath}: ${existsResult1}\n`;
+            mockPluginContext.log.info(`JS: fs.exists result for ${testFilePath}: ${existsResult1}`);
+
+
+            // FS Exists (несуществующий файл)
+            const nonExistentFile = "nonExistentFile.txt";
+            messageElement.textContent += `Attempting fs.exists('${nonExistentFile}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting fs.exists('${nonExistentFile}')`);
+            const existsResult2 = await mockPluginContext.fs.exists(nonExistentFile); // Ожидаем false
+            messageElement.textContent += `fs.exists result for ${nonExistentFile}: ${existsResult2}\n`;
+            mockPluginContext.log.info(`JS: fs.exists result for ${nonExistentFile}: ${existsResult2}`);
+
+            // FS Read File (несуществующий файл)
+            messageElement.textContent += `Attempting fs.readFile('${nonExistentFile}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting fs.readFile('${nonExistentFile}')`);
+            try {
+                await mockPluginContext.fs.readFile(nonExistentFile);
+                messageElement.textContent += `fs.readFile for ${nonExistentFile} UNEXPECTEDLY SUCCEEDED!\n`;
+                mockPluginContext.log.error(`JS: fs.readFile for ${nonExistentFile} UNEXPECTEDLY SUCCEEDED!`);
+            } catch (readError) {
+                messageElement.textContent += `fs.readFile for ${nonExistentFile} correctly failed: ${JSON.stringify(readError)}\n`;
+                mockPluginContext.log.info(`JS: fs.readFile for ${nonExistentFile} correctly failed: ${JSON.stringify(readError)}`);
+            }
+
 
         } catch (error) {
             messageElement.textContent += `Error during Settings/FS test: ${JSON.stringify(error)}\n`;
