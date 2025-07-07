@@ -64,7 +64,7 @@ class PluginContext {
         return new Promise((resolve, reject) => {
           const callbackId = generateCallbackId();
           window.mrComicPluginCallbacks[callbackId] = {
-            resolve: (result) => resolve(result.value), // Извлекаем данные из result.value
+            resolve: (result) => resolve(result.value),
             reject
           };
           try {
@@ -94,11 +94,59 @@ class PluginContext {
     };
 
     // API для работы с текстом
-    this.text = { // Остаются заглушками
-      getText: async (textId) => { this._checkPermission('read_text'); this.log.warn("text.getText not implemented."); return 'Sample text'; },
-      setText: async (textId, text) => { this._checkPermission('modify_text'); this.log.warn("text.setText not implemented."); return true; },
-      registerTextHandler: (handlerId, handlerFn, options = {}) => { this.log.warn("text.registerTextHandler not implemented."); this._addDisposable(()=>{}); },
-      spellCheck: async (text, options = {}) => { this.log.warn("text.spellCheck not implemented."); return { errors: [] }; }
+    this.text = {
+      getText: (textId) => { // Возвращает Promise<string | null>
+        this._checkPermission('read_text');
+        if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.textGetText !== 'function') {
+          this.log.error("MrComicNativeHost.textGetText is not available.");
+          return Promise.reject({ code: "native_bridge_error", message: "Native textGetText not found." });
+        }
+        return new Promise((resolve, reject) => {
+          const callbackId = generateCallbackId();
+          window.mrComicPluginCallbacks[callbackId] = {
+            resolve: (result) => resolve(result.value), // Ожидаем {value: "текст" или null}
+            reject
+          };
+          try {
+            this.log.debug(`JS: Calling MrComicNativeHost.textGetText for textId: ${textId}, cbId: ${callbackId}`);
+            window.MrComicNativeHost.textGetText(this._pluginId, textId, callbackId);
+          } catch (e) {
+            this.log.error("JS: Error calling MrComicNativeHost.textGetText:", e);
+            delete window.mrComicPluginCallbacks[callbackId];
+            reject({ code: "native_call_error", message: "Failed to call native textGetText: " + e.message });
+          }
+        });
+      },
+      setText: (textId, textContent) => { // Возвращает Promise<boolean>
+        this._checkPermission('write_text');
+        if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.textSetText !== 'function') {
+          this.log.error("MrComicNativeHost.textSetText is not available.");
+          return Promise.reject({ code: "native_bridge_error", message: "Native textSetText not found." });
+        }
+        return new Promise((resolve, reject) => {
+          const callbackId = generateCallbackId();
+          window.mrComicPluginCallbacks[callbackId] = {
+            resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
+            reject
+          };
+          try {
+            this.log.debug(`JS: Calling MrComicNativeHost.textSetText for textId: ${textId}, cbId: ${callbackId}`);
+            window.MrComicNativeHost.textSetText(this._pluginId, textId, textContent, callbackId);
+          } catch (e) {
+            this.log.error("JS: Error calling MrComicNativeHost.textSetText:", e);
+            delete window.mrComicPluginCallbacks[callbackId];
+            reject({ code: "native_call_error", message: "Failed to call native textSetText: " + e.message });
+          }
+        });
+      },
+      registerTextHandler: (handlerId, handlerFn, options = {}) => {
+        this.log.warn("text.registerTextHandler not implemented.");
+        this._addDisposable(()=>{});
+      },
+      spellCheck: async (text, options = {}) => {
+        this.log.warn("text.spellCheck not implemented.");
+        return { errors: [] };
+      }
     };
 
     // API для экспорта
@@ -123,7 +171,7 @@ class PluginContext {
     };
 
     // API для настроек
-    this.settings = {
+    this.settings = { // Уже реализовано с коллбэками
       get: (key, defaultValue) => {
         this._checkPermission('read_settings');
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.settingsGet !== 'function') {
@@ -132,10 +180,7 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
           const callbackId = generateCallbackId();
-          window.mrComicPluginCallbacks[callbackId] = {
-            resolve: (result) => resolve(result.value), // Извлекаем из result.value
-            reject
-          };
+          window.mrComicPluginCallbacks[callbackId] = { resolve: (result) => resolve(result.value), reject };
           try {
             const defaultValueJson = JSON.stringify(defaultValue);
             this.log.debug(`JS: Calling MrComicNativeHost.settingsGet for key: ${key}, cbId: ${callbackId}`);
@@ -155,10 +200,7 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
           const callbackId = generateCallbackId();
-          window.mrComicPluginCallbacks[callbackId] = {
-            resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
-            reject
-          };
+          window.mrComicPluginCallbacks[callbackId] = { resolve: (result) => resolve(result.value), reject };
           try {
             const valueJson = JSON.stringify(value);
             this.log.debug(`JS: Calling MrComicNativeHost.settingsSet for key: ${key}, cbId: ${callbackId}`);
@@ -178,10 +220,7 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = {
-                resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
-                reject
-            };
+            window.mrComicPluginCallbacks[callbackId] = { resolve: (result) => resolve(result.value), reject };
             try {
                 this.log.debug(`JS: Calling MrComicNativeHost.settingsRemove for key: ${key}, cbId: ${callbackId}`);
                 window.MrComicNativeHost.settingsRemove(this._pluginId, key, callbackId);
@@ -195,7 +234,7 @@ class PluginContext {
     };
 
     // API для файловой системы
-    this.fs = {
+    this.fs = { // Уже реализовано с коллбэками
       readFile: (path) => {
         this._checkPermission('read_file');
          if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.fsReadFile !== 'function') {
@@ -204,13 +243,10 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            // Нативный AndroidPluginBridge.fsReadFile вызывает коллбэк с JSON.stringify({ value: { data: "...", encoding: "..." } })
-            // Поэтому result здесь будет { value: { data: "...", encoding: "..." } }
-            // Мы хотим, чтобы Promise разрешался объектом { data: "...", encoding: "..." }
             window.mrComicPluginCallbacks[callbackId] = {
                 resolve: (result) => {
                     if (result && result.value && typeof result.value.data !== 'undefined' && typeof result.value.encoding !== 'undefined') {
-                        resolve(result.value); // Возвращаем { data, encoding }
+                        resolve(result.value);
                     } else {
                         this.log.error("JS: fsReadFile callback received malformed result object", result);
                         reject({ code: "native_response_error", message: "Malformed result from native fsReadFile", data: result });
@@ -236,10 +272,7 @@ class PluginContext {
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = {
-                resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
-                reject
-            };
+            window.mrComicPluginCallbacks[callbackId] = { resolve: (result) => resolve(result.value), reject };
             try {
                 let dataString;
                 let encoding = "utf8";
@@ -251,7 +284,7 @@ class PluginContext {
                     bytes.forEach((byte) => binary += String.fromCharCode(byte));
                     dataString = window.btoa(binary);
                     encoding = "base64";
-                } else if (typeof data === 'object' && data !== null) { // Попытка сериализовать объект в JSON, если это не строка/ArrayBuffer
+                } else if (typeof data === 'object' && data !== null) {
                     dataString = JSON.stringify(data);
                     this.log.debug("JS: fsWriteFile received an object, serializing to JSON string.");
                 }
@@ -269,17 +302,14 @@ class PluginContext {
         });
       },
       exists: (path) => {
-        this._checkPermission('read_file'); // или другое разрешение, если нужно
+        this._checkPermission('read_file');
         if (!window.MrComicNativeHost || typeof window.MrComicNativeHost.fsExists !== 'function') {
           this.log.warn("MrComicNativeHost.fsExists is not available. Returning false.");
           return Promise.resolve(false);
         }
         return new Promise((resolve, reject) => {
             const callbackId = generateCallbackId();
-            window.mrComicPluginCallbacks[callbackId] = {
-                resolve: (result) => resolve(result.value), // Ожидаем {value: true/false}
-                reject
-            };
+            window.mrComicPluginCallbacks[callbackId] = { resolve: (result) => resolve(result.value), reject };
             try {
                 this.log.debug(`JS: Calling MrComicNativeHost.fsExists for path: ${path}, cbId: ${callbackId}`);
                 window.MrComicNativeHost.fsExists(this._pluginId, path, callbackId);
@@ -294,29 +324,12 @@ class PluginContext {
   }
 
   // ... (остальные методы PluginContext: registerCommand, checkPermission, _checkPermission, requestPermission, _addDisposable, dispose)
-  registerCommand(commandId, commandFn, options = {}) {
-    this.log.warn("context.registerCommand is a stub and not fully implemented with native bridge yet.");
-    const dispose = () => {}; this._addDisposable(dispose); return dispose;
-  }
-  checkPermission(permission) {
-    if (!this._permissionManager) { this.log.warn(`PermissionManager not available, cannot check permission: ${permission}`); return false; }
-    return this._permissionManager.hasPermission(this._pluginId, permission);
-  }
-  _checkPermission(permission) {
-    if (!this.checkPermission(permission)) { const errorMsg = `Permission '${permission}' is required by plugin '${this._pluginId}'.`; this.log.error(errorMsg); throw new Error(errorMsg); }
-  }
-  async requestPermission(permission) {
-    this.log.warn("context.requestPermission is a stub."); if (!this._permissionManager) return false;
-    if (this._permissionManager.hasPermission(this._pluginId, permission)) return true; return false;
-  }
-  _addDisposable(disposable) {
-    if (typeof disposable === 'function') { this._subscriptions.push({ dispose: disposable });
-    } else if (disposable && typeof disposable.dispose === 'function') { this._subscriptions.push(disposable); }
-  }
-  dispose() {
-    for (const subscription of this._subscriptions) { try { subscription.dispose(); } catch (error) { this.log.error(`Error disposing subscription:`, error);}}
-    this._subscriptions = []; this.log.info(`PluginContext for ${this._pluginId} disposed.`);
-  }
+  registerCommand(commandId, commandFn, options = {}) { this.log.warn("context.registerCommand is a stub."); const dispose = () => {}; this._addDisposable(dispose); return dispose; }
+  checkPermission(permission) { if (!this._permissionManager) { this.log.warn(`PermissionManager not available, cannot check permission: ${permission}`); return false; } return this._permissionManager.hasPermission(this._pluginId, permission); }
+  _checkPermission(permission) { if (!this.checkPermission(permission)) { const errorMsg = `Permission '${permission}' is required by plugin '${this._pluginId}'.`; this.log.error(errorMsg); throw new Error(errorMsg); } }
+  async requestPermission(permission) { this.log.warn("context.requestPermission is a stub."); if (!this._permissionManager) return false; if (this._permissionManager.hasPermission(this._pluginId, permission)) return true; return false; }
+  _addDisposable(disposable) { if (typeof disposable === 'function') { this._subscriptions.push({ dispose: disposable }); } else if (disposable && typeof disposable.dispose === 'function') { this._subscriptions.push(disposable); } }
+  dispose() { for (const subscription of this._subscriptions) { try { subscription.dispose(); } catch (error) { this.log.error(`Error disposing subscription:`, error);}} this._subscriptions = []; this.log.info(`PluginContext for ${this._pluginId} disposed.`); }
 }
 
 module.exports = PluginContext;

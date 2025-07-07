@@ -326,4 +326,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // Запускаем тест Image API также с задержкой
     setTimeout(testImageApi, 1500);
 
+    async function testTextApi() {
+        if (!messageElement) return;
+        messageElement.textContent += "\n\n--- Testing Text API ---\n";
+        const testTextId = "greetingMessage";
+        const testTextContent = "Hello from Mr.Comic Text API!";
+
+        try {
+            // Text Set
+            messageElement.textContent += `Attempting text.setText('${testTextId}', '${testTextContent}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting text.setText('${testTextId}', '${testTextContent}')`);
+            const setResult = await mockPluginContext.text.setText(testTextId, testTextContent);
+            messageElement.textContent += `text.setText result: ${JSON.stringify(setResult)}\n`; // Ожидаем true
+            mockPluginContext.log.info(`JS: text.setText result: ${JSON.stringify(setResult)}`);
+
+            // Text Get
+            messageElement.textContent += `Attempting text.getText('${testTextId}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting text.getText('${testTextId}')`);
+            const getTextResult = await mockPluginContext.text.getText(testTextId);
+            messageElement.textContent += `text.getText result: ${JSON.stringify(getTextResult)}\n`; // Ожидаем testTextContent
+            mockPluginContext.log.info(`JS: text.getText result: ${JSON.stringify(getTextResult)}`);
+
+            if (getTextResult === testTextContent) {
+                messageElement.textContent += "Text API setText/getText successful!\n";
+                mockPluginContext.log.info("JS: Text API setText/getText successful!");
+            } else {
+                messageElement.textContent += `Text API content MISMATCH! Expected: '${testTextContent}', Got: '${getTextResult}'\n`;
+                mockPluginContext.log.error(`JS: Text API content MISMATCH! Expected: '${testTextContent}', Got: '${getTextResult}'`);
+            }
+
+            // Text Get (несуществующий ID)
+            const nonExistentTextId = "nonExistentText";
+            messageElement.textContent += `Attempting text.getText('${nonExistentTextId}')...\n`;
+            mockPluginContext.log.info(`JS: Attempting text.getText('${nonExistentTextId}')`);
+            const getNonExistentResult = await mockPluginContext.text.getText(nonExistentTextId);
+            messageElement.textContent += `text.getText result for nonExistent: ${JSON.stringify(getNonExistentResult)}\n`; // Ожидаем null
+            mockPluginContext.log.info(`JS: text.getText result for nonExistent: ${JSON.stringify(getNonExistentResult)}`);
+            if (getNonExistentResult === null) {
+                messageElement.textContent += "Text API getText for non-existent ID successful (returned null)!\n";
+                mockPluginContext.log.info("JS: Text API getText for non-existent ID successful (returned null)!");
+            } else {
+                 messageElement.textContent += `Text API getText for non-existent ID FAILED! Expected null, Got: ${JSON.stringify(getNonExistentResult)}\n`;
+                mockPluginContext.log.error(`JS: Text API getText for non-existent ID FAILED! Expected null, Got: ${JSON.stringify(getNonExistentResult)}`);
+            }
+
+
+        } catch (error) {
+            messageElement.textContent += `Error during Text API test: ${JSON.stringify(error)}\n`;
+            mockPluginContext.log.error(`JS: Error during Text API test: ${JSON.stringify(error)}`);
+        }
+    }
+    // Запускаем тест Text API также с задержкой
+    setTimeout(testTextApi, 2000);
+
 });

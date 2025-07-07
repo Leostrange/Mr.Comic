@@ -325,4 +325,49 @@ public class AndroidPluginBridge {
         }
     }
     // TODO: imageSaveImage, imageRegisterFilter, imageApplyFilter
+
+    // --- Text API ---
+    private SharedPreferences getPluginTextPreferences() {
+        return context.getSharedPreferences("plugin_texts_" + pluginId, Context.MODE_PRIVATE);
+    }
+
+    @JavascriptInterface
+    public void textGetText(String pluginIdFromJs, String textId, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "textGetText called for textId: " + textId + " cbId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
+            return;
+        }
+        // TODO: Проверка разрешения 'read_text' для pluginId
+
+        try {
+            SharedPreferences prefs = getPluginTextPreferences();
+            String textContent = prefs.getString(textId, null); // Возвращаем null, если нет значения
+            // JS ожидает { value: "текст" или null }
+            runJsCallback(callbackId, true, createSuccessJson(textContent));
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in textGetText for textId " + textId, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+
+    @JavascriptInterface
+    public void textSetText(String pluginIdFromJs, String textId, String textContent, String callbackId) {
+        Log.d(TAG_PREFIX + pluginId, "textSetText called for textId: " + textId + " cbId: " + callbackId);
+        if (!this.pluginId.equals(pluginIdFromJs)) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
+            return;
+        }
+        // TODO: Проверка разрешения 'write_text' или 'modify_text' для pluginId
+
+        try {
+            SharedPreferences prefs = getPluginTextPreferences();
+            prefs.edit().putString(textId, textContent).apply();
+            runJsCallback(callbackId, true, createSuccessJson(true)); // Ответ: { "value": true }
+        } catch (Exception e) {
+            Log.e(TAG_PREFIX + pluginId, "Error in textSetText for textId " + textId, e);
+            runJsCallback(callbackId, false, createErrorJson("native_error", e.getMessage()));
+        }
+    }
+    // TODO: textRegisterTextHandler, textSpellCheck
 }
