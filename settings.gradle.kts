@@ -1,5 +1,6 @@
 pluginManagement {
     repositories {
+        maven { url = uri("https://plugins.gradle.org/m2/") }
         gradlePluginPortal()
         google()
         mavenCentral()
@@ -29,9 +30,9 @@ include(":feature-ocr")
 include(":feature-reader")
 include(":feature-settings")
 include(":feature-themes")
-include(":mrcomic-api")
-include(":mrcomic-ocr-translation")
-include(":mrcomic-processing-pipeline")
+// include(":mrcomic-api")
+// include(":mrcomic-ocr-translation")
+// include(":mrcomic-processing-pipeline")
 include(":plugins")
 include(":reader")
 include(":reports")

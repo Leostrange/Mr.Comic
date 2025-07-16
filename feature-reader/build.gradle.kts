@@ -37,20 +37,12 @@ dependencies {
 
     // Zoomable Image support
     implementation(libs.telephoto.zoomable.image)
+
+    // Archive/document format support
+    implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
+    implementation("com.github.junrar:junrar:7.5.0")
+    implementation("net.sf.sevenzipjbinding:sevenzipjbinding:16.02-2.01")
+    implementation("org.apache.commons:commons-compress:1.26.0")
 }
 
-
-    implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
-
-
-
-    implementation("com.github.junrar:junrar:7.5.0")
-
-
-
-    implementation("net.sf.sevenzipjbinding:sevenzipjbinding:16.02-2.01")
-
-
-
-    implementation("org.apache.commons:commons-compress:1.26.0")
 
