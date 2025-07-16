@@ -110,14 +110,14 @@ test-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", v
 # Archives
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
+pdfium_android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
+djvu_android = { group = "com.github.Djvu-Android", name = "Djvu-Android", version.ref = "djvu_android" }
 sevenzip4j = { group = "com.github.SevenZip4j", name = "SevenZip4j", version.ref = "sevenzip4j" }
 commons_compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons_compress" }
 
 # PDF
-pdfium_android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
 
 # DJVU
-djvu_android = { group = "com.github.Djvu-Android", name = "Djvu-Android", version.ref = "djvu_android" }
 
 # Zoomable Image
 telephoto-zoomable-image = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
