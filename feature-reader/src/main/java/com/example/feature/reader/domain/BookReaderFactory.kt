@@ -21,9 +21,9 @@ class BookReaderFactory @Inject constructor(
     private val bitmapCache: BitmapCache
 ) {
     /**
-     * Creates a [BookReader] for the given file.
+     * Creates a [BookReader] for the given URI.
      *
-     * @param file The file to create a reader for.
+     * @param uri The URI of the file to create a reader for.
      * @return A [BookReader] instance suitable for the file type.
      * @throws UnsupportedFormatException if the file format is not supported.
      */
