@@ -144,6 +144,26 @@ class ReaderViewModelTest {
     }
 
     @Test
+    fun `goToPreviousPage - does nothing when on first page`() = runTest {
+        // Arrange
+        val mockBitmap: Bitmap = mock()
+        whenever(bookReader.open(testFile)).doReturn(2) // 2 pages (0, 1)
+        whenever(bookReader.renderPage(any())).doReturn(mockBitmap)
+        viewModel.openBook(testFile) // initial state: page 0
+
+        val stateBefore = viewModel.uiState.value
+        clearInvocations(bookReader) // reset invocation history
+
+        // Act
+        viewModel.goToPreviousPage() // try to go before page 0
+
+        // Assert
+        verify(bookReader, never()).renderPage(any())
+        val state = viewModel.uiState.value
+        assertThat(state).isSameInstanceAs(stateBefore)
+    }
+
+    @Test
     fun `loadPage failure - renderPage returns null updates state with error`() = runTest {
         // Arrange
         whenever(bookReader.open(testFile)).doReturn(10)
