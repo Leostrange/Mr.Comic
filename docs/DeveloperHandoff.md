@@ -31,6 +31,23 @@
 *   **Retrofit/OkHttp:** Для сетевых запросов (если применимо).
 *   **FolioReader:** Для поддержки EPUB.
 
+## Установка Android SDK
+
+Для сборки и тестирования Android-проектов требуется установленный Android SDK. Скачайте пакет `commandlinetools` с [официального сайта Android](https://developer.android.com/studio) и распакуйте его в удобную директорию, например `/opt/android-sdk`.
+
+1.  Создайте переменную окружения `ANDROID_SDK_ROOT` и добавьте инструменты SDK в `PATH`:
+    ```bash
+    export ANDROID_SDK_ROOT=/opt/android-sdk
+    export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools"
+    ```
+    Эти строки можно добавить в `~/.bashrc` или `~/.zshrc` для автоматической настройки при запуске терминала.
+
+2.  Установите необходимые компоненты SDK:
+    ```bash
+    sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
+    ```
+    При необходимости укажите актуальные версии Android API и build-tools.
+
 ## Процесс сборки
 
 Проект собирается с использованием Gradle. Для сборки отладочной версии выполните:
