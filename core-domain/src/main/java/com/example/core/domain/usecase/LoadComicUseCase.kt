@@ -8,7 +8,7 @@ class LoadComicUseCase @Inject constructor(
     private val bookReaderFactory: BookReaderFactory
 ) {
     suspend operator fun invoke(uri: Uri) {
-        bookReaderFactory.createReader(uri)
+        bookReaderFactory.create(uri)
     }
 
     fun releaseResources() {
