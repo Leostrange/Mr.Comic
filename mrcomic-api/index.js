@@ -3,7 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const passport = require('passport');
 const cors = require('cors');
-const morgan = 'morgan'; // This was a bug in my generation, should be require('morgan')
+const morgan = require('morgan');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
@@ -27,10 +27,8 @@ const app = express();
 app.use(cors());
 app.use(helmet());
 
-// Исправлено: morgan должен быть функцией
-const morganLogger = require('morgan');
 if (config.env === 'development') {
-  app.use(morganLogger('dev'));
+  app.use(morgan('dev'));
 }
 
 app.use(express.json({ limit: '10mb' })); // Увеличим лимит для JSON, если будем передавать base64 картинки
