@@ -1,4 +1,4 @@
-Comic reader application with a focus on customization. Inspired by ComiCat, aiming for enhanced user interface personalization (themes, fonts, layout, effects).
+Comic reader application with a focus on customization. Aiming for enhanced user interface personalization (themes, fonts, layout, effects).
 
 Это приложение для чтения комиксов, разрабатываемое с акцентом на кастомизацию и удобство использования.
 
