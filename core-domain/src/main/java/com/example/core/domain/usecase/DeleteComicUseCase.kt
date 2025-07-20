@@ -6,8 +6,13 @@ import javax.inject.Inject
 class DeleteComicUseCase @Inject constructor(
     private val repository: LibraryRepository
 ) {
-    suspend operator fun invoke(comicId: String) {
-        repository.deleteComic(comicId)
+    suspend operator fun invoke(comicIds: Set<String>): Result<Unit> {
+        return try {
+            comicIds.forEach { repository.deleteComic(it) }
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
     }
 }
 

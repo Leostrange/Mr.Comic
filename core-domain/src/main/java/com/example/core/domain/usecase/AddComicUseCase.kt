@@ -7,8 +7,13 @@ import javax.inject.Inject
 class AddComicUseCase @Inject constructor(
     private val repository: LibraryRepository
 ) {
-    suspend operator fun invoke(comic: Comic) {
-        repository.addComic(comic)
+    suspend operator fun invoke(comic: Comic): Result<Unit> {
+        return try {
+            repository.addComic(comic)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
     }
 }
 
