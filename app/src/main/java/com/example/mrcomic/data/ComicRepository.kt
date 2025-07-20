@@ -4,6 +4,8 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.ParcelFileDescriptor
+import android.graphics.pdf.PdfRenderer
 import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -67,11 +69,19 @@ class ComicRepository @Inject constructor(
                 }
             }
 
-            val pageCount = getPageCountFromCbz(newFile)
-            val coverPath = extractCoverFromCbz(newFile)
+            val extension = fileName.substringAfterLast('.').lowercase()
+            val pageCount: Int
+            val coverPath: String?
+            if (extension == "pdf") {
+                pageCount = getPageCountFromPdf(newFile)
+                coverPath = extractCoverFromPdf(newFile)
+            } else {
+                pageCount = getPageCountFromCbz(newFile)
+                coverPath = extractCoverFromCbz(newFile)
+            }
 
             val entity = ComicEntity(
-                title = fileName.removeSuffix(".cbz").replace("_", " "),
+                title = fileName.removeSuffix(".$extension").replace("_", " "),
                 author = "Неизвестен",
                 description = "Импортировано из файла: $fileName",
                 filePath = newFile.absolutePath,
@@ -126,6 +136,19 @@ class ComicRepository @Inject constructor(
         return count
     }
 
+    private fun getPageCountFromPdf(file: File): Int {
+        return try {
+            val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(descriptor)
+            val count = renderer.pageCount
+            renderer.close()
+            descriptor.close()
+            count
+        } catch (e: Exception) {
+            0
+        }
+    }
+
     private fun isImageFile(fileName: String): Boolean {
         val lowercased = fileName.lowercase()
         return lowercased.endsWith(".jpg") ||
@@ -157,6 +180,33 @@ class ComicRepository @Inject constructor(
             // TODO: Log error
         }
         return null
+    }
+
+    private fun extractCoverFromPdf(pdfFile: File): String? {
+        val coversDir = File(application.filesDir, "covers")
+        if (!coversDir.exists()) coversDir.mkdirs()
+        var descriptor: ParcelFileDescriptor? = null
+        var renderer: PdfRenderer? = null
+        return try {
+            descriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            renderer = PdfRenderer(descriptor!!)
+            if (renderer.pageCount > 0) {
+                val page = renderer.openPage(0)
+                val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                page.close()
+                val coverFile = File(coversDir, pdfFile.nameWithoutExtension + ".cover.jpg")
+                FileOutputStream(coverFile).use { fos ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+                }
+                coverFile.absolutePath
+            } else null
+        } catch (e: Exception) {
+            null
+        } finally {
+            renderer?.close()
+            descriptor?.close()
+        }
     }
 
     suspend fun getComicPage(filePath: String, pageIndex: Int): Bitmap? {
