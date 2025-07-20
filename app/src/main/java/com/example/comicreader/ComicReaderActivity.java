@@ -1,7 +1,5 @@
 package com.example.comicreader;
 
-package com.example.comicreader;
-
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.os.Bundle;
@@ -11,6 +9,7 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ProgressBar;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -19,7 +18,10 @@ import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener;
 import com.github.barteksc.pdfviewer.listener.OnErrorListener;
 import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
 
+import android.net.Uri;
 import java.io.File; // Added import
+import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -38,6 +40,8 @@ public class ComicReaderActivity extends AppCompatActivity {
     private ProgressBar pageLoadingProgressBar; // Added ProgressBar field
 
     private String comicFilePath;
+    private Uri comicFileUri;
+    private File localComicFile;
     private String comicTitle;
     private ComicUtils comicUtils;
     private ProgressManager.ComicProgressEntry currentProgressEntry;
@@ -64,6 +68,7 @@ public class ComicReaderActivity extends AppCompatActivity {
         Intent intent = getIntent();
         if (intent != null && intent.hasExtra(EXTRA_FILE_PATH)) {
             comicFilePath = intent.getStringExtra(EXTRA_FILE_PATH);
+            comicFileUri = Uri.parse(comicFilePath);
             comicTitle = intent.getStringExtra(EXTRA_COMIC_TITLE); // Получаем название
             if (comicTitle != null) {
                 setTitle(comicTitle); // Устанавливаем заголовок Activity
@@ -84,7 +89,33 @@ public class ComicReaderActivity extends AppCompatActivity {
         // 1. Загрузить метаданные (общее количество страниц)
         // Это может быть сделано асинхронно, если extractComicMetadata работает долго
         executorService.execute(() -> {
-            ComicUtils.ComicMetadata metadata = comicUtils.extractComicMetadata(comicFilePath);
+            try {
+                String name = "tempComic";
+                try {
+                    name = androidx.documentfile.provider.DocumentFile.fromSingleUri(this, comicFileUri).getName();
+                } catch (Exception ignored) {}
+                String extension = "";
+                int idx = name.lastIndexOf('.');
+                if (idx != -1) extension = name.substring(idx);
+                localComicFile = File.createTempFile("reader_", extension, getCacheDir());
+                try (InputStream in = getContentResolver().openInputStream(comicFileUri);
+                     FileOutputStream out = new FileOutputStream(localComicFile)) {
+                    byte[] buf = new byte[8192];
+                    int len;
+                    while ((len = in.read(buf)) != -1) {
+                        out.write(buf, 0, len);
+                    }
+                }
+            } catch (Exception e) {
+                Log.e("ComicReaderActivity", "Failed to copy comic", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Error opening comic", Toast.LENGTH_LONG).show();
+                    finish();
+                });
+                return;
+            }
+
+            ComicUtils.ComicMetadata metadata = comicUtils.extractComicMetadata(localComicFile.getAbsolutePath());
             totalPages = metadata.getPageCount();
 
             // 2. Загрузить прогресс (текущую страницу)
@@ -116,7 +147,7 @@ public class ComicReaderActivity extends AppCompatActivity {
             }
 
             runOnUiThread(() -> {
-                String lowerPath = comicFilePath.toLowerCase();
+                String lowerPath = localComicFile.getName().toLowerCase();
                 if (lowerPath.endsWith(".pdf")) {
                     pageImageView.setVisibility(View.GONE);
                     pdfView.setVisibility(View.VISIBLE);
@@ -125,7 +156,7 @@ public class ComicReaderActivity extends AppCompatActivity {
                     pageInfoTextViewReader.setVisibility(View.VISIBLE);
                     pageLoadingProgressBar.setVisibility(View.GONE); // No separate progress for PDF pages for now
 
-                    File pdfFile = new File(comicFilePath);
+                    File pdfFile = localComicFile;
                     if (pdfFile.exists()) {
                         int initialPdfPage = Math.max(0, currentPage - 1);
                         pdfView.fromFile(pdfFile)
@@ -135,7 +166,7 @@ public class ComicReaderActivity extends AppCompatActivity {
                             .onError(this::onPdfError)
                             .load();
                     } else {
-                        Toast.makeText(this, "PDF file not found: " + comicFilePath, Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "PDF file not found", Toast.LENGTH_LONG).show();
                         onPdfError(new Throwable("PDF file not found at specified path."));
                     }
                 } else if (lowerPath.endsWith(".cbz") || lowerPath.endsWith(".cbr")) {
@@ -157,12 +188,12 @@ public class ComicReaderActivity extends AppCompatActivity {
     }
 
     private void loadAndDisplayPage(int pageNumber) {
-        if (comicFilePath == null) {
+        if (comicFilePath == null || localComicFile == null) {
             Log.e("ComicReaderActivity", "Cannot load page, file path is null.");
             return;
         }
         // If it's a PDF, PDFView handles it, this method should not be called.
-        if (comicFilePath.toLowerCase().endsWith(".pdf")){
+        if (localComicFile.getName().toLowerCase().endsWith(".pdf")){
              Log.w("ComicReaderActivity", "loadAndDisplayPage called for PDF, should be handled by PDFView. Path: " + comicFilePath);
              return;
         }
@@ -185,12 +216,12 @@ public class ComicReaderActivity extends AppCompatActivity {
         pageLoadingProgressBar.setVisibility(View.VISIBLE);
         executorService.execute(() -> {
             final Bitmap pageBitmap;
-            String lowerPath = comicFilePath.toLowerCase();
+            String lowerPath = localComicFile.getName().toLowerCase();
 
             if (lowerPath.endsWith(".cbz")) {
-                pageBitmap = comicUtils.getPageAtIndex(comicFilePath, pageNumber - 1);
+                pageBitmap = comicUtils.getPageAtIndex(localComicFile.getAbsolutePath(), pageNumber - 1);
             } else if (lowerPath.endsWith(".cbr")) {
-                pageBitmap = comicUtils.getPageAtIndexCbr(comicFilePath, pageNumber - 1);
+                pageBitmap = comicUtils.getPageAtIndexCbr(localComicFile.getAbsolutePath(), pageNumber - 1);
             } else {
                 pageBitmap = null;
                 Log.e("ComicReaderActivity", "Unsupported file type for image page loading: " + comicFilePath);
@@ -314,5 +345,8 @@ public class ComicReaderActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         executorService.shutdown();
+        if (localComicFile != null) {
+            localComicFile.delete();
+        }
     }
 }
