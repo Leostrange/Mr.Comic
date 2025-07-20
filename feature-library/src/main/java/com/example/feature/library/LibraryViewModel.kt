@@ -7,6 +7,7 @@ import com.example.core.domain.usecase.DeleteComicUseCase
 import com.example.core.data.repository.ComicRepository
 import com.example.core.model.Comic
 import com.example.core.model.SortOrder
+import com.example.core.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,10 +68,9 @@ class LibraryViewModel @Inject constructor(
 
     fun addComic(title: String, author: String, coverPath: String) {
         viewModelScope.launch {
-            try {
-                addComicUseCase(Comic(title = title, author = author, filePath = coverPath))
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message ?: "Ошибка добавления")
+            when (val result = addComicUseCase(Comic(title = title, author = author, filePath = coverPath))) {
+                is Result.Success -> Unit
+                is Result.Error -> _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка добавления")
             }
         }
     }
@@ -94,8 +94,10 @@ class LibraryViewModel @Inject constructor(
 
     fun onDeletionTimeout() {
         viewModelScope.launch {
-            deleteComicUseCase(_uiState.value.pendingDeletionIds)
-            _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
+            when (val result = deleteComicUseCase(_uiState.value.pendingDeletionIds)) {
+                is Result.Success -> _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
+                is Result.Error -> _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка удаления")
+            }
         }
     }
 

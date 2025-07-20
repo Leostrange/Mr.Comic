@@ -9,6 +9,7 @@ import com.example.core.domain.usecase.GetComicPagesUseCase
 import com.example.core.domain.usecase.LoadComicUseCase
 import com.example.core.domain.usecase.SaveReadingProgressUseCase
 import com.example.core.domain.usecase.GetReadingProgressUseCase
+import com.example.core.domain.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,18 +48,27 @@ class ReaderViewModel @Inject constructor(
     fun loadComic(uriString: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, comicUri = uriString)
-            try {
-                loadComicUseCase(Uri.parse(uriString))
-                val totalPages = getComicPagesUseCase.getTotalPages()
-                val lastReadPage = getReadingProgressUseCase(uriString)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    pageCount = totalPages,
-                    currentPageIndex = lastReadPage
-                )
-                goToPage(lastReadPage)
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка")
+            when (val loadResult = loadComicUseCase(Uri.parse(uriString))) {
+                is Result.Success -> {
+                    val totalPages = when (val pagesResult = getComicPagesUseCase.getTotalPages()) {
+                        is Result.Success -> pagesResult.data
+                        is Result.Error -> {
+                            _uiState.value = _uiState.value.copy(isLoading = false, error = pagesResult.exception.message ?: "Ошибка чтения")
+                            return@launch
+                        }
+                    }
+                    val lastReadPage = when (val progressResult = getReadingProgressUseCase(uriString)) {
+                        is Result.Success -> progressResult.data
+                        is Result.Error -> 0
+                    }
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        pageCount = totalPages,
+                        currentPageIndex = lastReadPage
+                    )
+                    goToPage(lastReadPage)
+                }
+                is Result.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = loadResult.exception.message ?: "Неизвестная ошибка")
             }
         }
     }
@@ -83,14 +93,20 @@ class ReaderViewModel @Inject constructor(
 
     private fun goToPage(index: Int) {
         viewModelScope.launch {
-            val bmp = getComicPagesUseCase.getPage(index)
-            if (bmp != null) {
-                _uiState.value = _uiState.value.copy(
-                    currentPageIndex = index,
-                    currentPageBitmap = bmp,
-                    bitmaps = _uiState.value.bitmaps.toMutableMap().apply { put(index, bmp) }
-                )
-                saveReadingProgressUseCase(_uiState.value.comicUri, index)
+            when (val pageResult = getComicPagesUseCase.getPage(index)) {
+                is Result.Success -> {
+                    val bmp = pageResult.data
+                    if (bmp != null) {
+                        _uiState.value = _uiState.value.copy(
+                            currentPageIndex = index,
+                            currentPageBitmap = bmp,
+                            bitmaps = _uiState.value.bitmaps.toMutableMap().apply { put(index, bmp) }
+                        )
+                        saveReadingProgressUseCase(_uiState.value.comicUri, index)
+                        // result ignored
+                    }
+                }
+                is Result.Error -> _uiState.value = _uiState.value.copy(error = pageResult.exception.message ?: "Ошибка страницы")
             }
         }
     }

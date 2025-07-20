@@ -7,8 +7,13 @@ import javax.inject.Inject
 class LoadComicUseCase @Inject constructor(
     private val bookReaderFactory: BookReaderFactory
 ) {
-    suspend operator fun invoke(uri: Uri) {
-        bookReaderFactory.create(uri)
+    suspend operator fun invoke(uri: Uri): Result<Unit> {
+        return try {
+            bookReaderFactory.create(uri)
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
     }
 
     fun releaseResources() {
