@@ -152,6 +152,8 @@ private fun LibraryScreenContent(
         }
     }
 
+    val visibleComics = uiState.comics.filter { it.filePath !in uiState.pendingDeletionIds }
+
     Scaffold(
         topBar = {
             if (uiState.inSelectionMode) {
@@ -168,7 +170,7 @@ private fun LibraryScreenContent(
                 )
             } else {
                 MrComicTopAppBar(
-                    title = "Library",
+                    title = "Library (${visibleComics.size})",
                     actions = {
                         IconButton(onClick = onToggleSearch) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
@@ -213,7 +215,6 @@ private fun LibraryScreenContent(
                 } else if (uiState.error != null) {
                     Text(text = uiState.error)
                 } else {
-                    val visibleComics = uiState.comics.filter { it.filePath !in uiState.pendingDeletionIds }
                     if (visibleComics.isEmpty()) {
                         Text("No comics found.")
                     }
