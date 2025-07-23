@@ -2,21 +2,34 @@
 package com.example.mrcomic.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.example.mrcomic.ui.theme.MrComicTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: AccountViewModel = hiltViewModel()
 ) {
+    val profile by viewModel.userProfile.collectAsState()
+    var editingEmail by remember { mutableStateOf(false) }
+    var emailInput by remember(profile.email) { mutableStateOf(profile.email) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -33,31 +46,42 @@ fun AccountScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("This is the Account Screen.", style = MaterialTheme.typography.headlineMedium)
+                AsyncImage(
+                    model = profile.avatarUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(96.dp)
+                        .clip(CircleShape)
+                )
                 Spacer(modifier = Modifier.height(16.dp))
-                // Placeholder for account details based on mockups
-                Text("Account details will go here.")
+                Text(profile.username, style = MaterialTheme.typography.titleLarge)
+                Spacer(modifier = Modifier.height(8.dp))
+                if (editingEmail) {
+                    OutlinedTextField(
+                        value = emailInput,
+                        onValueChange = { emailInput = it },
+                        label = { Text("Email") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = {
+                        viewModel.updateEmail(emailInput)
+                        editingEmail = false
+                    }) {
+                        Text("Save")
+                    }
+                } else {
+                    Text(profile.email)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = { editingEmail = true }) {
+                        Text("Change email")
+                    }
+                }
             }
         }
     )
-}
-
-@Preview(showBackground = true, widthDp = 360, heightDp = 640)
-@Composable
-fun AccountScreenVerticalPreview() {
-    MrComicTheme {
-        AccountScreen(onNavigateBack = {})
-    }
-}
-
-@Preview(showBackground = true, widthDp = 640, heightDp = 360)
-@Composable
-fun AccountScreenHorizontalPreview() {
-    MrComicTheme {
-        AccountScreen(onNavigateBack = {})
-    }
 }
 
 

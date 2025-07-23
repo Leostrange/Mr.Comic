@@ -1,9 +1,6 @@
 package com.example.feature.library.ui
 
 import android.Manifest
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,7 +14,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -152,6 +148,8 @@ private fun LibraryScreenContent(
         }
     }
 
+    val visibleComics = uiState.comics.filter { it.filePath !in uiState.pendingDeletionIds }
+
     Scaffold(
         topBar = {
             if (uiState.inSelectionMode) {
@@ -168,7 +166,7 @@ private fun LibraryScreenContent(
                 )
             } else {
                 MrComicTopAppBar(
-                    title = "Library",
+                    title = "Library (${visibleComics.size})",
                     actions = {
                         IconButton(onClick = onToggleSearch) {
                             Icon(Icons.Default.Search, contentDescription = "Search")
@@ -209,11 +207,20 @@ private fun LibraryScreenContent(
         ) {
             if (uiState.hasStoragePermission) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator()
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(minSize = 160.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(PaddingMedium),
+                        verticalArrangement = Arrangement.spacedBy(PaddingMedium),
+                        horizontalArrangement = Arrangement.spacedBy(PaddingMedium)
+                    ) {
+                        items(6) {
+                            ComicCoverPlaceholder()
+                        }
+                    }
                 } else if (uiState.error != null) {
                     Text(text = uiState.error)
                 } else {
-                    val visibleComics = uiState.comics.filter { it.filePath !in uiState.pendingDeletionIds }
                     if (visibleComics.isEmpty()) {
                         Text("No comics found.")
                     }

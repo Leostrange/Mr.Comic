@@ -21,6 +21,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,7 +47,12 @@ fun SettingsScreen(
         uiState = uiState,
         onSortOrderSelected = viewModel::onSortOrderSelected,
         onAddFolder = viewModel::onAddFolder,
-        onRemoveFolder = viewModel::onRemoveFolder
+        onRemoveFolder = viewModel::onRemoveFolder,
+        onLanguageSelected = viewModel::onLanguageSelected,
+        onOcrEngineSelected = viewModel::onOcrEngineSelected,
+        onTranslationProviderSelected = viewModel::onTranslationProviderSelected,
+        onApiKeyChanged = viewModel::onApiKeyChanged,
+        onClearCache = viewModel::clearCache
     )
 }
 
@@ -55,7 +61,12 @@ private fun SettingsScreenContent(
     uiState: SettingsUiState,
     onSortOrderSelected: (SortOrder) -> Unit,
     onAddFolder: (String) -> Unit,
-    onRemoveFolder: (String) -> Unit
+    onRemoveFolder: (String) -> Unit,
+    onLanguageSelected: (String) -> Unit,
+    onOcrEngineSelected: (String) -> Unit,
+    onTranslationProviderSelected: (String) -> Unit,
+    onApiKeyChanged: (String) -> Unit,
+    onClearCache: () -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -77,8 +88,32 @@ private fun SettingsScreenContent(
                 )
             }
             item {
+                LanguageSetting(
+                    currentLanguage = uiState.targetLanguage,
+                    onLanguageSelected = onLanguageSelected
+                )
+            }
+            item {
+                OcrEngineSetting(
+                    currentEngine = uiState.ocrEngine,
+                    onEngineSelected = onOcrEngineSelected
+                )
+            }
+            item {
+                TranslationProviderSetting(
+                    currentProvider = uiState.translationProvider,
+                    onProviderSelected = onTranslationProviderSelected
+                )
+            }
+            item {
+                ApiKeySetting(
+                    apiKey = uiState.translationApiKey,
+                    onApiKeyChanged = onApiKeyChanged
+                )
+            }
+            item {
                 MrComicPrimaryButton(
-                    onClick = { viewModel.clearCache() },
+                    onClick = onClearCache,
                     text = "Clear Cache",
                     modifier = Modifier.padding(16.dp)
                 )
@@ -157,6 +192,128 @@ private fun LibraryFoldersSetting(
         MrComicPrimaryButton(
             onClick = { directoryPickerLauncher.launch(null) },
             text = "Add Folder"
+        )
+    }
+}
+
+@Composable
+private fun LanguageSetting(
+    currentLanguage: String,
+    onLanguageSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val languages = listOf("en", "es", "fr", "de", "ru")
+    val flags = mapOf(
+        "en" to "\uD83C\uDDEC\uD83C\uDDE7",
+        "es" to "\uD83C\uDDEA\uD83C\uDDF8",
+        "fr" to "\uD83C\uDDEB\uD83C\uDDF7",
+        "de" to "\uD83C\uDDE9\uD83C\uDDEA",
+        "ru" to "\uD83C\uDDF7\uD83C\uDDFA"
+    )
+
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .clickable { expanded = true }
+        .padding(16.dp)
+    ) {
+        Text("Preferred Language")
+        Text("${flags[currentLanguage] ?: ""} ${currentLanguage.uppercase()}")
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            languages.forEach { lang ->
+                DropdownMenuItem(
+                    text = { Text("${flags[lang] ?: ""} ${lang.uppercase()}") },
+                    onClick = {
+                        onLanguageSelected(lang)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OcrEngineSetting(
+    currentEngine: String,
+    onEngineSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val engines = listOf("Tesseract", "MLKit")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
+        Text("OCR Engine")
+        Text(currentEngine)
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            engines.forEach { engine ->
+                DropdownMenuItem(
+                    text = { Text(engine) },
+                    onClick = {
+                        onEngineSelected(engine)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TranslationProviderSetting(
+    currentProvider: String,
+    onProviderSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val providers = listOf("Google", "DeepL")
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
+        Text("Translation Provider")
+        Text(currentProvider)
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            providers.forEach { provider ->
+                DropdownMenuItem(
+                    text = { Text(provider) },
+                    onClick = {
+                        onProviderSelected(provider)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ApiKeySetting(
+    apiKey: String,
+    onApiKeyChanged: (String) -> Unit
+) {
+    var value by remember { mutableStateOf(apiKey) }
+
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text("API Key")
+        TextField(
+            value = value,
+            onValueChange = {
+                value = it
+                onApiKeyChanged(it)
+            },
+            modifier = Modifier.fillMaxWidth()
         )
     }
 }
