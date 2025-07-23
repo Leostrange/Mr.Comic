@@ -6,5 +6,6 @@ import com.example.core.model.SortOrder
 @Immutable
 data class SettingsUiState(
     val sortOrder: SortOrder = SortOrder.DATE_ADDED_DESC,
-    val libraryFolders: Set<String> = emptySet()
+    val libraryFolders: Set<String> = emptySet(),
+    val targetLanguage: String = "en"
 )
