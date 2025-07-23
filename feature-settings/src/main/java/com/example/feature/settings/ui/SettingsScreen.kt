@@ -46,7 +46,8 @@ fun SettingsScreen(
         uiState = uiState,
         onSortOrderSelected = viewModel::onSortOrderSelected,
         onAddFolder = viewModel::onAddFolder,
-        onRemoveFolder = viewModel::onRemoveFolder
+        onRemoveFolder = viewModel::onRemoveFolder,
+        onLanguageSelected = viewModel::onLanguageSelected
     )
 }
 
@@ -55,7 +56,8 @@ private fun SettingsScreenContent(
     uiState: SettingsUiState,
     onSortOrderSelected: (SortOrder) -> Unit,
     onAddFolder: (String) -> Unit,
-    onRemoveFolder: (String) -> Unit
+    onRemoveFolder: (String) -> Unit,
+    onLanguageSelected: (String) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -74,6 +76,12 @@ private fun SettingsScreenContent(
                     folders = uiState.libraryFolders,
                     onAddFolder = onAddFolder,
                     onRemoveFolder = onRemoveFolder
+                )
+            }
+            item {
+                LanguageSetting(
+                    currentLanguage = uiState.targetLanguage,
+                    onLanguageSelected = onLanguageSelected
                 )
             }
             item {
@@ -158,5 +166,45 @@ private fun LibraryFoldersSetting(
             onClick = { directoryPickerLauncher.launch(null) },
             text = "Add Folder"
         )
+    }
+}
+
+@Composable
+private fun LanguageSetting(
+    currentLanguage: String,
+    onLanguageSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val languages = listOf("en", "es", "fr", "de", "ru")
+    val flags = mapOf(
+        "en" to "\uD83C\uDDEC\uD83C\uDDE7",
+        "es" to "\uD83C\uDDEA\uD83C\uDDF8",
+        "fr" to "\uD83C\uDDEB\uD83C\uDDF7",
+        "de" to "\uD83C\uDDE9\uD83C\uDDEA",
+        "ru" to "\uD83C\uDDF7\uD83C\uDDFA"
+    )
+
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .clickable { expanded = true }
+        .padding(16.dp)
+    ) {
+        Text("Preferred Language")
+        Text("${flags[currentLanguage] ?: ""} ${currentLanguage.uppercase()}")
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            languages.forEach { lang ->
+                DropdownMenuItem(
+                    text = { Text("${flags[lang] ?: ""} ${lang.uppercase()}") },
+                    onClick = {
+                        onLanguageSelected(lang)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }

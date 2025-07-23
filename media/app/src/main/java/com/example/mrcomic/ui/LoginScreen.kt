@@ -5,18 +5,27 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import com.example.mrcomic.ui.theme.MrComicTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onNavigateBack: () -> Unit,
+    onForgotPassword: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -35,10 +44,33 @@ fun LoginScreen(
                     .padding(paddingValues)
                     .padding(16.dp)
             ) {
-                Text("This is the Login Screen.", style = MaterialTheme.typography.headlineMedium)
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        val icon = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Icon(icon, contentDescription = null)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(modifier = Modifier.height(16.dp))
-                // Placeholder for login form based on mockups
-                Text("Login form will go here.")
+                Button(onClick = { /* TODO: handle login */ }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Login")
+                }
+                TextButton(onClick = onForgotPassword) {
+                    Text("Forgot password?")
+                }
             }
         }
     )
@@ -48,7 +80,7 @@ fun LoginScreen(
 @Composable
 fun LoginScreenVerticalPreview() {
     MrComicTheme {
-        LoginScreen(onNavigateBack = {})
+        LoginScreen(onNavigateBack = {}, onForgotPassword = {})
     }
 }
 
@@ -56,7 +88,7 @@ fun LoginScreenVerticalPreview() {
 @Composable
 fun LoginScreenHorizontalPreview() {
     MrComicTheme {
-        LoginScreen(onNavigateBack = {})
+        LoginScreen(onNavigateBack = {}, onForgotPassword = {})
     }
 }
 

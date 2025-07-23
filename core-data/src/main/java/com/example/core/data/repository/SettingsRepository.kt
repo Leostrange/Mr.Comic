@@ -20,7 +20,12 @@ interface SettingsRepository {
     val libraryFolders: Flow<Set<String>>
     suspend fun addLibraryFolder(folderUri: String)
     suspend fun removeLibraryFolder(folderUri: String)
-    suspend fun clearCache()}
+
+    val targetLanguage: Flow<String>
+    suspend fun setTargetLanguage(language: String)
+
+    suspend fun clearCache()
+}
 
 class SettingsRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
@@ -30,6 +35,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val SORT_ORDER = stringPreferencesKey("sort_order")
         val SEARCH_QUERY = stringPreferencesKey("search_query")
         val LIBRARY_FOLDERS = stringSetPreferencesKey("library_folders")
+        val TARGET_LANGUAGE = stringPreferencesKey("target_language")
     }
 
     override val sortOrder: Flow<SortOrder> = dataStore.data
@@ -60,6 +66,11 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
         }
 
+    override val targetLanguage: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.TARGET_LANGUAGE] ?: "en"
+        }
+
     override suspend fun addLibraryFolder(folderUri: String) {
         dataStore.edit { preferences ->
             val currentFolders = preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
@@ -71,6 +82,12 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { preferences ->
             val currentFolders = preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
             preferences[PreferencesKeys.LIBRARY_FOLDERS] = currentFolders - folderUri
+        }
+    }
+
+    override suspend fun setTargetLanguage(language: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.TARGET_LANGUAGE] = language
         }
     }
 
