@@ -90,7 +90,7 @@ fun ReaderScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { showControls = !showControls }
@@ -106,13 +106,13 @@ fun ReaderScreen(
                 title = {
                     Text(
                         text = comicTitle,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Назад", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 actions = {
@@ -120,15 +120,15 @@ fun ReaderScreen(
                         Icon(
                             imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = "Закладка",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                     IconButton(onClick = { /* TODO: Настройки */ }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = Color.White)
+                        Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black.copy(alpha = 0.8f)
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                 )
             )
         }
@@ -138,7 +138,7 @@ fun ReaderScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .padding(8.dp)
-                .background(Color.DarkGray),
+                .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -158,14 +158,14 @@ fun ReaderScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Пока поддерживается только CBZ",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Поддержка PDF и CBR появится в будущих версиях.",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
@@ -196,14 +196,14 @@ fun ReaderScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Страница ${currentPage + 1}",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = if (filePath.endsWith(".cbz", true)) "CBZ-файл не найден или повреждён" else "Здесь будет изображение комикса",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center
                         )
@@ -212,7 +212,7 @@ fun ReaderScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = "Масштаб: ${String.format("%.1f", zoomLevel)}x",
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -248,7 +248,7 @@ fun ReaderScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text("—", color = Color.Gray)
+                                        Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
@@ -264,7 +264,7 @@ fun ReaderScreen(
             exit = slideOutVertically { it }
         ) {
             BottomAppBar(
-                containerColor = Color.Black.copy(alpha = 0.8f)
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
             ) {
                 Column(
                     modifier = Modifier
@@ -278,7 +278,7 @@ fun ReaderScreen(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Стр. ${currentPage + 1} / $pageCount",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -302,12 +302,12 @@ fun ReaderScreen(
                     ) {
                         Text(
                             text = "${currentPage + 1} / $pageCount",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             text = "${((currentPage + 1) * 100 / pageCount)}%",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -373,10 +373,10 @@ fun ReaderScreen(
                     }
                     
                     IconButton(onClick = { zoomLevel = (zoomLevel + 0.1f).coerceAtMost(2.0f) }) {
-                        Icon(Icons.Default.ZoomIn, contentDescription = "Увеличить", tint = Color.White)
+                        Icon(Icons.Default.ZoomIn, contentDescription = "Увеличить", tint = MaterialTheme.colorScheme.onSurface)
                     }
                     IconButton(onClick = { zoomLevel = (zoomLevel - 0.1f).coerceAtLeast(0.5f) }) {
-                        Icon(Icons.Default.ZoomOut, contentDescription = "Уменьшить", tint = Color.White)
+                        Icon(Icons.Default.ZoomOut, contentDescription = "Уменьшить", tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }

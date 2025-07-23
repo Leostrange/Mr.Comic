@@ -1,6 +1,9 @@
 package com.example.feature.ocr.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -8,11 +11,20 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.feature.ocr.ui.TranslateOcrViewModel
 
 @Composable
-fun TranslateOcrScreen(recognizedText: String, onTranslate: (String, String) -> Unit, translatedText: String?, isLoading: Boolean) {
+fun TranslateOcrContent(
+    recognizedText: String,
+    currentLanguage: String,
+    onLanguageChanged: (String) -> Unit,
+    onTranslate: (String, String) -> Unit,
+    translatedText: String?,
+    isLoading: Boolean
+) {
     var textToTranslate by remember { mutableStateOf(recognizedText) }
-    var targetLanguage by remember { mutableStateOf("en") } // По умолчанию английский
+    var targetLanguage by remember { mutableStateOf(currentLanguage) }
 
     Column(
         modifier = Modifier
@@ -30,13 +42,32 @@ fun TranslateOcrScreen(recognizedText: String, onTranslate: (String, String) -> 
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text("Целевой язык (например, en, es, fr):")
-        Spacer(modifier = Modifier.height(8.dp))
+    Text("Целевой язык")
+    Spacer(modifier = Modifier.height(8.dp))
+    var expanded by remember { mutableStateOf(false) }
+    val languages = listOf("en", "es", "fr", "de", "ru")
+    Box {
         TextField(
             value = targetLanguage,
-            onValueChange = { targetLanguage = it },
-            modifier = Modifier.fillMaxWidth()
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
         )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            languages.forEach { lang ->
+                DropdownMenuItem(
+                    text = { Text(lang.uppercase()) },
+                    onClick = {
+                        targetLanguage = lang
+                        onLanguageChanged(lang)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -68,3 +99,23 @@ fun TranslateOcrScreen(recognizedText: String, onTranslate: (String, String) -> 
 }
 
 
+
+@Composable
+fun TranslateOcrScreen(
+    recognizedText: String,
+    onTranslate: (String, String) -> Unit,
+    translatedText: String?,
+    isLoading: Boolean,
+    viewModel: TranslateOcrViewModel = hiltViewModel()
+) {
+    val language by viewModel.targetLanguage.collectAsState()
+
+    TranslateOcrContent(
+        recognizedText = recognizedText,
+        currentLanguage = language,
+        onLanguageChanged = viewModel::onLanguageSelected,
+        onTranslate = onTranslate,
+        translatedText = translatedText,
+        isLoading = isLoading
+    )
+}

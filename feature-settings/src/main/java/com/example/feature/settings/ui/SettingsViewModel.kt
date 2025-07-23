@@ -19,9 +19,14 @@ class SettingsViewModel @Inject constructor(
 
     val uiState = combine(
         settingsRepository.sortOrder,
-        settingsRepository.libraryFolders
-    ) { sortOrder, folders ->
-        SettingsUiState(sortOrder = sortOrder, libraryFolders = folders)
+        settingsRepository.libraryFolders,
+        settingsRepository.targetLanguage
+    ) { sortOrder, folders, language ->
+        SettingsUiState(
+            sortOrder = sortOrder,
+            libraryFolders = folders,
+            targetLanguage = language
+        )
     }
         .stateIn(
             scope = viewModelScope,
@@ -44,6 +49,12 @@ class SettingsViewModel @Inject constructor(
     fun onRemoveFolder(folderUri: String) {
         viewModelScope.launch {
             settingsRepository.removeLibraryFolder(folderUri)
+        }
+    }
+
+    fun onLanguageSelected(language: String) {
+        viewModelScope.launch {
+            settingsRepository.setTargetLanguage(language)
         }
     }
 
