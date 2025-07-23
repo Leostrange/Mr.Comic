@@ -114,6 +114,8 @@ dependencies {
     // Feature modules - пока только shared
     implementation(project(":shared"))
     implementation(project(":core-ui"))
+    implementation(project(":core-data"))
+    implementation(project(":core-model"))
     implementation(project(":feature-library"))
     implementation(project(":feature-settings"))
     implementation(project(":feature-reader"))
