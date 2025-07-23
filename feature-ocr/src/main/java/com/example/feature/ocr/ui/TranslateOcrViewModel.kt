@@ -20,7 +20,45 @@ class TranslateOcrViewModel @Inject constructor(
         "en"
     )
 
+    val ocrEngine = settingsRepository.ocrEngine.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "Tesseract"
+    )
+
+    val translationProvider = settingsRepository.translationProvider.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "Google"
+    )
+
+    val translationApiKey = settingsRepository.translationApiKey.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        ""
+    )
+
     fun onLanguageSelected(language: String) {
-        viewModelScope.launch { settingsRepository.setTargetLanguage(language) }
+        viewModelScope.launch {
+            settingsRepository.setTargetLanguage(language)
+        }
+    }
+
+    fun onEngineSelected(engine: String) {
+        viewModelScope.launch {
+            settingsRepository.setOcrEngine(engine)
+        }
+    }
+
+    fun onProviderSelected(provider: String) {
+        viewModelScope.launch {
+            settingsRepository.setTranslationProvider(provider)
+        }
+    }
+
+    fun onApiKeyChanged(key: String) {
+        viewModelScope.launch {
+            settingsRepository.setTranslationApiKey(key)
+        }
     }
 }

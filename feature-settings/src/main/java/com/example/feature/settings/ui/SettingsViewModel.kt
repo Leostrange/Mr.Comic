@@ -7,7 +7,6 @@ import com.example.core.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,19 +19,24 @@ class SettingsViewModel @Inject constructor(
     val uiState = combine(
         settingsRepository.sortOrder,
         settingsRepository.libraryFolders,
-        settingsRepository.targetLanguage
-    ) { sortOrder, folders, language ->
+        settingsRepository.targetLanguage,
+        settingsRepository.ocrEngine,
+        settingsRepository.translationProvider,
+        settingsRepository.translationApiKey
+    ) { sortOrder, folders, language, engine, provider, apiKey ->
         SettingsUiState(
             sortOrder = sortOrder,
             libraryFolders = folders,
-            targetLanguage = language
+            targetLanguage = language,
+            ocrEngine = engine,
+            translationProvider = provider,
+            translationApiKey = apiKey
         )
-    }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = SettingsUiState()
-        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = SettingsUiState()
+    )
 
     fun onSortOrderSelected(sortOrder: SortOrder) {
         viewModelScope.launch {
@@ -55,6 +59,24 @@ class SettingsViewModel @Inject constructor(
     fun onLanguageSelected(language: String) {
         viewModelScope.launch {
             settingsRepository.setTargetLanguage(language)
+        }
+    }
+
+    fun onOcrEngineSelected(engine: String) {
+        viewModelScope.launch {
+            settingsRepository.setOcrEngine(engine)
+        }
+    }
+
+    fun onTranslationProviderSelected(provider: String) {
+        viewModelScope.launch {
+            settingsRepository.setTranslationProvider(provider)
+        }
+    }
+
+    fun onApiKeyChanged(key: String) {
+        viewModelScope.launch {
+            settingsRepository.setTranslationApiKey(key)
         }
     }
 
