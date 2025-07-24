@@ -7,10 +7,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.feature.reader.domain.BookReader
 import com.example.feature.reader.domain.BookReaderFactory
+import com.example.core.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -19,11 +22,30 @@ import javax.inject.Inject
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val readerFactory: BookReaderFactory,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState = _uiState.asStateFlow()
+
+    val lineSpacing = settingsRepository.readerLineSpacing.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.5f
+    )
+
+    val font = settingsRepository.readerFont.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "Sans"
+    )
+
+    val background = settingsRepository.readerBackground.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        0xFFFFFFFF
+    )
 
     private var bookReader: BookReader? = null
 

@@ -23,6 +23,7 @@ import com.example.mrcomic.ui.ThemesScreen
 import com.example.mrcomic.ui.TranslateOcrScreen
 import com.example.mrcomic.ui.OptimizationScreen
 import com.example.mrcomic.ui.LoginScreen
+import com.example.mrcomic.ui.PasswordResetScreen
 import com.example.mrcomic.ui.LanguageSelectScreen
 import com.example.mrcomic.ui.ReaderMenuScreen
 import com.example.mrcomic.ui.ReaderSettingsScreen
@@ -143,9 +144,13 @@ fun MrComicApp() {
         }
         composable("login") {
             LoginScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onForgotPassword = { navController.navigate("passwordReset") }
+            )
+        }
+        composable("passwordReset") {
+            PasswordResetScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable("languageSelect") {
