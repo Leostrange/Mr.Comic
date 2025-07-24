@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.mrcomic.shared.logging.Log
 
 data class LibraryUiState(
     val isLoading: Boolean = false,
@@ -61,6 +62,7 @@ class LibraryViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(isLoading = false, comics = comics)
                 }
             } catch (e: Exception) {
+                Log.e("LibraryViewModel", "Failed to load comics", e)
                 _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка")
             }
         }
@@ -70,7 +72,10 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = addComicUseCase(Comic(title = title, author = author, filePath = coverPath))) {
                 is Result.Success -> Unit
-                is Result.Error -> _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка добавления")
+                is Result.Error -> {
+                    Log.e("LibraryViewModel", "Failed to add comic", result.exception)
+                    _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка добавления")
+                }
             }
         }
     }
@@ -96,7 +101,10 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             when (val result = deleteComicUseCase(_uiState.value.pendingDeletionIds)) {
                 is Result.Success -> _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
-                is Result.Error -> _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка удаления")
+                is Result.Error -> {
+                    Log.e("LibraryViewModel", "Failed to delete comics", result.exception)
+                    _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка удаления")
+                }
             }
         }
     }

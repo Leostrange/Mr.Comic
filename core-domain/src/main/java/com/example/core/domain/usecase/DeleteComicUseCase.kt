@@ -2,6 +2,7 @@ package com.example.core.domain.usecase
 
 import com.example.core.data.repository.LibraryRepository
 import javax.inject.Inject
+import com.mrcomic.shared.logging.Log
 
 class DeleteComicUseCase @Inject constructor(
     private val repository: LibraryRepository
@@ -11,6 +12,7 @@ class DeleteComicUseCase @Inject constructor(
             comicIds.forEach { repository.deleteComic(it) }
             Result.Success(Unit)
         } catch (e: Exception) {
+            Log.e("DeleteComicUseCase", "Failed to delete comics", e)
             Result.Error(e)
         }
     }

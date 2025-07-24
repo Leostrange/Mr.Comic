@@ -6,6 +6,10 @@ import com.example.core.data.repository.CoverExtractor
 import com.example.core.data.repository.CoverExtractorImpl
 import com.example.core.data.repository.SettingsRepository
 import com.example.core.data.repository.SettingsRepositoryImpl
+import com.example.core.data.repository.UserRepository
+import com.example.core.data.repository.UserRepositoryImpl
+import com.example.core.data.repository.WhisperRepository
+import com.example.core.data.repository.WhisperRepositoryImpl
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -23,4 +27,10 @@ abstract class DataModule {
 
     @Binds
     abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
+
+    @Binds
+    abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+
+    @Binds
+    abstract fun bindWhisperRepository(impl: WhisperRepositoryImpl): WhisperRepository
 }
