@@ -65,6 +65,7 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-window-size = { group = "androidx.compose.material3", name = "material3-window-size-class" }
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
@@ -129,7 +130,7 @@ epublib-core-siegmann = { group = "nl.siegmann.epublib", name = "epublib-core", 
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4jAndroid" }
 
 [bundles]
-compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview"]
+compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview", "androidx-compose-window-size"]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
 test-unit = ["test-junit", "test-kotlinx-coroutines", "test-mockito-core", "test-mockito-kotlin", "test-truth"]
 

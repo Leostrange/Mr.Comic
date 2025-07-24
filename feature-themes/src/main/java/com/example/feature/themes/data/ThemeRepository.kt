@@ -12,6 +12,16 @@ class ThemeRepository @Inject constructor() {
         // This would parse the theme.json file
         return mapOf("primaryColor" to "#000000") // Placeholder
     }
+
+    fun getThemePreviewPath(themeName: String): String {
+        return "themes_store/$themeName/preview.png"
+    }
+
+    fun downloadThemeFromUrl(url: String): String {
+        // Stub: in a real implementation this would download and store the theme
+        // Returning a fake theme name to indicate success
+        return "imported_theme"
+    }
 }
 
 
