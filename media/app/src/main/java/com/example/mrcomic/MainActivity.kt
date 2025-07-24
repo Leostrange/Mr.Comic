@@ -29,6 +29,7 @@ import com.example.mrcomic.ui.ReaderMenuScreen
 import com.example.mrcomic.ui.ReaderSettingsScreen
 import com.example.mrcomic.ui.AccountScreen
 import com.example.mrcomic.ui.OcrCropScreen
+import com.example.feature.themes.ui.ThemeEditorScreen
 import com.example.mrcomic.ui.theme.MrComicTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -123,9 +124,14 @@ fun MrComicApp() {
         }
         composable("themes") {
             ThemesScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onEditTheme = { name -> navController.navigate("themeEditor/$name") }
+            )
+        }
+        composable("themeEditor/{name}") { backStackEntry ->
+            ThemeEditorScreen(
+                themeName = backStackEntry.arguments?.getString("name"),
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable("translateOcr") {

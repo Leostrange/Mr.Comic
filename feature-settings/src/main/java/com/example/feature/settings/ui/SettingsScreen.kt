@@ -74,7 +74,10 @@ private fun SettingsScreenContent(
 private fun SortOrderSetting(currentSortOrder: SortOrder, onSortOrderSelected: (SortOrder) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(Modifier
+        .fillMaxWidth()
+        .clickable { expanded = true }
+        .padding(16.dp)) {
         Text("Default Sort Order")
         Text(currentSortOrder.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() })
 
@@ -135,7 +138,10 @@ private fun LanguageSetting(currentLanguage: String, onLanguageSelected: (String
         "ru" to "\uD83C\uDDF7\uD83C\uDDFA"
     )
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(Modifier
+        .fillMaxWidth()
+        .clickable { expanded = true }
+        .padding(16.dp)) {
         Text("Preferred Language")
         Text("${flags[currentLanguage] ?: ""} ${currentLanguage.uppercase()}")
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -154,7 +160,10 @@ private fun OcrEngineSetting(currentEngine: String, onEngineSelected: (String) -
     var expanded by remember { mutableStateOf(false) }
     val engines = listOf("Tesseract", "MLKit")
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(Modifier
+        .fillMaxWidth()
+        .clickable { expanded = true }
+        .padding(16.dp)) {
         Text("OCR Engine")
         Text(currentEngine)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -173,7 +182,10 @@ private fun TranslationProviderSetting(currentProvider: String, onProviderSelect
     var expanded by remember { mutableStateOf(false) }
     val providers = listOf("Google", "DeepL")
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(Modifier
+        .fillMaxWidth()
+        .clickable { expanded = true }
+        .padding(16.dp)) {
         Text("Translation Provider")
         Text(currentProvider)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
