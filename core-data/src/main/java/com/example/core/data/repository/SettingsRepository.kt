@@ -1,44 +1,3 @@
-package com.example.core.data.repository
-
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import com.example.core.model.SortOrder
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
-import javax.inject.Inject
-
-interface SettingsRepository {
-    val sortOrder: Flow<SortOrder>
-    suspend fun setSortOrder(sortOrder: SortOrder)
-
-    val searchQuery: Flow<String>
-    suspend fun setSearchQuery(query: String)
-
-    val libraryFolders: Flow<Set<String>>
-    suspend fun addLibraryFolder(folderUri: String)
-    suspend fun removeLibraryFolder(folderUri: String)
-
-    val targetLanguage: Flow<String>
-    suspend fun setTargetLanguage(language: String)
-
-    val ocrEngine: Flow<String>
-    suspend fun setOcrEngine(engine: String)
-
-    val translationProvider: Flow<String>
-    suspend fun setTranslationProvider(provider: String)
-
-    val translationApiKey: Flow<String>
-    suspend fun setTranslationApiKey(key: String)
-
-    val performanceMode: Flow<Boolean>
-    suspend fun setPerformanceMode(enabled: Boolean)
-
-    suspend fun clearCache()
-}
-
 class SettingsRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) : SettingsRepository {
@@ -77,15 +36,15 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun addLibraryFolder(folderUri: String) {
         dataStore.edit {
-            val currentFolders = it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
-            it[PreferencesKeys.LIBRARY_FOLDERS] = currentFolders + folderUri
+            val current = it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
+            it[PreferencesKeys.LIBRARY_FOLDERS] = current + folderUri
         }
     }
 
     override suspend fun removeLibraryFolder(folderUri: String) {
         dataStore.edit {
-            val currentFolders = it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
-            it[PreferencesKeys.LIBRARY_FOLDERS] = currentFolders - folderUri
+            val current = it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
+            it[PreferencesKeys.LIBRARY_FOLDERS] = current - folderUri
         }
     }
 

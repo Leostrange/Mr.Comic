@@ -3,6 +3,7 @@ package com.example.feature.ocr.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.data.repository.SettingsRepository
+import com.example.core.data.repository.WhisperRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -11,7 +12,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class TranslateOcrViewModel @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val whisperRepository: WhisperRepository
 ) : ViewModel() {
 
     val targetLanguage = settingsRepository.targetLanguage.stateIn(
@@ -38,6 +40,12 @@ class TranslateOcrViewModel @Inject constructor(
         ""
     )
 
+    val isWhisperModelAvailable = whisperRepository.isModelDownloaded.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        false
+    )
+
     fun onLanguageSelected(language: String) {
         viewModelScope.launch {
             settingsRepository.setTargetLanguage(language)
@@ -59,6 +67,12 @@ class TranslateOcrViewModel @Inject constructor(
     fun onApiKeyChanged(key: String) {
         viewModelScope.launch {
             settingsRepository.setTranslationApiKey(key)
+        }
+    }
+
+    fun downloadWhisperModel() {
+        viewModelScope.launch {
+            whisperRepository.downloadModel()
         }
     }
 }
