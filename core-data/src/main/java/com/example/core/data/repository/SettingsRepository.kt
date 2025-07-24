@@ -54,8 +54,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val PERFORMANCE_MODE = stringPreferencesKey("performance_mode")
     }
 
-    override val sortOrder: Flow<SortOrder> = dataStore.data.map { preferences ->
-        val sortOrderName = preferences[PreferencesKeys.SORT_ORDER] ?: SortOrder.DATE_ADDED_DESC.name
+    override val sortOrder: Flow<SortOrder> = dataStore.data.map {
+        val sortOrderName = it[PreferencesKeys.SORT_ORDER] ?: SortOrder.DATE_ADDED_DESC.name
         SortOrder.valueOf(sortOrderName)
     }
 
