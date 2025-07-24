@@ -66,139 +66,106 @@ class SettingsRepositoryImpl @Inject constructor(
         val READER_BACKGROUND = stringPreferencesKey("reader_background")
     }
 
-    override val sortOrder: Flow<SortOrder> = dataStore.data
-        .map { preferences ->
-            val sortOrderName = preferences[PreferencesKeys.SORT_ORDER] ?: SortOrder.DATE_ADDED_DESC.name
-            SortOrder.valueOf(sortOrderName)
-        }
+    override val sortOrder: Flow<SortOrder> = dataStore.data.map {
+        val sortOrderName = it[PreferencesKeys.SORT_ORDER] ?: SortOrder.DATE_ADDED_DESC.name
+        SortOrder.valueOf(sortOrderName)
+    }
 
     override suspend fun setSortOrder(sortOrder: SortOrder) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SORT_ORDER] = sortOrder.name
-        }
+        dataStore.edit { it[PreferencesKeys.SORT_ORDER] = sortOrder.name }
     }
 
-    override val searchQuery: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.SEARCH_QUERY] ?: ""
-        }
+    override val searchQuery: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.SEARCH_QUERY] ?: ""
+    }
 
     override suspend fun setSearchQuery(query: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SEARCH_QUERY] = query
-        }
+        dataStore.edit { it[PreferencesKeys.SEARCH_QUERY] = query }
     }
 
-    override val libraryFolders: Flow<Set<String>> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
-        }
-
-    override val targetLanguage: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.TARGET_LANGUAGE] ?: "en"
-        }
-
-    override val ocrEngine: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.OCR_ENGINE] ?: "Tesseract"
-        }
-
-    override val translationProvider: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_PROVIDER] ?: "Google"
-        }
-
-    override val translationApiKey: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_API_KEY] ?: ""
-        }
-
-    override val performanceMode: Flow<Boolean> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.PERFORMANCE_MODE]?.toBoolean() ?: false
-        }
-
-    override val readerLineSpacing: Flow<Float> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.READER_LINE_SPACING]?.toFloat() ?: 1.5f
-        }
-
-    override val readerFont: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.READER_FONT] ?: "Sans"
-        }
-
-    override val readerBackground: Flow<Long> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.READER_BACKGROUND]?.toLong() ?: 0xFFFFFFFF
-        }
+    override val libraryFolders: Flow<Set<String>> = dataStore.data.map {
+        it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
+    }
 
     override suspend fun addLibraryFolder(folderUri: String) {
-        dataStore.edit { preferences ->
-            val currentFolders = preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
-            preferences[PreferencesKeys.LIBRARY_FOLDERS] = currentFolders + folderUri
+        dataStore.edit {
+            val current = it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
+            it[PreferencesKeys.LIBRARY_FOLDERS] = current + folderUri
         }
     }
 
     override suspend fun removeLibraryFolder(folderUri: String) {
-        dataStore.edit { preferences ->
-            val currentFolders = preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
-            preferences[PreferencesKeys.LIBRARY_FOLDERS] = currentFolders - folderUri
+        dataStore.edit {
+            val current = it[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
+            it[PreferencesKeys.LIBRARY_FOLDERS] = current - folderUri
         }
+    }
+
+    override val targetLanguage: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.TARGET_LANGUAGE] ?: "en"
     }
 
     override suspend fun setTargetLanguage(language: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TARGET_LANGUAGE] = language
-        }
+        dataStore.edit { it[PreferencesKeys.TARGET_LANGUAGE] = language }
+    }
+
+    override val ocrEngine: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.OCR_ENGINE] ?: "Tesseract"
     }
 
     override suspend fun setOcrEngine(engine: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.OCR_ENGINE] = engine
-        }
+        dataStore.edit { it[PreferencesKeys.OCR_ENGINE] = engine }
+    }
+
+    override val translationProvider: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.TRANSLATION_PROVIDER] ?: "Google"
     }
 
     override suspend fun setTranslationProvider(provider: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_PROVIDER] = provider
-        }
+        dataStore.edit { it[PreferencesKeys.TRANSLATION_PROVIDER] = provider }
+    }
+
+    override val translationApiKey: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.TRANSLATION_API_KEY] ?: ""
     }
 
     override suspend fun setTranslationApiKey(key: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_API_KEY] = key
-        }
+        dataStore.edit { it[PreferencesKeys.TRANSLATION_API_KEY] = key }
+    }
+
+    override val performanceMode: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.PERFORMANCE_MODE]?.toBoolean() ?: false
     }
 
     override suspend fun setPerformanceMode(enabled: Boolean) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PERFORMANCE_MODE] = enabled.toString()
-        }
+        dataStore.edit { it[PreferencesKeys.PERFORMANCE_MODE] = enabled.toString() }
+    }
+
+    override val readerLineSpacing: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_LINE_SPACING]?.toFloat() ?: 1.5f
     }
 
     override suspend fun setReaderLineSpacing(spacing: Float) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.READER_LINE_SPACING] = spacing.toString()
-        }
+        dataStore.edit { it[PreferencesKeys.READER_LINE_SPACING] = spacing.toString() }
+    }
+
+    override val readerFont: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.READER_FONT] ?: "Sans"
     }
 
     override suspend fun setReaderFont(font: String) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.READER_FONT] = font
-        }
+        dataStore.edit { it[PreferencesKeys.READER_FONT] = font }
+    }
+
+    override val readerBackground: Flow<Long> = dataStore.data.map {
+        it[PreferencesKeys.READER_BACKGROUND]?.toLong() ?: 0xFFFFFFFF
     }
 
     override suspend fun setReaderBackground(color: Long) {
-        dataStore.edit { preferences ->
-            preferences[PreferencesKeys.READER_BACKGROUND] = color.toString()
-        }
+        dataStore.edit { it[PreferencesKeys.READER_BACKGROUND] = color.toString() }
     }
 
     override suspend fun clearCache() {
-        dataStore.edit { preferences ->
-            preferences.clear()
-        }
+        dataStore.edit { it.clear() }
     }
 }
