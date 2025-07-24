@@ -1,3 +1,4 @@
+```kotlin
 package com.example.feature.settings.ui
 
 import androidx.compose.runtime.Immutable
@@ -10,5 +11,6 @@ data class SettingsUiState(
     val targetLanguage: String = "en",
     val ocrEngine: String = "Tesseract",
     val translationProvider: String = "Google",
-    val translationApiKey: String = ""
+    val translationApiKey: String = "",
+    val performanceMode: Boolean = false
 )
