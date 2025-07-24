@@ -52,7 +52,7 @@ fun OcrCropScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .background(Color.Black)
+                    .background(MaterialTheme.colorScheme.background)
             ) {
                 Image(
                     bitmap = imageBitmap.asImageBitmap(),
@@ -91,7 +91,7 @@ fun OcrCropScreen(
                             modifier = Modifier
                                 .offset(x = cropRect.left.dp, y = cropRect.top.dp)
                                 .size(cropRect.width().dp, cropRect.height().dp)
-                                .border(2.dp, Color.Red)
+                                .border(2.dp, MaterialTheme.colorScheme.primary)
                         )
                     }
                 }

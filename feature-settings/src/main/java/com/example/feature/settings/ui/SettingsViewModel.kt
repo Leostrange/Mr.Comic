@@ -19,9 +19,22 @@ class SettingsViewModel @Inject constructor(
 
     val uiState = combine(
         settingsRepository.sortOrder,
-        settingsRepository.libraryFolders
-    ) { sortOrder, folders ->
-        SettingsUiState(sortOrder = sortOrder, libraryFolders = folders)
+        settingsRepository.libraryFolders,
+        settingsRepository.targetLanguage,
+        settingsRepository.ocrEngine,
+        settingsRepository.translationProvider,
+        settingsRepository.translationApiKey,
+        settingsRepository.performanceMode
+    ) { sortOrder, folders, language, engine, provider, apiKey, perfMode ->
+        SettingsUiState(
+            sortOrder = sortOrder,
+            libraryFolders = folders,
+            targetLanguage = language,
+            ocrEngine = engine,
+            translationProvider = provider,
+            translationApiKey = apiKey,
+            performanceMode = perfMode
+        )
     }
         .stateIn(
             scope = viewModelScope,
@@ -44,6 +57,36 @@ class SettingsViewModel @Inject constructor(
     fun onRemoveFolder(folderUri: String) {
         viewModelScope.launch {
             settingsRepository.removeLibraryFolder(folderUri)
+        }
+    }
+
+    fun onLanguageSelected(language: String) {
+        viewModelScope.launch {
+            settingsRepository.setTargetLanguage(language)
+        }
+    }
+
+    fun onOcrEngineSelected(engine: String) {
+        viewModelScope.launch {
+            settingsRepository.setOcrEngine(engine)
+        }
+    }
+
+    fun onTranslationProviderSelected(provider: String) {
+        viewModelScope.launch {
+            settingsRepository.setTranslationProvider(provider)
+        }
+    }
+
+    fun onApiKeyChanged(key: String) {
+        viewModelScope.launch {
+            settingsRepository.setTranslationApiKey(key)
+        }
+    }
+
+    fun onPerformanceModeChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setPerformanceMode(enabled)
         }
     }
 
