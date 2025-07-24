@@ -195,7 +195,7 @@ fun ReaderScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { showControls = !showControls }
@@ -212,7 +212,7 @@ fun ReaderScreen(
                 title = {
                     Text(
                         text = comicTitle,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         style = MaterialTheme.typography.titleMedium
                     )
                 },
@@ -220,7 +220,7 @@ fun ReaderScreen(
                     IconButton(onClick = onNavigateBack) {
                         Text(
                             text = "←",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
@@ -229,27 +229,27 @@ fun ReaderScreen(
                     IconButton(onClick = { showSearchDialog = true }) { // Кнопка поиска
                         Text(
                             text = "🔍",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
                     IconButton(onClick = { showGoToPageDialog = true }) { // Кнопка "Перейти к странице"
                         Text(
                             text = "📄",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
                     IconButton(onClick = { /* TODO: Настройки */ }) {
                         Text(
                             text = "⚙️",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black.copy(alpha = 0.8f)
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
                 )
             )
         }
@@ -262,7 +262,7 @@ fun ReaderScreen(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(8.dp)
-                        .background(Color.DarkGray)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .transformable(state = state)
                         .graphicsLayer(
                             scaleX = scale,
@@ -295,7 +295,7 @@ fun ReaderScreen(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(horizontal = 8.dp) // Добавляем горизонтальный паддинг
-                        .background(Color.DarkGray)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                         .transformable(state = state)
                         .graphicsLayer(
                             scaleX = scale,
@@ -370,7 +370,7 @@ fun ReaderScreen(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(horizontal = 8.dp) // Убираем вертикальный паддинг для вебтуна
-                        .background(Color.Black) // Черный фон для вебтуна
+                        .background(MaterialTheme.colorScheme.background)
                         .transformable(state = state)
                         .graphicsLayer(
                             scaleX = scale,
@@ -447,7 +447,7 @@ fun ReaderScreen(
             exit = slideOutVertically { it }
         ) {
             BottomAppBar(
-                containerColor = Color.Black.copy(alpha = 0.8f)
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
             ) {
                 // Прогресс бар
                 if (totalPages > 0) {
@@ -463,7 +463,7 @@ fun ReaderScreen(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Стр. ${currentPage + 1} / $totalPages",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
@@ -491,12 +491,12 @@ fun ReaderScreen(
                     ) {
                         Text(
                             text = "${currentPage + 1} / $totalPages",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Text(
                             text = "${((currentPage + 1) * 100 / totalPages)}%",
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall
                         )
                     }

@@ -26,6 +26,9 @@ class ThemesViewModel @Inject constructor(
     private val _availableThemes = MutableStateFlow<List<String>>(emptyList())
     val availableThemes: StateFlow<List<String>> = _availableThemes.asStateFlow()
 
+    private val _importResult = MutableStateFlow<String?>(null)
+    val importResult: StateFlow<String?> = _importResult.asStateFlow()
+
     init {
         viewModelScope.launch {
             _availableThemes.value = themeRepository.getAvailableThemes()
@@ -44,6 +47,17 @@ class ThemesViewModel @Inject constructor(
             // This would involve loading the theme.json and applying its properties
             // For now, we'll just update the selected theme name
             // _selectedTheme.value = AppTheme.CUSTOM // A new enum value might be needed
+        }
+    }
+
+    fun getThemePreviewPath(themeName: String): String {
+        return themeRepository.getThemePreviewPath(themeName)
+    }
+
+    fun importTheme(url: String) {
+        viewModelScope.launch {
+            _importResult.value = themeRepository.downloadThemeFromUrl(url)
+            _availableThemes.value = themeRepository.getAvailableThemes()
         }
     }
 }

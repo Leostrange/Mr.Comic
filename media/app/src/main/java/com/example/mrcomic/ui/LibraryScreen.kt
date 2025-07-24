@@ -250,16 +250,23 @@ fun ComicCard(
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(Icons.Default.Book, contentDescription = "Обложка", modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(3f / 4f)
-                    .clip(RoundedCornerShape(8.dp)),
-                    tint = Color.Gray
+                Icon(
+                    Icons.Default.Book,
+                    contentDescription = "Обложка",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(3f / 4f)
+                        .clip(RoundedCornerShape(8.dp)),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(comic.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(comic.author, style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Text(
+                    comic.author,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text("${comic.currentPage}/${comic.pageCount}", style = MaterialTheme.typography.bodySmall)
                     IconButton(
@@ -269,7 +276,8 @@ fun ComicCard(
                         Icon(
                             imageVector = if (comic.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = if (comic.isFavorite) "Убрать из избранного" else "В избранное",
-                            tint = if (comic.isFavorite) Color.Red else Color.Gray
+                            tint = if (comic.isFavorite) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

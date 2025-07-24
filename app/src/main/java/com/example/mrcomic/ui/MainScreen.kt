@@ -93,7 +93,7 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
                         1 -> CloudScreen()
                         2 -> AnnotationsScreen()
                         3 -> PluginsScreen()
-                        4 -> ThemesScreen()
+                        4 -> ThemesScreen(onNavigateBack = {}, onEditTheme = {})
                     }
                 }
             }

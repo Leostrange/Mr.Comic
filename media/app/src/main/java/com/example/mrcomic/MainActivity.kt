@@ -23,11 +23,13 @@ import com.example.mrcomic.ui.ThemesScreen
 import com.example.mrcomic.ui.TranslateOcrScreen
 import com.example.mrcomic.ui.OptimizationScreen
 import com.example.mrcomic.ui.LoginScreen
+import com.example.mrcomic.ui.PasswordResetScreen
 import com.example.mrcomic.ui.LanguageSelectScreen
 import com.example.mrcomic.ui.ReaderMenuScreen
 import com.example.mrcomic.ui.ReaderSettingsScreen
 import com.example.mrcomic.ui.AccountScreen
 import com.example.mrcomic.ui.OcrCropScreen
+import com.example.feature.themes.ui.ThemeEditorScreen
 import com.example.mrcomic.ui.theme.MrComicTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -122,9 +124,14 @@ fun MrComicApp() {
         }
         composable("themes") {
             ThemesScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onEditTheme = { name -> navController.navigate("themeEditor/$name") }
+            )
+        }
+        composable("themeEditor/{name}") { backStackEntry ->
+            ThemeEditorScreen(
+                themeName = backStackEntry.arguments?.getString("name"),
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable("translateOcr") {
@@ -143,9 +150,13 @@ fun MrComicApp() {
         }
         composable("login") {
             LoginScreen(
-                onNavigateBack = {
-                    navController.popBackStack()
-                }
+                onNavigateBack = { navController.popBackStack() },
+                onForgotPassword = { navController.navigate("passwordReset") }
+            )
+        }
+        composable("passwordReset") {
+            PasswordResetScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable("languageSelect") {
