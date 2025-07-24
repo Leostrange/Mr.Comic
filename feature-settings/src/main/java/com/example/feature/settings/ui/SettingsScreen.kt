@@ -96,7 +96,11 @@ private fun SortOrderSetting(currentSortOrder: SortOrder, onSortOrderSelected: (
 }
 
 @Composable
-private fun LibraryFoldersSetting(folders: Set<String>, onAddFolder: (String) -> Unit, onRemoveFolder: (String) -> Unit) {
+private fun LibraryFoldersSetting(
+    folders: Set<String>,
+    onAddFolder: (String) -> Unit,
+    onRemoveFolder: (String) -> Unit
+) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
@@ -129,9 +133,7 @@ private fun LibraryFoldersSetting(folders: Set<String>, onAddFolder: (String) ->
 private fun LanguageSetting(currentLanguage: String, onLanguageSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val languages = listOf("en", "es", "fr", "de", "ru")
-    val flags = mapOf(
-        "en" to "🇬🇧", "es" to "🇪🇸", "fr" to "🇫🇷", "de" to "🇩🇪", "ru" to "🇷🇺"
-    )
+    val flags = mapOf("en" to "🇬🇧", "es" to "🇪🇸", "fr" to "🇫🇷", "de" to "🇩🇪", "ru" to "🇷🇺")
 
     Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("Preferred Language")
@@ -159,7 +161,6 @@ private fun OcrEngineSetting(currentEngine: String, onEngineSelected: (String) -
     Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("OCR Engine")
         Text(currentEngine)
-
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             engines.forEach { engine ->
                 DropdownMenuItem(
@@ -222,9 +223,6 @@ private fun PerformanceModeSetting(enabled: Boolean, onEnabledChanged: (Boolean)
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text("Performance Mode", modifier = Modifier.weight(1f))
-        Switch(
-            checked = enabled,
-            onCheckedChange = onEnabledChanged
-        )
+        Switch(checked = enabled, onCheckedChange = onEnabledChanged)
     }
 }
