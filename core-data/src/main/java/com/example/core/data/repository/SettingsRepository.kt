@@ -82,31 +82,6 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
         }
 
-    override val targetLanguage: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.TARGET_LANGUAGE] ?: "en"
-        }
-
-    override val ocrEngine: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.OCR_ENGINE] ?: "Tesseract"
-        }
-
-    override val translationProvider: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_PROVIDER] ?: "Google"
-        }
-
-    override val translationApiKey: Flow<String> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.TRANSLATION_API_KEY] ?: ""
-        }
-
-    override val performanceMode: Flow<Boolean> = dataStore.data
-        .map { preferences ->
-            preferences[PreferencesKeys.PERFORMANCE_MODE]?.toBoolean() ?: false
-        }
-
     override suspend fun addLibraryFolder(folderUri: String) {
         dataStore.edit { preferences ->
             val currentFolders = preferences[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
@@ -121,11 +96,21 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override val targetLanguage: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.TARGET_LANGUAGE] ?: "en"
+        }
+
     override suspend fun setTargetLanguage(language: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TARGET_LANGUAGE] = language
         }
     }
+
+    override val ocrEngine: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.OCR_ENGINE] ?: "Tesseract"
+        }
 
     override suspend fun setOcrEngine(engine: String) {
         dataStore.edit { preferences ->
@@ -133,17 +118,32 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override val translationProvider: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.TRANSLATION_PROVIDER] ?: "Google"
+        }
+
     override suspend fun setTranslationProvider(provider: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TRANSLATION_PROVIDER] = provider
         }
     }
 
+    override val translationApiKey: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.TRANSLATION_API_KEY] ?: ""
+        }
+
     override suspend fun setTranslationApiKey(key: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TRANSLATION_API_KEY] = key
         }
     }
+
+    override val performanceMode: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.PERFORMANCE_MODE]?.toBoolean() ?: false
+        }
 
     override suspend fun setPerformanceMode(enabled: Boolean) {
         dataStore.edit { preferences ->
