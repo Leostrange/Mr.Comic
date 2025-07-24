@@ -7,7 +7,6 @@ import com.example.core.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,22 +22,23 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.targetLanguage,
         settingsRepository.ocrEngine,
         settingsRepository.translationProvider,
-        settingsRepository.translationApiKey
-    ) { sortOrder, folders, language, engine, provider, apiKey ->
+        settingsRepository.translationApiKey,
+        settingsRepository.performanceMode
+    ) { sortOrder, folders, language, engine, provider, apiKey, perfMode ->
         SettingsUiState(
             sortOrder = sortOrder,
             libraryFolders = folders,
             targetLanguage = language,
             ocrEngine = engine,
             translationProvider = provider,
-            translationApiKey = apiKey
+            translationApiKey = apiKey,
+            performanceMode = perfMode
         )
-    }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = SettingsUiState()
-        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = SettingsUiState()
+    )
 
     fun onSortOrderSelected(sortOrder: SortOrder) {
         viewModelScope.launch {
@@ -79,6 +79,12 @@ class SettingsViewModel @Inject constructor(
     fun onApiKeyChanged(key: String) {
         viewModelScope.launch {
             settingsRepository.setTranslationApiKey(key)
+        }
+    }
+
+    fun onPerformanceModeChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setPerformanceMode(enabled)
         }
     }
 
