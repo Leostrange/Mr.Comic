@@ -52,9 +52,7 @@ private fun SettingsScreenContent(
     onPerformanceModeChanged: (Boolean) -> Unit,
     onClearCache: () -> Unit
 ) {
-    Scaffold(
-        topBar = { MrComicTopAppBar(title = "Settings") }
-    ) { paddingValues ->
+    Scaffold(topBar = { MrComicTopAppBar(title = "Settings") }) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             item { SortOrderSetting(uiState.sortOrder, onSortOrderSelected) }
             item { LibraryFoldersSetting(uiState.libraryFolders, onAddFolder, onRemoveFolder) }
@@ -75,10 +73,7 @@ private fun SettingsScreenContent(
 }
 
 @Composable
-private fun SortOrderSetting(
-    currentSortOrder: SortOrder,
-    onSortOrderSelected: (SortOrder) -> Unit
-) {
+private fun SortOrderSetting(currentSortOrder: SortOrder, onSortOrderSelected: (SortOrder) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
@@ -103,11 +98,7 @@ private fun SortOrderSetting(
 }
 
 @Composable
-private fun LibraryFoldersSetting(
-    folders: Set<String>,
-    onAddFolder: (String) -> Unit,
-    onRemoveFolder: (String) -> Unit
-) {
+private fun LibraryFoldersSetting(folders: Set<String>, onAddFolder: (String) -> Unit, onRemoveFolder: (String) -> Unit) {
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree(),
