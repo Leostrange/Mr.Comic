@@ -55,6 +55,7 @@ fun ReaderScreen(
     filePath: String
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val bgColor by viewModel.background.collectAsState()
 
     LaunchedEffect(filePath) {
         viewModel.loadComic(filePath)
@@ -64,7 +65,8 @@ fun ReaderScreen(
         uiState = uiState,
         onNextPage = viewModel::goToNextPage,
         onPreviousPage = viewModel::goToPreviousPage,
-        onSetReadingMode = viewModel::setReadingMode
+        onSetReadingMode = viewModel::setReadingMode,
+        backgroundColor = Color(bgColor)
     )
 }
 
@@ -81,7 +83,8 @@ private fun ReaderScreenContent(
     uiState: ReaderUiState,
     onNextPage: () -> Unit,
     onPreviousPage: () -> Unit,
-    onSetReadingMode: (ReadingMode) -> Unit
+    onSetReadingMode: (ReadingMode) -> Unit,
+    backgroundColor: Color
 ) {
     Scaffold(
         bottomBar = {
@@ -107,7 +110,8 @@ private fun ReaderScreenContent(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .background(backgroundColor),
             contentAlignment = Alignment.Center
         ) {
             when (uiState.readingMode) {
