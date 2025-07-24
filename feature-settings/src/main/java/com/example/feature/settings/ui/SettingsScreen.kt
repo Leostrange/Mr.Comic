@@ -77,28 +77,20 @@ private fun SortOrderSetting(currentSortOrder: SortOrder, onSortOrderSelected: (
     Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("Default Sort Order")
         Text(currentSortOrder.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() })
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(
-                text = { Text("By Title (A-Z)") },
-                onClick = {
-                    onSortOrderSelected(SortOrder.TITLE_ASC)
-                    expanded = false
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("By Title (Z-A)") },
-                onClick = {
-                    onSortOrderSelected(SortOrder.TITLE_DESC)
-                    expanded = false
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("By Date Added") },
-                onClick = {
-                    onSortOrderSelected(SortOrder.DATE_ADDED_DESC)
-                    expanded = false
-                }
-            )
+            DropdownMenuItem({ Text("By Title (A-Z)") }) {
+                onSortOrderSelected(SortOrder.TITLE_ASC)
+                expanded = false
+            }
+            DropdownMenuItem({ Text("By Title (Z-A)") }) {
+                onSortOrderSelected(SortOrder.TITLE_DESC)
+                expanded = false
+            }
+            DropdownMenuItem({ Text("By Date Added") }) {
+                onSortOrderSelected(SortOrder.DATE_ADDED_DESC)
+                expanded = false
+            }
         }
     }
 }
@@ -148,13 +140,10 @@ private fun LanguageSetting(currentLanguage: String, onLanguageSelected: (String
         Text("${flags[currentLanguage] ?: ""} ${currentLanguage.uppercase()}")
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages.forEach { lang ->
-                DropdownMenuItem(
-                    text = { Text("${flags[lang] ?: ""} ${lang.uppercase()}") },
-                    onClick = {
-                        onLanguageSelected(lang)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem({ Text("${flags[lang] ?: ""} ${lang.uppercase()}") }) {
+                    onLanguageSelected(lang)
+                    expanded = false
+                }
             }
         }
     }
@@ -170,13 +159,10 @@ private fun OcrEngineSetting(currentEngine: String, onEngineSelected: (String) -
         Text(currentEngine)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             engines.forEach { engine ->
-                DropdownMenuItem(
-                    text = { Text(engine) },
-                    onClick = {
-                        onEngineSelected(engine)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem({ Text(engine) }) {
+                    onEngineSelected(engine)
+                    expanded = false
+                }
             }
         }
     }
@@ -192,13 +178,10 @@ private fun TranslationProviderSetting(currentProvider: String, onProviderSelect
         Text(currentProvider)
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             providers.forEach { provider ->
-                DropdownMenuItem(
-                    text = { Text(provider) },
-                    onClick = {
-                        onProviderSelected(provider)
-                        expanded = false
-                    }
-                )
+                DropdownMenuItem({ Text(provider) }) {
+                    onProviderSelected(provider)
+                    expanded = false
+                }
             }
         }
     }

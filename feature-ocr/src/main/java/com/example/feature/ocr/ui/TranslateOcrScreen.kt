@@ -21,6 +21,8 @@ fun TranslateOcrContent(
 ) {
     var textToTranslate by remember { mutableStateOf(recognizedText) }
     var targetLanguage by remember { mutableStateOf(currentLanguage) }
+    var expanded by remember { mutableStateOf(false) }
+    val languages = listOf("en", "es", "fr", "de", "ru")
 
     Column(
         modifier = Modifier
@@ -40,8 +42,6 @@ fun TranslateOcrContent(
 
         Text("Целевой язык")
         Spacer(modifier = Modifier.height(8.dp))
-        var expanded by remember { mutableStateOf(false) }
-        val languages = listOf("en", "es", "fr", "de", "ru")
         Box {
             TextField(
                 value = targetLanguage,

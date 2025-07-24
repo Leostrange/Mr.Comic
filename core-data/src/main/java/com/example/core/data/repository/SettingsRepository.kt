@@ -1,3 +1,53 @@
+package com.example.core.data.repository
+
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.example.core.model.SortOrder
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import javax.inject.Inject
+
+interface SettingsRepository {
+    val sortOrder: Flow<SortOrder>
+    suspend fun setSortOrder(sortOrder: SortOrder)
+
+    val searchQuery: Flow<String>
+    suspend fun setSearchQuery(query: String)
+
+    val libraryFolders: Flow<Set<String>>
+    suspend fun addLibraryFolder(folderUri: String)
+    suspend fun removeLibraryFolder(folderUri: String)
+
+    val targetLanguage: Flow<String>
+    suspend fun setTargetLanguage(language: String)
+
+    val ocrEngine: Flow<String>
+    suspend fun setOcrEngine(engine: String)
+
+    val translationProvider: Flow<String>
+    suspend fun setTranslationProvider(provider: String)
+
+    val translationApiKey: Flow<String>
+    suspend fun setTranslationApiKey(key: String)
+
+    val performanceMode: Flow<Boolean>
+    suspend fun setPerformanceMode(enabled: Boolean)
+
+    val readerLineSpacing: Flow<Float>
+    suspend fun setReaderLineSpacing(spacing: Float)
+
+    val readerFont: Flow<String>
+    suspend fun setReaderFont(font: String)
+
+    val readerBackground: Flow<Long>
+    suspend fun setReaderBackground(color: Long)
+
+    suspend fun clearCache()
+}
+
 class SettingsRepositoryImpl @Inject constructor(
     private val dataStore: DataStore<Preferences>
 ) : SettingsRepository {
@@ -11,6 +61,9 @@ class SettingsRepositoryImpl @Inject constructor(
         val TRANSLATION_PROVIDER = stringPreferencesKey("translation_provider")
         val TRANSLATION_API_KEY = stringPreferencesKey("translation_api_key")
         val PERFORMANCE_MODE = stringPreferencesKey("performance_mode")
+        val READER_LINE_SPACING = stringPreferencesKey("reader_line_spacing")
+        val READER_FONT = stringPreferencesKey("reader_font")
+        val READER_BACKGROUND = stringPreferencesKey("reader_background")
     }
 
     override val sortOrder: Flow<SortOrder> = dataStore.data.map {
@@ -86,6 +139,30 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override suspend fun setPerformanceMode(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.PERFORMANCE_MODE] = enabled.toString() }
+    }
+
+    override val readerLineSpacing: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_LINE_SPACING]?.toFloat() ?: 1.5f
+    }
+
+    override suspend fun setReaderLineSpacing(spacing: Float) {
+        dataStore.edit { it[PreferencesKeys.READER_LINE_SPACING] = spacing.toString() }
+    }
+
+    override val readerFont: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.READER_FONT] ?: "Sans"
+    }
+
+    override suspend fun setReaderFont(font: String) {
+        dataStore.edit { it[PreferencesKeys.READER_FONT] = font }
+    }
+
+    override val readerBackground: Flow<Long> = dataStore.data.map {
+        it[PreferencesKeys.READER_BACKGROUND]?.toLong() ?: 0xFFFFFFFF
+    }
+
+    override suspend fun setReaderBackground(color: Long) {
+        dataStore.edit { it[PreferencesKeys.READER_BACKGROUND] = color.toString() }
     }
 
     override suspend fun clearCache() {
