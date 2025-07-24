@@ -74,7 +74,12 @@ private fun SettingsScreenContent(
 private fun SortOrderSetting(currentSortOrder: SortOrder, onSortOrderSelected: (SortOrder) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
         Text("Default Sort Order")
         Text(currentSortOrder.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() })
 
@@ -135,7 +140,12 @@ private fun LanguageSetting(currentLanguage: String, onLanguageSelected: (String
     val languages = listOf("en", "es", "fr", "de", "ru")
     val flags = mapOf("en" to "🇬🇧", "es" to "🇪🇸", "fr" to "🇫🇷", "de" to "🇩🇪", "ru" to "🇷🇺")
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
         Text("Preferred Language")
         Text("${flags[currentLanguage] ?: ""} ${currentLanguage.uppercase()}")
 
@@ -158,9 +168,15 @@ private fun OcrEngineSetting(currentEngine: String, onEngineSelected: (String) -
     var expanded by remember { mutableStateOf(false) }
     val engines = listOf("Tesseract", "MLKit")
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
         Text("OCR Engine")
         Text(currentEngine)
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             engines.forEach { engine ->
                 DropdownMenuItem(
@@ -180,7 +196,12 @@ private fun TranslationProviderSetting(currentProvider: String, onProviderSelect
     var expanded by remember { mutableStateOf(false) }
     val providers = listOf("Google", "DeepL")
 
-    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
         Text("Translation Provider")
         Text(currentProvider)
 
@@ -202,7 +223,7 @@ private fun TranslationProviderSetting(currentProvider: String, onProviderSelect
 private fun ApiKeySetting(apiKey: String, onApiKeyChanged: (String) -> Unit) {
     var value by remember { mutableStateOf(apiKey) }
 
-    Column(Modifier.padding(16.dp)) {
+    Column(modifier = Modifier.padding(16.dp)) {
         Text("API Key")
         TextField(
             value = value,
