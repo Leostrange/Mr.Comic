@@ -74,26 +74,23 @@ private fun SettingsScreenContent(
 private fun SortOrderSetting(currentSortOrder: SortOrder, onSortOrderSelected: (SortOrder) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(Modifier
-        .fillMaxWidth()
-        .clickable { expanded = true }
-        .padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("Default Sort Order")
         Text(currentSortOrder.name.replace('_', ' ').lowercase().replaceFirstChar { it.uppercase() })
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem({ Text("By Title (A-Z)") }) {
+            DropdownMenuItem(text = { Text("By Title (A-Z)") }, onClick = {
                 onSortOrderSelected(SortOrder.TITLE_ASC)
                 expanded = false
-            }
-            DropdownMenuItem({ Text("By Title (Z-A)") }) {
+            })
+            DropdownMenuItem(text = { Text("By Title (Z-A)") }, onClick = {
                 onSortOrderSelected(SortOrder.TITLE_DESC)
                 expanded = false
-            }
-            DropdownMenuItem({ Text("By Date Added") }) {
+            })
+            DropdownMenuItem(text = { Text("By Date Added") }, onClick = {
                 onSortOrderSelected(SortOrder.DATE_ADDED_DESC)
                 expanded = false
-            }
+            })
         }
     }
 }
@@ -133,23 +130,22 @@ private fun LanguageSetting(currentLanguage: String, onLanguageSelected: (String
     var expanded by remember { mutableStateOf(false) }
     val languages = listOf("en", "es", "fr", "de", "ru")
     val flags = mapOf(
-        "en" to "\uD83C\uDDEC\uD83C\uDDE7", "es" to "\uD83C\uDDEA\uD83C\uDDF8",
-        "fr" to "\uD83C\uDDEB\uD83C\uDDF7", "de" to "\uD83C\uDDE9\uD83C\uDDEA",
-        "ru" to "\uD83C\uDDF7\uD83C\uDDFA"
+        "en" to "🇬🇧", "es" to "🇪🇸", "fr" to "🇫🇷", "de" to "🇩🇪", "ru" to "🇷🇺"
     )
 
-    Column(Modifier
-        .fillMaxWidth()
-        .clickable { expanded = true }
-        .padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("Preferred Language")
         Text("${flags[currentLanguage] ?: ""} ${currentLanguage.uppercase()}")
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             languages.forEach { lang ->
-                DropdownMenuItem({ Text("${flags[lang] ?: ""} ${lang.uppercase()}") }) {
-                    onLanguageSelected(lang)
-                    expanded = false
-                }
+                DropdownMenuItem(
+                    text = { Text("${flags[lang] ?: ""} ${lang.uppercase()}") },
+                    onClick = {
+                        onLanguageSelected(lang)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -160,18 +156,19 @@ private fun OcrEngineSetting(currentEngine: String, onEngineSelected: (String) -
     var expanded by remember { mutableStateOf(false) }
     val engines = listOf("Tesseract", "MLKit")
 
-    Column(Modifier
-        .fillMaxWidth()
-        .clickable { expanded = true }
-        .padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("OCR Engine")
         Text(currentEngine)
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             engines.forEach { engine ->
-                DropdownMenuItem({ Text(engine) }) {
-                    onEngineSelected(engine)
-                    expanded = false
-                }
+                DropdownMenuItem(
+                    text = { Text(engine) },
+                    onClick = {
+                        onEngineSelected(engine)
+                        expanded = false
+                    }
+                )
             }
         }
     }
@@ -182,18 +179,19 @@ private fun TranslationProviderSetting(currentProvider: String, onProviderSelect
     var expanded by remember { mutableStateOf(false) }
     val providers = listOf("Google", "DeepL")
 
-    Column(Modifier
-        .fillMaxWidth()
-        .clickable { expanded = true }
-        .padding(16.dp)) {
+    Column(Modifier.fillMaxWidth().clickable { expanded = true }.padding(16.dp)) {
         Text("Translation Provider")
         Text(currentProvider)
+
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             providers.forEach { provider ->
-                DropdownMenuItem({ Text(provider) }) {
-                    onProviderSelected(provider)
-                    expanded = false
-                }
+                DropdownMenuItem(
+                    text = { Text(provider) },
+                    onClick = {
+                        onProviderSelected(provider)
+                        expanded = false
+                    }
+                )
             }
         }
     }
