@@ -22,15 +22,17 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.targetLanguage,
         settingsRepository.ocrEngine,
         settingsRepository.translationProvider,
-        settingsRepository.translationApiKey
-    ) { sortOrder, folders, language, engine, provider, apiKey ->
+        settingsRepository.translationApiKey,
+        settingsRepository.performanceMode
+    ) { sortOrder, folders, language, engine, provider, apiKey, perfMode ->
         SettingsUiState(
             sortOrder = sortOrder,
             libraryFolders = folders,
             targetLanguage = language,
             ocrEngine = engine,
             translationProvider = provider,
-            translationApiKey = apiKey
+            translationApiKey = apiKey,
+            performanceMode = perfMode
         )
     }.stateIn(
         scope = viewModelScope,
@@ -77,6 +79,12 @@ class SettingsViewModel @Inject constructor(
     fun onApiKeyChanged(key: String) {
         viewModelScope.launch {
             settingsRepository.setTranslationApiKey(key)
+        }
+    }
+
+    fun onPerformanceModeChanged(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setPerformanceMode(enabled)
         }
     }
 

@@ -33,6 +33,9 @@ interface SettingsRepository {
     val translationApiKey: Flow<String>
     suspend fun setTranslationApiKey(key: String)
 
+    val performanceMode: Flow<Boolean>
+    suspend fun setPerformanceMode(enabled: Boolean)
+
     suspend fun clearCache()
 }
 
@@ -48,6 +51,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val OCR_ENGINE = stringPreferencesKey("ocr_engine")
         val TRANSLATION_PROVIDER = stringPreferencesKey("translation_provider")
         val TRANSLATION_API_KEY = stringPreferencesKey("translation_api_key")
+        val PERFORMANCE_MODE = stringPreferencesKey("performance_mode")
     }
 
     override val sortOrder: Flow<SortOrder> = dataStore.data
@@ -133,6 +137,17 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setTranslationApiKey(key: String) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.TRANSLATION_API_KEY] = key
+        }
+    }
+
+    override val performanceMode: Flow<Boolean> = dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.PERFORMANCE_MODE]?.toBoolean() ?: false
+        }
+
+    override suspend fun setPerformanceMode(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.PERFORMANCE_MODE] = enabled.toString()
         }
     }
 
