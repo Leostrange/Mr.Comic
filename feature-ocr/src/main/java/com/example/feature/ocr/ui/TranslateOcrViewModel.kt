@@ -47,22 +47,32 @@ class TranslateOcrViewModel @Inject constructor(
     )
 
     fun onLanguageSelected(language: String) {
-        viewModelScope.launch { settingsRepository.setTargetLanguage(language) }
+        viewModelScope.launch {
+            settingsRepository.setTargetLanguage(language)
+        }
     }
 
     fun onEngineSelected(engine: String) {
-        viewModelScope.launch { settingsRepository.setOcrEngine(engine) }
+        viewModelScope.launch {
+            settingsRepository.setOcrEngine(engine)
+        }
     }
 
     fun onProviderSelected(provider: String) {
-        viewModelScope.launch { settingsRepository.setTranslationProvider(provider) }
+        viewModelScope.launch {
+            settingsRepository.setTranslationProvider(provider)
+        }
     }
 
     fun onApiKeyChanged(key: String) {
-        viewModelScope.launch { settingsRepository.setTranslationApiKey(key) }
+        viewModelScope.launch {
+            settingsRepository.setTranslationApiKey(key)
+        }
     }
 
     fun downloadWhisperModel() {
-        viewModelScope.launch { whisperRepository.downloadModel() }
+        viewModelScope.launch {
+            whisperRepository.downloadModel()
+        }
     }
 }
