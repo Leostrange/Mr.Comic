@@ -1,13 +1,13 @@
 <lint-module
     format="1"
-    dir="C:\Users\xmeta\projects\Mr.Comic\core-model"
+    dir="/workspace/core-model"
     name=":core-model"
     type="LIBRARY"
-    maven="MrComic:core-model:"
-    agpVersion="8.1.1"
+    maven="MrComic:core-model:unspecified"
+    agpVersion="8.4.1"
     buildFolder="build"
-    bootClassPath="C:\Android\platforms\android-34\android.jar;C:\Android\build-tools\33.0.1\core-lambda-stubs.jar"
-    javaSourceLevel="1.8"
+    bootClassPath="/home/ubuntu/android-sdk/platforms/android-34-2/android.jar:/home/ubuntu/android-sdk/build-tools/34.0.0-2/core-lambda-stubs.jar"
+    javaSourceLevel="17"
     compileTarget="android-34"
     neverShrinking="true">
   <lintOptions

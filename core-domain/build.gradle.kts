@@ -18,7 +18,7 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled = false
+            // minifyEnabled недоступен для library модулей
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -26,16 +26,17 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "17"
     }
 }
 
 dependencies {
-    implementation(project(":feature-library"))
+    // core-domain не должен зависеть от feature модулей
+    implementation(project(":core-model"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -44,8 +45,8 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     // Hilt
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    implementation(libs.google.hilt.android)
+    kapt(libs.google.hilt.compiler)
 }
 
 

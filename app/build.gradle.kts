@@ -137,12 +137,12 @@ dependencies {
     // Archive support
     implementation("me.zhanghai.android.libarchive:library:1.1.6")
 
-    // EPUB (Siegmann's repo)
-    implementation(libs.epublib.core.siegmann) {
-        exclude(group = "org.slf4j") // Как рекомендовано в документации epublib
-        exclude(group = "xmlpull", module = "xmlpull")
-    }
-    implementation(libs.slf4j.android) // Рекомендованная реализация SLF4J для Android
+    // EPUB (Siegmann's repo) - TODO: Fix epublib dependency
+    // implementation(libs.epublib.core.siegmann) {
+    //     exclude(group = "org.slf4j") // Как рекомендовано в документации epublib
+    //     exclude(group = "xmlpull", module = "xmlpull")
+    // }
+    // implementation(libs.slf4j.android) // Рекомендованная реализация SLF4J для Android
 
     // Accompanist Permissions
     implementation("com.google.accompanist:accompanist-permissions:0.37.3")
@@ -162,8 +162,8 @@ dependencies {
     // implementation "com.github.siegfriedstech:cbr-android:1.0.3" // We replaced this
     implementation(libs.junrar)
 
-    //FolioReader для EPUB
-    implementation(libs.folioreader)
+    //FolioReader для EPUB - TODO: Fix folioreader dependency
+    // implementation(libs.folioreader)
 
     implementation(libs.pdfbox.android)
 }

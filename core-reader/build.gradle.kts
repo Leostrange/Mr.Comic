@@ -27,12 +27,13 @@ dependencies {
 
     implementation("androidx.collection:collection-ktx:1.4.0")
 
-    // Archive and document format support
+    // Archive and document format support - TODO: Fix external dependencies
     implementation(libs.zip4j)
     implementation(libs.junrar)
-    implementation("com.shockwave:pdfium-android:1.9.2")
-    implementation("com.github.Djvu-Android:Djvu-Android:1.0.0-beta.11")
-    implementation(libs.sevenzip4j)
+    // TODO: Fix pdfium dependency
+    // implementation("com.shockwave:pdfium-android:1.9.2")
+    // implementation("com.github.Djvu-Android:Djvu-Android:1.0.0-beta.11")
+    // implementation(libs.sevenzip4j)
     implementation("org.apache.commons:commons-compress:1.26.0")
 }
 

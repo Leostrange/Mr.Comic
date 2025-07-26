@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<issues format="6" by="lint 8.1.1">
+<issues format="6" by="lint 8.4.1">
+
+    <issue
+        id="ObsoleteLintCustomCheck"
+        severity="Warning"
+        message="Lint found an issue registry (`androidx.compose.ui.text.lint.UiTextIssueRegistry`) which requires a newer API level. That means that the custom lint checks are intended for a newer lint version; please upgrade."
+        category="Lint"
+        priority="10"
+        summary="Obsolete custom lint check"
+        explanation="Lint can be extended with &quot;custom checks&quot;: additional checks implemented by developers and libraries to for example enforce specific API usages required by a library or a company coding style guideline.&#xA;&#xA;The Lint APIs are not yet stable, so these checks may either cause a performance degradation, or stop working, or provide wrong results.&#xA;&#xA;This warning flags custom lint checks that are found to be using obsolete APIs and will need to be updated to run in the current lint environment.&#xA;&#xA;It may also flag issues found to be using a **newer** version of the API, meaning that you need to use a newer version of lint (or Android Studio or Gradle plugin etc) to work with these checks.">
+        <location
+            file="/home/ubuntu/.gradle/caches/8.13/transforms/3b5e731186ce4c0d130fa0620d41d701/transformed/jetified-ui-text-release/jars/lint.jar"/>
+    </issue>
 
 </issues>

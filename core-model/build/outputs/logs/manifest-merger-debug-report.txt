@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml:2:13-83
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml:2:13-83
+ADDED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml:2:13-83
+INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml:2:13-83
 	package
-		INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml
+		INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml
 	xmlns:android
-		ADDED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml:2:23-81
+		ADDED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml:2:23-81
 uses-sdk
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml reason: use-sdk injection requested
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml
+INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml reason: use-sdk injection requested
+INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml
+INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml
 	android:targetSdkVersion
-		INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml
+		INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml
 	android:minSdkVersion
-		INJECTED from C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest7140994830024477905.xml
+		INJECTED from /workspace/core-model/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest1547178361194436032.xml

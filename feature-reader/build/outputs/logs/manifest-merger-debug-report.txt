@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 manifest
-ADDED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml:2:13-83
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml:2:13-83
+ADDED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml:2:13-83
+INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml:2:13-83
 	package
-		INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml
+		INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml
 	xmlns:android
-		ADDED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml:2:23-81
+		ADDED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml:2:23-81
 uses-sdk
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml reason: use-sdk injection requested
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml
-INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml
+INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml reason: use-sdk injection requested
+INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml
+INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml
 	android:targetSdkVersion
-		INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml
+		INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml
 	android:minSdkVersion
-		INJECTED from C:\Users\xmeta\projects\Mr.Comic\feature-reader\build\intermediates\tmp\ProcessLibraryManifest\debug\tempAndroidManifest16937012744197405854.xml
+		INJECTED from /workspace/feature-reader/build/intermediates/tmp/ProcessLibraryManifest/debug/tempAndroidManifest15880422529083326087.xml

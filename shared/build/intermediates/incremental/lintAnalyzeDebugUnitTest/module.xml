@@ -1,12 +1,12 @@
 <lint-module
     format="1"
-    dir="C:\Users\xmeta\projects\Mr.Comic\shared"
+    dir="/workspace/shared"
     name=":shared"
     type="LIBRARY"
-    maven="Mr.Comic:shared:unspecified"
-    agpVersion="8.11.0"
+    maven="MrComic:shared:unspecified"
+    agpVersion="8.4.1"
     buildFolder="build"
-    bootClassPath="C:\Android\platforms\android-34\android.jar;C:\Android\build-tools\35.0.0\core-lambda-stubs.jar"
+    bootClassPath="/home/ubuntu/android-sdk/platforms/android-34-2/android.jar:/home/ubuntu/android-sdk/build-tools/34.0.0-2/core-lambda-stubs.jar"
     javaSourceLevel="17"
     compileTarget="android-34"
     neverShrinking="true">
