@@ -9,6 +9,18 @@ plugins {
     id("jacoco")
 }
 
+// Принудительно устанавливаем версию Kotlin для всех модулей
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains.kotlin:kotlin-stdlib:1.9.23")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.23")
+            force("org.jetbrains.kotlin:kotlin-stdlib-common:1.9.23")
+            force("org.jetbrains.kotlin:kotlin-reflect:1.9.23")
+        }
+    }
+}
+
 // Репозитории теперь централизованы в settings.gradle.kts
 
 

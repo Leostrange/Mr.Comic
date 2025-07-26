@@ -2,7 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    id("org.jetbrains.kotlin.kapt")
+    kotlin("kapt")
 }
 
 android {
@@ -187,16 +187,7 @@ tasks.register("jacocoTestReport", org.gradle.testing.jacoco.tasks.JacocoReport:
     executionData.setFrom(files("build/jacoco/testDebugUnitTest.exec"))
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KaptGenerateStubs> {
-    if (name.contains("UnitTest")) {
-        enabled = false
-    }
-}
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.Kapt> {
-    if (name.contains("UnitTest")) {
-        enabled = false
-    }
-}
+// KSP не требует отключения задач для unit тестов
 tasks.withType<org.gradle.api.tasks.testing.Test> {
     if (name.contains("UnitTest")) {
         enabled = false
