@@ -1,0 +1,132 @@
+name: Code Quality Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  dependency-check:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Run dependency check
+        run: ./gradlew dependencies --configuration implementation
+
+      - name: Check for outdated dependencies
+        run: ./gradlew dependencyUpdates
+        continue-on-error: true
+
+  gradle-validation:
+    name: Gradle Wrapper Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v2
+
+  code-metrics:
+    name: Code Metrics and Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Generate build scan
+        run: ./gradlew projects --scan
+
+      - name: Count lines of code
+        run: |
+          echo "📊 Lines of Code Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "| Language | Files | Lines |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          find . -name "*.kt" -type f | wc -l | xargs echo "| Kotlin | " | tr '\n' ' ' >> $GITHUB_STEP_SUMMARY
+          find . -name "*.kt" -exec wc -l {} + | tail -1 | awk '{print "| " $1 " |"}' >> $GITHUB_STEP_SUMMARY
+          find . -name "*.xml" -type f | wc -l | xargs echo "| XML | " | tr '\n' ' ' >> $GITHUB_STEP_SUMMARY
+          find . -name "*.xml" -exec wc -l {} + | tail -1 | awk '{print "| " $1 " |"}' >> $GITHUB_STEP_SUMMARY
+
+  documentation-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for README
+        run: |
+          if [ ! -f README.md ]; then
+            echo "❌ README.md not found"
+            exit 1
+          fi
+          echo "✅ README.md exists"
+
+      - name: Check for documentation completeness
+        run: |
+          echo "📋 Documentation Status" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          
+          files=("README.md" "TODOLIST.md" "technical_specification.md")
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "| $file | ✅ |" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "| $file | ❌ |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+
+      - name: Validate markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v14
+        with:
+          globs: '**/*.md'
+          config: |
+            {
+              "line-length": false,
+              "no-inline-html": false,
+              "first-line-heading": false
+            }
+        continue-on-error: true

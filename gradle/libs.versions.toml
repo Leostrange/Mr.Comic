@@ -16,13 +16,17 @@ kotlinAndroid = "1.9.23"
 ksp = "1.9.23-1.0.20"
 kotlinCompilerExtension = "1.5.14"
 jvmTarget = "17"
+kotlinxCoroutines = "1.8.0"
 
 # AndroidX
 composeBom = "2025.06.01"
 lifecycle = "2.9.1"
 navigation = "2.7.7"
+navigationCompose = "2.7.7"
 room = "2.7.2"
 datastore = "1.1.7"
+activityCompose = "1.8.2"
+splashscreen = "1.0.1"
 
 # DI
 hilt = "2.51.1"
@@ -33,6 +37,7 @@ kotlinxCoroutinesTest = "1.10.2"
 mockitoCore = "5.18.0"
 truth = "1.4.4"
 mockitoKotlin = "5.4.0"
+mockk = "1.13.8"
 
 # AndroidX
 appcompat = "1.6.1"
@@ -47,9 +52,7 @@ media3 = "1.7.1"
 exifinterface = "1.4.1"
 libarchive = "1.1.6"
 
-# Tooling
-spotless = "6.26.1"
-ktlintGradle = "11.6.1"
+# Tooling (removed unused plugins)
 
 # Archives
 zip4j = "2.11.5"
@@ -91,14 +94,21 @@ androidx-compose-material = { group = "androidx.compose.material", name = "mater
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx" }
 
+# Kotlin Coroutines
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+
 # AndroidX Lifecycle
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
 
 # AndroidX Activity
-androidx-activity-compose = { group = "androidx.activity", name = "activity-compose" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 
 # AndroidX Navigation
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-navigation-ui-ktx = { group = "androidx.navigation", name = "navigation-ui-ktx", version.ref = "navigation" }
+
+# AndroidX Core
+androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "splashscreen" }
 
 # AndroidX Room
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -120,6 +130,7 @@ test-kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-cor
 test-mockito-core = { group = "org.mockito", name = "mockito-core", version.ref = "mockitoCore" }
 test-truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 test-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
+test-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 # AndroidX Testing
 androidx-junit = { group = "androidx.test.ext", name = "junit", version = "1.1.5" }
@@ -167,11 +178,10 @@ test-unit = ["test-junit", "test-kotlinx-coroutines", "test-mockito-core", "test
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidApplication" }
+android-library = { id = "com.android.library", version.ref = "androidLibrary" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinAndroid" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinAndroid" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
-ktlint-gradle = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
 
 

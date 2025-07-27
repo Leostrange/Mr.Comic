@@ -25,11 +25,35 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            // Оптимизации R8
+            isDebuggable = false
+            isJniDebuggable = false
+            renderscriptOptimLevel = 3
+            
+            // Оптимизация размера APK
+            packaging {
+                resources {
+                    excludes += "/META-INF/{AL2.0,LGPL2.1}"
+                    excludes += "/META-INF/androidx.*"
+                    excludes += "/META-INF/proguard/*"
+                    excludes += "DebugProbesKt.bin"
+                    excludes += "kotlin-tooling-metadata.json"
+                }
+            }
+        }
+        
+        debug {
+            isMinifyEnabled = false
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
     compileOptions {
@@ -76,6 +100,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.core.splashscreen)
+    
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
@@ -84,7 +110,10 @@ dependencies {
     implementation(libs.androidx.compose.material)
     implementation(libs.androidx.compose.material.icons.core)
     implementation(libs.androidx.compose.material.icons.extended)
+    
+    // Navigation
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation.ui.ktx)
 
     // Networking - Retrofit, Gson, OkHttp Logging Interceptor
     implementation(libs.retrofit.core)
@@ -113,6 +142,7 @@ dependencies {
     
     // Feature modules - пока только shared
     implementation(project(":shared"))
+    implementation(project(":core-analytics"))
     implementation(project(":core-ui"))
     implementation(project(":core-data"))
     implementation(project(":core-model"))

@@ -21,6 +21,7 @@ rootProject.name = "MrComic"
 
 include(":app")
 include(":core")
+include(":core-analytics")
 include(":core-data")
 include(":core-model")
 include(":core-reader")

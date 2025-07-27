@@ -1,14 +1,49 @@
-.manus_persona.json
+# Python files (not needed in Android project)
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+requirements.txt
 
+# Manus AI files
+.manus_*.json
+manus_entity.py
 
-# Build artifacts
+# Android build artifacts
 build/
 .gradle/
 .idea/
-local.properties
 *.iml
 .DS_Store
+local.properties
 
+# Logs
+*.log
+build*.log
+kapt_debug.log
 
+# Temporary files
+temp_*.txt
+dummy.*
+
+# Archives
+*.zip
+*.tar.gz
+
+# VS Code workspaces (keep only one)
+*.code-workspace
+
+# Reports (keep only final ones)
+*_report.md
+gradle_report.md
+
+# Node.js (not needed in Android project)
 node_modules/
+package.json
+package-lock.json
+
+# Draft files
+*_draft.*
+*_old.*
+*_backup.*
