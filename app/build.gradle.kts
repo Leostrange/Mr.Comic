@@ -180,10 +180,19 @@ dependencies {
     // WebKit для EPUB
     implementation(libs.webkit)
 
-    // Media3 (ExoPlayer)
-    implementation(libs.media3.exoplayer)
-    implementation(libs.media3.ui)
-    implementation(libs.media3.session)
+    // Media3 (ExoPlayer) - с исключением конфликтующих зависимостей
+    implementation(libs.media3.exoplayer) {
+        exclude(group = "com.android.support", module = "support-annotations")
+        exclude(group = "com.android.support", module = "support-compat")
+    }
+    implementation(libs.media3.ui) {
+        exclude(group = "com.android.support", module = "support-annotations")
+        exclude(group = "com.android.support", module = "support-compat")
+    }
+    implementation(libs.media3.session) {
+        exclude(group = "com.android.support", module = "support-annotations")
+        exclude(group = "com.android.support", module = "support-compat")
+    }
 
     // Libarchive needs this
     implementation(libs.exifinterface)
