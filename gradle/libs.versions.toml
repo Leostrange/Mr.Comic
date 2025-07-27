@@ -48,7 +48,7 @@ espresso = "3.5.1"
 coil = "2.7.0"
 accompanist = "0.37.3"
 webkit = "1.14.0"
-media3 = "1.7.1"
+media3 = "1.4.1"
 exifinterface = "1.4.1"
 libarchive = "1.1.6"
 
