@@ -23,38 +23,62 @@ class CbzReader(
 
     override suspend fun open(uri: Uri): Int {
         return withContext(Dispatchers.IO) {
-            val cacheDir = context.cacheDir
+            try {
+                val cacheDir = context.cacheDir
 
-            // Create a unique temporary directory for this comic to avoid conflicts
-            tempDir = File(cacheDir, "reader_cbz_${uri.toString().hashCode()}_${System.currentTimeMillis()}").apply {
-                mkdirs()
-            }
-
-            // Copy content from URI to a temporary file because Zip4j works with Files
-            tempComicFile = File.createTempFile("temp_cbz_", ".cbz", cacheDir)
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                tempComicFile!!.outputStream().use { outputStream ->
-                    inputStream.copyTo(outputStream)
-                }
-            }
-
-            val zipFile = ZipFile(tempComicFile)
-            if (zipFile.isEncrypted) {
-                // For now, we don't support encrypted archives.
-                throw IllegalStateException("Encrypted CBZ files are not supported.")
-            }
-
-            // Filter for image files, extract them, and collect their paths
-            val extractedImagePaths = zipFile.fileHeaders
-                .filter { !it.isDirectory && isImageFile(it.fileName) }
-                .map { fileHeader ->
-                    zipFile.extractFile(fileHeader, tempDir!!.absolutePath)
-                    File(tempDir, fileHeader.fileName.substringAfterLast(File.separator)).absolutePath
+                // Create a unique temporary directory for this comic to avoid conflicts
+                tempDir = File(cacheDir, "reader_cbz_${uri.toString().hashCode()}_${System.currentTimeMillis()}").apply {
+                    mkdirs()
                 }
 
-            // Sort pages alphabetically to ensure correct order
-            pagePaths = extractedImagePaths.sorted()
-            pagePaths.size
+                // Copy content from URI to a temporary file because Zip4j works with Files
+                tempComicFile = File.createTempFile("temp_cbz_", ".cbz", cacheDir)
+                context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                    tempComicFile!!.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                } ?: throw IllegalStateException("Cannot open input stream from URI")
+
+                // Validate file exists and is not empty
+                if (!tempComicFile!!.exists() || tempComicFile!!.length() == 0L) {
+                    throw IllegalStateException("CBZ файл пустой или поврежден")
+                }
+
+                val zipFile = ZipFile(tempComicFile)
+                if (zipFile.isEncrypted) {
+                    throw IllegalStateException("Зашифрованные CBZ файлы не поддерживаются")
+                }
+
+                // Filter for image files, extract them, and collect their paths
+                val extractedImagePaths = zipFile.fileHeaders
+                    .filter { !it.isDirectory && isImageFile(it.fileName) }
+                    .map { fileHeader ->
+                        try {
+                            zipFile.extractFile(fileHeader, tempDir!!.absolutePath)
+                            File(tempDir, fileHeader.fileName.substringAfterLast(File.separator)).absolutePath
+                        } catch (e: Exception) {
+                            // Log the error but continue with other files
+                            android.util.Log.w("CbzReader", "Failed to extract ${fileHeader.fileName}: ${e.message}")
+                            null
+                        }
+                    }
+                    .filterNotNull()
+
+                if (extractedImagePaths.isEmpty()) {
+                    throw IllegalStateException("В CBZ файле не найдено изображений")
+                }
+
+                // Sort pages alphabetically to ensure correct order
+                pagePaths = extractedImagePaths.sorted()
+                pagePaths.size
+            } catch (e: Exception) {
+                // Clean up on error
+                cleanup()
+                throw when (e) {
+                    is IllegalStateException -> e
+                    else -> IllegalStateException("Ошибка при открытии CBZ файла: ${e.message}", e)
+                }
+            }
         }
     }
 
@@ -63,20 +87,43 @@ class CbzReader(
             return null
         }
         val path = pagePaths[pageIndex]
-        return runCatching { BitmapFactory.decodeFile(path) }.getOrNull()
+        return runCatching { 
+            val bitmap = BitmapFactory.decodeFile(path)
+            if (bitmap == null) {
+                android.util.Log.w("CbzReader", "Failed to decode bitmap from: $path")
+            }
+            bitmap
+        }.getOrNull()
     }
 
     override fun close() {
-        tempDir?.deleteRecursively()
+        cleanup()
+    }
+
+    private fun cleanup() {
+        try {
+            tempDir?.deleteRecursively()
+        } catch (e: Exception) {
+            android.util.Log.w("CbzReader", "Failed to delete temp directory: ${e.message}")
+        }
         tempDir = null
-        tempComicFile?.delete()
+        
+        try {
+            tempComicFile?.delete()
+        } catch (e: Exception) {
+            android.util.Log.w("CbzReader", "Failed to delete temp file: ${e.message}")
+        }
         tempComicFile = null
+        
+        pagePaths = emptyList()
     }
 
     private fun isImageFile(fileName: String): Boolean {
-        return fileName.lowercase().endsWith(".jpg") ||
-            fileName.lowercase().endsWith(".jpeg") ||
-            fileName.lowercase().endsWith(".png") ||
-            fileName.lowercase().endsWith(".webp")
+        val lowercaseName = fileName.lowercase()
+        return lowercaseName.endsWith(".jpg") ||
+            lowercaseName.endsWith(".jpeg") ||
+            lowercaseName.endsWith(".png") ||
+            lowercaseName.endsWith(".webp") ||
+            lowercaseName.endsWith(".bmp")
     }
 }

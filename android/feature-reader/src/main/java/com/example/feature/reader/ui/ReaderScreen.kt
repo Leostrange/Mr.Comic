@@ -1,6 +1,7 @@
 package com.example.feature.reader.ui
 
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
@@ -58,7 +59,7 @@ fun ReaderScreen(
     val bgColor by viewModel.background.collectAsState()
 
     LaunchedEffect(filePath) {
-        viewModel.loadComic(filePath)
+        viewModel.openBook(Uri.parse(filePath))
     }
 
     ReaderScreenContent(

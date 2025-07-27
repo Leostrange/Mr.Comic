@@ -20,6 +20,11 @@ class BookReaderFactory @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bitmapCache: BitmapCache
 ) {
+    
+    companion object {
+        private const val TAG = "BookReaderFactory"
+    }
+    
     /**
      * Creates a [BookReader] for the given URI.
      *
@@ -29,15 +34,41 @@ class BookReaderFactory @Inject constructor(
      */
     fun create(uri: Uri): BookReader {
         val fileName = DocumentFile.fromSingleUri(context, uri)?.name ?: ""
-        val delegateReader = when (fileName.substringAfterLast('.', "").lowercase()) {
-            "cbr" -> CbrReader(context)
-            "cbz" -> CbzReader(context)
-            "pdf" -> PdfReader(context)
-            "djvu", "djv" -> DjvuReader(context)
-            else -> throw UnsupportedFormatException("Unsupported file format for: $fileName")
+        val extension = fileName.substringAfterLast('.', "").lowercase()
+        
+        android.util.Log.d(TAG, "Creating reader for URI: $uri, fileName: $fileName, extension: $extension")
+        
+        val delegateReader = when (extension) {
+            "cbr" -> {
+                android.util.Log.d(TAG, "Creating CBR reader")
+                CbrReader(context)
+            }
+            "cbz" -> {
+                android.util.Log.d(TAG, "Creating CBZ reader")
+                CbzReader(context)
+            }
+            "pdf" -> {
+                android.util.Log.d(TAG, "Creating PDF reader")
+                PdfReader(context)
+            }
+            "djvu", "djv" -> {
+                android.util.Log.d(TAG, "Creating DJVU reader")
+                DjvuReader(context)
+            }
+            else -> {
+                android.util.Log.e(TAG, "Unsupported file format: $extension for file: $fileName")
+                throw UnsupportedFormatException("Unsupported file format for: $fileName")
+            }
         }
 
         // Wrap the actual reader in the caching decorator
-        return CachingBookReader(delegateReader, bitmapCache)
+        val cachedReader = CachingBookReader(delegateReader, bitmapCache)
+        android.util.Log.d(TAG, "Created cached reader for $extension file")
+        return cachedReader
+    }
+    
+    fun releaseResources() {
+        android.util.Log.d(TAG, "Releasing factory resources")
+        // Any cleanup needed
     }
 }
