@@ -40,7 +40,9 @@ android.enableJetifier=false  # Было: true
 
 **Причина:** Современные библиотеки уже используют AndroidX, Jetifier не нужен
 
-### **3. Добавили explicit exclusions**
+### **3. Добавили explicit exclusions для всех проблемных библиотек**
+
+#### **Media3 библиотеки:**
 ```kotlin
 // app/build.gradle.kts
 implementation(libs.media3.exoplayer) {
@@ -57,7 +59,35 @@ implementation(libs.media3.session) {
 }
 ```
 
-**Причина:** Исключаем старые support library модули, оставляя только AndroidX
+#### **EPUB и PDF библиотеки:**
+```kotlin
+// EPUBLib (старые support library зависимости)
+implementation(libs.epublib.core.siegmann) {
+    exclude(group = "org.slf4j")
+    exclude(group = "xmlpull", module = "xmlpull")
+    exclude(group = "com.android.support", module = "support-annotations")
+    exclude(group = "com.android.support", module = "support-compat")
+    exclude(group = "com.android.support", module = "support-v4")
+}
+
+// FolioReader (множественные support library зависимости)
+implementation(libs.folioreader) {
+    exclude(group = "com.android.support", module = "support-annotations")
+    exclude(group = "com.android.support", module = "support-compat")
+    exclude(group = "com.android.support", module = "support-v4")
+    exclude(group = "com.android.support", module = "design")
+    exclude(group = "com.android.support", module = "appcompat-v7")
+}
+
+// PDFBox Android (legacy support library)
+implementation(libs.pdfbox.android) {
+    exclude(group = "com.android.support", module = "support-annotations")
+    exclude(group = "com.android.support", module = "support-compat")
+    exclude(group = "com.android.support", module = "support-v4")
+}
+```
+
+**Причина:** Исключаем старые support library модули из всех проблемных зависимостей, оставляя только AndroidX
 
 ---
 
@@ -117,23 +147,38 @@ configurations.all {
 ### **3. Проверка warnings:**
 Должны исчезнуть warnings о Jetifier и support library conflicts
 
+### **4. Проверка других модулей:**
+```bash
+./gradlew app:dependencies --configuration debugRuntimeClasspath | grep "support-"
+```
+Если команда возвращает результаты, значит еще есть конфликтующие зависимости
+
 ---
 
-## 📊 **Media3 Features Status:**
+## 📊 **Анализ исправленных библиотек:**
 
-### **✅ Доступные функции в 1.4.1:**
-- 🎵 **ExoPlayer Core** - медиа воспроизведение
+### **✅ Media3 1.4.1:**
+- 🎵 **ExoPlayer Core** - медиа воспроизведение (для видео контента)
 - 🎛️ **Player Controls** - UI контролы
 - 📱 **Session Management** - медиа сессии
 - 🔊 **Audio Focus** - аудио управление
-- 📺 **Video Rendering** - видео отображение
 
-### **📝 Функции, недоступные в 1.4.1:**
-- 🆕 Некоторые новые API из 1.7.x
-- 🔧 Последние performance improvements
-- 📱 Новейшие Material Design компоненты
+### **✅ EPUBLib 4.0:**
+- 📖 **EPUB Parsing** - чтение EPUB файлов
+- 📝 **Text Extraction** - извлечение текста
+- 🎨 **Style Processing** - обработка стилей
 
-**Вывод:** Для нашего use case (Comic Reader) функциональности 1.4.1 более чем достаточно
+### **✅ FolioReader 0.3.0:**
+- 📚 **EPUB Reader** - полнофункциональный EPUB ридер
+- 🎨 **Customization** - настройка темы и шрифтов
+- 🔍 **Search & Highlights** - поиск и выделения
+
+### **✅ PDFBox Android 2.0.27.0:**
+- 📄 **PDF Parsing** - чтение PDF файлов
+- 🖼️ **Image Extraction** - извлечение изображений
+- 📝 **Text Extraction** - извлечение текста
+
+**Вывод:** Все функции продолжают работать, но теперь без конфликтов AndroidX
 
 ---
 

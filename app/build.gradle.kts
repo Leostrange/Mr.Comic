@@ -167,10 +167,13 @@ dependencies {
     // Archive support
     implementation(libs.libarchive)
 
-    // EPUB (Siegmann's repo)
+    // EPUB (Siegmann's repo) - с исключением конфликтующих зависимостей
     implementation(libs.epublib.core.siegmann) {
         exclude(group = "org.slf4j") // Как рекомендовано в документации epublib
         exclude(group = "xmlpull", module = "xmlpull")
+        exclude(group = "com.android.support", module = "support-annotations")
+        exclude(group = "com.android.support", module = "support-compat")
+        exclude(group = "com.android.support", module = "support-v4")
     }
     implementation(libs.slf4j.android) // Рекомендованная реализация SLF4J для Android
 
@@ -201,10 +204,21 @@ dependencies {
     // implementation "com.github.siegfriedstech:cbr-android:1.0.3" // We replaced this
     implementation(libs.junrar)
 
-    //FolioReader для EPUB
-    implementation(libs.folioreader)
+    //FolioReader для EPUB - с исключением конфликтующих зависимостей
+    implementation(libs.folioreader) {
+        exclude(group = "com.android.support", module = "support-annotations")
+        exclude(group = "com.android.support", module = "support-compat")
+        exclude(group = "com.android.support", module = "support-v4")
+        exclude(group = "com.android.support", module = "design")
+        exclude(group = "com.android.support", module = "appcompat-v7")
+    }
 
-    implementation(libs.pdfbox.android)
+    // PDFBox Android - с исключением конфликтующих зависимостей
+    implementation(libs.pdfbox.android) {
+        exclude(group = "com.android.support", module = "support-annotations")
+        exclude(group = "com.android.support", module = "support-compat")
+        exclude(group = "com.android.support", module = "support-v4")
+    }
 }
 
 // Jacoco coverage report
