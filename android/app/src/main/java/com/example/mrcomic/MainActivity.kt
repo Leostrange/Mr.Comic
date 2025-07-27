@@ -19,7 +19,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceProfiler
-import com.example.mrcomic.navigation.MrComicNavigation
+import com.example.mrcomic.navigation.AppNavHost
+import androidx.navigation.compose.rememberNavController
 import com.example.mrcomic.ui.theme.MrComicTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -90,9 +91,12 @@ fun MrComicApp(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            MrComicNavigation(
-                analyticsHelper = analyticsHelper,
-                performanceProfiler = performanceProfiler
+            val navController = rememberNavController()
+            AppNavHost(
+                navController = navController,
+                onOnboardingComplete = {
+                    // Handle onboarding completion if needed
+                }
             )
         }
     }
