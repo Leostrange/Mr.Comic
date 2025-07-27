@@ -1,5 +1,6 @@
 package com.example.mrcomic.ui.performance
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,461 +15,232 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.core.analytics.PerformanceProfiler
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceMetric
+import com.example.core.analytics.PerformanceProfiler
 import com.example.core.analytics.PerformanceStats
-import com.example.core.reader.CacheStats
-import kotlinx.coroutines.delay
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.mrcomic.ui.analytics.*
+import kotlinx.coroutines.launch
 
 /**
- * Дашборд для мониторинга производительности приложения
+ * Dashboard для мониторинга производительности приложения
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PerformanceDashboard(
-    performanceProfiler: PerformanceProfiler,
-    modifier: Modifier = Modifier
+    onBackClick: () -> Unit,
+    performanceProfiler: PerformanceProfiler = hiltViewModel(),
+    analyticsHelper: AnalyticsHelper = hiltViewModel()
 ) {
-    var performanceStats by remember { mutableStateOf(PerformanceStats()) }
-    var recentMetrics by remember { mutableStateOf<List<PerformanceMetric>>(emptyList()) }
-    var memoryUsage by remember { mutableStateOf(0f) }
-    
     val scope = rememberCoroutineScope()
     
-    // Обновляем данные каждые 2 секунды
-    LaunchedEffect(Unit) {
-        while (true) {
-            performanceStats = performanceProfiler.getPerformanceStats()
-            recentMetrics = performanceProfiler.performanceMetrics.value.takeLast(10)
-            
-            // Обновляем информацию о памяти
-            performanceProfiler.measureMemoryUsage(scope)
-            
-            delay(2000)
-        }
+    // Отслеживание экрана
+    TrackScreenView("PerformanceDashboard", analyticsHelper, scope)
+    
+    val performanceMetrics by performanceProfiler.performanceMetrics.collectAsStateWithLifecycle()
+    val performanceStats = remember(performanceMetrics) {
+        performanceProfiler.getPerformanceStats()
     }
     
-    LazyColumn(
-        modifier = modifier
+    Column(
+        modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .background(MaterialTheme.colorScheme.background)
+            .testTag("performance_dashboard")
     ) {
-        item {
-            Text(
-                text = "Мониторинг производительности",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
+        // Top App Bar
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Мониторинг производительности",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            navigationIcon = {
+                AnalyticsClickable(
+                    onClick = onBackClick,
+                    analyticsHelper = analyticsHelper,
+                    eventName = "performance_dashboard_back_clicked",
+                    scope = scope
+                ) {
+                    IconButton(onClick = { }) {
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Назад"
+                        )
+                    }
+                }
+            },
+            actions = {
+                AnalyticsClickable(
+                    onClick = {
+                        performanceProfiler.clearOldMetrics()
+                        analyticsHelper.track(
+                            com.example.core.analytics.AnalyticsEvent.PerformanceMetric(
+                                metricName = "performance_metrics_cleared",
+                                value = 1.0,
+                                unit = "action"
+                            ),
+                            scope
+                        )
+                    },
+                    analyticsHelper = analyticsHelper,
+                    eventName = "clear_metrics_clicked",
+                    scope = scope
+                ) {
+                    IconButton(onClick = { }) {
+                        Icon(
+                            Icons.Default.ClearAll,
+                            contentDescription = "Очистить метрики"
+                        )
+                    }
+                }
+            }
+        )
         
-        item {
-            PerformanceOverviewCard(performanceStats)
-        }
-        
-        item {
-            MemoryUsageCard(memoryUsage)
-        }
-        
-        item {
-            RecentOperationsCard(recentMetrics)
-        }
-        
-        item {
-            OperationBreakdownCard(performanceStats.operationCounts)
-        }
-        
-        item {
-            PerformanceRecommendationsCard(performanceStats)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Performance Summary
+            item {
+                PerformanceSummaryCard(
+                    stats = performanceStats,
+                    analyticsHelper = analyticsHelper,
+                    scope = scope
+                )
+            }
+            
+            // Memory Usage
+            item {
+                MemoryUsageCard(
+                    performanceProfiler = performanceProfiler,
+                    analyticsHelper = analyticsHelper,
+                    scope = scope
+                )
+            }
+            
+            // Quick Actions
+            item {
+                QuickActionsCard(
+                    performanceProfiler = performanceProfiler,
+                    analyticsHelper = analyticsHelper,
+                    scope = scope
+                )
+            }
+            
+            // Recent Metrics
+            item {
+                Text(
+                    text = "Недавние метрики",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+            
+            items(performanceMetrics.takeLast(20).reversed()) { metric ->
+                MetricCard(
+                    metric = metric,
+                    analyticsHelper = analyticsHelper,
+                    scope = scope
+                )
+            }
+            
+            if (performanceMetrics.isEmpty()) {
+                item {
+                    EmptyMetricsCard()
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun PerformanceOverviewCard(stats: PerformanceStats) {
+private fun PerformanceSummaryCard(
+    stats: PerformanceStats,
+    analyticsHelper: AnalyticsHelper,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        )
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(20.dp)
         ) {
-            Text(
-                text = "Общая статистика",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                PerformanceMetricItem(
-                    icon = Icons.Default.Timer,
-                    label = "Всего операций",
-                    value = stats.totalOperations.toString(),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                PerformanceMetricItem(
-                    icon = Icons.Default.Speed,
-                    label = "Среднее время",
-                    value = "${stats.averageDuration.toInt()}ms",
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                
-                PerformanceMetricItem(
-                    icon = Icons.Default.Warning,
-                    label = "Медленных",
-                    value = stats.slowOperations.toString(),
-                    color = if (stats.slowOperations > 0) MaterialTheme.colorScheme.error 
-                           else MaterialTheme.colorScheme.tertiary
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                PerformanceMetricItem(
-                    icon = Icons.Default.TrendingUp,
-                    label = "Макс. время",
-                    value = "${stats.maxDuration}ms",
-                    color = MaterialTheme.colorScheme.error
-                )
-                
-                PerformanceMetricItem(
-                    icon = Icons.Default.TrendingDown,
-                    label = "Мин. время",
-                    value = "${stats.minDuration}ms",
-                    color = MaterialTheme.colorScheme.tertiary
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MemoryUsageCard(memoryUsage: Float) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Использование памяти",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            val runtime = Runtime.getRuntime()
-            val totalMemory = runtime.totalMemory() / 1024 / 1024
-            val freeMemory = runtime.freeMemory() / 1024 / 1024
-            val usedMemory = totalMemory - freeMemory
-            val maxMemory = runtime.maxMemory() / 1024 / 1024
-            val usagePercent = (usedMemory.toFloat() / maxMemory) * 100
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "${usedMemory}MB / ${maxMemory}MB",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = "${usagePercent.toInt()}% использовано",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                
-                CircularProgressIndicator(
-                    progress = { usagePercent / 100f },
-                    modifier = Modifier.size(60.dp),
-                    color = when {
-                        usagePercent > 80 -> MaterialTheme.colorScheme.error
-                        usagePercent > 60 -> MaterialTheme.colorScheme.tertiary
-                        else -> MaterialTheme.colorScheme.primary
-                    }
+                Icon(
+                    Icons.Default.Dashboard,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Общая статистика",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
-            LinearProgressIndicator(
-                progress = { usagePercent / 100f },
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                color = when {
-                    usagePercent > 80 -> MaterialTheme.colorScheme.error
-                    usagePercent > 60 -> MaterialTheme.colorScheme.tertiary
-                    else -> MaterialTheme.colorScheme.primary
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecentOperationsCard(metrics: List<PerformanceMetric>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Последние операции",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            if (metrics.isEmpty()) {
-                Text(
-                    text = "Нет данных о производительности",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                StatItem(
+                    title = "Операций",
+                    value = stats.totalOperations.toString(),
+                    icon = Icons.Default.Speed,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
-            } else {
-                metrics.forEach { metric ->
-                    OperationItem(metric)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun OperationItem(metric: PerformanceMetric) {
-    val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-    
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = metric.operationName,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = timeFormat.format(Date(metric.timestamp)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        
-        Text(
-            text = "${metric.duration}ms",
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = when {
-                metric.duration > 1000 -> MaterialTheme.colorScheme.error
-                metric.duration > 500 -> MaterialTheme.colorScheme.tertiary
-                else -> MaterialTheme.colorScheme.primary
-            }
-        )
-    }
-}
-
-@Composable
-private fun OperationBreakdownCard(operationCounts: Map<String, Int>) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Частота операций",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            if (operationCounts.isEmpty()) {
-                Text(
-                    text = "Нет данных об операциях",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                val maxCount = operationCounts.values.maxOrNull() ?: 1
                 
-                operationCounts.entries.sortedByDescending { it.value }.forEach { (operation, count) ->
-                    OperationCountItem(
-                        operationName = operation,
-                        count = count,
-                        maxCount = maxCount
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
+                StatItem(
+                    title = "Ср. время",
+                    value = "${stats.averageDuration.toInt()}мс",
+                    icon = Icons.Default.Timer,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                
+                StatItem(
+                    title = "Медленных",
+                    value = stats.slowOperations.toString(),
+                    icon = Icons.Default.Warning,
+                    color = if (stats.slowOperations > 0) 
+                        MaterialTheme.colorScheme.error 
+                    else 
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
         }
     }
 }
 
 @Composable
-private fun OperationCountItem(
-    operationName: String,
-    count: Int,
-    maxCount: Int
-) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = operationName,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f)
-            )
-            Text(
-                text = count.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(4.dp))
-        
-        LinearProgressIndicator(
-            progress = { count.toFloat() / maxCount },
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Composable
-private fun PerformanceRecommendationsCard(stats: PerformanceStats) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Text(
-                text = "Рекомендации",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            val recommendations = generateRecommendations(stats)
-            
-            if (recommendations.isEmpty()) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Производительность оптимальна",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            } else {
-                recommendations.forEach { recommendation ->
-                    RecommendationItem(recommendation)
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecommendationItem(recommendation: PerformanceRecommendation) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(
-                when (recommendation.severity) {
-                    RecommendationSeverity.HIGH -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                    RecommendationSeverity.MEDIUM -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f)
-                    RecommendationSeverity.LOW -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                }
-            )
-            .padding(12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        Icon(
-            recommendation.icon,
-            contentDescription = null,
-            tint = when (recommendation.severity) {
-                RecommendationSeverity.HIGH -> MaterialTheme.colorScheme.error
-                RecommendationSeverity.MEDIUM -> MaterialTheme.colorScheme.tertiary
-                RecommendationSeverity.LOW -> MaterialTheme.colorScheme.primary
-            },
-            modifier = Modifier.size(20.dp)
-        )
-        
-        Spacer(modifier = Modifier.width(12.dp))
-        
-        Column {
-            Text(
-                text = recommendation.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = recommendation.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-@Composable
-private fun PerformanceMetricItem(
-    icon: ImageVector,
-    label: String,
+private fun StatItem(
+    title: String,
     value: String,
+    icon: ImageVector,
     color: Color
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            icon,
+            imageVector = icon,
             contentDescription = null,
             tint = color,
             modifier = Modifier.size(24.dp)
@@ -481,62 +253,322 @@ private fun PerformanceMetricItem(
             color = color
         )
         Text(
-            text = label,
+            text = title,
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = color.copy(alpha = 0.8f)
         )
     }
 }
 
-private fun generateRecommendations(stats: PerformanceStats): List<PerformanceRecommendation> {
-    val recommendations = mutableListOf<PerformanceRecommendation>()
+@Composable
+private fun MemoryUsageCard(
+    performanceProfiler: PerformanceProfiler,
+    analyticsHelper: AnalyticsHelper,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    var memoryUsage by remember { mutableStateOf(0f) }
     
-    if (stats.averageDuration > 500) {
-        recommendations.add(
-            PerformanceRecommendation(
-                severity = RecommendationSeverity.HIGH,
-                icon = Icons.Default.Warning,
-                title = "Медленные операции",
-                description = "Среднее время операций превышает 500ms. Рассмотрите оптимизацию алгоритмов."
-            )
-        )
+    LaunchedEffect(Unit) {
+        performanceProfiler.measureMemoryUsage(scope)
     }
     
-    if (stats.slowOperations > stats.totalOperations * 0.1) {
-        recommendations.add(
-            PerformanceRecommendation(
-                severity = RecommendationSeverity.MEDIUM,
-                icon = Icons.Default.Speed,
-                title = "Много медленных операций",
-                description = "Более 10% операций выполняются дольше 1 секунды."
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Memory,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Использование памяти",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Memory progress bar
+            LinearProgressIndicator(
+                progress = { memoryUsage },
+                modifier = Modifier.fillMaxWidth(),
+                color = when {
+                    memoryUsage > 0.8f -> MaterialTheme.colorScheme.error
+                    memoryUsage > 0.6f -> MaterialTheme.colorScheme.tertiary
+                    else -> MaterialTheme.colorScheme.primary
+                }
             )
-        )
-    }
-    
-    val runtime = Runtime.getRuntime()
-    val memoryUsage = ((runtime.totalMemory() - runtime.freeMemory()).toFloat() / runtime.maxMemory()) * 100
-    
-    if (memoryUsage > 80) {
-        recommendations.add(
-            PerformanceRecommendation(
-                severity = RecommendationSeverity.HIGH,
-                icon = Icons.Default.Memory,
-                title = "Высокое использование памяти",
-                description = "Использование памяти превышает 80%. Очистите кэши или оптимизируйте загрузку данных."
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "${(memoryUsage * 100).toInt()}% использовано",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            AnalyticsButton(
+                onClick = {
+                    performanceProfiler.measureMemoryUsage(scope)
+                    
+                    // Имитация сборки мусора
+                    System.gc()
+                    
+                    analyticsHelper.track(
+                        com.example.core.analytics.AnalyticsEvent.PerformanceMetric(
+                            metricName = "gc_triggered",
+                            value = 1.0,
+                            unit = "action"
+                        ),
+                        scope
+                    )
+                },
+                analyticsHelper = analyticsHelper,
+                eventName = "force_gc_clicked",
+                scope = scope,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Очистить память")
+            }
+        }
     }
-    
-    return recommendations
 }
 
-data class PerformanceRecommendation(
-    val severity: RecommendationSeverity,
-    val icon: ImageVector,
-    val title: String,
-    val description: String
-)
+@Composable
+private fun QuickActionsCard(
+    performanceProfiler: PerformanceProfiler,
+    analyticsHelper: AnalyticsHelper,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.FlashOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Быстрые действия",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                AnalyticsButton(
+                    onClick = {
+                        val measurementId = performanceProfiler.startMeasurement("test_operation")
+                        scope.launch {
+                            kotlinx.coroutines.delay(100)
+                            performanceProfiler.finishMeasurement(
+                                measurementId,
+                                "test_operation",
+                                scope,
+                                mapOf("type" to "manual_test")
+                            )
+                        }
+                    },
+                    analyticsHelper = analyticsHelper,
+                    eventName = "test_measurement_started",
+                    scope = scope,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Тест", style = MaterialTheme.typography.bodySmall)
+                }
+                
+                AnalyticsButton(
+                    onClick = {
+                        performanceProfiler.clearOldMetrics()
+                        
+                        analyticsHelper.track(
+                            com.example.core.analytics.AnalyticsEvent.PerformanceMetric(
+                                metricName = "metrics_cleared",
+                                value = 1.0,
+                                unit = "action"
+                            ),
+                            scope
+                        )
+                    },
+                    analyticsHelper = analyticsHelper,
+                    eventName = "clear_metrics_clicked",
+                    scope = scope,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.ClearAll, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Очистить", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
 
-enum class RecommendationSeverity {
-    HIGH, MEDIUM, LOW
+@Composable
+private fun MetricCard(
+    metric: PerformanceMetric,
+    analyticsHelper: AnalyticsHelper,
+    scope: kotlinx.coroutines.CoroutineScope
+) {
+    val backgroundColor = when {
+        metric.duration > 1000 -> MaterialTheme.colorScheme.errorContainer
+        metric.duration > 500 -> MaterialTheme.colorScheme.tertiaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant
+    }
+    
+    val textColor = when {
+        metric.duration > 1000 -> MaterialTheme.colorScheme.onErrorContainer
+        metric.duration > 500 -> MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = backgroundColor
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = when {
+                    metric.operationName.contains("error") -> Icons.Default.Error
+                    metric.operationName.contains("load") -> Icons.Default.Download
+                    metric.operationName.contains("render") -> Icons.Default.Visibility
+                    metric.operationName.contains("cache") -> Icons.Default.Storage
+                    else -> Icons.Default.Speed
+                },
+                contentDescription = null,
+                tint = textColor,
+                modifier = Modifier.size(20.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = metric.operationName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = textColor
+                )
+                
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "${metric.duration}ms",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                    
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.6f)
+                    )
+                    
+                    Text(
+                        text = formatTimestamp(metric.timestamp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.8f)
+                    )
+                }
+            }
+            
+            if (metric.additionalData.isNotEmpty()) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = "Дополнительная информация",
+                    tint = textColor.copy(alpha = 0.6f),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyMetricsCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.Analytics,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Text(
+                text = "Нет данных о производительности",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = "Используйте приложение для сбора метрик",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+private fun formatTimestamp(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    
+    return when {
+        diff < 60_000 -> "${diff / 1000}с назад"
+        diff < 3600_000 -> "${diff / 60_000}м назад"
+        diff < 86400_000 -> "${diff / 3600_000}ч назад"
+        else -> "${diff / 86400_000}д назад"
+    }
 }
