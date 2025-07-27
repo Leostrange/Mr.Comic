@@ -30,7 +30,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
     implementation(project(":core-reader"))
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)
     kapt(libs.google.hilt.compiler)
@@ -39,10 +39,10 @@ dependencies {
     implementation(libs.telephoto.zoomable.image)
 
     // Archive/document format support
-    implementation("com.github.barteksc:android-pdf-viewer:3.2.0-beta.1")
-    implementation("com.github.junrar:junrar:7.5.0")
-    implementation("net.sf.sevenzipjbinding:sevenzipjbinding:16.02-2.01")
-    implementation("org.apache.commons:commons-compress:1.26.0")
+    implementation(libs.android.pdf.viewer)
+    implementation(libs.junrar)
+    implementation(libs.sevenzip4j)
+    implementation(libs.commons.compress)
 }
 
 

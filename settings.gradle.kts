@@ -14,6 +14,9 @@ dependencyResolutionManagement {
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
         maven { url = uri("https://github.com/psiegman/mvn-repo/raw/master/releases") } // Для epublib
+        maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") } // Для некоторых библиотек
+        gradlePluginPortal()
+        maven { url = uri("https://repository.aspose.com/repo/") } // Альтернативный репозиторий
     }
 }
 

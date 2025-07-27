@@ -1,7 +1,0 @@
-com.mrcomic.core.model.core-model-pngs-0 C:\Users\xmeta\projects\Mr.Comic\core-model\build\generated\res\pngs\release
-com.mrcomic.core.model.core-model-resValues-1 C:\Users\xmeta\projects\Mr.Comic\core-model\build\generated\res\resValues\release
-com.mrcomic.core.model.core-model-mergeReleaseResources-2 C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\incremental\release\mergeReleaseResources\merged.dir
-com.mrcomic.core.model.core-model-mergeReleaseResources-3 C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\incremental\release\mergeReleaseResources\stripped.dir
-com.mrcomic.core.model.core-model-merged_res-4 C:\Users\xmeta\projects\Mr.Comic\core-model\build\intermediates\merged_res\release
-com.mrcomic.core.model.core-model-main-5 C:\Users\xmeta\projects\Mr.Comic\core-model\src\main\res
-com.mrcomic.core.model.core-model-release-6 C:\Users\xmeta\projects\Mr.Comic\core-model\src\release\res
