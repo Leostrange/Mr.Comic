@@ -25,11 +25,35 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            
+            // Оптимизации R8
+            isDebuggable = false
+            isJniDebuggable = false
+            renderscriptOptimLevel = 3
+            
+            // Оптимизация размера APK
+            packaging {
+                resources {
+                    excludes += "/META-INF/{AL2.0,LGPL2.1}"
+                    excludes += "/META-INF/androidx.*"
+                    excludes += "/META-INF/proguard/*"
+                    excludes += "DebugProbesKt.bin"
+                    excludes += "kotlin-tooling-metadata.json"
+                }
+            }
+        }
+        
+        debug {
+            isMinifyEnabled = false
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
     }
     compileOptions {
