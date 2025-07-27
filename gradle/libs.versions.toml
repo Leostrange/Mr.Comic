@@ -57,17 +57,18 @@ libarchive = "1.1.6"
 # Archives (исправленные версии)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.9.0"
-djvu_android = "1.9.0"
-telephoto = "0.7.1"
-sevenzip4j = "9.20-2.00beta"
+pdfium_android = "1.9.2"
+djvu_android = "1.0.0-beta.11"
+telephoto = "0.13.0"
+sevenzip4j = "16.02-2.01"
 commons_compress = "1.26.0"
 
 # Custom (исправленные версии)
-folioreader = "0.5.4"
+folioreader = "0.3.0"
 pdfboxAndroid = "2.0.27.0"
-epublibSiegmann = "3.1"
+epublibSiegmann = "4.0"
 slf4jAndroid = "1.7.36"
+mlkitTextRecognition = "16.0.0"
 
 [libraries]
 # Networking
@@ -88,7 +89,7 @@ androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "l
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "composeBom" }
 androidx-compose-material = { group = "androidx.compose.material", name = "material" }
 
 # AndroidX Core
@@ -153,9 +154,9 @@ libarchive = { group = "me.zhanghai.android.libarchive", name = "library", versi
 # Archives (исправленные dependencies)
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
-pdfium-android = { group = "com.github.barteksc", name = "pdfium-android", version.ref = "pdfium_android" }
-djvu-android = { group = "com.github.barteksc", name = "pdfium-android", version.ref = "djvu_android" }
-sevenzip4j = { group = "net.sf.sevenzipjbinding", name = "sevenzipjbinding", version.ref = "sevenzip4j" }
+pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
+djvu-android = { group = "com.github.Djvu-Android", name = "Djvu-Android", version.ref = "djvu_android" }
+sevenzip4j = { group = "com.github.SevenZip4j", name = "SevenZip4j", version.ref = "sevenzip4j" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons_compress" }
 
 # PDF
@@ -163,14 +164,17 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 # DJVU
 
 # Zoomable Image
-telephoto-zoomable-image = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
+telephoto = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
 
 # Custom
-folioreader = { group = "com.github.FolioReader", name = "FolioReader-Android", version.ref = "folioreader" }
+folioreader = { group = "com.folioreader", name = "folioreader", version.ref = "folioreader" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 epublib-core-siegmann = { group = "nl.siegmann.epublib", name = "epublib-core", version.ref = "epublibSiegmann" }
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4jAndroid" }
-android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version = "2.8.2" }
+android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version = "3.2.0-beta.1" }
+
+# MLKit
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview", "androidx-compose-window-size"]

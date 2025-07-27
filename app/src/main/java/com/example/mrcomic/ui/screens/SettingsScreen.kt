@@ -1,17 +1,49 @@
 package com.example.mrcomic.ui.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -126,7 +158,7 @@ fun SettingsScreen(
                         SwitchSettingItem(
                             title = "Не выключать экран",
                             subtitle = "Экран остается включенным во время чтения",
-                            icon = Icons.Default.ScreenLockPortrait,
+                            icon = Icons.Default.ScreenRotationLock,
                             checked = uiState.keepScreenOn,
                             onCheckedChange = { checked ->
                                 viewModel.setKeepScreenOn(checked)
@@ -148,7 +180,7 @@ fun SettingsScreen(
                         SliderSettingItem(
                             title = "Яркость по умолчанию",
                             subtitle = "Настройка яркости для чтения",
-                            icon = Icons.Default.Brightness6,
+                            icon = Icons.Default.Brightness4,
                             value = uiState.defaultBrightness,
                             onValueChange = viewModel::setDefaultBrightness,
                             analyticsHelper = analyticsHelper,
@@ -176,7 +208,7 @@ fun SettingsScreen(
                         ActionSettingItem(
                             title = "Очистить кэш",
                             subtitle = "Освободить место, удалив временные файлы",
-                            icon = Icons.Default.CleaningServices,
+                            icon = Icons.Default.Delete,
                             onClick = {
                                 viewModel.clearCache()
                             },
@@ -245,7 +277,7 @@ fun SettingsScreen(
                         ActionSettingItem(
                             title = "Сброс настроек",
                             subtitle = "Вернуть все настройки к значениям по умолчанию",
-                            icon = Icons.Default.SettingsBackupRestore,
+                            icon = Icons.Default.Restore,
                             onClick = {
                                 viewModel.showResetDialog()
                             },
@@ -446,7 +478,7 @@ private fun ReadingModeSettingItem(
                 ReadingMode.FIT_HEIGHT -> "По высоте"
                 ReadingMode.ORIGINAL_SIZE -> "Оригинальный размер"
             },
-            icon = Icons.Default.AspectRatio,
+                                        icon = Icons.Default.CropFree,
             trailing = {
                 Icon(
                     Icons.Default.ChevronRight,

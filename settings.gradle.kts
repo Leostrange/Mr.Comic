@@ -12,11 +12,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        gradlePluginPortal()
         maven { url = uri("https://jitpack.io") }
         maven { url = uri("https://github.com/psiegman/mvn-repo/raw/master/releases") } // Для epublib
         maven { url = uri("https://oss.sonatype.org/content/repositories/snapshots/") } // Для некоторых библиотек
-        gradlePluginPortal()
         maven { url = uri("https://repository.aspose.com/repo/") } // Альтернативный репозиторий
+        maven { url = uri("https://maven.google.com/") } // Дополнительно Google Maven
+        maven { url = uri("https://repo1.maven.org/maven2/") } // Дополнительно Maven Central
     }
 }
 
