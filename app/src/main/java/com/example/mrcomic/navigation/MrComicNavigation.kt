@@ -316,7 +316,7 @@ private fun MrComicBottomBar(
             NavigationBarItem(
                 icon = {
                     Icon(
-                        imageVector = Icons.Default.Analytics,
+                        imageVector = Icons.Default.Speed,
                         contentDescription = "Performance",
                         modifier = Modifier.testTag("nav_performance")
                     )

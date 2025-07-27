@@ -645,7 +645,7 @@ private fun ReaderBottomControls(
                 ) {
                     IconButton(onClick = { }) {
                         Icon(
-                            Icons.Default.FitScreen,
+                            Icons.Default.CropFree,
                             contentDescription = "По ширине",
                             tint = Color.White
                         )

@@ -158,7 +158,7 @@ fun SettingsScreen(
                         SwitchSettingItem(
                             title = "Не выключать экран",
                             subtitle = "Экран остается включенным во время чтения",
-                            icon = Icons.Default.ScreenLockPortrait,
+                            icon = Icons.Default.ScreenRotationLock,
                             checked = uiState.keepScreenOn,
                             onCheckedChange = { checked ->
                                 viewModel.setKeepScreenOn(checked)
@@ -180,7 +180,7 @@ fun SettingsScreen(
                         SliderSettingItem(
                             title = "Яркость по умолчанию",
                             subtitle = "Настройка яркости для чтения",
-                            icon = Icons.Default.Brightness6,
+                            icon = Icons.Default.Brightness4,
                             value = uiState.defaultBrightness,
                             onValueChange = viewModel::setDefaultBrightness,
                             analyticsHelper = analyticsHelper,
@@ -208,7 +208,7 @@ fun SettingsScreen(
                         ActionSettingItem(
                             title = "Очистить кэш",
                             subtitle = "Освободить место, удалив временные файлы",
-                            icon = Icons.Default.CleaningServices,
+                            icon = Icons.Default.Delete,
                             onClick = {
                                 viewModel.clearCache()
                             },
@@ -277,7 +277,7 @@ fun SettingsScreen(
                         ActionSettingItem(
                             title = "Сброс настроек",
                             subtitle = "Вернуть все настройки к значениям по умолчанию",
-                            icon = Icons.Default.SettingsBackupRestore,
+                            icon = Icons.Default.Restore,
                             onClick = {
                                 viewModel.showResetDialog()
                             },
@@ -478,7 +478,7 @@ private fun ReadingModeSettingItem(
                 ReadingMode.FIT_HEIGHT -> "По высоте"
                 ReadingMode.ORIGINAL_SIZE -> "Оригинальный размер"
             },
-            icon = Icons.Default.AspectRatio,
+                                        icon = Icons.Default.CropFree,
             trailing = {
                 Icon(
                     Icons.Default.ChevronRight,
