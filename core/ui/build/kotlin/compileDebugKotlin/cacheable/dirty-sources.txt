@@ -1,2 +1,0 @@
-C:\Users\xmeta\projects\Mr.Comic\core\ui\src\main\java\com\example\core\ui\components\TopBar.kt
-C:\Users\xmeta\projects\Mr.Comic\core\ui\src\main\java\com\example\core\ui\theme\Theme.kt
