@@ -16,6 +16,7 @@ kotlinAndroid = "1.9.23"
 ksp = "1.9.23-1.0.20"
 kotlinCompilerExtension = "1.5.14"
 jvmTarget = "17"
+kotlinxCoroutines = "1.8.0"
 
 # AndroidX
 composeBom = "2025.06.01"
@@ -89,6 +90,9 @@ androidx-compose-material = { group = "androidx.compose.material", name = "mater
 
 # AndroidX Core
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx" }
+
+# Kotlin Coroutines
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 
 # AndroidX Lifecycle
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
@@ -167,6 +171,7 @@ test-unit = ["test-junit", "test-kotlinx-coroutines", "test-mockito-core", "test
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidApplication" }
+android-library = { id = "com.android.library", version.ref = "androidLibrary" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinAndroid" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinAndroid" }
