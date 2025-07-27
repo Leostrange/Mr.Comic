@@ -153,6 +153,6 @@ URL: https://github.com/Leostrange/Mr.Comic
 
 ---
 
-*Инструкции подготовлены: 2024-12-19*  
+*Инструкции подготовлены: 2025-07-27*  
 *Репозиторий: https://github.com/Leostrange/Mr.Comic*  
 *Ветка: cursor/bc-76df1374-9d40-445e-adb3-411ffca3290d-b372*
