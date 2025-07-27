@@ -3,4 +3,3 @@ sentencepiece>=0.2.0
 pytesseract>=0.3.13
 Pillow>=11.0.0
 numpy>=1.21.6
-

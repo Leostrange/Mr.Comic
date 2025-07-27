@@ -93,10 +93,10 @@ dependencies {
     implementation(libs.google.gson)
     
     // Coil для загрузки изображений
-    implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation(libs.coil.compose)
     
     // Material Components для ресурсов
-    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.material)
     
     // Hilt с kapt
     implementation(libs.google.hilt.android)
@@ -122,8 +122,8 @@ dependencies {
     implementation(project(":feature-themes"))
     
     testImplementation(libs.test.junit)
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -135,7 +135,7 @@ dependencies {
     implementation(libs.junrar)
 
     // Archive support
-    implementation("me.zhanghai.android.libarchive:library:1.1.6")
+    implementation(libs.libarchive)
 
     // EPUB (Siegmann's repo)
     implementation(libs.epublib.core.siegmann) {
@@ -145,18 +145,18 @@ dependencies {
     implementation(libs.slf4j.android) // Рекомендованная реализация SLF4J для Android
 
     // Accompanist Permissions
-    implementation("com.google.accompanist:accompanist-permissions:0.37.3")
+    implementation(libs.accompanist.permissions)
 
     // WebKit для EPUB
-    implementation("androidx.webkit:webkit:1.14.0")
+    implementation(libs.webkit)
 
     // Media3 (ExoPlayer)
-    implementation("androidx.media3:media3-exoplayer:1.7.1")
-    implementation("androidx.media3:media3-ui:1.7.1")
-    implementation("androidx.media3:media3-session:1.7.1")
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.session)
 
     // Libarchive needs this
-    implementation("androidx.exifinterface:exifinterface:1.4.1")
+    implementation(libs.exifinterface)
     
     // Comic Book formats
     // implementation "com.github.siegfriedstech:cbr-android:1.0.3" // We replaced this
