@@ -15,7 +15,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.analytics.AnalyticsEvent
 import com.example.core.analytics.AnalyticsHelper
-import com.example.mrcomic.ui.analytics.*
+import com.example.mrcomic.ui.analytics.TrackScreenView
+import com.example.mrcomic.ui.analytics.AnalyticsButton
+import com.example.mrcomic.ui.analytics.TrackScreenTime
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 

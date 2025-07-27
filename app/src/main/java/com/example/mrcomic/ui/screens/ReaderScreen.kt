@@ -28,8 +28,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceProfiler
-import com.example.mrcomic.ui.analytics.*
-import com.example.mrcomic.ui.performance.*
+import com.example.mrcomic.ui.analytics.TrackScreenView
+import com.example.mrcomic.ui.analytics.AnalyticsButton
+import com.example.mrcomic.ui.analytics.AnalyticsClickable
+import com.example.mrcomic.ui.analytics.TrackScreenTime
+import com.example.mrcomic.ui.performance.CachedAsyncImage
+import com.example.mrcomic.ui.performance.PerformanceMonitor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs

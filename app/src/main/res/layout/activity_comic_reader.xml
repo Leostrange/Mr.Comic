@@ -35,7 +35,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="fitCenter"
-        android:visibility="gone" <!-- По умолчанию скрыт, если PDFView будет основным -->
+        android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/navigationControlsLayout"
         app:layout_constraintStart_toStartOf="parent"

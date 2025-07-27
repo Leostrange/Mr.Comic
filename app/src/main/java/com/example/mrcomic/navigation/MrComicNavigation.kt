@@ -15,9 +15,11 @@ import androidx.navigation.*
 import androidx.navigation.compose.*
 import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceProfiler
-import com.example.mrcomic.ui.analytics.*
+import com.example.mrcomic.ui.analytics.TrackScreenView
 import com.example.mrcomic.ui.performance.PerformanceDashboard
-import com.example.mrcomic.ui.screens.*
+import com.example.mrcomic.ui.screens.LibraryScreen
+import com.example.mrcomic.ui.screens.ReaderScreen
+import com.example.mrcomic.ui.screens.SettingsScreen
 import kotlinx.coroutines.launch
 
 /**
@@ -285,8 +287,8 @@ private fun MrComicBottomBar(
             )
         }
         
-        // Debug Performance Button (только в debug режиме)
-        if (BuildConfig.DEBUG) {
+                            // Debug Performance Button (только в debug режиме)
+                    if (true) { // TODO: заменить на BuildConfig.DEBUG когда будет доступен
             NavigationBarItem(
                 icon = {
                     Icon(
@@ -364,7 +366,4 @@ sealed class Screen(val route: String) {
     object Performance : Screen("performance")
 }
 
-// BuildConfig import fix (create a simple replacement)
-private object BuildConfig {
-    const val DEBUG = true // В реальном проекте это будет автоматически генерироваться
-}
+// BuildConfig будет автоматически генерироваться при сборке Android проекта

@@ -24,7 +24,8 @@ import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceMetric
 import com.example.core.analytics.PerformanceProfiler
 import com.example.core.analytics.PerformanceStats
-import com.example.mrcomic.ui.analytics.*
+import com.example.mrcomic.ui.analytics.TrackScreenView
+import com.example.mrcomic.ui.analytics.AnalyticsButton
 import kotlinx.coroutines.launch
 
 /**
