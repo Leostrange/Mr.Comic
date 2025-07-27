@@ -1,6 +1,10 @@
 package com.example.mrcomic.ui.settings
 
-import androidx.compose.ui.test.*
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import com.example.mrcomic.ui.BaseUITest
 import com.example.mrcomic.ui.utils.ComposeTestUtils.assertButtonExists
 import com.example.mrcomic.ui.utils.ComposeTestUtils.assertIsDisplayedAndEnabled
