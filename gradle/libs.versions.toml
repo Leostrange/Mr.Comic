@@ -48,9 +48,7 @@ media3 = "1.7.1"
 exifinterface = "1.4.1"
 libarchive = "1.1.6"
 
-# Tooling
-spotless = "6.26.1"
-ktlintGradle = "11.6.1"
+# Tooling (removed unused plugins)
 
 # Archives
 zip4j = "2.11.5"
@@ -173,7 +171,5 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinAnd
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinAndroid" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
-ktlint-gradle = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlintGradle" }
 
 
