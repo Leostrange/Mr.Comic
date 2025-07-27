@@ -202,6 +202,6 @@ app/src/main/java/com/example/mrcomic/
 ---
 
 *Created by: AI Assistant*  
-*Date: 2024-12-19*  
+*Date: 2025-07-27*  
 *Repository: https://github.com/Leostrange/Mr.Comic*  
 *Branch: cursor/bc-76df1374-9d40-445e-adb3-411ffca3290d-b372 → feat/initial-project-setup*
