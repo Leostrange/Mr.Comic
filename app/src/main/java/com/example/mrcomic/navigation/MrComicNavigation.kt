@@ -40,6 +40,7 @@ import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceProfiler
 import com.example.mrcomic.ui.analytics.TrackScreenView
 import com.example.mrcomic.ui.performance.PerformanceDashboard
+import com.example.mrcomic.BuildConfig
 import com.example.mrcomic.ui.screens.LibraryScreen
 import com.example.mrcomic.ui.screens.ReaderScreen
 import com.example.mrcomic.ui.screens.SettingsScreen
@@ -311,7 +312,7 @@ private fun MrComicBottomBar(
         }
         
                             // Debug Performance Button (только в debug режиме)
-                    if (true) { // TODO: заменить на BuildConfig.DEBUG когда будет доступен
+                    if (BuildConfig.DEBUG) {
             NavigationBarItem(
                 icon = {
                     Icon(
