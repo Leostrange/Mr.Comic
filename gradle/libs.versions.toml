@@ -61,16 +61,16 @@ libarchive = "1.1.6"
 # Archives (working versions - FIXED)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.8.0"  # Fixed version from 1.9.0
-telephoto = "0.11.0"  # Fixed version from 0.12.0  
+pdfium_android = "1.9.0"  # Using known working version
+telephoto = "0.11.0"  # Using known working version  
 commons_compress = "1.26.0"
 
 # Custom (working versions - FIXED)
 pdfboxAndroid = "2.0.27.0"
 slf4jAndroid = "1.7.36"
-mlkitTextRecognition = "16.0.1"  # Fixed version from 16.0.0
+mlkitTextRecognition = "16.0.0"  # Using Google's stable version
 materialIconsExtended = "1.6.8"
-androidPdfViewer = "2.8.2"  # Fixed version from 3.2.0-beta.1
+androidPdfViewer = "3.2.0-beta.1"  # Using exact version from dependency
 
 # Alternative PDF viewer (JitPack fallback)
 androidPdfViewerFallback = "2.7.0-beta.3"
@@ -91,7 +91,7 @@ accompanistPermissions = "0.34.0"
 
 # Image processing
 palette = "1.0.0"
-glide = "4.16.0"
+glide = "4.15.1"  # Using stable version without Compose dependency issues
 
 # Chart & Data visualization  
 charts = "1.0.1"
@@ -194,8 +194,8 @@ android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer
 android-pdf-viewer-fallback = { group = "com.github.shxdos", name = "AndroidPdfViewer", version.ref = "androidPdfViewerFallback" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
-# Zoomable Image - using stable telephoto version
-telephoto-zoomable = { group = "me.saket.telephoto", name = "zoomable-image-compose", version = "0.11.0" }
+# Zoomable Image - temporarily disabled due to resolution issues
+# telephoto-zoomable = { group = "me.saket.telephoto", name = "zoomable-image-compose", version = "0.11.0" }
 
 # MLKit (working versions) - using stable releases
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.0" }

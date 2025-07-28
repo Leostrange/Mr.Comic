@@ -40,8 +40,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.ViewStream
-import me.saket.telephoto.zoomable.rememberZoomableState
-import me.saket.telephoto.zoomable.zoomable
+// Temporarily disabled telephoto zoomable due to dependency issues
+// import me.saket.telephoto.zoomable.rememberZoomableState
+// import me.saket.telephoto.zoomable.zoomable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 
 /**
  * The main entry point for the reader screen.
@@ -141,49 +144,36 @@ private fun PagedReader(
         },
         label = "PageSlider"
     ) { targetState ->
-        BoxWithConstraints(
+                BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            val zoomableState = rememberZoomableState()
-            val isZoomed = zoomableState.zoom.scale > 1f
-
-            LaunchedEffect(targetState.currentPageBitmap) {
-                zoomableState.resetZoom(withAnimation = false)
-            }
-
             targetState.currentPageBitmap?.let { bitmap ->
                 Image(
                     painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
                     contentDescription = "Page ${targetState.currentPageIndex + 1}",
                     modifier = Modifier
                         .fillMaxSize()
-                        .zoomable(
-                            state = zoomableState,
-                            onTap = {
-                                if (!isZoomed) {
-                                    try {
-                                        // CRITICAL FIX: Prevent divide by zero and arithmetic exceptions
-                                        val maxWidthDp = constraints.maxWidth
-                                        if (maxWidthDp > 0) {
-                                            val screenWidth = maxWidthDp.toPx()
-                                            if (screenWidth > 0) {
-                                                val leftZone = screenWidth * 0.3f
-                                                val rightZone = screenWidth * 0.7f
-                                                when {
-                                                    it.x < leftZone -> onPreviousPage()
-                                                    it.x > rightZone -> onNextPage()
-                                                    // Middle zone does nothing (allows zoom)
-                                                }
-                                            }
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset ->
+                                try {
+                                    // CRITICAL FIX: Prevent divide by zero and arithmetic exceptions
+                                    val maxWidthPx = constraints.maxWidth.toFloat()
+                                    if (maxWidthPx > 0f) {
+                                        val leftZone = maxWidthPx * 0.3f
+                                        val rightZone = maxWidthPx * 0.7f
+                                        when {
+                                            offset.x < leftZone -> onPreviousPage()
+                                            offset.x > rightZone -> onNextPage()
+                                            // Middle zone does nothing
                                         }
-                                    } catch (e: ArithmeticException) {
-                                        android.util.Log.e("ReaderScreen", "ArithmeticException in tap handling", e)
-                                        // Fallback: still allow page navigation on center tap
                                     }
+                                } catch (e: ArithmeticException) {
+                                    android.util.Log.e("ReaderScreen", "ArithmeticException in tap handling", e)
+                                    // Fallback: still allow page navigation on center tap
                                 }
                             }
-                        ),
+                        },
                     contentScale = ContentScale.Fit
                 )
             }
@@ -213,13 +203,10 @@ private fun WebtoonPageItem(
     val bitmap = uiState.bitmaps[pageIndex]
 
     if (bitmap != null) {
-        val zoomableState = rememberZoomableState()
         Image(
             painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
             contentDescription = "Page ${pageIndex + 1}",
-            modifier = Modifier
-                .fillMaxWidth()
-                .zoomable(zoomableState),
+            modifier = Modifier.fillMaxWidth(),
             contentScale = ContentScale.FillWidth
         )
     } else {

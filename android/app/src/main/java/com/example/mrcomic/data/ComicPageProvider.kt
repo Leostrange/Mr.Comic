@@ -61,6 +61,15 @@ class CbzPageProvider(private val zipFile: ZipFile, private val imageEntries: Li
             Log.d(TAG, "CBZ file closed successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Error closing CBZ file", e)
+        } finally {
+            // Ensure file is properly closed
+            if (!zipFile.isClosed) {
+                try {
+                    zipFile.close()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to force close CBZ file", e)
+                }
+            }
         }
     }
     
@@ -128,8 +137,9 @@ class CbrPageProvider(private val imageFiles: List<File>) : PageProvider {
 fun createPageProvider(context: Context, file: File): PageProvider? {
     return when (file.extension.lowercase()) {
         "cbz" -> {
+            var zipFile: ZipFile? = null
             try {
-                val zipFile = ZipFile(file)
+                zipFile = ZipFile(file)
                 val entries = zipFile.entries().toList().filter { 
                     it.name.endsWith(".jpg", true) || 
                     it.name.endsWith(".png", true) ||
@@ -143,6 +153,7 @@ fun createPageProvider(context: Context, file: File): PageProvider? {
                 }
                 CbzPageProvider(zipFile, entries)
             } catch (e: Exception) {
+                zipFile?.close() // Close on error to prevent leak
                 Log.e("ComicPageProvider", "Failed to create CBZ page provider for ${file.name}", e)
                 null
             }
