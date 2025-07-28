@@ -33,15 +33,16 @@ class CbrReader(
                 }
 
                 // Copy content from URI to a temporary file because junrar works with Files
-                tempComicFile = File.createTempFile("temp_cbr_", ".cbr", cacheDir)
+                val createdTempFile = File.createTempFile("temp_cbr_", ".cbr", cacheDir)
+                tempComicFile = createdTempFile
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    tempComicFile!!.outputStream().use { outputStream ->
+                    createdTempFile.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }
                 } ?: throw IllegalStateException("Cannot open input stream from URI")
 
                 // Validate file exists and is not empty
-                if (!tempComicFile!!.exists() || tempComicFile!!.length() == 0L) {
+                if (!createdTempFile.exists() || createdTempFile.length() == 0L) {
                     throw IllegalStateException("CBR файл пустой или поврежден")
                 }
 

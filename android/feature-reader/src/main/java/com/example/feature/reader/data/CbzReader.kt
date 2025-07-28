@@ -32,15 +32,16 @@ class CbzReader(
                 }
 
                 // Copy content from URI to a temporary file because Zip4j works with Files
-                tempComicFile = File.createTempFile("temp_cbz_", ".cbz", cacheDir)
+                val createdTempFile = File.createTempFile("temp_cbz_", ".cbz", cacheDir)
+                tempComicFile = createdTempFile
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    tempComicFile!!.outputStream().use { outputStream ->
+                    createdTempFile.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)
                     }
                 } ?: throw IllegalStateException("Cannot open input stream from URI")
 
                 // Validate file exists and is not empty
-                if (!tempComicFile!!.exists() || tempComicFile!!.length() == 0L) {
+                if (!createdTempFile.exists() || createdTempFile.length() == 0L) {
                     throw IllegalStateException("CBZ файл пустой или поврежден")
                 }
 
@@ -54,8 +55,9 @@ class CbzReader(
                     .filter { !it.isDirectory && isImageFile(it.fileName) }
                     .map { fileHeader ->
                         try {
-                            zipFile.extractFile(fileHeader, tempDir!!.absolutePath)
-                            File(tempDir, fileHeader.fileName.substringAfterLast(File.separator)).absolutePath
+                            val currentTempDir = tempDir ?: throw IllegalStateException("Temp directory is null")
+                            zipFile.extractFile(fileHeader, currentTempDir.absolutePath)
+                            File(currentTempDir, fileHeader.fileName.substringAfterLast(File.separator)).absolutePath
                         } catch (e: Exception) {
                             // Log the error but continue with other files
                             android.util.Log.w("CbzReader", "Failed to extract ${fileHeader.fileName}: ${e.message}")
