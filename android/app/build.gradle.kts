@@ -113,6 +113,10 @@ dependencies {
     implementation(libs.pdfium.android)
     implementation(libs.android.pdf.viewer)
     
+    // Video splash screen
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
+    
     // Testing
     testImplementation(libs.test.junit)
     androidTestImplementation(libs.androidx.junit)
