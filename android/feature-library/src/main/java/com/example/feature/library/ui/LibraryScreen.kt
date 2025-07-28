@@ -171,7 +171,11 @@ private fun LibraryScreenContent(
                 )
             } else {
                 MrComicTopAppBar(
-                    title = "Library (${visibleComics.size})",
+                    title = if (uiState.searchQuery.isNotEmpty()) {
+                        "Found: ${uiState.visibleComicsCount} of ${uiState.totalComicsCount}"
+                    } else {
+                        "Library (${uiState.visibleComicsCount})"
+                    },
                     actions = {
                         IconButton(onClick = onToggleSearch) {
                             Icon(Icons.Default.Search, contentDescription = "Search")

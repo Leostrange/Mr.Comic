@@ -14,5 +14,8 @@ data class LibraryUiState(
     val isSearchActive: Boolean = false,
     val inSelectionMode: Boolean = false,
     val selectedComicIds: Set<String> = emptySet(),
-    val pendingDeletionIds: Set<String> = emptySet()
+    val pendingDeletionIds: Set<String> = emptySet(),
+    // Comic counter implementation for Issue #24
+    val totalComicsCount: Int = 0,
+    val visibleComicsCount: Int = 0
 )
