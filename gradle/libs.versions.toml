@@ -152,6 +152,9 @@ mlkit-text-recognition-common = { group = "com.google.mlkit", name = "text-recog
 # Logging
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4jAndroid" }
 
+# Kotlin Coroutines
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
+
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview", "androidx-compose-window-size"]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
