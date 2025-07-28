@@ -163,11 +163,14 @@ private fun PagedReader(
                             onTap = {
                                 if (!isZoomed) {
                                     val screenWidth = constraints.maxWidth.toPx()
-                                    // CRITICAL FIX: Prevent divide by zero
-                                    if (screenWidth > 0) {
+                                    // CRITICAL FIX: Prevent divide by zero and ensure valid screen dimensions
+                                    if (screenWidth > 0 && constraints.maxWidth > 0) {
+                                        val leftZone = screenWidth * 0.3f
+                                        val rightZone = screenWidth * 0.7f
                                         when {
-                                            it.x < screenWidth * 0.3f -> onPreviousPage()
-                                            it.x > screenWidth * 0.7f -> onNextPage()
+                                            it.x < leftZone -> onPreviousPage()
+                                            it.x > rightZone -> onNextPage()
+                                            // Middle zone does nothing (allows zoom)
                                         }
                                     }
                                 }

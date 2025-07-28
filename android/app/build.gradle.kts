@@ -109,9 +109,9 @@ dependencies {
     implementation(libs.junrar)
     implementation(libs.commons.compress)
     
-    // PDF support
+    // PDF support (with fallbacks for problematic versions)
     implementation(libs.pdfium.android)
-    implementation(libs.android.pdf.viewer)
+    implementation(libs.android.pdf.viewer.fallback)  // Using JitPack fallback
     
     // Video splash screen
     implementation(libs.exoplayer.core)

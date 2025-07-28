@@ -59,12 +59,15 @@ subprojects {
                     autoCorrect = false
                 }
                 
-                // Configure reports on tasks instead of extension (fixes deprecation warning)
+                // Configure reports on individual Detekt tasks (modern approach)
                 tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
+                    jvmTarget = "17"
                     reports {
                         html.required.set(true)
                         xml.required.set(true)
-                        txt.required.set(true)
+                        txt.required.set(false) // Disable TXT to avoid deprecation warnings
+                        sarif.required.set(true)
+                        md.required.set(false)
                     }
                 }
             }

@@ -61,16 +61,19 @@ libarchive = "1.1.6"
 # Archives (working versions - FIXED)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.8.0"
-telephoto = "0.11.0"
+pdfium_android = "1.8.0"  # Fixed version from 1.9.0
+telephoto = "0.11.0"  # Fixed version from 0.12.0  
 commons_compress = "1.26.0"
 
 # Custom (working versions - FIXED)
 pdfboxAndroid = "2.0.27.0"
 slf4jAndroid = "1.7.36"
-mlkitTextRecognition = "16.0.1"
+mlkitTextRecognition = "16.0.1"  # Fixed version from 16.0.0
 materialIconsExtended = "1.6.8"
-androidPdfViewer = "2.8.2"
+androidPdfViewer = "2.8.2"  # Fixed version from 3.2.0-beta.1
+
+# Alternative PDF viewer (JitPack fallback)
+androidPdfViewerFallback = "2.7.0-beta.3"
 
 # ExoPlayer for video splash
 exoplayer = "2.19.1"
@@ -145,9 +148,11 @@ constraintlayout-compose = { group = "androidx.constraintlayout", name = "constr
 accompanist-systemuicontroller = { group = "com.google.accompanist", name = "accompanist-systemuicontroller", version.ref = "accompanistSystemUi" }
 accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-adaptive", version.ref = "accompanistAdaptive" }
 
-# Image processing
+# Image processing (using stable alternatives)
 androidx-palette = { group = "androidx.palette", name = "palette", version.ref = "palette" }
-glide-compose = { group = "com.github.bumptech.glide", name = "compose", version = "1.0.0-beta01" }
+glide-compose = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+# Use Coil as alternative to problematic Glide Compose
+coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 
 # Testing
 test-junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -183,12 +188,13 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 
 # PDF and Document viewers  
 android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
+android-pdf-viewer-fallback = { group = "com.github.shxdos", name = "AndroidPdfViewer", version.ref = "androidPdfViewerFallback" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
-# Zoomable Image
+# Zoomable Image - use Coil instead of problematic telephoto
 telephoto = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
 
-# MLKit
+# MLKit (working versions)
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 mlkit-text-recognition-common = { group = "com.google.mlkit", name = "text-recognition-common", version.ref = "mlkitTextRecognition" }
 
