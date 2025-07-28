@@ -78,8 +78,9 @@ class ReaderViewModel @Inject constructor(
             bookReader?.close()
 
             try {
-                bookReader = readerFactory.create(uri)
-                val pageCount = bookReader!!.open(uri)
+                val reader = readerFactory.create(uri)
+                val pageCount = reader.open(uri)
+                bookReader = reader // Only assign if successful
                 android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
                 _uiState.update { it.copy(pageCount = pageCount) }
                 loadPage(0) // Load the first page

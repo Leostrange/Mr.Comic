@@ -51,10 +51,10 @@ class BookReaderFactory @Inject constructor(
                 android.util.Log.d(TAG, "Creating PDF reader")
                 PdfReader(context)
             }
-            "djvu", "djv" -> {
-                android.util.Log.d(TAG, "Creating DJVU reader")
-                DjvuReader(context)
-            }
+            // "djvu", "djv" -> {
+            //     android.util.Log.d(TAG, "Creating DJVU reader")
+            //     DjvuReader(context)
+            // } // DJVU support disabled - missing library
             else -> {
                 android.util.Log.e(TAG, "Unsupported file format: $extension for file: $fileName")
                 throw UnsupportedFormatException("Unsupported file format for: $fileName")
