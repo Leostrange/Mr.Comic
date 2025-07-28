@@ -57,11 +57,15 @@ class ReaderViewModel @Inject constructor(
     init {
         // The file path is passed as a navigation argument.
         // SavedStateHandle automatically receives arguments from the NavController.
+        android.util.Log.d(TAG, "🎬 ReaderViewModel initialized")
+        android.util.Log.d(TAG, "📋 SavedStateHandle keys: ${savedStateHandle.keys()}")
         val uriString = savedStateHandle.get<String>("uri")
-        android.util.Log.d(TAG, "Initializing with URI: $uriString")
+        android.util.Log.d(TAG, "📁 Received URI from navigation: $uriString")
         if (uriString != null) {
+            android.util.Log.d(TAG, "✅ URI found, opening book...")
             openBook(Uri.parse(uriString))
         } else {
+            android.util.Log.e(TAG, "❌ No URI provided in navigation arguments!")
             _uiState.update { it.copy(isLoading = false, error = "File URI not provided.") }
         }
     }

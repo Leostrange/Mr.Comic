@@ -146,7 +146,10 @@ private fun LibraryScreenContent(
 
     LaunchedEffect(storagePermissionState.status.isGranted) {
         if (storagePermissionState.status.isGranted) {
-            // Permission granted, ViewModel will handle loading comics
+            android.util.Log.d("LibraryScreen", "🔐 Storage permission granted, scanning for comics...")
+            viewModel.onPermissionsGranted()
+        } else {
+            android.util.Log.w("LibraryScreen", "⚠️ Storage permission not granted")
         }
     }
 
@@ -238,6 +241,8 @@ private fun LibraryScreenContent(
                                 comic = comic,
                                 isSelected = uiState.selectedComicIds.contains(comic.filePath),
                                 onClick = {
+                                    android.util.Log.d("LibraryScreen", "📖 Comic clicked: ${comic.title}")
+                                    android.util.Log.d("LibraryScreen", "📁 File path: ${comic.filePath}")
                                     if (uiState.inSelectionMode) {
                                         onComicSelected(comic.filePath)
                                     } else {
