@@ -32,6 +32,11 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        // ЯВНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
+        android.util.Log.d("MainActivity", "🚨 FIXED MAINACTIVITY STARTED - USING APPNAVHOST 🚨")
+        android.util.Log.d("MainActivity", "If you see this log, you're using the FIXED version")
+        println("🚨🚨🚨 FIXED MAINACTIVITY WITH APPNAVHOST STARTED 🚨🚨🚨")
+        
         // Устанавливаем Splash Screen
         val splashScreen = installSplashScreen()
         

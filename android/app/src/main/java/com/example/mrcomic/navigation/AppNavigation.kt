@@ -12,6 +12,7 @@ import com.example.mrcomic.ui.screens.add_comic.AddComicScreen
 import com.example.feature.reader.ui.ReaderScreen
 import com.example.feature.settings.SettingsScreen
 import com.example.feature.onboarding.OnboardingScreen
+import com.example.mrcomic.ui.DebugReaderScreen
 
 /**
  * Определяет навигационные маршруты в приложении.
@@ -28,6 +29,7 @@ sealed class Screen(val route: String) {
     data object AddComic : Screen("add_comic")
     data object Settings : Screen("settings")
     data object Onboarding : Screen("onboarding")
+    data object Debug : Screen("debug")
 
 }
 
@@ -36,7 +38,7 @@ sealed class Screen(val route: String) {
  */
 @Composable
 fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Unit) {
-    NavHost(navController = navController, startDestination = Screen.Onboarding.route) {
+    NavHost(navController = navController, startDestination = Screen.Debug.route) {
         composable(route = Screen.Library.route) {
             LibraryScreen(
                 onBookClick = { uriString -> navController.navigate(Screen.Reader.createRoute(uriString)) },
@@ -64,6 +66,10 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
 
         composable(route = Screen.Onboarding.route) {
             OnboardingScreen(onOnboardingComplete = onOnboardingComplete)
+        }
+
+        composable(route = Screen.Debug.route) {
+            DebugReaderScreen()
         }
     }
 }
