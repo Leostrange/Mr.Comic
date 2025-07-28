@@ -24,8 +24,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":core-model"))
-    implementation(project(":core-reader"))
+    implementation(project(":android:core-model"))
+    implementation(project(":android:core-reader"))
     implementation(libs.google.hilt.android)
     kapt(libs.google.hilt.compiler)
     implementation(libs.bundles.room)

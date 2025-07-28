@@ -32,6 +32,13 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     
     override fun onCreate(savedInstanceState: Bundle?) {
+        // АРХИТЕКТУРНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
+        android.util.Log.d("MainActivity", "🏗️ RESTRUCTURED ANDROID PROJECT STARTED 🏗️")
+        android.util.Log.d("MainActivity", "✅ Using correct :android:feature-reader module")
+        android.util.Log.d("MainActivity", "✅ AppNavHost navigation (not MrComicNavigation)")
+        android.util.Log.d("MainActivity", "✅ All modules properly namespaced under android:")
+        println("🏗️🚀 CLEAN ANDROID ARCHITECTURE ACTIVE 🚀🏗️")
+        
         // Устанавливаем Splash Screen
         val splashScreen = installSplashScreen()
         

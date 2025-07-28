@@ -140,16 +140,16 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     kapt(libs.androidx.room.compiler)
     
-    // Feature modules - пока только shared
-    implementation(project(":shared"))
-    implementation(project(":core-analytics"))
-    implementation(project(":core-ui"))
-    implementation(project(":core-data"))
-    implementation(project(":core-model"))
-    implementation(project(":feature-library"))
-    implementation(project(":feature-settings"))
-    implementation(project(":feature-reader"))
-    implementation(project(":feature-themes"))
+    // Android modules with proper paths
+    implementation(project(":android:shared"))
+    implementation(project(":android:core-analytics"))
+    implementation(project(":android:core-ui"))
+    implementation(project(":android:core-data"))
+    implementation(project(":android:core-model"))
+    implementation(project(":android:feature-library"))
+    implementation(project(":android:feature-settings"))
+    implementation(project(":android:feature-reader"))
+    implementation(project(":android:feature-themes"))
     
     testImplementation(libs.test.junit)
     androidTestImplementation(libs.androidx.junit)
