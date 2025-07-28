@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.example.feature.reader.data.CachingBookReader
 import com.example.feature.reader.data.CbrReader
-import com.example.feature.reader.data.DjvuReader
+// import com.example.feature.reader.data.DjvuReader // Removed - missing library
 import com.example.feature.reader.data.CbzReader
 import com.example.feature.reader.data.PdfReader
 import com.example.feature.reader.data.cache.BitmapCache

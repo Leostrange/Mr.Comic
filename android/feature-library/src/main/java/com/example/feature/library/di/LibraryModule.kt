@@ -3,7 +3,7 @@ package com.example.feature.library.di
 import android.content.Context
 import androidx.room.Room
 import com.example.feature.library.LibraryRepository
-import com.example.feature.library.RoomLibraryRepository
+// import com.example.feature.library.RoomLibraryRepository // Using implementation from LibraryRepository.kt
 import com.example.feature.library.data.ComicDao
 import com.example.feature.library.data.LibraryDatabase
 import dagger.Binds
