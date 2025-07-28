@@ -10,7 +10,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
@@ -19,9 +24,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.example.core.analytics.AnalyticsHelper
 import com.example.core.analytics.PerformanceProfiler
+import com.example.core.ui.splash.VideoSplash
+import com.example.core.ui.theme.MrComicTheme
 import com.example.mrcomic.navigation.AppNavHost
 import androidx.navigation.compose.rememberNavController
-import com.example.mrcomic.ui.theme.MrComicTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -34,13 +40,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // АРХИТЕКТУРНАЯ ОТЛАДОЧНАЯ ИНФОРМАЦИЯ
         android.util.Log.d("MainActivity", "🏗️ RESTRUCTURED ANDROID PROJECT STARTED 🏗️")
-        android.util.Log.d("MainActivity", "✅ Using correct :android:feature-reader module")
+        android.util.Log.d("MainActivity", "✅ Using modern UI components with video splash")
         android.util.Log.d("MainActivity", "✅ AppNavHost navigation (not MrComicNavigation)")
         android.util.Log.d("MainActivity", "✅ All modules properly namespaced under android:")
-        println("🏗️🚀 CLEAN ANDROID ARCHITECTURE ACTIVE 🚀🏗️")
+        println("🏗️🚀 CLEAN ANDROID ARCHITECTURE + MODERN UI ACTIVE 🚀🏗️")
         
-        // Устанавливаем Splash Screen
-        val splashScreen = installSplashScreen()
+        // Skip default splash for custom video splash
+        // val splashScreen = installSplashScreen()
         
         super.onCreate(savedInstanceState)
         
@@ -72,15 +78,15 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Главный компонент приложения
+ * Главный компонент приложения с современным видео-сплэшем
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MrComicApp(
     analyticsHelper: AnalyticsHelper = hiltViewModel(),
     performanceProfiler: PerformanceProfiler = hiltViewModel()
 ) {
     val context = LocalContext.current
+    var showVideoSplash by remember { mutableStateOf(true) }
     
     // Отслеживаем запуск приложения
     LaunchedEffect(Unit) {
@@ -98,13 +104,23 @@ fun MrComicApp(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
-            val navController = rememberNavController()
-            AppNavHost(
-                navController = navController,
-                onOnboardingComplete = {
-                    // Handle onboarding completion if needed
-                }
-            )
+            if (showVideoSplash) {
+                VideoSplash(
+                    videoResId = R.raw.splash_video,
+                    onFinished = { 
+                        showVideoSplash = false
+                        android.util.Log.d("MainActivity", "🎬 Video splash finished, launching app")
+                    }
+                )
+            } else {
+                val navController = rememberNavController()
+                AppNavHost(
+                    navController = navController,
+                    onOnboardingComplete = {
+                        // Handle onboarding completion if needed
+                    }
+                )
+            }
         }
     }
 }

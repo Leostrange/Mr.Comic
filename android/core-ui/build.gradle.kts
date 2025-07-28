@@ -30,9 +30,35 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2024.05.00"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("io.coil-kt:coil-compose:2.7.0")
+    // Compose BOM
+    implementation(platform(libs.androidx.compose.bom))
+    
+    // Core Compose
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material.icons.extended)
+    
+    // Modern UI Components
+    implementation(libs.lottie.compose)
+    implementation(libs.material3.window.size)
+    implementation(libs.constraintlayout.compose)
+    
+    // Animation & Effects
+    implementation(libs.accompanist.systemuicontroller)
+    implementation(libs.accompanist.adaptive)
+    implementation(libs.accompanist.permissions)
+    
+    // Image loading and processing
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.palette)
+    implementation(libs.glide.compose)
+    
+    // ExoPlayer for video components
+    implementation(libs.exoplayer.core)
+    implementation(libs.exoplayer.ui)
+    
+    // Lifecycle
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
 }
