@@ -39,11 +39,11 @@ dependencies {
     implementation(libs.telephoto)
 
     // Archive/document format support
-    implementation(libs.pdfium.android) // Corrected PDF library
-    implementation(libs.junrar)
-    implementation(libs.zip4j) // Added for CBZ support
-    implementation(libs.sevenzip4j)
-    implementation(libs.commons.compress)
+    implementation(libs.pdfium.android) // PDF library
+    implementation(libs.junrar) // CBR support
+    implementation(libs.zip4j) // CBZ support
+    implementation(libs.commons.compress) // General archive support
+    implementation(libs.android.pdf.viewer) // Alternative PDF viewer
 }
 
 
