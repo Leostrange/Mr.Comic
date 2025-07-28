@@ -29,9 +29,19 @@ class LibraryViewModel @Inject constructor(
     private fun observeComics() {
         viewModelScope.launch {
             _uiState.collectLatest { uiState ->
-                comicRepository.getComics(uiState.sortOrder, uiState.searchQuery).collectLatest {
+                comicRepository.getComics(uiState.sortOrder, uiState.searchQuery).collectLatest { comics ->
+                    // Calculate comic counts for Issue #24
+                    val visibleComics = comics.filter { comic ->
+                        comic.filePath !in uiState.pendingDeletionIds
+                    }
+                    
                     _uiState.update { currentState ->
-                        currentState.copy(isLoading = false, comics = it)
+                        currentState.copy(
+                            isLoading = false, 
+                            comics = comics,
+                            totalComicsCount = comics.size,
+                            visibleComicsCount = visibleComics.size
+                        )
                     }
                 }
             }
@@ -97,17 +107,32 @@ class LibraryViewModel @Inject constructor(
         val selectedIds = _uiState.value.selectedComicIds
         if (selectedIds.isEmpty()) return
 
-        _uiState.update {
-            it.copy(
-                pendingDeletionIds = it.pendingDeletionIds + selectedIds,
+        _uiState.update { currentState ->
+            val newPendingDeletionIds = currentState.pendingDeletionIds + selectedIds
+            val visibleComics = currentState.comics.filter { comic ->
+                comic.filePath !in newPendingDeletionIds
+            }
+            
+            currentState.copy(
+                pendingDeletionIds = newPendingDeletionIds,
                 inSelectionMode = false,
-                selectedComicIds = emptySet()
+                selectedComicIds = emptySet(),
+                visibleComicsCount = visibleComics.size
             )
         }
     }
 
     fun onUndoDelete() {
-        _uiState.update { it.copy(pendingDeletionIds = emptySet()) }
+        _uiState.update { currentState ->
+            val visibleComics = currentState.comics.filter { comic ->
+                comic.filePath !in emptySet<String>()
+            }
+            
+            currentState.copy(
+                pendingDeletionIds = emptySet(),
+                visibleComicsCount = visibleComics.size
+            )
+        }
     }
 
     fun onDeletionTimeout() {
