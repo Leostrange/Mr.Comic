@@ -30,9 +30,9 @@ object CbrTextExtractor {
                     if (!outputFile.parentFile.exists()) {
                         outputFile.parentFile.mkdirs()
                     }
-                    val outputStream = FileOutputStream(outputFile)
-                    archive.extractFile(header, outputStream)
-                    outputStream.close()
+                    FileOutputStream(outputFile).use { outputStream ->
+                        archive.extractFile(header, outputStream)
+                    }
 
                     // Read the extracted text file
                     BufferedReader(InputStreamReader(outputFile.inputStream())).use { reader ->
