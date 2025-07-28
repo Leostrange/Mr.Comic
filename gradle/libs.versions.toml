@@ -150,8 +150,9 @@ accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-a
 
 # Image processing (using stable alternatives)
 androidx-palette = { group = "androidx.palette", name = "palette", version.ref = "palette" }
-glide-compose = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
-# Use Coil as alternative to problematic Glide Compose
+# Glide stable version (avoiding compose issues)
+glide-core = { group = "com.github.bumptech.glide", name = "glide", version.ref = "glide" }
+# Use Coil as primary compose image loader (stable)
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 
 # Testing
@@ -183,20 +184,22 @@ libarchive = { group = "me.zhanghai.android.libarchive", name = "library", versi
 # Archives (working dependencies)
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
-pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
+# Using alternative PDF renderer - pdfium-android has repository issues
+# pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
+pdfium-android = { group = "com.github.barteksc", name = "pdfium-android", version = "1.9.0" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons_compress" }
 
-# PDF and Document viewers  
-android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
+# PDF and Document viewers (using stable version)
+android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version = "2.8.2" }
 android-pdf-viewer-fallback = { group = "com.github.shxdos", name = "AndroidPdfViewer", version.ref = "androidPdfViewerFallback" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
-# Zoomable Image - use Coil instead of problematic telephoto
-telephoto = { group = "me.saket.telephoto", name = "zoomable-image-compose", version.ref = "telephoto" }
+# Zoomable Image - using stable telephoto version
+telephoto-zoomable = { group = "me.saket.telephoto", name = "zoomable-image-compose", version = "0.11.0" }
 
-# MLKit (working versions)
-mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
-mlkit-text-recognition-common = { group = "com.google.mlkit", name = "text-recognition-common", version.ref = "mlkitTextRecognition" }
+# MLKit (working versions) - using stable releases
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.0" }
+mlkit-text-recognition-common = { group = "com.google.mlkit", name = "text-recognition-common", version = "16.0.0" }
 
 # Logging
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4jAndroid" }

@@ -52,7 +52,8 @@ dependencies {
     // Image loading and processing
     implementation(libs.coil.compose)
     implementation(libs.androidx.palette)
-    implementation(libs.glide.compose)
+    implementation(libs.glide.core)
+    // Note: Use Coil Compose instead of Glide Compose for better stability
     
     // ExoPlayer for video components
     implementation(libs.exoplayer.core)

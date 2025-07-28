@@ -162,16 +162,24 @@ private fun PagedReader(
                             state = zoomableState,
                             onTap = {
                                 if (!isZoomed) {
-                                    val screenWidth = constraints.maxWidth.toPx()
-                                    // CRITICAL FIX: Prevent divide by zero and ensure valid screen dimensions
-                                    if (screenWidth > 0 && constraints.maxWidth > 0) {
-                                        val leftZone = screenWidth * 0.3f
-                                        val rightZone = screenWidth * 0.7f
-                                        when {
-                                            it.x < leftZone -> onPreviousPage()
-                                            it.x > rightZone -> onNextPage()
-                                            // Middle zone does nothing (allows zoom)
+                                    try {
+                                        // CRITICAL FIX: Prevent divide by zero and arithmetic exceptions
+                                        val maxWidthDp = constraints.maxWidth
+                                        if (maxWidthDp > 0) {
+                                            val screenWidth = maxWidthDp.toPx()
+                                            if (screenWidth > 0) {
+                                                val leftZone = screenWidth * 0.3f
+                                                val rightZone = screenWidth * 0.7f
+                                                when {
+                                                    it.x < leftZone -> onPreviousPage()
+                                                    it.x > rightZone -> onNextPage()
+                                                    // Middle zone does nothing (allows zoom)
+                                                }
+                                            }
                                         }
+                                    } catch (e: ArithmeticException) {
+                                        android.util.Log.e("ReaderScreen", "ArithmeticException in tap handling", e)
+                                        // Fallback: still allow page navigation on center tap
                                     }
                                 }
                             }

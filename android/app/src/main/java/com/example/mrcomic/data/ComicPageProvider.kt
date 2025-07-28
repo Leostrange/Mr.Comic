@@ -40,19 +40,30 @@ class CbzPageProvider(private val zipFile: ZipFile, private val imageEntries: Li
                 return null
             }
             val entry = imageEntries[index]
-            val inputStream = zipFile.getInputStream(entry)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            if (bitmap == null) {
-                Log.e(TAG, "Failed to decode bitmap from CBZ entry: ${entry.name}")
-            } else {
-                Log.d(TAG, "Successfully loaded CBZ page $index (${entry.name})")
+            zipFile.getInputStream(entry).use { inputStream ->
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                if (bitmap == null) {
+                    Log.e(TAG, "Failed to decode bitmap from CBZ entry: ${entry.name}")
+                } else {
+                    Log.d(TAG, "Successfully loaded CBZ page $index (${entry.name})")
+                }
+                bitmap
             }
-            bitmap
         } catch (e: Exception) {
             Log.e(TAG, "Exception in getPage($index) [CBZ]", e)
             null
         }
     }
+    
+    fun close() {
+        try {
+            zipFile.close()
+            Log.d(TAG, "CBZ file closed successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error closing CBZ file", e)
+        }
+    }
+    
     companion object {
         private const val TAG = "CbzPageProvider"
     }
@@ -119,10 +130,20 @@ fun createPageProvider(context: Context, file: File): PageProvider? {
         "cbz" -> {
             try {
                 val zipFile = ZipFile(file)
-                val entries = zipFile.entries().toList().filter { it.name.endsWith(".jpg", true) || it.name.endsWith(".png", true) }
+                val entries = zipFile.entries().toList().filter { 
+                    it.name.endsWith(".jpg", true) || 
+                    it.name.endsWith(".png", true) ||
+                    it.name.endsWith(".jpeg", true) ||
+                    it.name.endsWith(".webp", true)
+                }
+                if (entries.isEmpty()) {
+                    zipFile.close()
+                    Log.w("ComicPageProvider", "No image entries found in CBZ file: ${file.name}")
+                    return null
+                }
                 CbzPageProvider(zipFile, entries)
             } catch (e: Exception) {
-                Log.e("ComicPageProvider", "Failed to create CBZ page provider", e)
+                Log.e("ComicPageProvider", "Failed to create CBZ page provider for ${file.name}", e)
                 null
             }
         }

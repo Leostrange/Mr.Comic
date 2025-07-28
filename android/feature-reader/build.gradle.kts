@@ -36,7 +36,7 @@ dependencies {
     kapt(libs.google.hilt.compiler)
 
     // Zoomable Image support
-    implementation(libs.telephoto)
+    implementation(libs.telephoto.zoomable)
 
     // Archive/document format support
     implementation(libs.pdfium.android) // PDF library
