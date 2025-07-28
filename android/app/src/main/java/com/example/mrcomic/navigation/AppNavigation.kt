@@ -41,7 +41,12 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
     NavHost(navController = navController, startDestination = Screen.Onboarding.route) {
         composable(route = Screen.Library.route) {
             LibraryScreen(
-                onBookClick = { uriString -> navController.navigate(Screen.Reader.createRoute(uriString)) },
+                onBookClick = { uriString -> 
+                    android.util.Log.d("AppNavigation", "🚀 Navigating to reader with URI: $uriString")
+                    val route = Screen.Reader.createRoute(uriString)
+                    android.util.Log.d("AppNavigation", "🔗 Navigation route: $route")
+                    navController.navigate(route)
+                },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onAddClick = { navController.navigate(Screen.AddComic.route) }
             )

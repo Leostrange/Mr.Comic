@@ -46,21 +46,16 @@ import me.saket.telephoto.zoomable.zoomable
 /**
  * The main entry point for the reader screen.
  * It is a stateful composable that holds the ViewModel.
+ * The URI is automatically received from navigation via SavedStateHandle.
  *
  * @param viewModel The ViewModel responsible for the reader logic.
- * @param filePath The path to the book file, which should be passed via navigation.
  */
 @Composable
 fun ReaderScreen(
-    viewModel: ReaderViewModel = hiltViewModel(),
-    filePath: String
+    viewModel: ReaderViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val bgColor by viewModel.background.collectAsState()
-
-    LaunchedEffect(filePath) {
-        viewModel.openBook(Uri.parse(filePath))
-    }
 
     ReaderScreenContent(
         uiState = uiState,
