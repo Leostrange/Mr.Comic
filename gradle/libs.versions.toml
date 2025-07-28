@@ -18,6 +18,10 @@ kotlinCompilerExtension = "1.5.15"
 jvmTarget = "17"
 kotlinxCoroutines = "1.8.0"
 
+# Code Quality
+detekt = "1.23.4"
+dependencyCheck = "10.0.3"
+
 # AndroidX
 composeBom = "2024.06.00"
 lifecycle = "2.9.1"
@@ -194,6 +198,10 @@ slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "sl
 # Kotlin Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
 
+# Code Quality
+detekt-cli = { group = "io.gitlab.arturbosch.detekt", name = "detekt-cli", version.ref = "detekt" }
+detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
+
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview", "androidx-compose-window-size"]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
@@ -206,5 +214,7 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlinAnd
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinAndroid" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+dependency-check = { id = "org.owasp.dependencycheck", version.ref = "dependencyCheck" }
 
 

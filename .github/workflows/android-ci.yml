@@ -86,14 +86,20 @@ jobs:
       matrix:
         module: [
           "android:app",
+          "android:core",
+          "android:core-analytics",
           "android:core-data", 
           "android:core-domain",
+          "android:core-model",
+          "android:core-reader",
           "android:core-ui",
           "android:feature-library",
           "android:feature-reader",
           "android:feature-settings",
           "android:feature-onboarding",
-          "android:feature-ocr"
+          "android:feature-ocr",
+          "android:feature-themes",
+          "android:shared"
         ]
     steps:
       - name: 📥 Checkout Code

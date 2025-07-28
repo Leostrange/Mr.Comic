@@ -11,6 +11,8 @@ plugins {
     id("org.jetbrains.kotlin.android") version "1.9.25" apply false
     id("com.google.dagger.hilt.android") version "2.51.1" apply false
     id("org.jetbrains.kotlin.plugin.serialization") version "1.9.25" apply false
+    id("io.gitlab.arturbosch.detekt") version "1.23.4"
+    id("org.owasp.dependencycheck") version "10.0.3"
 }
 
 // Clean task for removing build directories
@@ -42,6 +44,26 @@ tasks.register("modules") {
         println("📦 Available modules:")
         subprojects.forEach { project ->
             println("  - ${project.path}")
+        }
+    }
+}
+
+// Detekt configuration for all subprojects
+subprojects {
+    plugins.whenPluginAdded {
+        when (this) {
+            is io.gitlab.arturbosch.detekt.DetektPlugin -> {
+                extensions.configure<io.gitlab.arturbosch.detekt.extensions.DetektExtension> {
+                    config.setFrom(rootProject.files("detekt.yml"))
+                    buildUponDefaultConfig = true
+                    autoCorrect = false
+                    reports {
+                        html.required.set(true)
+                        xml.required.set(true)
+                        txt.required.set(true)
+                    }
+                }
+            }
         }
     }
 }
