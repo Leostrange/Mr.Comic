@@ -133,9 +133,9 @@ fun createPageProvider(context: Context, file: File): PageProvider? {
                             if (!outputFile.parentFile.exists()) {
                                 outputFile.parentFile.mkdirs()
                             }
-                            val outputStream = FileOutputStream(outputFile)
-                            archive.extractFile(header, outputStream)
-                            outputStream.close()
+                            FileOutputStream(outputFile).use { outputStream ->
+                                archive.extractFile(header, outputStream)
+                            }
                         }
                     }
                     archive.close()
