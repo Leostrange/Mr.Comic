@@ -1,0 +1,439 @@
+name: 🤖 Android CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, feature/**, fix/** ]
+    paths:
+      - 'android/**'
+      - 'gradle/**'
+      - '*.gradle.kts'
+      - '.github/workflows/android-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'android/**'
+      - 'gradle/**' 
+      - '*.gradle.kts'
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2 -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+
+jobs:
+  # ============================================================================
+  # 🔍 SETUP & VALIDATION
+  # ============================================================================
+  setup:
+    name: 🔧 Setup & Validation
+    runs-on: ubuntu-latest
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🗃️ Cache Gradle Dependencies
+        id: gradle-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🔑 Generate Cache Key
+        id: cache-key
+        run: echo "key=${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', 'gradle/libs.versions.toml') }}" >> $GITHUB_OUTPUT
+
+      - name: 🔐 Grant Execute Permission
+        run: chmod +x ./gradlew
+
+      - name: ✅ Validate Gradle Wrapper
+        uses: gradle/wrapper-validation-action@v1
+
+      - name: 🏗️ Validate Project Structure
+        run: |
+          echo "📁 Project Structure Validation" >> $GITHUB_STEP_SUMMARY
+          ./gradlew projects --quiet
+          echo "✅ All modules detected successfully" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 Project Info
+        run: |
+          echo "🏗️ **Project Structure**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ./gradlew projects --quiet | grep -E "^(Root project|Project)" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # 🧪 UNIT TESTS
+  # ============================================================================
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        module: [
+          "android:app",
+          "android:core-data", 
+          "android:core-domain",
+          "android:core-ui",
+          "android:feature-library",
+          "android:feature-reader",
+          "android:feature-settings",
+          "android:feature-onboarding",
+          "android:feature-ocr"
+        ]
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🗃️ Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ needs.setup.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🔐 Grant Execute Permission
+        run: chmod +x ./gradlew
+
+      - name: 🧪 Run Unit Tests for ${{ matrix.module }}
+        run: |
+          ./gradlew :${{ matrix.module }}:test --continue --build-cache
+        continue-on-error: false
+
+      - name: 📊 Generate Test Report for ${{ matrix.module }}
+        run: |
+          ./gradlew :${{ matrix.module }}:jacocoTestReport --continue
+        if: always()
+
+      - name: 📈 Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.module }}
+          path: |
+            **/build/test-results/test*/
+            **/build/reports/tests/test*/
+            **/build/reports/jacoco/test*/
+          retention-days: 14
+
+      - name: 📋 Test Summary
+        if: always()
+        run: |
+          echo "## 🧪 Test Results for ${{ matrix.module }}" >> $GITHUB_STEP_SUMMARY
+          if [ -d "android/$(echo ${{ matrix.module }} | cut -d: -f2)/build/test-results/testDebugUnitTest" ]; then
+            echo "✅ Unit tests completed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No test results found" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================================================
+  # 🔍 CODE QUALITY & LINT
+  # ============================================================================
+  code-quality:
+    name: 🔍 Code Quality
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🗃️ Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ needs.setup.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🔐 Grant Execute Permission
+        run: chmod +x ./gradlew
+
+      - name: 🔍 Run Android Lint
+        run: |
+          ./gradlew lint --continue --build-cache
+        continue-on-error: true
+
+      - name: 📊 Run Detekt (Kotlin Static Analysis)
+        run: |
+          ./gradlew detekt --continue --build-cache
+        continue-on-error: true
+
+      - name: 📈 Upload Lint Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-reports
+          path: |
+            **/build/reports/lint-results*.html
+            **/build/reports/lint-results*.xml
+            **/build/reports/detekt/
+          retention-days: 14
+
+      - name: 📋 Lint Summary
+        if: always()
+        run: |
+          echo "## 🔍 Code Quality Results" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Android Lint completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Detekt analysis completed" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Reports uploaded as artifacts" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # 🏗️ BUILD APKs
+  # ============================================================================
+  build:
+    name: 🏗️ Build APKs
+    runs-on: ubuntu-latest
+    needs: [setup, unit-tests]
+    strategy:
+      matrix:
+        build-type: [debug, release]
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🗃️ Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ needs.setup.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 🔐 Grant Execute Permission
+        run: chmod +x ./gradlew
+
+      - name: 🏗️ Build ${{ matrix.build-type }} APK
+        run: |
+          if [ "${{ matrix.build-type }}" = "debug" ]; then
+            ./gradlew assembleDebug --build-cache --parallel
+          else
+            ./gradlew assembleRelease --build-cache --parallel
+          fi
+
+      - name: 📱 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mr-comic-${{ matrix.build-type }}-apk
+          path: |
+            android/app/build/outputs/apk/${{ matrix.build-type }}/*.apk
+          retention-days: ${{ matrix.build-type == 'release' && 90 || 30 }}
+
+      - name: 📊 APK Info
+        run: |
+          echo "## 📱 ${{ matrix.build-type }} APK Built" >> $GITHUB_STEP_SUMMARY
+          APK_PATH="android/app/build/outputs/apk/${{ matrix.build-type }}"
+          if [ -d "$APK_PATH" ]; then
+            APK_SIZE=$(find $APK_PATH -name "*.apk" -exec ls -lh {} \; | awk '{print $5}')
+            echo "📦 **Size**: $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "📁 **Path**: $APK_PATH" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ============================================================================
+  # 📱 UI TESTS (Android Emulator)
+  # ============================================================================
+  ui-tests:
+    name: 📱 UI Tests
+    runs-on: macos-latest
+    needs: [setup, unit-tests]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        api-level: [29]
+        target: [google_apis]
+        arch: [x86_64]
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🗃️ Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ needs.setup.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 📱 AVD Cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ matrix.api-level }}
+
+      - name: 🔐 Grant Execute Permission
+        run: chmod +x ./gradlew
+
+      - name: 📱 Create AVD and Generate Snapshot
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+
+      - name: 🧪 Run UI Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb shell settings put global window_animation_scale 0
+            adb shell settings put global transition_animation_scale 0
+            adb shell settings put global animator_duration_scale 0
+            ./gradlew connectedAndroidTest --continue --build-cache
+
+      - name: 📈 Upload UI Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-test-results-api${{ matrix.api-level }}
+          path: |
+            **/build/reports/androidTests/connected/
+            **/build/outputs/androidTest-results/connected/
+          retention-days: 14
+
+  # ============================================================================
+  # 📊 TEST COVERAGE REPORT
+  # ============================================================================
+  coverage:
+    name: 📊 Coverage Report
+    runs-on: ubuntu-latest
+    needs: [setup, unit-tests]
+    if: always()
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: 🗃️ Restore Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            .gradle
+          key: ${{ needs.setup.outputs.cache-key }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: 📥 Download Test Results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-*
+          path: test-results
+          merge-multiple: true
+
+      - name: 🔐 Grant Execute Permission
+        run: chmod +x ./gradlew
+
+      - name: 📊 Generate Coverage Report
+        run: |
+          ./gradlew jacocoTestReport --continue
+        continue-on-error: true
+
+      - name: 📈 Upload Coverage Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-reports
+          path: |
+            **/build/reports/jacoco/
+            **/build/jacocoHtml/
+          retention-days: 30
+
+      - name: 📋 Coverage Summary
+        if: always()
+        run: |
+          echo "## 📊 Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          echo "📈 Coverage reports generated and uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Check artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # 🚀 SUCCESS SUMMARY
+  # ============================================================================
+  success:
+    name: ✅ CI Success
+    runs-on: ubuntu-latest
+    needs: [setup, unit-tests, code-quality, build, coverage]
+    if: always()
+    steps:
+      - name: 🎉 Success Summary
+        run: |
+          echo "# 🎉 Android CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔧 Setup | ${{ needs.setup.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Unit Tests | ${{ needs.unit-tests.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY  
+          echo "| 🔍 Code Quality | ${{ needs.code-quality.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🏗️ Build | ${{ needs.build.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 Coverage | ${{ needs.coverage.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Mr.Comic Android App** - Ready for testing!" >> $GITHUB_STEP_SUMMARY
