@@ -58,19 +58,19 @@ libarchive = "1.1.6"
 
 # Tooling (removed unused plugins)
 
-# Archives (working versions)
+# Archives (working versions - FIXED)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.9.0"
-telephoto = "0.12.0"
+pdfium_android = "1.8.0"
+telephoto = "0.11.0"
 commons_compress = "1.26.0"
 
-# Custom (working versions)
+# Custom (working versions - FIXED)
 pdfboxAndroid = "2.0.27.0"
 slf4jAndroid = "1.7.36"
-mlkitTextRecognition = "16.0.0"
+mlkitTextRecognition = "16.0.1"
 materialIconsExtended = "1.6.8"
-androidPdfViewer = "3.2.0-beta.1"
+androidPdfViewer = "2.8.2"
 
 # ExoPlayer for video splash
 exoplayer = "2.19.1"
@@ -147,7 +147,7 @@ accompanist-adaptive = { group = "com.google.accompanist", name = "accompanist-a
 
 # Image processing
 androidx-palette = { group = "androidx.palette", name = "palette", version.ref = "palette" }
-glide-compose = { group = "com.github.bumptech.glide", name = "compose", version.ref = "glide" }
+glide-compose = { group = "com.github.bumptech.glide", name = "compose", version = "1.0.0-beta01" }
 
 # Testing
 test-junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -181,7 +181,7 @@ junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" 
 pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons_compress" }
 
-# PDF and Document viewers
+# PDF and Document viewers  
 android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 

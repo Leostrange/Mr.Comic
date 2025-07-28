@@ -57,6 +57,10 @@ subprojects {
                     config.setFrom(rootProject.files("detekt.yml"))
                     buildUponDefaultConfig = true
                     autoCorrect = false
+                }
+                
+                // Configure reports on tasks instead of extension (fixes deprecation warning)
+                tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
                     reports {
                         html.required.set(true)
                         xml.required.set(true)

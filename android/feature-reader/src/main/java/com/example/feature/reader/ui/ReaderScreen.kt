@@ -163,9 +163,12 @@ private fun PagedReader(
                             onTap = {
                                 if (!isZoomed) {
                                     val screenWidth = constraints.maxWidth.toPx()
-                                    when {
-                                        it.x < screenWidth * 0.3f -> onPreviousPage()
-                                        it.x > screenWidth * 0.7f -> onNextPage()
+                                    // CRITICAL FIX: Prevent divide by zero
+                                    if (screenWidth > 0) {
+                                        when {
+                                            it.x < screenWidth * 0.3f -> onPreviousPage()
+                                            it.x > screenWidth * 0.7f -> onNextPage()
+                                        }
                                     }
                                 }
                             }

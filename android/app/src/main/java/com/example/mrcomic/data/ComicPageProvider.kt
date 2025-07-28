@@ -117,9 +117,14 @@ class CbrPageProvider(private val imageFiles: List<File>) : PageProvider {
 fun createPageProvider(context: Context, file: File): PageProvider? {
     return when (file.extension.lowercase()) {
         "cbz" -> {
-            val zipFile = ZipFile(file)
-            val entries = zipFile.entries().toList().filter { it.name.endsWith(".jpg", true) || it.name.endsWith(".png", true) }
-            CbzPageProvider(zipFile, entries)
+            try {
+                val zipFile = ZipFile(file)
+                val entries = zipFile.entries().toList().filter { it.name.endsWith(".jpg", true) || it.name.endsWith(".png", true) }
+                CbzPageProvider(zipFile, entries)
+            } catch (e: Exception) {
+                Log.e("ComicPageProvider", "Failed to create CBZ page provider", e)
+                null
+            }
         }
         "cbr" -> {
             val tempDir = File(context.cacheDir, file.nameWithoutExtension + "_cbr_cache")
