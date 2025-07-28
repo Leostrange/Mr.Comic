@@ -39,8 +39,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":core-ui"))
-    implementation(project(":core-data"))
+    implementation(project(":android:core-ui"))
+    implementation(project(":android:core-data"))
 
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")

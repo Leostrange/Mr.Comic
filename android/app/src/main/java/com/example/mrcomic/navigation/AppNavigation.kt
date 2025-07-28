@@ -38,7 +38,7 @@ sealed class Screen(val route: String) {
  */
 @Composable
 fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Unit) {
-    NavHost(navController = navController, startDestination = Screen.Debug.route) {
+    NavHost(navController = navController, startDestination = Screen.Onboarding.route) {
         composable(route = Screen.Library.route) {
             LibraryScreen(
                 onBookClick = { uriString -> navController.navigate(Screen.Reader.createRoute(uriString)) },

@@ -29,7 +29,7 @@ android {
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
-    implementation(project(":core-reader"))
+    implementation(project(":android:core-reader"))
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)
@@ -39,11 +39,11 @@ dependencies {
     implementation(libs.telephoto)
 
     // Archive/document format support
-    implementation(libs.pdfium-android) // Corrected PDF library
+    implementation(libs.pdfium.android) // Corrected PDF library
     implementation(libs.junrar)
     implementation(libs.zip4j) // Added for CBZ support
     implementation(libs.sevenzip4j)
-    implementation(libs.commons-compress)
+    implementation(libs.commons.compress)
 }
 
 

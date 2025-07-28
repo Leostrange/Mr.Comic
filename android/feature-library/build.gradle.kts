@@ -28,9 +28,9 @@ android {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
-    implementation(project(":core-ui"))
-    implementation(project(":core-data"))
-    implementation(project(":core-model"))
+    implementation(project(":android:core-ui"))
+    implementation(project(":android:core-data"))
+    implementation(project(":android:core-model"))
     implementation(libs.bundles.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)

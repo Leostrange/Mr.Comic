@@ -28,7 +28,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation("com.google.mlkit:text-recognition:16.0.0")
     implementation("com.google.mlkit:text-recognition-common:16.0.0")
-    implementation(project(":shared"))
+    implementation(project(":android:shared"))
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.51.1")
