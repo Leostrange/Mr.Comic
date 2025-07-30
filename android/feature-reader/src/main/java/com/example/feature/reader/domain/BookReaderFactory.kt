@@ -25,6 +25,9 @@ class BookReaderFactory @Inject constructor(
         private const val TAG = "BookReaderFactory"
     }
     
+    private var currentReader: BookReader? = null
+    private var currentUri: Uri? = null
+    
     /**
      * Creates a [BookReader] for the given URI.
      *
@@ -33,6 +36,9 @@ class BookReaderFactory @Inject constructor(
      * @throws UnsupportedFormatException if the file format is not supported.
      */
     fun create(uri: Uri): BookReader {
+        // Clean up previous reader if exists
+        currentReader?.close()
+        
         val fileName = DocumentFile.fromSingleUri(context, uri)?.name ?: ""
         val extension = fileName.substringAfterLast('.', "").lowercase()
         
@@ -64,11 +70,30 @@ class BookReaderFactory @Inject constructor(
         // Wrap the actual reader in the caching decorator
         val cachedReader = CachingBookReader(delegateReader, bitmapCache)
         android.util.Log.d(TAG, "Created cached reader for $extension file")
+        
+        // Store current reader and URI
+        currentReader = cachedReader
+        currentUri = uri
+        
         return cachedReader
     }
     
+    /**
+     * Gets the current reader instance.
+     * @return The current BookReader or null if none exists.
+     */
+    fun getCurrentReader(): BookReader? = currentReader
+    
+    /**
+     * Gets the current URI.
+     * @return The current URI or null if none exists.
+     */
+    fun getCurrentUri(): Uri? = currentUri
+    
     fun releaseResources() {
         android.util.Log.d(TAG, "Releasing factory resources")
-        // Any cleanup needed
+        currentReader?.close()
+        currentReader = null
+        currentUri = null
     }
 }

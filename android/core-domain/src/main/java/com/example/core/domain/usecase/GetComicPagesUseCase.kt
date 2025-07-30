@@ -9,9 +9,14 @@ class GetComicPagesUseCase @Inject constructor(
 ) {
     fun getTotalPages(): Result<Int> {
         return try {
-            val pages = bookReaderFactory.getCurrentReader()?.let { reader ->
-                reader.open(bookReaderFactory.getCurrentUri()!!)
-            } ?: 0
+            val reader = bookReaderFactory.getCurrentReader()
+            val uri = bookReaderFactory.getCurrentUri()
+            
+            if (reader == null || uri == null) {
+                return Result.Error(IllegalStateException("No reader or URI available"))
+            }
+            
+            val pages = reader.open(uri)
             Result.Success(pages)
         } catch (e: Exception) {
             Result.Error(e)
@@ -20,7 +25,12 @@ class GetComicPagesUseCase @Inject constructor(
 
     fun getPage(pageIndex: Int): Result<Bitmap?> {
         return try {
-            Result.Success(bookReaderFactory.getCurrentReader()?.renderPage(pageIndex))
+            val reader = bookReaderFactory.getCurrentReader()
+            if (reader == null) {
+                return Result.Error(IllegalStateException("No reader available"))
+            }
+            
+            Result.Success(reader.renderPage(pageIndex))
         } catch (e: Exception) {
             Result.Error(e)
         }

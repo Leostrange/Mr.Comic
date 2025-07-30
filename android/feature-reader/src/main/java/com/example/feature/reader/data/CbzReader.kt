@@ -34,6 +34,7 @@ class CbzReader(
                 // Copy content from URI to a temporary file because Zip4j works with Files
                 val createdTempFile = File.createTempFile("temp_cbz_", ".cbz", cacheDir)
                 tempComicFile = createdTempFile
+                
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     createdTempFile.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)
@@ -45,7 +46,7 @@ class CbzReader(
                     throw IllegalStateException("CBZ файл пустой или поврежден")
                 }
 
-                val zipFile = ZipFile(tempComicFile)
+                val zipFile = ZipFile(createdTempFile)
                 if (zipFile.isEncrypted) {
                     throw IllegalStateException("Зашифрованные CBZ файлы не поддерживаются")
                 }
@@ -53,7 +54,7 @@ class CbzReader(
                 // Filter for image files, extract them, and collect their paths
                 val extractedImagePaths = zipFile.fileHeaders
                     .filter { !it.isDirectory && isImageFile(it.fileName) }
-                    .map { fileHeader ->
+                    .mapNotNull { fileHeader ->
                         try {
                             val currentTempDir = tempDir ?: throw IllegalStateException("Temp directory is null")
                             zipFile.extractFile(fileHeader, currentTempDir.absolutePath)
@@ -64,7 +65,6 @@ class CbzReader(
                             null
                         }
                     }
-                    .filterNotNull()
 
                 if (extractedImagePaths.isEmpty()) {
                     throw IllegalStateException("В CBZ файле не найдено изображений")
@@ -86,8 +86,10 @@ class CbzReader(
 
     override fun renderPage(pageIndex: Int): Bitmap? {
         if (pageIndex < 0 || pageIndex >= pagePaths.size) {
+            android.util.Log.w("CbzReader", "Invalid page index: $pageIndex (total pages: ${pagePaths.size})")
             return null
         }
+        
         val path = pagePaths[pageIndex]
         return runCatching { 
             val bitmap = BitmapFactory.decodeFile(path)
@@ -95,7 +97,10 @@ class CbzReader(
                 android.util.Log.w("CbzReader", "Failed to decode bitmap from: $path")
             }
             bitmap
-        }.getOrNull()
+        }.getOrElse { e ->
+            android.util.Log.e("CbzReader", "Error rendering page $pageIndex: ${e.message}", e)
+            null
+        }
     }
 
     override fun close() {
