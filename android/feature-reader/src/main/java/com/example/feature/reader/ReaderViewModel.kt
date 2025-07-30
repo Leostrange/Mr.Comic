@@ -44,6 +44,10 @@ class ReaderViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+    
+    // Background color for reader (dark theme)
+    private val _background = MutableStateFlow(0xFF1A1A1A.toLong())
+    val background: StateFlow<Long> = _background.asStateFlow()
 
     fun loadComic(uriString: String) {
         viewModelScope.launch {

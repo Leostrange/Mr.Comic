@@ -2,6 +2,7 @@ package com.example.feature.reader.ui
 
 import android.graphics.Bitmap
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -59,6 +61,14 @@ fun ReaderScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val bgColor by viewModel.background.collectAsState()
+    val context = LocalContext.current
+
+    // Show error toast when error state changes
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            Toast.makeText(context, "Ошибка: $error", Toast.LENGTH_LONG).show()
+        }
+    }
 
     ReaderScreenContent(
         uiState = uiState,
@@ -113,15 +123,38 @@ private fun ReaderScreenContent(
                 .background(backgroundColor),
             contentAlignment = Alignment.Center
         ) {
-            when (uiState.readingMode) {
-                ReadingMode.PAGE -> PagedReader(uiState, onNextPage, onPreviousPage)
-                ReadingMode.WEBTOON -> WebtoonReader(uiState)
-            }
-
-            if (uiState.isLoading && uiState.readingMode == ReadingMode.PAGE) {
-                CircularProgressIndicator()
-            } else if (uiState.error != null) {
-                Text(text = uiState.error, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center, modifier = Modifier.padding(16.dp))
+            when {
+                uiState.isLoading -> {
+                    // Show loading indicator
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+                uiState.error != null -> {
+                    // Show error message
+                    Text(
+                        text = uiState.error,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
+                uiState.pageCount > 0 -> {
+                    // Show content
+                    when (uiState.readingMode) {
+                        ReadingMode.PAGE -> PagedReader(uiState, onNextPage, onPreviousPage)
+                        ReadingMode.WEBTOON -> WebtoonReader(uiState)
+                    }
+                }
+                else -> {
+                    // Show empty state
+                    Text(
+                        text = "Выберите файл для чтения",
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(16.dp)
+                    )
+                }
             }
         }
     }

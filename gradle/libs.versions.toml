@@ -61,7 +61,7 @@ libarchive = "1.1.6"
 # Archives (working versions - FIXED)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.9.0"  # Using known working version
+pdfium_android = "1.8.0"  # Using stable version
 telephoto = "0.11.0"  # Using known working version  
 commons_compress = "1.26.0"
 
@@ -70,7 +70,7 @@ pdfboxAndroid = "2.0.27.0"
 slf4jAndroid = "1.7.36"
 mlkitTextRecognition = "16.0.0"  # Using Google's stable version
 materialIconsExtended = "1.6.8"
-androidPdfViewer = "3.2.0-beta.1"  # Using exact version from dependency
+androidPdfViewer = "2.8.2"  # Using stable version
 
 # Alternative PDF viewer (JitPack fallback)
 androidPdfViewerFallback = "2.7.0-beta.3"
@@ -184,13 +184,12 @@ libarchive = { group = "me.zhanghai.android.libarchive", name = "library", versi
 # Archives (working dependencies)
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
-# Using alternative PDF renderer - pdfium-android has repository issues
-# pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
-pdfium-android = { group = "com.github.barteksc", name = "pdfium-android", version = "1.9.0" }
+# Using stable PDF renderer
+pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons_compress" }
 
 # PDF and Document viewers (using stable version)
-android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version = "2.8.2" }
+android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
 android-pdf-viewer-fallback = { group = "com.github.shxdos", name = "AndroidPdfViewer", version.ref = "androidPdfViewerFallback" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 

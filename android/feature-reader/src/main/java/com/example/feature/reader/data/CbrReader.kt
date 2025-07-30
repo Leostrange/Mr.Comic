@@ -35,6 +35,7 @@ class CbrReader(
                 // Copy content from URI to a temporary file because junrar works with Files
                 val createdTempFile = File.createTempFile("temp_cbr_", ".cbr", cacheDir)
                 tempComicFile = createdTempFile
+                
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     createdTempFile.outputStream().use { outputStream ->
                         inputStream.copyTo(outputStream)
@@ -49,7 +50,7 @@ class CbrReader(
                 val extractedImagePaths = mutableListOf<String>()
                 var archive: Archive? = null
                 try {
-                    archive = Archive(tempComicFile)
+                    archive = Archive(createdTempFile)
                     if (archive.isEncrypted) {
                         throw IllegalStateException("Зашифрованные CBR файлы не поддерживаются")
                     }
@@ -96,8 +97,10 @@ class CbrReader(
 
     override fun renderPage(pageIndex: Int): Bitmap? {
         if (pageIndex < 0 || pageIndex >= pagePaths.size) {
+            android.util.Log.w("CbrReader", "Invalid page index: $pageIndex (total pages: ${pagePaths.size})")
             return null
         }
+        
         val path = pagePaths[pageIndex]
         return runCatching { 
             val bitmap = BitmapFactory.decodeFile(path)
@@ -105,7 +108,10 @@ class CbrReader(
                 android.util.Log.w("CbrReader", "Failed to decode bitmap from: $path")
             }
             bitmap
-        }.getOrNull()
+        }.getOrElse { e ->
+            android.util.Log.e("CbrReader", "Error rendering page $pageIndex: ${e.message}", e)
+            null
+        }
     }
 
     override fun close() {
