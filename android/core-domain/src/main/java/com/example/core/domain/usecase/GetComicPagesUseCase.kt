@@ -7,17 +7,25 @@ import javax.inject.Inject
 class GetComicPagesUseCase @Inject constructor(
     private val bookReaderFactory: BookReaderFactory
 ) {
+    private var cachedPageCount: Int? = null
+    
     fun getTotalPages(): Result<Int> {
         return try {
             val reader = bookReaderFactory.getCurrentReader()
-            val uri = bookReaderFactory.getCurrentUri()
             
-            if (reader == null || uri == null) {
-                return Result.Error(IllegalStateException("No reader or URI available"))
+            if (reader == null) {
+                return Result.Error(IllegalStateException("No reader available"))
             }
             
-            val pages = reader.open(uri)
-            Result.Success(pages)
+            // Use cached page count if available
+            if (cachedPageCount != null) {
+                return Result.Success(cachedPageCount!!)
+            }
+            
+            // Get page count from reader (should be set during open)
+            val pageCount = reader.getPageCount()
+            cachedPageCount = pageCount
+            Result.Success(pageCount)
         } catch (e: Exception) {
             Result.Error(e)
         }
@@ -34,6 +42,10 @@ class GetComicPagesUseCase @Inject constructor(
         } catch (e: Exception) {
             Result.Error(e)
         }
+    }
+    
+    fun clearCache() {
+        cachedPageCount = null
     }
 }
 

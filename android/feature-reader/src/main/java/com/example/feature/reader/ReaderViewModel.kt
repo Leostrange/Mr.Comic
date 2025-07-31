@@ -52,6 +52,10 @@ class ReaderViewModel @Inject constructor(
     fun loadComic(uriString: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, comicUri = uriString)
+            
+            // Clear any existing cache
+            getComicPagesUseCase.clearCache()
+            
             when (val loadResult = loadComicUseCase(Uri.parse(uriString))) {
                 is Result.Success -> {
                     val totalPages = when (val pagesResult = getComicPagesUseCase.getTotalPages()) {

@@ -21,6 +21,7 @@ class CbrReader(
     private var tempDir: File? = null
     private var pagePaths: List<String> = emptyList()
     private var tempComicFile: File? = null
+    private var pageCount: Int = 0
 
     override suspend fun open(uri: Uri): Int {
         return withContext(Dispatchers.IO) {
@@ -83,7 +84,8 @@ class CbrReader(
 
                 // Sort pages alphabetically to ensure correct order
                 pagePaths = extractedImagePaths.sorted()
-                pagePaths.size
+                pageCount = pagePaths.size
+                pageCount
             } catch (e: Exception) {
                 // Clean up on error
                 cleanup()
@@ -94,6 +96,8 @@ class CbrReader(
             }
         }
     }
+
+    override fun getPageCount(): Int = pageCount
 
     override fun renderPage(pageIndex: Int): Bitmap? {
         if (pageIndex < 0 || pageIndex >= pagePaths.size) {
@@ -134,6 +138,7 @@ class CbrReader(
         tempComicFile = null
         
         pagePaths = emptyList()
+        pageCount = 0
     }
 
     private fun isImageFile(fileName: String): Boolean {
