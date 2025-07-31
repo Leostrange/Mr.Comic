@@ -22,6 +22,12 @@ interface BookReader {
     fun renderPage(pageIndex: Int): Bitmap?
 
     /**
+     * Gets the total number of pages in the book.
+     * @return The total number of pages, or 0 if the book is not opened.
+     */
+    fun getPageCount(): Int
+
+    /**
      * Closes the reader and cleans up any resources, such as temporary files.
      */
     fun close()

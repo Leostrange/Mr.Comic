@@ -31,6 +31,8 @@ class CachingBookReader(
         return pageCount
     }
 
+    override fun getPageCount(): Int = delegate.getPageCount()
+
     override fun renderPage(pageIndex: Int): Bitmap? {
         val key = "$bookId:$pageIndex"
         

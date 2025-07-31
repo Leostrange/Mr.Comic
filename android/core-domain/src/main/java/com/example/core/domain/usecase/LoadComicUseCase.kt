@@ -9,7 +9,10 @@ class LoadComicUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(uri: Uri): Result<Unit> {
         return try {
-            bookReaderFactory.create(uri)
+            // Create and store the reader for this URI
+            val reader = bookReaderFactory.create(uri)
+            // Open the reader to initialize it
+            reader.open(uri)
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(e)

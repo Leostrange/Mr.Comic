@@ -57,6 +57,8 @@ class PdfReader(
         }
     }
 
+    override fun getPageCount(): Int = pageCount
+
     override fun renderPage(pageIndex: Int): Bitmap? {
         val core = pdfiumCore ?: return null
         val doc = pdfDocument ?: return null
