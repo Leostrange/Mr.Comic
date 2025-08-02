@@ -6,54 +6,94 @@ import {
   StatusBar,
   TouchableOpacity,
   Text,
+  Alert,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import {useComicContext} from '../store/ComicContext';
 import FastImage from 'react-native-fast-image';
 import {PanGestureHandler, State} from 'react-native-gesture-handler';
+import ComicService from '../services/ComicService';
 
 const {width, height} = Dimensions.get('window');
 
 const ReaderScreen = () => {
   const navigation = useNavigation();
-  const {state} = useComicContext();
+  const {state, dispatch} = useComicContext();
   const [currentPage, setCurrentPage] = useState(0);
   const [pageImage, setPageImage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [comicId, setComicId] = useState<string | null>(null);
 
   const comic = state.currentComic;
 
   useEffect(() => {
     if (comic) {
-      setCurrentPage(comic.currentPage);
-      loadPage(comic.currentPage);
+      loadComic();
     }
   }, [comic]);
 
-  const loadPage = async (pageIndex: number) => {
+  const loadComic = async () => {
     if (!comic) return;
     
+    setIsLoading(true);
     try {
-      // TODO: Implement page loading from comic reader service
-      // const pagePath = await comicReader.getPage(pageIndex);
-      // setPageImage(pagePath);
+      // Open comic using native module
+      const result = await ComicService.openComicForReading(comic.filePath);
+      setComicId(result.comicId);
+      
+      // Update comic with actual page count
+      const updatedComic = {
+        ...comic,
+        pageCount: result.pageCount,
+        title: result.title,
+      };
+      dispatch({type: 'UPDATE_COMIC', payload: updatedComic});
+      
+      // Load first page
+      await loadPage(0);
+    } catch (error) {
+      console.error('Failed to load comic:', error);
+      Alert.alert('Ошибка', 'Не удалось открыть комикс');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadPage = async (pageIndex: number) => {
+    if (!comicId || !comic) return;
+    
+    try {
+      setIsLoading(true);
+      const pagePath = await ComicService.getPage(comicId, pageIndex);
+      setPageImage(pagePath);
+      setCurrentPage(pageIndex);
+      
+      // Update progress
+      const progress = {
+        comicId: comic.id,
+        currentPage: pageIndex,
+        lastRead: Date.now(),
+        readingTime: 0,
+      };
+      await ComicService.updateProgress(progress);
+      
     } catch (error) {
       console.error('Failed to load page:', error);
+      Alert.alert('Ошибка', 'Не удалось загрузить страницу');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const goToNextPage = () => {
+  const goToNextPage = async () => {
     if (comic && currentPage < comic.pageCount - 1) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      loadPage(nextPage);
+      await loadPage(currentPage + 1);
     }
   };
 
-  const goToPreviousPage = () => {
+  const goToPreviousPage = async () => {
     if (currentPage > 0) {
-      const prevPage = currentPage - 1;
-      setCurrentPage(prevPage);
-      loadPage(prevPage);
+      await loadPage(currentPage - 1);
     }
   };
 
@@ -69,6 +109,15 @@ const ReaderScreen = () => {
     }
   };
 
+  useEffect(() => {
+    // Cleanup when component unmounts
+    return () => {
+      if (comicId) {
+        ComicService.closeComic(comicId);
+      }
+    };
+  }, [comicId]);
+
   if (!comic) {
     return (
       <View style={styles.container}>
@@ -83,15 +132,19 @@ const ReaderScreen = () => {
       
       <PanGestureHandler onGestureEvent={onGestureEvent}>
         <View style={styles.imageContainer}>
-          {pageImage ? (
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>Загрузка страницы...</Text>
+            </View>
+          ) : pageImage ? (
             <FastImage
-              source={{uri: pageImage}}
+              source={{uri: `file://${pageImage}`}}
               style={styles.pageImage}
               resizeMode={FastImage.resizeMode.contain}
             />
           ) : (
             <View style={styles.loadingContainer}>
-              <Text style={styles.loadingText}>Загрузка страницы...</Text>
+              <Text style={styles.loadingText}>Загрузка комикса...</Text>
             </View>
           )}
         </View>

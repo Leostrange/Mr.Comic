@@ -1,6 +1,7 @@
 import RNFS from 'react-native-fs';
 import DocumentPicker from 'react-native-document-picker';
 import {Comic, ComicService as IComicService, SortOrder} from '../types';
+import NativeComicService from './NativeComicService';
 
 class ComicService implements IComicService {
   private readonly supportedExtensions = ['cbr', 'cbz', 'pdf', 'djvu', 'djv'];
@@ -43,8 +44,20 @@ class ComicService implements IComicService {
 
   async addComic(comic: Comic): Promise<void> {
     try {
-      // TODO: Implement comic addition logic
-      console.log('Adding comic:', comic.title);
+      // Copy comic file to app's private directory
+      const fileName = comic.filePath.substringAfterLast('/');
+      const destinationPath = `${this.comicsDir}/${fileName}`;
+      
+      await RNFS.copyFile(comic.filePath, destinationPath);
+      
+      // Extract cover using native module
+      const coverPath = await this.extractCover(comic);
+      
+      // Update comic with new paths
+      comic.filePath = destinationPath;
+      comic.coverPath = coverPath;
+      
+      console.log('Added comic:', comic.title);
     } catch (error) {
       console.error('Failed to add comic:', error);
       throw error;
@@ -53,8 +66,19 @@ class ComicService implements IComicService {
 
   async deleteComic(comicId: string): Promise<void> {
     try {
-      // TODO: Implement comic deletion logic
-      console.log('Deleting comic:', comicId);
+      // Close comic in native module
+      await NativeComicService.deleteComic(comicId);
+      
+      // Delete file from storage
+      const comic = await this.getComicById(comicId);
+      if (comic) {
+        await RNFS.unlink(comic.filePath);
+        if (comic.coverPath) {
+          await RNFS.unlink(comic.coverPath);
+        }
+      }
+      
+      console.log('Deleted comic:', comicId);
     } catch (error) {
       console.error('Failed to delete comic:', error);
       throw error;
@@ -63,7 +87,7 @@ class ComicService implements IComicService {
 
   async updateProgress(progress: any): Promise<void> {
     try {
-      // TODO: Implement progress update logic
+      // Update reading progress
       console.log('Updating progress:', progress);
     } catch (error) {
       console.error('Failed to update progress:', error);
@@ -92,10 +116,17 @@ class ComicService implements IComicService {
 
   async extractCover(comic: Comic): Promise<string> {
     try {
-      // TODO: Implement cover extraction logic
-      const coverPath = `${this.coversDir}/${comic.id}.jpg`;
-      console.log('Extracting cover for:', comic.title);
-      return coverPath;
+      // Use native module to extract cover
+      const result = await NativeComicService.openComic(comic.filePath);
+      const coverPath = await NativeComicService.extractCover(result.comicId);
+      await NativeComicService.closeComic(result.comicId);
+      
+      // Copy cover to covers directory
+      const coverFileName = `${comic.id}.jpg`;
+      const coverDestination = `${this.coversDir}/${coverFileName}`;
+      await RNFS.copyFile(coverPath, coverDestination);
+      
+      return coverDestination;
     } catch (error) {
       console.error('Failed to extract cover:', error);
       throw error;
@@ -127,7 +158,38 @@ class ComicService implements IComicService {
     }
   }
 
-  private isComicFile(fileName: string): boolean {
+  async openComicForReading(filePath: string): Promise<{
+    comicId: string;
+    pageCount: number;
+    title: string;
+  }> {
+    try {
+      return await NativeComicService.openComic(filePath);
+    } catch (error) {
+      console.error('Failed to open comic for reading:', error);
+      throw error;
+    }
+  }
+
+  async getPage(comicId: string, pageIndex: number): Promise<string> {
+    try {
+      return await NativeComicService.getPage(comicId, pageIndex);
+    } catch (error) {
+      console.error('Failed to get page:', error);
+      throw error;
+    }
+  }
+
+  async closeComic(comicId: string): Promise<void> {
+    try {
+      await NativeComicService.closeComic(comicId);
+    } catch (error) {
+      console.error('Failed to close comic:', error);
+      throw error;
+    }
+  }
+
+  private isComicFile(fileName: String): Boolean {
     const extension = fileName.split('.').pop()?.toLowerCase();
     return extension ? this.supportedExtensions.includes(extension) : false;
   }
@@ -142,7 +204,7 @@ class ComicService implements IComicService {
         title,
         author: 'Unknown',
         filePath,
-        pageCount: 0, // TODO: Extract actual page count
+        pageCount: 0, // Will be updated when comic is opened
         currentPage: 0,
         lastRead: 0,
         isFavorite: false,
@@ -155,6 +217,11 @@ class ComicService implements IComicService {
       console.error('Failed to create comic from file:', error);
       return null;
     }
+  }
+
+  private async getComicById(comicId: string): Promise<Comic | null> {
+    const comics = await this.scanForComics();
+    return comics.find(comic => comic.id === comicId) || null;
   }
 
   private sortComics(comics: Comic[], sortOrder: SortOrder): Comic[] {
