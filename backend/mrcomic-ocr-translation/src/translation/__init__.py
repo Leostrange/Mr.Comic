@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""
-Инициализация пакета translation
+"""Инициализация пакета ``translation``.
+
+Модуль предоставляет только базовые интерфейсы перевода. Конкретные
+реализации переводчиков импортируются фабрикой по требованию, что
+позволяет использовать отдельные подсистемы (например, кэш переводов)
+без установки дополнительных зависимостей.
 """
 
-# Импортируем основные классы для удобства использования
 from .translator_interface import TranslatorInterface, TranslatorFactory
-from .google_translator import GoogleTranslator
-from .libre_translator import LibreTranslator
-from .fallback_translator import FallbackTranslator
 
-# Обновляем фабрику для поддержки fallback-переводчика
-TranslatorFactory._create_fallback = lambda config: FallbackTranslator(config)
+__all__ = ["TranslatorInterface", "TranslatorFactory"]
