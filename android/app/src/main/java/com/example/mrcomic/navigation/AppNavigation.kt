@@ -13,66 +13,68 @@ import com.example.feature.reader.ui.ReaderScreen
 import com.example.feature.settings.SettingsScreen
 import com.example.feature.onboarding.OnboardingScreen
 import com.example.mrcomic.ui.DebugReaderScreen
+import com.example.mrcomic.ui.ComicListScreen
+import com.example.mrcomic.ui.ComicDetailScreen
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mrcomic.navigation.Screen
 
-/**
- * Определяет навигационные маршруты в приложении.
- */
-sealed class Screen(val route: String) {
-    data object Library : Screen("library")
-    data object Reader : Screen("reader/{uri}") {
-        fun createRoute(uri: String): String {
-            // Важно кодировать путь к файлу, чтобы безопасно передавать его как URL.
-            val encodedUri = Uri.encode(uri)
-            return "reader/$encodedUri"
-        }
-    }
-    data object AddComic : Screen("add_comic")
-    data object Settings : Screen("settings")
-    data object Onboarding : Screen("onboarding")
-    data object Debug : Screen("debug")
 
-}
 
 /**
  * Главный навигационный хост приложения.
  */
 @Composable
 fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Unit) {
-    NavHost(navController = navController, startDestination = Screen.Onboarding.route) {
-        composable(route = Screen.Library.route) {
-            LibraryScreen(
-                onBookClick = { uriString -> 
-                    android.util.Log.d("AppNavigation", "🚀 Navigating to reader with URI: $uriString")
-                    val route = Screen.Reader.createRoute(uriString)
-                    android.util.Log.d("AppNavigation", "🔗 Navigation route: $route")
-                    navController.navigate(route)
-                },
-                onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                onAddClick = { navController.navigate(Screen.AddComic.route) }
+    NavHost(navController = navController, startDestination = Screen.ComicListScreen.route) {
+        
+        // Список комиксов
+        composable(route = Screen.ComicListScreen.route) {
+            ComicListScreen(
+                navController = navController,
+                viewModel = hiltViewModel()
             )
         }
 
+        // Детали комикса с параметром
+        composable(
+            route = Screen.ComicDetailScreen.route,
+            arguments = listOf(navArgument("comicId") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val comicId = backStackEntry.arguments?.getInt("comicId") ?: 0
+            ComicDetailScreen(
+                navController = navController,
+                comicId = comicId,
+                viewModel = hiltViewModel()
+            )
+        }
+
+        // Читалка комиксов
         composable(
             route = Screen.Reader.route,
             arguments = listOf(navArgument("uri") { type = NavType.StringType })
         ) {
-            // HiltViewModel автоматически получит аргумент "filePath"
-            // через SavedStateHandle, поэтому передавать его вручную не нужно.
             ReaderScreen()
         }
 
+        // Добавление комикса
         composable(Screen.AddComic.route) {
-            AddComicScreen(onComicAdded = { navController.popBackStack() }, onNavigateUp = { navController.popBackStack() })
+            AddComicScreen(
+                onComicAdded = { navController.popBackStack() }, 
+                onNavigateUp = { navController.popBackStack() }
+            )
         }
 
+        // Настройки
         composable(route = Screen.Settings.route) {
             SettingsScreen()
         }
 
+        // Онбординг
         composable(route = Screen.Onboarding.route) {
             OnboardingScreen(onOnboardingComplete = onOnboardingComplete)
         }
 
+        // Отладочный экран
         composable(route = Screen.Debug.route) {
             DebugReaderScreen()
         }
