@@ -39,7 +39,7 @@ dependencies {
     // implementation(libs.telephoto.zoomable)
 
     // Archive/document format support
-    // implementation(libs.pdfium.android) // PDF library - temporarily disabled
+    implementation(libs.pdfium.android) // PDF library - using stable version
     implementation(libs.junrar) // CBR support
     implementation(libs.zip4j) // CBZ support
     implementation(libs.commons.compress) // General archive support

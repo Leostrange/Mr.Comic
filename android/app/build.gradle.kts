@@ -109,8 +109,8 @@ dependencies {
     implementation(libs.junrar)
     implementation(libs.commons.compress)
     
-    // PDF support - temporarily disabled due to build issues
-    // implementation(libs.pdfium.android)
+    // PDF support - using stable alternatives
+    implementation(libs.pdfium.android)
     // implementation(libs.android.pdf.viewer.fallback)
     
     // Video splash screen
