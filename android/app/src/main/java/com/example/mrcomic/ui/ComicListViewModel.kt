@@ -25,7 +25,6 @@ class ComicListViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _comicsState.value = ComicListState.Loading
             try {
-                // Имитация загрузки комиксов (замените на реальную логику)
                 val comics = getTestComics()
                 _comicsState.value = ComicListState.Success(comics)
             } catch (e: Exception) {
@@ -38,24 +37,39 @@ class ComicListViewModel @Inject constructor() : ViewModel() {
         return listOf(
             Comic(
                 id = 1,
-                title = "Тестовый комикс 1",
-                author = "Автор 1",
-                pageCount = 5,
-                description = "Описание первого комикса"
+                title = "XKCD Adventures",
+                author = "Randall Munroe",
+                images = listOf(
+                    "https://imgs.xkcd.com/comics/barrel_cropped_(1).jpg",
+                    "https://imgs.xkcd.com/comics/tree_cropped_(1).jpg",
+                    "https://imgs.xkcd.com/comics/balloon_cropped_(1).jpg"
+                ),
+                description = "Классический веб-комикс о науке, технологиях и жизни"
             ),
             Comic(
                 id = 2,
-                title = "Тестовый комикс 2",
-                author = "Автор 2",
-                pageCount = 3,
-                description = "Описание второго комикса"
+                title = "Dilbert Daily",
+                author = "Scott Adams",
+                images = listOf(
+                    "https://assets.amuniversal.com/example1.jpg",
+                    "https://assets.amuniversal.com/example2.jpg",
+                    "https://assets.amuniversal.com/example3.jpg",
+                    "https://assets.amuniversal.com/example4.jpg"
+                ),
+                description = "Юмористический комикс о жизни в офисе"
             ),
             Comic(
                 id = 3,
                 title = "Тестовый комикс 3",
                 author = "Автор 3",
-                pageCount = 7,
-                description = "Описание третьего комикса"
+                images = listOf(
+                    "https://picsum.photos/400/600?random=1",
+                    "https://picsum.photos/400/600?random=2",
+                    "https://picsum.photos/400/600?random=3",
+                    "https://picsum.photos/400/600?random=4",
+                    "https://picsum.photos/400/600?random=5"
+                ),
+                description = "Тестовый комикс с случайными изображениями"
             )
         )
     }

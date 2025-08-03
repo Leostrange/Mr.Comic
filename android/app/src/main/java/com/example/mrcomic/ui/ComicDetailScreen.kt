@@ -68,7 +68,7 @@ fun ComicDetailScreen(
 
                 // Индикатор страницы
                 Text(
-                    text = "${currentPage + 1} / ${comic.pageCount}",
+                    text = "${currentPage + 1} / ${comic.images.size}",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -77,7 +77,7 @@ fun ComicDetailScreen(
 
                 // Прогресс чтения
                 LinearProgressIndicator(
-                    progress = { (currentPage + 1).toFloat() / comic.pageCount.toFloat() },
+                    progress = { (currentPage + 1).toFloat() / comic.images.size.toFloat() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
@@ -92,14 +92,18 @@ fun ComicDetailScreen(
                 ) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(comic.getImagePath(currentPage))
+                            .data(comic.images[currentPage])
                             .crossfade(true)
                             .build(),
                         contentDescription = "Comic page",
                         modifier = Modifier
                             .fillMaxSize()
                             .align(Alignment.Center),
-                        contentScale = ContentScale.Fit
+                        contentScale = ContentScale.Fit,
+                        onError = { 
+                            // Показываем placeholder при ошибке загрузки
+                            android.util.Log.e("ComicDetailScreen", "Ошибка загрузки изображения: ${comic.images[currentPage]}")
+                        }
                     )
                 }
 
@@ -124,12 +128,12 @@ fun ComicDetailScreen(
 
                     Button(
                         onClick = { 
-                            if (currentPage < comic.pageCount - 1) {
+                            if (currentPage < comic.images.size - 1) {
                                 currentPage++
                                 viewModel.updateCurrentPage(currentPage)
                             }
                         },
-                        enabled = currentPage < comic.pageCount - 1
+                        enabled = currentPage < comic.images.size - 1
                     ) {
                         Text("Вперед")
                     }
@@ -173,7 +177,7 @@ fun ComicDetailScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Ошибка загрузки комикса: ${state.message}",
+                    text = "Ошибка: ${state.message}",
                     color = MaterialTheme.colorScheme.error
                 )
                 Button(

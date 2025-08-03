@@ -21,7 +21,6 @@ class ComicDetailViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             _comicState.value = ComicDetailState.Loading
             try {
-                // Имитация загрузки комикса (замените на реальную логику)
                 val comic = getComicById(comicId)
                 if (comic != null) {
                     _comicState.value = ComicDetailState.Success(comic)
@@ -29,7 +28,7 @@ class ComicDetailViewModel @Inject constructor() : ViewModel() {
                     _comicState.value = ComicDetailState.Error("Комикс не найден")
                 }
             } catch (e: Exception) {
-                _comicState.value = ComicDetailState.Error(e.message ?: "Неизвестная ошибка")
+                _comicState.value = ComicDetailState.Error(e.message ?: "Ошибка загрузки комикса")
             }
         }
     }
@@ -59,15 +58,45 @@ class ComicDetailViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun getComicById(id: Int): Comic? {
-        // Здесь должна быть реальная логика получения комикса
-        // Пока возвращаем тестовые данные
-        return Comic(
-            id = id,
-            title = "Тестовый комикс $id",
-            author = "Автор $id",
-            pageCount = 5,
-            currentPage = 0,
-            description = "Описание тестового комикса $id"
-        )
+        // Адаптировано под вашу структуру данных с реальными URL
+        return when (id) {
+            1 -> Comic(
+                id = 1,
+                title = "XKCD Comic",
+                author = "Randall Munroe",
+                images = listOf(
+                    "https://imgs.xkcd.com/comics/barrel_cropped_(1).jpg",
+                    "https://imgs.xkcd.com/comics/tree_cropped_(1).jpg",
+                    "https://imgs.xkcd.com/comics/balloon_cropped_(1).jpg"
+                ),
+                description = "Классический веб-комикс о науке, технологиях и жизни"
+            )
+            2 -> Comic(
+                id = 2,
+                title = "Dilbert Comic",
+                author = "Scott Adams",
+                images = listOf(
+                    "https://assets.amuniversal.com/example1.jpg",
+                    "https://assets.amuniversal.com/example2.jpg",
+                    "https://assets.amuniversal.com/example3.jpg",
+                    "https://assets.amuniversal.com/example4.jpg"
+                ),
+                description = "Юмористический комикс о жизни в офисе"
+            )
+            3 -> Comic(
+                id = 3,
+                title = "Тестовый комикс 3",
+                author = "Автор 3",
+                images = listOf(
+                    "https://picsum.photos/400/600?random=1",
+                    "https://picsum.photos/400/600?random=2",
+                    "https://picsum.photos/400/600?random=3",
+                    "https://picsum.photos/400/600?random=4",
+                    "https://picsum.photos/400/600?random=5"
+                ),
+                description = "Тестовый комикс с случайными изображениями"
+            )
+            else -> null
+        }
     }
 } 

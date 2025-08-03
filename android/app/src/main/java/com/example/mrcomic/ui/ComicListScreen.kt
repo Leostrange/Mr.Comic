@@ -110,7 +110,7 @@ fun ComicItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${comic.pageCount} страниц",
+                    text = "${comic.images.size} страниц",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -121,7 +121,7 @@ fun ComicItem(
                         modifier = Modifier.width(100.dp)
                     )
                     Text(
-                        text = "${comic.currentPage}/${comic.pageCount}",
+                        text = "${comic.currentPage}/${comic.images.size}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
