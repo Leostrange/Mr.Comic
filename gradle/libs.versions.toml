@@ -61,7 +61,7 @@ libarchive = "1.1.6"
 # Archives (working versions - FIXED)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.8.0"  # Using stable version
+# pdfium_android = "1.8.0"  # Temporarily disabled due to build issues
 telephoto = "0.11.0"  # Using known working version  
 commons_compress = "1.26.0"
 
@@ -184,13 +184,12 @@ libarchive = { group = "me.zhanghai.android.libarchive", name = "library", versi
 # Archives (working dependencies)
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
-# Using stable PDF renderer
-pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons_compress" }
 
-# PDF and Document viewers (using stable version)
-android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
-android-pdf-viewer-fallback = { group = "com.github.shxdos", name = "AndroidPdfViewer", version.ref = "androidPdfViewerFallback" }
+# PDF support - using working alternatives
+# Removed problematic PDF libraries that cause build failures
+# pdfium-android = { group = "com.shockwave", name = "pdfium-android", version.ref = "pdfium_android" }
+# android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
 # Zoomable Image - temporarily disabled due to resolution issues

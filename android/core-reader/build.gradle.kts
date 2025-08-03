@@ -30,7 +30,7 @@ dependencies {
     // Archive and document format support
     implementation(libs.zip4j)
     implementation(libs.junrar)
-    implementation(libs.pdfium.android)
+    // implementation(libs.pdfium.android) // Temporarily disabled due to build issues
     implementation(libs.commons.compress)
 }
 
