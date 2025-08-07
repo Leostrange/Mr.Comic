@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.example.feature.themes.data.ThemeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -31,13 +32,13 @@ class ThemesViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            _availableThemes.value = themeRepository.getAvailableThemes()
+            _availableThemes.update { themeRepository.getAvailableThemes() }
         }
     }
 
     fun selectTheme(theme: AppTheme) {
         viewModelScope.launch {
-            _selectedTheme.value = theme
+            _selectedTheme.update { theme }
         }
     }
 
@@ -46,7 +47,7 @@ class ThemesViewModel @Inject constructor(
             // Logic to apply custom theme from themes_store
             // This would involve loading the theme.json and applying its properties
             // For now, we'll just update the selected theme name
-            // _selectedTheme.value = AppTheme.CUSTOM // A new enum value might be needed
+            // _selectedTheme.update { AppTheme.CUSTOM } // A new enum value might be needed
         }
     }
 
@@ -56,8 +57,8 @@ class ThemesViewModel @Inject constructor(
 
     fun importTheme(url: String) {
         viewModelScope.launch {
-            _importResult.value = themeRepository.downloadThemeFromUrl(url)
-            _availableThemes.value = themeRepository.getAvailableThemes()
+            _importResult.update { themeRepository.downloadThemeFromUrl(url) }
+            _availableThemes.update { themeRepository.getAvailableThemes() }
         }
     }
 }
