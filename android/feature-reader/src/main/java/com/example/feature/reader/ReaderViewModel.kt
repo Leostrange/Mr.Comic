@@ -15,6 +15,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -44,24 +45,24 @@ class ReaderViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
-    
+
     // Background color for reader (dark theme)
     private val _background = MutableStateFlow(0xFF1A1A1A.toLong())
     val background: StateFlow<Long> = _background.asStateFlow()
 
     fun loadComic(uriString: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, comicUri = uriString)
-            
+            _uiState.update { it.copy(isLoading = true, error = null, comicUri = uriString) }
+
             // Clear any existing cache
             getComicPagesUseCase.clearCache()
-            
+
             when (val loadResult = loadComicUseCase(Uri.parse(uriString))) {
                 is Result.Success -> {
                     val totalPages = when (val pagesResult = getComicPagesUseCase.getTotalPages()) {
                         is Result.Success -> pagesResult.data
                         is Result.Error -> {
-                            _uiState.value = _uiState.value.copy(isLoading = false, error = pagesResult.exception.message ?: "Ошибка чтения")
+                            _uiState.update { it.copy(isLoading = false, error = pagesResult.exception.message ?: "Ошибка чтения") }
                             return@launch
                         }
                     }
@@ -69,14 +70,16 @@ class ReaderViewModel @Inject constructor(
                         is Result.Success -> progressResult.data
                         is Result.Error -> 0
                     }
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        pageCount = totalPages,
-                        currentPageIndex = lastReadPage
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            pageCount = totalPages,
+                            currentPageIndex = lastReadPage
+                        )
+                    }
                     goToPage(lastReadPage)
                 }
-                is Result.Error -> _uiState.value = _uiState.value.copy(isLoading = false, error = loadResult.exception.message ?: "Неизвестная ошибка")
+                is Result.Error -> _uiState.update { it.copy(isLoading = false, error = loadResult.exception.message ?: "Неизвестная ошибка") }
             }
         }
     }
@@ -105,16 +108,18 @@ class ReaderViewModel @Inject constructor(
                 is Result.Success -> {
                     val bmp = pageResult.data
                     if (bmp != null) {
-                        _uiState.value = _uiState.value.copy(
-                            currentPageIndex = index,
-                            currentPageBitmap = bmp,
-                            bitmaps = _uiState.value.bitmaps.toMutableMap().apply { put(index, bmp) }
-                        )
+                        _uiState.update {
+                            it.copy(
+                                currentPageIndex = index,
+                                currentPageBitmap = bmp,
+                                bitmaps = it.bitmaps.toMutableMap().apply { put(index, bmp) }
+                            )
+                        }
                         saveReadingProgressUseCase(_uiState.value.comicUri, index)
                         // result ignored
                     }
                 }
-                is Result.Error -> _uiState.value = _uiState.value.copy(error = pageResult.exception.message ?: "Ошибка страницы")
+                is Result.Error -> _uiState.update { it.copy(error = pageResult.exception.message ?: "Ошибка страницы") }
             }
         }
     }
@@ -124,7 +129,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun setReadingMode(mode: ReadingMode) {
-        _uiState.value = _uiState.value.copy(readingMode = mode)
+        _uiState.update { it.copy(readingMode = mode) }
     }
 
     override fun onCleared() {
