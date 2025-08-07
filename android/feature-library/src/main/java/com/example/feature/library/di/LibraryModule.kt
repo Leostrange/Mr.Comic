@@ -2,11 +2,8 @@ package com.example.feature.library.di
 
 import android.content.Context
 import androidx.room.Room
-import com.example.feature.library.LibraryRepository
-// import com.example.feature.library.RoomLibraryRepository // Using implementation from LibraryRepository.kt
 import com.example.feature.library.data.ComicDao
 import com.example.feature.library.data.LibraryDatabase
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,8 +21,4 @@ object LibraryModule {
 
     @Provides
     fun provideComicDao(db: LibraryDatabase): ComicDao = db.comicDao()
-
-    @Provides
-    @Singleton
-    fun provideLibraryRepository(dao: ComicDao): LibraryRepository = RoomLibraryRepository(dao)
-} 
+}

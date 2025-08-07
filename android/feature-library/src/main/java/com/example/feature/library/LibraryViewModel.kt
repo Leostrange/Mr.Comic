@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import com.mrcomic.shared.logging.Log
@@ -56,14 +57,14 @@ class LibraryViewModel @Inject constructor(
 
     fun loadComics() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 comicRepository.getComics(_uiState.value.sortOrder, _uiState.value.searchQuery).collectLatest { comics ->
-                    _uiState.value = _uiState.value.copy(isLoading = false, comics = comics)
+                    _uiState.update { it.copy(isLoading = false, comics = comics) }
                 }
             } catch (e: Exception) {
                 Log.e("LibraryViewModel", "Failed to load comics", e)
-                _uiState.value = _uiState.value.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка")
+                _uiState.update { it.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка") }
             }
         }
     }
@@ -74,15 +75,20 @@ class LibraryViewModel @Inject constructor(
                 is Result.Success -> Unit
                 is Result.Error -> {
                     Log.e("LibraryViewModel", "Failed to add comic", result.exception)
-                    _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка добавления")
+                    _uiState.update { it.copy(error = result.exception.message ?: "Ошибка добавления") }
                 }
             }
         }
     }
 
     fun onDeleteRequest() {
-        _uiState.value = _uiState.value.copy(pendingDeletionIds = _uiState.value.selectedComicIds)
-        _uiState.value = _uiState.value.copy(inSelectionMode = false, selectedComicIds = emptySet())
+        _uiState.update {
+            it.copy(
+                pendingDeletionIds = it.selectedComicIds,
+                inSelectionMode = false,
+                selectedComicIds = emptySet()
+            )
+        }
         viewModelScope.launch {
             _events.send(LibraryEvent.ShowSnackbar(
                 message = "${_uiState.value.pendingDeletionIds.size} item(s) will be deleted",
@@ -93,42 +99,42 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onUndoDelete() {
-        _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
+        _uiState.update { it.copy(pendingDeletionIds = emptySet()) }
         viewModelScope.launch { _events.send(LibraryEvent.HideSnackbar) }
     }
 
     fun onDeletionTimeout() {
         viewModelScope.launch {
             when (val result = deleteComicUseCase(_uiState.value.pendingDeletionIds)) {
-                is Result.Success -> _uiState.value = _uiState.value.copy(pendingDeletionIds = emptySet())
+                is Result.Success -> _uiState.update { it.copy(pendingDeletionIds = emptySet()) }
                 is Result.Error -> {
                     Log.e("LibraryViewModel", "Failed to delete comics", result.exception)
-                    _uiState.value = _uiState.value.copy(error = result.exception.message ?: "Ошибка удаления")
+                    _uiState.update { it.copy(error = result.exception.message ?: "Ошибка удаления") }
                 }
             }
         }
     }
 
     fun onSortOrderChange(sortOrder: SortOrder) {
-        _uiState.value = _uiState.value.copy(sortOrder = sortOrder)
+        _uiState.update { it.copy(sortOrder = sortOrder) }
         loadComics()
     }
 
     fun onSearchQueryChange(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        _uiState.update { it.copy(searchQuery = query) }
         loadComics()
     }
 
     fun onToggleSearch() {
-        _uiState.value = _uiState.value.copy(isSearchActive = !_uiState.value.isSearchActive)
+        _uiState.update { it.copy(isSearchActive = !it.isSearchActive) }
         if (!_uiState.value.isSearchActive) {
-            _uiState.value = _uiState.value.copy(searchQuery = "")
+            _uiState.update { it.copy(searchQuery = "") }
             loadComics()
         }
     }
 
     fun onPermissionsGranted() {
-        _uiState.value = _uiState.value.copy(hasStoragePermission = true)
+        _uiState.update { it.copy(hasStoragePermission = true) }
         loadComics()
     }
 
@@ -139,37 +145,37 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onEnterSelectionMode(comicId: String) {
-        _uiState.value = _uiState.value.copy(inSelectionMode = true, selectedComicIds = setOf(comicId))
+        _uiState.update { it.copy(inSelectionMode = true, selectedComicIds = setOf(comicId)) }
     }
 
     fun onComicSelected(comicId: String) {
-        val currentSelection = _uiState.value.selectedComicIds.toMutableSet()
-        if (currentSelection.contains(comicId)) {
-            currentSelection.remove(comicId)
-        } else {
-            currentSelection.add(comicId)
-        }
-        _uiState.value = _uiState.value.copy(selectedComicIds = currentSelection)
-        if (currentSelection.isEmpty()) {
-            _uiState.value = _uiState.value.copy(inSelectionMode = false)
+        _uiState.update { currentState ->
+            val currentSelection = currentState.selectedComicIds.toMutableSet()
+            if (currentSelection.contains(comicId)) {
+                currentSelection.remove(comicId)
+            } else {
+                currentSelection.add(comicId)
+            }
+            val inSelectionMode = currentSelection.isNotEmpty()
+            currentState.copy(selectedComicIds = currentSelection, inSelectionMode = inSelectionMode)
         }
     }
 
     fun onClearSelection() {
-        _uiState.value = _uiState.value.copy(inSelectionMode = false, selectedComicIds = emptySet())
+        _uiState.update { it.copy(inSelectionMode = false, selectedComicIds = emptySet()) }
     }
 
     fun onAddComicClick() {
-        _uiState.value = _uiState.value.copy(showAddComicDialog = true)
+        _uiState.update { it.copy(showAddComicDialog = true) }
     }
 
     fun onDismissAddComicDialog() {
-        _uiState.value = _uiState.value.copy(showAddComicDialog = false)
+        _uiState.update { it.copy(showAddComicDialog = false) }
     }
 
     fun onConfirmAddComicDialog(title: String, author: String, coverPath: String) {
         addComic(title, author, coverPath)
-        _uiState.value = _uiState.value.copy(showAddComicDialog = false)
+        _uiState.update { it.copy(showAddComicDialog = false) }
     }
 }
 
