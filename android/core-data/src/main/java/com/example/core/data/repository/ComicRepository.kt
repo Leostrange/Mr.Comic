@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
+import com.example.core.data.database.BookmarkEntity
+import com.example.core.model.Bookmark
 import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 import com.example.core.data.database.ComicDao
@@ -26,6 +28,10 @@ interface ComicRepository {
     suspend fun addComic(comic: Comic)
     suspend fun updateProgress(comicId: String, currentPage: Int)
     suspend fun clearCache()
+    suspend fun importComicFromUri(uri: android.net.Uri)
+    suspend fun addBookmark(bookmark: Bookmark)
+    suspend fun removeBookmark(bookmark: Bookmark)
+    suspend fun getBookmarks(comicId: String): List<Bookmark>
 }
 
 class ComicRepositoryImpl @Inject constructor(
@@ -139,6 +145,64 @@ class ComicRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun importComicFromUri(uri: Uri) {
+        withContext(Dispatchers.IO) {
+            val fileName = getFullFileName(uri) ?: "imported_comic_${System.currentTimeMillis()}"
+            val comicsDir = File(context.filesDir, "comics")
+            if (!comicsDir.exists()) {
+                comicsDir.mkdirs()
+            }
+            val destinationFile = File(comicsDir, fileName)
+
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                destinationFile.outputStream().use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+
+            val comicEntity = ComicEntity(
+                filePath = destinationFile.absolutePath,
+                title = fileName.substringBeforeLast('.'),
+                coverPath = null, // Cover can be extracted later
+                dateAdded = System.currentTimeMillis()
+            )
+
+            comicDao.insertAll(listOf(comicEntity))
+        }
+    }
+
+    override suspend fun addBookmark(bookmark: Bookmark) {
+        val entity = BookmarkEntity(
+            comicId = bookmark.comicId,
+            page = bookmark.page,
+            label = bookmark.label,
+            timestamp = System.currentTimeMillis()
+        )
+        comicDao.insertBookmark(entity)
+    }
+
+    override suspend fun removeBookmark(bookmark: Bookmark) {
+        val entity = BookmarkEntity(
+            id = bookmark.id.toLong(),
+            comicId = bookmark.comicId,
+            page = bookmark.page,
+            label = bookmark.label,
+            timestamp = 0L // Timestamp is not used for deletion
+        )
+        comicDao.deleteBookmark(entity)
+    }
+
+    override suspend fun getBookmarks(comicId: String): List<Bookmark> {
+        return comicDao.getBookmarksForComic(comicId).map { entity ->
+            Bookmark(
+                id = entity.id.toString(),
+                comicId = entity.comicId,
+                page = entity.page,
+                label = entity.label
+            )
+        }
+    }
+
     private fun scanDirectory(directory: File, uriList: MutableList<Uri>) {
         android.util.Log.d("ComicRepository", "🔍 Scanning directory: ${directory.absolutePath}")
         directory.listFiles()?.forEach { file ->
@@ -173,6 +237,29 @@ class ComicRepositoryImpl @Inject constructor(
         return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast(
 '.
 ')
+    }
+
+    private fun getFullFileName(uri: Uri): String? {
+        var result: String? = null
+        if (uri.scheme == "content") {
+            val cursor = context.contentResolver.query(uri, null, null, null, null)
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val displayNameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (displayNameIndex != -1) {
+                        result = it.getString(displayNameIndex)
+                    }
+                }
+            }
+        }
+        if (result == null) {
+            result = uri.path
+            val cut = result?.lastIndexOf('/')
+            if (cut != -1 && cut != null) {
+                result = result?.substring(cut + 1)
+            }
+        }
+        return result
     }
 }
 

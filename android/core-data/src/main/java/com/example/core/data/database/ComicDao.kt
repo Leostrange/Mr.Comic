@@ -30,4 +30,15 @@ interface ComicDao {
     suspend fun deleteComicsByFilePaths(filePaths: List<String>)
 
     @Query("DELETE FROM comics")
-    suspend fun clearAll()}
+    suspend fun clearAll()
+
+    // Bookmark methods
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBookmark(bookmark: BookmarkEntity)
+
+    @Delete
+    suspend fun deleteBookmark(bookmark: BookmarkEntity)
+
+    @Query("SELECT * FROM bookmarks WHERE comicId = :comicId ORDER BY page ASC")
+    suspend fun getBookmarksForComic(comicId: String): List<BookmarkEntity>
+}
