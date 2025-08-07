@@ -1,6 +1,7 @@
 package com.example.feature.library.ui
 
 import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -142,7 +143,12 @@ private fun LibraryScreenContent(
         BottomNavItem("Settings", Icons.Default.Settings, "settings")
     )}
 
-    val storagePermissionState = rememberPermissionState(Manifest.permission.READ_EXTERNAL_STORAGE)
+    val storagePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val storagePermissionState = rememberPermissionState(storagePermission)
 
     LaunchedEffect(storagePermissionState.status.isGranted) {
         if (storagePermissionState.status.isGranted) {
