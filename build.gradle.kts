@@ -73,4 +73,13 @@ subprojects {
             }
         }
     }
+    // Force Kotlin stdlib 1.9.25 across all modules
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-stdlib")) {
+                useVersion("1.9.25")
+                because("Align Kotlin stdlib with Kotlin Gradle plugin 1.9.25 to avoid metadata version mismatch")
+            }
+        }
+    }
 }

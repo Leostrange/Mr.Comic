@@ -223,9 +223,7 @@ class ComicRepositoryImpl @Inject constructor(
             if (doc.isDirectory) {
                 scanDocumentTree(doc.uri, uriList)
             } else if (doc.isFile) {
-                val extension = doc.name?.substringAfterLast(
-'.
-', "")?.lowercase()
+                val extension = doc.name?.substringAfterLast('.', "")?.lowercase()
                 if (supportedExtensions.contains(extension)) {
                     uriList.add(doc.uri)
                 }
@@ -234,9 +232,7 @@ class ComicRepositoryImpl @Inject constructor(
     }
 
     private fun getFileName(uri: Uri): String? {
-        return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast(
-'.
-')
+        return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast('.')
     }
 
     private fun getFullFileName(uri: Uri): String? {
