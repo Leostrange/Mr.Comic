@@ -1,18 +1,14 @@
 package com.example.core.domain.usecase
 
 import android.net.Uri
-import com.example.feature.reader.domain.BookReaderFactory
+import com.example.core.domain.util.Result
 import javax.inject.Inject
 
-class LoadComicUseCase @Inject constructor(
-    private val bookReaderFactory: BookReaderFactory
-) {
+class LoadComicUseCase @Inject constructor() {
     suspend operator fun invoke(uri: Uri): Result<Unit> {
         return try {
-            // Create and store the reader for this URI
-            val reader = bookReaderFactory.create(uri)
-            // Open the reader to initialize it
-            reader.open(uri)
+            // Actual reader integration is handled in feature-reader. Domain just validates input.
+            if (uri.toString().isBlank()) return Result.Error(IllegalArgumentException("Empty URI"))
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(e)
@@ -20,7 +16,7 @@ class LoadComicUseCase @Inject constructor(
     }
 
     fun releaseResources() {
-        bookReaderFactory.releaseResources()
+        // no-op for pure domain
     }
 }
 

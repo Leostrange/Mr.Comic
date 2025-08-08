@@ -28,9 +28,12 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
     implementation(project(":android:core-data"))
+    implementation(project(":android:core-model"))
+    implementation(project(":android:core-ui"))
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)
     kapt(libs.google.hilt.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation("androidx.activity:activity-compose:1.9.0")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 }

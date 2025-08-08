@@ -26,15 +26,24 @@ android {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(project(":android:core-ui"))
     implementation(project(":android:core-data"))
+    implementation(project(":android:core-domain"))
     implementation(project(":android:core-model"))
     implementation(libs.bundles.compose)
+    implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation(libs.google.hilt.android)
     kapt(libs.google.hilt.compiler)
+    implementation(libs.bundles.room)
+    kapt(libs.androidx.room.compiler)
     testImplementation(libs.bundles.test.unit)
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 }
