@@ -43,6 +43,13 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # Install the Android SDK and build tools
+      - name: 📱 Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          components: platform-tools, platforms;android-34, build-tools;34.0.0
+
       - name: 🗃️ Setup Gradle Cache
         uses: actions/cache@v4
         with:
@@ -157,6 +164,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      # Install the Android SDK for tests
+      - name: 📱 Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          components: platform-tools, platforms;android-34, build-tools;34.0.0
 
       - name: 🗃️ Restore Gradle Cache
         uses: actions/cache@v4

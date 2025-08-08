@@ -4,6 +4,9 @@ import android.content.Context
 import com.example.mrcomic.data.network.MrComicApiService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.example.mrcomic.data.OcrTranslationRepository
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
