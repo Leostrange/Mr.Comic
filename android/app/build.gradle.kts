@@ -97,7 +97,7 @@ dependencies {
     implementation(project(":android:core-model"))
     implementation(project(":android:feature-library"))
     implementation(project(":android:feature-settings"))
-    implementation(project(":android:feature-reader"))
+    // implementation(project(":android:feature-reader"))
     implementation(project(":android:feature-themes"))
     
     // Third-party libraries
