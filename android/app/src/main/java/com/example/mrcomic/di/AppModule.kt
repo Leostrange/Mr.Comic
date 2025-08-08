@@ -1,11 +1,13 @@
 package com.example.mrcomic.di
 
+import android.content.Context
 import com.example.mrcomic.data.network.MrComicApiService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -13,73 +15,99 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import android.net.Uri
+import com.example.mrcomic.di.Resource
+import com.example.mrcomic.data.network.dto.OcrResponseDto
+import com.example.mrcomic.data.network.dto.TranslationRequestDto
+import com.example.mrcomic.data.network.dto.TranslationResponseDto
 
 // Условный BuildConfig для базового URL. В реальном проекте он будет генерироваться Gradle.
 object FakeBuildConfig {
-    const val DEBUG = true // Или false, в зависимости от типа сборки
-    const val BASE_API_URL = "http://10.0.2.2:3000/api/" // Для эмулятора Android, указывающего на localhost хост-машины
-    // const val BASE_API_URL = "https://api.mrcomic.com/v1/" // Для продакшена
+    const val DEBUG = true
+    const val BASE_API_URL = "http://10.0.2.2:3000/api/"
 }
 
+interface OcrTranslationRepository {
+    fun processImageOcr(
+        imageUri: Uri,
+        regionsJson: String? = null,
+        languagesJson: String? = null,
+        ocrParamsJson: String? = null
+    ): Flow<Resource<OcrResponseDto>>
+
+    fun translateText(request: TranslationRequestDto): Flow<Resource<TranslationResponseDto>>
+}
+
+class OcrTranslationRepositoryImpl(
+    private val api: MrComicApiService,
+    private val context: Context,
+    private val gson: Gson
+) : OcrTranslationRepository {
+    override fun processImageOcr(
+        imageUri: Uri,
+        regionsJson: String?,
+        languagesJson: String?,
+        ocrParamsJson: String?
+    ): Flow<Resource<OcrResponseDto>> = flow {
+        emit(Resource.Loading())
+        emit(Resource.Error("OCR not implemented in app module"))
+    }
+
+    override fun translateText(request: TranslationRequestDto): Flow<Resource<TranslationResponseDto>> = flow {
+        emit(Resource.Loading())
+        emit(Resource.Error("Translate not implemented in app module"))
+    }
+}
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule { // Переименовано из NetworkModule
+object AppModule {
 
     @Provides
     @Singleton
-    fun provideBaseUrl(): String {
-        // В реальном приложении URL будет браться из BuildConfig или другого конфигурационного файла
-        return FakeBuildConfig.BASE_API_URL
-    }
+    fun provideBaseUrl(): String = FakeBuildConfig.BASE_API_URL
 
     @Provides
     @Singleton
-    fun provideGson(): Gson {
-        return GsonBuilder()
-            // .setDateFormat("yyyy-MM-dd'T'HH:mm:ssZ") // Если нужна специфичная обработка дат
-            // .serializeNulls() // Если нужно отправлять null поля
-            .create()
-    }
+    fun provideGson(): Gson = GsonBuilder().create()
 
     @Provides
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         val loggingInterceptor = HttpLoggingInterceptor()
         loggingInterceptor.level = if (FakeBuildConfig.DEBUG) {
-            HttpLoggingInterceptor.Level.BODY // Логировать всё в debug сборках
+            HttpLoggingInterceptor.Level.BODY
         } else {
-            HttpLoggingInterceptor.Level.NONE // Не логировать в release
+            HttpLoggingInterceptor.Level.NONE
         }
         return loggingInterceptor
     }
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(loggingInterceptor: HttpLoggingInterceptor): OkHttpClient {
-        return OkHttpClient.Builder()
+    fun provideOkHttpClient(loggingInterceptor: HttpLoggingInterceptor): OkHttpClient =
+        OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
             .build()
-    }
 
     @Provides
     @Singleton
-    fun provideRetrofit(baseUrl: String, okHttpClient: OkHttpClient, gson: Gson): Retrofit {
-        return Retrofit.Builder()
+    fun provideRetrofit(baseUrl: String, okHttpClient: OkHttpClient, gson: Gson): Retrofit =
+        Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
-    }
 
     @Provides
     @Singleton
-    fun provideMrComicApiService(retrofit: Retrofit): MrComicApiService {
-        return retrofit.create(MrComicApiService::class.java)
-    }
+    fun provideMrComicApiService(retrofit: Retrofit): MrComicApiService =
+        retrofit.create(MrComicApiService::class.java)
 
     @Provides
     @Singleton
@@ -87,7 +115,5 @@ object AppModule { // Переименовано из NetworkModule
         mrComicApiService: MrComicApiService,
         @ApplicationContext context: Context,
         gson: Gson
-    ): OcrTranslationRepository {
-        return OcrTranslationRepository(mrComicApiService, context, gson)
-    }
+    ): OcrTranslationRepository = OcrTranslationRepositoryImpl(mrComicApiService, context, gson)
 }

@@ -24,7 +24,14 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.translationProvider,
         settingsRepository.translationApiKey,
         settingsRepository.performanceMode
-    ) { sortOrder, folders, language, engine, provider, apiKey, perfMode ->
+    ) { values ->
+        val sortOrder = values[0] as SortOrder
+        val folders = values[1] as Set<String>
+        val language = values[2] as String
+        val engine = values[3] as String
+        val provider = values[4] as String
+        val apiKey = values[5] as String
+        val perfMode = values[6] as Boolean
         SettingsUiState(
             sortOrder = sortOrder,
             libraryFolders = folders,

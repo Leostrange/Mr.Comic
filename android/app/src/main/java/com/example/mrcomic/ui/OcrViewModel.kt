@@ -3,7 +3,7 @@ package com.example.mrcomic.ui
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mrcomic.data.OcrTranslationRepository
+import com.example.mrcomic.di.OcrTranslationRepository
 import com.example.mrcomic.data.network.dto.OcrResponseDto
 import com.example.mrcomic.di.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel

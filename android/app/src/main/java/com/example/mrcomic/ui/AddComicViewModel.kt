@@ -3,7 +3,7 @@ package com.example.mrcomic.ui
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mrcomic.data.ComicRepository
+import com.example.core.data.repository.ComicRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +40,6 @@ class AddComicViewModel @Inject constructor(
                 comicRepository.importComicFromUri(uri)
                 _isSuccess.value = true
             } catch (e: Exception) {
-                // TODO: Handle error (e.g., show a snackbar)
                 _isSuccess.value = false
             } finally {
                 _isLoading.value = false

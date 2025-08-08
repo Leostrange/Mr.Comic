@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.Comic
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     onBookClick: (filePath: String) -> Unit,
@@ -51,8 +53,9 @@ fun LibraryScreen(
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            if (uiState.error != null) {
-                Text(text = uiState.error)
+            val errorText = uiState.error
+            if (errorText != null) {
+                Text(text = errorText)
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { viewModel.onPermissionsGranted() }) {
                     Text("Retry")

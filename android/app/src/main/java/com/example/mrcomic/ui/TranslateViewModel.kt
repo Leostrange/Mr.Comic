@@ -2,7 +2,7 @@ package com.example.mrcomic.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mrcomic.data.OcrTranslationRepository
+import com.example.mrcomic.di.OcrTranslationRepository
 import com.example.mrcomic.data.network.dto.TextToTranslateDto
 import com.example.mrcomic.data.network.dto.TranslationParametersDto
 import com.example.mrcomic.data.network.dto.TranslationRequestDto
@@ -21,7 +21,7 @@ data class TranslateUiState(
     val isLoading: Boolean = false,
     val translationResponse: TranslationResponseDto? = null,
     val error: String? = null,
-    val originalText: String = "" // Для хранения текста, который переводится
+    val originalText: String = ""
 )
 
 @HiltViewModel
@@ -38,7 +38,7 @@ class TranslateViewModel @Inject constructor(
 
     fun performTranslation(
         textsToTranslate: List<TextToTranslateDto>,
-        sourceLanguage: String, // "auto" или код языка
+        sourceLanguage: String,
         targetLanguage: String,
         translationParams: TranslationParametersDto? = null
     ) {
@@ -46,9 +46,7 @@ class TranslateViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(error = "No text provided for translation.")
             return
         }
-        // Сохраняем первый текст для отображения, если их несколько
         _uiState.value = _uiState.value.copy(originalText = textsToTranslate.first().text)
-
 
         val requestDto = TranslationRequestDto(
             texts = textsToTranslate,

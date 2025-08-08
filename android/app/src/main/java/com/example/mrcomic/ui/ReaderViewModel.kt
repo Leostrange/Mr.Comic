@@ -2,8 +2,8 @@ package com.example.mrcomic.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.data.repository.ComicRepository
 import com.example.mrcomic.data.BookmarkEntity
-import com.example.mrcomic.data.ComicRepository
 import com.example.mrcomic.data.ComicEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow

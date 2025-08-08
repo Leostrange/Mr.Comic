@@ -56,23 +56,20 @@ media3 = "1.4.1"
 exifinterface = "1.4.1"
 libarchive = "1.1.6"
 
-# Tooling (removed unused plugins)
-
 # Archives (working versions - FIXED)
 zip4j = "2.11.5"
 junrar = "7.5.5"
-pdfium_android = "1.9.0"  # Using stable version from Maven Central
-telephoto = "0.11.0"  # Using known working version  
+pdfium_android = "1.9.0"
+telephoto = "0.11.0"
 commons_compress = "1.26.0"
 
 # Custom (working versions - FIXED)
 pdfboxAndroid = "2.0.27.0"
 slf4jAndroid = "1.7.36"
-mlkitTextRecognition = "16.0.0"  # Using Google's stable version
+mlkitTextRecognition = "16.0.0"
 materialIconsExtended = "1.6.8"
-androidPdfViewer = "2.8.2"  # Using stable version
+androidPdfViewer = "2.8.2"
 
-# Alternative PDF viewer (JitPack fallback)
 androidPdfViewerFallback = "2.7.0-beta.3"
 
 # ExoPlayer for video splash
@@ -91,7 +88,7 @@ accompanistPermissions = "0.34.0"
 
 # Image processing
 palette = "1.0.0"
-glide = "4.15.1"  # Using stable version without Compose dependency issues
+glide = "4.15.1"
 
 # Chart & Data visualization  
 charts = "1.0.1"
@@ -121,6 +118,7 @@ androidx-splashscreen = { group = "androidx.core", name = "core-splashscreen", v
 
 # AndroidX Navigation
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
+androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.2.0" }
 
 # AndroidX Room
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -190,9 +188,6 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 pdfium-android = { group = "com.github.barteksc", name = "pdfium-android", version.ref = "pdfium_android" }
 # android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
-
-# Zoomable Image - temporarily disabled due to resolution issues
-# telephoto-zoomable = { group = "me.saket.telephoto", name = "zoomable-image-compose", version = "0.11.0" }
 
 # MLKit (working versions) - using stable releases
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.0" }

@@ -2,25 +2,18 @@ package com.example.mrcomic.data
 
 import androidx.room.Dao
 import androidx.room.Delete
-import androidx.room.Entity
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BookmarkDao {
-    @Query("SELECT * FROM bookmarks WHERE comicId = :comicId ORDER BY page ASC")
-    fun getBookmarksForComic(comicId: String): Flow<List<BookmarkEntity>>
-    
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBookmark(bookmark: BookmarkEntity): Long
-    
+    suspend fun insert(bookmark: BookmarkEntity): Long
+
     @Delete
-    suspend fun deleteBookmark(bookmark: BookmarkEntity)
-    
-    @Query("DELETE FROM bookmarks WHERE comicId = :comicId")
-    suspend fun deleteAllBookmarksForComic(comicId: String)
-    @Query("SELECT * FROM bookmarks WHERE comicId = :comicId AND page = :page LIMIT 1")
-    suspend fun getBookmarkAtPage(comicId: String, page: Int): BookmarkEntity?
+    suspend fun delete(bookmark: BookmarkEntity)
+
+    @Query("SELECT * FROM bookmarks WHERE comicId = :comicId ORDER BY page ASC")
+    suspend fun getBookmarks(comicId: Long): List<BookmarkEntity>
 } 

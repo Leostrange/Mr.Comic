@@ -1,5 +1,6 @@
 package com.example.mrcomic.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,18 +24,35 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.mrcomic.ui.theme.MrComicTheme
-
 import com.example.feature.library.ui.LibraryScreen
 import com.example.feature.themes.ui.ThemesScreen
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -49,7 +67,7 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
             TopAppBar(
                 title = { Text("Mr. Comic") },
                 actions = {
-                    IconButton(onClick = { navController.navigate("account") }) {
+                    IconButton(onClick = { /* nav to account */ }) {
                         Icon(Icons.Filled.AccountCircle, contentDescription = "Account")
                     }
                 }
@@ -86,34 +104,35 @@ fun MainScreen(modifier: Modifier = Modifier, navController: NavController = rem
                     label = { Text("Темы") },
                     selected = selectedTabIndex == 4,
                     onClick = { selectedTabIndex = 4; coroutineScope.launch { pagerState.animateScrollToPage(4) } }
-                )},
-        content = { paddingValues ->
-            Column(modifier = Modifier.padding(paddingValues)) {
-                TabRow(selectedTabIndex = selectedTabIndex) {
-                    tabs.forEachIndexed { index, title ->
-                        Tab(
-                            selected = selectedTabIndex == index,
-                            onClick = { selectedTabIndex = index; coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { Text(title) }
-                        )
-                    }
+                )
+            }
+        }
+    ) { paddingValues ->
+        Column(modifier = Modifier.padding(paddingValues)) {
+            TabRow(selectedTabIndex = selectedTabIndex) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index; coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                        text = { Text(title) }
+                    )
                 }
-                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) {
-                    when (it) {
-                        0 -> LibraryScreen(
-                            onBookClick = { uriString -> navController.navigate(Screen.Reader.createRoute(uriString)) },
-                            onAddClick = { navController.navigate(Screen.AddComic.route) },
-                            onSettingsClick = { navController.navigate(Screen.Settings.route) }
-                        )
-                        1 -> CloudScreen()
-                        2 -> AnnotationsScreen()
-                        3 -> PluginsScreen()
-                        4 -> ThemesScreen(onNavigateBack = {}, onEditTheme = {})
-                    }
+            }
+            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                when (page) {
+                    0 -> LibraryScreen(
+                        onBookClick = { /* open reader */ },
+                        onAddClick = { /* nav add */ },
+                        onSettingsClick = { /* nav settings */ }
+                    )
+                    1 -> Box(Modifier.fillMaxSize()) { Text("Облако") }
+                    2 -> Box(Modifier.fillMaxSize()) { Text("Аннотации") }
+                    3 -> Box(Modifier.fillMaxSize()) { Text("Плагины") }
+                    4 -> ThemesScreen(onNavigateBack = {}, onEditTheme = {})
                 }
             }
         }
-    )
+    }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 640)
