@@ -23,6 +23,10 @@ android {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
     implementation(project(":android:core-model"))
     implementation(project(":android:core-reader"))
