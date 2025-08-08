@@ -30,13 +30,13 @@ import androidx.compose.foundation.gestures.rememberTransformableState
 import androidx.compose.foundation.gestures.transformable
 import com.example.core.reader.pdf.PdfReader
 import com.example.core.reader.pdf.PdfReaderFactory
+import com.github.junrar.Archive
+import com.github.junrar.rarfile.FileHeader
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
-import java.util.zip.ZipInputStream
-import kotlin.math.max
-import kotlin.math.min
 
 @Composable
 fun ReaderScreen(uriString: String) {
@@ -47,12 +47,15 @@ fun ReaderScreen(uriString: String) {
     var pdfReader by remember { mutableStateOf<PdfReader?>(null) }
     var cbzZipFile by remember { mutableStateOf<ZipFile?>(null) }
     var cbzEntries by remember { mutableStateOf<List<ZipEntry>>(emptyList()) }
+    var rarArchive by remember { mutableStateOf<Archive?>(null) }
+    var rarHeaders by remember { mutableStateOf<List<FileHeader>>(emptyList()) }
 
     LaunchedEffect(uriString) {
         errorText = null
         pageCount = null
         pdfReader?.close(); pdfReader = null
         cbzZipFile?.close(); cbzZipFile = null; cbzEntries = emptyList()
+        try { rarArchive?.close() } catch (_: Throwable) {}; rarArchive = null; rarHeaders = emptyList()
 
         val uri = toUri(uriString)
         val lower = uriString.lowercase()
@@ -86,6 +89,30 @@ fun ReaderScreen(uriString: String) {
             } catch (t: Throwable) {
                 errorText = t.message ?: "Ошибка открытия CBZ"
             }
+        } else if (lower.endsWith(".cbr") || lower.endsWith(".rar")) {
+            try {
+                val file = ensureFileForUri(context, uri)
+                val archive = Archive(file)
+                val headers = archive.fileHeaders
+                    .filter { h ->
+                        val name = h.fileName ?: ""
+                        !h.isDirectory && name.substringAfterLast('.', "").lowercase() in setOf("jpg","jpeg","png","webp","bmp")
+                    }
+                    .sortedBy { it.fileName?.lowercase() ?: "" }
+                if (headers.isEmpty()) {
+                    archive.close()
+                    errorText = "В CBR нет изображений"
+                } else if (archive.isEncrypted) {
+                    archive.close()
+                    errorText = "Зашифрованные RAR не поддерживаются"
+                } else {
+                    rarArchive = archive
+                    rarHeaders = headers
+                    pageCount = headers.size
+                }
+            } catch (t: Throwable) {
+                errorText = t.message ?: "Ошибка открытия CBR"
+            }
         } else {
             errorText = "Неподдерживаемый формат"
         }
@@ -95,6 +122,8 @@ fun ReaderScreen(uriString: String) {
         onDispose {
             pdfReader?.close(); pdfReader = null
             cbzZipFile?.close(); cbzZipFile = null
+            try { rarArchive?.close() } catch (_: Throwable) {}
+            rarArchive = null
         }
     }
 
@@ -105,7 +134,7 @@ fun ReaderScreen(uriString: String) {
             val count = pageCount!!
             val pagerState = rememberPagerState(pageCount = { count })
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { pageIndex ->
-                val bmpState = produceState<android.graphics.Bitmap?>(initialValue = null, pdfReader, cbzZipFile, cbzEntries, pageIndex) {
+                val bmpState = produceState<android.graphics.Bitmap?>(initialValue = null, pdfReader, cbzZipFile, cbzEntries, rarArchive, rarHeaders, pageIndex) {
                     value = null
                     val r = pdfReader
                     if (r != null) {
@@ -113,12 +142,26 @@ fun ReaderScreen(uriString: String) {
                         value = if (res.isSuccess) res.getOrNull() else null
                     } else {
                         val zf = cbzZipFile
-                        val entries = cbzEntries
-                        if (zf != null && pageIndex in entries.indices) {
-                            val entry = entries[pageIndex]
+                        val zEntries = cbzEntries
+                        val rar = rarArchive
+                        val rHeaders = rarHeaders
+                        if (zf != null && pageIndex in zEntries.indices) {
+                            val entry = zEntries[pageIndex]
                             zf.getInputStream(entry).use { ins ->
                                 val bytes = ins.readBytes()
                                 value = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            }
+                        } else if (rar != null && pageIndex in rHeaders.indices) {
+                            val header = rHeaders[pageIndex]
+                            val baos = ByteArrayOutputStream()
+                            try {
+                                rar.extractFile(header, baos)
+                                val bytes = baos.toByteArray()
+                                value = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                            } catch (_: Throwable) {
+                                value = null
+                            } finally {
+                                try { baos.close() } catch (_: Throwable) {}
                             }
                         }
                     }
@@ -140,7 +183,6 @@ private fun ZoomableImage(bitmap: androidx.compose.ui.graphics.ImageBitmap) {
     var offset by remember { mutableStateOf(Offset.Zero) }
     val transformState = rememberTransformableState { zoomChange, panChange, _ ->
         val newScale = (scale * zoomChange).coerceIn(1f, 5f)
-        // Normalize pan relative to scale changes
         val scaleRatio = if (scale == 0f) 1f else newScale / scale
         scale = newScale
         offset += panChange * scaleRatio
@@ -196,7 +238,8 @@ private fun ensureFileForUri(context: Context, uri: Uri): File {
         "content" -> {
             val input = context.contentResolver.openInputStream(uri)
                 ?: throw IllegalStateException("Не удалось открыть поток контента")
-            val temp = File.createTempFile("cbz_", ".zip", context.cacheDir)
+            val ext = ".tmp"
+            val temp = File.createTempFile("archive_", ext, context.cacheDir)
             FileOutputStream(temp).use { out ->
                 input.copyTo(out)
             }
