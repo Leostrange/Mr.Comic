@@ -34,7 +34,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":android:feature-library"))
+    implementation(project(":android:core-data"))
+    implementation(project(":android:core-model"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

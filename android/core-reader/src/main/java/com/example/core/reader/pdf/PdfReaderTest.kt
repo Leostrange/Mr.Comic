@@ -36,7 +36,7 @@ class PdfReaderTest(private val context: Context) {
                 // Пытаемся открыть документ
                 val openResult = reader.openDocument(context, uri)
                 if (openResult.isFailure) {
-                    return ReaderTestResult(
+                    return@runBlocking ReaderTestResult(
                         readerName = reader.javaClass.simpleName,
                         success = false,
                         error = openResult.exceptionOrNull()?.message ?: "Unknown error",
@@ -47,7 +47,7 @@ class PdfReaderTest(private val context: Context) {
                 // Получаем количество страниц
                 val pageCount = reader.getPageCount()
                 if (pageCount == null || pageCount <= 0) {
-                    return ReaderTestResult(
+                    return@runBlocking ReaderTestResult(
                         readerName = reader.javaClass.simpleName,
                         success = false,
                         error = "Invalid page count: $pageCount",
@@ -56,9 +56,9 @@ class PdfReaderTest(private val context: Context) {
                 }
                 
                 // Пытаемся рендерить первую страницу
-                val renderResult = reader.renderPage(0)
+                val renderResult = reader.renderPage(0, 1024, 1024)
                 if (renderResult.isFailure) {
-                    return ReaderTestResult(
+                    return@runBlocking ReaderTestResult(
                         readerName = reader.javaClass.simpleName,
                         success = false,
                         error = "Failed to render page: ${renderResult.exceptionOrNull()?.message}",

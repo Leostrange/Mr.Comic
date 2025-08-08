@@ -2,10 +2,10 @@ package com.example.core.data.repository
 
 import android.content.Context
 import android.graphics.Bitmap
-import com.example.feature.reader.domain.BookReaderFactory
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.example.core.reader.pdf.PdfReaderFactory
 import java.io.File
 import java.io.FileOutputStream
 import javax.inject.Inject
@@ -23,19 +23,27 @@ interface CoverExtractor {
 
 class CoverExtractorImpl @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bookReaderFactory: BookReaderFactory,
 ) : CoverExtractor {
 
     override suspend fun extractAndSaveCover(uri: Uri): String? {
         return runCatching {
-            val reader = bookReaderFactory.create(uri)
+            val fileName = DocumentFile.fromSingleUri(context, uri)?.name ?: ""
+            val extension = fileName.substringAfterLast('.', "").lowercase()
+
             var bitmap: Bitmap? = null
-            try {
-                if (reader.open(uri) > 0) {
-                    bitmap = reader.renderPage(0)
+
+            if (extension == "pdf") {
+                val pdfFactory = PdfReaderFactory()
+                val openResult = pdfFactory.openPdfWithFallback(context, uri)
+                val pdfReader = openResult.getOrNull()
+                if (pdfReader != null) {
+                    val renderResult = pdfReader.renderPage(0)
+                    bitmap = renderResult.getOrNull()
+                    pdfReader.close()
                 }
-            } finally {
-                reader.close()
+            } else {
+                // Non-PDF formats: cover extraction not implemented here
+                bitmap = null
             }
 
             bitmap?.let {

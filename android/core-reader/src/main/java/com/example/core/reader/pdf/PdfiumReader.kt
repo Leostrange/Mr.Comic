@@ -29,16 +29,16 @@ class PdfiumReader : PdfReader {
             
             // Открываем файловый дескриптор
             parcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: return Result.failure(IOException("Cannot open file descriptor for URI"))
+                ?: return@withContext Result.failure(IOException("Cannot open file descriptor for URI"))
             
             // Создаем PDF документ
             pdfDocument = pdfiumCore?.newDocument(parcelFileDescriptor)
-                ?: return Result.failure(IOException("Cannot create PDF document"))
+                ?: return@withContext Result.failure(IOException("Cannot create PDF document"))
             
             // Получаем количество страниц
             pageCount = pdfiumCore?.getPageCount(pdfDocument) ?: 0
             if (pageCount <= 0) {
-                return Result.failure(IOException("PDF file contains no pages"))
+                return@withContext Result.failure(IOException("PDF file contains no pages"))
             }
             
             Result.success(Unit)
@@ -54,11 +54,11 @@ class PdfiumReader : PdfReader {
     
     override suspend fun renderPage(pageIndex: Int, maxWidth: Int, maxHeight: Int): Result<Bitmap> = withContext(Dispatchers.IO) {
         try {
-            val core = pdfiumCore ?: return Result.failure(IOException("PdfiumCore not initialized"))
-            val document = pdfDocument ?: return Result.failure(IOException("PDF document not opened"))
+            val core = pdfiumCore ?: return@withContext Result.failure(IOException("PdfiumCore not initialized"))
+            val document = pdfDocument ?: return@withContext Result.failure(IOException("PDF document not opened"))
             
             if (pageIndex < 0 || pageIndex >= pageCount) {
-                return Result.failure(IllegalArgumentException("Invalid page index: $pageIndex"))
+                return@withContext Result.failure(IllegalArgumentException("Invalid page index: $pageIndex"))
             }
             
             // Открываем страницу
@@ -76,11 +76,9 @@ class PdfiumReader : PdfReader {
             // Создаем bitmap
             val bitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
             
-            // Рендерим страницу
-            core.renderPageBitmap(bitmap, document, pageIndex, 0, 0, scaledWidth, scaledHeight)
-            
-            // Закрываем страницу
-            core.closePage(document, pageIndex)
+            // Рендерим страницу (сигнатуры библиотек различаются порядком аргументов)
+            // Попробуем порядок: document, bitmap, index, left, top, width, height
+            core.renderPageBitmap(document, bitmap, pageIndex, 0, 0, scaledWidth, scaledHeight)
             
             Result.success(bitmap)
         } catch (e: Exception) {

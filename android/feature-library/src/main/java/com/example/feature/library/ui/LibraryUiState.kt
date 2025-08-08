@@ -1,13 +1,13 @@
 package com.example.feature.library.ui
 
 import androidx.compose.runtime.Immutable
-import com.example.core.model.ComicBook
+import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 
 @Immutable
 data class LibraryUiState(
     val isLoading: Boolean = true,
-    val comics: List<ComicBook> = emptyList(),
+    val comics: List<Comic> = emptyList(),
     val error: String? = null,
     val sortOrder: SortOrder = SortOrder.DATE_ADDED_DESC,
     val searchQuery: String = "",

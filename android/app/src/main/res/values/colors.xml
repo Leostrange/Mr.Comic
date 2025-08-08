@@ -35,4 +35,13 @@
     
     <!-- Splash Screen -->
     <color name="splash_background">@color/primary</color>
+
+    <!-- Legacy names used in XML layouts -->
+    <color name="primary_color">@color/primary</color>
+    <color name="primary_text_color">@color/on_surface</color>
+    <color name="secondary_text_color">#666666</color>
+    <color name="light_gray">#EEEEEE</color>
+    <color name="light_blue">#E3F2FD</color>
+    <color name="error_background">#FFEBEE</color>
+    <color name="error_text_color">#C62828</color>
 </resources>

@@ -23,6 +23,10 @@ android {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
     implementation(project(":android:core-model"))
     implementation(project(":android:core-reader"))
@@ -31,5 +35,6 @@ dependencies {
     implementation(libs.bundles.room)
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
 }

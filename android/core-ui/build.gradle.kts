@@ -62,4 +62,7 @@ dependencies {
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Models
+    implementation(project(":android:core-model"))
 }

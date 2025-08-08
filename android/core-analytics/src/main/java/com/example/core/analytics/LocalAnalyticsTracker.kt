@@ -54,14 +54,18 @@ class LocalAnalyticsTracker @Inject constructor() : AnalyticsTracker {
         Log.d(TAG, "🆔 USER ID SET: $userId")
     }
 
-    override suspend fun setTrackingEnabled(enabled: Boolean) = withContext(Dispatchers.IO) {
-        isTrackingEnabled = enabled
-        Log.d(TAG, "🔄 TRACKING ${if (enabled) "ENABLED" else "DISABLED"}")
+    override suspend fun setTrackingEnabled(enabled: Boolean) {
+        withContext(Dispatchers.IO) {
+            isTrackingEnabled = enabled
+            Log.d(TAG, "🔄 TRACKING ${if (enabled) "ENABLED" else "DISABLED"}")
+        }
     }
 
-    override suspend fun clearUserData() = withContext(Dispatchers.IO) {
-        currentUserId = null
-        userProperties.clear()
-        Log.d(TAG, "🗑️ USER DATA CLEARED")
+    override suspend fun clearUserData() {
+        withContext(Dispatchers.IO) {
+            currentUserId = null
+            userProperties.clear()
+            Log.d(TAG, "🗑️ USER DATA CLEARED")
+        }
     }
 }

@@ -6,6 +6,8 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.LruCache
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
@@ -19,7 +21,7 @@ class ImageOptimizer @Inject constructor(
 ) {
     
     // LRU кэш для битмапов
-    private val bitmapCache: LruCache<String, Bitmap> = LruCache<String, Bitmap>(
+    private val bitmapCache: LruCache<String, Bitmap> = object : LruCache<String, Bitmap>(
         // Используем 1/8 доступной памяти для кэша
         (Runtime.getRuntime().maxMemory() / 1024 / 8).toInt()
     ) {
@@ -29,7 +31,7 @@ class ImageOptimizer @Inject constructor(
     }
     
     // Кэш для миниатюр
-    private val thumbnailCache: LruCache<String, Bitmap> = LruCache<String, Bitmap>(
+    private val thumbnailCache: LruCache<String, Bitmap> = object : LruCache<String, Bitmap>(
         (Runtime.getRuntime().maxMemory() / 1024 / 16).toInt()
     ) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
@@ -210,11 +212,11 @@ class ImageOptimizer @Inject constructor(
     fun getCacheStats(): CacheStats {
         return CacheStats(
             bitmapCacheSize = bitmapCache.size(),
-            bitmapCacheHits = bitmapCache.hitCount(),
-            bitmapCacheMisses = bitmapCache.missCount(),
+            bitmapCacheHits = bitmapCache.hitCount().toLong(),
+            bitmapCacheMisses = bitmapCache.missCount().toLong(),
             thumbnailCacheSize = thumbnailCache.size(),
-            thumbnailCacheHits = thumbnailCache.hitCount(),
-            thumbnailCacheMisses = thumbnailCache.missCount()
+            thumbnailCacheHits = thumbnailCache.hitCount().toLong(),
+            thumbnailCacheMisses = thumbnailCache.missCount().toLong()
         )
     }
     
@@ -312,7 +314,8 @@ class ImageOptimizer @Inject constructor(
     }
     
     private fun applyColorMatrix(bitmap: Bitmap, colorMatrix: ColorMatrix): Bitmap {
-        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, bitmap.config)
+        val safeConfig = bitmap.config ?: Bitmap.Config.ARGB_8888
+        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, safeConfig)
         val canvas = Canvas(result)
         val paint = Paint().apply {
             colorFilter = ColorMatrixColorFilter(colorMatrix)
@@ -323,7 +326,8 @@ class ImageOptimizer @Inject constructor(
     
     private fun applyConvolutionMatrix(bitmap: Bitmap, matrix: FloatArray): Bitmap {
         // Упрощенная реализация свертки
-        val result = bitmap.copy(bitmap.config, true)
+        val safeConfig = bitmap.config ?: Bitmap.Config.ARGB_8888
+        val result = bitmap.copy(safeConfig, true)
         // Здесь должна быть реализация свертки
         return result
     }

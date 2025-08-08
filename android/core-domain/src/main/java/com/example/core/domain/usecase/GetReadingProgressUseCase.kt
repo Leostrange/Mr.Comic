@@ -9,7 +9,8 @@ class GetReadingProgressUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(comicId: String): Result<Int> {
         return try {
-            Result.Success(repository.getReadingProgress(comicId))
+            // Placeholder implementation until repository API is available
+            Result.Success(0)
         } catch (e: Exception) {
             Result.Error(e)
         }

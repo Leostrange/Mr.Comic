@@ -3,6 +3,8 @@ package com.example.feature.library.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.data.repository.ComicRepository
+import com.example.core.model.Comic
+import com.example.core.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +32,6 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.collectLatest { uiState ->
                 comicRepository.getComics(uiState.sortOrder, uiState.searchQuery).collectLatest { comics ->
-                    // Calculate comic counts for Issue #24
                     val visibleComics = comics.filter { comic ->
                         comic.filePath !in uiState.pendingDeletionIds
                     }
@@ -84,7 +85,6 @@ class LibraryViewModel @Inject constructor(
             } else {
                 selectedIds.add(comicId)
             }
-            // Если последний элемент снят с выбора, выходим из режима выбора
             val inSelectionMode = selectedIds.isNotEmpty()
             currentState.copy(
                 selectedComicIds = selectedIds,
@@ -144,10 +144,10 @@ class LibraryViewModel @Inject constructor(
 
     fun addComic(title: String, author: String, coverPath: String, filePath: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val newComic = com.example.core.model.ComicBook(
-                id = UUID.randomUUID().toString(),
+            val newComic = Comic(
                 title = title,
-                coverUrl = coverPath,
+                author = author,
+                coverPath = coverPath,
                 filePath = filePath
             )
             comicRepository.addComic(newComic)

@@ -18,7 +18,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.mrcomic.shared.logging.Log
 
 data class LibraryUiState(
     val isLoading: Boolean = false,
@@ -63,7 +62,6 @@ class LibraryViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, comics = comics) }
                 }
             } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Failed to load comics", e)
                 _uiState.update { it.copy(isLoading = false, error = e.message ?: "Неизвестная ошибка") }
             }
         }
@@ -74,7 +72,6 @@ class LibraryViewModel @Inject constructor(
             when (val result = addComicUseCase(Comic(title = title, author = author, filePath = coverPath))) {
                 is Result.Success -> Unit
                 is Result.Error -> {
-                    Log.e("LibraryViewModel", "Failed to add comic", result.exception)
                     _uiState.update { it.copy(error = result.exception.message ?: "Ошибка добавления") }
                 }
             }
@@ -108,7 +105,6 @@ class LibraryViewModel @Inject constructor(
             when (val result = deleteComicUseCase(_uiState.value.pendingDeletionIds)) {
                 is Result.Success -> _uiState.update { it.copy(pendingDeletionIds = emptySet()) }
                 is Result.Error -> {
-                    Log.e("LibraryViewModel", "Failed to delete comics", result.exception)
                     _uiState.update { it.copy(error = result.exception.message ?: "Ошибка удаления") }
                 }
             }

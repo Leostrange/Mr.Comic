@@ -141,7 +141,19 @@ class ComicRepositoryImpl @Inject constructor(
 
     override suspend fun updateProgress(comicId: String, currentPage: Int) {
         withContext(Dispatchers.IO) {
-            comicDao.updateProgress(comicId, currentPage, System.currentTimeMillis())
+            comicDao.updateProgress(comicId)
+        }
+    }
+
+    override suspend fun clearCache() {
+        withContext(Dispatchers.IO) {
+            // Очищаем таблицы
+            comicDao.clearAll()
+            // Удаляем кэш обложек
+            val coversDir = File(context.cacheDir, "covers")
+            if (coversDir.exists()) {
+                coversDir.deleteRecursively()
+            }
         }
     }
 
@@ -223,9 +235,7 @@ class ComicRepositoryImpl @Inject constructor(
             if (doc.isDirectory) {
                 scanDocumentTree(doc.uri, uriList)
             } else if (doc.isFile) {
-                val extension = doc.name?.substringAfterLast(
-'.
-', "")?.lowercase()
+                val extension = doc.name?.substringAfterLast('.', "")?.lowercase()
                 if (supportedExtensions.contains(extension)) {
                     uriList.add(doc.uri)
                 }
@@ -234,9 +244,7 @@ class ComicRepositoryImpl @Inject constructor(
     }
 
     private fun getFileName(uri: Uri): String? {
-        return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast(
-'.
-')
+        return DocumentFile.fromSingleUri(context, uri)?.name?.substringBeforeLast('.')
     }
 
     private fun getFullFileName(uri: Uri): String? {

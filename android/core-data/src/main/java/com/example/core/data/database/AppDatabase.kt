@@ -7,11 +7,7 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [ComicEntity::class, BookmarkEntity::class],
     version = 3,
-    exportSchema = true,
-    autoMigrations = [
-        AutoMigration(from = 1, to = 2),
-        AutoMigration(from = 2, to = 3)
-    ]
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun comicDao(): ComicDao
