@@ -42,4 +42,8 @@ interface ComicDao {
 
     @Query("SELECT * FROM bookmarks WHERE comicId = :comicId ORDER BY page ASC")
     suspend fun getBookmarksForComic(comicId: String): List<BookmarkEntity>
+
+    // Progress tracking stub: no-op update to satisfy current UI expectations
+    @Query("UPDATE comics SET dateAdded = dateAdded WHERE filePath = :comicId")
+    suspend fun updateProgress(comicId: String)
 }

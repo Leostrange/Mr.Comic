@@ -26,10 +26,18 @@ android {
     }
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
     implementation(project(":android:core-reader"))
+    implementation(project(":android:core-data"))
+    implementation(project(":android:core-domain"))
+    implementation(libs.bundles.room)
+    kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)

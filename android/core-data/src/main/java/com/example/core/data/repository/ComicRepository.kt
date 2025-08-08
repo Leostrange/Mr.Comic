@@ -141,7 +141,19 @@ class ComicRepositoryImpl @Inject constructor(
 
     override suspend fun updateProgress(comicId: String, currentPage: Int) {
         withContext(Dispatchers.IO) {
-            comicDao.updateProgress(comicId, currentPage, System.currentTimeMillis())
+            comicDao.updateProgress(comicId)
+        }
+    }
+
+    override suspend fun clearCache() {
+        withContext(Dispatchers.IO) {
+            // Очищаем таблицы
+            comicDao.clearAll()
+            // Удаляем кэш обложек
+            val coversDir = File(context.cacheDir, "covers")
+            if (coversDir.exists()) {
+                coversDir.deleteRecursively()
+            }
         }
     }
 
