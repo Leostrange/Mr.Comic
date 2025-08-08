@@ -35,6 +35,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.feature.themes.ui.ThemesViewModel
 
+// Additional Material3 imports for Scaffold and related components
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemesScreen(

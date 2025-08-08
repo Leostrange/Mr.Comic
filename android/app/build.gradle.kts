@@ -99,6 +99,9 @@ dependencies {
     implementation(project(":android:feature-settings"))
     implementation(project(":android:feature-reader"))
     implementation(project(":android:feature-themes"))
+
+    // Include OCR feature module for language selection and translation support
+    implementation(project(":android:feature-ocr"))
     
     // Third-party libraries
     implementation(libs.coil.compose)

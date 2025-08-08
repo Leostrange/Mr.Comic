@@ -34,6 +34,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
+// Additional Material3 imports for Scaffold and related components
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(

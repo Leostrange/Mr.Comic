@@ -2,6 +2,7 @@ package com.example.core.domain.usecase
 
 import android.graphics.Bitmap
 import com.example.feature.reader.domain.BookReaderFactory
+import com.example.core.domain.util.Result
 import javax.inject.Inject
 
 class GetComicPagesUseCase @Inject constructor(

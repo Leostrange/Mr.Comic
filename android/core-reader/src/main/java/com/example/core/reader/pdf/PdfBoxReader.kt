@@ -2,7 +2,6 @@ package com.example.core.reader.pdf
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Color
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -53,21 +52,18 @@ class PdfBoxReader : PdfReader {
     
     override suspend fun renderPage(pageIndex: Int, maxWidth: Int, maxHeight: Int): Result<Bitmap> = withContext(Dispatchers.IO) {
         try {
-            val renderer = pdfRenderer ?: return Result.failure(IOException("PDF renderer not initialized"))
-            
+            val renderer = pdfRenderer ?: return@withContext Result.failure(IOException("PDF renderer not initialized"))
+
             if (pageIndex < 0 || pageIndex >= pageCount) {
-                return Result.failure(IllegalArgumentException("Invalid page index: $pageIndex"))
+                return@withContext Result.failure(IllegalArgumentException("Invalid page index: $pageIndex"))
             }
-            
-            // Рендерим страницу
-            val awtImage = renderer.renderImageWithDPI(pageIndex, 150f) // 150 DPI для хорошего качества
-            
-            // Конвертируем AWT изображение в Android Bitmap
-            val bitmap = convertAwtImageToBitmap(awtImage)
-            
-            // Масштабируем если нужно
+
+            // Render page directly to Android Bitmap at 150 DPI
+            val bitmap: Bitmap = renderer.renderImageWithDPI(pageIndex, 150f)
+
+            // Scale bitmap if necessary to fit within max dimensions
             val scaledBitmap = scaleBitmapIfNeeded(bitmap, maxWidth, maxHeight)
-            
+
             Result.success(scaledBitmap)
         } catch (e: Exception) {
             Result.failure(e)
@@ -91,29 +87,8 @@ class PdfBoxReader : PdfReader {
         return uri.scheme?.let { it == "content" || it == "file" } ?: false
     }
     
-    private fun convertAwtImageToBitmap(awtImage: java.awt.image.BufferedImage): Bitmap {
-        val width = awtImage.width
-        val height = awtImage.height
-        
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        
-        // Конвертируем пиксели из AWT в Android Bitmap
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val rgb = awtImage.getRGB(x, y)
-                val alpha = (rgb shr 24) and 0xFF
-                val red = (rgb shr 16) and 0xFF
-                val green = (rgb shr 8) and 0xFF
-                val blue = rgb and 0xFF
-                
-                val color = Color.argb(alpha, red, green, blue)
-                bitmap.setPixel(x, y, color)
-            }
-        }
-        
-        return bitmap
-    }
-    
+    // PdfBox-Android directly produces android.graphics.Bitmap via renderImageWithDPI,
+    // so no AWT to Bitmap conversion is needed.
     private fun scaleBitmapIfNeeded(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
         val width = bitmap.width
         val height = bitmap.height

@@ -1,6 +1,7 @@
 package com.example.core.domain.usecase
 
 import com.example.core.data.repository.LibraryRepository
+import com.example.core.domain.util.Result
 import javax.inject.Inject
 import com.mrcomic.shared.logging.Log
 
