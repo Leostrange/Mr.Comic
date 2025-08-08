@@ -1,5 +1,6 @@
 package com.example.mrcomic.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -14,7 +15,7 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object Onboarding : Screen("onboarding")
     data object Reader : Screen("reader/{path}") {
-        fun create(path: String) = "reader/$path"
+        fun create(encodedPath: String) = "reader/$encodedPath"
     }
 }
 
@@ -23,7 +24,7 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
     NavHost(navController = navController, startDestination = Screen.Onboarding.route) {
         composable(route = Screen.Library.route) {
             LibraryScreen(
-                onBookClick = { path -> navController.navigate(Screen.Reader.create(path)) },
+                onBookClick = { path -> navController.navigate(Screen.Reader.create(Uri.encode(path))) },
                 onSettingsClick = { navController.navigate(Screen.Settings.route) },
                 onAddClick = { }
             )
@@ -39,7 +40,8 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
 
         composable(route = Screen.Reader.route) { backStackEntry ->
             val arg = backStackEntry.arguments?.getString("path") ?: ""
-            ReaderScreen(uriString = arg)
+            val decoded = Uri.decode(arg)
+            ReaderScreen(uriString = decoded)
         }
     }
 }
