@@ -20,6 +20,10 @@ android {
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
 }
 
+kapt {
+    correctErrorTypes = true
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)

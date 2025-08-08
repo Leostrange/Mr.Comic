@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.google.hilt.android)
     kapt(libs.google.hilt.compiler)
     implementation(libs.coil.compose)
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     testImplementation(libs.test.junit)
     androidTestImplementation(libs.androidx.junit)
