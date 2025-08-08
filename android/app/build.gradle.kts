@@ -108,6 +108,7 @@ dependencies {
     implementation(project(":android:core-ui"))
     implementation(project(":android:core-data"))
     implementation(project(":android:core-model"))
+    implementation(project(":android:core-reader"))
     implementation(project(":android:feature-library"))
     implementation(project(":android:feature-settings"))
     // implementation(project(":android:feature-reader"))
