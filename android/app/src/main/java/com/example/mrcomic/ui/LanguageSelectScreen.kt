@@ -31,6 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.feature.ocr.ui.TranslateOcrViewModel
 import com.example.mrcomic.ui.theme.MrComicTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+
+// Compose Material3 components not imported above
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.clickable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

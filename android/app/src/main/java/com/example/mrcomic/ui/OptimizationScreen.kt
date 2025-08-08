@@ -26,6 +26,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.mrcomic.ui.theme.MrComicTheme
 
+// Additional Material3 imports for Scaffold and related components
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OptimizationScreen(
