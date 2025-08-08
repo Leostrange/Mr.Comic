@@ -112,6 +112,7 @@ dependencies {
     implementation(project(":android:feature-settings"))
     // implementation(project(":android:feature-reader"))
     implementation(project(":android:feature-themes"))
+    implementation(project(":android:feature-onboarding"))
     
     // Third-party libraries
     implementation(libs.coil.compose)
