@@ -9,7 +9,7 @@
     </style>
 
     <!-- Main App Theme -->
-    <style name="Theme.MrComic" parent="android:Theme.Material.DayNight.NoActionBar">
+    <style name="Theme.MrComic" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
