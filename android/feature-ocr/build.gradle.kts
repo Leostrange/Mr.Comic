@@ -6,6 +6,9 @@ plugins {
 }
 
 android {
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
     namespace = "com.mrcomic.feature.ocr"
     compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig {

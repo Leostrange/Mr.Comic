@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -81,7 +82,7 @@ private fun LibraryFoldersList(folders: Set<String>, onAdd: (String) -> Unit, on
                 Text(uri, modifier = Modifier.weight(1f))
                 Button(onClick = { onRemove(uri) }) { Text("Remove") }
             }
-            Divider(modifier = Modifier.padding(vertical = 4.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
         }
     }
     Spacer(modifier = Modifier.height(8.dp))

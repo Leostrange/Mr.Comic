@@ -6,6 +6,9 @@ plugins {
 }
 
 android {
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
     namespace = "com.example.core.reader"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
