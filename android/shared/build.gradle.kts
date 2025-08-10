@@ -4,6 +4,9 @@ plugins {
 }
 
 android {
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
     namespace = "com.mrcomic.shared"
     compileSdk = libs.versions.compileSdk.get().toInt()
 

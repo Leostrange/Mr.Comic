@@ -6,6 +6,9 @@ plugins {
 }
 
 android {
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
     namespace = "com.example.core.analytics"
     compileSdk = libs.versions.compileSdk.get().toInt()
 

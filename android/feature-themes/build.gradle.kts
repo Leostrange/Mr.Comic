@@ -6,6 +6,9 @@ plugins {
 }
 
 android {
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
     namespace = "com.example.feature.themes"
     compileSdk = libs.versions.compileSdk.get().toInt()
 

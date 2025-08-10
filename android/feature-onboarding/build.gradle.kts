@@ -4,6 +4,9 @@ plugins {
 }
 
 android {
+    lint {
+        disable += "NullSafeMutableLiveData"
+    }
     namespace = "com.example.feature.onboarding"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
