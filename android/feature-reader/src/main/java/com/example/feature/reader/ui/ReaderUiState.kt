@@ -20,6 +20,7 @@ data class ReaderUiState(
     val pageCount: Int = 0,
     val currentPageIndex: Int = 0,
     val currentPageBitmap: Bitmap? = null,
+    val bitmaps: Map<Int, Bitmap> = emptyMap(),
     val readingMode: ReadingMode = ReadingMode.PAGE,
     val readingDirection: ReadingDirection = ReadingDirection.LTR
 )

@@ -90,19 +90,25 @@ object FormatProcessor {
                     if (entry.isDirectory) continue
                     if (isImageFile(entry.name) && coverUri == null && entry.name.contains("cover", true)) {
                         val outFile = File(destDir, entry.name.substringAfterLast('/'))
-                        zipFile.getInputStream(entry).use { it.copyTo(outFile.outputStream()) }
-                        coverUri = Uri.fromFile(outFile)
+                        outFile?.let { file ->
+                            zipFile.getInputStream(entry).use { it.copyTo(file.outputStream()) }
+                            coverUri = Uri.fromFile(file)
+                        }
                     } else if (entry.name.lowercase().endsWith(".xhtml") || entry.name.lowercase().endsWith(".html")) {
                         val outFile = File(destDir, entry.name.substringAfterLast('/'))
-                        zipFile.getInputStream(entry).use { it.copyTo(outFile.outputStream()) }
-                        pages.add(Uri.fromFile(outFile))
+                        outFile?.let { file ->
+                            zipFile.getInputStream(entry).use { it.copyTo(file.outputStream()) }
+                            pages.add(Uri.fromFile(file))
+                        }
                     }
                 }
                 if (coverUri == null) {
                     zipFile.entries().asSequence().firstOrNull { !it.isDirectory && isImageFile(it.name) }?.let { firstImg ->
                         val outFile = File(destDir, firstImg.name.substringAfterLast('/'))
-                        zipFile.getInputStream(firstImg).use { it.copyTo(outFile.outputStream()) }
-                        coverUri = Uri.fromFile(outFile)
+                        outFile?.let { file ->
+                            zipFile.getInputStream(firstImg).use { it.copyTo(file.outputStream()) }
+                            coverUri = Uri.fromFile(file)
+                        }
                     }
                 }
             }

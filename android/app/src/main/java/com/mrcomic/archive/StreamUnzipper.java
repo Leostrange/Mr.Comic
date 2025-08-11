@@ -51,8 +51,6 @@ public class StreamUnzipper {
             System.out.println("Dummy large zip file created: " + zipFilePath);
         } catch (ZipException e) {
             e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
         try {

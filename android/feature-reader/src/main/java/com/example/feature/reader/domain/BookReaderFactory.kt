@@ -2,7 +2,6 @@ package com.example.feature.reader.domain
 
 import android.content.Context
 import android.net.Uri
-import androidx.documentfile.provider.DocumentFile
 import com.example.feature.reader.data.CachingBookReader
 import com.example.feature.reader.data.CbrReader
 // import com.example.feature.reader.data.DjvuReader // Removed - missing library
@@ -39,7 +38,7 @@ class BookReaderFactory @Inject constructor(
         // Clean up previous reader if exists
         currentReader?.close()
         
-        val fileName = DocumentFile.fromSingleUri(context, uri)?.name ?: ""
+        val fileName = uri.lastPathSegment ?: ""
         val extension = fileName.substringAfterLast('.', "").lowercase()
         
         android.util.Log.d(TAG, "Creating reader for URI: $uri, fileName: $fileName, extension: $extension")

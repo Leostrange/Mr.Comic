@@ -59,8 +59,9 @@ dependencies {
     // Note: Use Coil Compose instead of Glide Compose for better stability
     
     // ExoPlayer for video components
-    implementation(libs.exoplayer.core)
-    implementation(libs.exoplayer.ui)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.session)
     
     // Lifecycle
     implementation(libs.androidx.lifecycle.runtime.compose)

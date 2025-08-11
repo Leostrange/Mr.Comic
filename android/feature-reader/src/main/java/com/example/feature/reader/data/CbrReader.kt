@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.net.Uri
 import android.graphics.BitmapFactory
 import com.example.feature.reader.domain.BookReader
-import com.github.junrar.api.Archive
+import com.github.junrar.Archive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
