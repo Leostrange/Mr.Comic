@@ -114,7 +114,7 @@ dependencies {
     implementation(project(":android:core-reader"))
     implementation(project(":android:feature-library"))
     implementation(project(":android:feature-settings"))
-    // implementation(project(":android:feature-reader"))
+    implementation(project(":android:feature-reader"))
     implementation(project(":android:feature-themes"))
     implementation(project(":android:feature-onboarding"))
     
@@ -131,9 +131,10 @@ dependencies {
     implementation(libs.pdfium.android)
     // implementation(libs.android.pdf.viewer.fallback)
     
-    // Video splash screen
-    implementation(libs.exoplayer.core)
-    implementation(libs.exoplayer.ui)
+    // Video splash screen (Media3)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.session)
     
     // Testing
     testImplementation(libs.test.junit)

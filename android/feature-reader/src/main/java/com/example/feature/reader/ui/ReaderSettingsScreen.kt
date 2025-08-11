@@ -27,15 +27,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.core.ui.components.MrComicTopAppBar
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderSettingsScreen(viewModel: ReaderSettingsViewModel = hiltViewModel()) {
     val lineSpacing by viewModel.lineSpacing.collectAsState()
     val font by viewModel.font.collectAsState()
     val background by viewModel.background.collectAsState()
 
-    Scaffold(topBar = { MrComicTopAppBar(title = "Reader Settings") }) { padding ->
+    Scaffold(topBar = { 
+        CenterAlignedTopAppBar(
+            title = { androidx.compose.material3.Text("Reader Settings") },
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer
+            )
+        )
+    }) { padding ->
         Column(modifier = Modifier.padding(padding).padding(16.dp)) {
             Text("Line spacing: %.1f".format(lineSpacing))
             Slider(

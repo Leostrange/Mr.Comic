@@ -38,9 +38,9 @@ hilt = "2.51.1"
 # Testing
 junit = "4.13.2"
 kotlinxCoroutinesTest = "1.10.2"
-mockitoCore = "5.18.0"
+mockitoCore = "5.8.0"
 truth = "1.4.4"
-mockitoKotlin = "5.4.0"
+mockitoKotlin = "5.2.1"
 mockk = "1.13.8"
 bytebuddy = "1.14.11"
 
@@ -73,8 +73,7 @@ androidPdfViewer = "2.8.2"
 
 androidPdfViewerFallback = "2.7.0-beta.3"
 
-# ExoPlayer for video splash
-exoplayer = "2.19.1"
+
 
 # UI Components for modern design
 lottie = "6.4.1"
@@ -133,9 +132,10 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 google-hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 google-hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.ref = "hilt" }
 
-# ExoPlayer for video splash
-exoplayer-core = { group = "com.google.android.exoplayer", name = "exoplayer-core", version.ref = "exoplayer" }
-exoplayer-ui = { group = "com.google.android.exoplayer", name = "exoplayer-ui", version.ref = "exoplayer" }
+# Media3 for video splash (replaces ExoPlayer)
+media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
+media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
+media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 
 # Modern UI Components
 lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "lottie" }
@@ -175,9 +175,6 @@ material = { group = "com.google.android.material", name = "material", version.r
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 accompanist-permissions = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanist" }
 webkit = { group = "androidx.webkit", name = "webkit", version.ref = "webkit" }
-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
-media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
-media3-session = { group = "androidx.media3", name = "media3-session", version.ref = "media3" }
 exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 libarchive = { group = "me.zhanghai.android.libarchive", name = "library", version.ref = "libarchive" }
 
