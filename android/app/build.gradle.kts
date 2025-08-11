@@ -2,7 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -66,9 +66,7 @@ android {
     }
 }
 
-kapt {
-    correctErrorTypes = true
-}
+// KSP does not need kapt options
 
 dependencies {
     // AndroidX Core
@@ -98,12 +96,12 @@ dependencies {
 
     // Hilt DI
     implementation(libs.google.hilt.android)
-    kapt(libs.google.hilt.compiler)
+    ksp(libs.google.hilt.compiler)
     
     // Room Database
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     
     // Android modules with proper paths
     implementation(project(":android:shared"))
