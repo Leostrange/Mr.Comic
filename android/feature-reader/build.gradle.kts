@@ -2,7 +2,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -29,10 +29,6 @@ android {
     }
 }
 
-kapt {
-    correctErrorTypes = true
-}
-
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
@@ -41,11 +37,11 @@ dependencies {
     implementation(project(":android:core-domain"))
     implementation(project(":android:core-ui"))
     implementation(libs.bundles.room)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)
-    kapt(libs.google.hilt.compiler)
+    ksp(libs.google.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     // Zoomable Image support - temporarily disabled due to dependency resolution issues

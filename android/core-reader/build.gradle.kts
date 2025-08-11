@@ -2,7 +2,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -30,7 +30,7 @@ dependencies {
     implementation(project(":android:core-model"))
 
     implementation(libs.google.hilt.android)
-    kapt(libs.google.hilt.compiler)
+    ksp(libs.google.hilt.compiler)
 
     implementation("androidx.collection:collection-ktx:1.4.0")
 

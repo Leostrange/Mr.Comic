@@ -2,7 +2,7 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
-    kotlin("kapt")
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -51,9 +51,9 @@ dependencies {
     implementation(libs.bundles.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.google.hilt.android)
-    kapt(libs.google.hilt.compiler)
+    ksp(libs.google.hilt.compiler)
     implementation(libs.coil.compose)
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation(libs.androidx.hilt.navigation.compose)
 
     testImplementation(libs.test.junit)
     androidTestImplementation(libs.androidx.junit)
