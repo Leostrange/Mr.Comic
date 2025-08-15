@@ -12,5 +12,29 @@
     <string name="select_language">Выберите язык</string>
     <string name="confirm">Подтвердить</string>
     <string name="cancel">Отмена</string>
-    <!-- ... другие строки ... -->
+    <string name="welcome_message">Добро пожаловать в Mr.Comic</string>
+    <string name="action_settings">Настройки</string>
+    <string name="menu_home">Главная</string>
+    <string name="menu_settings">Настройки</string>
+    <string name="start_drawing">Начать рисование</string>
+    <string name="save_drawing">Сохранить рисунок</string>
+    <string name="extract_text">Извлечь текст</string>
+    <string name="translation_settings">Настройки перевода</string>
+    <string name="import_model">Импортировать модель</string>
+    <string name="analytics_title">Аналитика</string>
+    <string name="export_csv">Экспорт в CSV</string>
+    <string name="customization_settings">Кастомизация</string>
+    <string name="import_theme">Импортировать тему</string>
+    <string name="training_title">Обучение переводчика</string>
+    <string name="export_training_data">Экспортировать обучающие данные</string>
+    <string name="start_training">Запустить обучение</string>
+    <string name="metadata_title">Метаданные комиксов</string>
+    <string name="import_metadata">Импортировать метаданные</string>
+    <string name="double_page_mode">Двухстраничный режим</string>
+    <string name="error_log">Лог ошибок</string>
+    <string name="export_errors">Экспортировать ошибки</string>
+    <string name="dark_mode">Тёмная тема</string>
+    <string name="notifications">Уведомления</string>
+    <string name="back">Назад</string>
+    <string name="next">Далее</string>
 </resources> 

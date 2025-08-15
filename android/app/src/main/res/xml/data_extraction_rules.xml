@@ -4,12 +4,14 @@
         <include domain="sharedpref" path="."/>
         <include domain="database" path="."/>
         <include domain="file" path="."/>
+        <exclude domain="file" path="cache/"/>
         <exclude domain="file" path="temp/"/>
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="."/>
         <include domain="database" path="."/>
         <include domain="file" path="."/>
+        <exclude domain="file" path="cache/"/>
         <exclude domain="file" path="temp/"/>
     </device-transfer>
-</data-extraction-rules> 
+</data-extraction-rules>

@@ -124,13 +124,9 @@ class LibraryViewModel @Inject constructor(
 
     fun onUndoDelete() {
         _uiState.update { currentState ->
-            val visibleComics = currentState.comics.filter { comic ->
-                comic.filePath !in emptySet<String>()
-            }
-            
             currentState.copy(
                 pendingDeletionIds = emptySet(),
-                visibleComicsCount = visibleComics.size
+                visibleComicsCount = currentState.comics.size
             )
         }
     }

@@ -2,7 +2,7 @@ package com.example.feature.library.ui
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.example.core.data.repository.ComicRepository
-import com.example.core.model.ComicBook
+import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -33,29 +33,23 @@ class LibraryViewModelTest {
     private lateinit var viewModel: LibraryViewModel
 
     private val sampleComics = listOf(
-        ComicBook(
-            id = "1",
+        Comic(
             title = "Comic 1",
+            author = "Author 1",
             filePath = "/path/comic1.cbz",
-            coverPath = "/path/cover1.jpg",
-            pageCount = 20,
-            currentPage = 1
+            coverPath = "/path/cover1.jpg"
         ),
-        ComicBook(
-            id = "2", 
+        Comic(
             title = "Comic 2",
+            author = "Author 2", 
             filePath = "/path/comic2.cbr",
-            coverPath = "/path/cover2.jpg",
-            pageCount = 30,
-            currentPage = 1
+            coverPath = "/path/cover2.jpg"
         ),
-        ComicBook(
-            id = "3",
-            title = "Comic 3", 
+        Comic(
+            title = "Comic 3",
+            author = "Author 3",
             filePath = "/path/comic3.pdf",
-            coverPath = "/path/cover3.jpg",
-            pageCount = 40,
-            currentPage = 1
+            coverPath = "/path/cover3.jpg"
         )
     )
 
@@ -110,8 +104,8 @@ class LibraryViewModelTest {
         assertEquals(3, viewModel.uiState.value.visibleComicsCount)
         
         // When: Enter selection mode and select comics
-        viewModel.onEnterSelectionMode("1")
-        viewModel.onComicSelected("2")
+        viewModel.onEnterSelectionMode("/path/comic1.cbz")
+        viewModel.onComicSelected("/path/comic2.cbr")
         
         // And: Request deletion
         viewModel.onDeleteRequest()
@@ -119,13 +113,13 @@ class LibraryViewModelTest {
         // Then: Visible count should decrease but total should remain
         assertEquals(3, viewModel.uiState.value.totalComicsCount)
         assertEquals(1, viewModel.uiState.value.visibleComicsCount) // Only comic 3 remains visible
-        assertEquals(setOf("1", "2"), viewModel.uiState.value.pendingDeletionIds)
+        assertEquals(setOf("/path/comic1.cbz", "/path/comic2.cbr"), viewModel.uiState.value.pendingDeletionIds)
     }
 
     @Test
     fun `when deletion undone, visibleComicsCount should restore`() = runTest {
         // Given: Comics are marked for deletion
-        viewModel.onEnterSelectionMode("1")
+        viewModel.onEnterSelectionMode("/path/comic1.cbz")
         viewModel.onDeleteRequest()
         assertEquals(2, viewModel.uiState.value.visibleComicsCount)
         
@@ -179,12 +173,12 @@ class LibraryViewModelTest {
         assertEquals(3, viewModel.uiState.value.totalComicsCount)
         
         // When: Select and delete one comic
-        viewModel.onEnterSelectionMode("1")
+        viewModel.onEnterSelectionMode("/path/comic1.cbz")
         viewModel.onDeleteRequest()
         assertEquals(2, viewModel.uiState.value.visibleComicsCount)
         
         // And: Select and delete another comic
-        viewModel.onEnterSelectionMode("2") 
+        viewModel.onEnterSelectionMode("/path/comic2.cbr") 
         viewModel.onDeleteRequest()
         assertEquals(1, viewModel.uiState.value.visibleComicsCount)
         

@@ -53,6 +53,9 @@ dependencies {
     implementation(libs.zip4j) // CBZ support
     implementation(libs.commons.compress) // General archive support
     // implementation(libs.android.pdf.viewer) // Alternative PDF viewer - temporarily disabled
+    
+    // Test dependencies
+    testImplementation(libs.bundles.test.unit)
 }
 
 

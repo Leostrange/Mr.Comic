@@ -42,6 +42,7 @@ mockitoCore = "5.8.0"
 truth = "1.4.4"
 mockitoKotlin = "5.2.1"
 mockk = "1.13.8"
+archCoreTesting = "2.2.0"
 bytebuddy = "1.14.11"
 
 # AndroidX
@@ -161,6 +162,7 @@ test-mockito-core = { group = "org.mockito", name = "mockito-core", version.ref 
 test-mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockitoKotlin" }
 test-truth = { group = "com.google.truth", name = "truth", version.ref = "truth" }
 test-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
+test-arch-core = { group = "androidx.arch.core", name = "core-testing", version.ref = "archCoreTesting" }
 byte-buddy = { group = "net.bytebuddy", name = "byte-buddy", version.ref = "bytebuddy" }
 
 # AndroidX Testing
@@ -205,7 +207,7 @@ detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-form
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview", "androidx-compose-window-size"]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
-test-unit = ["test-junit", "test-kotlinx-coroutines", "test-mockito-core", "test-mockito-kotlin", "test-truth"]
+test-unit = ["test-junit", "test-kotlinx-coroutines", "test-mockito-core", "test-mockito-kotlin", "test-truth", "test-mockk", "test-arch-core"]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidApplication" }
