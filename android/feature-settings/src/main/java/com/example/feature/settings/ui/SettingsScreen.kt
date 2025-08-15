@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.SortOrder
+import com.example.core.model.LocalDictionary
+import com.example.core.model.LocalModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +60,20 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 Text("Performance Mode")
                 Switch(checked = uiState.performanceMode, onCheckedChange = viewModel::onPerformanceModeChanged)
             }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+            LocalResourcesSection(
+                dictionaries = uiState.availableDictionaries,
+                models = uiState.availableModels,
+                selectedDictionary = uiState.selectedDictionary,
+                selectedModel = uiState.selectedModel,
+                onRefresh = viewModel::refreshLocalResources,
+                onSelectDictionary = viewModel::selectDictionary,
+                onSelectModel = viewModel::selectModel
+            )
+
             Spacer(modifier = Modifier.height(12.dp))
             Button(onClick = viewModel::clearCache) { Text("Clear Cache") }
         }
@@ -105,4 +121,55 @@ private fun ApiKeyField(valueInitial: String, onChange: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         label = { Text("API Key") }
     )
+}
+
+@Composable
+private fun LocalResourcesSection(
+    dictionaries: List<LocalDictionary>,
+    models: List<LocalModel>,
+    selectedDictionary: LocalDictionary?,
+    selectedModel: LocalModel?,
+    onRefresh: () -> Unit,
+    onSelectDictionary: (LocalDictionary?) -> Unit,
+    onSelectModel: (LocalModel?) -> Unit
+) {
+    Text("Local Resources")
+    Spacer(modifier = Modifier.height(4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = onRefresh) { Text("Rescan") }
+        if (selectedDictionary != null) {
+            Text("Dictionary: ${selectedDictionary.name}")
+        } else {
+            Text("Dictionary: None")
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Text("Dictionaries")
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        items(dictionaries) { dict ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(dict.name, modifier = Modifier.weight(1f))
+                Button(onClick = { onSelectDictionary(dict) }) { Text("Select") }
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        }
+    }
+
+    Spacer(modifier = Modifier.height(8.dp))
+    if (selectedModel != null) {
+        Text("Model: ${selectedModel.name}")
+    } else {
+        Text("Model: None")
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    Text("Models")
+    LazyColumn(modifier = Modifier.fillMaxWidth()) {
+        items(models) { model ->
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(model.name, modifier = Modifier.weight(1f))
+                Button(onClick = { onSelectModel(model) }) { Text("Select") }
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+        }
+    }
 }
