@@ -6,8 +6,8 @@
     android:layout_height="match_parent"
     tools:context=".ComicReaderActivity">
 
-    <!-- Заменяем ImageView на PDFView -->
-    <com.github.barteksc.pdfviewer.PDFView
+    <!-- PDF контейнер-плейсхолдер вместо внешнего PDFView; PDF рендеринг выполняется через core-reader -->
+    <FrameLayout
         android:id="@+id/pdfView"
         android:layout_width="0dp"
         android:layout_height="0dp"
