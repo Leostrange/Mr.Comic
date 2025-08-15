@@ -4,6 +4,9 @@ import android.content.Context
 import com.example.mrcomic.data.network.MrComicApiService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.example.core.data.repository.SettingsRepository
+import com.example.mrcomic.data.LocalTranslationEngine
+import com.example.mrcomic.data.DummyLocalTranslationEngine
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.Module
 import dagger.Provides
@@ -73,9 +76,22 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideLocalTranslationEngine(): LocalTranslationEngine = DummyLocalTranslationEngine()
+
+    @Provides
+    @Singleton
     fun provideOcrTranslationRepository(
         mrComicApiService: MrComicApiService,
         @ApplicationContext context: Context,
-        gson: Gson
-    ): OcrTranslationRepository = OcrTranslationRepository(mrComicApiService, context, gson)
+        gson: Gson,
+        settingsRepository: SettingsRepository,
+        localTranslationEngine: LocalTranslationEngine
+    ): OcrTranslationRepository =
+        OcrTranslationRepository(
+            mrComicApiService,
+            context,
+            gson,
+            settingsRepository,
+            localTranslationEngine
+        )
 }
