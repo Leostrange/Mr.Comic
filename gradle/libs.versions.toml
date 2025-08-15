@@ -1,7 +1,7 @@
 [versions]
 # Android
-androidApplication = "8.7.0"
-androidLibrary = "8.4.1"
+androidApplication = "8.7.2"
+androidLibrary = "8.7.2"
 compileSdk = "35"
 minSdk = "26"
 targetSdk = "35"
@@ -12,8 +12,8 @@ okhttp = "4.12.0"
 gson = "2.11.0"
 
 # Kotlin
-kotlinAndroid = "1.9.24"
-ksp = "1.9.24-1.0.20"
+kotlinAndroid = "1.9.25"
+ksp = "1.9.25-1.0.20"
 kotlinCompilerExtension = "1.5.15"
 jvmTarget = "17"
 kotlinxCoroutines = "1.8.0"
@@ -74,8 +74,6 @@ androidPdfViewer = "2.8.2"
 
 androidPdfViewerFallback = "2.7.0-beta.3"
 
-
-
 # UI Components for modern design
 lottie = "6.4.1"
 material3WindowSizeClass = "1.2.1"
@@ -93,6 +91,18 @@ glide = "4.15.1"
 
 # Chart & Data visualization  
 charts = "1.0.1"
+
+# OCR and AI (according to roadmap)
+tesseract = "5.3.3"
+paddleocr = "2.7.0"
+easyocr = "1.7.0"
+trocr = "0.1.0"
+
+# Translation engines (according to roadmap)
+opusmt = "1.2.1"
+huggingface = "4.40.0"
+m2m100 = "1.1.0"
+nllb = "1.0.0"
 
 [libraries]
 # Networking
@@ -204,10 +214,24 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 detekt-cli = { group = "io.gitlab.arturbosch.detekt", name = "detekt-cli", version.ref = "detekt" }
 detekt-formatting = { group = "io.gitlab.arturbosch.detekt", name = "detekt-formatting", version.ref = "detekt" }
 
+# OCR and AI Libraries (according to roadmap)
+tesseract-android = { group = "com.rmtheis", name = "tess-two", version = "9.1.0" }
+paddleocr-android = { group = "com.github.PaddlePaddle", name = "PaddleOCR", version.ref = "paddleocr" }
+easyocr-android = { group = "com.github.JaidedAI", name = "EasyOCR", version.ref = "easyocr" }
+trocr-android = { group = "com.microsoft", name = "TrOCR", version.ref = "trocr" }
+
+# Translation Libraries (according to roadmap)
+opusmt-android = { group = "com.github.Helsinki-NLP", name = "OPUS-MT", version.ref = "opusmt" }
+huggingface-transformers = { group = "com.huggingface", name = "transformers", version.ref = "huggingface" }
+m2m100-android = { group = "com.facebook", name = "M2M100", version.ref = "m2m100" }
+nllb-android = { group = "com.facebook", name = "NLLB", version.ref = "nllb" }
+
 [bundles]
 compose = ["androidx-compose-ui", "androidx-compose-material3", "androidx-compose-ui-tooling-preview", "androidx-compose-window-size"]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
 test-unit = ["test-junit", "test-kotlinx-coroutines", "test-mockito-core", "test-mockito-kotlin", "test-truth", "test-mockk", "test-arch-core"]
+ocr = ["tesseract-android", "paddleocr-android", "easyocr-android", "trocr-android"]
+translation = ["opusmt-android", "huggingface-transformers", "m2m100-android", "nllb-android"]
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidApplication" }
