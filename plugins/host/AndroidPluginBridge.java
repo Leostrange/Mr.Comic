@@ -39,6 +39,11 @@ public class AndroidPluginBridge {
         return context.getSharedPreferences("plugin_settings_" + pluginId, Context.MODE_PRIVATE);
     }
 
+    private boolean hasPermission(String permission) {
+        SharedPreferences perms = context.getSharedPreferences("plugin_permissions_" + pluginId, Context.MODE_PRIVATE);
+        return perms.getBoolean(permission, false);
+    }
+
     private void runJsCallback(String callbackId, boolean success, String jsonResult) {
         // Убедимся, что jsonResult это валидная строка для JS, особенно если это строка JSON
         // Оборачиваем строку результата в кавычки, если это не null и не boolean/number literal
@@ -115,7 +120,10 @@ public class AndroidPluginBridge {
             runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
             return;
         }
-        // TODO: Проверка разрешений 'read_settings' для pluginId
+        if (!hasPermission("read_settings")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing read_settings permission."));
+            return;
+        }
         try {
             SharedPreferences prefs = getPluginPreferences();
             String valueJson = prefs.getString(key, defaultValueJson); // defaultValueJson уже строка JSON
@@ -129,11 +137,14 @@ public class AndroidPluginBridge {
     @JavascriptInterface
     public void settingsSet(String pluginIdFromJs, String key, String valueJson, String callbackId) {
         Log.d(TAG_PREFIX + pluginId, "settingsSet called for key: " + key + " with valueJson: " + valueJson + " callbackId: " + callbackId);
-         if (!this.pluginId.equals(pluginIdFromJs)) {
+        if (!this.pluginId.equals(pluginIdFromJs)) {
             runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
             return;
         }
-        // TODO: Проверка разрешений 'write_settings' для pluginId
+        if (!hasPermission("write_settings")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing write_settings permission."));
+            return;
+        }
         try {
             SharedPreferences prefs = getPluginPreferences();
             prefs.edit().putString(key, valueJson).apply();
@@ -151,7 +162,10 @@ public class AndroidPluginBridge {
             runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
             return;
         }
-        // TODO: Проверка разрешений 'write_settings' для pluginId
+        if (!hasPermission("write_settings")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing write_settings permission."));
+            return;
+        }
         try {
             SharedPreferences prefs = getPluginPreferences();
             prefs.edit().remove(key).apply();
@@ -167,14 +181,12 @@ public class AndroidPluginBridge {
     // Пути должны быть ограничены директорией плагина.
 
     private File getSafePluginFile(String relativePath) throws SecurityException {
-        // TODO: Реализовать проверку, что path не выходит за пределы директории плагина!
-        // Например, new File(pluginDir, relativePath).getCanonicalPath().startsWith(pluginDir.getCanonicalPath())
+        // Проверяем, что путь не выходит за пределы директории плагина
         File pluginDataDir = new File(context.getFilesDir(), "plugin_data/" + pluginId);
         if (!pluginDataDir.exists()) {
             pluginDataDir.mkdirs();
         }
         File targetFile = new File(pluginDataDir, relativePath);
-        // Проверка, что путь не пытается выйти из песочницы плагина
         if (!targetFile.getAbsoluteFile().toPath().normalize().startsWith(pluginDataDir.getAbsoluteFile().toPath().normalize())) {
             throw new SecurityException("Attempt to access file outside plugin directory: " + relativePath);
         }
@@ -185,7 +197,10 @@ public class AndroidPluginBridge {
     public void fsReadFile(String pluginIdFromJs, String path, String callbackId) {
         Log.d(TAG_PREFIX + pluginId, "fsReadFile called for path: " + path + " cbId: " + callbackId);
         if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
-        // TODO: Проверка 'read_file'
+        if (!hasPermission("read_file")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing read_file permission."));
+            return;
+        }
         try {
             File file = getSafePluginFile(path);
             if (file.exists() && file.isFile()) {
@@ -245,8 +260,11 @@ public class AndroidPluginBridge {
     @JavascriptInterface
     public void fsWriteFile(String pluginIdFromJs, String path, String dataString, String encoding, String callbackId) {
         Log.d(TAG_PREFIX + pluginId, "fsWriteFile called for path: " + path + " cbId: " + callbackId);
-         if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
-        // TODO: Проверка 'write_file'
+        if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
+        if (!hasPermission("write_file")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing write_file permission."));
+            return;
+        }
         try {
             File file = getSafePluginFile(path);
             File parentDir = file.getParentFile();
@@ -275,7 +293,10 @@ public class AndroidPluginBridge {
     public void fsExists(String pluginIdFromJs, String path, String callbackId) {
         Log.d(TAG_PREFIX + pluginId, "fsExists called for path: " + path + " cbId: " + callbackId);
         if (!this.pluginId.equals(pluginIdFromJs)) { /* ... ошибка ... */ runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch.")); return; }
-        // TODO: Проверка 'read_file' (или специальное разрешение на проверку существования)
+        if (!hasPermission("read_file")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing read_file permission."));
+            return;
+        }
         try {
             File file = getSafePluginFile(path); // getSafePluginFile может выбросить SecurityException
             boolean exists = file.exists();
@@ -298,7 +319,10 @@ public class AndroidPluginBridge {
             runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
             return;
         }
-        // TODO: Проверка разрешения 'read_image' для pluginId
+        if (!hasPermission("read_image")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing read_image permission."));
+            return;
+        }
         // TODO: Реализовать реальную логику получения данных изображения по imageId (например, из БД или файловой системы)
 
         // Заглушка: возвращаем моковые данные
@@ -338,7 +362,10 @@ public class AndroidPluginBridge {
             runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
             return;
         }
-        // TODO: Проверка разрешения 'read_text' для pluginId
+        if (!hasPermission("read_text")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing read_text permission."));
+            return;
+        }
 
         try {
             SharedPreferences prefs = getPluginTextPreferences();
@@ -358,7 +385,10 @@ public class AndroidPluginBridge {
             runJsCallback(callbackId, false, createErrorJson("permission_denied", "Plugin ID mismatch."));
             return;
         }
-        // TODO: Проверка разрешения 'write_text' или 'modify_text' для pluginId
+        if (!hasPermission("write_text")) {
+            runJsCallback(callbackId, false, createErrorJson("permission_denied", "Missing write_text permission."));
+            return;
+        }
 
         try {
             SharedPreferences prefs = getPluginTextPreferences();

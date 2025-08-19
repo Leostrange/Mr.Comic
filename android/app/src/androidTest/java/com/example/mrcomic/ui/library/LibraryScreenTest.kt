@@ -1,10 +1,15 @@
 package com.example.mrcomic.ui.library
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.example.feature.library.ui.LibraryScreen
+import com.example.feature.library.ui.LibraryViewModel
+import com.example.core.data.repository.ComicRepository
+import com.example.core.model.Bookmark
+import com.example.core.model.Comic
+import com.example.core.model.SortOrder
 import com.example.mrcomic.ui.BaseUITest
 import com.example.mrcomic.ui.utils.ComposeTestUtils.assertButtonExists
 import com.example.mrcomic.ui.utils.ComposeTestUtils.assertIsDisplayedAndEnabled
@@ -12,7 +17,10 @@ import com.example.mrcomic.ui.utils.ComposeTestUtils.waitForElement
 import com.example.mrcomic.ui.utils.ComposeTestUtils.waitForText
 import com.example.mrcomic.ui.utils.TestData
 import dagger.hilt.android.testing.HiltAndroidTest
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Test
+import android.net.Uri
 
 /**
  * UI тесты для экрана библиотеки комиксов
@@ -24,8 +32,12 @@ class LibraryScreenTest : BaseUITest() {
     fun libraryScreen_displaysCorrectly() {
         // Arrange & Act
         composeTestRule.setContent {
-            // TODO: Здесь будет реальный LibraryScreen когда он будет создан
-            // LibraryScreen()
+            LibraryScreen(
+                onBookClick = {},
+                onAddClick = {},
+                onSettingsClick = {},
+                viewModel = LibraryViewModel(FakeComicRepository())
+            )
         }
 
         // Assert
@@ -224,4 +236,18 @@ class LibraryScreenTest : BaseUITest() {
         
         composeTestRule.assertButtonExists(TestData.Texts.BUTTON_RETRY)
     }
+}
+
+private class FakeComicRepository : ComicRepository {
+    private val comics = MutableStateFlow<List<Comic>>(emptyList())
+    override fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<Comic>> = comics
+    override suspend fun refreshComicsIfEmpty() {}
+    override suspend fun deleteComics(comicIds: Set<String>) {}
+    override suspend fun addComic(comic: Comic) {}
+    override suspend fun updateProgress(comicId: String, currentPage: Int) {}
+    override suspend fun clearCache() {}
+    override suspend fun importComicFromUri(uri: Uri) {}
+    override suspend fun addBookmark(bookmark: Bookmark) {}
+    override suspend fun removeBookmark(bookmark: Bookmark) {}
+    override suspend fun getBookmarks(comicId: String): List<Bookmark> = emptyList()
 }

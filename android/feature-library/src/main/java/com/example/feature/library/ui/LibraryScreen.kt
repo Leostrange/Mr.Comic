@@ -3,7 +3,6 @@ package com.example.feature.library.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,12 +19,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.Comic
@@ -43,7 +42,10 @@ fun LibraryScreen(
     Scaffold(
         topBar = { TopAppBar(title = { Text("Library") }) },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
+            FloatingActionButton(
+                onClick = onAddClick,
+                modifier = Modifier.testTag("add_comic_button")
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Comic")
             }
         }
@@ -53,6 +55,7 @@ fun LibraryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
+                .testTag("library_screen")
         ) {
             val errorText = uiState.error
             if (errorText != null) {
@@ -61,14 +64,24 @@ fun LibraryScreen(
                 Button(onClick = { viewModel.onPermissionsGranted() }) {
                     Text("Retry")
                 }
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(uiState.comics) { comic ->
-                    ComicRow(comic = comic, onClick = { onBookClick(comic.filePath) })
+            } else if (uiState.comics.isEmpty()) {
+                Text(text = "Библиотека пуста")
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(text = "Добавьте первый комикс")
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = onAddClick) {
+                    Text("Добавить")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("library_list"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(uiState.comics) { comic ->
+                        ComicRow(comic = comic, onClick = { onBookClick(comic.filePath) })
+                    }
                 }
             }
         }
