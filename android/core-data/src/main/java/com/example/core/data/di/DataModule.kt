@@ -43,7 +43,7 @@ abstract class DataModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object DataModule {
+object DataProvidersModule {
 
 	@Provides
 	@Singleton
