@@ -6,10 +6,12 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.feature.library.ui.LibraryScreen
+import com.example.feature.library.ui.ModernLibraryScreen
 import com.example.feature.settings.ui.SettingsScreen
 import com.example.feature.onboarding.OnboardingScreen
 import com.example.feature.reader.ui.ReaderScreen
-import com.example.feature.ocr.ui.TranslationScreen
+import com.example.feature.reader.ui.ModernReaderScreen
+import com.example.feature.ocr.ui.SimpleTranslateScreen
 import com.example.mrcomic.ui.MainScreen
 import com.example.mrcomic.ui.MainDestination
 
@@ -48,9 +50,12 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
 
         // Reader screen (full screen, outside main navigation)
         composable(route = Screen.Reader.route) { backStackEntry ->
-            // URI parameter will be used when reader implementation is complete
-            // val uri = backStackEntry.arguments?.getString("uri") ?: ""
-            ReaderScreen()
+            val uri = backStackEntry.arguments?.getString("uri") ?: ""
+            ModernReaderScreen(
+                comicTitle = uri.substringAfterLast("/").substringBeforeLast("."),
+                onBackClick = { navController.popBackStack() },
+                onSettingsClick = { /* TODO: Navigate to reader settings */ }
+            )
         }
     }
 }
@@ -62,19 +67,19 @@ fun MainNavHost(navController: NavHostController) {
         startDestination = MainDestination.Library.route
     ) {
         composable(route = MainDestination.Library.route) {
-            LibraryScreen(
+            ModernLibraryScreen(
                 onBookClick = { path -> 
                     navController.navigate(Screen.Reader.create(path))
                 },
                 onSettingsClick = { 
                     navController.navigate(MainDestination.Settings.route)
                 },
-                onAddClick = { }
+                onAddClick = { /* TODO: Add comic selection */ }
             )
         }
 
         composable(route = MainDestination.Translation.route) {
-            TranslationScreen()
+            SimpleTranslateScreen()
         }
 
         composable(route = MainDestination.Settings.route) {
