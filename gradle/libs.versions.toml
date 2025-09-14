@@ -201,8 +201,7 @@ pdfium-android = { group = "com.github.barteksc", name = "pdfium-android", versi
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
 
 # MLKit (working versions) - using stable releases
-mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.0" }
-mlkit-text-recognition-common = { group = "com.google.mlkit", name = "text-recognition-common", version = "16.0.0" }
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.1" }
 
 # Logging
 slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4jAndroid" }

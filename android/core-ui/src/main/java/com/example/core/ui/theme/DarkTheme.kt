@@ -113,7 +113,7 @@ object LightThemeColors {
     val Scrim = Color(0xFF000000)
 }
 
-private val DarkColorScheme = darkColorScheme(
+val DarkColorScheme = darkColorScheme(
     primary = DarkThemeColors.Primary,
     onPrimary = DarkThemeColors.OnPrimary,
     primaryContainer = DarkThemeColors.PrimaryContainer,
@@ -145,7 +145,7 @@ private val DarkColorScheme = darkColorScheme(
     scrim = DarkThemeColors.Scrim
 )
 
-private val LightColorScheme = lightColorScheme(
+val LightColorScheme = lightColorScheme(
     primary = LightThemeColors.Primary,
     onPrimary = LightThemeColors.OnPrimary,
     primaryContainer = LightThemeColors.PrimaryContainer,
@@ -177,47 +177,4 @@ private val LightColorScheme = lightColorScheme(
     scrim = LightThemeColors.Scrim
 )
 
-/**
- * Mr.Comic theme with automatic dark/light switching
- */
-@Composable
-fun MrComicTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
-}
-
-/**
- * Force dark theme regardless of system setting
- */
-@Composable
-fun MrComicDarkTheme(
-    content: @Composable () -> Unit
-) {
-    MaterialTheme(
-        colorScheme = DarkColorScheme,
-        typography = Typography,
-        content = content
-    )
-}
-
-/**
- * Force light theme regardless of system setting
- */
-@Composable
-fun MrComicLightTheme(
-    content: @Composable () -> Unit
-) {
-    MaterialTheme(
-        colorScheme = LightColorScheme,
-        typography = Typography,
-        content = content
-    )
-}
+// Theme functions moved to Theme.kt to avoid conflicts

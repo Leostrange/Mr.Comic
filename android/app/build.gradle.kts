@@ -115,6 +115,7 @@ dependencies {
     implementation(project(":android:feature-reader"))
     implementation(project(":android:feature-themes"))
     implementation(project(":android:feature-onboarding"))
+    implementation(project(":android:feature-ocr"))
     
     // Third-party libraries
     implementation(libs.coil.compose)
