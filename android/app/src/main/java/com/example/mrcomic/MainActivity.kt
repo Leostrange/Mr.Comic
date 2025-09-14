@@ -12,10 +12,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.example.core.ui.splash.VideoSplash
 import com.example.core.ui.theme.MrComicTheme
+import com.example.core.ui.theme.ThemePreferencesRepository
+import javax.inject.Inject
 import com.example.mrcomic.navigation.AppNavHost
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -25,6 +28,9 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     
+    @Inject
+    lateinit var themePreferencesRepository: ThemePreferencesRepository
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -32,7 +38,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            MrComicApp()
+            MrComicApp(themePreferencesRepository)
         }
     }
     
@@ -55,11 +61,14 @@ class MainActivity : ComponentActivity() {
  * Главный компонент приложения с современным видео-сплэшем
  */
 @Composable
-fun MrComicApp() {
+fun MrComicApp(themePreferencesRepository: ThemePreferencesRepository) {
     var showVideoSplash by remember { mutableStateOf(true) }
+    val themeConfig by themePreferencesRepository.themeConfig.collectAsState(
+        initial = com.example.core.ui.theme.ThemeConfig()
+    )
     
     // Применяем тему и запускаем навигацию
-    MrComicTheme {
+    MrComicTheme(themeConfig = themeConfig) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background

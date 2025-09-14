@@ -7,6 +7,7 @@ import com.google.gson.GsonBuilder
 import com.example.core.data.repository.SettingsRepository
 import com.example.mrcomic.data.LocalTranslationEngine
 import com.example.mrcomic.data.DummyLocalTranslationEngine
+import com.example.core.ui.theme.ThemePreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.Module
 import dagger.Provides
@@ -77,6 +78,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideLocalTranslationEngine(): LocalTranslationEngine = DummyLocalTranslationEngine()
+
+    @Provides
+    @Singleton
+    fun provideThemePreferencesRepository(
+        @ApplicationContext context: Context
+    ): ThemePreferencesRepository = ThemePreferencesRepository(context)
 
     @Provides
     @Singleton

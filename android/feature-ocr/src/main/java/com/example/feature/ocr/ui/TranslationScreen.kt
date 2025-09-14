@@ -1,0 +1,251 @@
+package com.example.feature.ocr.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.core.ui.components.MrComicCard
+import com.example.core.ui.components.MrComicButton
+import com.example.core.ui.components.MrComicTextField
+import com.example.core.ui.theme.MrComicTheme
+
+/**
+ * Main Translation screen for OCR and translation features
+ * 
+ * Features:
+ * - Camera OCR
+ * - Image OCR from gallery
+ * - Manual text translation
+ * - Translation history
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TranslationScreen(
+    modifier: Modifier = Modifier,
+    viewModel: TranslateOcrViewModel = hiltViewModel()
+) {
+    var inputText by remember { mutableStateOf("") }
+    var translatedText by remember { mutableStateOf("") }
+    var isTranslating by remember { mutableStateOf(false) }
+    
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        TopAppBar(
+            title = {
+                Text(
+                    text = "Translation",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            }
+        )
+        
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // OCR Options Section
+            Text(
+                text = "OCR & Image Translation",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Camera OCR Card
+                MrComicCard(
+                    modifier = Modifier.weight(1f),
+                    onClick = { /* TODO: Navigate to camera OCR */ }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Camera,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Camera OCR",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Scan text from camera",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                // Gallery OCR Card
+                MrComicCard(
+                    modifier = Modifier.weight(1f),
+                    onClick = { /* TODO: Navigate to gallery OCR */ }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Image,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Gallery OCR",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Extract text from image",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            // Manual Translation Section
+            Text(
+                text = "Manual Translation",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            MrComicCard {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Input text field
+                    MrComicTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        label = "Enter text to translate",
+                        placeholder = "Type or paste text here...",
+                        singleLine = false,
+                        maxLines = 4
+                    )
+                    
+                    // Language selection would go here
+                    // TODO: Add language selection dropdown
+                    
+                    // Translate button
+                    MrComicButton(
+                        onClick = {
+                            if (inputText.isNotBlank()) {
+                                isTranslating = true
+                                // TODO: Implement translation
+                                // For now, simulate translation
+                                translatedText = "Translation result will appear here..."
+                                isTranslating = false
+                            }
+                        },
+                        text = if (isTranslating) "Translating..." else "Translate",
+                        icon = Icons.Default.Translate,
+                        enabled = inputText.isNotBlank() && !isTranslating,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    // Translation result
+                    if (translatedText.isNotBlank()) {
+                        MrComicTextField(
+                            value = translatedText,
+                            onValueChange = { },
+                            label = "Translation",
+                            readOnly = true,
+                            singleLine = false,
+                            maxLines = 4
+                        )
+                    }
+                    
+                    // Loading indicator
+                    if (isTranslating) {
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            
+            // Translation History Section (placeholder)
+            Text(
+                text = "Recent Translations",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            
+            MrComicCard {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "No recent translations",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Your translation history will appear here",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TranslationScreenPreview() {
+    MrComicTheme {
+        TranslationScreen()
+    }
+}
