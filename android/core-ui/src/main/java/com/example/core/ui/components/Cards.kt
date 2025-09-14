@@ -35,25 +35,46 @@ fun MrComicCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
-        modifier = modifier,
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 4.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            content = content
-        )
+    if (onClick != null) {
+        Card(
+            modifier = modifier,
+            onClick = onClick,
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 2.dp,
+                pressedElevation = 4.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
+    } else {
+        Card(
+            modifier = modifier,
+            shape = MaterialTheme.shapes.medium,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 2.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -66,21 +87,38 @@ fun MrComicElevatedCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    ElevatedCard(
-        modifier = modifier,
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 6.dp,
-            pressedElevation = 8.dp
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            content = content
-        )
+    if (onClick != null) {
+        ElevatedCard(
+            modifier = modifier,
+            onClick = onClick,
+            shape = MaterialTheme.shapes.medium,
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 6.dp,
+                pressedElevation = 8.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
+    } else {
+        ElevatedCard(
+            modifier = modifier,
+            shape = MaterialTheme.shapes.medium,
+            elevation = CardDefaults.elevatedCardElevation(
+                defaultElevation = 6.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -93,19 +131,35 @@ fun MrComicOutlinedCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    OutlinedCard(
-        modifier = modifier,
-        onClick = onClick,
-        shape = MaterialTheme.shapes.medium,
-        border = CardDefaults.outlinedCardBorder(),
-        colors = CardDefaults.outlinedCardColors()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            content = content
-        )
+    if (onClick != null) {
+        OutlinedCard(
+            modifier = modifier,
+            onClick = onClick,
+            shape = MaterialTheme.shapes.medium,
+            border = CardDefaults.outlinedCardBorder(),
+            colors = CardDefaults.outlinedCardColors()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
+    } else {
+        OutlinedCard(
+            modifier = modifier,
+            shape = MaterialTheme.shapes.medium,
+            border = CardDefaults.outlinedCardBorder(),
+            colors = CardDefaults.outlinedCardColors()
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                content = content
+            )
+        }
     }
 }
 
@@ -256,7 +310,7 @@ fun MrComicEmptyStateCard(
 @Preview(showBackground = true)
 @Composable
 private fun CardsPreview() {
-    MrComicTheme {
+    com.example.core.ui.theme.MrComicTheme {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

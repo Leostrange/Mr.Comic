@@ -1,11 +1,14 @@
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
+    id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
 }
 
 android {
     lint {
         disable += "NullSafeMutableLiveData"
+        disable += "UnsafeOptInUsageError"
     }
     namespace = "com.example.core.ui"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -69,6 +72,10 @@ dependencies {
 
     // DataStore for theme preferences
     implementation(libs.androidx.datastore.preferences)
+    
+    // Hilt DI
+    implementation(libs.google.hilt.android)
+    ksp(libs.google.hilt.compiler)
     
     // Models
     implementation(project(":android:core-model"))

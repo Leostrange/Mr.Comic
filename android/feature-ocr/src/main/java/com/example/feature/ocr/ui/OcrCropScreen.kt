@@ -72,7 +72,7 @@ fun OcrCropScreen(bitmap: Bitmap, onCrop: (Bitmap) -> Unit) {
         Box(modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectDragGestures {\n                    change, dragAmount ->
+                detectDragGestures { change, dragAmount ->
                     change.consume()
                     val newLeft = (cropRect.left + dragAmount.x).coerceIn(0f, imageSize.width.toFloat() - cropRect.width)
                     val newTop = (cropRect.top + dragAmount.y).coerceIn(0f, imageSize.height.toFloat() - cropRect.height)

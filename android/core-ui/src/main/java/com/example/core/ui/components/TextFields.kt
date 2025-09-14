@@ -283,7 +283,7 @@ fun MrComicEmailField(
 @Preview(showBackground = true)
 @Composable
 private fun TextFieldsPreview() {
-    MrComicTheme {
+    com.example.core.ui.theme.MrComicTheme {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
