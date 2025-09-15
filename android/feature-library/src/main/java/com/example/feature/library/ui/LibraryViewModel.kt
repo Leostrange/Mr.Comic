@@ -10,11 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-import java.util.UUID
 
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
@@ -30,22 +30,25 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeComics() {
         viewModelScope.launch {
-            _uiState.collectLatest { uiState ->
-                comicRepository.getComics(uiState.sortOrder, uiState.searchQuery).collectLatest { comics ->
-                    val visibleComics = comics.filter { comic ->
-                        comic.filePath !in uiState.pendingDeletionIds
-                    }
-                    
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            isLoading = false, 
-                            comics = comics,
-                            totalComicsCount = comics.size,
-                            visibleComicsCount = visibleComics.size
-                        )
+            _uiState
+                .map { it.sortOrder to it.searchQuery }
+                .distinctUntilChanged()
+                .collectLatest { (sortOrder, query) ->
+                    comicRepository.getComics(sortOrder, query).collectLatest { comics ->
+                        _uiState.update { currentState ->
+                            val visibleComics = comics.filter { comic ->
+                                comic.filePath !in currentState.pendingDeletionIds
+                            }
+
+                            currentState.copy(
+                                isLoading = false,
+                                comics = comics,
+                                totalComicsCount = comics.size,
+                                visibleComicsCount = visibleComics.size
+                            )
+                        }
                     }
                 }
-            }
         }
     }
 
@@ -69,12 +72,38 @@ class LibraryViewModel @Inject constructor(
         _uiState.update { it.copy(searchQuery = query) }
     }
 
-    fun onToggleSearch() {
-        _uiState.update { it.copy(isSearchActive = !it.isSearchActive, searchQuery = "") }
+    fun onSearchActiveChange(isActive: Boolean) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                isSearchActive = isActive,
+                searchQuery = if (!isActive) currentState.searchQuery.trim() else currentState.searchQuery
+            )
+        }
     }
 
     fun onSortOrderChange(sortOrder: SortOrder) {
         _uiState.update { it.copy(sortOrder = sortOrder) }
+    }
+
+    fun onTabSelected(tab: LibraryTab) {
+        _uiState.update { it.copy(selectedTab = tab) }
+    }
+
+    fun refreshLibrary() {
+        if (_uiState.value.isRefreshing || _uiState.value.selectedTab != LibraryTab.LIBRARY) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true, error = null) }
+            try {
+                comicRepository.rescanLibrary()
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(error = e.message ?: "Failed to refresh library")
+                }
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
     }
 
     fun onComicSelected(comicId: String) {

@@ -17,5 +17,14 @@ data class LibraryUiState(
     val pendingDeletionIds: Set<String> = emptySet(),
     // Comic counter implementation for Issue #24
     val totalComicsCount: Int = 0,
-    val visibleComicsCount: Int = 0
+    val visibleComicsCount: Int = 0,
+    val selectedTab: LibraryTab = LibraryTab.LIBRARY,
+    val isRefreshing: Boolean = false
 )
+
+enum class LibraryTab(val title: String) {
+    LIBRARY("Library"),
+    CLOUD("Cloud"),
+    ANNOTATIONS("Annotations"),
+    PLUGINS("Plugins")
+}
