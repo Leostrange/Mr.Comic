@@ -36,7 +36,8 @@ data class ComicInfo(
     val pageCount: Int? = null,
     val currentPage: Int = 0,
     val genre: String? = null,
-    val rating: Float? = null
+    val rating: Float? = null,
+    val filePath: String = ""
 )
 
 /**
@@ -328,7 +329,8 @@ private fun ComicCardsPreview() {
             isFavorite = true,
             pageCount = 120,
             currentPage = 78,
-            genre = "Adventure"
+            genre = "Adventure",
+            filePath = "/storage/comics/amazing.cbz"
         )
         
         Column(

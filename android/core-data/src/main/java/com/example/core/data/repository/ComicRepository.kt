@@ -24,6 +24,7 @@ import javax.inject.Inject
 interface ComicRepository {
     fun getComics(sortOrder: SortOrder, searchQuery: String): Flow<List<Comic>>
     suspend fun refreshComicsIfEmpty()
+    suspend fun rescanLibrary()
     suspend fun deleteComics(comicIds: Set<String>)
     suspend fun addComic(comic: Comic)
     suspend fun updateProgress(comicId: String, currentPage: Int)
@@ -69,45 +70,68 @@ class ComicRepositoryImpl @Inject constructor(
             return
         }
         android.util.Log.d("ComicRepository", "🔍 No comics found, starting scan...")
+        rescanLibrary()
+    }
 
-        val comicUris = mutableListOf<Uri>()
-        var foldersToScan = settingsRepository.libraryFolders.first()
+    override suspend fun rescanLibrary() {
+        android.util.Log.d("ComicRepository", "🔄 Rescanning library folders")
+        val comicUris = discoverComicUris()
+        android.util.Log.d("ComicRepository", "📊 Found ${comicUris.size} comic files")
 
-        // Если пользователь не выбрал ни одной папки, сканируем стандартные
-        if (foldersToScan.isEmpty()) {
-            android.util.Log.d("ComicRepository", "📁 Scanning default directories...")
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            android.util.Log.d("ComicRepository", "📂 Scanning Downloads: ${downloadsDir.absolutePath}")
-            scanDirectory(downloadsDir, comicUris)
-            android.util.Log.d("ComicRepository", "📂 Scanning Documents: ${documentsDir.absolutePath}")
-            scanDirectory(documentsDir, comicUris)
-        } else {
-            android.util.Log.d("ComicRepository", "📁 Scanning ${foldersToScan.size} user-selected folders...")
-            foldersToScan.forEach { uriString ->
-                android.util.Log.d("ComicRepository", "📂 Scanning folder: $uriString")
-                scanDocumentTree(Uri.parse(uriString), comicUris)
-            }
+        if (comicUris.isEmpty()) {
+            android.util.Log.d("ComicRepository", "⚠️ No comics discovered during rescan")
+            return
         }
 
-        android.util.Log.d("ComicRepository", "📊 Found ${comicUris.size} comic files")
-        
         withContext(Dispatchers.IO) {
+            val filePaths = comicUris.map { it.toString() }
+            val existingEntities = comicDao.getComicsByFilePaths(filePaths).associateBy { it.filePath }
+
             val comicEntities = comicUris.map { uri ->
                 async {
                     android.util.Log.d("ComicRepository", "📖 Processing: $uri")
-                    val coverPath = coverExtractor.extractAndSaveCover(uri)
+                    val filePath = uri.toString()
+                    val existing = existingEntities[filePath]
+                    val coverPath = existing?.coverPath?.takeIf { it.isNotBlank() && File(it).exists() }
+                        ?: coverExtractor.extractAndSaveCover(uri)
+
                     ComicEntity(
-                        filePath = uri.toString(),
+                        filePath = filePath,
                         title = getFileName(uri) ?: "Unknown",
                         coverPath = coverPath,
-                        dateAdded = System.currentTimeMillis()
+                        dateAdded = existing?.dateAdded ?: System.currentTimeMillis()
                     )
                 }
             }.awaitAll()
+
             android.util.Log.d("ComicRepository", "💾 Saving ${comicEntities.size} comics to database")
             comicDao.insertAll(comicEntities)
             android.util.Log.d("ComicRepository", "✅ Comics saved successfully!")
+        }
+    }
+
+    private suspend fun discoverComicUris(): List<Uri> {
+        return withContext(Dispatchers.IO) {
+            val comicUris = mutableListOf<Uri>()
+            val foldersToScan = settingsRepository.libraryFolders.first()
+
+            if (foldersToScan.isEmpty()) {
+                android.util.Log.d("ComicRepository", "📁 Scanning default directories...")
+                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                android.util.Log.d("ComicRepository", "📂 Scanning Downloads: ${downloadsDir.absolutePath}")
+                scanDirectory(downloadsDir, comicUris)
+                android.util.Log.d("ComicRepository", "📂 Scanning Documents: ${documentsDir.absolutePath}")
+                scanDirectory(documentsDir, comicUris)
+            } else {
+                android.util.Log.d("ComicRepository", "📁 Scanning ${foldersToScan.size} user-selected folders...")
+                foldersToScan.forEach { uriString ->
+                    android.util.Log.d("ComicRepository", "📂 Scanning folder: $uriString")
+                    scanDocumentTree(Uri.parse(uriString), comicUris)
+                }
+            }
+
+            comicUris
         }
     }
 
