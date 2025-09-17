@@ -54,6 +54,10 @@ dependencies {
     // Hilt
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
+
+    // Testing
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.test.kotlinx.coroutines)
 }
 
 
