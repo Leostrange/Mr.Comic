@@ -1,6 +1,7 @@
 package com.example.core.domain
 
-import com.example.feature.library.LibraryRepository
+import com.example.core.data.repository.ComicRepository
+import com.example.core.domain.util.Result
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -10,7 +11,7 @@ import org.junit.Test
 
 class DeleteComicUseCaseTest {
 
-    private lateinit var repository: LibraryRepository
+    private lateinit var repository: ComicRepository
     private lateinit var deleteComicUseCase: DeleteComicUseCase
 
     @Before
@@ -25,10 +26,11 @@ class DeleteComicUseCaseTest {
         val comicId = "test-comic-id"
 
         // When
-        deleteComicUseCase.invoke(comicId)
+        val result = deleteComicUseCase.invoke(setOf(comicId))
 
         // Then
-        coVerify(exactly = 1) { repository.deleteComic(comicId) }
+        assert(result is Result.Success)
+        coVerify(exactly = 1) { repository.deleteComics(setOf(comicId)) }
     }
 
     @Test
@@ -36,26 +38,25 @@ class DeleteComicUseCaseTest {
         // Given
         val comicId = "test-comic-id"
         val exception = RuntimeException("Delete failed")
-        coEvery { repository.deleteComic(comicId) } throws exception
+        coEvery { repository.deleteComics(setOf(comicId)) } throws exception
 
         // When & Then
-        try {
-            deleteComicUseCase.invoke(comicId)
-            assert(false) { "Expected exception to be thrown" }
-        } catch (e: RuntimeException) {
-            assert(e.message == "Delete failed")
-        }
+        val result = deleteComicUseCase.invoke(setOf(comicId))
+        assert(result is Result.Error)
+        val error = result as Result.Error
+        assert(error.exception.message == "Delete failed")
     }
 
     @Test
     fun `invoke should handle empty comic id`() = runTest {
         // Given
-        val emptyComicId = ""
+        val comicIds = emptySet<String>()
 
         // When
-        deleteComicUseCase.invoke(emptyComicId)
+        val result = deleteComicUseCase.invoke(comicIds)
 
         // Then
-        coVerify(exactly = 1) { repository.deleteComic(emptyComicId) }
+        assert(result is Result.Success)
+        coVerify(exactly = 1) { repository.deleteComics(comicIds) }
     }
 }
