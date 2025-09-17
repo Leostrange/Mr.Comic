@@ -29,7 +29,7 @@ class GetComicPagesUseCaseTest {
     @Before
     fun setUp() {
         bookReaderFactory = mockk(relaxed = true)
-        bookReader = mockk()
+        bookReader = mockk(relaxed = true)
         mockUri = mockk()
         every { bookReaderFactory.getCurrentReader() } returns bookReader
         every { bookReaderFactory.getCurrentUri() } returns mockUri
@@ -42,7 +42,7 @@ class GetComicPagesUseCaseTest {
     fun `getTotalPages should return success result with page count`() = runTest {
         // Given
         val expectedPageCount = 10
-        coEvery { bookReader.open(mockUri) } returns expectedPageCount
+        every { bookReader.getPageCount() } returns expectedPageCount
 
         // When
         val result = getComicPagesUseCase.getTotalPages()
@@ -50,14 +50,15 @@ class GetComicPagesUseCaseTest {
         // Then
         assertTrue(result is Result.Success)
         assertEquals(expectedPageCount, (result as Result.Success).data)
-        coVerify(exactly = 1) { bookReader.open(mockUri) }
+        verify(exactly = 1) { bookReader.getPageCount() }
+        coVerify(exactly = 0) { bookReader.open(any()) }
     }
 
     @Test
     fun `getTotalPages should reuse cached value on subsequent calls`() = runTest {
         // Given
         val expectedPageCount = 5
-        coEvery { bookReader.open(mockUri) } returns expectedPageCount
+        every { bookReader.getPageCount() } returns expectedPageCount
 
         // When
         val firstResult = getComicPagesUseCase.getTotalPages()
@@ -66,7 +67,7 @@ class GetComicPagesUseCaseTest {
         // Then
         assertEquals(expectedPageCount, (firstResult as Result.Success).data)
         assertEquals(expectedPageCount, (secondResult as Result.Success).data)
-        coVerify(exactly = 1) { bookReader.open(mockUri) }
+        verify(exactly = 1) { bookReader.getPageCount() }
     }
 
     @Test
@@ -86,6 +87,7 @@ class GetComicPagesUseCaseTest {
     fun `getTotalPages should return error when open throws`() = runTest {
         // Given
         val exception = RuntimeException("Failed to open book")
+        every { bookReader.getPageCount() } returns 0
         coEvery { bookReader.open(mockUri) } throws exception
 
         // When
@@ -170,7 +172,7 @@ class GetComicPagesUseCaseTest {
     @Test
     fun `clearCache should release resources and reset cached count`() = runTest {
         // Given
-        coEvery { bookReader.open(mockUri) } returnsMany listOf(3, 6)
+        every { bookReader.getPageCount() } returnsMany listOf(3, 6)
 
         // When
         val firstResult = getComicPagesUseCase.getTotalPages()
@@ -181,6 +183,6 @@ class GetComicPagesUseCaseTest {
         assertEquals(3, (firstResult as Result.Success).data)
         assertEquals(6, (secondResult as Result.Success).data)
         verify { bookReaderFactory.releaseResources() }
-        coVerify(exactly = 2) { bookReader.open(mockUri) }
+        verify(exactly = 2) { bookReader.getPageCount() }
     }
 }

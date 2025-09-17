@@ -53,11 +53,16 @@ class GetComicPagesUseCase @Inject constructor(
     }
 
     private suspend fun fetchPageCount(reader: BookReader): Int {
+        val currentCount = reader.getPageCount()
+        if (currentCount > 0) {
+            return currentCount
+        }
+
         val uri = bookReaderFactory.getCurrentUri()
         return if (uri != null) {
             reader.open(uri)
         } else {
-            reader.getPageCount()
+            currentCount
         }
     }
 }
