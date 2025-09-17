@@ -39,7 +39,7 @@ class GetReadingProgressUseCaseTest {
     fun `invoke should return error result when repository throws exception`() = runTest {
         // Given
         val comicId = "test-comic-id"
-        val exception = RuntimeException("Database error")
+        val exception = NoSuchElementException("Comic not found: $comicId")
         coEvery { repository.getReadingProgress(comicId) } throws exception
 
         // When

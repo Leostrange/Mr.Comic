@@ -27,6 +27,7 @@ interface ComicRepository {
     suspend fun rescanLibrary()
     suspend fun deleteComics(comicIds: Set<String>)
     suspend fun addComic(comic: Comic)
+    suspend fun getReadingProgress(comicId: String): Int
     suspend fun updateProgress(comicId: String, currentPage: Int)
     suspend fun clearCache()
     suspend fun importComicFromUri(uri: android.net.Uri)
@@ -56,7 +57,9 @@ class ComicRepositoryImpl @Inject constructor(
                     title = entity.title,
                     author = "Unknown", // Assuming author is not in ComicEntity for now
                     filePath = entity.filePath,
-                    coverPath = entity.coverPath
+                    coverPath = entity.coverPath,
+                    currentPage = entity.currentPage,
+                    totalPages = entity.totalPages
                 )
             }
         }
@@ -99,7 +102,9 @@ class ComicRepositoryImpl @Inject constructor(
                         filePath = filePath,
                         title = getFileName(uri) ?: "Unknown",
                         coverPath = coverPath,
-                        dateAdded = existing?.dateAdded ?: System.currentTimeMillis()
+                        dateAdded = existing?.dateAdded ?: System.currentTimeMillis(),
+                        currentPage = existing?.currentPage ?: 0,
+                        totalPages = existing?.totalPages ?: 0
                     )
                 }
             }.awaitAll()
@@ -157,15 +162,27 @@ class ComicRepositoryImpl @Inject constructor(
                 filePath = comic.filePath,
                 title = comic.title,
                 coverPath = comic.coverPath,
-                dateAdded = System.currentTimeMillis()
+                dateAdded = System.currentTimeMillis(),
+                currentPage = comic.currentPage,
+                totalPages = comic.totalPages
             )
             comicDao.insertAll(listOf(comicEntity))
         }
     }
 
+    override suspend fun getReadingProgress(comicId: String): Int {
+        return withContext(Dispatchers.IO) {
+            comicDao.getReadingProgress(comicId)
+                ?: throw NoSuchElementException("Comic not found: $comicId")
+        }
+    }
+
     override suspend fun updateProgress(comicId: String, currentPage: Int) {
         withContext(Dispatchers.IO) {
-            comicDao.updateProgress(comicId)
+            val updatedRows = comicDao.updateProgress(comicId, currentPage)
+            if (updatedRows == 0) {
+                throw NoSuchElementException("Comic not found: $comicId")
+            }
         }
     }
 
@@ -200,7 +217,9 @@ class ComicRepositoryImpl @Inject constructor(
                 filePath = destinationFile.absolutePath,
                 title = fileName.substringBeforeLast('.'),
                 coverPath = null, // Cover can be extracted later
-                dateAdded = System.currentTimeMillis()
+                dateAdded = System.currentTimeMillis(),
+                currentPage = 0,
+                totalPages = 0
             )
 
             comicDao.insertAll(listOf(comicEntity))
