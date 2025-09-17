@@ -3,6 +3,7 @@ package com.example.feature.reader
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.domain.usecase.GetComicPagesUseCase
@@ -66,14 +67,19 @@ class ReaderViewModel @Inject constructor(
                             return@launch
                         }
                     }
-                    val lastReadPage = when (val progressResult = getReadingProgressUseCase(uriString)) {
-                        is Result.Success -> progressResult.data
+                    val progressResult = getReadingProgressUseCase(uriString)
+                    val lastReadPage = when (progressResult) {
+                        is Result.Success -> progressResult.data.currentPage
                         is Result.Error -> 0
+                    }.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+                    val resolvedPageCount = when (progressResult) {
+                        is Result.Success -> if (totalPages == 0) progressResult.data.totalPages else totalPages
+                        is Result.Error -> totalPages
                     }
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            pageCount = totalPages,
+                            pageCount = resolvedPageCount,
                             currentPageIndex = lastReadPage
                         )
                     }
@@ -115,8 +121,22 @@ class ReaderViewModel @Inject constructor(
                                 bitmaps = it.bitmaps.toMutableMap().apply { put(index, bmp) }
                             )
                         }
-                        saveReadingProgressUseCase(_uiState.value.comicUri, index)
-                        // result ignored
+                        when (
+                            val saveResult = saveReadingProgressUseCase(
+                                comicId = _uiState.value.comicUri,
+                                currentPage = index,
+                                totalPages = _uiState.value.pageCount
+                            )
+                        ) {
+                            is Result.Error -> {
+                                Log.e(
+                                    "ReaderViewModel",
+                                    "Failed to save reading progress",
+                                    saveResult.exception
+                                )
+                            }
+                            else -> Unit
+                        }
                     }
                 }
                 is Result.Error -> _uiState.update { it.copy(error = pageResult.exception.message ?: "Ошибка страницы") }

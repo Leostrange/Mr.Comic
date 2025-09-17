@@ -2,6 +2,7 @@ package com.example.core.domain.usecase
 
 import com.example.core.data.repository.ComicRepository
 import com.example.core.domain.util.Result
+import com.example.core.model.ReadingProgress
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
@@ -24,7 +25,7 @@ class GetReadingProgressUseCaseTest {
     fun `invoke should return success result with reading progress`() = runTest {
         // Given
         val comicId = "test-comic-id"
-        val expectedProgress = 5
+        val expectedProgress = ReadingProgress(currentPage = 5, totalPages = 100)
         coEvery { repository.getReadingProgress(comicId) } returns expectedProgress
 
         // When
@@ -54,7 +55,7 @@ class GetReadingProgressUseCaseTest {
     fun `invoke should handle zero progress`() = runTest {
         // Given
         val comicId = "new-comic-id"
-        val expectedProgress = 0
+        val expectedProgress = ReadingProgress(currentPage = 0, totalPages = 0)
         coEvery { repository.getReadingProgress(comicId) } returns expectedProgress
 
         // When
@@ -69,7 +70,7 @@ class GetReadingProgressUseCaseTest {
     fun `invoke should handle negative progress`() = runTest {
         // Given
         val comicId = "corrupted-comic-id"
-        val expectedProgress = -1
+        val expectedProgress = ReadingProgress(currentPage = -1, totalPages = 20)
         coEvery { repository.getReadingProgress(comicId) } returns expectedProgress
 
         // When

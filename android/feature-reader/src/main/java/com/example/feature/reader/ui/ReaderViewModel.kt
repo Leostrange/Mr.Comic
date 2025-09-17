@@ -5,6 +5,9 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.domain.usecase.GetReadingProgressUseCase
+import com.example.core.domain.usecase.SaveReadingProgressUseCase
+import com.example.core.domain.util.Result
 import com.example.core.reader.domain.BookReader
 import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
@@ -23,6 +26,8 @@ import javax.inject.Inject
 class ReaderViewModel @Inject constructor(
     private val readerFactory: BookReaderFactory,
     private val settingsRepository: SettingsRepository,
+    private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -48,6 +53,7 @@ class ReaderViewModel @Inject constructor(
     )
 
     private var bookReader: BookReader? = null
+    private var currentComicId: String? = null
 
     companion object {
         private const val PRELOAD_DISTANCE = 1
@@ -81,9 +87,22 @@ class ReaderViewModel @Inject constructor(
                 val reader = readerFactory.create(uri)
                 val pageCount = reader.open(uri)
                 bookReader = reader // Only assign if successful
+                currentComicId = uri.toString()
                 android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
-                _uiState.update { it.copy(pageCount = pageCount) }
-                loadPage(0) // Load the first page
+                val progressResult = getReadingProgressUseCase(currentComicId!!)
+                if (progressResult is Result.Error) {
+                    android.util.Log.w(TAG, "Failed to load reading progress", progressResult.exception)
+                }
+                val lastReadPage = when (progressResult) {
+                    is Result.Success -> progressResult.data.currentPage
+                    is Result.Error -> 0
+                }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+                val resolvedPageCount = when (progressResult) {
+                    is Result.Success -> if (pageCount == 0) progressResult.data.totalPages else pageCount
+                    is Result.Error -> pageCount
+                }
+                _uiState.update { it.copy(pageCount = resolvedPageCount) }
+                loadPage(lastReadPage)
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Failed to open book", e)
                 _uiState.update {
@@ -152,6 +171,22 @@ class ReaderViewModel @Inject constructor(
                     currentPageBitmap = bitmap,
                     error = if (bitmap == null) "Failed to load page ${pageIndex + 1}" else null
                 )
+            }
+            currentComicId?.let { comicId ->
+                when (
+                    val saveResult = saveReadingProgressUseCase(
+                        comicId = comicId,
+                        currentPage = pageIndex,
+                        totalPages = _uiState.value.pageCount
+                    )
+                ) {
+                    is Result.Error -> android.util.Log.e(
+                        TAG,
+                        "Failed to save reading progress",
+                        saveResult.exception
+                    )
+                    else -> Unit
+                }
             }
             // After updating UI, preload adjacent pages for a smoother experience
             preloadAdjacentPages(pageIndex)

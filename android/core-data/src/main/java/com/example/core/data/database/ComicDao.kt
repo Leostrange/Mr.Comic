@@ -7,6 +7,11 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
+data class ReadingProgressEntity(
+    val currentPage: Int,
+    val totalPages: Int
+)
+
 @Dao
 interface ComicDao {
     @Query("SELECT * FROM comics WHERE title LIKE '%' || :searchQuery || '%' ORDER BY title COLLATE NOCASE ASC")
@@ -43,9 +48,9 @@ interface ComicDao {
     @Delete
     suspend fun deleteBookmark(bookmark: BookmarkEntity)
 
-    @Query("SELECT currentPage FROM comics WHERE filePath = :comicId LIMIT 1")
-    suspend fun getReadingProgress(comicId: String): Int?
+    @Query("SELECT currentPage, totalPages FROM comics WHERE filePath = :comicId LIMIT 1")
+    suspend fun getReadingProgress(comicId: String): ReadingProgressEntity?
 
-    @Query("UPDATE comics SET currentPage = :currentPage WHERE filePath = :comicId")
-    suspend fun updateProgress(comicId: String, currentPage: Int): Int
+    @Query("UPDATE comics SET currentPage = :currentPage, totalPages = :totalPages WHERE filePath = :comicId")
+    suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int): Int
 }

@@ -7,9 +7,9 @@ import javax.inject.Inject
 class SaveReadingProgressUseCase @Inject constructor(
     private val repository: ComicRepository
 ) {
-    suspend operator fun invoke(comicId: String, currentPage: Int): Result<Unit> {
+    suspend operator fun invoke(comicId: String, currentPage: Int, totalPages: Int): Result<Unit> {
         return try {
-            repository.updateProgress(comicId, currentPage)
+            repository.updateProgress(comicId, currentPage, totalPages)
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(e)
