@@ -24,7 +24,7 @@ class AddComicUseCaseTest {
     }
 
     @Test
-    fun `invoke should call repository addComic`() = runTest {
+    fun `invoke should return success and add comic to repository`() = runTest {
         // Given
         val comic = Comic(
             title = "Test Comic",
@@ -32,17 +32,19 @@ class AddComicUseCaseTest {
             filePath = "/path/to/comic",
             coverPath = "/path/to/cover"
         )
+        coEvery { repository.addComic(comic) } returns Unit
 
         // When
         val result = addComicUseCase.invoke(comic)
 
         // Then
         assertTrue(result is Result.Success)
+        assertEquals(Unit, (result as Result.Success).data)
         coVerify(exactly = 1) { repository.addComic(comic) }
     }
 
     @Test
-    fun `invoke should propagate repository exceptions`() = runTest {
+    fun `invoke should return error when repository fails to add comic`() = runTest {
         // Given
         val comic = Comic(
             title = "Test Comic",
@@ -53,11 +55,12 @@ class AddComicUseCaseTest {
         val exception = RuntimeException("Database error")
         coEvery { repository.addComic(comic) } throws exception
 
-        // When & Then
+        // When
         val result = addComicUseCase.invoke(comic)
 
+        // Then
         assertTrue(result is Result.Error)
-        val error = result as Result.Error
-        assertEquals("Database error", error.exception.message)
+        assertEquals(exception, (result as Result.Error).exception)
+        coVerify(exactly = 1) { repository.addComic(comic) }
     }
 }
