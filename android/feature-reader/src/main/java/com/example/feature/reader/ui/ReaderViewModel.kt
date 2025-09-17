@@ -5,8 +5,8 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.feature.reader.domain.BookReader
-import com.example.feature.reader.domain.BookReaderFactory
+import com.example.core.reader.domain.BookReader
+import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers

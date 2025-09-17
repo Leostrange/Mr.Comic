@@ -1,21 +1,19 @@
-package com.example.feature.reader.domain
+package com.example.core.reader.domain
 
 import android.content.Context
 import android.net.Uri
-import com.example.feature.reader.data.CachingBookReader
-import com.example.feature.reader.data.CbrReader
-// import com.example.feature.reader.data.DjvuReader // Removed - missing library
-import com.example.feature.reader.data.CbzReader
-import com.example.feature.reader.data.PdfReader
-import com.example.feature.reader.data.cache.BitmapCache
+import com.example.core.reader.data.CachingBookReader
+import com.example.core.reader.data.CbrReader
+// import com.example.core.reader.data.DjvuReader // Removed - missing library
+import com.example.core.reader.data.CbzReader
+import com.example.core.reader.data.PdfReader
+import com.example.core.reader.data.cache.BitmapCache
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import javax.inject.Inject
 
 /**
  * Factory for creating [BookReader] instances based on file type.
  */
-class BookReaderFactory @Inject constructor(
+class BookReaderFactory(
     @ApplicationContext private val context: Context,
     private val bitmapCache: BitmapCache
 ) {
@@ -96,3 +94,4 @@ class BookReaderFactory @Inject constructor(
         currentUri = null
     }
 }
+

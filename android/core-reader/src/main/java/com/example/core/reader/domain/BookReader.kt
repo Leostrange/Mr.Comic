@@ -1,4 +1,4 @@
-package com.example.feature.reader.domain
+package com.example.core.reader.domain
 
 import android.graphics.Bitmap
 import android.net.Uri
