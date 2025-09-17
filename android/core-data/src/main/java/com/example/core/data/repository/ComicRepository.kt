@@ -10,6 +10,7 @@ import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 import com.example.core.data.database.ComicDao
 import com.example.core.data.database.ComicEntity
+import com.example.core.model.ReadingProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -27,8 +28,8 @@ interface ComicRepository {
     suspend fun rescanLibrary()
     suspend fun deleteComics(comicIds: Set<String>)
     suspend fun addComic(comic: Comic)
-    suspend fun getReadingProgress(comicId: String): Int
-    suspend fun updateProgress(comicId: String, currentPage: Int)
+    suspend fun getReadingProgress(comicId: String): ReadingProgress
+    suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int)
     suspend fun clearCache()
     suspend fun importComicFromUri(uri: android.net.Uri)
     suspend fun addBookmark(bookmark: Bookmark)
@@ -170,16 +171,21 @@ class ComicRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getReadingProgress(comicId: String): Int {
+    override suspend fun getReadingProgress(comicId: String): ReadingProgress {
         return withContext(Dispatchers.IO) {
-            comicDao.getReadingProgress(comicId)
+            val progress = comicDao.getReadingProgress(comicId)
                 ?: throw NoSuchElementException("Comic not found: $comicId")
+
+            ReadingProgress(
+                currentPage = progress.currentPage,
+                totalPages = progress.totalPages
+            )
         }
     }
 
-    override suspend fun updateProgress(comicId: String, currentPage: Int) {
+    override suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int) {
         withContext(Dispatchers.IO) {
-            val updatedRows = comicDao.updateProgress(comicId, currentPage)
+            val updatedRows = comicDao.updateProgress(comicId, currentPage, totalPages)
             if (updatedRows == 0) {
                 throw NoSuchElementException("Comic not found: $comicId")
             }

@@ -26,15 +26,16 @@ class SaveReadingProgressUseCaseTest {
         // Given
         val comicId = "test-comic-id"
         val currentPage = 5
-        coEvery { repository.updateProgress(comicId, currentPage) } returns Unit
+        val pageCount = 100
+        coEvery { repository.updateProgress(comicId, currentPage, pageCount) } returns Unit
 
         // When
-        val result = saveReadingProgressUseCase.invoke(comicId, currentPage)
+        val result = saveReadingProgressUseCase.invoke(comicId, currentPage, pageCount)
 
         // Then
         assertTrue(result is Result.Success)
         assertEquals(Unit, (result as Result.Success).data)
-        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage) }
+        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage, pageCount) }
     }
 
     @Test
@@ -42,16 +43,17 @@ class SaveReadingProgressUseCaseTest {
         // Given
         val comicId = "test-comic-id"
         val currentPage = 5
+        val pageCount = 80
         val exception = NoSuchElementException("Comic not found: $comicId")
-        coEvery { repository.updateProgress(comicId, currentPage) } throws exception
+        coEvery { repository.updateProgress(comicId, currentPage, pageCount) } throws exception
 
         // When
-        val result = saveReadingProgressUseCase.invoke(comicId, currentPage)
+        val result = saveReadingProgressUseCase.invoke(comicId, currentPage, pageCount)
 
         // Then
         assertTrue(result is Result.Error)
         assertEquals(exception, (result as Result.Error).exception)
-        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage) }
+        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage, pageCount) }
     }
 
     @Test
@@ -59,14 +61,15 @@ class SaveReadingProgressUseCaseTest {
         // Given
         val comicId = "test-comic-id"
         val currentPage = 0
-        coEvery { repository.updateProgress(comicId, currentPage) } returns Unit
+        val pageCount = 0
+        coEvery { repository.updateProgress(comicId, currentPage, pageCount) } returns Unit
 
         // When
-        val result = saveReadingProgressUseCase.invoke(comicId, currentPage)
+        val result = saveReadingProgressUseCase.invoke(comicId, currentPage, pageCount)
 
         // Then
         assertTrue(result is Result.Success)
-        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage) }
+        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage, pageCount) }
     }
 
     @Test
@@ -74,14 +77,15 @@ class SaveReadingProgressUseCaseTest {
         // Given
         val comicId = "test-comic-id"
         val currentPage = -1
-        coEvery { repository.updateProgress(comicId, currentPage) } returns Unit
+        val pageCount = 10
+        coEvery { repository.updateProgress(comicId, currentPage, pageCount) } returns Unit
 
         // When
-        val result = saveReadingProgressUseCase.invoke(comicId, currentPage)
+        val result = saveReadingProgressUseCase.invoke(comicId, currentPage, pageCount)
 
         // Then
         assertTrue(result is Result.Success)
-        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage) }
+        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage, pageCount) }
     }
 
     @Test
@@ -89,13 +93,14 @@ class SaveReadingProgressUseCaseTest {
         // Given
         val comicId = ""
         val currentPage = 5
-        coEvery { repository.updateProgress(comicId, currentPage) } returns Unit
+        val pageCount = 50
+        coEvery { repository.updateProgress(comicId, currentPage, pageCount) } returns Unit
 
         // When
-        val result = saveReadingProgressUseCase.invoke(comicId, currentPage)
+        val result = saveReadingProgressUseCase.invoke(comicId, currentPage, pageCount)
 
         // Then
         assertTrue(result is Result.Success)
-        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage) }
+        coVerify(exactly = 1) { repository.updateProgress(comicId, currentPage, pageCount) }
     }
 }

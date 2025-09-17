@@ -5,10 +5,12 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.domain.usecase.GetReadingProgressUseCase
+import com.example.core.domain.usecase.SaveReadingProgressUseCase
+import com.example.core.domain.util.Result
 import com.example.core.reader.domain.BookReader
 import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
-import com.example.feature.reader.ReaderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,7 +26,8 @@ import javax.inject.Inject
 class ReaderViewModel @Inject constructor(
     private val readerFactory: BookReaderFactory,
     private val settingsRepository: SettingsRepository,
-    private val readerRepository: ReaderRepository,
+    private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
+    private val getReadingProgressUseCase: GetReadingProgressUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -51,7 +54,6 @@ class ReaderViewModel @Inject constructor(
 
     private var bookReader: BookReader? = null
     private var currentComicId: String? = null
-    private var lastSavedState: Pair<String, Int>? = null
 
     companion object {
         private const val PRELOAD_DISTANCE = 1
@@ -59,22 +61,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     init {
-        viewModelScope.launch {
-            readerRepository.getStateFlow().collect { state ->
-                lastSavedState = state
-                val (savedComicId, savedPage) = state
-                val currentId = currentComicId
-                if (savedComicId.isNotEmpty() && currentId != null && savedComicId == currentId) {
-                    val desiredPage = savedPage.coerceAtLeast(0)
-                    if (bookReader != null && desiredPage != _uiState.value.currentPageIndex) {
-                        loadPage(desiredPage)
-                    }
-                }
-            }
-        }
-
-        // The file path is passed as a navigation argument.
-        // SavedStateHandle automatically receives arguments from the NavController.
+        // Путь к файлу приходит как аргумент навигации.
         android.util.Log.d(TAG, "🎬 ReaderViewModel initialized")
         android.util.Log.d(TAG, "📋 SavedStateHandle keys: ${savedStateHandle.keys()}")
         val uriString = savedStateHandle.get<String>("uri")
@@ -92,23 +79,36 @@ class ReaderViewModel @Inject constructor(
         android.util.Log.d(TAG, "Opening book: $uri")
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
-            // Close previous reader if a new book is opened
+            // Закрываем предыдущий reader при открытии новой книги
             bookReader?.close()
 
             try {
                 val reader = readerFactory.create(uri)
                 val pageCount = reader.open(uri)
-                bookReader = reader // Only assign if successful
+                bookReader = reader // назначаем только после успешного открытия
                 currentComicId = uri.toString()
                 android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
-                _uiState.update { it.copy(pageCount = pageCount) }
-                if (pageCount > 0) {
-                    val targetPage = lastSavedState
-                        ?.takeIf { it.first == currentComicId }
-                        ?.second
-                        ?.coerceIn(0, pageCount - 1)
-                        ?: 0
-                    loadPage(targetPage)
+
+                // Восстанавливаем прогресс чтения
+                val progressResult = getReadingProgressUseCase(currentComicId!!)
+                if (progressResult is Result.Error) {
+                    android.util.Log.w(TAG, "Failed to load reading progress", progressResult.exception)
+                }
+
+                val lastReadPage = when (progressResult) {
+                    is Result.Success -> progressResult.data.currentPage
+                    is Result.Error -> 0
+                }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+
+                val resolvedPageCount = when (progressResult) {
+                    is Result.Success -> if (pageCount == 0) progressResult.data.totalPages else pageCount
+                    is Result.Error -> pageCount
+                }
+
+                _uiState.update { it.copy(pageCount = resolvedPageCount) }
+
+                if (resolvedPageCount > 0) {
+                    loadPage(lastReadPage)
                 } else {
                     _uiState.update { it.copy(isLoading = false) }
                 }
@@ -166,7 +166,7 @@ class ReaderViewModel @Inject constructor(
             val bitmap = withContext(Dispatchers.IO) {
                 bookReader?.renderPage(pageIndex)
             }
-            
+
             if (bitmap != null) {
                 android.util.Log.d(TAG, "Page $pageIndex loaded successfully (${bitmap.width}x${bitmap.height})")
             } else {
@@ -181,28 +181,34 @@ class ReaderViewModel @Inject constructor(
                     error = if (bitmap == null) "Failed to load page ${pageIndex + 1}" else null
                 )
             }
-            if (bitmap != null) {
-                val comicId = currentComicId
-                if (!comicId.isNullOrEmpty()) {
-                    lastSavedState = comicId to pageIndex
-                    readerRepository.setState(comicId, pageIndex)
+
+            // Сохраняем прогресс чтения
+            currentComicId?.let { comicId ->
+                when (
+                    val saveResult = saveReadingProgressUseCase(
+                        comicId = comicId,
+                        currentPage = pageIndex,
+                        totalPages = _uiState.value.pageCount
+                    )
+                ) {
+                    is Result.Error -> android.util.Log.e(TAG, "Failed to save reading progress", saveResult.exception)
+                    else -> Unit
                 }
             }
-            // After updating UI, preload adjacent pages for a smoother experience
+
+            // Прелоадим соседние страницы
             preloadAdjacentPages(pageIndex)
         }
     }
 
     /**
-     * Preloads pages before and after the given index into the cache.
-     * This is a "fire-and-forget" operation running in the background.
+     * Фоновый прелоад страниц до/после текущей для более плавного UX.
      */
     private fun preloadAdjacentPages(centerPageIndex: Int) {
         val pageCount = _uiState.value.pageCount
         if (pageCount <= 1) return
 
         viewModelScope.launch(Dispatchers.IO) {
-            // Preload pages after the current one
             for (i in 1..PRELOAD_DISTANCE) {
                 val nextIndex = centerPageIndex + i
                 if (nextIndex < pageCount) {
@@ -210,7 +216,6 @@ class ReaderViewModel @Inject constructor(
                     bookReader?.renderPage(nextIndex)
                 }
             }
-            // Preload pages before the current one
             for (i in 1..PRELOAD_DISTANCE) {
                 val prevIndex = centerPageIndex - i
                 if (prevIndex >= 0) {
@@ -224,10 +229,8 @@ class ReaderViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         android.util.Log.d(TAG, "ViewModel cleared, closing book reader")
-        // Ensure resources are freed when the ViewModel is destroyed
         bookReader?.close()
         bookReader = null
         currentComicId = null
-        lastSavedState = null
     }
 }
