@@ -6,6 +6,8 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -21,42 +23,48 @@ class DeleteComicUseCaseTest {
     }
 
     @Test
-    fun `invoke should call repository deleteComic with correct id`() = runTest {
+    fun `invoke should return success and delete all requested comics`() = runTest {
         // Given
-        val comicId = "test-comic-id"
-
-        // When
-        val result = deleteComicUseCase.invoke(setOf(comicId))
-
-        // Then
-        assert(result is Result.Success)
-        coVerify(exactly = 1) { repository.deleteComics(setOf(comicId)) }
-    }
-
-    @Test
-    fun `invoke should propagate repository exceptions`() = runTest {
-        // Given
-        val comicId = "test-comic-id"
-        val exception = RuntimeException("Delete failed")
-        coEvery { repository.deleteComics(setOf(comicId)) } throws exception
-
-        // When & Then
-        val result = deleteComicUseCase.invoke(setOf(comicId))
-        assert(result is Result.Error)
-        val error = result as Result.Error
-        assert(error.exception.message == "Delete failed")
-    }
-
-    @Test
-    fun `invoke should handle empty comic id`() = runTest {
-        // Given
-        val comicIds = emptySet<String>()
+        val comicIds = setOf("comic-1", "comic-2", "comic-3")
+        coEvery { repository.deleteComics(comicIds) } returns Unit
 
         // When
         val result = deleteComicUseCase.invoke(comicIds)
 
         // Then
-        assert(result is Result.Success)
+        assertTrue(result is Result.Success)
+        assertEquals(Unit, (result as Result.Success).data)
+        coVerify(exactly = 1) { repository.deleteComics(comicIds) }
+    }
+
+    @Test
+    fun `invoke should return success when there are no comics to delete`() = runTest {
+        // Given
+        val comicIds = emptySet<String>()
+        coEvery { repository.deleteComics(comicIds) } returns Unit
+
+        // When
+        val result = deleteComicUseCase.invoke(comicIds)
+
+        // Then
+        assertTrue(result is Result.Success)
+        assertEquals(Unit, (result as Result.Success).data)
+        coVerify(exactly = 1) { repository.deleteComics(comicIds) }
+    }
+
+    @Test
+    fun `invoke should return error when repository fails to delete comics`() = runTest {
+        // Given
+        val comicIds = setOf("failed-id")
+        val exception = RuntimeException("Delete failed")
+        coEvery { repository.deleteComics(comicIds) } throws exception
+
+        // When
+        val result = deleteComicUseCase.invoke(comicIds)
+
+        // Then
+        assertTrue(result is Result.Error)
+        assertEquals(exception, (result as Result.Error).exception)
         coVerify(exactly = 1) { repository.deleteComics(comicIds) }
     }
 }

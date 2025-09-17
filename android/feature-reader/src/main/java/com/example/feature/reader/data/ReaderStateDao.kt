@@ -11,6 +11,9 @@ interface ReaderStateDao {
     @Query("SELECT * FROM reader_state WHERE id = 0")
     fun getState(): Flow<ReaderStateEntity?>
 
+    @Query("SELECT * FROM reader_state WHERE id = 0")
+    suspend fun getStateOnce(): ReaderStateEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setState(state: ReaderStateEntity)
-} 
+}

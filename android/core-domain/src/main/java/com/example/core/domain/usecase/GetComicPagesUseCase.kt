@@ -2,6 +2,7 @@ package com.example.core.domain.usecase
 
 import android.graphics.Bitmap
 import com.example.core.domain.util.Result
+import com.example.core.reader.domain.BookReader
 import com.example.core.reader.domain.BookReaderFactory
 import javax.inject.Inject
 
@@ -14,21 +15,15 @@ class GetComicPagesUseCase @Inject constructor(
         val reader = bookReaderFactory.getCurrentReader()
             ?: return Result.Success(0).also { cachedPageCount = 0 }
 
-        return try {
-            val totalPages = cachedPageCount ?: run {
-                val uri = bookReaderFactory.getCurrentUri()
-                if (uri != null) {
-                    reader.open(uri)
-                } else {
-                    reader.getPageCount()
-                }
-            }
-
-            cachedPageCount = totalPages
-            Result.Success(totalPages)
-        } catch (exception: Exception) {
-            Result.Error(exception)
-        }
+        return runCatching {
+            cachedPageCount ?: fetchPageCount(reader)
+        }.fold(
+            onSuccess = { totalPages ->
+                cachedPageCount = totalPages
+                Result.Success(totalPages)
+            },
+            onFailure = { exception -> Result.Error(exception) },
+        )
     }
 
     fun getPage(pageIndex: Int): Result<Bitmap?> {
@@ -39,21 +34,31 @@ class GetComicPagesUseCase @Inject constructor(
             return Result.Error(IndexOutOfBoundsException("Page index must be non-negative"))
         }
 
-        return try {
+        return runCatching {
             val pageCount = cachedPageCount ?: reader.getPageCount()
             if (pageIndex >= pageCount) {
-                Result.Success(null)
+                null
             } else {
-                Result.Success(reader.renderPage(pageIndex))
+                reader.renderPage(pageIndex)
             }
-        } catch (exception: Exception) {
-            Result.Error(exception)
-        }
+        }.fold(
+            onSuccess = { bitmap -> Result.Success(bitmap) },
+            onFailure = { exception -> Result.Error(exception) },
+        )
     }
 
     fun clearCache() {
         cachedPageCount = null
         bookReaderFactory.releaseResources()
+    }
+
+    private suspend fun fetchPageCount(reader: BookReader): Int {
+        val uri = bookReaderFactory.getCurrentUri()
+        return if (uri != null) {
+            reader.open(uri)
+        } else {
+            reader.getPageCount()
+        }
     }
 }
 
