@@ -1,17 +1,20 @@
 package com.example.core.domain
 
-import com.example.feature.library.data.ComicEntity
-import com.example.feature.library.LibraryRepository
+import com.example.core.data.repository.ComicRepository
+import com.example.core.domain.util.Result
+import com.example.core.model.Comic
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 class AddComicUseCaseTest {
 
-    private lateinit var repository: LibraryRepository
+    private lateinit var repository: ComicRepository
     private lateinit var addComicUseCase: AddComicUseCase
 
     @Before
@@ -23,44 +26,38 @@ class AddComicUseCaseTest {
     @Test
     fun `invoke should call repository addComic`() = runTest {
         // Given
-        val comic = ComicEntity(
-            id = "1",
+        val comic = Comic(
             title = "Test Comic",
+            author = "Test Author",
             filePath = "/path/to/comic",
-            coverPath = "/path/to/cover",
-            totalPages = 10,
-            currentPage = 0,
-            dateAdded = System.currentTimeMillis()
+            coverPath = "/path/to/cover"
         )
 
         // When
-        addComicUseCase.invoke(comic)
+        val result = addComicUseCase.invoke(comic)
 
         // Then
+        assertTrue(result is Result.Success)
         coVerify(exactly = 1) { repository.addComic(comic) }
     }
 
     @Test
     fun `invoke should propagate repository exceptions`() = runTest {
         // Given
-        val comic = ComicEntity(
-            id = "1",
+        val comic = Comic(
             title = "Test Comic",
+            author = "Test Author",
             filePath = "/path/to/comic",
-            coverPath = "/path/to/cover",
-            totalPages = 10,
-            currentPage = 0,
-            dateAdded = System.currentTimeMillis()
+            coverPath = "/path/to/cover"
         )
         val exception = RuntimeException("Database error")
         coEvery { repository.addComic(comic) } throws exception
 
         // When & Then
-        try {
-            addComicUseCase.invoke(comic)
-            assert(false) { "Expected exception to be thrown" }
-        } catch (e: RuntimeException) {
-            assert(e.message == "Database error")
-        }
+        val result = addComicUseCase.invoke(comic)
+
+        assertTrue(result is Result.Error)
+        val error = result as Result.Error
+        assertEquals("Database error", error.exception.message)
     }
 }
