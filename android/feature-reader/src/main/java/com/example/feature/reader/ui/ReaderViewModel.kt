@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.reader.domain.BookReader
 import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
+import com.example.feature.reader.ReaderRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ import javax.inject.Inject
 class ReaderViewModel @Inject constructor(
     private val readerFactory: BookReaderFactory,
     private val settingsRepository: SettingsRepository,
+    private val readerRepository: ReaderRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -48,6 +50,8 @@ class ReaderViewModel @Inject constructor(
     )
 
     private var bookReader: BookReader? = null
+    private var currentComicId: String? = null
+    private var lastSavedState: Pair<String, Int>? = null
 
     companion object {
         private const val PRELOAD_DISTANCE = 1
@@ -55,6 +59,20 @@ class ReaderViewModel @Inject constructor(
     }
 
     init {
+        viewModelScope.launch {
+            readerRepository.getStateFlow().collect { state ->
+                lastSavedState = state
+                val (savedComicId, savedPage) = state
+                val currentId = currentComicId
+                if (savedComicId.isNotEmpty() && currentId != null && savedComicId == currentId) {
+                    val desiredPage = savedPage.coerceAtLeast(0)
+                    if (bookReader != null && desiredPage != _uiState.value.currentPageIndex) {
+                        loadPage(desiredPage)
+                    }
+                }
+            }
+        }
+
         // The file path is passed as a navigation argument.
         // SavedStateHandle automatically receives arguments from the NavController.
         android.util.Log.d(TAG, "🎬 ReaderViewModel initialized")
@@ -81,9 +99,19 @@ class ReaderViewModel @Inject constructor(
                 val reader = readerFactory.create(uri)
                 val pageCount = reader.open(uri)
                 bookReader = reader // Only assign if successful
+                currentComicId = uri.toString()
                 android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
                 _uiState.update { it.copy(pageCount = pageCount) }
-                loadPage(0) // Load the first page
+                if (pageCount > 0) {
+                    val targetPage = lastSavedState
+                        ?.takeIf { it.first == currentComicId }
+                        ?.second
+                        ?.coerceIn(0, pageCount - 1)
+                        ?: 0
+                    loadPage(targetPage)
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Failed to open book", e)
                 _uiState.update {
@@ -144,7 +172,7 @@ class ReaderViewModel @Inject constructor(
             } else {
                 android.util.Log.w(TAG, "Failed to load page $pageIndex")
             }
-            
+
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -152,6 +180,13 @@ class ReaderViewModel @Inject constructor(
                     currentPageBitmap = bitmap,
                     error = if (bitmap == null) "Failed to load page ${pageIndex + 1}" else null
                 )
+            }
+            if (bitmap != null) {
+                val comicId = currentComicId
+                if (!comicId.isNullOrEmpty()) {
+                    lastSavedState = comicId to pageIndex
+                    readerRepository.setState(comicId, pageIndex)
+                }
             }
             // After updating UI, preload adjacent pages for a smoother experience
             preloadAdjacentPages(pageIndex)
@@ -192,5 +227,7 @@ class ReaderViewModel @Inject constructor(
         // Ensure resources are freed when the ViewModel is destroyed
         bookReader?.close()
         bookReader = null
+        currentComicId = null
+        lastSavedState = null
     }
 }
