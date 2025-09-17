@@ -1,4 +1,4 @@
-package com.example.feature.reader.data.cache
+package com.example.core.reader.data.cache
 
 import android.graphics.Bitmap
 import androidx.collection.LruCache

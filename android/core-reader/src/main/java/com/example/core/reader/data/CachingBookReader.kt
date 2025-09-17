@@ -1,9 +1,9 @@
-package com.example.feature.reader.data
+package com.example.core.reader.data
 
 import android.graphics.Bitmap
 import android.net.Uri
-import com.example.feature.reader.data.cache.BitmapCache
-import com.example.feature.reader.domain.BookReader
+import com.example.core.reader.data.cache.BitmapCache
+import com.example.core.reader.domain.BookReader
 
 /**
  * A decorator for [BookReader] that adds a bitmap caching layer.

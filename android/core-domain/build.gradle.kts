@@ -38,6 +38,7 @@ android {
 
 dependencies {
     implementation(project(":android:core-data"))
+    implementation(project(":android:core-reader"))
     implementation(project(":android:core-model"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)

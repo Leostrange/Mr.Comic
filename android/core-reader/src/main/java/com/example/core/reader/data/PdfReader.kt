@@ -1,9 +1,9 @@
-package com.example.feature.reader.data
+package com.example.core.reader.data
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import com.example.feature.reader.domain.BookReader
+import com.example.core.reader.domain.BookReader
 import com.example.core.reader.pdf.PdfReaderFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
