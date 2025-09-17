@@ -134,6 +134,7 @@ class ReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
+        getComicPagesUseCase.clearCache()
         loadComicUseCase.releaseResources()
     }
 }
