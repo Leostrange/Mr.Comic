@@ -42,7 +42,7 @@ class SaveReadingProgressUseCaseTest {
         // Given
         val comicId = "test-comic-id"
         val currentPage = 5
-        val exception = RuntimeException("Update failed")
+        val exception = NoSuchElementException("Comic not found: $comicId")
         coEvery { repository.updateProgress(comicId, currentPage) } throws exception
 
         // When

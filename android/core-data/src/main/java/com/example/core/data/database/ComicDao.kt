@@ -1,10 +1,10 @@
 package com.example.core.data.database
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Delete
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -37,13 +37,15 @@ interface ComicDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBookmark(bookmark: BookmarkEntity)
 
-    @Delete
-    suspend fun deleteBookmark(bookmark: BookmarkEntity)
-
     @Query("SELECT * FROM bookmarks WHERE comicId = :comicId ORDER BY page ASC")
     suspend fun getBookmarksForComic(comicId: String): List<BookmarkEntity>
 
-    // Progress tracking stub: no-op update to satisfy current UI expectations
-    @Query("UPDATE comics SET dateAdded = dateAdded WHERE filePath = :comicId")
-    suspend fun updateProgress(comicId: String)
+    @Delete
+    suspend fun deleteBookmark(bookmark: BookmarkEntity)
+
+    @Query("SELECT currentPage FROM comics WHERE filePath = :comicId LIMIT 1")
+    suspend fun getReadingProgress(comicId: String): Int?
+
+    @Query("UPDATE comics SET currentPage = :currentPage WHERE filePath = :comicId")
+    suspend fun updateProgress(comicId: String, currentPage: Int): Int
 }

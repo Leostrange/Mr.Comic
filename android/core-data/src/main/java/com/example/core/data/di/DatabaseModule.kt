@@ -22,7 +22,8 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "mr_comic_database"
-        ).build()
+        ).addMigrations(AppDatabase.MIGRATION_3_4)
+            .build()
     }
 
     @Provides
