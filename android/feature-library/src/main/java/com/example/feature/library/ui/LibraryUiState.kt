@@ -20,7 +20,8 @@ data class LibraryUiState(
     val totalComicsCount: Int = 0,
     val visibleComicsCount: Int = 0,
     val selectedTab: LibraryTab = LibraryTab.LIBRARY,
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
+    val folderGroups: Map<String, List<Comic>> = emptyMap()
 )
 
 enum class LibraryTab(val title: String) {

@@ -1,5 +1,7 @@
 package com.example.feature.reader.ui
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
@@ -25,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -63,11 +66,28 @@ fun ReaderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val bgColor by viewModel.background.collectAsState()
     val context = LocalContext.current
+    val activity = context as? Activity
 
     // Show error toast when error state changes
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
             Toast.makeText(context, "Ошибка: $error", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    DisposableEffect(uiState.orientation) {
+        val previousOrientation = activity?.requestedOrientation
+        val newOrientation = when (uiState.orientation) {
+            "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            "locked" -> ActivityInfo.SCREEN_ORIENTATION_LOCKED
+            else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        activity?.requestedOrientation = newOrientation
+        onDispose {
+            if (uiState.orientation == "auto") {
+                activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
         }
     }
 
@@ -96,6 +116,15 @@ private fun ReaderScreenContent(
     onSetReadingMode: (ReadingMode) -> Unit,
     backgroundColor: Color
 ) {
+    val contentScale = remember(uiState.scaleMode) {
+        when (uiState.scaleMode) {
+            "height" -> ContentScale.FillHeight
+            "fit" -> ContentScale.Fit
+            "custom" -> ContentScale.Fit
+            else -> ContentScale.FillWidth
+        }
+    }
+
     Scaffold(
         bottomBar = {
             if (!uiState.isLoading && uiState.error == null && uiState.pageCount > 0) {
@@ -143,7 +172,7 @@ private fun ReaderScreenContent(
                 uiState.pageCount > 0 -> {
                     // Show content
                     when (uiState.readingMode) {
-                        ReadingMode.PAGE -> PagedReader(uiState, onNextPage, onPreviousPage)
+                        ReadingMode.PAGE -> PagedReader(uiState, onNextPage, onPreviousPage, contentScale)
                         ReadingMode.WEBTOON -> WebtoonReader(uiState)
                     }
                 }
@@ -166,7 +195,8 @@ private fun ReaderScreenContent(
 private fun PagedReader(
     uiState: ReaderUiState,
     onNextPage: () -> Unit,
-    onPreviousPage: () -> Unit
+    onPreviousPage: () -> Unit,
+    contentScale: ContentScale
 ) {
     AnimatedContent(
         targetState = uiState,
@@ -208,7 +238,7 @@ private fun PagedReader(
                                 }
                             }
                         },
-                    contentScale = ContentScale.Fit
+                    contentScale = contentScale
                 )
             }
         }

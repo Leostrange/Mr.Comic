@@ -7,10 +7,25 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.core.model.SortOrder
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 interface SettingsRepository {
+    data class SettingsSnapshot(
+        val readingMode: String,
+        val scaleMode: String,
+        val orientation: String,
+        val theme: String,
+        val language: String,
+        val targetLanguage: String,
+        val translationProvider: String,
+        val ocrEngine: String,
+        val libraryFolders: Set<String>
+    ) {
+        companion object
+    }
+
     val sortOrder: Flow<SortOrder>
     suspend fun setSortOrder(sortOrder: SortOrder)
 
@@ -56,8 +71,6 @@ interface SettingsRepository {
     suspend fun setReadingDoubleTapZoom(value: Float)
     val readingBlockSwipeWhenZoomed: Flow<Boolean>
     suspend fun setReadingBlockSwipeWhenZoomed(enabled: Boolean)
-    val readingOrientation: Flow<String> // auto|portrait|landscape|locked
-    suspend fun setReadingOrientation(orientation: String)
 
     // UI Settings
     val theme: Flow<String> // system|light|dark|sepia|amoled|manga
@@ -85,6 +98,13 @@ interface SettingsRepository {
     val pdfPreloadThumbnails: Flow<Boolean>
     suspend fun setPdfPreloadThumbnails(enabled: Boolean)
 
+    val lastBackupUri: Flow<String?>
+    val lastBackupTime: Flow<Long?>
+    suspend fun updateLastBackup(uri: String, timestamp: Long)
+
+    suspend fun getSettingsSnapshot(): SettingsSnapshot
+    suspend fun applySettingsSnapshot(snapshot: SettingsSnapshot)
+
     suspend fun clearCache()
 }
 
@@ -111,13 +131,16 @@ class SettingsRepositoryImpl @Inject constructor(
         val ORIENTATION = stringPreferencesKey("orientation")
         val READING_DOUBLE_TAP_ZOOM = stringPreferencesKey("reading_double_tap_zoom")
         val READING_BLOCK_SWIPE_WHEN_ZOOMED = stringPreferencesKey("reading_block_swipe_when_zoomed")
-        val READING_ORIENTATION = stringPreferencesKey("reading_orientation")
 
         // UI Settings
         val THEME = stringPreferencesKey("theme")
         val LANGUAGE = stringPreferencesKey("language")
         val CACHE_SIZE = stringPreferencesKey("cache_size")
         val LIBRARY_SIZE = stringPreferencesKey("library_size")
+
+        // Backup metadata
+        val LAST_BACKUP_URI = stringPreferencesKey("backup_last_uri")
+        val LAST_BACKUP_TIME = stringPreferencesKey("backup_last_timestamp")
 
         // Library
         val LIBRARY_VIEW_MODE = stringPreferencesKey("library_view_mode")
@@ -168,27 +191,27 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override val targetLanguage: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.TARGET_LANGUAGE] ?: "en"
+        (it[PreferencesKeys.TARGET_LANGUAGE] ?: "en").lowercase()
     }
 
     override suspend fun setTargetLanguage(language: String) {
-        dataStore.edit { it[PreferencesKeys.TARGET_LANGUAGE] = language }
+        dataStore.edit { it[PreferencesKeys.TARGET_LANGUAGE] = language.lowercase() }
     }
 
     override val ocrEngine: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.OCR_ENGINE] ?: "Tesseract"
+        it[PreferencesKeys.OCR_ENGINE]?.lowercase()?.replaceFirstChar { c -> c.uppercase() } ?: "Tesseract"
     }
 
     override suspend fun setOcrEngine(engine: String) {
-        dataStore.edit { it[PreferencesKeys.OCR_ENGINE] = engine }
+        dataStore.edit { it[PreferencesKeys.OCR_ENGINE] = engine.lowercase() }
     }
 
     override val translationProvider: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.TRANSLATION_PROVIDER] ?: "Google"
+        (it[PreferencesKeys.TRANSLATION_PROVIDER] ?: "google").lowercase()
     }
 
     override suspend fun setTranslationProvider(provider: String) {
-        dataStore.edit { it[PreferencesKeys.TRANSLATION_PROVIDER] = provider }
+        dataStore.edit { it[PreferencesKeys.TRANSLATION_PROVIDER] = provider.lowercase() }
     }
 
     override val translationApiKey: Flow<String> = dataStore.data.map {
@@ -233,42 +256,36 @@ class SettingsRepositoryImpl @Inject constructor(
 
     // Reading
     override val readingMode: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.READING_MODE] ?: "horizontal"
+        normalizeReadingMode(it[PreferencesKeys.READING_MODE])
     }
     override suspend fun setReadingMode(mode: String) {
-        dataStore.edit { it[PreferencesKeys.READING_MODE] = mode }
+        dataStore.edit { it[PreferencesKeys.READING_MODE] = normalizeReadingMode(mode) }
     }
 
     override val scaleMode: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.SCALE_MODE] ?: "width"
+        normalizeScaleMode(it[PreferencesKeys.SCALE_MODE])
     }
     override suspend fun setScaleMode(mode: String) {
-        dataStore.edit { it[PreferencesKeys.SCALE_MODE] = mode }
+        dataStore.edit { it[PreferencesKeys.SCALE_MODE] = normalizeScaleMode(mode) }
     }
 
     override val orientation: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.ORIENTATION] ?: "auto"
+        normalizeOrientation(it[PreferencesKeys.ORIENTATION])
     }
     override suspend fun setOrientation(mode: String) {
-        dataStore.edit { it[PreferencesKeys.ORIENTATION] = mode }
+        dataStore.edit { it[PreferencesKeys.ORIENTATION] = normalizeOrientation(mode) }
     }
     override val readingDoubleTapZoom: Flow<Float> = dataStore.data.map {
-        it[PreferencesKeys.READING_DOUBLE_TAP_ZOOM]?.toFloat() ?: 2.0f
+        it[PreferencesKeys.READING_DOUBLE_TAP_ZOOM]?.toFloatOrNull()?.coerceAtLeast(1.0f) ?: 2.0f
     }
     override suspend fun setReadingDoubleTapZoom(value: Float) {
-        dataStore.edit { it[PreferencesKeys.READING_DOUBLE_TAP_ZOOM] = value.toString() }
+        dataStore.edit { it[PreferencesKeys.READING_DOUBLE_TAP_ZOOM] = value.coerceAtLeast(1.0f).toString() }
     }
     override val readingBlockSwipeWhenZoomed: Flow<Boolean> = dataStore.data.map {
         it[PreferencesKeys.READING_BLOCK_SWIPE_WHEN_ZOOMED]?.toBoolean() ?: true
     }
     override suspend fun setReadingBlockSwipeWhenZoomed(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.READING_BLOCK_SWIPE_WHEN_ZOOMED] = enabled.toString() }
-    }
-    override val readingOrientation: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.READING_ORIENTATION] ?: "auto"
-    }
-    override suspend fun setReadingOrientation(orientation: String) {
-        dataStore.edit { it[PreferencesKeys.READING_ORIENTATION] = orientation }
     }
 
     // Library
@@ -288,17 +305,17 @@ class SettingsRepositoryImpl @Inject constructor(
 
     // UI Settings
     override val theme: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.THEME] ?: "system"
+        (it[PreferencesKeys.THEME] ?: "system").lowercase()
     }
     override suspend fun setTheme(theme: String) {
-        dataStore.edit { it[PreferencesKeys.THEME] = theme }
+        dataStore.edit { it[PreferencesKeys.THEME] = theme.lowercase() }
     }
 
     override val language: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.LANGUAGE] ?: "ru"
+        (it[PreferencesKeys.LANGUAGE] ?: "ru").lowercase()
     }
     override suspend fun setLanguage(language: String) {
-        dataStore.edit { it[PreferencesKeys.LANGUAGE] = language }
+        dataStore.edit { it[PreferencesKeys.LANGUAGE] = language.lowercase() }
     }
 
     override val cacheSize: Flow<String> = dataStore.data.map {
@@ -309,19 +326,34 @@ class SettingsRepositoryImpl @Inject constructor(
         it[PreferencesKeys.LIBRARY_SIZE] ?: "2.1 GB"
     }
 
+    override val lastBackupUri: Flow<String?> = dataStore.data.map {
+        it[PreferencesKeys.LAST_BACKUP_URI]
+    }
+
+    override val lastBackupTime: Flow<Long?> = dataStore.data.map {
+        it[PreferencesKeys.LAST_BACKUP_TIME]?.toLongOrNull()
+    }
+
+    override suspend fun updateLastBackup(uri: String, timestamp: Long) {
+        dataStore.edit {
+            it[PreferencesKeys.LAST_BACKUP_URI] = uri
+            it[PreferencesKeys.LAST_BACKUP_TIME] = timestamp.toString()
+        }
+    }
+
     override suspend fun clearCache() {
         dataStore.edit { it.clear() }
     }
 
     // Cache
     override val pageCacheLimitMb: Flow<Int> = dataStore.data.map {
-        it[PreferencesKeys.PAGE_CACHE_LIMIT_MB]?.toInt() ?: 128
+        it[PreferencesKeys.PAGE_CACHE_LIMIT_MB]?.toIntOrNull() ?: 128
     }
     override suspend fun setPageCacheLimitMb(mb: Int) {
         dataStore.edit { it[PreferencesKeys.PAGE_CACHE_LIMIT_MB] = mb.toString() }
     }
     override val coverCacheLimitMb: Flow<Int> = dataStore.data.map {
-        it[PreferencesKeys.COVER_CACHE_LIMIT_MB]?.toInt() ?: 64
+        it[PreferencesKeys.COVER_CACHE_LIMIT_MB]?.toIntOrNull() ?: 64
     }
     override suspend fun setCoverCacheLimitMb(mb: Int) {
         dataStore.edit { it[PreferencesKeys.COVER_CACHE_LIMIT_MB] = mb.toString() }
@@ -329,7 +361,7 @@ class SettingsRepositoryImpl @Inject constructor(
 
     // PDF
     override val pdfRenderDpi: Flow<Int> = dataStore.data.map {
-        it[PreferencesKeys.PDF_RENDER_DPI]?.toInt() ?: 200
+        it[PreferencesKeys.PDF_RENDER_DPI]?.toIntOrNull()?.coerceIn(72, 600) ?: 200
     }
     override suspend fun setPdfRenderDpi(dpi: Int) {
         dataStore.edit { it[PreferencesKeys.PDF_RENDER_DPI] = dpi.toString() }
@@ -341,4 +373,60 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[PreferencesKeys.PDF_PRELOAD_THUMBS] = enabled.toString() }
     }
 
+    override suspend fun getSettingsSnapshot(): SettingsRepository.SettingsSnapshot {
+        val prefs = dataStore.data.first()
+        return SettingsRepository.SettingsSnapshot(
+            readingMode = normalizeReadingMode(prefs[PreferencesKeys.READING_MODE]),
+            scaleMode = normalizeScaleMode(prefs[PreferencesKeys.SCALE_MODE]),
+            orientation = normalizeOrientation(prefs[PreferencesKeys.ORIENTATION]),
+            theme = (prefs[PreferencesKeys.THEME] ?: "system").lowercase(),
+            language = (prefs[PreferencesKeys.LANGUAGE] ?: "ru").lowercase(),
+            targetLanguage = (prefs[PreferencesKeys.TARGET_LANGUAGE] ?: "en").lowercase(),
+            translationProvider = (prefs[PreferencesKeys.TRANSLATION_PROVIDER] ?: "google").lowercase(),
+            ocrEngine = prefs[PreferencesKeys.OCR_ENGINE]?.lowercase() ?: "tesseract",
+            libraryFolders = prefs[PreferencesKeys.LIBRARY_FOLDERS] ?: emptySet()
+        )
+    }
+
+    override suspend fun applySettingsSnapshot(snapshot: SettingsRepository.SettingsSnapshot) {
+        dataStore.edit {
+            it[PreferencesKeys.READING_MODE] = normalizeReadingMode(snapshot.readingMode)
+            it[PreferencesKeys.SCALE_MODE] = normalizeScaleMode(snapshot.scaleMode)
+            it[PreferencesKeys.ORIENTATION] = normalizeOrientation(snapshot.orientation)
+            it[PreferencesKeys.THEME] = snapshot.theme.lowercase()
+            it[PreferencesKeys.LANGUAGE] = snapshot.language.lowercase()
+            it[PreferencesKeys.TARGET_LANGUAGE] = snapshot.targetLanguage.lowercase()
+            it[PreferencesKeys.TRANSLATION_PROVIDER] = snapshot.translationProvider.lowercase()
+            it[PreferencesKeys.OCR_ENGINE] = snapshot.ocrEngine.lowercase()
+            it[PreferencesKeys.LIBRARY_FOLDERS] = snapshot.libraryFolders
+        }
+    }
+
+}
+
+private fun normalizeReadingMode(raw: String?): String {
+    return when (raw?.lowercase()?.trim()) {
+        "vertical", "webtoon" -> "webtoon"
+        "page", "horizontal" -> "page"
+        else -> "page"
+    }
+}
+
+private fun normalizeScaleMode(raw: String?): String {
+    return when (raw?.lowercase()?.trim()) {
+        "height" -> "height"
+        "fit" -> "fit"
+        "custom" -> "custom"
+        "width" -> "width"
+        else -> "width"
+    }
+}
+
+private fun normalizeOrientation(raw: String?): String {
+    return when (raw?.lowercase()?.trim()) {
+        "portrait" -> "portrait"
+        "landscape" -> "landscape"
+        "locked", "lock" -> "locked"
+        else -> "auto"
+    }
 }

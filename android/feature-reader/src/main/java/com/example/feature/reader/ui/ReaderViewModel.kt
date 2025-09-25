@@ -68,7 +68,7 @@ class ReaderViewModel @Inject constructor(
         true
     )
 
-    val readingOrientation = settingsRepository.readingOrientation.stateIn(
+    val readingOrientation = settingsRepository.orientation.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         "auto"
@@ -92,21 +92,73 @@ class ReaderViewModel @Inject constructor(
         // Путь к файлу приходит как аргумент навигации.
         android.util.Log.d(TAG, "🎬 ReaderViewModel initialized")
         android.util.Log.d(TAG, "📋 SavedStateHandle keys: ${savedStateHandle.keys()}")
+        observeReaderPreferences()
+
         val uriString = savedStateHandle.get<String>("uri")
         android.util.Log.d(TAG, "📁 Received URI from navigation: $uriString")
         if (uriString != null) {
             android.util.Log.d(TAG, "✅ URI found, opening book...")
-            openBook(Uri.parse(uriString))
+            val decoded = runCatching { Uri.decode(uriString) }.getOrElse { uriString }
+            val uri = runCatching { Uri.parse(decoded) }.getOrElse {
+                android.util.Log.w(TAG, "Failed to parse decoded URI, trying raw", it)
+                Uri.parse(uriString)
+            }
+            openBook(uri)
         } else {
             android.util.Log.e(TAG, "❌ No URI provided in navigation arguments!")
             _uiState.update { it.copy(isLoading = false, error = "File URI not provided.") }
         }
     }
 
+    private fun observeReaderPreferences() {
+        viewModelScope.launch {
+            settingsRepository.readingMode.collect { mode ->
+                val resolvedMode = when (normalizeReadingMode(mode)) {
+                    "webtoon" -> ReadingMode.WEBTOON
+                    else -> ReadingMode.PAGE
+                }
+                _uiState.update { it.copy(readingMode = resolvedMode) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.scaleMode.collect { scaleMode ->
+                _uiState.update { it.copy(scaleMode = normalizeScaleMode(scaleMode)) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.readingDoubleTapZoom.collect { zoom ->
+                _uiState.update { it.copy(doubleTapZoom = zoom.coerceAtLeast(1.0f)) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.readingBlockSwipeWhenZoomed.collect { block ->
+                _uiState.update { it.copy(blockSwipeWhenZoomed = block) }
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.orientation.collect { orientation ->
+                _uiState.update { it.copy(orientation = normalizeOrientation(orientation)) }
+            }
+        }
+    }
+
     fun openBook(uri: Uri) {
         android.util.Log.d(TAG, "Opening book: $uri")
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    pageCount = 0,
+                    currentPageIndex = 0,
+                    currentPageBitmap = null,
+                    bitmaps = emptyMap()
+                )
+            }
             // Закрываем предыдущий reader при открытии новой книги
             try {
                 bookReader?.close()
@@ -185,11 +237,45 @@ class ReaderViewModel @Inject constructor(
     fun setReadingMode(mode: ReadingMode) {
         android.util.Log.d(TAG, "Setting reading mode: $mode")
         _uiState.update { it.copy(readingMode = mode) }
+        viewModelScope.launch {
+            settingsRepository.setReadingMode(
+                when (mode) {
+                    ReadingMode.WEBTOON -> "webtoon"
+                    ReadingMode.PAGE -> "page"
+                }
+            )
+        }
     }
 
     fun setReadingDirection(direction: ReadingDirection) {
         android.util.Log.d(TAG, "Setting reading direction: $direction")
         _uiState.update { it.copy(readingDirection = direction) }
+    }
+
+    private fun normalizeReadingMode(raw: String?): String {
+        return when (raw?.lowercase()?.trim()) {
+            "vertical", "webtoon" -> "webtoon"
+            else -> "page"
+        }
+    }
+
+    private fun normalizeScaleMode(raw: String?): String {
+        return when (raw?.lowercase()?.trim()) {
+            "height" -> "height"
+            "fit" -> "fit"
+            "stretch", "fill" -> "fit"
+            "custom" -> "custom"
+            else -> "width"
+        }
+    }
+
+    private fun normalizeOrientation(raw: String?): String {
+        return when (raw?.lowercase()?.trim()) {
+            "portrait" -> "portrait"
+            "landscape" -> "landscape"
+            "locked", "lock" -> "locked"
+            else -> "auto"
+        }
     }
 
     private suspend fun getPage(pageIndex: Int): Bitmap? {
@@ -221,11 +307,18 @@ class ReaderViewModel @Inject constructor(
                 android.util.Log.w(TAG, "Failed to load page $pageIndex")
             }
 
-            _uiState.update {
-                it.copy(
+            _uiState.update { currentState ->
+                val updatedBitmaps = if (bitmap != null) {
+                    currentState.bitmaps + (pageIndex to bitmap)
+                } else {
+                    currentState.bitmaps - pageIndex
+                }
+
+                currentState.copy(
                     isLoading = false,
                     currentPageIndex = pageIndex,
                     currentPageBitmap = bitmap,
+                    bitmaps = updatedBitmaps,
                     error = if (bitmap == null) "Failed to load page ${pageIndex + 1}" else null
                 )
             }
@@ -264,7 +357,16 @@ class ReaderViewModel @Inject constructor(
                     val reader = bookReader
                     if (reader != null) {
                         val result = reader.renderPage(nextIndex, 1920, 1080, 1.0f)
-                        if (result.isFailure) {
+                        if (result.isSuccess) {
+                            result.getOrNull()?.let { bitmap ->
+                                withContext(Dispatchers.Main) {
+                                    _uiState.update { state ->
+                                        if (state.bitmaps[nextIndex] === bitmap) state
+                                        else state.copy(bitmaps = state.bitmaps + (nextIndex to bitmap))
+                                    }
+                                }
+                            }
+                        } else {
                             android.util.Log.e(TAG, "Failed to preload page $nextIndex: ${result.exceptionOrNull()?.message}")
                         }
                     }
@@ -277,7 +379,16 @@ class ReaderViewModel @Inject constructor(
                     val reader = bookReader
                     if (reader != null) {
                         val result = reader.renderPage(prevIndex, 1920, 1080, 1.0f)
-                        if (result.isFailure) {
+                        if (result.isSuccess) {
+                            result.getOrNull()?.let { bitmap ->
+                                withContext(Dispatchers.Main) {
+                                    _uiState.update { state ->
+                                        if (state.bitmaps[prevIndex] === bitmap) state
+                                        else state.copy(bitmaps = state.bitmaps + (prevIndex to bitmap))
+                                    }
+                                }
+                            }
+                        } else {
                             android.util.Log.e(TAG, "Failed to preload page $prevIndex: ${result.exceptionOrNull()?.message}")
                         }
                     }

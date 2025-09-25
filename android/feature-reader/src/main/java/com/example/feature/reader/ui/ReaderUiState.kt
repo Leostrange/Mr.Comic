@@ -22,5 +22,9 @@ data class ReaderUiState(
     val currentPageBitmap: Bitmap? = null,
     val bitmaps: Map<Int, Bitmap> = emptyMap(),
     val readingMode: ReadingMode = ReadingMode.PAGE,
-    val readingDirection: ReadingDirection = ReadingDirection.LTR
+    val readingDirection: ReadingDirection = ReadingDirection.LTR,
+    val scaleMode: String = "width",
+    val doubleTapZoom: Float = 2.0f,
+    val blockSwipeWhenZoomed: Boolean = true,
+    val orientation: String = "auto"
 )

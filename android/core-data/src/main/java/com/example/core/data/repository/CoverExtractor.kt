@@ -2,7 +2,10 @@ package com.example.core.data.repository
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +13,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipFile
+import java.io.ByteArrayOutputStream
+import com.github.junrar.Archive
 import javax.inject.Inject
 
 interface CoverExtractor {
@@ -46,12 +51,20 @@ class CoverExtractorImpl @Inject constructor(
                     extractCoverFromZip(tempFile)
                 }
                 fileName.endsWith(".cbr", ignoreCase = true) || fileName.endsWith(".rar", ignoreCase = true) -> {
-                    // TODO: Implement RAR support when junrar library is available
-                    null
+                    val tempFile = File.createTempFile("comic", ".${fileName.substringAfterLast('.')}").apply {
+                        deleteOnExit()
+                    }
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    extractCoverFromCbr(tempFile)
                 }
                 fileName.endsWith(".pdf", ignoreCase = true) -> {
-                    // TODO: Implement PDF cover extraction
-                    null
+                    val tempFile = File.createTempFile("comic", ".pdf").apply { deleteOnExit() }
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        tempFile.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    extractCoverFromPdf(tempFile)
                 }
                 else -> null
             }
@@ -91,9 +104,47 @@ class CoverExtractorImpl @Inject constructor(
                 val entry = entries.first()
                 val inputStream = zip.getInputStream(entry)
 
-                android.graphics.BitmapFactory.decodeStream(inputStream)
+                BitmapFactory.decodeStream(inputStream)
             }
         } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun extractCoverFromCbr(rarFile: File): Bitmap? {
+        return try {
+            Archive(rarFile).use { archive ->
+                val imageHeader = archive.fileHeaders
+                    .filter { !it.isDirectory && it.fileName.lowercase().matches(".*\\.(jpe?g|png|webp)$".toRegex()) }
+                    .sortedBy { it.fileName.lowercase() }
+                    .firstOrNull() ?: return null
+
+                val output = ByteArrayOutputStream()
+                archive.extractFile(imageHeader, output)
+                val bytes = output.toByteArray()
+                if (bytes.isEmpty()) return null
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun extractCoverFromPdf(pdfFile: File): Bitmap? {
+        return try {
+            ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
+                PdfRenderer(descriptor).use { renderer ->
+                    if (renderer.pageCount == 0) return null
+                    renderer.openPage(0).use { page ->
+                        val width = (page.width * 0.8f).toInt().coerceAtLeast(1)
+                        val height = (page.height * 0.8f).toInt().coerceAtLeast(1)
+                        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).also { bitmap ->
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {
             null
         }
     }
