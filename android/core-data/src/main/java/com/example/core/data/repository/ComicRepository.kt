@@ -56,11 +56,12 @@ class ComicRepositoryImpl @Inject constructor(
             entities.map { entity ->
                 Comic(
                     title = entity.title,
-                    author = "Unknown", // Assuming author is not in ComicEntity for now
                     filePath = entity.filePath,
+                    fileName = entity.title,
+                    fileSize = 0L,
                     coverPath = entity.coverPath,
-                    currentPage = entity.currentPage,
-                    totalPages = entity.totalPages
+                    pageCount = entity.totalPages,
+                    readingProgress = if (entity.totalPages > 0) entity.currentPage.toFloat() / entity.totalPages.toFloat() else 0f
                 )
             }
         }
@@ -161,11 +162,11 @@ class ComicRepositoryImpl @Inject constructor(
         withContext(Dispatchers.IO) {
             val comicEntity = ComicEntity(
                 filePath = comic.filePath,
-                title = comic.title,
+                title = comic.title.ifBlank { getFileName(Uri.parse(comic.filePath)) ?: "Unknown" },
                 coverPath = comic.coverPath,
                 dateAdded = System.currentTimeMillis(),
-                currentPage = comic.currentPage,
-                totalPages = comic.totalPages
+                currentPage = ((comic.readingProgress.coerceIn(0f, 1f)) * comic.pageCount.toFloat()).toInt(),
+                totalPages = comic.pageCount
             )
             comicDao.insertAll(listOf(comicEntity))
         }
@@ -219,10 +220,14 @@ class ComicRepositoryImpl @Inject constructor(
                 }
             }
 
+            val fileUri = Uri.fromFile(destinationFile)
+            // Извлечём обложку сразу
+            val cover = runCatching { coverExtractor.extractAndSaveCover(uri) }.getOrNull() // Передаём оригинальный URI
+
             val comicEntity = ComicEntity(
-                filePath = destinationFile.absolutePath,
+                filePath = fileUri.toString(),
                 title = fileName.substringBeforeLast('.'),
-                coverPath = null, // Cover can be extracted later
+                coverPath = cover,
                 dateAdded = System.currentTimeMillis(),
                 currentPage = 0,
                 totalPages = 0

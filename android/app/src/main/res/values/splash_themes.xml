@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme for Modern Splash Screen (Android 12+) -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <!-- Set the splash screen background -->
+        <item name="windowSplashScreenBackground">@color/splash_screen_background</item>
+        
+        <!-- Set the splash screen animated vector drawable -->
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        
+        <!-- Set the theme of the Activity that directly follows your splash screen -->
+        <item name="postSplashScreenTheme">@android:style/Theme.DeviceDefault.NoActionBar</item>
+        
+        <!-- Customize the splash screen animation duration -->
+        <item name="windowSplashScreenAnimationDuration">1000</item>
+        
+        <!-- Set the icon background color -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_screen_icon_background</item>
+    </style>
+    
+    <!-- Fallback theme for older Android versions -->
+    <style name="Theme.App.Starting.Legacy" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>

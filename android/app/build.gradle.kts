@@ -11,14 +11,16 @@ android {
     }
     namespace = "com.example.mrcomic"
     compileSdk = libs.versions.compileSdk.get().toInt()
+    buildToolsVersion = libs.versions.buildTools.get()
 
     defaultConfig {
         applicationId = "com.example.mrcomic"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
 
-        versionCode = 1
-        versionName = "1.0"
+        // bump to force new APK build signature/size
+        versionCode = 12
+        versionName = "1.0.12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -28,7 +30,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -39,6 +42,32 @@ android {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+        }
+    }
+    
+    // Dynamic Features конфигурация
+    // Temporarily disabled due to build issues
+    // dynamicFeatures.add(":android:feature_cbr")
+    
+    // App Bundle конфигурация
+    bundle {
+        language {
+            enableSplit = true
+        }
+        density {
+            enableSplit = true
+        }
+        abi {
+            enableSplit = true
+        }
+    }
+    
+    // Отключаем ABI сплиты — собираем универсальный APK
+    splits {
+        abi {
+            isEnable = false
+            reset()
+            isUniversalApk = true
         }
     }
     
@@ -109,6 +138,7 @@ dependencies {
     implementation(project(":android:core-ui"))
     implementation(project(":android:core-data"))
     implementation(project(":android:core-model"))
+    // Enabled now that compilation errors are fixed
     implementation(project(":android:core-reader"))
     implementation(project(":android:feature-library"))
     implementation(project(":android:feature-settings"))
@@ -116,6 +146,8 @@ dependencies {
     implementation(project(":android:feature-themes"))
     implementation(project(":android:feature-onboarding"))
     implementation(project(":android:feature-ocr"))
+    // Temporarily disabled due to build issues
+    // implementation(project(":android:feature_cbr"))
     
     // Third-party libraries
     implementation(libs.coil.compose)
@@ -129,6 +161,11 @@ dependencies {
     // PDF support - using stable alternatives
     implementation(libs.pdfium.android)
     // implementation(libs.android.pdf.viewer.fallback)
+    
+    // EPUB support - LGPL licensed
+    implementation(libs.epublib.core) {
+        exclude(group = "xmlpull", module = "xmlpull")
+    }
     
     // Video splash screen (Media3)
     implementation(libs.media3.exoplayer)

@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":android:core-reader"))
     implementation(project(":android:core-data"))
     implementation(project(":android:core-domain"))
+    implementation(project(":android:core-model"))
     implementation(project(":android:core-ui"))
     implementation(libs.bundles.room)
     ksp(libs.androidx.room.compiler)

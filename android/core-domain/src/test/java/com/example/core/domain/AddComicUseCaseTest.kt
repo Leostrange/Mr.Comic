@@ -1,6 +1,7 @@
 package com.example.core.domain
 
 import com.example.core.data.repository.ComicRepository
+import com.example.core.domain.usecase.AddComicUseCase
 import com.example.core.domain.util.Result
 import com.example.core.model.Comic
 import io.mockk.coEvery
@@ -39,7 +40,7 @@ class AddComicUseCaseTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(Unit, (result as Result.Success).data)
+        assertEquals(Unit, (result as Result.Success<Unit>).data)
         coVerify(exactly = 1) { repository.addComic(comic) }
     }
 

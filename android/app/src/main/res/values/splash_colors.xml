@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash Screen Colors -->
+    <color name="splash_background">#1A1A1A</color>
+    <color name="splash_text_primary">#FFFFFF</color>
+    <color name="splash_text_secondary">#CCCCCC</color>
+    <color name="splash_text_tertiary">#888888</color>
+    <color name="splash_accent">#FF6B35</color>
+    
+    <!-- Modern Splash Screen (Android 12+) -->
+    <color name="splash_screen_background">#1A1A1A</color>
+    <color name="splash_screen_icon_background">#FF6B35</color>
+</resources>

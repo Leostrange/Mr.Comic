@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cbr_module_title">CBR Reader</string>
+    <string name="cbr_module_description">Support for CBR/RAR comic files</string>
+</resources>

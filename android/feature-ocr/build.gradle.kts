@@ -50,6 +50,7 @@ dependencies {
     // Core modules
     implementation(project(":android:shared"))
     implementation(project(":android:core-ui"))
+    implementation(project(":android:core-model"))
 
     // Hilt
     implementation(libs.google.hilt.android)

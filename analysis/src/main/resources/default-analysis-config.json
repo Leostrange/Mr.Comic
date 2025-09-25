@@ -1,0 +1,34 @@
+{
+  "enabledAnalyzers": [],
+  "disabledAnalyzers": [],
+  "securityScanLevel": "STANDARD",
+  "performanceThresholds": {
+    "maxBuildTimeMinutes": 10,
+    "maxMemoryUsageMb": 512,
+    "minTestCoveragePercent": 80.0,
+    "maxMethodComplexity": 10,
+    "maxClassSize": 500
+  },
+  "autoFixLevel": "SAFE_ONLY",
+  "reportFormat": "MARKDOWN",
+  "excludePatterns": [
+    ".*\\.generated\\..*",
+    ".*/build/.*",
+    ".*/\\.gradle/.*"
+  ],
+  "includePatterns": [
+    ".*\\.kt$",
+    ".*\\.java$",
+    ".*\\.gradle\\.kts$"
+  ],
+  "parallelExecution": true,
+  "maxConcurrentAnalyzers": 4,
+  "cacheEnabled": true,
+  "timeoutMinutes": 30,
+  "outputDirectory": "analysis-output",
+  "customSettings": {
+    "mrcomic.enablePluginAnalysis": "true",
+    "mrcomic.enableOcrAnalysis": "true",
+    "mrcomic.enableArchiveAnalysis": "true"
+  }
+}

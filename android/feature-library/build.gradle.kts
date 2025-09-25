@@ -43,6 +43,7 @@ dependencies {
     ksp(libs.google.hilt.compiler)
     implementation(libs.bundles.room)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.coil.compose)
     testImplementation(libs.bundles.test.unit)
     implementation(libs.accompanist.permissions)
 }

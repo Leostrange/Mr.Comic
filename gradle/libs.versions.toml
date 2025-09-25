@@ -3,6 +3,7 @@
 androidApplication = "8.7.2"
 androidLibrary = "8.7.2"
 compileSdk = "35"
+buildTools = "35.0.0"
 minSdk = "26"
 targetSdk = "35"
 
@@ -71,6 +72,7 @@ slf4jAndroid = "1.7.36"
 mlkitTextRecognition = "16.0.0"
 materialIconsExtended = "1.6.8"
 androidPdfViewer = "2.8.2"
+epublib = "3.1"
 
 androidPdfViewerFallback = "2.7.0-beta.3"
 
@@ -199,6 +201,9 @@ commons-compress = { group = "org.apache.commons", name = "commons-compress", ve
 pdfium-android = { group = "com.github.barteksc", name = "pdfium-android", version.ref = "pdfium_android" }
 # android-pdf-viewer = { group = "com.github.barteksc", name = "android-pdf-viewer", version.ref = "androidPdfViewer" }
 pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
+
+# EPUB support - LGPL licensed
+epublib-core = { group = "nl.siegmann.epublib", name = "epublib-core", version.ref = "epublib" }
 
 # MLKit (working versions) - using stable releases
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version = "16.0.1" }

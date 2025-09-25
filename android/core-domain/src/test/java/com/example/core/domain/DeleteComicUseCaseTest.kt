@@ -1,6 +1,7 @@
 package com.example.core.domain
 
 import com.example.core.data.repository.ComicRepository
+import com.example.core.domain.usecase.DeleteComicUseCase
 import com.example.core.domain.util.Result
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -33,7 +34,7 @@ class DeleteComicUseCaseTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(Unit, (result as Result.Success).data)
+        assertEquals(Unit, (result as Result.Success<Unit>).data)
         coVerify(exactly = 1) { repository.deleteComics(comicIds) }
     }
 
@@ -48,7 +49,7 @@ class DeleteComicUseCaseTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(Unit, (result as Result.Success).data)
+        assertEquals(Unit, (result as Result.Success<Unit>).data)
         coVerify(exactly = 1) { repository.deleteComics(comicIds) }
     }
 

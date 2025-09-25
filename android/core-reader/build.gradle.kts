@@ -40,6 +40,9 @@ dependencies {
     implementation(libs.pdfium.android) // Using stable version
     implementation(libs.pdfbox.android) // Fallback PDF library
     implementation(libs.commons.compress)
+    
+    // EPUB support - LGPL licensed
+    implementation(libs.epublib.core) {
+        exclude(group = "xmlpull", module = "xmlpull")
+    }
 }
-
-

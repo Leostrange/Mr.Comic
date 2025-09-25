@@ -13,12 +13,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 
@@ -33,61 +35,106 @@ fun VideoSplashScreen(
     @RawRes videoResId: Int,
     onSplashFinished: () -> Unit,
     modifier: Modifier = Modifier,
-    autoFinishDelayMs: Long = 3000L,
+    autoFinishDelayMs: Long = Long.MAX_VALUE, // Убираем таймаут - видео играет полностью
     showControls: Boolean = false
 ) {
     val context = LocalContext.current
     
     val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            val uri = Uri.parse("android.resource://${context.packageName}/$videoResId")
-            val mediaItem = MediaItem.fromUri(uri)
-            setMediaItem(mediaItem)
-            prepare()
-            playWhenReady = true
-            repeatMode = Player.REPEAT_MODE_OFF
-            volume = 0f // Mute for better UX as recommended
+        try {
+            ExoPlayer.Builder(context).build().apply {
+                val uri = Uri.parse("android.resource://${context.packageName}/$videoResId")
+                val mediaItem = MediaItem.fromUri(uri)
+                setMediaItem(mediaItem)
+                prepare()
+                playWhenReady = true
+                repeatMode = Player.REPEAT_MODE_OFF
+                volume = 0f // Mute for better UX as recommended
+            }
+        } catch (e: Exception) {
+            // Если не удается создать плеер, возвращаем null
+            null
         }
     }
 
-    // Auto-finish splash after delay or video completion
+    // Гарантируем одиночный вызов завершения
+    val finishedOnce = remember { androidx.compose.runtime.mutableStateOf(false) }
+
     LaunchedEffect(exoPlayer) {
-        val listener = object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED) {
-                    onSplashFinished()
+        if (exoPlayer != null) {
+            val listener = object : Player.Listener {
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED && !finishedOnce.value) {
+                        finishedOnce.value = true
+                        onSplashFinished()
+                    }
+                }
+                
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    if (!finishedOnce.value) {
+                        finishedOnce.value = true
+                        onSplashFinished()
+                    }
                 }
             }
+            exoPlayer.addListener(listener)
         }
-        exoPlayer.addListener(listener)
         
-        // Fallback timeout
-        delay(autoFinishDelayMs)
-        onSplashFinished()
+                // Fallback timeout – завершаем, только если ещё не завершили по видео
+                // Но поскольку autoFinishDelayMs теперь Long.MAX_VALUE, таймаут не сработает
+                delay(autoFinishDelayMs)
+                if (!finishedOnce.value) {
+                    finishedOnce.value = true
+                    onSplashFinished()
+                }
     }
 
     DisposableEffect(exoPlayer) {
         onDispose {
-            exoPlayer.release()
+            exoPlayer?.release()
         }
     }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface),
+            .background(Color.Black), // Чёрный фон вместо MaterialTheme
         contentAlignment = Alignment.Center
     ) {
-        AndroidView(
-            factory = { context ->
-                PlayerView(context).apply {
-                    player = exoPlayer
-                    useController = showControls
-                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                }
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+        if (exoPlayer != null) {
+            AndroidView(
+                factory = { context ->
+                    PlayerView(context).apply {
+                        player = exoPlayer
+                        useController = showControls
+                        setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                        // Растягиваем видео по высоте, убирая полосы сверху и снизу
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FILL
+                        setBackgroundColor(android.graphics.Color.BLACK)
+                        // Отключаем системные insets для полного экрана
+                        setSystemUiVisibility(
+                            android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                            android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                            android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black) // Чёрные полосы вместо белых
+            )
+        } else {
+                    // Если плеер не создался, показываем чёрный экран и завершаем
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                    )
+                    LaunchedEffect(Unit) {
+                        delay(1000L) // Короткая задержка для показа чёрного экрана
+                        onSplashFinished()
+                    }
+        }
     }
 }
 
@@ -103,7 +150,7 @@ fun VideoSplash(
     VideoSplashScreen(
         videoResId = videoResId,
         onSplashFinished = onFinished,
-        autoFinishDelayMs = 2500L,
+        autoFinishDelayMs = 4000L, // Увеличиваем время для нового видео
         showControls = false
     )
 }

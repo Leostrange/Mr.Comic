@@ -32,9 +32,7 @@
     <!-- Basic Colors -->
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
-    
-    <!-- Splash Screen -->
-    <color name="splash_background">@color/primary</color>
+
 
     <!-- Legacy names used in XML layouts -->
     <color name="primary_color">@color/primary</color>

@@ -1,5 +1,18 @@
 <resources>
     <string name="app_name">Mr.Comic</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_settings">Icono de la aplicación</string>
+    <string name="app_icon_settings_description">Elige tu icono de aplicación preferido</string>
+    <string name="app_icon_default">Por defecto</string>
+    <string name="app_icon_alt1">Alternativo 1</string>
+    <string name="app_icon_alt2">Alternativo 2</string>
+    <string name="app_icon_alt3">Alternativo 3</string>
+    <string name="app_icon_current">Actual</string>
+    <string name="app_icon_unavailable">No disponible</string>
+    <string name="app_icon_reset">Restablecer al predeterminado</string>
+    <string name="app_icon_change_success">Icono de la aplicación cambiado exitosamente</string>
+    <string name="app_icon_change_error">Error al cambiar el icono de la aplicación</string>
     <string name="language_settings">Configuración de idioma</string>
     <string name="settings">Configuración</string>
     <string name="library">Biblioteca</string>

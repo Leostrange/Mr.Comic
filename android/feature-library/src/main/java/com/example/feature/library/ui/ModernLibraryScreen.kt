@@ -48,8 +48,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+
+import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -77,7 +77,7 @@ import com.example.core.ui.components.MrComicFAB
 import com.example.core.ui.theme.MrComicTheme
 import kotlin.math.max
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun ModernLibraryScreen(
     onBookClick: (filePath: String) -> Unit,
@@ -136,7 +136,7 @@ fun ModernLibraryScreen(
         if (uiState.searchQuery.isBlank()) emptyList() else filteredComics.take(5)
     }
 
-    val pullToRefreshState = rememberPullToRefreshState()
+
 
     Scaffold(
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -187,14 +187,7 @@ fun ModernLibraryScreen(
         },
         contentWindowInsets = WindowInsets(0)
     ) { paddingValues ->
-        PullToRefreshBox(
-            state = pullToRefreshState,
-            isRefreshing = uiState.isRefreshing && uiState.selectedTab == LibraryTab.LIBRARY,
-            onRefresh = {
-                if (uiState.selectedTab == LibraryTab.LIBRARY) {
-                    viewModel.refreshLibrary()
-                }
-            },
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)

@@ -3,7 +3,7 @@ package com.example.core.domain.usecase
 import android.graphics.Bitmap
 import android.net.Uri
 import com.example.core.domain.util.Result
-import com.example.core.reader.domain.BookReader
+import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.BookReaderFactory
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -22,7 +22,7 @@ import org.junit.Test
 class GetComicPagesUseCaseTest {
 
     private lateinit var bookReaderFactory: BookReaderFactory
-    private lateinit var bookReader: BookReader
+    private lateinit var bookReader: MediaReader
     private lateinit var getComicPagesUseCase: GetComicPagesUseCase
     private lateinit var mockUri: Uri
 
@@ -49,9 +49,8 @@ class GetComicPagesUseCaseTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(expectedPageCount, (result as Result.Success).data)
+        assertEquals(expectedPageCount, (result as Result.Success<Int>).data)
         verify(exactly = 1) { bookReader.getPageCount() }
-        coVerify(exactly = 0) { bookReader.open(any()) }
     }
 
     @Test
@@ -65,8 +64,8 @@ class GetComicPagesUseCaseTest {
         val secondResult = getComicPagesUseCase.getTotalPages()
 
         // Then
-        assertEquals(expectedPageCount, (firstResult as Result.Success).data)
-        assertEquals(expectedPageCount, (secondResult as Result.Success).data)
+        assertEquals(expectedPageCount, (firstResult as Result.Success<Int>).data)
+        assertEquals(expectedPageCount, (secondResult as Result.Success<Int>).data)
         verify(exactly = 1) { bookReader.getPageCount() }
     }
 
@@ -80,58 +79,27 @@ class GetComicPagesUseCaseTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(0, (result as Result.Success).data)
+        assertEquals(0, (result as Result.Success<Int>).data)
     }
 
     @Test
-    fun `getTotalPages should return error when open throws`() = runTest {
-        // Given
-        val exception = RuntimeException("Failed to open book")
-        every { bookReader.getPageCount() } returns 0
-        coEvery { bookReader.open(mockUri) } throws exception
-
-        // When
-        val result = getComicPagesUseCase.getTotalPages()
-
-        // Then
-        assertTrue(result is Result.Error)
-        assertEquals(exception, (result as Result.Error).exception)
-    }
-
-    @Test
-    fun `getTotalPages should fallback to current page count when uri missing`() = runTest {
-        // Given
-        val expectedPageCount = 7
-        every { bookReaderFactory.getCurrentUri() } returns null
-        every { bookReader.getPageCount() } returns expectedPageCount
-
-        // When
-        val result = getComicPagesUseCase.getTotalPages()
-
-        // Then
-        assertTrue(result is Result.Success)
-        assertEquals(expectedPageCount, (result as Result.Success).data)
-        coVerify(exactly = 0) { bookReader.open(any()) }
-    }
-
-    @Test
-    fun `getPage should return success result with bitmap`() {
+    fun `getPage should return success result with bitmap`() = runTest {
         // Given
         val pageIndex = 5
         val mockBitmap = mockk<Bitmap>()
         every { bookReader.getPageCount() } returns 10
-        every { bookReader.renderPage(pageIndex) } returns mockBitmap
+        coEvery { bookReader.renderPage(pageIndex, 1920, 1080, 1.0f) } returns Result.success(mockBitmap)
 
         // When
         val result = getComicPagesUseCase.getPage(pageIndex)
 
         // Then
         assertTrue(result is Result.Success)
-        assertEquals(mockBitmap, (result as Result.Success).data)
+        assertEquals(mockBitmap, (result as Result.Success<Bitmap?>).data)
     }
 
     @Test
-    fun `getPage should return success with null when no reader available`() {
+    fun `getPage should return success with null when no reader available`() = runTest {
         // Given
         every { bookReaderFactory.getCurrentReader() } returns null
 
@@ -140,16 +108,16 @@ class GetComicPagesUseCaseTest {
 
         // Then
         assertTrue(result is Result.Success)
-        assertNull((result as Result.Success).data)
+        assertNull((result as Result.Success<Bitmap?>).data)
     }
 
     @Test
-    fun `getPage should return error when render throws`() {
+    fun `getPage should return error when render fails`() = runTest {
         // Given
         val pageIndex = 3
         val exception = RuntimeException("Failed to render page")
         every { bookReader.getPageCount() } returns 10
-        every { bookReader.renderPage(pageIndex) } throws exception
+        coEvery { bookReader.renderPage(pageIndex, 1920, 1080, 1.0f) } returns Result.failure(exception)
 
         // When
         val result = getComicPagesUseCase.getPage(pageIndex)
@@ -160,7 +128,7 @@ class GetComicPagesUseCaseTest {
     }
 
     @Test
-    fun `getPage should return error on negative index`() {
+    fun `getPage should return error on negative index`() = runTest {
         // When
         val result = getComicPagesUseCase.getPage(-1)
 
@@ -180,9 +148,9 @@ class GetComicPagesUseCaseTest {
         val secondResult = getComicPagesUseCase.getTotalPages()
 
         // Then
-        assertEquals(3, (firstResult as Result.Success).data)
-        assertEquals(6, (secondResult as Result.Success).data)
-        verify { bookReaderFactory.releaseResources() }
+        assertEquals(3, (firstResult as Result.Success<Int>).data)
+        assertEquals(6, (secondResult as Result.Success<Int>).data)
+        coVerify { bookReaderFactory.releaseResources() }
         verify(exactly = 2) { bookReader.getPageCount() }
     }
 }

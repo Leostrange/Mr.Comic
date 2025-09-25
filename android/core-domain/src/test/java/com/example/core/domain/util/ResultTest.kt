@@ -90,7 +90,7 @@ class ResultTest {
         assertTrue(successResult is Result.Success)
         assertTrue(errorResult is Result.Error)
         assertFalse(successResult is Result.Error)
-        assertFalse(errorResult is Result.Success)
+        assertFalse(errorResult is Result.Success<*>)
     }
 
     @Test

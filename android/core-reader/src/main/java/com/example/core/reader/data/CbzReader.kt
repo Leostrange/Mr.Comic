@@ -3,139 +3,141 @@ package com.example.core.reader.data
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import android.graphics.BitmapFactory
-import com.example.core.reader.domain.BookReader
+import com.example.core.reader.domain.MediaReader
+import com.example.core.reader.domain.MediaMetadata
+import com.example.core.reader.domain.MediaType
+import com.example.core.reader.streaming.StreamingExtractor
+import com.example.core.reader.utils.BitmapUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import net.lingala.zip4j.ZipFile
-import java.io.File
 
 /**
- * A [BookReader] implementation for reading CBZ (ZIP archive) files.
+ * A [MediaReader] implementation for reading CBZ (ZIP archive) files.
  */
 class CbzReader(
     private val context: Context
-) : BookReader {
-
-    private var tempDir: File? = null
-    private var pagePaths: List<String> = emptyList()
-    private var tempComicFile: File? = null
+) : MediaReader {
+    
+    private var streamingExtractor: StreamingExtractor? = null
     private var pageCount: Int = 0
-
-    override suspend fun open(uri: Uri): Int {
-        return withContext(Dispatchers.IO) {
-            try {
-                val cacheDir = context.cacheDir
-
-                // Create a unique temporary directory for this comic to avoid conflicts
-                tempDir = File(cacheDir, "reader_cbz_${uri.toString().hashCode()}_${System.currentTimeMillis()}").apply {
-                    mkdirs()
-                }
-
-                // Copy content from URI to a temporary file because Zip4j works with Files
-                val createdTempFile = File.createTempFile("temp_cbz_", ".cbz", cacheDir)
-                tempComicFile = createdTempFile
-                
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    createdTempFile.outputStream().use { outputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
-                } ?: throw IllegalStateException("Cannot open input stream from URI")
-
-                // Validate file exists and is not empty
-                if (!createdTempFile.exists() || createdTempFile.length() == 0L) {
-                    throw IllegalStateException("CBZ файл пустой или поврежден")
-                }
-
-                val zipFile = ZipFile(createdTempFile)
-                if (zipFile.isEncrypted) {
-                    throw IllegalStateException("Зашифрованные CBZ файлы не поддерживаются")
-                }
-
-                // Filter for image files, extract them, and collect their paths
-                val extractedImagePaths = zipFile.fileHeaders
-                    .filter { !it.isDirectory && isImageFile(it.fileName) }
-                    .mapNotNull { fileHeader ->
-                        try {
-                            val currentTempDir = tempDir ?: throw IllegalStateException("Temp directory is null")
-                            zipFile.extractFile(fileHeader, currentTempDir.absolutePath)
-                            File(currentTempDir, fileHeader.fileName.substringAfterLast(File.separator)).absolutePath
-                        } catch (e: Exception) {
-                            // Log the error but continue with other files
-                            android.util.Log.w("CbzReader", "Failed to extract ${fileHeader.fileName}: ${e.message}")
-                            null
-                        }
-                    }
-
-                if (extractedImagePaths.isEmpty()) {
+    private var currentUri: Uri? = null
+    private var metadata: MediaMetadata? = null
+    private var isOpen: Boolean = false
+    
+    override suspend fun open(context: Context, uri: Uri): Result<MediaMetadata> = withContext(Dispatchers.IO) {
+        try {
+            cleanup()
+            currentUri = uri
+            
+            // Используем стриминговую распаковку
+            streamingExtractor = StreamingExtractor(context)
+            val result = streamingExtractor!!.openArchive(uri)
+            
+            if (result.isSuccess) {
+                val imageFiles = result.getOrNull() ?: emptyList()
+                if (imageFiles.isEmpty()) {
                     throw IllegalStateException("В CBZ файле не найдено изображений")
                 }
-
-                // Sort pages alphabetically to ensure correct order
-                pagePaths = extractedImagePaths.sorted()
-                pageCount = pagePaths.size
-                pageCount
-            } catch (e: Exception) {
-                // Clean up on error
-                cleanup()
-                throw when (e) {
-                    is IllegalStateException -> e
-                    else -> IllegalStateException("Ошибка при открытии CBZ файла: ${e.message}", e)
-                }
+                
+                pageCount = imageFiles.size
+                android.util.Log.d("CbzReader", "Opened CBZ with $pageCount pages using streaming extraction")
+                
+                // Create metadata
+                metadata = MediaMetadata(
+                    title = uri.lastPathSegment,
+                    pageCount = pageCount,
+                    type = MediaType.CBZ
+                )
+                
+                isOpen = true
+                Result.success(metadata!!)
+            } else {
+                throw result.exceptionOrNull() ?: IllegalStateException("Failed to open CBZ archive")
             }
+        } catch (e: Exception) {
+            cleanup()
+            Result.failure(when (e) {
+                is IllegalStateException -> e
+                else -> IllegalStateException("Ошибка при открытии CBZ файла: ${e.message}", e)
+            })
         }
     }
-
-    override fun getPageCount(): Int = pageCount
-
-    override fun renderPage(pageIndex: Int): Bitmap? {
-        if (pageIndex < 0 || pageIndex >= pagePaths.size) {
-            android.util.Log.w("CbzReader", "Invalid page index: $pageIndex (total pages: ${pagePaths.size})")
-            return null
+    
+    override fun getPageCount(): Int? = if (isOpen) pageCount else null
+    
+    override suspend fun renderPage(
+        pageIndex: Int,
+        maxWidth: Int,
+        maxHeight: Int,
+        scale: Float
+    ): Result<Bitmap> {
+        if (!isOpen) {
+            return Result.failure(IllegalStateException("CBZ reader is not open"))
         }
         
-        val path = pagePaths[pageIndex]
-        return runCatching { 
-            val bitmap = BitmapFactory.decodeFile(path)
-            if (bitmap == null) {
-                android.util.Log.w("CbzReader", "Failed to decode bitmap from: $path")
+        val extractor = streamingExtractor ?: return Result.failure(IllegalStateException("Streaming extractor not initialized"))
+        
+        if (pageIndex < 0 || pageIndex >= pageCount) {
+            android.util.Log.w("CbzReader", "Invalid page index: $pageIndex (total pages: $pageCount)")
+            return Result.failure(IndexOutOfBoundsException("Invalid page index: $pageIndex"))
+        }
+        
+        return try {
+            // Используем стриминговую распаковку для получения файла
+            val fileResult = extractor.getFile(pageIndex)
+            
+            if (fileResult.isSuccess) {
+                val file = fileResult.getOrNull()!!
+                // Используем оптимизированное декодирование
+                val bitmap = BitmapUtils.decodeSampledBitmapFromFile(
+                    file.absolutePath,
+                    maxWidth,
+                    maxHeight,
+                    Bitmap.Config.RGB_565 // Экономим память
+                )
+                if (bitmap != null) {
+                    Result.success(bitmap)
+                } else {
+                    Result.failure(IllegalStateException("Failed to decode bitmap"))
+                }
+            } else {
+                android.util.Log.w("CbzReader", "Failed to extract file for page $pageIndex: ${fileResult.exceptionOrNull()?.message}")
+                Result.failure(fileResult.exceptionOrNull() ?: IllegalStateException("Failed to extract file"))
             }
-            bitmap
-        }.getOrElse { e ->
+        } catch (e: Exception) {
             android.util.Log.e("CbzReader", "Error rendering page $pageIndex: ${e.message}", e)
-            null
+            Result.failure(e)
         }
     }
-
-    override fun close() {
+    
+    override fun getMetadata(): MediaMetadata? {
+        return metadata
+    }
+    
+    override suspend fun close() {
         cleanup()
     }
-
-    private fun cleanup() {
-        try {
-            tempDir?.deleteRecursively()
-        } catch (e: Exception) {
-            android.util.Log.w("CbzReader", "Failed to delete temp directory: ${e.message}")
-        }
-        tempDir = null
-        
-        try {
-            tempComicFile?.delete()
-        } catch (e: Exception) {
-            android.util.Log.w("CbzReader", "Failed to delete temp file: ${e.message}")
-        }
-        tempComicFile = null
-        
-        pagePaths = emptyList()
-        pageCount = 0
+    
+    override fun isOpen(): Boolean {
+        return isOpen
     }
-
+    
+    private fun cleanup() {
+        streamingExtractor?.cleanup()
+        streamingExtractor = null
+        pageCount = 0
+        currentUri = null
+        metadata = null
+        isOpen = false
+    }
+    
     private fun isImageFile(fileName: String): Boolean {
         val lowercaseName = fileName.lowercase()
         return lowercaseName.endsWith(".jpg") ||
             lowercaseName.endsWith(".jpeg") ||
             lowercaseName.endsWith(".png") ||
             lowercaseName.endsWith(".webp") ||
-            lowercaseName.endsWith(".bmp")
+            lowercaseName.endsWith(".bmp") ||
+            lowercaseName.endsWith(".gif")
     }
 }

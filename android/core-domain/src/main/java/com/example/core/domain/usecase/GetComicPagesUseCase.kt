@@ -2,7 +2,7 @@ package com.example.core.domain.usecase
 
 import android.graphics.Bitmap
 import com.example.core.domain.util.Result
-import com.example.core.reader.domain.BookReader
+import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.BookReaderFactory
 import javax.inject.Inject
 
@@ -22,11 +22,11 @@ class GetComicPagesUseCase @Inject constructor(
                 cachedPageCount = totalPages
                 Result.Success(totalPages)
             },
-            onFailure = { exception -> Result.Error(exception) },
+            onFailure = { exception -> Result.Error(exception as? Exception ?: Exception("${exception.message ?: "Unknown error"}")) },
         )
     }
 
-    fun getPage(pageIndex: Int): Result<Bitmap?> {
+    suspend fun getPage(pageIndex: Int): Result<Bitmap?> {
         val reader = bookReaderFactory.getCurrentReader()
             ?: return Result.Success(null)
 
@@ -35,35 +35,37 @@ class GetComicPagesUseCase @Inject constructor(
         }
 
         return runCatching {
-            val pageCount = cachedPageCount ?: reader.getPageCount()
+            val pageCount = cachedPageCount ?: reader.getPageCount() ?: 0
             if (pageIndex >= pageCount) {
-                null
+                Result.Success(null)
             } else {
-                reader.renderPage(pageIndex)
+                val result = reader.renderPage(pageIndex, 1920, 1080, 1.0f)
+                if (result.isSuccess) {
+                    Result.Success(result.getOrNull())
+                } else {
+                    Result.Error(Exception("${result.exceptionOrNull()?.message ?: "Failed to render page"}"))
+                }
             }
         }.fold(
-            onSuccess = { bitmap -> Result.Success(bitmap) },
-            onFailure = { exception -> Result.Error(exception) },
+            onSuccess = { result -> result },
+            onFailure = { exception -> Result.Error(exception as? Exception ?: Exception("${exception.message ?: "Unknown error"}")) },
         )
     }
 
     fun clearCache() {
         cachedPageCount = null
-        bookReaderFactory.releaseResources()
+        kotlinx.coroutines.runBlocking {
+            bookReaderFactory.releaseResources()
+        }
     }
 
-    private suspend fun fetchPageCount(reader: BookReader): Int {
+    private suspend fun fetchPageCount(reader: MediaReader): Int {
         val currentCount = reader.getPageCount()
-        if (currentCount > 0) {
+        if (currentCount != null && currentCount > 0) {
             return currentCount
         }
 
-        val uri = bookReaderFactory.getCurrentUri()
-        return if (uri != null) {
-            reader.open(uri)
-        } else {
-            currentCount
-        }
+        // For MediaReader, we don't need to reopen as it should already be open
+        return currentCount ?: 0
     }
 }
-

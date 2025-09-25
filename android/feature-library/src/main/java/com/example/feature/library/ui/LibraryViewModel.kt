@@ -1,8 +1,12 @@
 package com.example.feature.library.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.data.repository.ComicRepository
+import com.example.core.data.repository.SettingsRepository
 import com.example.core.model.Comic
 import com.example.core.model.SortOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,16 +20,81 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val TAG = "LibraryViewModel"
+
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val comicRepository: ComicRepository
+    private val comicRepository: ComicRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState = _uiState.asStateFlow()
 
+    // Настройки библиотеки
+    val libraryViewMode = settingsRepository.libraryViewMode
+    val librarySortOrder = settingsRepository.librarySortOrder
+
     init {
         observeComics()
+        // Применяем настройки при инициализации
+        viewModelScope.launch {
+            libraryViewMode.collectLatest { mode ->
+                _uiState.update { it.copy(viewMode = mode) }
+            }
+        }
+        viewModelScope.launch {
+            librarySortOrder.collectLatest { order ->
+                _uiState.update { it.copy(sortOrder = order) }
+            }
+        }
+    }
+
+    /**
+     * Добавляет папку библиотеки (SAF tree URI), сохраняет разрешение и пересканирует библиотеку.
+     */
+    fun addLibraryFolder(context: Context, treeUri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Захватываем permissions на дерево документов
+                // Используем только READ_PERMISSION, так как PERSISTABLE не поддерживается всеми провайдерами
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                try {
+                    context.contentResolver.takePersistableUriPermission(treeUri, flags)
+                } catch (e: SecurityException) {
+                    // Некоторые провайдеры не поддерживают persistable permissions
+                    // Но мы можем работать с временными правами, если они уже есть
+                    android.util.Log.w(TAG, "Persistable permissions not supported: ${e.message}")
+                }
+
+                settingsRepository.addLibraryFolder(treeUri.toString())
+                // Триггер пересканирования
+                comicRepository.rescanLibrary()
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error adding library folder", e)
+                _uiState.update { it.copy(error = "Не удалось добавить папку: ${e.message}") }
+            }
+        }
+    }
+
+    /**
+     * Импорт одного файла через SAF (из диалога OpenDocument) в библиотеку.
+     * Не открывает чтение, только добавляет и пересканирует список.
+     */
+    fun importComicUri(context: Context, uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Для одиночных файлов persistable-права не требуются, достаточно временного READ
+                // Некоторые провайдеры ругаются на флаг PERSISTABLE (0x40): "Requested flags 0x41, but only 0x3 are allowed"
+                // Поэтому здесь не вызываем takePersistableUriPermission вообще.
+
+                comicRepository.importComicFromUri(uri)
+                // Обновим список
+                comicRepository.rescanLibrary()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message ?: "Failed to import comic") }
+            }
+        }
     }
 
     private fun observeComics() {
@@ -82,7 +151,17 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun onSortOrderChange(sortOrder: SortOrder) {
+        viewModelScope.launch {
+            settingsRepository.setLibrarySortOrder(sortOrder)
+        }
         _uiState.update { it.copy(sortOrder = sortOrder) }
+    }
+
+    fun onViewModeChange(viewMode: String) {
+        viewModelScope.launch {
+            settingsRepository.setLibraryViewMode(viewMode)
+        }
+        _uiState.update { it.copy(viewMode = viewMode) }
     }
 
     fun onTabSelected(tab: LibraryTab) {

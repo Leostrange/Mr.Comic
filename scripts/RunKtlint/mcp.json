@@ -1,7 +1,0 @@
-{
-  "name": "RunKtlint",
-  "description": "Запускает форматирование ktlint по всему проекту",
-  "language": "typescript",
-  "entry": "index.ts",
-  "outputType": "text"
-} 

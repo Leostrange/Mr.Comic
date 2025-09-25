@@ -13,14 +13,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.Text
 import androidx.navigation.compose.rememberNavController
-import com.example.core.ui.splash.VideoSplash
+import androidx.compose.ui.platform.LocalContext
+import com.example.core.ui.splash.GifSplash
 import com.example.core.ui.theme.MrComicTheme
 import com.example.core.ui.theme.ThemePreferencesRepository
 import javax.inject.Inject
 import com.example.mrcomic.navigation.AppNavHost
+import com.example.mrcomic.navigation.Screen
+import com.example.mrcomic.crash.CrashLogger
+import com.example.mrcomic.ui.CrashReportScreen
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.delay
 
 /**
  * Главная активность приложения Mr.Comic
@@ -38,7 +47,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            MrComicApp(themePreferencesRepository)
+            val deepLink = when (intent?.action) {
+                android.content.Intent.ACTION_VIEW -> intent?.dataString
+                else -> null
+            }
+            MrComicApp(themePreferencesRepository, initialDeepLinkUri = deepLink)
         }
     }
     
@@ -61,7 +74,7 @@ class MainActivity : ComponentActivity() {
  * Главный компонент приложения с современным видео-сплэшем
  */
 @Composable
-fun MrComicApp(themePreferencesRepository: ThemePreferencesRepository) {
+fun MrComicApp(themePreferencesRepository: ThemePreferencesRepository, initialDeepLinkUri: String? = null) {
     var showVideoSplash by remember { mutableStateOf(true) }
     val themeConfig by themePreferencesRepository.themeConfig.collectAsState(
         initial = com.example.core.ui.theme.ThemeConfig()
@@ -74,14 +87,36 @@ fun MrComicApp(themePreferencesRepository: ThemePreferencesRepository) {
             color = MaterialTheme.colorScheme.background
         ) {
             if (showVideoSplash) {
-                VideoSplash(
+                // Показываем видео-сплэшскрин
+                com.example.core.ui.splash.VideoSplashScreen(
                     videoResId = R.raw.splash_video,
-                    onFinished = { 
+                    onSplashFinished = {
                         showVideoSplash = false
                     }
                 )
             } else {
                 val navController = rememberNavController()
+                val context = LocalContext.current
+                val crashLog = CrashLogger.getCrashText(context)
+                if (crashLog != null) {
+                    CrashReportScreen(
+                        log = crashLog,
+                        onContinue = {
+                            CrashLogger.clear(context)
+                        },
+                        onClear = {
+                            CrashLogger.clear(context)
+                        }
+                    )
+                    return@Surface
+                }
+                // Если приложение запущено через интент с файлом, переходим сразу к ридеру
+                LaunchedEffect(Unit) {
+                    initialDeepLinkUri?.let { raw ->
+                        val encoded = android.net.Uri.encode(raw)
+                        navController.navigate(Screen.Reader.create(encoded))
+                    }
+                }
                 AppNavHost(
                     navController = navController,
                     onOnboardingComplete = { /* no-op */ }

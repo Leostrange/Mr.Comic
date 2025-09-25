@@ -17,6 +17,31 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MrComic">
+        <!-- Modern Splash Activity - Entry Point -->
+        <activity
+            android:name=".splash.ModernSplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.App.Starting">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <!-- Video Splash Activity for legacy devices -->
+        <activity
+            android:name=".splash.VideoSplashActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        
+        <!-- App Icon Settings Activity -->
+        <activity
+            android:name=".ui.settings.AppIconSettingsActivity"
+            android:exported="false"
+            android:label="@string/app_icon_settings"
+            android:theme="@style/Theme.MrComic" />
+        
+        <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -24,8 +49,9 @@
             android:theme="@style/Theme.MrComic.SplashScreen"
             tools:targetApi="31">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -39,8 +65,62 @@
                 <data android:scheme="file" android:host="*" android:pathPattern=".*\\.cbr" android:mimeType="application/x-cbr" />
                 <data android:scheme="content" android:host="*" android:pathPattern=".*\\.epub" android:mimeType="application/epub+zip" />
                 <data android:scheme="file" android:host="*" android:pathPattern=".*\\.epub" android:mimeType="application/epub+zip" />
+                <!-- Доп. MIME-типы для совместимости с файловыми менеджерами -->
+                <!-- CBR/RAR -->
+                <data android:mimeType="application/vnd.comicbook-rar" />
+                <data android:mimeType="application/vnd.comicbook+rar" />
+                <data android:mimeType="application/x-rar-compressed" />
+                <data android:mimeType="application/rar" />
+                <!-- CBZ/ZIP -->
+                <data android:mimeType="application/vnd.comicbook+zip" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
             </intent-filter>
         </activity>
+
+        <!-- Alternative app icons -->
+        <activity-alias
+            android:name=".MainActivityAlt1"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt1"
+            android:roundIcon="@mipmap/ic_launcher_alt1"
+            android:label="@string/app_name"
+            android:targetActivity=".splash.ModernSplashActivity">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityAlt2"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt2"
+            android:roundIcon="@mipmap/ic_launcher_alt2"
+            android:label="@string/app_name"
+            android:targetActivity=".splash.ModernSplashActivity">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".MainActivityAlt3"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_alt3"
+            android:roundIcon="@mipmap/ic_launcher_alt3"
+            android:label="@string/app_name"
+            android:targetActivity=".splash.ModernSplashActivity">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
     </application>
 
 </manifest>

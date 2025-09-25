@@ -10,6 +10,7 @@ data class LibraryUiState(
     val comics: List<Comic> = emptyList(),
     val error: String? = null,
     val sortOrder: SortOrder = SortOrder.DATE_ADDED_DESC,
+    val viewMode: String = "grid", // list|grid|folders
     val searchQuery: String = "",
     val isSearchActive: Boolean = false,
     val inSelectionMode: Boolean = false,

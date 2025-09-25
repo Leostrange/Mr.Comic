@@ -28,7 +28,8 @@ android {
 
 dependencies {
     implementation(project(":android:core-model"))
-    implementation(project(":android:core-reader"))
+    // Temporarily disabled due to compilation errors
+    // implementation(project(":android:core-reader"))
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
     implementation(libs.bundles.room)

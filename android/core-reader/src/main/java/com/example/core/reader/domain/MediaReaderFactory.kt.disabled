@@ -1,0 +1,123 @@
+package com.example.core.reader.domain
+
+import android.content.Context
+import android.net.Uri
+import android.webkit.MimeTypeMap
+import com.example.core.reader.data.CbrReader
+import com.example.core.reader.data.CbzReader
+import com.example.core.reader.data.EpubReader
+import com.example.core.reader.data.ImageSeqReader
+import com.example.core.reader.pdf.PdfiumReader
+import java.io.File
+
+/**
+ * Фабрика для создания подходящего MediaReader на основе типа файла
+ */
+class MediaReaderFactory {
+    
+    companion object {
+        private const val TAG = "MediaReaderFactory"
+        
+        /**
+         * Создать MediaReader для указанного URI
+         * @param context Android контекст
+         * @param uri URI файла
+         * @return MediaReader или null если формат не поддерживается
+         */
+        fun createReader(context: Context, uri: Uri): MediaReader? {
+            val mediaType = determineMediaType(uri) ?: return null
+            
+            return when (mediaType) {
+                MediaType.CBR -> CbrReader(context)
+                MediaType.CBZ -> CbzReader(context)
+                MediaType.PDF -> PdfiumReader()
+                MediaType.EPUB -> EpubReader(context)
+                MediaType.ZIP -> CbzReader(context) // ZIP обрабатывается как CBZ
+                MediaType.IMAGE_SEQ -> ImageSeqReader(context)
+            }
+        }
+        
+        /**
+         * Определить тип медиа по URI
+         */
+        private fun determineMediaType(uri: Uri): MediaType? {
+            // Сначала пробуем по расширению файла
+            val path = uri.path ?: uri.toString()
+            val extension = getFileExtension(path)
+            
+            extension?.let { ext ->
+                MediaType.fromExtension(ext)?.let { return it }
+            }
+            
+            // Если не удалось по расширению, пробуем по MIME типу
+            val mimeType = getMimeType(uri)
+            mimeType?.let { mime ->
+                MediaType.fromMimeType(mime)?.let { return it }
+            }
+            
+            // Специальная обработка для архивов
+            if (isArchiveFile(path)) {
+                return when {
+                    path.contains(".cbr", ignoreCase = true) -> MediaType.CBR
+                    path.contains(".cbz", ignoreCase = true) -> MediaType.CBZ
+                    path.contains(".zip", ignoreCase = true) -> MediaType.ZIP
+                    else -> null
+                }
+            }
+            
+            return null
+        }
+        
+        /**
+         * Получить расширение файла
+         */
+        private fun getFileExtension(path: String): String? {
+            val lastDot = path.lastIndexOf('.')
+            return if (lastDot > 0 && lastDot < path.length - 1) {
+                path.substring(lastDot + 1).lowercase()
+            } else null
+        }
+        
+        /**
+         * Получить MIME тип для URI
+         */
+        private fun getMimeType(uri: Uri): String? {
+            return try {
+                val extension = getFileExtension(uri.path ?: "")
+                extension?.let { MimeTypeMap.getSingleton().getMimeTypeFromExtension(it) }
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to get MIME type for URI: $uri", e)
+                null
+            }
+        }
+        
+        /**
+         * Проверить, является ли файл архивом
+         */
+        private fun isArchiveFile(path: String): Boolean {
+            val archiveExtensions = listOf(".cbr", ".cbz", ".zip", ".rar")
+            return archiveExtensions.any { path.contains(it, ignoreCase = true) }
+        }
+        
+        /**
+         * Проверить, поддерживается ли данный тип файла
+         */
+        fun isSupported(uri: Uri): Boolean {
+            return determineMediaType(uri) != null
+        }
+        
+        /**
+         * Получить список поддерживаемых расширений
+         */
+        fun getSupportedExtensions(): List<String> {
+            return MediaType.values().map { it.extension }.filter { it.isNotEmpty() }
+        }
+        
+        /**
+         * Получить список поддерживаемых MIME типов
+         */
+        fun getSupportedMimeTypes(): List<String> {
+            return MediaType.values().map { it.mimeType }
+        }
+    }
+}

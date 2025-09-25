@@ -1,5 +1,7 @@
 package com.example.core.domain.usecase
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import android.net.Uri
 import com.example.core.domain.util.Result
 import com.example.core.reader.domain.BookReaderFactory
@@ -7,6 +9,7 @@ import javax.inject.Inject
 
 class LoadComicUseCase @Inject constructor(
     private val bookReaderFactory: BookReaderFactory,
+    @ApplicationContext private val context: Context
 ) {
     suspend operator fun invoke(uri: Uri): Result<Unit> {
         if (uri.toString().isBlank()) {
@@ -15,10 +18,13 @@ class LoadComicUseCase @Inject constructor(
 
         return runCatching {
             val reader = bookReaderFactory.create(uri)
-            reader.open(uri)
+            val result = reader.open(context, uri)
+            if (result.isFailure) {
+                throw result.exceptionOrNull() ?: Exception("Failed to open comic")
+            }
         }.fold(
             onSuccess = { Result.Success(Unit) },
-            onFailure = { exception -> Result.Error(exception) },
+            onFailure = { exception -> Result.Error(exception as? Exception ?: Exception(exception)) },
         )
     }
 
@@ -26,4 +32,3 @@ class LoadComicUseCase @Inject constructor(
         bookReaderFactory.releaseResources()
     }
 }
-

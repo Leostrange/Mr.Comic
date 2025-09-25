@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Mr.Comic</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_settings">App Icon</string>
+    <string name="app_icon_settings_description">Choose your preferred app icon</string>
+    <string name="app_icon_default">Default</string>
+    <string name="app_icon_alt1">Alternative 1</string>
+    <string name="app_icon_alt2">Alternative 2</string>
+    <string name="app_icon_alt3">Alternative 3</string>
+    <string name="app_icon_current">Current</string>
+    <string name="app_icon_unavailable">Unavailable</string>
+    <string name="app_icon_reset">Reset to default</string>
+    <string name="app_icon_change_success">App icon changed successfully</string>
+    <string name="app_icon_change_error">Failed to change app icon</string>
     <string name="language_settings">Language Settings</string>
     <string name="settings">Settings</string>
     <string name="library">Library</string>
@@ -39,4 +52,8 @@
     <string name="notifications">Notifications</string>
     <string name="back">Back</string>
     <string name="next">Next</string>
+    <string name="choose_app_icon">Choose your app icon</string>
+    <string name="app_icon_note">The app icon change will take effect immediately. You may need to restart your launcher if the icon doesn\'t update right away.</string>
+    <string name="appearance">Appearance</string>
+    <string name="cbr_module_title">CBR Reader</string>
 </resources>

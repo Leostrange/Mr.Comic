@@ -2,151 +2,165 @@ package com.example.core.reader.data
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.net.Uri
 import android.graphics.BitmapFactory
-import com.example.core.reader.domain.BookReader
+import android.net.Uri
+import com.example.core.reader.domain.MediaReader
+import com.example.core.reader.domain.MediaMetadata
+import com.example.core.reader.domain.MediaType
+import com.example.core.reader.domain.UnsupportedFormatException
 import com.github.junrar.Archive
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.github.junrar.rarfile.FileHeader
+import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.FileOutputStream
+import javax.inject.Inject
 
 /**
- * A [BookReader] implementation for reading CBR (RAR archive) files.
+ * CBR/RAR Reader implementation using JunRAR library
  */
-class CbrReader(
+class CbrReader @Inject constructor(
     private val context: Context
-) : BookReader {
-
-    private var tempDir: File? = null
-    private var pagePaths: List<String> = emptyList()
-    private var tempComicFile: File? = null
+) : MediaReader {
+    
+    companion object {
+        private const val TAG = "CbrReader"
+        private val SUPPORTED_IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "gif", "bmp", "webp")
+    }
+    
+    private var archive: Archive? = null
+    private var imageFiles: List<FileHeader> = emptyList()
+    private var currentUri: Uri? = null
     private var pageCount: Int = 0
-
-    override suspend fun open(uri: Uri): Int {
-        return withContext(Dispatchers.IO) {
-            try {
-                val cacheDir = context.cacheDir
-
-                // Create a unique temporary directory for this comic to avoid conflicts
-                tempDir = File(cacheDir, "reader_cbr_${uri.toString().hashCode()}_${System.currentTimeMillis()}").apply {
-                    mkdirs()
-                }
-
-                // Copy content from URI to a temporary file because junrar works with Files
-                val createdTempFile = File.createTempFile("temp_cbr_", ".cbr", cacheDir)
-                tempComicFile = createdTempFile
-                
-                context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                    createdTempFile.outputStream().use { outputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
-                } ?: throw IllegalStateException("Cannot open input stream from URI")
-
-                // Validate file exists and is not empty
-                if (!createdTempFile.exists() || createdTempFile.length() == 0L) {
-                    throw IllegalStateException("CBR файл пустой или поврежден")
-                }
-
-                val extractedImagePaths = mutableListOf<String>()
-                var archive: Archive? = null
-                try {
-                    archive = Archive(createdTempFile)
-                    if (archive.isEncrypted) {
-                        throw IllegalStateException("Зашифрованные CBR файлы не поддерживаются")
-                    }
-
-                    var header = archive.nextFileHeader()
-                    while (header != null) {
-                        if (!header.isDirectory && isImageFile(header.fileName)) {
-                            try {
-                                val extractedFile = File(tempDir, header.fileName.substringAfterLast('/'))
-                                FileOutputStream(extractedFile).use { os ->
-                                    archive.extractFile(header, os)
-                                }
-                                if (extractedFile.exists() && extractedFile.length() > 0) {
-                                    extractedImagePaths.add(extractedFile.absolutePath)
-                                }
-                            } catch (e: Exception) {
-                                // Log the error but continue with other files
-                                android.util.Log.w("CbrReader", "Failed to extract ${header.fileName}: ${e.message}")
-                            }
-                        }
-                        header = archive.nextFileHeader()
-                    }
-                } finally {
-                    archive?.close()
-                }
-
-                if (extractedImagePaths.isEmpty()) {
-                    throw IllegalStateException("В CBR файле не найдено изображений")
-                }
-
-                // Sort pages alphabetically to ensure correct order
-                pagePaths = extractedImagePaths.sorted()
-                pageCount = pagePaths.size
-                pageCount
-            } catch (e: Exception) {
-                // Clean up on error
-                cleanup()
-                throw when (e) {
-                    is IllegalStateException -> e
-                    else -> IllegalStateException("Ошибка при открытии CBR файла: ${e.message}", e)
+    private var metadata: MediaMetadata? = null
+    private var isOpen: Boolean = false
+    
+    override suspend fun open(context: Context, uri: Uri): Result<MediaMetadata> {
+        return try {
+            android.util.Log.d(TAG, "Opening CBR file: $uri")
+            
+            // Close previous archive if exists
+            close()
+            
+            currentUri = uri
+            
+            // Open the RAR archive
+            val inputStream = context.contentResolver.openInputStream(uri)
+                ?: throw UnsupportedFormatException("Cannot open input stream for: $uri")
+            
+            // Create temporary file for JunRAR (it requires File access)
+            val tempFile = File.createTempFile("cbr_temp", ".rar", context.cacheDir)
+            tempFile.deleteOnExit()
+            
+            inputStream.use { input ->
+                tempFile.outputStream().use { output ->
+                    input.copyTo(output)
                 }
             }
+            
+            archive = Archive(tempFile)
+            
+            // Get all image files from the archive
+            imageFiles = archive!!.fileHeaders
+                .filter { header ->
+                    !header.isDirectory && 
+                    header.fileName.substringAfterLast('.', "").lowercase() in SUPPORTED_IMAGE_EXTENSIONS
+                }
+                .sortedBy { it.fileName.lowercase() }
+            
+            android.util.Log.d(TAG, "Found ${imageFiles.size} image files in CBR archive")
+            
+            if (imageFiles.isEmpty()) {
+                throw UnsupportedFormatException("No supported image files found in CBR archive")
+            }
+            
+            pageCount = imageFiles.size
+            
+            // Create metadata
+            metadata = MediaMetadata(
+                title = uri.lastPathSegment,
+                pageCount = pageCount,
+                type = MediaType.CBR,
+                fileSize = tempFile.length()
+            )
+            
+            isOpen = true
+            Result.success(metadata!!)
+            
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to open CBR file: $uri", e)
+            close()
+            Result.failure(UnsupportedFormatException("Failed to open CBR file: ${e.message}"))
         }
     }
-
-    override fun getPageCount(): Int = pageCount
-
-    override fun renderPage(pageIndex: Int): Bitmap? {
-        if (pageIndex < 0 || pageIndex >= pagePaths.size) {
-            android.util.Log.w("CbrReader", "Invalid page index: $pageIndex (total pages: ${pagePaths.size})")
-            return null
-        }
-        
-        val path = pagePaths[pageIndex]
-        return runCatching { 
-            val bitmap = BitmapFactory.decodeFile(path)
+    
+    override suspend fun renderPage(
+        pageIndex: Int,
+        maxWidth: Int,
+        maxHeight: Int,
+        scale: Float
+    ): Result<Bitmap> {
+        return try {
+            val currentArchive = archive ?: return Result.failure(IllegalStateException("Archive not open"))
+            
+            if (pageIndex < 0 || pageIndex >= imageFiles.size) {
+                android.util.Log.w(TAG, "Page index $pageIndex out of bounds (0-${imageFiles.size - 1})")
+                return Result.failure(IndexOutOfBoundsException("Page index out of bounds"))
+            }
+            
+            val fileHeader = imageFiles[pageIndex]
+            android.util.Log.d(TAG, "Rendering page $pageIndex: ${fileHeader.fileName}")
+            
+            // Extract file data from archive
+            val outputStream = ByteArrayOutputStream()
+            currentArchive.extractFile(fileHeader, outputStream)
+            val imageData = outputStream.toByteArray()
+            
+            if (imageData.isEmpty()) {
+                android.util.Log.w(TAG, "No data extracted for page $pageIndex")
+                return Result.failure(IllegalStateException("No data extracted for page"))
+            }
+            
+            // Decode bitmap from extracted data
+            val bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size)
+            
             if (bitmap == null) {
-                android.util.Log.w("CbrReader", "Failed to decode bitmap from: $path")
+                android.util.Log.w(TAG, "Failed to decode bitmap for page $pageIndex")
+                return Result.failure(IllegalStateException("Failed to decode bitmap"))
             }
-            bitmap
-        }.getOrElse { e ->
-            android.util.Log.e("CbrReader", "Error rendering page $pageIndex: ${e.message}", e)
-            null
-        }
-    }
-
-    override fun close() {
-        cleanup()
-    }
-
-    private fun cleanup() {
-        try {
-            tempDir?.deleteRecursively()
+            
+            android.util.Log.d(TAG, "Successfully rendered page $pageIndex (${bitmap.width}x${bitmap.height})")
+            Result.success(bitmap)
+            
         } catch (e: Exception) {
-            android.util.Log.w("CbrReader", "Failed to delete temp directory: ${e.message}")
+            android.util.Log.e(TAG, "Failed to render page $pageIndex", e)
+            Result.failure(e)
         }
-        tempDir = null
-        
-        try {
-            tempComicFile?.delete()
-        } catch (e: Exception) {
-            android.util.Log.w("CbrReader", "Failed to delete temp file: ${e.message}")
-        }
-        tempComicFile = null
-        
-        pagePaths = emptyList()
-        pageCount = 0
     }
-
-    private fun isImageFile(fileName: String): Boolean {
-        val lowercaseName = fileName.lowercase()
-        return lowercaseName.endsWith(".jpg") ||
-            lowercaseName.endsWith(".jpeg") ||
-            lowercaseName.endsWith(".png") ||
-            lowercaseName.endsWith(".webp") ||
-            lowercaseName.endsWith(".bmp")
+    
+    override fun getPageCount(): Int? {
+        return if (isOpen) pageCount else null
+    }
+    
+    override fun getMetadata(): MediaMetadata? {
+        return metadata
+    }
+    
+    override suspend fun close() {
+        try {
+            archive?.close()
+            android.util.Log.d(TAG, "CBR archive closed")
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Error closing CBR archive", e)
+        } finally {
+            archive = null
+            imageFiles = emptyList()
+            currentUri = null
+            pageCount = 0
+            metadata = null
+            isOpen = false
+        }
+    }
+    
+    override fun isOpen(): Boolean {
+        return isOpen
     }
 }

@@ -1,5 +1,6 @@
 package com.example.feature.reader.ui
 
+import android.content.Context
 import android.net.Uri
 import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
@@ -8,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.domain.usecase.GetReadingProgressUseCase
 import com.example.core.domain.usecase.SaveReadingProgressUseCase
 import com.example.core.domain.util.Result
-import com.example.core.reader.domain.BookReader
+import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -28,6 +30,7 @@ class ReaderViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
     private val getReadingProgressUseCase: GetReadingProgressUseCase,
+    @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -52,7 +55,32 @@ class ReaderViewModel @Inject constructor(
         0xFFFFFFFF
     )
 
-    private var bookReader: BookReader? = null
+
+    val readingDoubleTapZoom = settingsRepository.readingDoubleTapZoom.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        2.0f
+    )
+
+    val readingBlockSwipeWhenZoomed = settingsRepository.readingBlockSwipeWhenZoomed.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+
+    val readingOrientation = settingsRepository.readingOrientation.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "auto"
+    )
+
+    val readingScaleMode = settingsRepository.scaleMode.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "width"
+    )
+
+    private var bookReader: MediaReader? = null
     private var currentComicId: String? = null
 
     companion object {
@@ -80,37 +108,48 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             // Закрываем предыдущий reader при открытии новой книги
-            bookReader?.close()
+            try {
+                bookReader?.close()
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Error closing previous reader", e)
+            }
 
             try {
                 val reader = readerFactory.create(uri)
-                val pageCount = reader.open(uri)
-                bookReader = reader // назначаем только после успешного открытия
-                currentComicId = uri.toString()
-                android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
+                val result = reader.open(context, uri)
+                
+                if (result.isSuccess) {
+                    bookReader = reader // назначаем только после успешного открытия
+                    currentComicId = uri.toString()
+                    val metadata = result.getOrThrow()
+                    val pageCount = metadata.pageCount
+                    android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
 
-                // Восстанавливаем прогресс чтения
-                val progressResult = getReadingProgressUseCase(currentComicId!!)
-                if (progressResult is Result.Error) {
-                    android.util.Log.w(TAG, "Failed to load reading progress", progressResult.exception)
-                }
+                    // Восстанавливаем прогресс чтения
+                    val progressResult = getReadingProgressUseCase(currentComicId!!)
+                    if (progressResult is Result.Error) {
+                        android.util.Log.w(TAG, "Failed to load reading progress", progressResult.exception)
+                    }
 
-                val lastReadPage = when (progressResult) {
-                    is Result.Success -> progressResult.data.currentPage
-                    is Result.Error -> 0
-                }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+                    val lastReadPage = when (progressResult) {
+                        is Result.Success -> progressResult.data.currentPage
+                        is Result.Error -> 0
+                    }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
 
-                val resolvedPageCount = when (progressResult) {
-                    is Result.Success -> if (pageCount == 0) progressResult.data.totalPages else pageCount
-                    is Result.Error -> pageCount
-                }
+                    val resolvedPageCount = when (progressResult) {
+                        is Result.Success -> if (pageCount == 0) progressResult.data.totalPages else pageCount
+                        is Result.Error -> pageCount
+                    }
 
-                _uiState.update { it.copy(pageCount = resolvedPageCount) }
+                    _uiState.update { it.copy(pageCount = resolvedPageCount) }
 
-                if (resolvedPageCount > 0) {
-                    loadPage(lastReadPage)
+                    if (resolvedPageCount > 0) {
+                        loadPage(lastReadPage)
+                    } else {
+                        _uiState.update { it.copy(isLoading = false) }
+                    }
                 } else {
-                    _uiState.update { it.copy(isLoading = false) }
+                    throw result.exceptionOrNull() ?: Exception("Failed to open book")
                 }
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Failed to open book", e)
@@ -153,19 +192,28 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(readingDirection = direction) }
     }
 
-    suspend fun getPage(pageIndex: Int): Bitmap? {
+    private suspend fun getPage(pageIndex: Int): Bitmap? {
         return withContext(Dispatchers.IO) {
-            bookReader?.renderPage(pageIndex)
+            val reader = bookReader
+            if (reader != null) {
+                val result = reader.renderPage(pageIndex, 1920, 1080, 1.0f)
+                if (result.isSuccess) {
+                    result.getOrNull()
+                } else {
+                    android.util.Log.e(TAG, "Failed to render page $pageIndex: ${result.exceptionOrNull()?.message}")
+                    null
+                }
+            } else {
+                null
+            }
         }
     }
 
-    private fun loadPage(pageIndex: Int) {
+    fun loadPage(pageIndex: Int) {
         android.util.Log.d(TAG, "Loading page: $pageIndex")
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
-            val bitmap = withContext(Dispatchers.IO) {
-                bookReader?.renderPage(pageIndex)
-            }
+            val bitmap = getPage(pageIndex)
 
             if (bitmap != null) {
                 android.util.Log.d(TAG, "Page $pageIndex loaded successfully (${bitmap.width}x${bitmap.height})")
@@ -213,14 +261,26 @@ class ReaderViewModel @Inject constructor(
                 val nextIndex = centerPageIndex + i
                 if (nextIndex < pageCount) {
                     android.util.Log.d(TAG, "Preloading page: $nextIndex")
-                    bookReader?.renderPage(nextIndex)
+                    val reader = bookReader
+                    if (reader != null) {
+                        val result = reader.renderPage(nextIndex, 1920, 1080, 1.0f)
+                        if (result.isFailure) {
+                            android.util.Log.e(TAG, "Failed to preload page $nextIndex: ${result.exceptionOrNull()?.message}")
+                        }
+                    }
                 }
             }
             for (i in 1..PRELOAD_DISTANCE) {
                 val prevIndex = centerPageIndex - i
                 if (prevIndex >= 0) {
                     android.util.Log.d(TAG, "Preloading page: $prevIndex")
-                    bookReader?.renderPage(prevIndex)
+                    val reader = bookReader
+                    if (reader != null) {
+                        val result = reader.renderPage(prevIndex, 1920, 1080, 1.0f)
+                        if (result.isFailure) {
+                            android.util.Log.e(TAG, "Failed to preload page $prevIndex: ${result.exceptionOrNull()?.message}")
+                        }
+                    }
                 }
             }
         }
@@ -229,7 +289,15 @@ class ReaderViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         android.util.Log.d(TAG, "ViewModel cleared, closing book reader")
-        bookReader?.close()
+        try {
+            bookReader?.let { reader ->
+                kotlinx.coroutines.runBlocking {
+                    reader.close()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Error closing reader", e)
+        }
         bookReader = null
         currentComicId = null
     }

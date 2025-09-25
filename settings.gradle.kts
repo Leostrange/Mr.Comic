@@ -54,11 +54,18 @@ include(":android:core-ui")
 project(":android:core-ui").projectDir = file("android/core-ui")
 
 // Feature modules
+// Temporarily disabled due to build issues
+// include(":android:feature_cbr")
+// project(":android:feature_cbr").projectDir = file("android/feature_cbr")
+
 include(":android:feature-library")
 project(":android:feature-library").projectDir = file("android/feature-library")
 
 include(":android:feature-ocr")
 project(":android:feature-ocr").projectDir = file("android/feature-ocr")
+
+include(":android:feature-translate")
+project(":android:feature-translate").projectDir = file("android/feature-translate")
 
 include(":android:feature-onboarding")
 project(":android:feature-onboarding").projectDir = file("android/feature-onboarding")
@@ -82,6 +89,10 @@ project(":android:shared").projectDir = file("android/shared")
 // Scripts and utilities
 include(":scripts")
 include(":reports")
+
+// Analysis and improvement system
+include(":analysis")
+project(":analysis").projectDir = file("analysis")
 
 // ========================================
 // DEPRECATED/LEGACY MODULES (TO BE REMOVED)

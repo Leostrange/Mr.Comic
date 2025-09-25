@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Splash Screen Strings -->
+    <string name="splash_subtitle">Your Digital Comic Library</string>
+    <string name="version_info">Version 1.0</string>
+    <string name="splash_loading">Loading...</string>
+    <string name="splash_tap_to_skip">Tap to skip</string>
+    
+    <!-- Error Messages -->
+    <string name="splash_video_error">Unable to load video splash</string>
+    <string name="splash_fallback_message">Initializing application...</string>
+</resources>

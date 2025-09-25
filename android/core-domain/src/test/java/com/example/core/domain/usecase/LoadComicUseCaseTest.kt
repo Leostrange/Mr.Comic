@@ -1,8 +1,9 @@
 package com.example.core.domain.usecase
 
+import android.content.Context
 import android.net.Uri
 import com.example.core.domain.util.Result
-import com.example.core.reader.domain.BookReader
+import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.BookReaderFactory
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -18,8 +19,9 @@ import org.junit.Test
 class LoadComicUseCaseTest {
 
     private lateinit var bookReaderFactory: BookReaderFactory
-    private lateinit var bookReader: BookReader
+    private lateinit var bookReader: MediaReader
     private lateinit var uri: Uri
+    private lateinit var context: Context
     private lateinit var useCase: LoadComicUseCase
 
     @Before
@@ -27,19 +29,20 @@ class LoadComicUseCaseTest {
         bookReaderFactory = mockk()
         bookReader = mockk()
         uri = mockk()
-        useCase = LoadComicUseCase(bookReaderFactory)
+        context = mockk()
+        useCase = LoadComicUseCase(bookReaderFactory, context)
     }
 
     @Test
     fun `invoke returns success when reader opens`() = runTest {
         every { uri.toString() } returns "content://comic"
         every { bookReaderFactory.create(uri) } returns bookReader
-        coEvery { bookReader.open(uri) } returns 5
+        coEvery { bookReader.open(context, uri) } returns Result.success(mockk())
 
         val result = useCase(uri)
 
-        assertTrue(result is Result.Success)
-        coVerify(exactly = 1) { bookReader.open(uri) }
+        assertTrue(result is Result.Success<Unit>)
+        coVerify(exactly = 1) { bookReader.open(context, uri) }
     }
 
     @Test
@@ -66,7 +69,7 @@ class LoadComicUseCaseTest {
     fun `invoke returns error when reader open fails`() = runTest {
         every { uri.toString() } returns "content://comic"
         every { bookReaderFactory.create(uri) } returns bookReader
-        coEvery { bookReader.open(uri) } throws IllegalArgumentException("fail")
+        coEvery { bookReader.open(context, uri) } returns Result.failure(IllegalArgumentException("fail"))
 
         val result = useCase(uri)
 
@@ -74,11 +77,11 @@ class LoadComicUseCaseTest {
     }
 
     @Test
-    fun `releaseResources delegates to factory`() {
-        justRun { bookReaderFactory.releaseResources() }
+    fun `releaseResources delegates to factory`() = runTest {
+        coEvery { bookReaderFactory.releaseResources() } justRun {}
 
         useCase.releaseResources()
 
-        verify(exactly = 1) { bookReaderFactory.releaseResources() }
+        coVerify(exactly = 1) { bookReaderFactory.releaseResources() }
     }
 }

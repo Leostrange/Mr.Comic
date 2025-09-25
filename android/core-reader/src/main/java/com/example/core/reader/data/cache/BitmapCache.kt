@@ -30,3 +30,29 @@ class BitmapCache @Inject constructor() {
         }
     }
 }
+
+/**
+ * Специализированный кэш для миниатюр страниц PDF
+ * Использует меньший размер памяти (1/16 от доступной) для оптимизации
+ */
+@Singleton
+class ThumbnailCache @Inject constructor() {
+    private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+    private val cacheSize = maxMemory / 16 // 1/16 памяти для миниатюр
+
+    private val memoryCache = object : LruCache<String, Bitmap>(cacheSize) {
+        override fun sizeOf(key: String, bitmap: Bitmap): Int {
+            return bitmap.byteCount / 1024
+        }
+    }
+
+    fun getThumbnail(key: String): Bitmap? = memoryCache.get(key)
+
+    fun putThumbnail(key: String, bitmap: Bitmap) {
+        if (getThumbnail(key) == null) {
+            memoryCache.put(key, bitmap)
+        }
+    }
+
+    fun clear() = memoryCache.evictAll()
+}

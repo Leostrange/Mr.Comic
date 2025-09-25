@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.Comic
+import com.example.feature.library.ui.LibraryViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
