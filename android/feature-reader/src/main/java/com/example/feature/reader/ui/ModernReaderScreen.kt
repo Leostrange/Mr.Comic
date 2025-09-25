@@ -54,8 +54,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,6 +71,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -117,6 +119,25 @@ fun ModernReaderScreen(
     val readingBlockSwipeWhenZoomed by viewModel.readingBlockSwipeWhenZoomed.collectAsStateWithLifecycle(true)
     val readingOrientation by viewModel.readingOrientation.collectAsStateWithLifecycle("auto")
 
+    val context = LocalContext.current
+    val activity = context as? Activity
+
+    DisposableEffect(readingOrientation) {
+        val previousOrientation = activity?.requestedOrientation
+        val newOrientation = when (readingOrientation) {
+            "portrait" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+            "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            "locked" -> ActivityInfo.SCREEN_ORIENTATION_LOCKED
+            else -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        activity?.requestedOrientation = newOrientation
+        onDispose {
+            if (readingOrientation == "auto") {
+                activity?.requestedOrientation = previousOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.uiState.collect { state ->
             uiState = state
@@ -160,11 +181,17 @@ fun ModernReaderScreen(
             modifier = Modifier.fillMaxSize(),
             userScrollEnabled = pagerUserInputEnabled
         ) { page ->
+            val pageBitmap = uiState.bitmaps[page]
+                ?: if (page == uiState.currentPageIndex) uiState.currentPageBitmap else null
+            val pageError = uiState.error?.takeIf { page == uiState.currentPageIndex }
+            val pageIsLoading = pageBitmap == null && pageError == null
+
             ComicPage(
                 pageNumber = page + 1,
                 onTap = { showUI = !showUI },
-                bitmap = uiState.currentPageBitmap,
-                isLoading = uiState.isLoading,
+                bitmap = pageBitmap,
+                isLoading = pageIsLoading,
+                errorMessage = pageError,
                 onZoomStateChanged = { scale ->
                     // Применяем настройку блокировки свайпа при зуме
                     pagerUserInputEnabled = if (readingBlockSwipeWhenZoomed) {
@@ -412,6 +439,7 @@ private fun ComicPage(
     onTap: () -> Unit,
     bitmap: Bitmap?,
     isLoading: Boolean,
+    errorMessage: String?,
     onZoomStateChanged: (Float) -> Unit,
     readingScaleMode: String = "width",
     readingDoubleTapZoom: Float = 2.0f,
@@ -509,20 +537,16 @@ private fun ComicPage(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    }
                 }
             }
-        } else {
-            // Show error state
+        } else if (errorMessage != null) {
             Surface(
                 modifier = Modifier
                     .size(300.dp, 400.dp)
                     .clip(RoundedCornerShape(8.dp)),
                 color = MaterialTheme.colorScheme.errorContainer
             ) {
-                Box(
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(contentAlignment = Alignment.Center) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -532,11 +556,40 @@ private fun ComicPage(
                             style = MaterialTheme.typography.headlineMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
-                        
+
                         Text(
-                            text = "Failed to load page",
+                            text = errorMessage,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier
+                    .size(300.dp, 400.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                color = MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Page $pageNumber",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Preparing preview...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

@@ -122,26 +122,31 @@ fun MainNavHost(navController: NavHostController, onOpenReader: (String) -> Unit
                     )
 
                     SimpleLibraryScreen(
-                onBookClick = { path -> 
-                    val encoded = Uri.encode(path)
-                    onOpenReader(encoded)
-                },
-                onSettingsClick = { 
-                    navController.navigate(MainDestination.Settings.route)
-                },
-                onAddClick = {
-                            filePicker.launch(arrayOf(
-                        "application/pdf",
-                        "application/x-cbz",
-                        "application/vnd.comicbook+zip",
-                        "application/x-rar-compressed",
-                        "application/vnd.comicbook-rar",
-                        "application/zip",
-                        "*/*"
-                    ))
+                        onBookClick = { path ->
+                            val encoded = Uri.encode(path)
+                            onOpenReader(encoded)
                         },
-            )
-        }
+                        onAddFile = {
+                            filePicker.launch(
+                                arrayOf(
+                                    "application/pdf",
+                                    "application/x-cbz",
+                                    "application/vnd.comicbook+zip",
+                                    "application/x-rar-compressed",
+                                    "application/vnd.comicbook-rar",
+                                    "application/zip",
+                                    "*/*"
+                                )
+                            )
+                        },
+                        onAddFolder = {
+                            folderPicker.launch(null)
+                        },
+                        onSettingsClick = {
+                            navController.navigate(MainDestination.Settings.route)
+                        },
+                    )
+                }
 
         composable(route = MainDestination.Translation.route) {
             SimpleTranslateScreen()

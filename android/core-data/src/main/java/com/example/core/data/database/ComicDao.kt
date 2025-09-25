@@ -38,6 +38,12 @@ interface ComicDao {
     @Query("DELETE FROM comics")
     suspend fun clearAll()
 
+    @Query("SELECT * FROM comics")
+    suspend fun getAllComics(): List<ComicEntity>
+
+    @Query("SELECT * FROM bookmarks")
+    suspend fun getAllBookmarks(): List<BookmarkEntity>
+
     // Bookmark methods
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBookmark(bookmark: BookmarkEntity)

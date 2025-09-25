@@ -1,5 +1,6 @@
 package com.example.core.ui.splash
 
+import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.RawRes
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -23,6 +25,9 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * Modern video splash screen component with ExoPlayer integration
@@ -39,7 +44,23 @@ fun VideoSplashScreen(
     showControls: Boolean = false
 ) {
     val context = LocalContext.current
-    
+    val view = LocalView.current
+    val window = remember(view) { (view.context as? Activity)?.window }
+
+    DisposableEffect(window) {
+        val controller = window?.let { win ->
+            WindowCompat.setDecorFitsSystemWindows(win, false)
+            WindowInsetsControllerCompat(win, win.decorView).apply {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
+        onDispose {
+            controller?.show(WindowInsetsCompat.Type.systemBars())
+            window?.let { WindowCompat.setDecorFitsSystemWindows(it, true) }
+        }
+    }
+
     val exoPlayer = remember {
         try {
             ExoPlayer.Builder(context).build().apply {

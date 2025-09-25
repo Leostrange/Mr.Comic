@@ -73,6 +73,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.Comic
 import com.example.core.ui.components.ComicInfo
 import com.example.core.ui.theme.MrComicTheme
+import android.net.Uri
+import java.io.File
 
 /**
  * Простой экран библиотеки в стиле рабочей версии
@@ -81,7 +83,8 @@ import com.example.core.ui.theme.MrComicTheme
 @Composable
 fun SimpleLibraryScreen(
     onBookClick: (filePath: String) -> Unit,
-    onAddClick: () -> Unit,
+    onAddFile: () -> Unit,
+    onAddFolder: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: LibraryViewModel = hiltViewModel()
@@ -93,6 +96,7 @@ fun SimpleLibraryScreen(
     val libraryViewMode by viewModel.libraryViewMode.collectAsState("grid")
     val librarySortOrder by viewModel.librarySortOrder.collectAsState(com.example.core.model.SortOrder.DATE_ADDED_DESC)
             var menuExpanded by remember { mutableStateOf(false) }
+            var addMenuExpanded by remember { mutableStateOf(false) }
             var showSearch by rememberSaveable { mutableStateOf(false) }
             var searchQuery by remember { mutableStateOf("") }
 
@@ -134,6 +138,14 @@ fun SimpleLibraryScreen(
                                     }
                                 )
                                 DropdownMenuItem(
+                                    text = { Text(if (libraryViewMode == "folders") "Режим сетки" else "Отображать папки") },
+                                    onClick = {
+                                        val newMode = if (libraryViewMode == "folders") "grid" else "folders"
+                                        viewModel.onViewModeChange(newMode)
+                                        menuExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Сортировка (${librarySortOrder.displayName})") },
                                     onClick = {
                                         // TODO: Открыть диалог выбора сортировки
@@ -143,11 +155,29 @@ fun SimpleLibraryScreen(
                             }
                         },
                 actions = {
-                    IconButton(onClick = onAddClick) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Добавить комикс"
-                        )
+                    Box {
+                        IconButton(onClick = { addMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Добавить комикс"
+                            )
+                        }
+                        DropdownMenu(expanded = addMenuExpanded, onDismissRequest = { addMenuExpanded = false }) {
+                            DropdownMenuItem(
+                                text = { Text("Добавить файл") },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onAddFile()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Добавить папку") },
+                                onClick = {
+                                    addMenuExpanded = false
+                                    onAddFolder()
+                                }
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -214,16 +244,35 @@ fun SimpleLibraryScreen(
                             (comic.author?.contains(searchQuery, ignoreCase = true) == true)
                     }
                     
-                    if (libraryViewMode == "grid") {
-                        ComicsGrid(
-                            comics = filteredComics,
-                            onComicClick = onBookClick
-                        )
-                    } else {
-                        ComicsList(
-                            comics = filteredComics,
-                            onComicClick = onBookClick
-                        )
+                    val folderGroups = remember(filteredComics) {
+                        filteredComics.groupBy { it.folderName() }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
+                    }
+
+                    when (libraryViewMode) {
+                        "grid" -> {
+                            ComicsGrid(
+                                comics = filteredComics,
+                                onComicClick = onBookClick
+                            )
+                        }
+                        "list" -> {
+                            ComicsList(
+                                comics = filteredComics,
+                                onComicClick = onBookClick
+                            )
+                        }
+                        "folders" -> {
+                            FolderLibraryView(
+                                folderGroups = folderGroups,
+                                onComicClick = onBookClick
+                            )
+                        }
+                        else -> {
+                            ComicsGrid(
+                                comics = filteredComics,
+                                onComicClick = onBookClick
+                            )
+                        }
                     }
                 }
             }
@@ -269,6 +318,36 @@ private fun ComicsList(
                 comic = comic,
                 onClick = { onComicClick(comic.filePath) }
             )
+        }
+    }
+}
+
+@Composable
+private fun FolderLibraryView(
+    folderGroups: Map<String, List<Comic>>,
+    onComicClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        folderGroups.forEach { (folder, comics) ->
+            item(key = folder) {
+                Text(
+                    text = folder,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            items(comics) { comic ->
+                ComicListItem(
+                    comic = comic,
+                    onClick = { onComicClick(comic.filePath) }
+                )
+            }
         }
     }
 }
@@ -350,6 +429,16 @@ private fun ComicCard(
             }
         }
     }
+}
+
+private fun Comic.folderName(): String {
+    return runCatching {
+        val uri = Uri.parse(filePath)
+        when (uri.scheme) {
+            "file" -> File(uri.path ?: "").parentFile?.name
+            else -> uri.pathSegments.dropLast(1).lastOrNull()
+        }?.takeIf { it.isNotBlank() }
+    }.getOrNull() ?: "Без папки"
 }
 
 @Composable

@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 private const val TAG = "LibraryViewModel"
@@ -113,7 +114,8 @@ class LibraryViewModel @Inject constructor(
                                 isLoading = false,
                                 comics = comics,
                                 totalComicsCount = comics.size,
-                                visibleComicsCount = visibleComics.size
+                                visibleComicsCount = visibleComics.size,
+                                folderGroups = comics.groupBy { extractFolderName(it.filePath) }.toSortedMap(String.CASE_INSENSITIVE_ORDER)
                             )
                         }
                     }
@@ -257,4 +259,14 @@ class LibraryViewModel @Inject constructor(
             comicRepository.addComic(newComic)
         }
     }
+}
+
+private fun extractFolderName(path: String): String {
+    return runCatching {
+        val uri = Uri.parse(path)
+        when (uri.scheme) {
+            "file" -> File(uri.path ?: "").parentFile?.name
+            else -> uri.pathSegments.dropLast(1).lastOrNull()
+        }?.takeIf { it.isNotBlank() }
+    }.getOrNull() ?: "Без папки"
 }
