@@ -28,8 +28,7 @@ android {
 
 dependencies {
     implementation(project(":android:core-model"))
-    // Temporarily disabled due to compilation errors
-    // implementation(project(":android:core-reader"))
+    implementation(project(":android:core-reader"))
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
     implementation(libs.bundles.room)
@@ -37,6 +36,14 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation("androidx.documentfile:documentfile:1.0.1")
     implementation(libs.kotlinx.coroutines.android)
+    // For CBR cover extraction
+    implementation(libs.junrar)
+    // For settings backup/restore
+    implementation(libs.google.gson)
+    // For automatic backups with WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("androidx.hilt:hilt-work:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     testImplementation(libs.test.junit)
     testImplementation(libs.test.mockk)

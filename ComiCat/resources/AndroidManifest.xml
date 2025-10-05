@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:versionCode="95" android:versionName="2.42" android:installLocation="auto" android:compileSdkVersion="23" android:compileSdkVersionCodename="6.0-2438415" package="meanlabs.comicat" platformBuildVersionCode="22" platformBuildVersionName="5.1.1-1819727">
+    <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="22"/>
+    <uses-permission android:name="android.permission.SET_WALLPAPER"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
+    <supports-screens android:anyDensity="true" android:normalScreens="true" android:largeScreens="true" android:resizeable="true" android:xlargeScreens="true"/>
+    <application android:theme="@style/ComiCatActionBar" android:label="@string/app_name" android:icon="@drawable/icon" android:name="meanlabs.comicreader.ComicReaderApp" android:allowBackup="true" android:hardwareAccelerated="true" android:largeHeap="true">
+        <meta-data android:name="android.max_aspect" android:value="2.1"/>
+        <meta-data android:name="AmazonAPIKey" android:value="@string/amazon_debug_api_key"/>
+        <activity android:theme="@style/CatalogActionBar" android:label="@string/app_name" android:name="meanlabs.comicreader.Catalog" android:launchMode="standard" android:configChanges="keyboardHidden|orientation|screenSize" android:alwaysRetainTaskState="true" android:windowSoftInputMode="adjustPan">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:mimeType="image/comic" android:scheme="file" android:host="*" android:pathPattern=".*\\.cbz"/>
+                <data android:mimeType="image/comic" android:scheme="file" android:host="*" android:pathPattern=".*\\.cbr"/>
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH"/>
+            </intent-filter>
+        </activity>
+        <activity android:name="com.dropbox.core.android.AuthActivity" android:launchMode="singleTask" android:configChanges="keyboard|orientation">
+            <intent-filter>
+                <data android:scheme="db-76weop5hf3hiwxu"/>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <activity android:name="meanlabs.comicreader.cloud.googledrive.GoogleNonWebViewAuthActivity" android:launchMode="singleTask" android:configChanges="keyboard|orientation">
+            <intent-filter>
+                <data android:scheme="com.googleusercontent.apps.917345885065-50qtjsg0j1k41c1rruubc8s0o22oraju"/>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+        <activity android:theme="@style/Theme.NoDisplay" android:name="com.amazon.identity.auth.device.authorization.AuthorizationActivity" android:launchMode="singleTask" android:configChanges="keyboard|orientation" android:allowTaskReparenting="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="amzn" android:host="meanlabs.comicat"/>
+            </intent-filter>
+        </activity>
+        <activity android:theme="@style/ViewerActionBar" android:name="meanlabs.comicreader.Viewer" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/settings" android:name="meanlabs.comicreader.SettingsHome" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/catalogTools" android:name="meanlabs.comicreader.CatalogTools" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/selectFilesToDelete" android:name="meanlabs.comicreader.DeleteMultipleFiles" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/generalSettings" android:name="meanlabs.comicreader.GeneralSettings" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/viewerSettings" android:name="meanlabs.comicreader.ViewerSettings" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/catalogSettings" android:name="meanlabs.comicreader.CatalogSettings" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/performanceSettings" android:name="meanlabs.comicreader.PerformanceSettings" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/cloudSyncSettings" android:name="meanlabs.comicreader.CloudSyncSettings" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/settingsGuide" android:name="meanlabs.comicreader.UserGuide" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/help" android:name="meanlabs.comicreader.Help" android:configChanges="keyboardHidden|orientation|screenSize"/>
+        <activity android:label="@string/privateFolders" android:name="meanlabs.comicreader.HiddenFolderSettings" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/markMultipleComicRead" android:name="meanlabs.comicreader.BulkMarkRead" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/limitScanTo" android:name="meanlabs.comicreader.ComicFolders" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/cloudSync" android:name="meanlabs.comicreader.cloud.CloudSync" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/activeDownloads" android:name="meanlabs.comicreader.cloud.ActiveDownloads" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/dropbox" android:name="meanlabs.comicreader.cloud.dropbox.DropboxAuthActivity" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/googleDrive" android:name="meanlabs.comicreader.cloud.googledrive.GoogleAuthActivity" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/box" android:name="meanlabs.comicreader.cloud.box_content.Authentication" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/oneDrive" android:name="meanlabs.comicreader.cloud.onedrive.OneDriveAuthActivity" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <activity android:label="@string/addSMBShare" android:name="meanlabs.comicreader.cloud.smb.SMBShareChooserActivity" android:configChanges="keyboardHidden|orientation|screenSize" android:windowSoftInputMode="adjustPan"/>
+        <service android:name="meanlabs.comicreader.cloud.DownloaderService"/>
+        <service android:name="meanlabs.comicreader.ThumbnailService"/>
+        <activity android:name="com.box.androidsdk.content.auth.OAuthActivity" android:exported="true" android:configChanges="orientation|screenSize"/>
+        <activity android:name="com.box.androidsdk.content.auth.BlockedIPErrorActivity" android:launchMode="singleInstance"/>
+    </application>
+</manifest>

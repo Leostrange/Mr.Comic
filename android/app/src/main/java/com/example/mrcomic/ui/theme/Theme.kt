@@ -150,9 +150,18 @@ fun MrComicTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            
             // Используем современный подход для статус бара
             WindowCompat.setDecorFitsSystemWindows(window, false)
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            
+            // Устанавливаем цвета системных панелей
+            window.statusBarColor = colorScheme.surface.copy(alpha = 0.8f).toArgb()
+            window.navigationBarColor = colorScheme.surface.copy(alpha = 0.9f).toArgb()
+            
+            // Настраиваем внешний вид иконок (светлые иконки для темной темы, темные для светлой)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 

@@ -26,5 +26,18 @@ data class ReaderUiState(
     val scaleMode: String = "width",
     val doubleTapZoom: Float = 2.0f,
     val blockSwipeWhenZoomed: Boolean = true,
-    val orientation: String = "auto"
+    val orientation: String = "auto",
+    // Gesture settings
+    val gestureSensitivity: Float = 1.0f,
+    val tapZoneLeftRatio: Float = 0.25f,
+    val tapZoneRightRatio: Float = 0.25f,
+    val tapZonesEnabled: Boolean = true,
+    val showUIControls: Boolean = true,
+    val showTopPanel: Boolean = false,
+    val showLeftPanel: Boolean = false,
+    val showRightPanel: Boolean = false,
+    val showBottomPanel: Boolean = false,
+    // Pin settings
+    val isPinned: Boolean = false,
+    val pinnedPage: Int? = null
 )

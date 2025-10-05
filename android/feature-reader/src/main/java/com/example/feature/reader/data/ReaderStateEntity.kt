@@ -7,5 +7,7 @@ import androidx.room.PrimaryKey
 data class ReaderStateEntity(
     @PrimaryKey val id: Int = 0, // всегда одна запись
     val comicTitle: String,
-    val page: Int
+    val page: Int,
+    val isPinned: Boolean = false,
+    val pinnedPage: Int? = null
 ) 

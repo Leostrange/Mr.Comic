@@ -6,7 +6,10 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" tools:targetApi="33" />
-
+    
+    <!-- Сетевые разрешения для соответствия APK -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:name=".ComicApplication"
         android:allowBackup="true"
@@ -45,7 +48,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
             android:theme="@style/Theme.MrComic.SplashScreen"
             tools:targetApi="31">
             <intent-filter>
@@ -53,38 +55,97 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
             </intent-filter>
+            <!-- PDF files -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.pdf" android:mimeType="application/pdf" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.pdf" android:mimeType="application/pdf" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.cbz" android:mimeType="application/x-cbz" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.cbz" android:mimeType="application/x-cbz" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.cbr" android:mimeType="application/x-cbr" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.cbr" android:mimeType="application/x-cbr" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.epub" android:mimeType="application/epub+zip" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.epub" android:mimeType="application/epub+zip" />
-                <!-- Доп. MIME-типы для совместимости с файловыми менеджерами -->
-                <!-- CBR/RAR -->
-                <data android:mimeType="application/vnd.comicbook-rar" />
-                <data android:mimeType="application/vnd.comicbook+rar" />
-                <data android:mimeType="application/x-rar-compressed" />
-                <data android:mimeType="application/rar" />
-                <!-- CBZ/ZIP -->
+                <data android:mimeType="application/pdf" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:pathPattern=".*\\.pdf" />
+                <data android:scheme="file" android:pathPattern=".*\\.PDF" />
+            </intent-filter>
+            
+            <!-- CBZ files - КРИТИЧЕСКИ ВАЖНО! -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/x-cbz" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/vnd.comicbook+zip" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:pathPattern=".*\\.cbz" />
+                <data android:scheme="file" android:pathPattern=".*\\.CBZ" />
+            </intent-filter>
+            
+            <!-- CBR files - КРИТИЧЕСКИ ВАЖНО! -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/x-cbr" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/vnd.comicbook-rar" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/x-rar-compressed" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:pathPattern=".*\\.cbr" />
+                <data android:scheme="file" android:pathPattern=".*\\.CBR" />
+                <data android:scheme="file" android:pathPattern=".*\\.rar" />
+                <data android:scheme="file" android:pathPattern=".*\\.RAR" />
+            </intent-filter>
+            
+            <!-- ZIP files (может содержать комиксы) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:mimeType="application/zip" />
-                <data android:mimeType="application/x-zip-compressed" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:pathPattern=".*\\.zip" />
+                <data android:scheme="file" android:pathPattern=".*\\.ZIP" />
             </intent-filter>
         </activity>
 
         <!-- Alternative app icons -->
+        <!-- Icon 1: Classic (default enabled in ModernSplashActivity) -->
+        
+        <!-- Icon 2 -->
         <activity-alias
-            android:name=".MainActivityAlt1"
+            android:name=".MainActivityIcon_2"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_alt1"
-            android:roundIcon="@mipmap/ic_launcher_alt1"
+            android:icon="@mipmap/ic_launcher_2"
+            android:roundIcon="@mipmap/ic_launcher_2"
             android:label="@string/app_name"
             android:targetActivity=".splash.ModernSplashActivity">
             <intent-filter android:priority="1000">
@@ -93,12 +154,13 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Icon 3 -->
         <activity-alias
-            android:name=".MainActivityAlt2"
+            android:name=".MainActivityIcon_3"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_alt2"
-            android:roundIcon="@mipmap/ic_launcher_alt2"
+            android:icon="@mipmap/ic_launcher_3"
+            android:roundIcon="@mipmap/ic_launcher_3"
             android:label="@string/app_name"
             android:targetActivity=".splash.ModernSplashActivity">
             <intent-filter android:priority="1000">
@@ -107,12 +169,58 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Icon 4 -->
         <activity-alias
-            android:name=".MainActivityAlt3"
+            android:name=".MainActivityIcon_4"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_alt3"
-            android:roundIcon="@mipmap/ic_launcher_alt3"
+            android:icon="@mipmap/ic_launcher_4"
+            android:roundIcon="@mipmap/ic_launcher_4"
+            android:label="@string/app_name"
+            android:targetActivity=".splash.ModernSplashActivity">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Icon 5 -->
+        <activity-alias
+            android:name=".MainActivityIcon_5"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_5"
+            android:roundIcon="@mipmap/ic_launcher_5"
+            android:label="@string/app_name"
+            android:targetActivity=".splash.ModernSplashActivity">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Icon 6 -->
+        <activity-alias
+            android:name=".MainActivityIcon_6"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_6"
+            android:roundIcon="@mipmap/ic_launcher_6"
+            android:label="@string/app_name"
+            android:targetActivity=".splash.ModernSplashActivity">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Icon 7 -->
+        <activity-alias
+            android:name=".MainActivityIcon_7"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_7"
+            android:roundIcon="@mipmap/ic_launcher_7"
             android:label="@string/app_name"
             android:targetActivity=".splash.ModernSplashActivity">
             <intent-filter android:priority="1000">

@@ -1,25 +1,40 @@
 package com.example.core.model
 
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
 import java.util.Date
 
 /**
- * Основная модель комикса/манги/книги (чистая модель без зависимостей Room)
+ * Основная модель комикса/манги/книги с Room аннотациями
  */
+@Entity(
+    tableName = "comics",
+    indices = [
+        Index(value = ["title"]),
+        Index(value = ["addedDate"]),
+        Index(value = ["lastReadDate"]),
+        Index(value = ["folderId"])
+    ]
+)
+@TypeConverters(Converters::class)
 data class Comic(
+    @PrimaryKey
     val id: String = java.util.UUID.randomUUID().toString(),
     val title: String = "",
-    val filePath: String = "",
-    val fileName: String = "",
-    val fileSize: Long = 0L,
+    val path: String = "",
     val format: ComicFormat = ComicFormat.UNKNOWN,
     val coverPath: String? = null,
     val pageCount: Int = 0,
+    val fileSize: Long = 0L,
+    val addedDate: Long = System.currentTimeMillis(),
+    val lastModified: Long = System.currentTimeMillis(),
+    val folderId: String? = null,
+    val lastReadDate: Long? = null,
     val readingProgress: Float = 0f, // 0.0 - 1.0
-    val lastReadDate: Date? = null,
-    val addedDate: Date = Date(),
-    val modifiedDate: Date = Date(),
     val isBookmarked: Boolean = false,
-    val tags: List<String> = emptyList(),
+    val tags: String = "", // JSON serialized list
     val series: String? = null,
     val volume: Int? = null,
     val issue: Int? = null,
@@ -41,5 +56,6 @@ enum class ComicFormat {
     RAR,    // Generic RAR
     SEVENZ, // 7-Zip
     TAR,    // TAR Archive
+    FOLDER, // Folder with images
     UNKNOWN
 }

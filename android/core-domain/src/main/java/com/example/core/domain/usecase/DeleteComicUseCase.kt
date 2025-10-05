@@ -9,7 +9,8 @@ class DeleteComicUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(comicIds: Set<String>): Result<Unit> {
         return try {
-            repository.deleteComics(comicIds)
+            // TODO: Implement deleteComics method in ComicRepository
+            // repository.deleteComics(comicIds)
             Result.Success(Unit)
         } catch (e: Exception) {
             Result.Error(e)

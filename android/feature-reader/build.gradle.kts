@@ -37,6 +37,7 @@ dependencies {
     implementation(project(":android:core-domain"))
     implementation(project(":android:core-model"))
     implementation(project(":android:core-ui"))
+    implementation(project(":android:core-analytics"))
     implementation(libs.bundles.room)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.compose.material.icons.extended)

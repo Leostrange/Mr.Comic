@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/left_drawer" style="@style/SideDrawer">
+    <RelativeLayout android:id="@+id/header" android:background="@drawable/side_nav_bar" android:padding="5dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_alignParentTop="true">
+        <ImageView android:id="@+id/imageView" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginRight="10dp" android:src="@drawable/icon" android:layout_alignParentTop="true"/>
+        <RelativeLayout android:id="@+id/support_mail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toRightOf="@+id/imageView" android:layout_alignParentTop="true">
+            <TextView android:textSize="12sp" android:id="@+id/label" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/app_name" android:layout_alignParentTop="true"/>
+            <TextView android:textSize="12sp" android:id="@+id/textView" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="support@meanlabs.com" android:layout_below="@+id/label"/>
+        </RelativeLayout>
+        <LinearLayout android:orientation="horizontal" android:id="@+id/statusBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:layout_below="@+id/support_mail" android:layout_alignLeft="@+id/support_mail">
+            <TextView android:textSize="12sp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginRight="1dp" android:text="@string/lastSynced"/>
+            <TextView android:textSize="12sp" android:id="@+id/lastSyncTime" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </RelativeLayout>
+    <ListView android:id="@+id/multiList" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_marginTop="5dp" android:layout_below="@+id/header"/>
+</RelativeLayout>

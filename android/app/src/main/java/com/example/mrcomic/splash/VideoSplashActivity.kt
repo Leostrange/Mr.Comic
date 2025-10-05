@@ -30,7 +30,7 @@ import kotlinx.coroutines.delay
  */
 class VideoSplashActivity : ComponentActivity() {
     
-        companion object {
+    companion object {
         private const val TAG = "VideoSplashActivity"
         private const val FALLBACK_DURATION_MS = Long.MAX_VALUE // Убираем таймаут для полного видео
     }
@@ -69,25 +69,18 @@ class VideoSplashActivity : ComponentActivity() {
         
         // Инициализируем плеер
         LaunchedEffect(Unit) {
-            val videoResourceId = context.resources.getIdentifier("splash_video", "raw", context.packageName)
-            
-            if (videoResourceId != 0) {
-                val uri = Uri.parse("android.resource://${context.packageName}/$videoResourceId")
-                
-                optimizedPlayer.initialize(
-                    videoUri = uri,
-                    onVideoEnded = onSplashFinished,
-                    onError = { 
-                        android.util.Log.e(TAG, "Optimized video playback error", it)
-                        showFallback = true
-                        onError()
-                    }
-                )
-            } else {
-                // Видео-ресурс не найден
-                showFallback = true
-                onError()
-            }
+            // Используем видео из raw ресурсов
+            val uri = Uri.parse("android.resource://${context.packageName}/${R.raw.splash_video}")
+
+            optimizedPlayer.initialize(
+                videoUri = uri,
+                onVideoEnded = onSplashFinished,
+                onError = {
+                    android.util.Log.e(TAG, "Optimized video playback error", it)
+                    showFallback = true
+                    onError()
+                }
+            )
         }
         
         // Отслеживаем состояние плеера
@@ -122,16 +115,14 @@ class VideoSplashActivity : ComponentActivity() {
         
         // Автоматическое завершение при показе fallback (только если видео не готово)
         LaunchedEffect(showFallback) {
-            if (showFallback) {
-                delay(2000) // Показываем fallback 2 секунды, если видео не загрузилось
-                onSplashFinished()
-            }
+            delay(2000) // Показываем fallback 2 секунды, если видео не загрузилось
+            onSplashFinished()
         }
         
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
                 .clickable { onSplashFinished() }, // Тап для пропуска
             contentAlignment = Alignment.Center
         ) {
@@ -139,7 +130,6 @@ class VideoSplashActivity : ComponentActivity() {
                 // Показываем fallback сплэш
                 FallbackSplashContent()
             } else {
-                // Показываем видео
                 player?.let { exoPlayer ->
                     AndroidView(
                         factory = { context ->
@@ -159,7 +149,6 @@ class VideoSplashActivity : ComponentActivity() {
                 }
             }
         }
-
     }
     
     @Composable
@@ -172,7 +161,7 @@ class VideoSplashActivity : ComponentActivity() {
             Text(
                 text = "Mr.Comic",
                 style = MaterialTheme.typography.headlineLarge,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onBackground,
                 textAlign = TextAlign.Center
             )
             
@@ -181,7 +170,7 @@ class VideoSplashActivity : ComponentActivity() {
             Text(
                 text = "Loading...",
                 style = MaterialTheme.typography.bodyLarge,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center
             )
         }

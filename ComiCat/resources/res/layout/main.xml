@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/drawer_layout" android:layout_width="match_parent" android:layout_height="match_parent">
+    <FrameLayout android:id="@+id/catalogContainer" android:layout_width="match_parent" android:layout_height="match_parent">
+        <GridView android:gravity="center_horizontal" android:layout_gravity="center_horizontal" android:id="@+id/catalogFolderGrid" android:layout_width="wrap_content" android:layout_height="match_parent" android:stretchMode="columnWidth" android:numColumns="auto_fit"/>
+        <GridView android:gravity="center_horizontal" android:layout_gravity="center_horizontal" android:id="@+id/catalogFileGrid" android:layout_width="wrap_content" android:layout_height="match_parent" android:stretchMode="columnWidth" android:numColumns="auto_fit"/>
+        <LinearLayout android:gravity="center" android:layout_gravity="center" android:orientation="vertical" android:id="@+id/buildCatalogView" android:background="@drawable/translucent_back" android:paddingLeft="10dp" android:paddingTop="15dp" android:paddingRight="10dp" android:paddingBottom="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginLeft="15dp" android:layout_marginRight="15dp">
+            <TextView android:textColor="#ff333333" android:gravity="center_horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="10dp" android:text="@string/buildCatalogMessage1"/>
+            <Button android:id="@+id/buildCatalog" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/buildCatalog"/>
+            <TextView android:textColor="#ff333333" android:gravity="center_horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="@string/buildCatalogMessage2"/>
+        </LinearLayout>
+    </FrameLayout>
+    <include layout="@layout/drawer_items"/>
+</android.support.v4.widget.DrawerLayout>

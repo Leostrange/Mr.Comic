@@ -77,6 +77,12 @@
 # PDF libraries
 -keep class com.shockwave.pdfium.** { *; }
 -keep class org.vudroid.djvulibre.** { *; }
+# Keep PDFBox-Android classes (Java package uses underscore)
+-keep class com.tom_roush.** { *; }
+-dontwarn com.tom_roush.**
+# Keep SLF4J bindings
+-keep class org.slf4j.** { *; }
+-dontwarn org.slf4j.**
 
 # Image processing optimizations
 -keep class android.graphics.** { *; }

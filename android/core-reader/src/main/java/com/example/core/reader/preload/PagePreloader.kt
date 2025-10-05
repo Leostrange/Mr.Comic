@@ -20,7 +20,7 @@ class PagePreloader @Inject constructor(
     
     companion object {
         private const val TAG = "PagePreloader"
-        private const val PRELOAD_RANGE = 1 // Предзагружаем ±1 страницу
+        private const val PRELOAD_RANGE = 3 // Предзагружаем ±3 страницы для более плавного UX
     }
     
     // Отдельный dispatcher для IO операций предзагрузки

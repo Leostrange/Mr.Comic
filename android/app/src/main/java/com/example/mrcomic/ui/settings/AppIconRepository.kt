@@ -37,9 +37,12 @@ class AppIconRepository @Inject constructor(
         val activityAlias: String?
     ) {
         DEFAULT("default", "Default", R.mipmap.ic_launcher, null),
-        ALT1("alt1", "Alternative 1", R.mipmap.ic_launcher_alt1, ".MainActivityAlt1"),
-        ALT2("alt2", "Alternative 2", R.mipmap.ic_launcher_alt2, ".MainActivityAlt2"),
-        ALT3("alt3", "Alternative 3", R.mipmap.ic_launcher_alt3, ".MainActivityAlt3")
+        ICON2("icon2", "Icon 2", R.mipmap.ic_launcher_2, ".MainActivityIcon_2"),
+        ICON3("icon3", "Icon 3", R.mipmap.ic_launcher_3, ".MainActivityIcon_3"),
+        ICON4("icon4", "Icon 4", R.mipmap.ic_launcher_4, ".MainActivityIcon_4"),
+        ICON5("icon5", "Icon 5", R.mipmap.ic_launcher_5, ".MainActivityIcon_5"),
+        ICON6("icon6", "Icon 6", R.mipmap.ic_launcher_6, ".MainActivityIcon_6"),
+        ICON7("icon7", "Icon 7", R.mipmap.ic_launcher_7, ".MainActivityIcon_7")
     }
     
     /**
@@ -54,6 +57,7 @@ class AppIconRepository @Inject constructor(
      * Получить все доступные иконки
      */
     fun getAllIcons(): List<AppIcon> {
+        // Expose all 7 variants + default
         return AppIcon.values().toList()
     }
     

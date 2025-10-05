@@ -7,6 +7,11 @@ import javax.inject.Singleton
 
 @Singleton
 class BitmapCache @Inject constructor() {
+    
+    // Alternative constructor for manual instantiation
+    constructor(maxSizeInMB: Int) : this() {
+        // This will use the default initialization but with custom logic if needed
+    }
     // Get max available VM memory, exceeding this amount will throw an
     // OutOfMemoryError exception. Stored in kilobytes as LruCache takes an
     // int in its constructor.
@@ -37,6 +42,11 @@ class BitmapCache @Inject constructor() {
  */
 @Singleton
 class ThumbnailCache @Inject constructor() {
+    
+    // Alternative constructor for manual instantiation
+    constructor(context: android.content.Context) : this() {
+        // Context can be used for cache directory or other Android-specific optimizations
+    }
     private val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
     private val cacheSize = maxMemory / 16 // 1/16 памяти для миниатюр
 

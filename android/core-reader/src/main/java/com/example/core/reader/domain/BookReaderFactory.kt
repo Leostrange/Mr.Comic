@@ -37,9 +37,13 @@ class BookReaderFactory(
      * @throws UnsupportedFormatException if the file format is not supported.
      */
     fun create(uri: Uri): MediaReader {
+        android.util.Log.d(TAG, "🔥 DIAGNOSTIC: BookReaderFactory.create() called with URI: $uri")
+        android.util.Log.d(TAG, "🔥 DIAGNOSTIC: URI scheme: ${uri.scheme}, path: ${uri.path}, lastPathSegment: ${uri.lastPathSegment}")
+        
         // Clean up previous reader if exists
         try {
             currentReader?.let { reader ->
+                android.util.Log.d(TAG, "🔥 DIAGNOSTIC: Closing previous reader: ${reader::class.simpleName}")
                 kotlinx.coroutines.runBlocking {
                     reader.close()
                 }
@@ -52,6 +56,7 @@ class BookReaderFactory(
         val extension = when (uri.scheme) {
             "file" -> uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase() ?: ""
             "content" -> {
+                // Сначала пытаемся получить имя через ContentResolver
                 val name = try {
                     val cursor = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
                     cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
@@ -59,25 +64,33 @@ class BookReaderFactory(
                     android.util.Log.w(TAG, "Failed to get display name for content URI", e)
                     null
                 }
-                android.util.Log.d(TAG, "Content URI display name: $name")
-                name?.substringAfterLast('.', "")?.lowercase() ?: ""
+                android.util.Log.d(TAG, "🔥 Content URI display name: $name")
+                
+                // Если не получилось, пытаемся извлечь из lastPathSegment
+                val ext = name?.substringAfterLast('.', "")?.lowercase() 
+                    ?: uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase()
+                    ?: uri.path?.substringAfterLast('.', "")?.lowercase()
+                    ?: ""
+                
+                android.util.Log.d(TAG, "🔥 Extracted extension: '$ext' from name='$name', lastPathSegment='${uri.lastPathSegment}', path='${uri.path}'")
+                ext
             }
             else -> uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase() ?: ""
         }
         
-        android.util.Log.d(TAG, "Creating reader for URI: $uri, extension: $extension, scheme=${uri.scheme}")
+        android.util.Log.d(TAG, "🔥 DIAGNOSTIC: Creating reader for URI: $uri, extension: '$extension', scheme=${uri.scheme}")
         
         val delegateReader: MediaReader = when (extension) {
             "cbr" -> {
-                android.util.Log.d(TAG, "Creating CBR reader")
+                android.util.Log.d(TAG, "🔥 DIAGNOSTIC: ✅ Extension matches 'cbr' - Creating CbrReader")
                 CbrReader(context)
             }
             "rar" -> {
-                android.util.Log.d(TAG, "Creating CBR reader for .rar (treated as CBR)")
+                android.util.Log.d(TAG, "🔥 DIAGNOSTIC: ✅ Extension matches 'rar' - Creating CbrReader")
                 CbrReader(context)
             }
             "cbz" -> {
-                android.util.Log.d(TAG, "Creating CBZ reader")
+                android.util.Log.d(TAG, "🔥 DIAGNOSTIC: ✅ Extension matches 'cbz' - Creating CbzReader")
                 CbzReader(context)
             }
             "pdf" -> {
@@ -111,8 +124,9 @@ class BookReaderFactory(
                         CbzReader(context)
                     }
                     else -> {
-                        android.util.Log.e(TAG, "Unsupported file format: $extension for uri: $uri")
-                        throw UnsupportedFormatException("Unsupported file format for: $uri")
+                        android.util.Log.e(TAG, "🔥 DIAGNOSTIC: ❌ Unsupported file format: extension='$extension' for uri: $uri")
+                        android.util.Log.e(TAG, "🔥 DIAGNOSTIC: ❌ Available formats: cbr, rar, cbz, zip, pdf")
+                        throw UnsupportedFormatException("Unsupported file format for: $uri (extension: $extension)")
                     }
                 }
             }

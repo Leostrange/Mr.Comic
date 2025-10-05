@@ -4,9 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import androidx.annotation.RawRes
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -14,9 +18,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -25,6 +31,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableStateOf
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -79,20 +86,33 @@ fun VideoSplashScreen(
     }
 
     // Гарантируем одиночный вызов завершения
-    val finishedOnce = remember { androidx.compose.runtime.mutableStateOf(false) }
+    val finishedOnce = remember { mutableStateOf(false) }
+    
+    // Анимация плавного появления и исчезновения
+    val alphaAnimation = remember { Animatable(0f) }
+    val isVideoEnding = remember { mutableStateOf(false) }
 
     LaunchedEffect(exoPlayer) {
         if (exoPlayer != null) {
             val listener = object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED && !finishedOnce.value) {
-                        finishedOnce.value = true
-                        onSplashFinished()
+                    when (playbackState) {
+                        Player.STATE_READY -> {
+                            // Плавное появление видео - запускаем в отдельном LaunchedEffect
+                        }
+                        Player.STATE_ENDED -> {
+                            if (!finishedOnce.value) {
+                                isVideoEnding.value = true
+                                finishedOnce.value = true
+                                onSplashFinished()
+                            }
+                        }
                     }
                 }
                 
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     if (!finishedOnce.value) {
+                        isVideoEnding.value = true
                         finishedOnce.value = true
                         onSplashFinished()
                     }
@@ -100,14 +120,37 @@ fun VideoSplashScreen(
             }
             exoPlayer.addListener(listener)
         }
-        
-                // Fallback timeout – завершаем, только если ещё не завершили по видео
-                // Но поскольку autoFinishDelayMs теперь Long.MAX_VALUE, таймаут не сработает
-                delay(autoFinishDelayMs)
-                if (!finishedOnce.value) {
-                    finishedOnce.value = true
-                    onSplashFinished()
-                }
+    }
+    
+    // Отдельные анимации
+    LaunchedEffect(exoPlayer) {
+        if (exoPlayer != null) {
+            // Ждём готовности видео
+            while (exoPlayer.playbackState != Player.STATE_READY && exoPlayer.playbackState != Player.STATE_ENDED) {
+                delay(100)
+            }
+            if (exoPlayer.playbackState == Player.STATE_READY) {
+                alphaAnimation.animateTo(
+                    1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
+            }
+        }
+    }
+    
+    LaunchedEffect(isVideoEnding.value) {
+        if (isVideoEnding.value) {
+            alphaAnimation.animateTo(
+                0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
+        }
     }
 
     DisposableEffect(exoPlayer) {
@@ -142,6 +185,7 @@ fun VideoSplashScreen(
                 },
                 modifier = Modifier
                     .fillMaxSize()
+                    .alpha(alphaAnimation.value) // Плавная анимация появления
                     .background(Color.Black) // Чёрные полосы вместо белых
             )
         } else {
@@ -155,6 +199,26 @@ fun VideoSplashScreen(
                         delay(1000L) // Короткая задержка для показа чёрного экрана
                         onSplashFinished()
                     }
+        }
+        
+        // Кнопка "Пропустить" в правом верхнем углу
+        androidx.compose.material3.TextButton(
+            onClick = {
+                if (!finishedOnce.value) {
+                    finishedOnce.value = true
+                    onSplashFinished()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .alpha(alphaAnimation.value) // Появляется вместе с видео
+        ) {
+            androidx.compose.material3.Text(
+                text = "Пропустить",
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }

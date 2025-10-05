@@ -23,8 +23,31 @@ class PdfBoxReader : PdfReader {
     
     override suspend fun openDocument(context: Context, uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val inputStream: InputStream = context.contentResolver.openInputStream(uri)
-                ?: return@withContext Result.failure(IOException("Cannot open input stream for URI"))
+            // Check and request permissions for content:// URIs
+            if (uri.scheme == "content") {
+                try {
+                    // Try to take persistable permission
+                    context.contentResolver.takePersistableUriPermission(
+                        uri, 
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    android.util.Log.d("PdfBoxReader", "✅ PDF DIAGNOSTIC: Persistable permission granted for URI: $uri")
+                } catch (e: SecurityException) {
+                    android.util.Log.w("PdfBoxReader", "⚠️ PDF DIAGNOSTIC: Could not take persistable permission: ${e.message}")
+                    // Continue anyway, might work with temporary permission
+                }
+            }
+            
+            val inputStream: InputStream? = try {
+                context.contentResolver.openInputStream(uri)
+            } catch (e: SecurityException) {
+                android.util.Log.e("PdfBoxReader", "❌ PDF DIAGNOSTIC: SecurityException when opening URI: $uri", e)
+                return@withContext Result.failure(IOException("Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"))
+            }
+            
+            if (inputStream == null) {
+                return@withContext Result.failure(IOException("Cannot open input stream for URI"))
+            }
             
             pdfDocument = PDDocument.load(inputStream)
             pdfRenderer = pdfDocument?.let { PDFRenderer(it) }

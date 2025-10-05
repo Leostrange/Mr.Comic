@@ -1,0 +1,43 @@
+<body>
+	<p>
+		<strong>Troubleshooting ComiCat</strong>
+	</p>
+	<div class="topic">
+		<h3>I am getting sync failures</h3>
+		<p>There are a few possible reasons why a file may fail to sync</p>
+			<ul>
+				<li>The file is password or DRM protected.</li>
+				<li>The file is incomplete, it happens when resync is done while the file is still being copied/downloaded.</li>
+				<li>The file is on external sdcard and the sdcard is encrypted.</li>
+				<li>The file has been saved offline from Google drive. Google drive keeps offline files encrypted which makes them unreadable for other apps. Turn off encryption from Google drive's settings and then do a re-sync</li>
+			</ul>
+		</p>	
+		<h3>A lot of non comic files appear on my shelf</h3>
+		<p>
+			This can happen when ComiCat is set to scan for secondary comic file extensions like zip and pdf. Since these are general purpose formats, found files can be non comic files. You can try following
+			<ul>
+				<li>If the number of files is limited you can 'Exclude' them from catalog. This can be done using the context menu in catalog view.</li>
+				<li>You can set "Include Zip, RAR, PDF format files" preference in "Catalog Settings" to "Don't Include" or "Include only if inside comic folder".</li>
+			</ul>
+		</p>
+		<h3>Some of my comics are not scanned by ComiCat and I don't get any sync failure</h3>
+		<p>It means ComiCat ignored those comic files. Besides the primary comic format extensions ComiCat can look for .zip, .rar, .pdf extensions and import them to your catalog. But which files it will pick will depend on "Include Zip, RAR, PDF format files" settings. You can read about this setting in the "Catalog Settings" section of "Settings Guide". You can either change this setting to the desired value or move the comics to an appropriate folder to have them imported.</p>
+		<h3>My comics look blurry</h3>
+		<p>Try increasing the "Max Image Size" setting in "Performance Settings". We recommend that you increase the value in 1MB steps until you get crisp images.</p>
+		<h3>I get force close while reading comics</h3>
+		<p>This may either be because of a corrupt Comic file or memory issues. If it happens only with one file then most probably it is the former else you can try the following
+			<ol>
+				<li>In performance settings reduce the value of "Max Image Size" setting.</li>
+				<li>Turn off "Aggressive Caching".</li>
+				<li>If the above two don't work then turn off "Show Transitions"</li>
+			</ol>
+		</p>
+		<h3>I deleted and now want to re-download a comic from dropbox but ComiCat won't do it.</h3>
+		<p>
+			By default ComiCat maintains and uses download history to avoid re-downloading deleted files. This is so that the users can freely delete Comic files from their device once they are done reading it.
+			You can turn this off from "Cloud Sync Settings". Please note, turning off this setting does not clear the download history, it only tells ComiCat to ignore it. You can re-enable the setting any time without losing the download history.
+		</p>
+		<h3>ComiCat insists I see double page spreads as single page</h3>
+		<p>By default ComiCat is set to split Double Page Scans and show them as single pages. If this is not desired you can turn it off from "Double Page Scans" setting in viewer settings.</p>				
+	</div>
+</body>

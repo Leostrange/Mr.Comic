@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 
 /**
@@ -91,7 +92,15 @@ fun MrComicTheme(
             colorScheme = colorScheme,
             typography = Typography,
             shapes = Shapes,
-            content = content
+            content = {
+                // Применяем тему к системным панелям
+                SystemBarsTheme(
+                    darkTheme = useDarkTheme,
+                    statusBarColor = colorScheme.surface.copy(alpha = 0.8f),
+                    navigationBarColor = colorScheme.surface.copy(alpha = 0.9f)
+                )
+                content()
+            }
         )
     }
 }
@@ -104,6 +113,39 @@ private fun createAmoledDarkColorScheme(): ColorScheme {
         background = androidx.compose.ui.graphics.Color.Black,
         surface = androidx.compose.ui.graphics.Color.Black,
         surfaceVariant = androidx.compose.ui.graphics.Color(0xFF0A0A0A)
+    )
+}
+
+/**
+ * Creates sepia color scheme for comfortable reading
+ */
+fun createSepiaColorScheme(): ColorScheme {
+    return LightColorScheme.copy(
+        background = androidx.compose.ui.graphics.Color(0xFFF5F1E8), // Sepia background
+        surface = androidx.compose.ui.graphics.Color(0xFFF5F1E8),
+        surfaceVariant = androidx.compose.ui.graphics.Color(0xFFEDE8DF),
+        onBackground = androidx.compose.ui.graphics.Color(0xFF3D3D3D), // Dark brown text
+        onSurface = androidx.compose.ui.graphics.Color(0xFF3D3D3D),
+        onSurfaceVariant = androidx.compose.ui.graphics.Color(0xFF5D5D5D),
+        primary = androidx.compose.ui.graphics.Color(0xFF8B4513), // Saddle brown
+        onPrimary = androidx.compose.ui.graphics.Color.White,
+        primaryContainer = androidx.compose.ui.graphics.Color(0xFFD2B48C), // Tan
+        onPrimaryContainer = androidx.compose.ui.graphics.Color(0xFF3D3D3D)
+    )
+}
+
+/**
+ * Creates pure black color scheme for reader AMOLED mode
+ */
+fun createReaderBlackColorScheme(): ColorScheme {
+    return DarkColorScheme.copy(
+        background = androidx.compose.ui.graphics.Color.Black,
+        surface = androidx.compose.ui.graphics.Color.Black,
+        surfaceVariant = androidx.compose.ui.graphics.Color(0xFF000000),
+        onBackground = androidx.compose.ui.graphics.Color.White,
+        onSurface = androidx.compose.ui.graphics.Color.White,
+        primary = androidx.compose.ui.graphics.Color(0xFF808080), // Gray
+        onPrimary = androidx.compose.ui.graphics.Color.Black
     )
 }
 
@@ -179,5 +221,59 @@ fun MrComicDynamicTheme(
     MrComicTheme(
         themeConfig = themeConfig,
         content = content
+    )
+}
+
+/**
+ * Reader-specific theme composable
+ * Applies appropriate color scheme based on reader theme preferences
+ */
+@Composable
+fun MrComicReaderTheme(
+    readerThemeConfig: ReaderThemeConfig,
+    appThemeConfig: ThemeConfig = ThemeConfig(),
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+    val isSystemDark = isSystemInDarkTheme()
+    
+    // Determine color scheme based on reader theme mode
+    val colorScheme = when (readerThemeConfig.themeMode) {
+        ReaderThemeMode.SYSTEM -> {
+            // Follow app theme
+            when (appThemeConfig.themeMode) {
+                ThemeMode.SYSTEM -> if (isSystemDark) DarkColorScheme else LightColorScheme
+                ThemeMode.LIGHT -> LightColorScheme
+                ThemeMode.DARK -> if (readerThemeConfig.useAmoled) createAmoledDarkColorScheme() else DarkColorScheme
+                ThemeMode.DYNAMIC -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && appThemeConfig.useDynamicColor) {
+                        if (isSystemDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                    } else {
+                        if (isSystemDark) DarkColorScheme else LightColorScheme
+                    }
+                }
+            }
+        }
+        ReaderThemeMode.LIGHT -> LightColorScheme
+        ReaderThemeMode.DARK -> {
+            if (readerThemeConfig.useAmoled) createAmoledDarkColorScheme() else DarkColorScheme
+        }
+        ReaderThemeMode.SEPIA -> createSepiaColorScheme()
+        ReaderThemeMode.BLACK -> createReaderBlackColorScheme()
+    }
+    
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        shapes = Shapes,
+        content = {
+            // Apply reader-specific system bars
+            SystemBarsTheme(
+                darkTheme = colorScheme.background.luminance() < 0.5f,
+                statusBarColor = colorScheme.surface.copy(alpha = 0.3f),
+                navigationBarColor = colorScheme.surface.copy(alpha = 0.3f)
+            )
+            content()
+        }
     )
 }

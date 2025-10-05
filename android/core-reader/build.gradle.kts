@@ -38,11 +38,20 @@ dependencies {
     implementation(libs.zip4j)
     implementation(libs.junrar)
     implementation(libs.pdfium.android) // Using stable version
-    implementation(libs.pdfbox.android) // Fallback PDF library
+    implementation(libs.pdfbox.android) { // Fallback PDF library
+        exclude(group = "org.slf4j", module = "slf4j-simple")
+    }
+    implementation(libs.slf4j.android) // Logging binding for pdfbox-android
     implementation(libs.commons.compress)
     
     // EPUB support - LGPL licensed
     implementation(libs.epublib.core) {
         exclude(group = "xmlpull", module = "xmlpull")
+        exclude(group = "org.slf4j", module = "slf4j-simple")
     }
+    
+    // Test dependencies
+    testImplementation(libs.test.junit)
+    testImplementation(libs.test.mockk)
+    testImplementation(libs.test.kotlinx.coroutines)
 }

@@ -16,6 +16,10 @@
         
         <!-- Set the icon background color -->
         <item name="windowSplashScreenIconBackgroundColor">@color/splash_screen_icon_background</item>
+        
+        <!-- Hide ActionBar -->
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
     </style>
     
     <!-- Fallback theme for older Android versions -->

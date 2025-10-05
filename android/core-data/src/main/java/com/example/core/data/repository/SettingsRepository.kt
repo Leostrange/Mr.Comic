@@ -6,10 +6,14 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import com.example.core.model.SortOrder
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
+import android.content.Context
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
+import com.google.gson.Gson
 
 interface SettingsRepository {
     data class SettingsSnapshot(
@@ -50,6 +54,14 @@ interface SettingsRepository {
 
     val performanceMode: Flow<Boolean>
     suspend fun setPerformanceMode(enabled: Boolean)
+    
+    // Backup methods
+    suspend fun createLocalBackup()
+    suspend fun restoreLocalBackup()
+    suspend fun createCloudBackup()
+    suspend fun restoreCloudBackup()
+    suspend fun changeAppIcon()
+    suspend fun clearCache()
 
     val readerLineSpacing: Flow<Float>
     suspend fun setReaderLineSpacing(spacing: Float)
@@ -71,6 +83,12 @@ interface SettingsRepository {
     suspend fun setReadingDoubleTapZoom(value: Float)
     val readingBlockSwipeWhenZoomed: Flow<Boolean>
     suspend fun setReadingBlockSwipeWhenZoomed(enabled: Boolean)
+    val readerBrightness: Flow<Float>
+    suspend fun setReaderBrightness(value: Float)
+    val readerAnimationSpeed: Flow<Float>
+    suspend fun setReaderAnimationSpeed(value: Float)
+    val pageTurnSoundEnabled: Flow<Boolean>
+    suspend fun setPageTurnSoundEnabled(enabled: Boolean)
 
     // UI Settings
     val theme: Flow<String> // system|light|dark|sepia|amoled|manga
@@ -104,11 +122,10 @@ interface SettingsRepository {
 
     suspend fun getSettingsSnapshot(): SettingsSnapshot
     suspend fun applySettingsSnapshot(snapshot: SettingsSnapshot)
-
-    suspend fun clearCache()
 }
 
 class SettingsRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val dataStore: DataStore<Preferences>
 ) : SettingsRepository {
 
@@ -131,6 +148,9 @@ class SettingsRepositoryImpl @Inject constructor(
         val ORIENTATION = stringPreferencesKey("orientation")
         val READING_DOUBLE_TAP_ZOOM = stringPreferencesKey("reading_double_tap_zoom")
         val READING_BLOCK_SWIPE_WHEN_ZOOMED = stringPreferencesKey("reading_block_swipe_when_zoomed")
+        val READER_BRIGHTNESS = stringPreferencesKey("reader_brightness")
+        val READER_ANIMATION_SPEED = stringPreferencesKey("reader_animation_speed")
+        val PAGE_TURN_SOUND = stringPreferencesKey("page_turn_sound")
 
         // UI Settings
         val THEME = stringPreferencesKey("theme")
@@ -287,6 +307,24 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setReadingBlockSwipeWhenZoomed(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.READING_BLOCK_SWIPE_WHEN_ZOOMED] = enabled.toString() }
     }
+    override val readerBrightness: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_BRIGHTNESS]?.toFloatOrNull()?.coerceIn(0.0f, 1.0f) ?: 1.0f
+    }
+    override suspend fun setReaderBrightness(value: Float) {
+        dataStore.edit { it[PreferencesKeys.READER_BRIGHTNESS] = value.coerceIn(0.0f, 1.0f).toString() }
+    }
+    override val readerAnimationSpeed: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_ANIMATION_SPEED]?.toFloatOrNull()?.coerceIn(0.5f, 2.0f) ?: 1.0f
+    }
+    override suspend fun setReaderAnimationSpeed(value: Float) {
+        dataStore.edit { it[PreferencesKeys.READER_ANIMATION_SPEED] = value.coerceIn(0.5f, 2.0f).toString() }
+    }
+    override val pageTurnSoundEnabled: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.PAGE_TURN_SOUND]?.toBoolean() ?: false
+    }
+    override suspend fun setPageTurnSoundEnabled(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.PAGE_TURN_SOUND] = enabled.toString() }
+    }
 
     // Library
     override val libraryViewMode: Flow<String> = dataStore.data.map {
@@ -342,7 +380,96 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     override suspend fun clearCache() {
-        dataStore.edit { it.clear() }
+        try {
+            // Очищаем кэш обложек
+            val coversDir = File(context.cacheDir, "covers")
+            if (coversDir.exists()) {
+                coversDir.deleteRecursively()
+            }
+            // Очищаем кэш страниц
+            val pagesDir = File(context.cacheDir, "pages")
+            if (pagesDir.exists()) {
+                pagesDir.deleteRecursively()
+            }
+            android.util.Log.d("SettingsRepository", "✅ Cache cleared successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "❌ Failed to clear cache", e)
+        }
+    }
+
+    override suspend fun createLocalBackup() {
+        try {
+            // Создаём бэкап в Documents/MrComic/Backups
+            val backupDir = File(context.getExternalFilesDir(null), "backups")
+            if (!backupDir.exists()) {
+                backupDir.mkdirs()
+            }
+            
+            val timestamp = System.currentTimeMillis()
+            val backupFile = File(backupDir, "mrcomic_backup_$timestamp.json")
+            
+            // Создаём JSON с настройками
+            val settings = getSettingsSnapshot()
+            val json = Gson().toJson(settings)
+            
+            backupFile.writeText(json)
+            updateLastBackup(backupFile.absolutePath, timestamp)
+            
+            android.util.Log.d("SettingsRepository", "✅ Local backup created: ${backupFile.absolutePath}")
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "❌ Failed to create local backup", e)
+        }
+    }
+
+    override suspend fun restoreLocalBackup() {
+        try {
+            val lastBackupUri = lastBackupUri.first()
+            if (lastBackupUri == null) {
+                android.util.Log.w("SettingsRepository", "⚠️ No backup found to restore")
+                return
+            }
+            
+            val backupFile = File(lastBackupUri)
+            if (!backupFile.exists()) {
+                android.util.Log.w("SettingsRepository", "⚠️ Backup file not found: $lastBackupUri")
+                return
+            }
+            
+            val json = backupFile.readText()
+            val settings = Gson().fromJson(json, SettingsRepository.SettingsSnapshot::class.java)
+            
+            applySettingsSnapshot(settings)
+            android.util.Log.d("SettingsRepository", "✅ Local backup restored from: $lastBackupUri")
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "❌ Failed to restore local backup", e)
+        }
+    }
+
+    override suspend fun createCloudBackup() {
+        try {
+            android.util.Log.d("SettingsRepository", "🔄 Cloud backup functionality coming soon...")
+            // TODO: Implement cloud backup via CloudBackupManager
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "❌ Cloud backup failed", e)
+        }
+    }
+
+    override suspend fun restoreCloudBackup() {
+        try {
+            android.util.Log.d("SettingsRepository", "🔄 Cloud restore functionality coming soon...")
+            // TODO: Implement cloud restore via CloudBackupManager
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "❌ Cloud restore failed", e)
+        }
+    }
+
+    override suspend fun changeAppIcon() {
+        try {
+            android.util.Log.d("SettingsRepository", "🔄 App icon change functionality available in app settings...")
+            // Эта функция реализована в AppIconManager
+        } catch (e: Exception) {
+            android.util.Log.e("SettingsRepository", "❌ App icon change failed", e)
+        }
     }
 
     // Cache

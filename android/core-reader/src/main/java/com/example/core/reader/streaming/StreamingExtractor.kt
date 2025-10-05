@@ -96,19 +96,49 @@ class StreamingExtractor(
                 android.util.Log.d(TAG, "Successfully created ZipFile for: ${tempArchiveFile.absolutePath}")
 
                 // Получаем список файлов изображений
+                android.util.Log.d(TAG, "🔍 Total files in archive: ${currentArchive?.fileHeaders?.size ?: 0}")
+                
+                // Логируем ВСЕ файлы для диагностики
+                android.util.Log.d(TAG, "📋 ALL FILES IN ARCHIVE:")
+                currentArchive?.fileHeaders?.forEach { header ->
+                    android.util.Log.d(TAG, "  📄 ${header.fileName} (dir: ${header.isDirectory}, size: ${header.uncompressedSize})")
+                }
+                
+                // Фильтруем только изображения
+                android.util.Log.d(TAG, "🔍 Filtering image files...")
                 fileHeaders = currentArchive?.fileHeaders?.filter { header ->
-                    !header.isDirectory && isImageFile(header.fileName)
-                }?.sortedBy { it.fileName } ?: emptyList()
+                    val isNotDir = !header.isDirectory
+                    val isImage = isImageFile(header.fileName)
+                    if (isNotDir && !isImage) {
+                        android.util.Log.d(TAG, "⚠️ Skipping non-image file: ${header.fileName}")
+                    }
+                    isNotDir && isImage
+                }?.sortedWith(naturalOrderComparator()) ?: emptyList()
 
                 val imageFiles = fileHeaders.map { it.fileName }
 
-                android.util.Log.d(TAG, "Opened archive with ${imageFiles.size} image files")
-                android.util.Log.d(TAG, "Temp file size: ${tempArchiveFile.length()} bytes")
-                android.util.Log.d(TAG, "Total files in archive: ${currentArchive?.fileHeaders?.size ?: 0}")
+                android.util.Log.d(TAG, "✅ Opened archive with ${imageFiles.size} image files")
+                android.util.Log.d(TAG, "📦 Temp file size: ${tempArchiveFile.length()} bytes")
 
                 if (imageFiles.isEmpty()) {
-                    android.util.Log.w(TAG, "No image files found in archive. Available files: ${currentArchive?.fileHeaders?.map { it.fileName }}")
-                    return@withContext Result.failure(IllegalStateException("No image files found in archive"))
+                    android.util.Log.e(TAG, "❌ No image files found in archive!")
+                    android.util.Log.e(TAG, "📋 All files in archive:")
+                    
+                    val allFiles = mutableListOf<String>()
+                    currentArchive?.fileHeaders?.forEach { header ->
+                        android.util.Log.e(TAG, "  - ${header.fileName} (dir: ${header.isDirectory})")
+                        if (!header.isDirectory) {
+                            allFiles.add(header.fileName)
+                        }
+                    }
+                    
+                    val errorMessage = if (allFiles.isEmpty()) {
+                        "Архив пустой или поврежден"
+                    } else {
+                        "В архиве ${allFiles.size} файлов, но нет изображений. Примеры: ${allFiles.take(3).joinToString(", ")}"
+                    }
+                    
+                    return@withContext Result.failure(IllegalStateException(errorMessage))
                 }
 
                 Result.success(imageFiles)
@@ -217,17 +247,48 @@ class StreamingExtractor(
             val archive = currentArchive ?: return null
             val tempDirectory = tempDir ?: return null
             
-            val extractedFile = File(tempDirectory, "${cacheKey}_${header.fileName.substringAfterLast('/')}")
+            val fileName = header.fileName.substringAfterLast('/')
+            val extractedFile = File(tempDirectory, "${cacheKey}_${fileName}")
             
-            archive.extractFile(header, tempDirectory.absolutePath, extractedFile.name)
+            android.util.Log.d(TAG, "🔍 Extracting file: ${header.fileName} -> ${extractedFile.name}")
+            android.util.Log.d(TAG, "   Temp directory: ${tempDirectory.absolutePath}")
+            android.util.Log.d(TAG, "   Target file: ${extractedFile.absolutePath}")
+            
+            // Используем zip4j API для извлечения
+            // extractFile(FileHeader, String destinationPath, String newFileName)
+            try {
+                archive.extractFile(header, tempDirectory.absolutePath, extractedFile.name)
+                android.util.Log.d(TAG, "   extractFile() called successfully")
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "❌ extractFile() failed: ${e.message}")
+                
+                // Пробуем альтернативный метод - через InputStream
+                android.util.Log.d(TAG, "   Trying alternative extraction method...")
+                try {
+                    archive.getInputStream(header).use { input ->
+                        extractedFile.outputStream().use { output ->
+                            val bytesWritten = input.copyTo(output)
+                            android.util.Log.d(TAG, "   Copied $bytesWritten bytes via alternative method")
+                        }
+                    }
+                } catch (altE: Exception) {
+                    android.util.Log.e(TAG, "❌ Alternative extraction also failed: ${altE.message}")
+                    // Файл поврежден или использует неподдерживаемый метод сжатия
+                    // Возвращаем null, чтобы пропустить этот файл
+                    return null
+                }
+            }
             
             if (extractedFile.exists() && extractedFile.length() > 0) {
+                android.util.Log.d(TAG, "✅ File extracted successfully: ${extractedFile.name}, size: ${extractedFile.length()} bytes")
                 extractedFile
             } else {
+                android.util.Log.e(TAG, "❌ Extracted file is empty or doesn't exist: ${extractedFile.name}")
+                android.util.Log.d(TAG, "   File exists: ${extractedFile.exists()}, length: ${if (extractedFile.exists()) extractedFile.length() else "N/A"}")
                 null
             }
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to extract file: ${header.fileName}", e)
+            android.util.Log.e(TAG, "❌ Failed to extract file: ${header.fileName}", e)
             null
         }
     }
@@ -254,13 +315,32 @@ class StreamingExtractor(
     }
     
     private fun isImageFile(fileName: String): Boolean {
+        // Игнорируем скрытые файлы и системные файлы
+        val name = fileName.substringAfterLast('/')
+        if (name.startsWith(".") || name.startsWith("__MACOSX") || fileName.contains("__MACOSX")) {
+            return false
+        }
+        
+        // Проверяем расширение (case-insensitive)
         val lowercaseName = fileName.lowercase()
-        return lowercaseName.endsWith(".jpg") ||
+        val isImage = lowercaseName.endsWith(".jpg") ||
             lowercaseName.endsWith(".jpeg") ||
             lowercaseName.endsWith(".png") ||
             lowercaseName.endsWith(".webp") ||
             lowercaseName.endsWith(".bmp") ||
-            lowercaseName.endsWith(".gif")
+            lowercaseName.endsWith(".gif") ||
+            lowercaseName.endsWith(".jpe") ||
+            lowercaseName.endsWith(".jfif") ||
+            lowercaseName.endsWith(".tif") ||
+            lowercaseName.endsWith(".tiff")
+        
+        if (isImage) {
+            android.util.Log.d(TAG, "✅ Image file detected: $fileName")
+        } else {
+            android.util.Log.d(TAG, "❌ Not an image file: $fileName")
+        }
+        
+        return isImage
     }
     
     /**
@@ -321,6 +401,40 @@ class StreamingExtractor(
         fileHeaders = emptyList()
         
         android.util.Log.d(TAG, "Streaming extractor cleaned up")
+    }
+    
+    /**
+     * Natural order comparator that properly sorts filenames with numbers
+     * (e.g., page1.jpg, page2.jpg, page10.jpg instead of page1.jpg, page10.jpg, page2.jpg)
+     */
+    private fun naturalOrderComparator(): Comparator<net.lingala.zip4j.model.FileHeader> {
+        return Comparator { header1, header2 ->
+            val name1 = header1.fileName.lowercase()
+            val name2 = header2.fileName.lowercase()
+            
+            // Split filenames into parts (text and numbers)
+            val parts1 = name1.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)".toRegex())
+            val parts2 = name2.split("(?<=\\D)(?=\\d)|(?<=\\d)(?=\\D)".toRegex())
+            
+            val minSize = minOf(parts1.size, parts2.size)
+            
+            for (i in 0 until minSize) {
+                val part1 = parts1[i]
+                val part2 = parts2[i]
+                
+                val num1 = part1.toIntOrNull()
+                val num2 = part2.toIntOrNull()
+                
+                val result = when {
+                    num1 != null && num2 != null -> num1.compareTo(num2)
+                    else -> part1.compareTo(part2)
+                }
+                
+                if (result != 0) return@Comparator result
+            }
+            
+            parts1.size.compareTo(parts2.size)
+        }
     }
 }
 

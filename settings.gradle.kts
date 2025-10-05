@@ -54,7 +54,7 @@ include(":android:core-ui")
 project(":android:core-ui").projectDir = file("android/core-ui")
 
 // Feature modules
-// Temporarily disabled due to build issues
+// Temporarily disabled due to compilation issues - using core-reader CBR/CBZ support instead
 // include(":android:feature_cbr")
 // project(":android:feature_cbr").projectDir = file("android/feature_cbr")
 

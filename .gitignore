@@ -6,3 +6,19 @@ node_modules/
 test_cache/
 results/
 __pycache__/
+
+# Декомпилированные APK и анализ
+decompiled_apk/
+analysis/
+
+# Локальные настройки
+local.properties
+
+# Старые релизы и APK
+releases/
+final_apk/
+*.apk
+
+# Временные скрипты
+*.ps1
+*.bat

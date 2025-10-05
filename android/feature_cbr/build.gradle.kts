@@ -1,5 +1,5 @@
 plugins {
-    id("com.android.dynamic-feature")
+    id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
@@ -43,7 +43,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":android:app"))
+    // Removed app dependency to fix circular reference
     implementation(project(":android:core-reader"))
     implementation(project(":android:core-model"))
     implementation(project(":android:core-ui"))
@@ -55,6 +55,18 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
+    
+    // Android framework
+    implementation("androidx.core:core-ktx:1.9.0")
+    
+    // DataStore for preferences
+    implementation(libs.androidx.datastore.preferences)
+    
+    // Material Icons Extended
+    implementation(libs.androidx.compose.material.icons.extended)
+    
+    // Hilt Navigation Compose
+    implementation(libs.androidx.hilt.navigation.compose)
     
     // Hilt DI
     implementation(libs.google.hilt.android)

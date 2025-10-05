@@ -18,9 +18,9 @@ android {
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
 
-        // bump to force new APK build signature/size
-        versionCode = 12
-        versionName = "1.0.12"
+        // Updated with improvements: CBZ/CBR, enhanced reader, themes, icons
+        versionCode = 13
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -46,23 +46,23 @@ android {
     }
     
     // Dynamic Features конфигурация
-    // Temporarily disabled due to build issues
+    // CBR/CBZ support - using regular dependency instead of dynamic feature
     // dynamicFeatures.add(":android:feature_cbr")
     
     // App Bundle конфигурация
     bundle {
         language {
-            enableSplit = true
+            enableSplit = false
         }
         density {
-            enableSplit = true
+            enableSplit = false
         }
         abi {
-            enableSplit = true
+            enableSplit = false
         }
     }
     
-    // Отключаем ABI сплиты — собираем универсальный APK
+    // Отключаем все сплиты для создания универсального APK
     splits {
         abi {
             isEnable = false
@@ -132,6 +132,9 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+    
     // Android modules with proper paths
     implementation(project(":android:shared"))
     implementation(project(":android:core-analytics"))
@@ -146,7 +149,8 @@ dependencies {
     implementation(project(":android:feature-themes"))
     implementation(project(":android:feature-onboarding"))
     implementation(project(":android:feature-ocr"))
-    // Temporarily disabled due to build issues
+    implementation(project(":android:feature-translate"))
+    // CBR/CBZ support - using core-reader implementation instead of separate feature module
     // implementation(project(":android:feature_cbr"))
     
     // Third-party libraries
@@ -165,6 +169,7 @@ dependencies {
     // EPUB support - LGPL licensed
     implementation(libs.epublib.core) {
         exclude(group = "xmlpull", module = "xmlpull")
+        exclude(group = "org.slf4j", module = "slf4j-simple")
     }
     
     // Video splash screen (Media3)

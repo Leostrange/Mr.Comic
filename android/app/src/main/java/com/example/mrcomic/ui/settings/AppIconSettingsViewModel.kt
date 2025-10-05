@@ -14,7 +14,8 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class AppIconSettingsViewModel @Inject constructor(
-    private val appIconRepository: AppIconRepository
+    private val appIconRepository: AppIconRepository,
+    private val analyticsHelper: com.example.core.analytics.AnalyticsHelper
 ) : ViewModel() {
     
     private val _uiState = MutableStateFlow(AppIconSettingsUiState())
@@ -78,6 +79,14 @@ class AppIconSettingsViewModel @Inject constructor(
                         icons = updatedIcons,
                         currentIcon = icon,
                         successMessage = "App icon changed successfully"
+                    )
+                    // Analytics: app icon changed
+                    analyticsHelper.track(
+                        com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                            settingName = "app_icon",
+                            value = icon.id
+                        ),
+                        viewModelScope
                     )
                 } else {
                     _uiState.value = _uiState.value.copy(

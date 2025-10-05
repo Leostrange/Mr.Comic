@@ -1,10 +1,6 @@
 package com.example.core.data.di
 
 import android.content.Context
-import com.example.core.data.repository.ComicRepository
-import com.example.core.data.repository.ComicRepositoryImpl
-import com.example.core.data.repository.CoverExtractor
-import com.example.core.data.repository.CoverExtractorImpl
 import com.example.core.data.repository.LocalResourcesRepository
 import com.example.core.data.repository.LocalResourcesRepositoryImpl
 import com.example.core.data.repository.SettingsRepository
@@ -25,11 +21,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 abstract class DataModule {
 
-    @Binds
-    abstract fun bindComicRepository(impl: ComicRepositoryImpl): ComicRepository
+    // Закомментировано - используем DatabaseModule для предоставления репозиториев
+    // @Binds
+    // abstract fun bindComicRepository(impl: ComicRepositoryImpl): ComicRepository
 
-    @Binds
-    abstract fun bindCoverExtractor(impl: CoverExtractorImpl): CoverExtractor
+    // @Binds
+    // abstract fun bindCoverExtractor(impl: CoverExtractorImpl): CoverExtractor
 
     @Binds
     abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository

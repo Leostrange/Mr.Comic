@@ -25,5 +25,13 @@ android {
 }
 
 dependencies {
-    // Здесь можно будет добавлять общие зависимости, например, для сериализации (kotlinx.serialization)
-} 
+    // Core reader module for comic book support
+    implementation(project(":android:core-reader"))
+    implementation(project(":android:core-model"))
+    
+    // Android framework
+    implementation("androidx.core:core-ktx:1.9.0")
+    
+    // Coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+}

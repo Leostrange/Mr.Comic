@@ -24,12 +24,35 @@ class PdfiumReader : PdfReader {
     
     override suspend fun openDocument(context: Context, uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            // Check and request permissions for content:// URIs
+            if (uri.scheme == "content") {
+                try {
+                    // Try to take persistable permission
+                    context.contentResolver.takePersistableUriPermission(
+                        uri, 
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    android.util.Log.d("PdfiumReader", "✅ PDF DIAGNOSTIC: Persistable permission granted for URI: $uri")
+                } catch (e: SecurityException) {
+                    android.util.Log.w("PdfiumReader", "⚠️ PDF DIAGNOSTIC: Could not take persistable permission: ${e.message}")
+                    // Continue anyway, might work with temporary permission
+                }
+            }
+            
             // Инициализируем PdfiumCore
             pdfiumCore = PdfiumCore(context)
             
             // Открываем файловый дескриптор
-            parcelFileDescriptor = context.contentResolver.openFileDescriptor(uri, "r")
-                ?: return@withContext Result.failure(IOException("Cannot open file descriptor for URI"))
+            parcelFileDescriptor = try {
+                context.contentResolver.openFileDescriptor(uri, "r")
+            } catch (e: SecurityException) {
+                android.util.Log.e("PdfiumReader", "❌ PDF DIAGNOSTIC: SecurityException when opening URI: $uri", e)
+                return@withContext Result.failure(IOException("Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"))
+            }
+            
+            if (parcelFileDescriptor == null) {
+                return@withContext Result.failure(IOException("Cannot open file descriptor for URI"))
+            }
             
             // Создаем PDF документ
             pdfDocument = pdfiumCore?.newDocument(parcelFileDescriptor)

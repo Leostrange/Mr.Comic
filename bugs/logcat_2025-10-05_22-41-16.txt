@@ -1,0 +1,3558 @@
+[2025-10-05 22:37:40.432 Uid(value=11079):9352:9352 D/OplusInputMethodManagerInternal]
+get inputMethodManager extension: com.android.internal.view.IInputMethodManager$Stub$Proxy@dda4b34
+
+[2025-10-05 22:37:40.833 Uid(value=11079):9352:9352 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:false, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][1080,2400]}, relayoutAsync:true, mSyncSeqId:0
+
+[2025-10-05 22:37:40.833 Uid(value=11079):9352:9352 W/VRI[MainActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(1080, 2400), format:-3, blastBufferQueue:android.graphics.BLASTBufferQueue@e6079a
+
+[2025-10-05 22:37:40.981 Uid(value=11079):9352:9352 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:37:44.139 Uid(value=11079):9352:9352 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:false, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:37:48.476 Uid(value=11079):9352:9352 D/ActivityThread]
+ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.MainActivity} checkFinished=false 2
+
+[2025-10-05 22:37:48.476 Uid(value=11079):9352:9352 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:37:48.530 Uid(value=11079):9352:9352 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:37:48.531 Uid(value=11079):9352:9352 W/VRI[MainActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(1080, 2400), format:-3, blastBufferQueue:null
+
+[2025-10-05 22:37:48.792 Uid(value=11079):9352:9352 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:38:29.896 Uid(value=11079):9352:9352 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:false, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:38:32.451 Uid(value=11079):9352:9352 D/ActivityThread]
+do gfx trim 40 success
+
+[2025-10-05 22:39:42.077 Uid(value=11079):14809:14809 I/e.mrcomic.debug]
+Late-enabling -Xcheck:jni
+
+[2025-10-05 22:39:42.119 Uid(value=11079):14809:14809 E/e.mrcomic.debug]
+Unknown bits set in runtime_flags: 0x40000000
+
+[2025-10-05 22:39:42.119 Uid(value=11079):14809:14809 I/e.mrcomic.debug]
+Using CollectorTypeCMC GC.
+
+[2025-10-05 22:39:42.138 Uid(value=11079):14809:14809 D/nativeloader]
+Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+
+[2025-10-05 22:39:42.156 Uid(value=11079):14809:14809 W/ziparchive]
+Unable to open '/system_ext/framework/mediatek-framework.dm': No such file or directory
+
+[2025-10-05 22:39:42.156 Uid(value=11079):14809:14809 W/ziparchive]
+Unable to open '/system_ext/framework/mediatek-framework.dm': No such file or directory
+
+[2025-10-05 22:39:42.158 Uid(value=11079):14809:14809 D/OplusActivityThreadExtImpl]
+java.lang.NoSuchMethodException: dalvik.system.VMRuntime.SupressionGC [int, int]
+
+[2025-10-05 22:39:42.158 Uid(value=11079):14809:14809 I/OneTrace]
+Mark active for pid=14809? true
+
+[2025-10-05 22:39:42.159 Uid(value=11079):14809:14809 D/cutils-dev]
+otrace_set_tracing_enabled? true tag:0
+
+[2025-10-05 22:39:42.159 Uid(value=11079):14809:14815 D/cutils-dev]
+properties changed in otrace_seq_number_changed!
+
+[2025-10-05 22:39:42.176 Uid(value=11079):14809:14809 D/OplusActivityManager]
+get AMS extension: android.os.BinderProxy@87773c8
+
+[2025-10-05 22:39:42.184 Uid(value=11079):14809:14821 D/OplusAppHeapManager]
+java.lang.NoSuchMethodException: dalvik.system.VMRuntime.updateProcessValue [int, int, int]
+
+[2025-10-05 22:39:42.202 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:42.208 Uid(value=11079):14809:14809 D/CompactWindowAppManager]
+initCompactApplicationInfo CompactMode: , NormalMode: 
+
+[2025-10-05 22:39:42.216 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+setIsInWhiteList false
+
+[2025-10-05 22:39:42.217 Uid(value=11079):14809:14809 D/OplusViewDebugManager]
+OplusViewDebugManager Constructor android.view.debug.OplusViewDebugManager@d10e386 [mHasViewDebugProperty true] [mHasMsgDebugProperty false] [DEBUG false] [EXTRAINFOENABLE false] [LIGHT_OS false]
+
+[2025-10-05 22:39:42.221 Uid(value=11079):14809:14809 D/OplusViewDragManager]
+For this package, DragConfig = null
+
+[2025-10-05 22:39:42.227 Uid(value=11079):14809:14809 D/CompatChangeReporter]
+Compat change id reported: 202956589; UID 11079; state: ENABLED
+
+[2025-10-05 22:39:42.230 Uid(value=11079):14809:14809 W/libc]
+Access denied finding property "ro.odm.prev.product.name"
+
+[2025-10-05 22:39:42.231 Uid(value=11079):14809:14809 W/libc]
+Access denied finding property "ro.vendor.oplus.gundam"
+
+[2025-10-05 22:39:42.236 Uid(value=11079):14809:14809 D/ApplicationLoaders]
+Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+
+[2025-10-05 22:39:42.236 Uid(value=11079):14809:14809 D/ApplicationLoaders]
+Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+
+[2025-10-05 22:39:42.237 Uid(value=11079):14809:14809 W/ziparchive]
+Unable to open '/data/app/~~anBJ8xLMYG4e2sa4fdnXMA==/com.example.mrcomic.debug-6zARzmuHc9bxC-OuZx8_9Q==/base.dm': No such file or directory
+
+[2025-10-05 22:39:42.237 Uid(value=11079):14809:14809 W/ziparchive]
+Unable to open '/data/app/~~anBJ8xLMYG4e2sa4fdnXMA==/com.example.mrcomic.debug-6zARzmuHc9bxC-OuZx8_9Q==/base.dm': No such file or directory
+
+[2025-10-05 22:39:42.536 Uid(value=11079):14809:14809 D/nativeloader]
+Configuring clns-7 for other apk /data/app/~~anBJ8xLMYG4e2sa4fdnXMA==/com.example.mrcomic.debug-6zARzmuHc9bxC-OuZx8_9Q==/base.apk. target_sdk_version=35, uses_libraries=, library_path=/data/app/~~anBJ8xLMYG4e2sa4fdnXMA==/com.example.mrcomic.debug-6zARzmuHc9bxC-OuZx8_9Q==/lib/arm64:/data/app/~~anBJ8xLMYG4e2sa4fdnXMA==/com.example.mrcomic.debug-6zARzmuHc9bxC-OuZx8_9Q==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.example.mrcomic.debug
+
+[2025-10-05 22:39:42.537 Uid(value=11079):14809:14809 I/Quality]
+ActivityThread: createClassLoader delay 301 /data/app/~~anBJ8xLMYG4e2sa4fdnXMA==/com.example.mrcomic.debug-6zARzmuHc9bxC-OuZx8_9Q==/base.apk 14809
+
+[2025-10-05 22:39:42.539 Uid(value=11079):14809:14809 I/Quality]
+ActivityThread: createOrUpdateClassLoaderLocked delay 307 com.example.mrcomic.debug 14809
+
+[2025-10-05 22:39:42.549 Uid(value=11079):14809:14809 V/GraphicsEnvironment]
+Currently set values for:
+
+[2025-10-05 22:39:42.549 Uid(value=11079):14809:14809 V/GraphicsEnvironment]
+  angle_gl_driver_selection_pkgs=[]
+
+[2025-10-05 22:39:42.549 Uid(value=11079):14809:14809 V/GraphicsEnvironment]
+  angle_gl_driver_selection_values=[]
+
+[2025-10-05 22:39:42.550 Uid(value=11079):14809:14809 V/GraphicsEnvironment]
+Global.Settings values are invalid: number of packages: 0, number of values: 0
+
+[2025-10-05 22:39:42.550 Uid(value=11079):14809:14809 V/GraphicsEnvironment]
+App is not on the allowlist for updatable production driver.
+
+[2025-10-05 22:39:42.553 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:-1
+
+[2025-10-05 22:39:42.567 Uid(value=11079):14809:14809 D/WM-WrkMgrInitializer]
+Initializing WorkManager with default configuration.
+
+[2025-10-05 22:39:42.593 Uid(value=11079):14809:14809 D/WM-PackageManagerHelper]
+Skipping component enablement for androidx.work.impl.background.systemjob.SystemJobService
+
+[2025-10-05 22:39:42.593 Uid(value=11079):14809:14809 D/WM-Schedulers]
+Created SystemJobScheduler and enabled SystemJobService
+
+[2025-10-05 22:39:42.597 Uid(value=11079):14809:14809 D/CompatChangeReporter]
+Compat change id reported: 279646685; UID 11079; state: ENABLED
+
+[2025-10-05 22:39:42.601 Uid(value=11079):14809:14809 D/nativeloader]
+Load libSchedAssistJni.so using system ns (caller=/system/framework/oplus-framework.jar): ok
+
+[2025-10-05 22:39:42.601 Uid(value=11079):14809:14809 D/ExtensionsLoader]
+createInstance(64bit) : createExtendedFactory
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 D/ExtensionsLoader]
+Opened libSchedAssistExtImpl.so
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 E/SchedAssist]
+ofbOpen failed with error=No such file or directory
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 E/SchedAssist]
+sysOpen failed with error=No such file or directory
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 E/SchedAssist]
+open sharedFd failed with error=Permission denied
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 E/SchedAssist]
+open sharedFd failed with error=Permission denied
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 E/SchedAssist]
+open sharedFd failed with error=Permission denied
+
+[2025-10-05 22:39:42.602 Uid(value=11079):14809:14809 E/SchedAssist]
+open sharedFd failed with error=Permission denied
+
+[2025-10-05 22:39:42.604 Uid(value=11079):14809:14809 D/OplusGraphicsEvent]
+OplusGraphicsEventListener create now!
+
+[2025-10-05 22:39:42.605 Uid(value=11079):14809:14809 D/OplusGraphicsEvent]
+addEventListener success!
+
+[2025-10-05 22:39:42.607 Uid(value=11079):14809:14809 D/ScrollOptim [ConfigManager]]
+initOptConfig: pkg= com.example.mrcomic.debug, mOptEnable= true, mAnimAheadEnable= true, mInsertDefaultNum= 1, mFrameInsertEnableList= {}, mSCEnableList= []
+
+[2025-10-05 22:39:42.610 Uid(value=11079):14809:14809 D/nativeloader]
+Load libpowerhalwrap_jni.so using system ns (caller=/system_ext/framework/mediatek-framework.jar): ok
+
+[2025-10-05 22:39:42.611 Uid(value=11079):14809:14809 I/PowerHalWrapper]
+PowerHalWrapper.getInstance 
+
+[2025-10-05 22:39:42.611 Uid(value=11079):14809:14809 I/M-ProMotion]
+M-ProMotion is disabled
+
+[2025-10-05 22:39:42.617 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:42.622 Uid(value=11079):14809:14809 I/HWUI]
+SupportApps size 0
+
+[2025-10-05 22:39:42.625 Uid(value=11079):14809:14832 D/ExtensionsLoader]
+createInstance(64bit) : createExtendedFactory
+
+[2025-10-05 22:39:42.626 Uid(value=11079):14809:14832 D/ExtensionsLoader]
+Opened libSchedAssistExtImpl.so
+
+[2025-10-05 22:39:42.630 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:39:42.634 Uid(value=11079):14809:14834 D/libMEOW]
+meow new tls: 0xb400007324f22580
+
+[2025-10-05 22:39:42.637 Uid(value=11079):14809:14834 D/libMEOW]
+meow reload base cfg path: na
+
+[2025-10-05 22:39:42.637 Uid(value=11079):14809:14834 D/libMEOW]
+meow reload overlay cfg path: na
+
+[2025-10-05 22:39:42.638 Uid(value=11079):14809:14834 W/QT]
+qt_process_init() called
+
+[2025-10-05 22:39:42.639 Uid(value=11079):14809:14834 E/QT]
+[QT]file does not exist
+
+[2025-10-05 22:39:42.639 Uid(value=11079):14809:14834 W/QT]
+Support!!
+
+[2025-10-05 22:39:42.644 Uid(value=11079):14809:14834 E/QT]
+[QT]file does not exist
+
+[2025-10-05 22:39:42.644 Uid(value=11079):14809:14834 D/libMEOW]
+applied 1 plugins for [com.example.mrcomic.debug]:
+
+[2025-10-05 22:39:42.644 Uid(value=11079):14809:14834 D/libMEOW]
+  plugin 1: [libMEOW_gift.so]:
+
+[2025-10-05 22:39:42.645 Uid(value=11079):14809:14834 D/libMEOW]
+meow delete tls: 0xb400007324f22580
+
+[2025-10-05 22:39:42.649 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+Unknow feature:IOplusTextViewRTLUtilForUG
+
+[2025-10-05 22:39:42.653 Uid(value=11079):14809:14809 D/nativeloader]
+Load liboplushwui_jni.so using system ns (caller=/system/framework/oplus-framework.jar): ok
+
+[2025-10-05 22:39:42.665 Uid(value=11079):14809:14809 D/CompatChangeReporter]
+Compat change id reported: 309578419; UID 11079; state: ENABLED
+
+[2025-10-05 22:39:42.683 Uid(value=11079):14809:14809 D/ScrollOptim [SceneManager]]
+updateCurrentActivity: mCurrentActivityName=com.example.mrcomic.splash.ModernSplashActivity, isOptEnable=true, isAnimAheadEnable=true, isFrameInsertEnable=true, InsertNum=1, isEnabledForScrollChanged=false
+
+[2025-10-05 22:39:42.683 Uid(value=11079):14809:14809 D/ActivityThread]
+ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity} checkFinished=false 2
+
+[2025-10-05 22:39:42.683 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:39:42.685 Uid(value=11079):14809:14809 D/CompatChangeReporter]
+Compat change id reported: 352594277; UID 11079; state: ENABLED
+
+[2025-10-05 22:39:42.686 Uid(value=11079):14809:14830 I/PowerHalWrapper]
+PowerHalWrapper.getInstance 
+
+[2025-10-05 22:39:42.686 Uid(value=11079):14809:14809 D/OplusInputMethodUtil]
+init sDebug to false, init sDebugIme to false, init sAlwaysOn to false
+
+[2025-10-05 22:39:42.686 Uid(value=11079):14809:14809 D/OplusInputMethodUtil]
+updateDebugToClass InputMethodManager.DEBUG = false
+
+[2025-10-05 22:39:42.686 Uid(value=11079):14809:14809 D/OplusInputMethodUtil]
+updateDebugToClass ImeFocusController.DEBUG = false
+
+[2025-10-05 22:39:42.686 Uid(value=11079):14809:14809 D/OplusInputMethodUtil]
+updateDebugToClass InsetsController.DEBUG = false
+
+[2025-10-05 22:39:42.686 Uid(value=11079):14809:14809 D/OplusInputMethodUtil]
+updateDebugToClass BaseInputConnection.DEBUG = false
+
+[2025-10-05 22:39:42.688 Uid(value=11079):14809:14809 I/SurfaceFactory]
+[static] sSurfaceFactory = com.mediatek.view.impl.SurfaceFactoryImpl@ddce219
+
+[2025-10-05 22:39:42.697 Uid(value=11079):14809:14809 D/WindowManager]
+Add to mViews: com.android.internal.policy.DecorView{949dcbf I.E...... R.....ID 0,0-0,0 alpha=1.0 viewInfo = }[ModernSplashActivity],pkg= com.example.mrcomic.debug
+
+[2025-10-05 22:39:42.698 Uid(value=11079):14809:14832 D/ExtensionsLoader]
+createInstance(64bit) : createExtendedFactory
+
+[2025-10-05 22:39:42.706 Uid(value=11079):14809:14832 D/ExtensionsLoader]
+Opened libhwuiextimpl.so
+
+[2025-10-05 22:39:42.706 Uid(value=11079):14809:14832 D/skia]
+setRusSupported enable 0
+
+[2025-10-05 22:39:42.706 Uid(value=11079):14809:14809 D/ExtensionsLoader]
+createInstance(64bit) : createExtendedFactory
+
+[2025-10-05 22:39:42.707 Uid(value=11079):14809:14809 D/ExtensionsLoader]
+Opened libSchedAssistExtImpl.so
+
+[2025-10-05 22:39:42.717 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+onDisplayChanged -1 for VRI android.view.ViewRootImpl@74985db
+
+[2025-10-05 22:39:42.720 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:42.720 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:39:42.723 Uid(value=11079):14809:14809 E/OplusBracketLog]
+[OplusViewMirrorManager] updateHostViewRootIfNeeded, not support android.view.ViewRootImpl@74985db
+
+[2025-10-05 22:39:42.726 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=false, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity
+
+[2025-10-05 22:39:42.734 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+relayoutWindow result, sizeChanged:true, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(0, 0), mWidth:-1, mHeight:-1, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:39:42.734 Uid(value=11079):14809:14809 W/VRI[ModernSplashActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(0, 0), format:-1, blastBufferQueue:null
+
+[2025-10-05 22:39:42.734 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[](id:39d900000000,api:0,p:-1,c:14809) connect: controlledByApp=false
+
+[2025-10-05 22:39:42.743 Uid(value=11079):14809:14832 D/libMEOW]
+meow new tls: 0xb40000730fe12240
+
+[2025-10-05 22:39:42.743 Uid(value=11079):14809:14832 D/libMEOW]
+applied 1 plugins for [com.example.mrcomic.debug]:
+
+[2025-10-05 22:39:42.743 Uid(value=11079):14809:14832 D/libMEOW]
+  plugin 1: [libMEOW_gift.so]:
+
+[2025-10-05 22:39:42.777 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity)/@0x83b9fb6,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:39:42.780 Uid(value=11079):14809:14832 D/MAGT_SYNC_FRAME]
+MAGT Sync: MAGT is not supported. Disabling Sync.
+
+[2025-10-05 22:39:42.788 Uid(value=11079):14809:14832 W/libc]
+Access denied finding property "ro.vendor.mbrain.mode"
+
+[2025-10-05 22:39:42.789 Uid(value=11079):14809:14832 D/e.mrcomic.debug]
+Can't load libmbrainSDK
+
+[2025-10-05 22:39:42.793 Uid(value=11079):14809:14832 I/GrallocExtra]
+gralloc_extra_query:is_SW3D 0
+
+[2025-10-05 22:39:42.794 Uid(value=11079):14809:14832 D/BLASTBufferQueue]
+[VRI[ModernSplashActivity]#0](f:0,a:1) acquireNextBufferLocked size=1080x2400 mFrameNumber=1 applyTransaction=true mTimestamp=744269605684668(auto) mPendingTransactions.size=0 graphicBufferId=63604170686464 transform=0
+
+[2025-10-05 22:39:42.794 Uid(value=11079):14809:14832 W/libc]
+Access denied finding property "ro.vendor.mbrain.mode"
+
+[2025-10-05 22:39:42.794 Uid(value=11079):14809:14832 D/e.mrcomic.debug]
+Can't load libmbrainSDK
+
+[2025-10-05 22:39:42.794 Uid(value=11079):14809:14832 D/VRI[ModernSplashActivity]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true syncBuffer=false
+
+[2025-10-05 22:39:42.795 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+draw finished. seqId=0
+
+[2025-10-05 22:39:42.796 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+setMaxDequeuedBufferCount: 2
+
+[2025-10-05 22:39:42.798 Uid(value=11079):14809:14809 I/DynamicFramerate [FRTCConfigManager]]
+initFrameRateConfig: 
+	levels: [120, 60]
+	thresholds: [200]
+
+[2025-10-05 22:39:42.798 Uid(value=11079):14809:14809 I/DynamicFramerate [FRTCConfigManager]]
+FRTCConfigManager: FRTC_CAPABILITY = 120, package name = com.example.mrcomic.debug, WINDOW_ANIMATION_SPEED_RATE = 10, SCROLL_ANIMATION_SPEED_RATE = 20, PACKAGE_ENABLE = false
+
+[2025-10-05 22:39:42.798 Uid(value=11079):14809:14809 I/DynamicFramerate [DynamicFrameRateController]]
+init info: mPackageName = com.example.mrcomic.debug, mIsEnabled = false
+
+[2025-10-05 22:39:42.799 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:42.800 Uid(value=11079):14809:14809 W/VRI[ModernSplashActivity]]
+handleResized, msg:, frameChanged:false, configChanged:false, displayChanged:false, attachedFrameChanged:false, compatScaleChanged:false, pendingDragResizing=false
+
+[2025-10-05 22:39:42.819 Uid(value=11079):14809:14832 D/VRI[ModernSplashActivity]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=2 didProduceBuffer=false syncBuffer=false
+
+[2025-10-05 22:39:42.819 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+draw finished. seqId=0
+
+[2025-10-05 22:39:42.821 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:42.838 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+onFocusEvent true
+
+[2025-10-05 22:39:42.855 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=true, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity
+
+[2025-10-05 22:39:42.856 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:false, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][1080,2400]}, relayoutAsync:true, mSyncSeqId:0
+
+[2025-10-05 22:39:42.856 Uid(value=11079):14809:14809 W/VRI[ModernSplashActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(1080, 2400), format:-1, blastBufferQueue:android.graphics.BLASTBufferQueue@c4a769a
+
+[2025-10-05 22:39:42.857 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity)/@0x83b9fb6,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:39:43.472 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:43.473 Uid(value=11079):14809:14809 D/ScrollOptim [SceneManager]]
+updateCurrentActivity: mCurrentActivityName=null, isOptEnable=true, isAnimAheadEnable=true, isFrameInsertEnable=true, InsertNum=1, isEnabledForScrollChanged=false
+
+[2025-10-05 22:39:43.483 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:43.484 Uid(value=11079):14809:14894 D/libMEOW]
+meow new tls: 0xb4000073095dc040
+
+[2025-10-05 22:39:43.485 Uid(value=11079):14809:14894 D/libMEOW]
+applied 1 plugins for [com.example.mrcomic.debug]:
+
+[2025-10-05 22:39:43.485 Uid(value=11079):14809:14894 D/libMEOW]
+  plugin 1: [libMEOW_gift.so]:
+
+[2025-10-05 22:39:43.485 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:39:43.485 Uid(value=11079):14809:14894 D/libMEOW]
+meow delete tls: 0xb4000073095dc040
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 === INTENT DIAGNOSTIC START ===
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 Action: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 Data: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 DataString: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 Type: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 Categories: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 Scheme: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 Path: null
+
+[2025-10-05 22:39:43.491 Uid(value=11079):14809:14809 D/MainActivity]
+🔥 === INTENT DIAGNOSTIC END ===
+
+[2025-10-05 22:39:43.496 Uid(value=11079):14809:14809 D/ScrollOptimizationHelper]
+can't find the config file for optimizaiton
+
+[2025-10-05 22:39:43.496 Uid(value=11079):14809:14809 D/ScrollOptimizationHelper]
+will not debug for debug is false
+
+[2025-10-05 22:39:43.497 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.497 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.497 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.538 Uid(value=11079):14809:14809 E/OplusCustomizeRestrictionManager]
+sInstance is null, start a new sInstance
+
+[2025-10-05 22:39:43.542 Uid(value=11079):14809:14809 D/CompatChangeReporter]
+Compat change id reported: 63938206; UID 11079; state: ENABLED
+
+[2025-10-05 22:39:43.545 Uid(value=11079):14809:14809 D/ScrollOptim [SceneManager]]
+updateCurrentActivity: mCurrentActivityName=com.example.mrcomic.MainActivity, isOptEnable=true, isAnimAheadEnable=true, isFrameInsertEnable=true, InsertNum=1, isEnabledForScrollChanged=false
+
+[2025-10-05 22:39:43.545 Uid(value=11079):14809:14809 D/ActivityThread]
+ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.MainActivity} checkFinished=false 2
+
+[2025-10-05 22:39:43.545 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:39:43.549 Uid(value=11079):14809:14809 D/WindowManager]
+Add to mViews: com.android.internal.policy.DecorView{90884e4 I.E...... R.....ID 0,0-0,0 alpha=1.0 viewInfo = }[MainActivity],pkg= com.example.mrcomic.debug
+
+[2025-10-05 22:39:43.550 Uid(value=11079):14809:14832 D/skia]
+setRusSupported enable 0
+
+[2025-10-05 22:39:43.558 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+onDisplayChanged -1 for VRI android.view.ViewRootImpl@ef58d13
+
+[2025-10-05 22:39:43.560 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+onFocusEvent false
+
+[2025-10-05 22:39:43.560 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:43.560 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:39:43.565 Uid(value=11079):14809:14809 E/OplusBracketLog]
+[OplusViewMirrorManager] updateHostViewRootIfNeeded, not support android.view.ViewRootImpl@ef58d13
+
+[2025-10-05 22:39:43.706 Uid(value=11079):14809:14809 I/ExoPlayerImpl]
+Init f3dc72 [AndroidXMedia3/1.4.1] [RE6066L1, RMX5000, realme, 35]
+
+[2025-10-05 22:39:43.728 Uid(value=11079):14809:14809 W/e.mrcomic.debug]
+Accessing hidden method Landroid/media/AudioTrack;->getLatency()I (unsupported, reflection, allowed)
+
+[2025-10-05 22:39:43.832 Uid(value=11079):14809:14921 W/AudioCapabilities]
+Unsupported mime audio/x-adpcm-dvi-ima
+
+[2025-10-05 22:39:43.835 Uid(value=11079):14809:14921 W/AudioCapabilities]
+Unsupported mime audio/x-adpcm-dvi-ima
+
+[2025-10-05 22:39:43.835 Uid(value=11079):14809:14921 W/AudioCapabilities]
+Unsupported mime audio/x-adpcm-ms
+
+[2025-10-05 22:39:43.836 Uid(value=11079):14809:14921 W/AudioCapabilities]
+Unsupported mime audio/x-adpcm-ms
+
+[2025-10-05 22:39:43.836 Uid(value=11079):14809:14921 W/AudioCapabilities]
+Unsupported mime audio/alac
+
+[2025-10-05 22:39:43.837 Uid(value=11079):14809:14921 W/AudioCapabilities]
+Unsupported mime audio/alac
+
+[2025-10-05 22:39:43.844 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity,This com.android.internal.policy.DecorView{949dcbf V.E...... R....... 0,0-1080,2400 aid=0 alpha=1.0 viewInfo = }[ModernSplashActivity] change focus to true
+
+[2025-10-05 22:39:43.848 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.848 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.848 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.863 Uid(value=11079):14809:14921 W/VideoCapabilities]
+Unsupported mime image/vnd.android.heic
+
+[2025-10-05 22:39:43.864 Uid(value=11079):14809:14921 W/VideoCapabilities]
+Unsupported mime image/vnd.android.heic
+
+[2025-10-05 22:39:43.865 Uid(value=11079):14809:14921 W/VideoCapabilities]
+Unsupported mime image/vnd.android.heic
+
+[2025-10-05 22:39:43.866 Uid(value=11079):14809:14921 W/VideoCapabilities]
+Unsupported mime image/vnd.android.heic
+
+[2025-10-05 22:39:43.879 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.879 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.879 Uid(value=11079):14809:14809 I/oplus.android.OplusFrameworkFactoryImpl]
+get feature:IOplusDynamicVsyncFeature
+
+[2025-10-05 22:39:43.879 Uid(value=11079):14809:14921 W/VideoCapabilities]
+Unsupported mime video/apv
+
+[2025-10-05 22:39:43.880 Uid(value=11079):14809:14921 W/VideoCapabilities]
+Unsupported mime video/apv
+
+[2025-10-05 22:39:43.917 Uid(value=11079):14809:14809 D/OplusWindowManager]
+get WMS extension: android.os.BinderProxy@fc55abd
+
+[2025-10-05 22:39:43.921 Uid(value=11079):14809:14936 D/libMEOW]
+meow new tls: 0xb400007302189000
+
+[2025-10-05 22:39:43.921 Uid(value=11079):14809:14936 D/libMEOW]
+applied 1 plugins for [com.example.mrcomic.debug]:
+
+[2025-10-05 22:39:43.921 Uid(value=11079):14809:14936 D/libMEOW]
+  plugin 1: [libMEOW_gift.so]:
+
+[2025-10-05 22:39:43.922 Uid(value=11079):14809:14809 I/SurfaceView]
+18046462 onAttachedToWindow
+
+[2025-10-05 22:39:43.924 Uid(value=11079):14809:14815 I/e.mrcomic.debug]
+Compiler allocated 7110KB to compile void android.view.ViewRootImpl.performTraversals()
+
+[2025-10-05 22:39:43.934 Uid(value=11079):14809:14936 D/BufferQueueConsumer]
+[](id:39d900000001,api:0,p:-1,c:14809) connect: controlledByApp=true
+
+[2025-10-05 22:39:43.935 Uid(value=11079):14809:14921 I/DMCodecAdapterFactory]
+Creating an asynchronous MediaCodec adapter for track type video
+
+[2025-10-05 22:39:43.939 Uid(value=11079):14809:14921 D/MediaCodec]
+CreateByComponentName: name c2.mtk.avc.decoder
+
+[2025-10-05 22:39:43.958 Uid(value=11079):14809:14921 D/IAtlas]
+IAtlas::init CallingPid 14809
+
+[2025-10-05 22:39:43.959 Uid(value=11079):14809:14921 D/IAtlas]
+IAtlas::init this 0xb40000730b882fc0
+
+[2025-10-05 22:39:43.961 Uid(value=11079):14809:14921 W/libc]
+Access denied finding property "vendor.oplus.media.vpp.stutter"
+
+[2025-10-05 22:39:43.962 Uid(value=11079):14809:14921 D/ListServiceUtils]
+mListServiceUtils::init CallingPid 14809
+
+[2025-10-05 22:39:43.963 Uid(value=11079):14809:14921 D/ListServiceUtils]
+mListServiceUtils::init this 0xb400007279a59dc0
+
+[2025-10-05 22:39:43.967 Uid(value=11079):14809:14921 D/MediaCodec]
+[0xb40000727adf5000] init: CCodec 0xb40000730216b000, CCodecBufferChannel 0xb400007302033d18
+
+[2025-10-05 22:39:43.970 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 1
+
+[2025-10-05 22:39:43.971 Uid(value=11079):14809:14938 D/CCodec]
+allocate(c2.mtk.avc.decoder)
+
+[2025-10-05 22:39:43.976 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=false, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.MainActivity
+
+[2025-10-05 22:39:43.985 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:true, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(0, 0), mWidth:-1, mHeight:-1, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:39:43.985 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(0, 0), format:-3, blastBufferQueue:null
+
+[2025-10-05 22:39:43.986 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[](id:39d900000002,api:0,p:-1,c:14809) connect: controlledByApp=false
+
+[2025-10-05 22:39:43.990 Uid(value=11079):14809:14938 I/Codec2Client]
+Available Codec2 services: "default" "software"
+
+[2025-10-05 22:39:44.007 Uid(value=11079):14809:14809 E/OplusDisplayModeManager]
+has been initialized.
+
+[2025-10-05 22:39:44.015 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[](id:39d900000003,api:0,p:-1,c:14809) connect: controlledByApp=false
+
+[2025-10-05 22:39:44.016 Uid(value=11079):14809:14809 I/SurfaceView]
+18046462 visibleChanged -- surfaceCreated 
+
+[2025-10-05 22:39:44.018 Uid(value=11079):14809:14809 D/SurfaceView]
+18046462 handleSyncNoBuffer
+
+[2025-10-05 22:39:44.019 Uid(value=11079):14809:14809 D/SurfaceView]
+18046462 finishedDrawing
+
+[2025-10-05 22:39:44.019 Uid(value=11079):14809:14938 I/CCodec]
+setting up 'default' as default (vendor) store
+
+[2025-10-05 22:39:44.019 Uid(value=11079):14809:14809 D/SurfaceView]
+18046462 performDrawFinished mAttachedToWindow true
+
+[2025-10-05 22:39:44.020 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=com.example.mrcomic.debug/com.example.mrcomic.MainActivity)/@0xbdf0155,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:39:44.024 Uid(value=11079):14809:14809 D/SurfaceView]
+18046462 dispatchDraw mDrawFinished true isAboveParent false (mPrivateFlags & PFLAG_SKIP_DRAW) 128
+
+[2025-10-05 22:39:44.024 Uid(value=11079):14809:14809 D/SurfaceView]
+18046462 clearSurfaceViewPort mCornerRadius 0.0
+
+[2025-10-05 22:39:44.039 Uid(value=11079):14809:14832 D/BLASTBufferQueue]
+[VRI[MainActivity]#1](f:0,a:1) acquireNextBufferLocked size=1080x2400 mFrameNumber=1 applyTransaction=true mTimestamp=744270851150822(auto) mPendingTransactions.size=0 graphicBufferId=63604170686468 transform=0
+
+[2025-10-05 22:39:44.039 Uid(value=11079):14809:14832 D/VRI[MainActivity]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true syncBuffer=false
+
+[2025-10-05 22:39:44.040 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+draw finished. seqId=0
+
+[2025-10-05 22:39:44.041 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+setMaxDequeuedBufferCount: 2
+
+[2025-10-05 22:39:44.072 Uid(value=11079):14809:14944 D/CompatChangeReporter]
+Compat change id reported: 312399441; UID 11079; state: ENABLED
+
+[2025-10-05 22:39:44.082 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:44.083 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized, msg:, frameChanged:false, configChanged:false, displayChanged:false, attachedFrameChanged:false, compatScaleChanged:false, pendingDragResizing=false
+
+[2025-10-05 22:39:44.083 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent true
+
+[2025-10-05 22:39:44.084 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:44.084 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized, msg:, frameChanged:false, configChanged:false, displayChanged:false, attachedFrameChanged:false, compatScaleChanged:false, pendingDragResizing=false
+
+[2025-10-05 22:39:44.085 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:44.085 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized, msg:, frameChanged:false, configChanged:false, displayChanged:false, attachedFrameChanged:false, compatScaleChanged:false, pendingDragResizing=false
+
+[2025-10-05 22:39:44.087 Uid(value=11079):14809:14809 D/InsetsController]
+setRequestedVisibleTypes, mRequestedVisibleTypes: systemGestures mandatorySystemGestures tappableElement displayCutout windowDecor systemOverlays, requestedVisibleTypes: systemGestures mandatorySystemGestures tappableElement displayCutout windowDecor systemOverlays, visibleTypes: , type: 1, call: android.view.InsetsController.controlAnimationUnchecked:1477 android.view.InsetsController.applyAnimation:2191 android.view.InsetsController.applyAnimation:2161 android.view.InsetsController.onControlsChanged:1171 android.view.ViewRootImpl.handleInsetsControlChanged:2565 android.view.ViewRootImpl.-$$Nest$mhandleInsetsControlChanged:0 android.view.ViewRootImpl$ViewRootHandler.handleMessageImpl:7565 android.view.ViewRootImpl$ViewRootHandler.handleMessage:7504 android.os.Handler.dispatchMessage:107 android.os.Looper.loopOnce:282 
+
+[2025-10-05 22:39:44.099 Uid(value=11079):14809:14832 D/VRI[MainActivity]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=2 didProduceBuffer=false syncBuffer=false
+
+[2025-10-05 22:39:44.099 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+draw finished. seqId=0
+
+[2025-10-05 22:39:44.132 Uid(value=11079):14809:14938 I/CCodec]
+Created component [c2.mtk.avc.decoder]
+
+[2025-10-05 22:39:44.132 Uid(value=11079):14809:14938 D/CCodecBufferChannel]
+[0xb400007302033d18] setComponent: mName c2.mtk.avc.decoder#412, mPipelineWatcher 0xb400007302034200
+
+[2025-10-05 22:39:44.133 Uid(value=11079):14809:14938 D/CCodecConfig]
+read media type: video/avc
+
+[2025-10-05 22:39:44.142 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: algo.buffers.max-count.values
+
+[2025-10-05 22:39:44.144 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: output.subscribed-indices.values
+
+[2025-10-05 22:39:44.144 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: input.buffers.allocator-ids.values
+
+[2025-10-05 22:39:44.144 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: output.buffers.allocator-ids.values
+
+[2025-10-05 22:39:44.144 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: algo.buffers.allocator-ids.values
+
+[2025-10-05 22:39:44.144 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: output.buffers.pool-ids.values
+
+[2025-10-05 22:39:44.145 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+extent() != 1 for single value type: algo.buffers.pool-ids.values
+
+[2025-10-05 22:39:44.148 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+ignored struct field coded.color-format.locations
+
+[2025-10-05 22:39:44.154 Uid(value=11079):14809:14938 D/CCodecConfig]
+ignoring local param raw.size (0xd2001800) as it is already supported
+
+[2025-10-05 22:39:44.154 Uid(value=11079):14809:14938 D/CCodecConfig]
+ignoring local param raw.crop (0xd2001801) as it is already supported
+
+[2025-10-05 22:39:44.154 Uid(value=11079):14809:14938 D/CCodecConfig]
+ignoring local param default.color (0x5200180b) as it is already supported
+
+[2025-10-05 22:39:44.154 Uid(value=11079):14809:14938 D/CCodecConfig]
+ignoring local param raw.hdr-static-info (0xd200180a) as it is already supported
+
+[2025-10-05 22:39:44.161 Uid(value=11079):14809:14938 I/CCodecConfig]
+query failed after returning 18 values (BAD_INDEX)
+
+[2025-10-05 22:39:44.161 Uid(value=11079):14809:14938 W/ColorUtils]
+expected specified color aspects (2:0:0:0)
+
+[2025-10-05 22:39:44.161 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 2
+
+[2025-10-05 22:39:44.167 Uid(value=11079):14809:14937 I/MediaCodec]
+MediaCodec will operate in async mode
+
+[2025-10-05 22:39:44.168 Uid(value=11079):14809:14921 I/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] configure, format : AMessage(what = 0x00000000) = {
+  int32_t max-height = 1280
+  string log-session-id = "q9YtvL1ZPGPk75Yc"
+  int32_t importance = 1000
+  string mime = "video/avc"
+  int32_t priority = 0
+  Buffer csd-1 = {
+    00000000:  00 00 00 01 68 eb e3 cb  22 c0                    ....h...".
+  }
+  int32_t max-width = 720
+  int32_t width = 720
+  float frame-rate = 24.000000
+  int32_t rotation-degrees = 0
+  int32_t max-input-size = 112800
+  int32_t height = 1280
+  Buffer csd-0 = {
+    00000000:  00 00 00 01 67 64 00 1f  ac d9 40 b4 0a 1a 10 00  ....gd....@.....
+    00000010:  00 03 00 10 00 00 03 03  00 f1 83 19 60           ............`
+  }
+}
+
+[2025-10-05 22:39:44.168 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] connectToSurface: surface 0xb400007279b55000, mSurface 0x0
+
+[2025-10-05 22:39:44.168 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb400007279b55010, reason connectToSurface
+
+[2025-10-05 22:39:44.169 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb400007279b55010, reason connectToSurface(reconnect)
+
+[2025-10-05 22:39:44.169 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb400007279b55000, reason connectToSurface(reconnect-with-listener)
+
+[2025-10-05 22:39:44.169 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 3
+
+[2025-10-05 22:39:44.169 Uid(value=11079):14809:14937 I/OplusCCodec]
+consumeName is SurfaceTexture-1-14809-0
+
+[2025-10-05 22:39:44.172 Uid(value=11079):14809:14937 W/AString]
+ctor got NULL, using empty string instead
+
+[2025-10-05 22:39:44.173 Uid(value=11079):14809:14937 D/AtlasEventUploadUtils]
+setEvent event:atlas_event_video_monitor_network_switch
+
+[2025-10-05 22:39:44.185 Uid(value=11079):14809:14938 D/CCodec]
+[c2.mtk.avc.decoder] buffers are bound to CCodec for this session
+
+[2025-10-05 22:39:44.186 Uid(value=11079):14809:14938 D/ReflectedParamUpdater]
+vendor.oplus.vpp.white.list.value found, but param #1107330561 isn't present to update
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 W/Codec2Client]
+query -- param skipped: index = 1107298332.
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 D/CCodec]
+client requested max input size 112800, which is smaller than what component recommended (2094080); overriding with component recommendation.
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 W/CCodec]
+This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 D/CCodec]
+encoding statistics level = 0
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 D/CCodec]
+setup formats input: AMessage(what = 0x00000000) = {
+  string mime = "video/avc"
+  int32_t width = 720
+  int32_t profile = 65536
+  int32_t priority = 0
+  int32_t frame-rate = 24
+  int32_t height = 1280
+  int32_t level = 32768
+  int32_t max-input-size = 2094080
+  Rect crop(0, 0, 318, 238)
+}
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 D/CCodec]
+setup formats output: AMessage(what = 0x00000000) = {
+  int32_t android._color-format = 2130708361
+  int32_t android._video-scaling = 1
+  int32_t sar-width = 1
+  int32_t color-standard = 4
+  int32_t color-range = 2
+  int32_t color-transfer = 3
+  int32_t android._dataspace = 259
+  int32_t width = 720
+  int32_t rotation-degrees = 0
+  int32_t sar-height = 1
+  int32_t max-width = 720
+  int32_t max-height = 1280
+  int32_t priority = 0
+  string mime = "video/raw"
+  Rect crop(0, 0, 318, 238)
+  Buffer hdr-static-info = {
+    00000000:  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  ................
+    00000010:  00 00 00 00 00 00 00 00  00                       .........
+  }
+  int32_t frame-rate = 24
+  int32_t height = 1280
+  int32_t color-format = 2130708361
+}
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14938 I/CCodecConfig]
+query failed after returning 19 values (BAD_INDEX)
+
+[2025-10-05 22:39:44.187 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 4
+
+[2025-10-05 22:39:44.188 Uid(value=11079):14809:14921 D/MediaCodec]
+keep callback message for reclaim
+
+[2025-10-05 22:39:44.188 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 5
+
+[2025-10-05 22:39:44.190 Uid(value=11079):14809:14938 W/Codec2Client]
+query -- param skipped: index = 1342179345.
+
+[2025-10-05 22:39:44.190 Uid(value=11079):14809:14938 W/Codec2Client]
+query -- param skipped: index = 2415921170.
+
+[2025-10-05 22:39:44.190 Uid(value=11079):14809:14938 W/Codec2Client]
+query -- param skipped: index = 1610614798.
+
+[2025-10-05 22:39:44.190 Uid(value=11079):14809:14938 D/C2Store]
+Using DMABUF Heaps
+
+[2025-10-05 22:39:44.191 Uid(value=11079):14809:14938 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] Created input block pool with allocatorID 16 => poolID 17 - OK (0)
+
+[2025-10-05 22:39:44.192 Uid(value=11079):14809:14938 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] Query output surface allocator returned 0 params => BAD_INDEX (6)
+
+[2025-10-05 22:39:44.192 Uid(value=11079):14809:14938 I/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] Created output block pool with allocatorID 18 => poolID 1966 - OK
+
+[2025-10-05 22:39:44.192 Uid(value=11079):14809:14938 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] Configured output block pool ids 1966 => OK
+
+[2025-10-05 22:39:44.192 Uid(value=11079):14809:14938 D/CCodecBufferChannel]
+[0xb400007302033d18] [c2.mtk.avc.decoder#412] start: output->outputDelay 12, output->numSlots 16
+
+[2025-10-05 22:39:44.192 Uid(value=11079):14809:14938 D/Codec2-OutputBufferQueue]
+C2SurfaceSyncMemory created 20(20)
+
+[2025-10-05 22:39:44.192 Uid(value=11079):14809:14938 D/Codec2-OutputBufferQueue]
+remote graphic buffer migration 0/0
+
+[2025-10-05 22:39:44.193 Uid(value=11079):14809:14938 D/Codec2Client]
+setOutputSurface -- generation=15164417 consumer usage=0x900 sync
+
+[2025-10-05 22:39:44.201 Uid(value=11079):14809:14938 D/Codec2Client]
+Surface configure completed
+
+[2025-10-05 22:39:44.202 Uid(value=11079):14809:14938 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:44.208 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 6
+
+[2025-10-05 22:39:44.209 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] send inputSlots:4
+
+[2025-10-05 22:39:44.215 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] connectToSurface: surface 0xb400007279b57800, mSurface 0xb400007279b55000
+
+[2025-10-05 22:39:44.215 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb400007279b57810, reason connectToSurface
+
+[2025-10-05 22:39:44.215 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb400007279b57810, reason connectToSurface(reconnect)
+
+[2025-10-05 22:39:44.215 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb400007279b57800, reason connectToSurface(reconnect-with-listener)
+
+[2025-10-05 22:39:44.217 Uid(value=11079):14809:14937 D/Codec2-OutputBufferQueue]
+C2SurfaceSyncMemory created 20(20)
+
+[2025-10-05 22:39:44.217 Uid(value=11079):14809:14937 D/Codec2-OutputBufferQueue]
+remote graphic buffer migration 0/0
+
+[2025-10-05 22:39:44.217 Uid(value=11079):14809:14937 D/Codec2Client]
+setOutputSurface -- generation=15164418 consumer usage=0x900 sync
+
+[2025-10-05 22:39:44.221 Uid(value=11079):14809:14937 D/Codec2Client]
+Surface configure completed
+
+[2025-10-05 22:39:44.222 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] disconnectFromSurface: mSurface 0xb400007279b55000
+
+[2025-10-05 22:39:44.222 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb400007279b55010, reason disconnectFromSurface
+
+[2025-10-05 22:39:44.234 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] send inputSlots:8
+
+[2025-10-05 22:39:44.237 Uid(value=11079):14809:14938 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] onWorkDone: updating output delay 10
+
+[2025-10-05 22:39:44.237 Uid(value=11079):14809:14938 I/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] onWorkDone: updating max output delay 19
+
+[2025-10-05 22:39:44.242 Uid(value=11079):14809:14938 D/Codec2-OutputBufferQueue]
+set max dequeue count 19 from update
+
+[2025-10-05 22:39:44.270 Uid(value=11079):14809:14937 D/OplusCCodec]
+signalSetParameters [1832]: (0xb40000730216b000)
+
+[2025-10-05 22:39:44.286 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] first render dataSpace=260
+
+[2025-10-05 22:39:44.287 Uid(value=11079):14809:14937 D/BLASTBufferQueue]
+[SurfaceView[com.example.mrcomic.debug/com.example.mrcomic.MainActivity]#2](f:0,a:1) acquireNextBufferLocked size=1080x2400 mFrameNumber=1 applyTransaction=true mTimestamp=744271091699053 mPendingTransactions.size=0 graphicBufferId=63604170686472 transform=0
+
+[2025-10-05 22:39:44.288 Uid(value=11079):14809:14937 D/OplusFeedbackInfo]
+video-first-frame-latency-list is not configured
+
+[2025-10-05 22:39:44.288 Uid(value=11079):14809:14937 D/OplusCCodec]
+signalSetParameters [1832]: (0xb40000730216b000)
+
+[2025-10-05 22:39:44.452 Uid(value=11079):14809:14922 D/VRI[ModernSplashActivity]]
+dispatchAppVisibility visible:false
+
+[2025-10-05 22:39:44.458 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+visibilityChanged oldVisibility=true newVisibility=false
+
+[2025-10-05 22:39:44.477 Uid(value=11079):14809:14809 D/HWUI]
+RenderProxy::destroy: this=0xb40000737b348900, mContext=0xb400007324fc7940
+
+[2025-10-05 22:39:44.477 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb40000737b24c9c0, surface=NULL
+
+[2025-10-05 22:39:44.479 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=false, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity
+
+[2025-10-05 22:39:44.483 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:false, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:39:44.483 Uid(value=11079):14809:14809 D/BLASTBufferQueue]
+[VRI[ModernSplashActivity]#0](f:0,a:2) destructor()
+
+[2025-10-05 22:39:44.483 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[VRI[ModernSplashActivity]#0(BLAST Consumer)0](id:39d900000000,api:0,p:-1,c:14809) disconnect
+
+[2025-10-05 22:39:44.486 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:44.487 Uid(value=11079):14809:14809 D/VRI[ModernSplashActivity]]
+setWindowStopped stopped:true
+
+[2025-10-05 22:39:44.489 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity,window dying
+
+[2025-10-05 22:39:44.489 Uid(value=11079):14809:14947 W/InteractionJankMonitor]
+Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.example.mrcomic.debug
+
+[2025-10-05 22:39:44.489 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity,unregisterSystemUIBroadcastReceiver 
+
+[2025-10-05 22:39:44.489 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.splash.ModernSplashActivity, unregisterSystemUIBroadcastReceiver failed java.lang.IllegalArgumentException: Receiver not registered: android.view.OplusScrollToTopManager$2@9082ce9
+
+[2025-10-05 22:39:44.489 Uid(value=11079):14809:14809 W/WindowOnBackDispatcher]
+sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@378e878
+
+[2025-10-05 22:39:44.490 Uid(value=11079):14809:14809 D/HWUI]
+RenderProxy::destroy: this=0xb40000737b348900, mContext=0xb400007324fc7940
+
+[2025-10-05 22:39:44.490 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb40000737b24c9c0, surface=NULL
+
+[2025-10-05 22:39:44.504 Uid(value=11079):14809:14809 D/InsetsController]
+setRequestedVisibleTypes, mRequestedVisibleTypes: systemGestures mandatorySystemGestures tappableElement displayCutout windowDecor systemOverlays, requestedVisibleTypes: systemGestures mandatorySystemGestures tappableElement displayCutout windowDecor systemOverlays, visibleTypes: , type: 1, call: android.view.InsetsController.notifyFinished:1879 android.view.InsetsAnimationThreadControlRunner$1.lambda$notifyFinished$0:86 android.view.InsetsAnimationThreadControlRunner$1.$r8$lambda$cDFF0h4Ncq-8EXdGszv69jrUu7c:0 android.view.InsetsAnimationThreadControlRunner$1$$ExternalSyntheticLambda1.run:0 android.os.Handler.handleCallback:973 android.os.Handler.dispatchMessage:100 android.os.Looper.loopOnce:282 android.os.Looper.loop:387 android.app.ActivityThread.main:9500 java.lang.reflect.Method.invoke:-2 
+
+[2025-10-05 22:39:45.100 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 V.E...... R....... 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to true
+
+[2025-10-05 22:39:45.158 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:45.209 Uid(value=11079):14809:14938 I/OplusFeedbackInfo]
+0xb40000730216bc00 c2.mtk.avc.decoder codec[0xb40000727adf5000] 720x1280 inputFps=49 outputFps=41 renderFps=23, discardFps=0
+
+[2025-10-05 22:39:45.251 Uid(value=11079):14809:14809 D/OplusInputMethodManagerInternal]
+get inputMethodManager extension: com.android.internal.view.IInputMethodManager$Stub$Proxy@1f09c46
+
+[2025-10-05 22:39:45.255 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:45.297 Uid(value=11079):14809:14809 D/LibraryViewModel]
+🚀🚀🚀 LIBRARY VIEW MODEL INITIALIZED 🚀🚀🚀
+
+[2025-10-05 22:39:45.297 Uid(value=11079):14809:14809 D/LibraryViewModel]
+🚀 Context: com.example.mrcomic.ComicApplication@9fbcf00
+
+[2025-10-05 22:39:45.297 Uid(value=11079):14809:14809 D/LibraryViewModel]
+🚀 ComicRepository: com.example.core.data.repository.ComicRepository@a34c8c1
+
+[2025-10-05 22:39:45.297 Uid(value=11079):14809:14809 D/LibraryViewModel]
+🚀 Starting loadComics, loadFolders, cleanupInaccessibleComics...
+
+[2025-10-05 22:39:45.297 Uid(value=11079):14809:14809 D/LibraryViewModel]
+📚 loadComics() called
+
+[2025-10-05 22:39:45.298 Uid(value=11079):14809:14809 D/LibraryViewModel]
+📚 Setting isLoading = true
+
+[2025-10-05 22:39:45.298 Uid(value=11079):14809:14809 D/LibraryViewModel]
+📚 Calling comicRepository.getAllComics()...
+
+[2025-10-05 22:39:45.307 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:39:45.307 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=true, comics=0, error=null
+
+[2025-10-05 22:39:45.321 Uid(value=11079):14809:14809 I/SurfaceView]
+18046462 surfaceDestroyed
+
+[2025-10-05 22:39:45.322 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] connectToSurface: surface 0xb4000072694ef000, mSurface 0xb400007279b57800
+
+[2025-10-05 22:39:45.322 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb4000072694ef010, reason connectToSurface
+
+[2025-10-05 22:39:45.322 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb4000072694ef010, reason connectToSurface(reconnect)
+
+[2025-10-05 22:39:45.322 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb4000072694ef000, reason connectToSurface(reconnect-with-listener)
+
+[2025-10-05 22:39:45.323 Uid(value=11079):14809:14937 D/Codec2-OutputBufferQueue]
+C2SurfaceSyncMemory created 20(20)
+
+[2025-10-05 22:39:45.323 Uid(value=11079):14809:14937 D/Codec2-OutputBufferQueue]
+remote graphic buffer migration 14/14
+
+[2025-10-05 22:39:45.329 Uid(value=11079):14809:14937 D/Codec2Client]
+setOutputSurface -- generation=15164419 consumer usage=0x900 sync
+
+[2025-10-05 22:39:45.330 Uid(value=11079):14809:14937 D/Codec2Client]
+Surface configure completed
+
+[2025-10-05 22:39:45.330 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] disconnectFromSurface: mSurface 0xb400007279b57800
+
+[2025-10-05 22:39:45.330 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb400007279b57810, reason disconnectFromSurface
+
+[2025-10-05 22:39:45.342 Uid(value=11079):14809:14809 I/ExoPlayerImpl]
+Release f3dc72 [AndroidXMedia3/1.4.1] [RE6066L1, RMX5000, realme, 35] [media3.common, media3.exoplayer, media3.decoder, media3.datasource, media3.extractor, media3.ui]
+
+[2025-10-05 22:39:45.342 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 7
+
+[2025-10-05 22:39:45.342 Uid(value=11079):14809:14937 D/OplusCCodec]
+signalFlush [1824]: (0xb40000730216b000)
+
+[2025-10-05 22:39:45.342 Uid(value=11079):14809:14937 I/OplusFeedbackInfo]
+[signalFlush:L1414]
+
+[2025-10-05 22:39:45.345 Uid(value=11079):14809:14824 D/BLASTBufferQueue]
+[SurfaceView[com.example.mrcomic.debug/com.example.mrcomic.MainActivity]#2](f:0,a:1) destructor()
+
+[2025-10-05 22:39:45.345 Uid(value=11079):14809:14824 D/BufferQueueConsumer]
+[SurfaceView[com.example.mrcomic.debug/com.example.mrcomic.MainActivity]#2(BLAST Consumer)2](id:39d900000003,api:0,p:-1,c:14809) disconnect
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14938 D/PipelineWatcher]
+onWorkDone: frameIndex not found (18446744073709551615); ignored
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14938 D/PipelineWatcher]
+onWorkDone: frameIndex not found (18446744073709551615); ignored
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14938 D/PipelineWatcher]
+onWorkDone: frameIndex not found (18446744073709551615); ignored
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14938 D/PipelineWatcher]
+onWorkDone: frameIndex not found (18446744073709551615); ignored
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14938 D/PipelineWatcher]
+onWorkDone: frameIndex not found (18446744073709551615); ignored
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 8
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14921 D/MediaCodec]
+keep callback message for reclaim
+
+[2025-10-05 22:39:45.351 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 6
+
+[2025-10-05 22:39:45.352 Uid(value=11079):14809:14937 I/CCodecConfig]
+query failed after returning 19 values (BAD_INDEX)
+
+[2025-10-05 22:39:45.353 Uid(value=11079):14809:14937 W/Codec2Client]
+query -- param skipped: index = 1342179345.
+
+[2025-10-05 22:39:45.353 Uid(value=11079):14809:14937 W/Codec2Client]
+query -- param skipped: index = 2415921170.
+
+[2025-10-05 22:39:45.353 Uid(value=11079):14809:14937 W/Codec2Client]
+query -- param skipped: index = 1610614798.
+
+[2025-10-05 22:39:45.354 Uid(value=11079):14809:14921 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] releaseAsync
+
+[2025-10-05 22:39:45.354 Uid(value=11079):14809:14937 D/BufferQueueConsumer]
+[](id:39d900000004,api:0,p:-1,c:14809) connect: controlledByApp=false
+
+[2025-10-05 22:39:45.354 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] connectToSurface: surface 0xb400007279a7a800, mSurface 0xb4000072694ef000
+
+[2025-10-05 22:39:45.354 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb400007279a7a810, reason connectToSurface
+
+[2025-10-05 22:39:45.354 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb400007279a7a810, reason connectToSurface(reconnect)
+
+[2025-10-05 22:39:45.354 Uid(value=11079):14809:14937 D/SurfaceUtils]
+connecting to surface 0xb400007279a7a800, reason connectToSurface(reconnect-with-listener)
+
+[2025-10-05 22:39:45.355 Uid(value=11079):14809:14937 D/Codec2-OutputBufferQueue]
+C2SurfaceSyncMemory created 20(20)
+
+[2025-10-05 22:39:45.355 Uid(value=11079):14809:14937 D/Codec2-OutputBufferQueue]
+remote graphic buffer migration 0/0
+
+[2025-10-05 22:39:45.355 Uid(value=11079):14809:14937 D/Codec2Client]
+setOutputSurface -- generation=15164420 consumer usage=0x900 sync
+
+[2025-10-05 22:39:45.357 Uid(value=11079):14809:14937 D/Codec2Client]
+Surface configure completed
+
+[2025-10-05 22:39:45.357 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] disconnectFromSurface: mSurface 0xb4000072694ef000
+
+[2025-10-05 22:39:45.357 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb4000072694ef010, reason disconnectFromSurface
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 10
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.359 Uid(value=11079):14809:14937 D/CCodecBufferChannel]
+[c2.mtk.avc.decoder#412] MediaCodec discarded an unknown buffer
+
+[2025-10-05 22:39:45.361 Uid(value=11079):14809:14936 D/BufferQueueConsumer]
+[SurfaceTexture-1-14809-0](id:39d900000001,api:0,p:-1,c:14809) disconnect
+
+[2025-10-05 22:39:45.370 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] kWhatReleaseCompleted
+
+[2025-10-05 22:39:45.370 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] setState: 0
+
+[2025-10-05 22:39:45.370 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] [c2.mtk.avc.decoder] disconnectFromSurface: mSurface 0xb400007279a7a800
+
+[2025-10-05 22:39:45.370 Uid(value=11079):14809:14937 D/SurfaceUtils]
+disconnecting from surface 0xb400007279a7a810, reason disconnectFromSurface
+
+[2025-10-05 22:39:45.370 Uid(value=11079):14809:14936 D/libMEOW]
+meow delete tls: 0xb400007302189000
+
+[2025-10-05 22:39:45.370 Uid(value=11079):14809:14938 I/hw-BpHwBinder]
+onLastStrongRef automatically unlinking death recipients
+
+[2025-10-05 22:39:45.375 Uid(value=11079):14809:14937 D/MediaCodec]
+[0xb40000727adf5000] ~MediaCodec
+
+[2025-10-05 22:39:45.383 Uid(value=11079):14809:14937 D/AtlasEventUploadUtils]
+setEvent event:atlas_event_video_monitor_network_switch
+
+[2025-10-05 22:39:45.464 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔄 Showing loading spinner
+
+[2025-10-05 22:39:45.483 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔄 Showing loading spinner
+
+[2025-10-05 22:39:45.485 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=true, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.MainActivity
+
+[2025-10-05 22:39:45.485 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:false, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][1080,2400]}, relayoutAsync:true, mSyncSeqId:0
+
+[2025-10-05 22:39:45.486 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(1080, 2400), format:-3, blastBufferQueue:android.graphics.BLASTBufferQueue@d0f6889
+
+[2025-10-05 22:39:45.502 Uid(value=11079):14809:14809 E/OplusDisplayModeManager]
+has been initialized.
+
+[2025-10-05 22:39:45.502 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=com.example.mrcomic.debug/com.example.mrcomic.MainActivity)/@0xbdf0155,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:39:45.520 Uid(value=11079):14809:14832 D/SurfaceView]
+213346939positionLost mSurfaceControl is null return;
+
+[2025-10-05 22:39:45.524 Uid(value=11079):14809:14809 D/LibraryViewModel]
+🧹 Checking 1 comics for accessibility...
+
+[2025-10-05 22:39:45.525 Uid(value=11079):14809:14809 D/LibraryViewModel]
+📋 Current persisted URIs: 1
+
+[2025-10-05 22:39:45.709 Uid(value=11079):14809:14809 D/InsetsController]
+hide(ime(), fromIme=false)
+
+[2025-10-05 22:39:45.711 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:67520c4: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+
+[2025-10-05 22:39:45.711 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:67520c4: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+
+[2025-10-05 22:39:45.719 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:39:45.719 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:39:45.721 Uid(value=11079):14809:14809 D/LibraryViewModel]
+📚 Received 1 comics from repository
+
+[2025-10-05 22:39:45.721 Uid(value=11079):14809:14809 D/LibraryViewModel]
+✅ Comics loaded successfully: 1 comics
+
+[2025-10-05 22:39:45.726 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:39:45.726 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:39:45.732 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:39:45.733 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:39:45.733 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:39:45.733 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:39:45.756 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:39:46.007 Uid(value=11079):14809:14944 D/skia]
+SkJpegCodec::onGetPixels + (502, 762)
+
+[2025-10-05 22:39:46.011 Uid(value=11079):14809:14944 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:46.012 Uid(value=11079):14809:14944 D/skia]
+stream getLength() not supported, use temp buffer for loading stream, buffer addr 0x7310004000 length 570636
+
+[2025-10-05 22:39:46.012 Uid(value=11079):14809:14944 D/skia]
+LoadInputStreamToMem va 0x7310004000  size 572928
+
+[2025-10-05 22:39:46.013 Uid(value=11079):14809:14944 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:46.014 Uid(value=11079):14809:14944 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:256 256 256 236x384, alignment:256x16)
+
+[2025-10-05 22:39:46.021 Uid(value=11079):14809:14944 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:46.025 Uid(value=11079):14809:15003 D/libMEOW]
+meow new tls: 0xb40000727b9f1540
+
+[2025-10-05 22:39:46.025 Uid(value=11079):14809:15003 D/libMEOW]
+applied 1 plugins for [com.example.mrcomic.debug]:
+
+[2025-10-05 22:39:46.025 Uid(value=11079):14809:15003 D/libMEOW]
+  plugin 1: [libMEOW_gift.so]:
+
+[2025-10-05 22:39:46.031 Uid(value=11079):14809:14944 D/libMEOW]
+meow new tls: 0xb40000727a94dd00
+
+[2025-10-05 22:39:46.031 Uid(value=11079):14809:14944 D/libMEOW]
+applied 1 plugins for [com.example.mrcomic.debug]:
+
+[2025-10-05 22:39:46.031 Uid(value=11079):14809:14944 D/libMEOW]
+  plugin 1: [libMEOW_gift.so]:
+
+[2025-10-05 22:39:47.023 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:47.110 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:47.128 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:39:47.128 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:39:47.144 Uid(value=11079):14809:14809 D/ReaderViewModel]
+🎬 ReaderViewModel initialized
+
+[2025-10-05 22:39:47.144 Uid(value=11079):14809:14809 D/ReaderViewModel]
+📋 SavedStateHandle keys: [android-support-nav:controller:deepLinkIntent, uri]
+
+[2025-10-05 22:39:47.148 Uid(value=11079):14809:14809 D/ReaderViewModel]
+📁 Received URI from navigation: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.148 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ URI found, opening book...
+
+[2025-10-05 22:39:47.148 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Opening book: content://com.android.externalstorage.documents/document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.149 Uid(value=11079):14809:14809 D/ReaderViewModel]
+🔐 Checking permissions for content URI: content://com.android.externalstorage.documents/document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.150 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ Found matching persisted URI: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.150 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ Persistable permission already exists for URI
+
+[2025-10-05 22:39:47.150 Uid(value=11079):14809:14809 D/ReaderViewModel]
+🔄 Replacing decoded URI with persisted URI
+
+[2025-10-05 22:39:47.150 Uid(value=11079):14809:14809 D/ReaderViewModel]
+   Original: content://com.android.externalstorage.documents/document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.150 Uid(value=11079):14809:14809 D/ReaderViewModel]
+   Persisted: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.166 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ Successfully opened input stream with persisted URI
+
+[2025-10-05 22:39:47.176 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ Successfully opened input stream for URI
+
+[2025-10-05 22:39:47.177 Uid(value=11079):14809:14809 D/ReaderViewModel]
+🔄 Using persisted URI instead of decoded URI
+
+[2025-10-05 22:39:47.177 Uid(value=11079):14809:14809 D/ReaderViewModel]
+   Original: content://com.android.externalstorage.documents/document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.177 Uid(value=11079):14809:14809 D/ReaderViewModel]
+   Final: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.177 Uid(value=11079):14809:14809 D/ReaderViewModel]
+🔧 Creating reader for URI: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.177 Uid(value=11079):14809:14809 D/BookReaderFactory]
+🔥 DIAGNOSTIC: BookReaderFactory.create() called with URI: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.177 Uid(value=11079):14809:14809 D/BookReaderFactory]
+🔥 DIAGNOSTIC: URI scheme: content, path: /document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr, lastPathSegment: primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.190 Uid(value=11079):14809:14809 D/BookReaderFactory]
+🔥 Content URI display name: 13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.190 Uid(value=11079):14809:14809 D/BookReaderFactory]
+🔥 Extracted extension: 'cbr' from name='13 Coins #01 [RPU].cbr', lastPathSegment='primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr', path='/document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr'
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/BookReaderFactory]
+🔥 DIAGNOSTIC: Creating reader for URI: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr, extension: 'cbr', scheme=content
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/BookReaderFactory]
+🔥 DIAGNOSTIC: ✅ Extension matches 'cbr' - Creating CbrReader
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/BookReaderFactory]
+Created cached reader for cbr file
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ Reader created: CachingBookReader
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/ReaderViewModel]
+📖 Opening book with reader...
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/CachingBookReader]
+Opening book with caching: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/CbrReader]
+🔥 CBR DIAGNOSTIC: Opening CBR file: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/CbrReader]
+🔥 CBR DIAGNOSTIC: Context: com.example.mrcomic.ComicApplication@9fbcf00
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/CbrReader]
+🔥 CBR DIAGNOSTIC: URI scheme: content, path: /document/primary:Comics/13 Coins (2014)/13 Coins #01 [RPU].cbr
+
+[2025-10-05 22:39:47.191 Uid(value=11079):14809:14809 D/CbrReader]
+CBR archive closed and resources released
+
+[2025-10-05 22:39:47.192 Uid(value=11079):14809:14809 D/CbrReader]
+✅ CBR DIAGNOSTIC: Persistable permission granted for URI: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.192 Uid(value=11079):14809:14809 D/CbrReader]
+🔥 CBR DIAGNOSTIC: Opening input stream for URI: content://com.android.externalstorage.documents/document/primary%3AComics%2F13%20Coins%20(2014)%2F13%20Coins%20%2301%20%5BRPU%5D.cbr
+
+[2025-10-05 22:39:47.200 Uid(value=11079):14809:14809 D/CbrReader]
+✅ CBR DIAGNOSTIC: Input stream opened successfully
+
+[2025-10-05 22:39:47.200 Uid(value=11079):14809:14809 D/CbrReader]
+📁 CBR DIAGNOSTIC: Copying to temp file: /data/user/0/com.example.mrcomic.debug/cache/cbr_temp_17596787872003218350938135819875.cbr
+
+[2025-10-05 22:39:47.400 Uid(value=11079):14809:14809 D/CbrReader]
+📦 CBR DIAGNOSTIC: Copied 36599794 bytes to temp file
+
+[2025-10-05 22:39:47.401 Uid(value=11079):14809:14809 D/CbrReader]
+✅ CBR DIAGNOSTIC: Temp file created: true, size: 36599794 bytes
+
+[2025-10-05 22:39:47.401 Uid(value=11079):14809:14809 D/CbrReader]
+🔍 Checking file format...
+
+[2025-10-05 22:39:47.402 Uid(value=11079):14809:14809 D/CbrReader]
+📄 Read 8 bytes: 52 61 72 21 1A 07 00 CF
+
+[2025-10-05 22:39:47.402 Uid(value=11079):14809:14809 D/CbrReader]
+✅ RAR4 format detected
+
+[2025-10-05 22:39:47.417 Uid(value=11079):14809:14809 D/CbrReader]
+Found 26 image files in CBR archive
+
+[2025-10-05 22:39:47.417 Uid(value=11079):14809:14809 D/CachingBookReader]
+Book opened, page count: 26
+
+[2025-10-05 22:39:47.417 Uid(value=11079):14809:14809 D/ReaderViewModel]
+📊 Open result: success=true, failure=false
+
+[2025-10-05 22:39:47.417 Uid(value=11079):14809:14809 D/ReaderViewModel]
+✅ Book opened successfully. Page count: 26
+
+[2025-10-05 22:39:47.418 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Loading page: 0
+
+[2025-10-05 22:39:47.418 Uid(value=11079):14809:15012 D/CachingBookReader]
+Cache miss for page 0, rendering...
+
+[2025-10-05 22:39:47.418 Uid(value=11079):14809:15012 D/CbrReader]
+Rendering page 0: 13 Coins #1\13 Coins 001-000.jpg
+
+[2025-10-05 22:39:47.436 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:39:47.436 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:39:47.436 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:39:47.436 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:39:47.440 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:39:47.452 Uid(value=11079):14809:14809 W/WindowOnBackDispatcher]
+OnBackInvokedCallback is not enabled for the application.
+Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+
+[2025-10-05 22:39:47.496 Uid(value=11079):14809:14944 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=reader_animation_speed, value=1.00}
+
+[2025-10-05 22:39:47.496 Uid(value=11079):14809:15013 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=double_tap_zoom, value=2.00}
+
+[2025-10-05 22:39:47.497 Uid(value=11079):14809:15007 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=page_turn_sound, value=false}
+
+[2025-10-05 22:39:47.498 Uid(value=11079):14809:14951 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=block_swipe_when_zoomed, value=true}
+
+[2025-10-05 22:39:47.499 Uid(value=11079):14809:14952 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=reader_brightness, value=1.00}
+
+[2025-10-05 22:39:47.500 Uid(value=11079):14809:15007 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=orientation, value=auto}
+
+[2025-10-05 22:39:47.515 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:39:47.515 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:39:47.525 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:39:47.525 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:39:47.525 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:39:47.525 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:39:47.528 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:39:47.678 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:47.678 Uid(value=11079):14809:15012 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:47.678 Uid(value=11079):14809:15012 D/skia]
+stream getLength() supported, buffer addr 0x7279e65000 length 2272256
+
+[2025-10-05 22:39:47.680 Uid(value=11079):14809:15012 D/skia]
+LoadInputStreamToMem va 0x7279e65000  size 2272256
+
+[2025-10-05 22:39:47.680 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:47.680 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:47.719 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:47.722 Uid(value=11079):14809:15012 D/CbrReader]
+Successfully rendered page 0 (2008x3047)
+
+[2025-10-05 22:39:47.723 Uid(value=11079):14809:15012 D/CachingBookReader]
+Successfully rendered page 0, caching...
+
+[2025-10-05 22:39:47.723 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Page 0 loaded successfully (2008x3047)
+
+[2025-10-05 22:39:47.724 Uid(value=11079):14809:15012 D/ReaderViewModel]
+Preloading page: 1
+
+[2025-10-05 22:39:47.724 Uid(value=11079):14809:15012 D/CachingBookReader]
+Cache miss for page 1, rendering...
+
+[2025-10-05 22:39:47.724 Uid(value=11079):14809:15012 D/CbrReader]
+Rendering page 1: 13 Coins #1\13 Coins 001-001.jpg
+
+[2025-10-05 22:39:47.823 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:47.823 Uid(value=11079):14809:15012 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:47.824 Uid(value=11079):14809:15012 D/skia]
+stream getLength() supported, buffer addr 0x7279e73000 length 2215936
+
+[2025-10-05 22:39:47.824 Uid(value=11079):14809:15012 D/skia]
+LoadInputStreamToMem va 0x7279e73000  size 2215936
+
+[2025-10-05 22:39:47.825 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:47.825 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:47.855 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:47.855 Uid(value=11079):14809:15012 D/CbrReader]
+Successfully rendered page 1 (2008x3047)
+
+[2025-10-05 22:39:47.856 Uid(value=11079):14809:15012 D/CachingBookReader]
+Successfully rendered page 1, caching...
+
+[2025-10-05 22:39:47.857 Uid(value=11079):14809:15012 D/ReaderViewModel]
+Preloading page: 2
+
+[2025-10-05 22:39:47.857 Uid(value=11079):14809:15012 D/CachingBookReader]
+Cache miss for page 2, rendering...
+
+[2025-10-05 22:39:47.857 Uid(value=11079):14809:15012 D/CbrReader]
+Rendering page 2: 13 Coins #1\13 Coins 001-002.jpg
+
+[2025-10-05 22:39:47.902 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:47.902 Uid(value=11079):14809:15012 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:47.903 Uid(value=11079):14809:15012 D/skia]
+stream getLength() supported, buffer addr 0x7279f87000 length 1081600
+
+[2025-10-05 22:39:47.903 Uid(value=11079):14809:15012 D/skia]
+LoadInputStreamToMem va 0x7279f87000  size 1081600
+
+[2025-10-05 22:39:47.904 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:47.904 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:47.928 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:47.928 Uid(value=11079):14809:15012 D/CbrReader]
+Successfully rendered page 2 (2008x3047)
+
+[2025-10-05 22:39:47.928 Uid(value=11079):14809:15012 D/CachingBookReader]
+Successfully rendered page 2, caching...
+
+[2025-10-05 22:39:47.929 Uid(value=11079):14809:15012 D/ReaderViewModel]
+Preloading page: 3
+
+[2025-10-05 22:39:47.929 Uid(value=11079):14809:15012 D/CachingBookReader]
+Cache miss for page 3, rendering...
+
+[2025-10-05 22:39:47.929 Uid(value=11079):14809:15012 D/CbrReader]
+Rendering page 3: 13 Coins #1\13 Coins 001-003.jpg
+
+[2025-10-05 22:39:47.980 Uid(value=11079):14809:15029 D/ProfileInstaller]
+Installing profile for com.example.mrcomic.debug
+
+[2025-10-05 22:39:48.080 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels + (2008, 1524)
+
+[2025-10-05 22:39:48.080 Uid(value=11079):14809:15012 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:48.081 Uid(value=11079):14809:15012 D/skia]
+stream getLength() supported, buffer addr 0x7279d0d000 length 3680768
+
+[2025-10-05 22:39:48.083 Uid(value=11079):14809:15012 D/skia]
+LoadInputStreamToMem va 0x7279d0d000  size 3680768
+
+[2025-10-05 22:39:48.084 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:48.084 Uid(value=11079):14809:15012 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:1024 1024 1024 944x768, alignment:256x16)
+
+[2025-10-05 22:39:48.140 Uid(value=11079):14809:15012 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:48.140 Uid(value=11079):14809:15012 D/CbrReader]
+Successfully rendered page 3 (2008x1524)
+
+[2025-10-05 22:39:48.140 Uid(value=11079):14809:15012 D/CachingBookReader]
+Successfully rendered page 3, caching...
+
+[2025-10-05 22:39:49.546 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:49.650 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Setting reading mode: WEBTOON
+
+[2025-10-05 22:39:49.653 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:49.703 Uid(value=11079):14809:15012 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=reader_animation_speed, value=1.00}
+
+[2025-10-05 22:39:49.703 Uid(value=11079):14809:15012 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=double_tap_zoom, value=2.00}
+
+[2025-10-05 22:39:49.704 Uid(value=11079):14809:15012 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=page_turn_sound, value=false}
+
+[2025-10-05 22:39:49.704 Uid(value=11079):14809:14951 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=block_swipe_when_zoomed, value=true}
+
+[2025-10-05 22:39:49.705 Uid(value=11079):14809:15007 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=reader_brightness, value=1.00}
+
+[2025-10-05 22:39:49.705 Uid(value=11079):14809:15012 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=orientation, value=auto}
+
+[2025-10-05 22:39:49.706 Uid(value=11079):14809:15007 D/Analytics]
+📊 EVENT: reading_mode_changed
+   Parameters: {mode=webtoon}
+
+[2025-10-05 22:39:50.253 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:50.317 Uid(value=11079):14809:14967 I/PowerHalWrapper]
+PowerHalWrapper.getInstance 
+
+[2025-10-05 22:39:50.322 Uid(value=11079):14809:14809 I/PowerHalWrapper]
+PowerHalWrapper.getInstance 
+
+[2025-10-05 22:39:50.403 Uid(value=11079):14809:14809 I/ScrollIdentify]
+on fling
+
+[2025-10-05 22:39:50.403 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:51.193 Uid(value=11079):14809:14941 D/BufferPoolAccessor2.0]
+bufferpool2 0xb400007279b46428 : 0(0 size) total buffers - 0(0 size) used buffers - 53/62 (recycle/alloc) - 9/57 (fetch/transfer)
+
+[2025-10-05 22:39:51.193 Uid(value=11079):14809:14941 D/BufferPoolAccessor2.0]
+evictor expired: 1, evicted: 1
+
+[2025-10-05 22:39:51.394 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:51.510 Uid(value=11079):14809:14809 I/ScrollIdentify]
+on fling
+
+[2025-10-05 22:39:51.510 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:52.565 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:52.616 Uid(value=11079):14809:14816 W/e.mrcomic.debug]
+Cleared Reference was only reachable from finalizer (only reported once)
+
+[2025-10-05 22:39:52.743 Uid(value=11079):14809:14809 I/ScrollIdentify]
+on fling
+
+[2025-10-05 22:39:52.743 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:52.745 Uid(value=11079):14809:14816 I/e.mrcomic.debug]
+Background concurrent mark compact GC freed 13MB AllocSpace bytes, 363(39MB) LOS objects, 49% free, 13MB/27MB, paused 518us,6.187ms total 148.774ms
+
+[2025-10-05 22:39:52.748 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb40000737b24c9c0, surface=NULL
+
+[2025-10-05 22:39:52.751 Uid(value=11079):14809:14818 W/System]
+A resource failed to call release. 
+
+[2025-10-05 22:39:53.260 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:53.359 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Setting reading mode: PAGE
+
+[2025-10-05 22:39:53.361 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:53.401 Uid(value=11079):14809:15012 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=reader_animation_speed, value=1.00}
+
+[2025-10-05 22:39:53.401 Uid(value=11079):14809:14952 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=page_turn_sound, value=false}
+
+[2025-10-05 22:39:53.401 Uid(value=11079):14809:14951 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=double_tap_zoom, value=2.00}
+
+[2025-10-05 22:39:53.402 Uid(value=11079):14809:15010 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=block_swipe_when_zoomed, value=true}
+
+[2025-10-05 22:39:53.402 Uid(value=11079):14809:14952 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=reader_brightness, value=1.00}
+
+[2025-10-05 22:39:53.403 Uid(value=11079):14809:15010 D/Analytics]
+📊 EVENT: setting_changed
+   Parameters: {setting_name=orientation, value=auto}
+
+[2025-10-05 22:39:53.404 Uid(value=11079):14809:15007 D/Analytics]
+📊 EVENT: reading_mode_changed
+   Parameters: {mode=page}
+
+[2025-10-05 22:39:54.320 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:54.438 Uid(value=11079):14809:14809 D/ReaderViewModel]
+goToNextPage: current=0, next=1, total=26
+
+[2025-10-05 22:39:54.438 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Loading page: 1
+
+[2025-10-05 22:39:54.440 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:54.440 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache hit for page 1
+
+[2025-10-05 22:39:54.467 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Page 1 loaded successfully (2008x3047)
+
+[2025-10-05 22:39:54.468 Uid(value=11079):14809:14951 D/ReaderViewModel]
+Preloading page: 2
+
+[2025-10-05 22:39:54.469 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache hit for page 2
+
+[2025-10-05 22:39:54.471 Uid(value=11079):14809:14951 D/ReaderViewModel]
+Preloading page: 3
+
+[2025-10-05 22:39:54.471 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache hit for page 3
+
+[2025-10-05 22:39:54.504 Uid(value=11079):14809:14951 D/ReaderViewModel]
+Preloading page: 4
+
+[2025-10-05 22:39:54.505 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache miss for page 4, rendering...
+
+[2025-10-05 22:39:54.505 Uid(value=11079):14809:14951 D/CbrReader]
+Rendering page 4: 13 Coins #1\13 Coins 001-004.jpeg
+
+[2025-10-05 22:39:54.508 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:54.587 Uid(value=11079):14809:14951 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:54.587 Uid(value=11079):14809:14951 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:54.587 Uid(value=11079):14809:14951 D/skia]
+stream getLength() supported, buffer addr 0x73abc65000 length 1681024
+
+[2025-10-05 22:39:54.588 Uid(value=11079):14809:14951 D/skia]
+LoadInputStreamToMem va 0x73abc65000  size 1681024
+
+[2025-10-05 22:39:54.589 Uid(value=11079):14809:14951 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:54.589 Uid(value=11079):14809:14951 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:54.616 Uid(value=11079):14809:14951 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:54.617 Uid(value=11079):14809:14809 D/ReaderViewModel]
+goToNextPage: current=1, next=2, total=26
+
+[2025-10-05 22:39:54.617 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Loading page: 2
+
+[2025-10-05 22:39:54.617 Uid(value=11079):14809:14951 D/CbrReader]
+Successfully rendered page 4 (2008x3047)
+
+[2025-10-05 22:39:54.617 Uid(value=11079):14809:14951 D/CachingBookReader]
+Successfully rendered page 4, caching...
+
+[2025-10-05 22:39:54.618 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache hit for page 2
+
+[2025-10-05 22:39:54.619 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:54.624 Uid(value=11079):14809:14951 D/ReaderViewModel]
+Preloading page: 0
+
+[2025-10-05 22:39:54.624 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache miss for page 0, rendering...
+
+[2025-10-05 22:39:54.624 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Page 2 loaded successfully (2008x3047)
+
+[2025-10-05 22:39:54.624 Uid(value=11079):14809:14951 D/CbrReader]
+Rendering page 0: 13 Coins #1\13 Coins 001-000.jpg
+
+[2025-10-05 22:39:54.625 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 3
+
+[2025-10-05 22:39:54.625 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache hit for page 3
+
+[2025-10-05 22:39:54.663 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 4
+
+[2025-10-05 22:39:54.664 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache hit for page 4
+
+[2025-10-05 22:39:54.673 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 5
+
+[2025-10-05 22:39:54.674 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 5, rendering...
+
+[2025-10-05 22:39:54.674 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 5: 13 Coins #1\13 Coins 001-005.jpeg
+
+[2025-10-05 22:39:54.680 Uid(value=11079):14809:14951 E/CbrReader]
+Failed to render page 0
+com.github.junrar.exception.CrcErrorException
+	at com.github.junrar.Archive.doExtractFile(Archive.java:727)
+	at com.github.junrar.Archive.extractFile(Archive.java:564)
+	at com.example.core.reader.data.CbrReader.renderPage-yxL6bBk(CbrReader.kt:223)
+	at com.example.core.reader.data.CachingBookReader.renderPage-yxL6bBk(CachingBookReader.kt:74)
+	at com.example.feature.reader.ui.ReaderViewModel$preloadAdjacentPages$1.invokeSuspend(ReaderViewModel.kt:651)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+[2025-10-05 22:39:54.681 Uid(value=11079):14809:14951 W/CachingBookReader]
+Failed to render page 0: null
+
+[2025-10-05 22:39:54.681 Uid(value=11079):14809:14951 E/ReaderViewModel]
+Failed to preload page 0: null
+
+[2025-10-05 22:39:54.749 Uid(value=11079):14809:15013 E/CbrReader]
+Failed to render page 5
+com.github.junrar.exception.CrcErrorException
+	at com.github.junrar.Archive.doExtractFile(Archive.java:727)
+	at com.github.junrar.Archive.extractFile(Archive.java:564)
+	at com.example.core.reader.data.CbrReader.renderPage-yxL6bBk(CbrReader.kt:223)
+	at com.example.core.reader.data.CachingBookReader.renderPage-yxL6bBk(CachingBookReader.kt:74)
+	at com.example.feature.reader.ui.ReaderViewModel$preloadAdjacentPages$1.invokeSuspend(ReaderViewModel.kt:629)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:104)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:111)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:99)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:584)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:811)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:715)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:702)
+
+[2025-10-05 22:39:54.749 Uid(value=11079):14809:15013 W/CachingBookReader]
+Failed to render page 5: null
+
+[2025-10-05 22:39:54.749 Uid(value=11079):14809:15013 E/ReaderViewModel]
+Failed to preload page 5: null
+
+[2025-10-05 22:39:54.749 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 1
+
+[2025-10-05 22:39:54.749 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache hit for page 1
+
+[2025-10-05 22:39:54.750 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 0
+
+[2025-10-05 22:39:54.750 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 0, rendering...
+
+[2025-10-05 22:39:54.750 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 0: 13 Coins #1\13 Coins 001-000.jpg
+
+[2025-10-05 22:39:54.842 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:54.842 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:54.845 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aafd5000 length 2272256
+
+[2025-10-05 22:39:54.846 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aafd5000  size 2272256
+
+[2025-10-05 22:39:54.846 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:54.847 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:54.885 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:54.885 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 0 (2008x3047)
+
+[2025-10-05 22:39:54.886 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 0, caching...
+
+[2025-10-05 22:39:55.752 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:57.231 Uid(value=11079):14809:14809 D/ReaderViewModel]
+goToNextPage: current=2, next=3, total=26
+
+[2025-10-05 22:39:57.231 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Loading page: 3
+
+[2025-10-05 22:39:57.231 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache hit for page 3
+
+[2025-10-05 22:39:57.231 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:57.249 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Page 3 loaded successfully (2008x1524)
+
+[2025-10-05 22:39:57.250 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 4
+
+[2025-10-05 22:39:57.250 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache hit for page 4
+
+[2025-10-05 22:39:57.290 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 5
+
+[2025-10-05 22:39:57.290 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 5, rendering...
+
+[2025-10-05 22:39:57.290 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 5: 13 Coins #1\13 Coins 001-005.jpeg
+
+[2025-10-05 22:39:57.359 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:57.359 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:57.360 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73b0894000 length 1635072
+
+[2025-10-05 22:39:57.361 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73b0894000  size 1635072
+
+[2025-10-05 22:39:57.361 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:57.362 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:57.394 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:57.395 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 5 (2008x3047)
+
+[2025-10-05 22:39:57.395 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 5, caching...
+
+[2025-10-05 22:39:57.396 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 6
+
+[2025-10-05 22:39:57.396 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 6, rendering...
+
+[2025-10-05 22:39:57.396 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 6: 13 Coins #1\13 Coins 001-006.jpg
+
+[2025-10-05 22:39:57.468 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:57.468 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:57.469 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73b08bc000 length 1472640
+
+[2025-10-05 22:39:57.470 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73b08bc000  size 1472640
+
+[2025-10-05 22:39:57.470 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:57.471 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:57.501 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:57.502 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 6 (2008x3047)
+
+[2025-10-05 22:39:57.502 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 6, caching...
+
+[2025-10-05 22:39:57.503 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 2
+
+[2025-10-05 22:39:57.503 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 2, rendering...
+
+[2025-10-05 22:39:57.503 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 2: 13 Coins #1\13 Coins 001-002.jpg
+
+[2025-10-05 22:39:57.550 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:57.550 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:57.551 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73b091b000 length 1081600
+
+[2025-10-05 22:39:57.551 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73b091b000  size 1081600
+
+[2025-10-05 22:39:57.551 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:57.552 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:57.606 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:57.606 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 2 (2008x3047)
+
+[2025-10-05 22:39:57.606 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 2, caching...
+
+[2025-10-05 22:39:57.607 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 1
+
+[2025-10-05 22:39:57.607 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 1, rendering...
+
+[2025-10-05 22:39:57.607 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 1: 13 Coins #1\13 Coins 001-001.jpg
+
+[2025-10-05 22:39:57.708 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:57.708 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:57.708 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aede3000 length 2215936
+
+[2025-10-05 22:39:57.710 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aede3000  size 2215936
+
+[2025-10-05 22:39:57.710 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:57.711 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:57.760 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:57.760 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 1 (2008x3047)
+
+[2025-10-05 22:39:57.760 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 1, caching...
+
+[2025-10-05 22:39:57.764 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 0
+
+[2025-10-05 22:39:57.765 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 0, rendering...
+
+[2025-10-05 22:39:57.765 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 0: 13 Coins #1\13 Coins 001-000.jpg
+
+[2025-10-05 22:39:57.894 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:57.894 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:57.895 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aedd5000 length 2272256
+
+[2025-10-05 22:39:57.896 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aedd5000  size 2272256
+
+[2025-10-05 22:39:57.896 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:57.897 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:57.949 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:57.950 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 0 (2008x3047)
+
+[2025-10-05 22:39:57.950 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 0, caching...
+
+[2025-10-05 22:39:58.594 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:39:59.592 Uid(value=11079):14809:14809 D/ReaderViewModel]
+goToPreviousPage: current=3, prev=2
+
+[2025-10-05 22:39:59.592 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Loading page: 2
+
+[2025-10-05 22:39:59.593 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:39:59.593 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache hit for page 2
+
+[2025-10-05 22:39:59.612 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Page 2 loaded successfully (2008x3047)
+
+[2025-10-05 22:39:59.613 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 3
+
+[2025-10-05 22:39:59.613 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 3, rendering...
+
+[2025-10-05 22:39:59.613 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 3: 13 Coins #1\13 Coins 001-003.jpg
+
+[2025-10-05 22:39:59.766 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 1524)
+
+[2025-10-05 22:39:59.766 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:59.768 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aec7d000 length 3680768
+
+[2025-10-05 22:39:59.771 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aec7d000  size 3680768
+
+[2025-10-05 22:39:59.772 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:59.773 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:1024 1024 1024 944x768, alignment:256x16)
+
+[2025-10-05 22:39:59.826 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:59.827 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 3 (2008x1524)
+
+[2025-10-05 22:39:59.828 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 3, caching...
+
+[2025-10-05 22:39:59.829 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 4
+
+[2025-10-05 22:39:59.830 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 4, rendering...
+
+[2025-10-05 22:39:59.830 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 4: 13 Coins #1\13 Coins 001-004.jpeg
+
+[2025-10-05 22:39:59.905 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:39:59.905 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:39:59.905 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73b0889000 length 1681024
+
+[2025-10-05 22:39:59.906 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73b0889000  size 1681024
+
+[2025-10-05 22:39:59.906 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:39:59.906 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:39:59.936 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:39:59.937 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 4 (2008x3047)
+
+[2025-10-05 22:39:59.937 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 4, caching...
+
+[2025-10-05 22:39:59.940 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 5
+
+[2025-10-05 22:39:59.940 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 5, rendering...
+
+[2025-10-05 22:39:59.940 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 5: 13 Coins #1\13 Coins 001-005.jpeg
+
+[2025-10-05 22:40:00.006 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:40:00.006 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:40:00.006 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73b0894000 length 1635072
+
+[2025-10-05 22:40:00.007 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73b0894000  size 1635072
+
+[2025-10-05 22:40:00.008 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:40:00.008 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:40:00.060 Uid(value=11079):14809:14816 I/e.mrcomic.debug]
+Background concurrent mark compact GC freed 480KB AllocSpace bytes, 104(21MB) LOS objects, 49% free, 12MB/25MB, paused 590us,5.244ms total 55.125ms
+
+[2025-10-05 22:40:00.062 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:40:00.063 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 5 (2008x3047)
+
+[2025-10-05 22:40:00.063 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 5, caching...
+
+[2025-10-05 22:40:00.064 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 1
+
+[2025-10-05 22:40:00.064 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 1, rendering...
+
+[2025-10-05 22:40:00.064 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 1: 13 Coins #1\13 Coins 001-001.jpg
+
+[2025-10-05 22:40:00.156 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:40:00.156 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:40:00.157 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aede3000 length 2215936
+
+[2025-10-05 22:40:00.158 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aede3000  size 2215936
+
+[2025-10-05 22:40:00.159 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:40:00.159 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:40:00.194 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:40:00.195 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 1 (2008x3047)
+
+[2025-10-05 22:40:00.195 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 1, caching...
+
+[2025-10-05 22:40:00.196 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 0
+
+[2025-10-05 22:40:00.196 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 0, rendering...
+
+[2025-10-05 22:40:00.196 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 0: 13 Coins #1\13 Coins 001-000.jpg
+
+[2025-10-05 22:40:00.293 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:40:00.294 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:40:00.294 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aedd5000 length 2272256
+
+[2025-10-05 22:40:00.295 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aedd5000  size 2272256
+
+[2025-10-05 22:40:00.295 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:40:00.296 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:40:00.329 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:40:00.330 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 0 (2008x3047)
+
+[2025-10-05 22:40:00.330 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 0, caching...
+
+[2025-10-05 22:40:01.077 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:02.148 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:02.379 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:02.380 Uid(value=11079):14809:14809 D/ScrollOptim [SceneManager]]
+updateCurrentActivity: mCurrentActivityName=null, isOptEnable=true, isAnimAheadEnable=true, isFrameInsertEnable=true, InsertNum=1, isEnabledForScrollChanged=false
+
+[2025-10-05 22:40:02.411 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent false
+
+[2025-10-05 22:40:02.580 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:03.165 Uid(value=11079):14809:14821 D/VRI[MainActivity]]
+dispatchAppVisibility visible:false
+
+[2025-10-05 22:40:03.166 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+visibilityChanged oldVisibility=true newVisibility=false
+
+[2025-10-05 22:40:03.171 Uid(value=11079):14809:14809 D/HWUI]
+RenderProxy::destroy: this=0xb4000073094d3b00, mContext=0xb400007302039100
+
+[2025-10-05 22:40:03.171 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb40000730b900b80, surface=NULL
+
+[2025-10-05 22:40:03.177 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=false, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.MainActivity
+
+[2025-10-05 22:40:03.182 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:false, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:40:03.183 Uid(value=11079):14809:14809 D/BLASTBufferQueue]
+[VRI[MainActivity]#1](f:0,a:2) destructor()
+
+[2025-10-05 22:40:03.183 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[VRI[MainActivity]#1(BLAST Consumer)1](id:39d900000002,api:0,p:-1,c:14809) disconnect
+
+[2025-10-05 22:40:03.241 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:03.242 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+setWindowStopped stopped:true
+
+[2025-10-05 22:40:03.465 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 I.E...... R.....ID 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to false
+
+[2025-10-05 22:40:06.349 Uid(value=11079):14809:14809 D/ActivityThread]
+do gfx trim 40 success
+
+[2025-10-05 22:40:06.351 Uid(value=11079):14809:14832 D/HWUI]
+RenderThread::destroyRenderingContext: this=0xb40000737b2d9300
+
+[2025-10-05 22:40:06.351 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::onContextDestroyed: this=0xb40000730b900b80
+
+[2025-10-05 22:40:06.355 Uid(value=11079):14809:14832 D/HWUI]
+EglManager::destroy: mEglDisplay=0xb40000737b33ea00, mEglContext=0xb400007324fe0900, mCurrentSurface=0x0
+
+[2025-10-05 22:40:27.901 Uid(value=11079):14809:14922 D/VRI[MainActivity]]
+dispatchAppVisibility visible:true
+
+[2025-10-05 22:40:27.908 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:27.911 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+setWindowStopped stopped:false
+
+[2025-10-05 22:40:27.921 Uid(value=11079):14809:14809 W/WindowOnBackDispatcher]
+OnBackInvokedCallback is not enabled for the application.
+Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+
+[2025-10-05 22:40:27.922 Uid(value=11079):14809:14809 D/ScrollOptim [SceneManager]]
+updateCurrentActivity: mCurrentActivityName=com.example.mrcomic.MainActivity, isOptEnable=true, isAnimAheadEnable=true, isFrameInsertEnable=true, InsertNum=1, isEnabledForScrollChanged=false
+
+[2025-10-05 22:40:27.922 Uid(value=11079):14809:14809 D/ActivityThread]
+ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.MainActivity} checkFinished=false 2
+
+[2025-10-05 22:40:27.923 Uid(value=11079):14809:14809 D/ResourcesManagerExtImpl]
+applyConfigurationToAppResourcesLocked app.getDisplayId() return callback.displayId:0
+
+[2025-10-05 22:40:27.928 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=false, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.MainActivity
+
+[2025-10-05 22:40:27.936 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:true, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:40:27.936 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+updateBlastSurfaceIfNeeded, surfaceSize:Point(1080, 2400), lastSurfaceSize:Point(1080, 2400), format:-3, blastBufferQueue:null
+
+[2025-10-05 22:40:27.936 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[](id:39d900000005,api:0,p:-1,c:14809) connect: controlledByApp=false
+
+[2025-10-05 22:40:27.954 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=com.example.mrcomic.debug/com.example.mrcomic.MainActivity)/@0xbdf0155,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:40:28.011 Uid(value=11079):14809:14832 D/BLASTBufferQueue]
+[VRI[MainActivity]#3](f:0,a:1) acquireNextBufferLocked size=1080x2400 mFrameNumber=1 applyTransaction=true mTimestamp=744314822784594(auto) mPendingTransactions.size=0 graphicBufferId=63604170686558 transform=0
+
+[2025-10-05 22:40:28.011 Uid(value=11079):14809:14832 D/VRI[MainActivity]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true syncBuffer=false
+
+[2025-10-05 22:40:28.012 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+draw finished. seqId=0
+
+[2025-10-05 22:40:28.012 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+setMaxDequeuedBufferCount: 2
+
+[2025-10-05 22:40:28.048 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent true
+
+[2025-10-05 22:40:28.078 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:28.078 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:40:29.052 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 V.E...... R....... 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to true
+
+[2025-10-05 22:40:29.262 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:31.808 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:32.343 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:33.715 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:34.635 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent false
+
+[2025-10-05 22:40:34.995 Uid(value=11079):14809:14821 D/OplusGraphicsEvent]
+FRTC rate change to 30, type: 1, duration: 0, propagation: 0
+
+[2025-10-05 22:40:34.995 Uid(value=11079):14809:14821 I/GuiUtils]
+VRR [FRTC] s client update frtcRate from 0 to 30
+
+[2025-10-05 22:40:34.995 Uid(value=11079):14809:14821 I/GuiUtils]
+VRR [FRTC] s client update frtcType from 0 to 1
+
+[2025-10-05 22:40:35.135 Uid(value=11079):14809:14821 D/OplusGraphicsEvent]
+FRTC rate change to 30, type: 1, duration: 0, propagation: 0
+
+[2025-10-05 22:40:35.640 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 V.E...... R....... 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to false
+
+[2025-10-05 22:40:38.129 Uid(value=11079):14809:14821 D/OplusGraphicsEvent]
+FRTC rate change to 30, type: 1, duration: 0, propagation: 0
+
+[2025-10-05 22:40:38.734 Uid(value=11079):14809:14821 D/OplusGraphicsEvent]
+FRTC rate change to 0, type: 1, duration: 0, propagation: 0
+
+[2025-10-05 22:40:38.734 Uid(value=11079):14809:14821 I/GuiUtils]
+VRR [FRTC] s client update frtcRate from 30 to 0
+
+[2025-10-05 22:40:39.154 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent true
+
+[2025-10-05 22:40:39.431 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:40.160 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 V.E...... R....... 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to true
+
+[2025-10-05 22:40:40.409 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:40.901 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:41.569 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:43.366 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:44.152 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:44.481 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:45.640 Uid(value=11079):14809:14809 D/ReaderViewModel]
+goToPreviousPage: current=2, prev=1
+
+[2025-10-05 22:40:45.640 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Loading page: 1
+
+[2025-10-05 22:40:45.642 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:45.647 Uid(value=11079):14809:14951 D/CachingBookReader]
+Cache hit for page 1
+
+[2025-10-05 22:40:45.678 Uid(value=11079):14809:14809 D/ReaderViewModel]
+Page 1 loaded successfully (2008x3047)
+
+[2025-10-05 22:40:45.679 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 2
+
+[2025-10-05 22:40:45.680 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 2, rendering...
+
+[2025-10-05 22:40:45.680 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 2: 13 Coins #1\13 Coins 001-002.jpg
+
+[2025-10-05 22:40:45.742 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:40:45.742 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:40:45.743 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aeef7000 length 1081600
+
+[2025-10-05 22:40:45.744 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aeef7000  size 1081600
+
+[2025-10-05 22:40:45.748 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:40:45.754 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:40:45.834 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:40:45.835 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 2 (2008x3047)
+
+[2025-10-05 22:40:45.835 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 2, caching...
+
+[2025-10-05 22:40:45.837 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 3
+
+[2025-10-05 22:40:45.837 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 3, rendering...
+
+[2025-10-05 22:40:45.837 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 3: 13 Coins #1\13 Coins 001-003.jpg
+
+[2025-10-05 22:40:46.060 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 1524)
+
+[2025-10-05 22:40:46.060 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:40:46.063 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aec7d000 length 3680768
+
+[2025-10-05 22:40:46.065 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aec7d000  size 3680768
+
+[2025-10-05 22:40:46.066 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:40:46.066 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:1024 1024 1024 944x768, alignment:256x16)
+
+[2025-10-05 22:40:46.087 Uid(value=11079):14809:15003 D/HWUI]
+EglManager::destroy: mEglDisplay=0xb40000737b33ea00, mEglContext=0xb400007279afe880, mCurrentSurface=0x0
+
+[2025-10-05 22:40:46.179 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:40:46.180 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 3 (2008x1524)
+
+[2025-10-05 22:40:46.180 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 3, caching...
+
+[2025-10-05 22:40:46.181 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 4
+
+[2025-10-05 22:40:46.181 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 4, rendering...
+
+[2025-10-05 22:40:46.181 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 4: 13 Coins #1\13 Coins 001-004.jpeg
+
+[2025-10-05 22:40:46.272 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels + (2008, 3047)
+
+[2025-10-05 22:40:46.272 Uid(value=11079):14809:15013 I/DMABUFHEAPS]
+Using DMA-BUF heap named: mtk_mm
+
+[2025-10-05 22:40:46.273 Uid(value=11079):14809:15013 D/skia]
+stream getLength() supported, buffer addr 0x73aee65000 length 1681024
+
+[2025-10-05 22:40:46.273 Uid(value=11079):14809:15013 D/skia]
+LoadInputStreamToMem va 0x73aee65000  size 1681024
+
+[2025-10-05 22:40:46.274 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Huffman Builder run in subthread
+
+[2025-10-05 22:40:46.274 Uid(value=11079):14809:15013 D/libjpeg-alpha]
+Tile Decoder (#thread:4, size:512 512 512 472x768, alignment:256x16)
+
+[2025-10-05 22:40:46.355 Uid(value=11079):14809:15013 D/skia]
+SkJpegCodec::onGetPixels -
+
+[2025-10-05 22:40:46.355 Uid(value=11079):14809:15013 D/CbrReader]
+Successfully rendered page 4 (2008x3047)
+
+[2025-10-05 22:40:46.356 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 4, caching...
+
+[2025-10-05 22:40:46.357 Uid(value=11079):14809:15013 D/ReaderViewModel]
+Preloading page: 0
+
+[2025-10-05 22:40:46.357 Uid(value=11079):14809:15013 D/CachingBookReader]
+Cache miss for page 0, rendering...
+
+[2025-10-05 22:40:46.357 Uid(value=11079):14809:15013 D/CbrReader]
+Rendering page 0: 13 Coins #1\13 Coins 001-000.jpg
+
+[2025-10-05 22:40:46.490 Uid(value=11079):14809:15013 D/CbrReader]
+Cache hit for page 0
+
+[2025-10-05 22:40:46.490 Uid(value=11079):14809:15013 D/CachingBookReader]
+Successfully rendered page 0, caching...
+
+[2025-10-05 22:40:46.505 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:47.391 Uid(value=11079):14809:14809 I/VelocityTracker]
+LSQ2 speed rezero
+
+[2025-10-05 22:40:47.392 Uid(value=11079):14809:14809 I/VelocityTracker]
+LSQ2 speed rezero
+
+[2025-10-05 22:40:47.392 Uid(value=11079):14809:14809 I/ScrollIdentify]
+on fling
+
+[2025-10-05 22:40:47.392 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:47.498 Uid(value=11079):14809:14944 D/libMEOW]
+meow delete tls: 0xb40000727a94dd00
+
+[2025-10-05 22:40:48.401 Uid(value=11079):14809:14809 D/Activity]
+dispatchKeyEvent to com.example.mrcomic.MainActivity@929a111 will call onBackPressed
+
+[2025-10-05 22:40:48.425 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:40:48.426 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:40:48.482 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:48.482 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:48.482 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:48.482 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:48.492 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:48.563 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:40:48.563 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:40:48.568 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:48.568 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:48.568 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:48.568 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:48.570 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:48.573 Uid(value=11079):14809:14809 D/InsetsController]
+hide(ime(), fromIme=false)
+
+[2025-10-05 22:40:48.574 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:3f9f2ddd: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+
+[2025-10-05 22:40:48.574 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:3f9f2ddd: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+
+[2025-10-05 22:40:49.267 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:40:49.267 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:40:49.273 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:49.273 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:49.273 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:49.273 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:49.276 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:49.309 Uid(value=11079):14809:14809 D/ReaderViewModel]
+ViewModel cleared, closing book reader
+
+[2025-10-05 22:40:49.309 Uid(value=11079):14809:14809 D/CachingBookReader]
+Closing caching book reader
+
+[2025-10-05 22:40:49.314 Uid(value=11079):14809:14809 D/CbrReader]
+CBR archive closed and resources released
+
+[2025-10-05 22:40:49.319 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:40:49.320 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:40:49.321 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:49.321 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:49.321 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:49.321 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:49.323 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:50.462 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:50.548 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:50.576 Uid(value=11079):14809:14809 D/WindowManager]
+Add to mViews: androidx.compose.ui.window.PopupLayout{a4bcc11 V.E...... ......I. 0,0-0,0 #1020002 android:id/content alpha=1.0 viewInfo = },pkg= com.example.mrcomic.debug
+
+[2025-10-05 22:40:50.577 Uid(value=11079):14809:14832 D/skia]
+setRusSupported enable 0
+
+[2025-10-05 22:40:50.596 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+onDisplayChanged -1 for VRI android.view.ViewRootImpl@cc4ebe4
+
+[2025-10-05 22:40:50.610 Uid(value=11079):14809:14809 E/OplusBracketLog]
+[OplusViewMirrorManager] updateHostViewRootIfNeeded, not support android.view.ViewRootImpl@cc4ebe4
+
+[2025-10-05 22:40:50.616 Uid(value=11079):14809:14809 W/WindowOnBackDispatcher]
+OnBackInvokedCallback is not enabled for the application.
+Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+
+[2025-10-05 22:40:50.662 Uid(value=11079):14809:14809 D/VRI[Всплывающее окно]]
+setLayoutParams: x = 348, y = 278
+
+[2025-10-05 22:40:50.671 Uid(value=11079):14809:14809 D/BufferQueueConsumer]
+[](id:39d900000006,api:0,p:-1,c:14809) connect: controlledByApp=false
+
+[2025-10-05 22:40:50.680 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=Всплывающее окно)/@0xa3fdc65,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:40:50.693 Uid(value=11079):14809:14832 D/BLASTBufferQueue]
+[VRI[Всплывающее окно]#4](f:0,a:1) acquireNextBufferLocked size=488x720 mFrameNumber=1 applyTransaction=true mTimestamp=744337505001826(auto) mPendingTransactions.size=0 graphicBufferId=63604170686565 transform=0
+
+[2025-10-05 22:40:50.694 Uid(value=11079):14809:14832 D/VRI[Всплывающее окно]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=1 didProduceBuffer=true syncBuffer=false
+
+[2025-10-05 22:40:50.695 Uid(value=11079):14809:14809 D/VRI[Всплывающее окно]]
+draw finished. seqId=0
+
+[2025-10-05 22:40:50.696 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+setMaxDequeuedBufferCount: 2
+
+[2025-10-05 22:40:50.713 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=Всплывающее окно)/@0xa3fdc65,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:40:50.713 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent false
+
+[2025-10-05 22:40:50.714 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:50.722 Uid(value=11079):14809:14809 I/SurfaceControl]
+ setExtendedRangeBrightness sc=Surface(name=Всплывающее окно)/@0xa3fdc65,currentBufferRatio=1.0,desiredRatio=1.0
+
+[2025-10-05 22:40:50.727 Uid(value=11079):14809:14832 D/VRI[Всплывающее окно]]
+Received frameCommittedCallback lastAttemptedDrawFrameNum=3 didProduceBuffer=true syncBuffer=false
+
+[2025-10-05 22:40:50.727 Uid(value=11079):14809:14809 D/VRI[Всплывающее окно]]
+draw finished. seqId=0
+
+[2025-10-05 22:40:50.729 Uid(value=11079):14809:14809 D/VRI[Всплывающее окно]]
+onFocusEvent true
+
+[2025-10-05 22:40:51.452 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:51.574 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+Всплывающее окно,window dying
+
+[2025-10-05 22:40:51.575 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+Всплывающее окно,unregisterSystemUIBroadcastReceiver 
+
+[2025-10-05 22:40:51.575 Uid(value=11079):14809:14809 D/OplusScrollToTopManager]
+Всплывающее окно, unregisterSystemUIBroadcastReceiver failed java.lang.IllegalArgumentException: Receiver not registered: android.view.OplusScrollToTopManager$2@86bab33
+
+[2025-10-05 22:40:51.575 Uid(value=11079):14809:14809 W/WindowOnBackDispatcher]
+sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda11@86670cc
+
+[2025-10-05 22:40:51.578 Uid(value=11079):14809:14809 D/HWUI]
+RenderProxy::destroy: this=0xb40000726944a300, mContext=0xb4000072695dff00
+
+[2025-10-05 22:40:51.578 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb400007279b79140, surface=NULL
+
+[2025-10-05 22:40:51.587 Uid(value=11079):14809:14821 D/BLASTBufferQueue]
+[VRI[Всплывающее окно]#4](f:0,a:2) destructor()
+
+[2025-10-05 22:40:51.587 Uid(value=11079):14809:14821 D/BufferQueueConsumer]
+[VRI[Всплывающее окно]#4(BLAST Consumer)4](id:39d900000006,api:0,p:-1,c:14809) disconnect
+
+[2025-10-05 22:40:51.623 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent true
+
+[2025-10-05 22:40:52.197 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:52.282 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:52.631 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 V.E...... R....... 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to true
+
+[2025-10-05 22:40:53.215 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:53.289 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:53.292 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:40:53.293 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:40:53.392 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.392 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.392 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.392 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.394 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.482 Uid(value=11079):14809:14809 D/InsetsController]
+show(ime(), fromIme=false)
+
+[2025-10-05 22:40:53.483 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:28c3c003: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT_BY_INSETS_API fromUser false
+
+[2025-10-05 22:40:53.485 Uid(value=11079):14809:14809 D/InputMethodManager]
+showSoftInput() view=androidx.compose.ui.platform.AndroidComposeView{f0fe880 VFED..... .F....ID 0,0-1080,2400 aid=1073741825 alpha=1.0 viewInfo = } flags=0 reason=SHOW_SOFT_INPUT_BY_INSETS_API
+
+[2025-10-05 22:40:53.513 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.513 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.513 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.513 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.524 Uid(value=11079):14809:14809 W/RemoteInputConnectionImpl]
+getExtractedText on inactive InputConnection
+
+[2025-10-05 22:40:53.525 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:4547a046: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+
+[2025-10-05 22:40:53.526 Uid(value=11079):14809:14809 D/InputMethodManager]
+showSoftInput() view=androidx.compose.ui.platform.AndroidComposeView{f0fe880 VFED..... .F....ID 0,0-1080,2400 aid=1073741825 alpha=1.0 viewInfo = } flags=0 reason=SHOW_SOFT_INPUT
+
+[2025-10-05 22:40:53.530 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.540 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.540 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.540 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.540 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.593 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.600 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.600 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.600 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.600 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.623 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.634 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.634 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.634 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.634 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.663 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.670 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.670 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.670 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.670 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.692 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.700 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.701 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.701 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.701 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.714 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:53.715 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:40:53.720 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.726 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.726 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.726 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.726 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.739 Uid(value=11079):14809:14809 D/InsetsController]
+show(ime(), fromIme=true)
+
+[2025-10-05 22:40:53.744 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.756 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:53.756 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:53.756 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:53.756 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:53.772 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:53.776 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:53.777 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:40:54.059 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:4547a046: onShown
+
+[2025-10-05 22:40:54.845 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:54.919 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:54.923 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 LibraryScreen composing...
+
+[2025-10-05 22:40:54.924 Uid(value=11079):14809:14809 D/LibraryScreen]
+🎨 UI State: isLoading=false, comics=1, error=null
+
+[2025-10-05 22:40:54.934 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:54.934 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:54.934 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:54.934 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:54.936 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:54.958 Uid(value=11079):14809:14809 D/InsetsController]
+hide(ime(), fromIme=false)
+
+[2025-10-05 22:40:54.958 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:63ec8a3: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+
+[2025-10-05 22:40:54.959 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:7111ce3f: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_REQUEST_HIDE_WITH_CONTROL fromUser false
+
+[2025-10-05 22:40:54.972 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:54.972 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:40:54.983 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:54.983 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:54.983 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:54.983 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:54.997 Uid(value=11079):14809:14809 D/InsetsController]
+hide(ime(), fromIme=true)
+
+[2025-10-05 22:40:54.997 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:7111ce3f: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+
+[2025-10-05 22:40:54.999 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.005 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.005 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.005 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.005 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.021 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.027 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.027 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.027 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.027 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.047 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb400007279b79140, surface=NULL
+
+[2025-10-05 22:40:55.055 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.061 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.061 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.061 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.061 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.079 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.083 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.083 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.084 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.084 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.100 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.105 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.105 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.105 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.105 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.117 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.122 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.122 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.123 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.123 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.134 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.139 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.139 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.139 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.139 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.150 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.155 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.155 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.155 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.155 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.166 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.172 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.172 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.172 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.172 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.183 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.188 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.188 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.188 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.188 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.199 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.204 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.204 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.204 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.204 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.214 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.219 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.219 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.219 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.219 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.229 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.234 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.234 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.234 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.234 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.243 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:55.249 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.254 Uid(value=11079):14809:14809 D/LibraryScreen]
+📚 Showing comics: 1 comics, viewMode=GRID
+
+[2025-10-05 22:40:55.254 Uid(value=11079):14809:14809 D/LibraryScreen]
+🔲 Rendering ComicGridView with 1 comics
+
+[2025-10-05 22:40:55.254 Uid(value=11079):14809:14809 D/ComicGridView]
+🔲 ComicGridView composing with 1 comics
+
+[2025-10-05 22:40:55.254 Uid(value=11079):14809:14809 D/ComicGridView]
+  📖 Comic 0: 13 Coins #01 [RPU] (id=94e6aa80-2e96-4abb-a379-6bbce995a26e, coverPath=/data/user/0/com.example.mrcomic.debug/cache/covers/5c3eb7b22907e2249495bdcfc523206e.jpg)
+
+[2025-10-05 22:40:55.265 Uid(value=11079):14809:14809 D/ComicGridView]
+🎨 Rendering item for comic: 13 Coins #01 [RPU]
+
+[2025-10-05 22:40:55.281 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:87d2107d: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_ON_ANIMATION_STATE_CHANGED fromUser false
+
+[2025-10-05 22:40:55.281 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:63ec8a3: onHidden
+
+[2025-10-05 22:40:55.290 Uid(value=11079):14809:14809 D/InsetsController]
+hide(ime(), fromIme=false)
+
+[2025-10-05 22:40:55.291 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:bf3015dc: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT_BY_INSETS_API fromUser false
+
+[2025-10-05 22:40:55.291 Uid(value=11079):14809:14809 I/ImeTracker]
+com.example.mrcomic.debug:bf3015dc: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+
+[2025-10-05 22:40:55.353 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:40:55.817 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:40:55.817 Uid(value=11079):14809:14809 W/VRI[MainActivity]]
+handleResized abandoned!
+
+[2025-10-05 22:40:58.796 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:40:58.881 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:41:01.402 Uid(value=11079):14809:14809 V/AutofillManager]
+requestHideFillUi(null): anchor = null
+
+[2025-10-05 22:41:01.514 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+the up motion event handled by client, just return
+
+[2025-10-05 22:41:02.301 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:41:02.482 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+onFocusEvent false
+
+[2025-10-05 22:41:03.379 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+
+[2025-10-05 22:41:03.379 Uid(value=11079):14809:14809 D/ScrollOptim [SceneManager]]
+updateCurrentActivity: mCurrentActivityName=null, isOptEnable=true, isAnimAheadEnable=true, isFrameInsertEnable=true, InsertNum=1, isEnabledForScrollChanged=false
+
+[2025-10-05 22:41:03.381 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+setWindowStopped stopped:true
+
+[2025-10-05 22:41:03.426 Uid(value=11079):14809:14809 D/HWUI]
+RenderProxy::destroy: this=0xb4000073094d3b00, mContext=0xb400007302039100
+
+[2025-10-05 22:41:03.428 Uid(value=11079):14809:14832 D/HWUI]
+SkiaOpenGLPipeline::setSurface: this=0xb40000730b900b80, surface=NULL
+
+[2025-10-05 22:41:03.432 Uid(value=11079):14809:14832 D/BLASTBufferQueue]
+[VRI[MainActivity]#3](f:0,a:2) destructor()
+
+[2025-10-05 22:41:03.433 Uid(value=11079):14809:14832 D/BufferQueueConsumer]
+[VRI[MainActivity]#3(BLAST Consumer)3](id:39d900000005,api:0,p:-1,c:14809) disconnect
+
+[2025-10-05 22:41:03.436 Uid(value=11079):14809:14809 D/ViewRootImplExtImpl]
+wrapConfigInfoIntoFlags rotation=0, smallestScreenWidthDp=360, relayoutAsync=false, flags=0, newFlags=23592960, residentWS=false, title=com.example.mrcomic.debug/com.example.mrcomic.MainActivity
+
+[2025-10-05 22:41:03.465 Uid(value=11079):14809:14809 D/VRI[MainActivity]]
+relayoutWindow result, sizeChanged:false, surfaceControlChanged:true, transformHintChanged:false, mSurfaceSize:Point(1080, 2400), mLastSurfaceSize:Point(1080, 2400), mWidth:1080, mHeight:2400, requestedWidth:1080, requestedHeight:2400, transformHint:0, installOrientation:0, displayRotation:0, isSurfaceValid:false, attr.flag:-2122252032, tmpFrames:ClientWindowFrames{frame=[0,0][1080,2400] display=[0,0][1080,2400] parentFrame=[0,0][0,0]}, relayoutAsync:false, mSyncSeqId:0
+
+[2025-10-05 22:41:03.473 Uid(value=11079):14809:14965 D/VRI[MainActivity]]
+dispatchAppVisibility visible:false
+
+[2025-10-05 22:41:03.512 Uid(value=11079):14809:14837 D/OplusScrollToTopManager]
+com.example.mrcomic.debug/com.example.mrcomic.MainActivity,This com.android.internal.policy.DecorView{90884e4 I.E...... R......D 0,0-1080,2400 aid=1 alpha=1.0 viewInfo = }[MainActivity] change focus to false
+
+[2025-10-05 22:41:03.810 Uid(value=11079):14809:14809 D/callGcSupression]
+java.lang.NullPointerException: Attempt to invoke virtual method 'java.lang.Object java.lang.reflect.Method.invoke(java.lang.Object, java.lang.Object[])' on a null object reference
+

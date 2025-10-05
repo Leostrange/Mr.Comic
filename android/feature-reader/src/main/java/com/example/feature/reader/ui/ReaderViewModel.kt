@@ -31,6 +31,7 @@ class ReaderViewModel @Inject constructor(
     private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
     private val getReadingProgressUseCase: GetReadingProgressUseCase,
     @ApplicationContext private val context: Context,
+    private val analyticsHelper: com.example.core.analytics.AnalyticsHelper,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -80,11 +81,29 @@ class ReaderViewModel @Inject constructor(
         "width"
     )
 
+    val readerBrightness = settingsRepository.readerBrightness.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+
+    val readerAnimationSpeed = settingsRepository.readerAnimationSpeed.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+
+    val pageTurnSoundEnabled = settingsRepository.pageTurnSoundEnabled.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        false
+    )
+
     private var bookReader: MediaReader? = null
     private var currentComicId: String? = null
 
     companion object {
-        private const val PRELOAD_DISTANCE = 1
+        private const val PRELOAD_DISTANCE = 3 // Preload 3 pages ahead/behind for smoother UX
         private const val TAG = "ReaderViewModel"
     }
 
@@ -129,19 +148,81 @@ class ReaderViewModel @Inject constructor(
 
         viewModelScope.launch {
             settingsRepository.readingDoubleTapZoom.collect { zoom ->
-                _uiState.update { it.copy(doubleTapZoom = zoom.coerceAtLeast(1.0f)) }
+                val coerced = zoom.coerceAtLeast(1.0f)
+                _uiState.update { it.copy(doubleTapZoom = coerced) }
+                // Analytics: double tap zoom changed
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "double_tap_zoom",
+                        value = String.format(java.util.Locale.US, "%.2f", coerced)
+                    ),
+                    this
+                )
             }
         }
 
         viewModelScope.launch {
             settingsRepository.readingBlockSwipeWhenZoomed.collect { block ->
                 _uiState.update { it.copy(blockSwipeWhenZoomed = block) }
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "block_swipe_when_zoomed",
+                        value = block.toString()
+                    ),
+                    this
+                )
             }
         }
 
         viewModelScope.launch {
             settingsRepository.orientation.collect { orientation ->
                 _uiState.update { it.copy(orientation = normalizeOrientation(orientation)) }
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "orientation",
+                        value = normalizeOrientation(orientation)
+                    ),
+                    this
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.readerBrightness.collect { brightness ->
+                val coerced = brightness.coerceIn(0.0f, 1.0f)
+                // Track application; UI applies it, but event captured here
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "reader_brightness",
+                        value = String.format(java.util.Locale.US, "%.2f", coerced)
+                    ),
+                    this
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.readerAnimationSpeed.collect { speed ->
+                val coerced = speed.coerceIn(0.5f, 2.0f)
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "reader_animation_speed",
+                        value = String.format(java.util.Locale.US, "%.2f", coerced)
+                    ),
+                    this
+                )
+            }
+        }
+
+        viewModelScope.launch {
+            settingsRepository.pageTurnSoundEnabled.collect { enabled ->
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "page_turn_sound",
+                        value = enabled.toString()
+                    ),
+                    this
+                )
             }
         }
     }
@@ -159,6 +240,137 @@ class ReaderViewModel @Inject constructor(
                     bitmaps = emptyMap()
                 )
             }
+            
+            // 🔥 КРИТИЧЕСКИ ВАЖНО: Проверяем и запрашиваем permissions для content:// URI
+            if (uri.scheme == "content") {
+                try {
+                    android.util.Log.d(TAG, "🔐 Checking permissions for content URI: $uri")
+                    
+                    // Проверяем, есть ли у нас уже persistable permission
+                    val persistedUris = context.contentResolver.persistedUriPermissions
+                    
+                    // 🔥 ВАЖНО: Проверяем permission для разных вариантов URI (encoded/decoded)
+                    // Потому что Android может сохранять их по-разному
+                    val uriString = uri.toString()
+                    val uriStringDecoded = android.net.Uri.decode(uriString)
+                    
+                    // Ищем persisted URI, который соответствует нашему URI
+                    var matchedPersistedUri: Uri? = null
+                    val hasPermission = persistedUris.any { persistedUri ->
+                        val persistedUriString = persistedUri.uri.toString()
+                        val persistedUriStringDecoded = android.net.Uri.decode(persistedUriString)
+                        
+                        // Сравниваем как encoded, так и decoded варианты
+                        val match = ((persistedUri.uri == uri) ||
+                                    (persistedUriString == uriString) ||
+                                    (persistedUriStringDecoded == uriString) ||
+                                    (persistedUriString == uriStringDecoded) ||
+                                    (persistedUriStringDecoded == uriStringDecoded)) &&
+                                   persistedUri.isReadPermission
+                        
+                        if (match) {
+                            matchedPersistedUri = persistedUri.uri
+                            android.util.Log.d(TAG, "✅ Found matching persisted URI: ${persistedUri.uri}")
+                        }
+                        match
+                    }
+                    
+                    if (!hasPermission) {
+                        android.util.Log.w(TAG, "⚠️ No persistable permission found for URI: $uri")
+                        android.util.Log.d(TAG, "📋 Current persisted URIs (${persistedUris.size}):")
+                        persistedUris.forEach { 
+                            android.util.Log.d(TAG, "  - ${it.uri} (read=${it.isReadPermission}, write=${it.isWritePermission})")
+                        }
+                        
+                        // Пытаемся взять persistable permission (может не сработать, если URI не поддерживает)
+                        try {
+                            context.contentResolver.takePersistableUriPermission(
+                                uri,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                            android.util.Log.d(TAG, "✅ Successfully took persistable URI permission")
+                        } catch (e: SecurityException) {
+                            android.util.Log.w(TAG, "⚠️ Could not take persistable permission: ${e.message}")
+                            // Это нормально для некоторых URI, продолжаем
+                        }
+                    } else {
+                        android.util.Log.d(TAG, "✅ Persistable permission already exists for URI")
+                        
+                        // 🔥 КРИТИЧЕСКИ ВАЖНО: Используем persisted URI вместо decoded URI
+                        // Потому что permission работает только с тем URI, для которого он был взят
+                        if (matchedPersistedUri != null && matchedPersistedUri != uri) {
+                            android.util.Log.d(TAG, "🔄 Replacing decoded URI with persisted URI")
+                            android.util.Log.d(TAG, "   Original: $uri")
+                            android.util.Log.d(TAG, "   Persisted: $matchedPersistedUri")
+                            // Заменяем URI на persisted вариант для дальнейшего использования
+                            val persistedUri = matchedPersistedUri!!
+                            
+                            // Проверяем, можем ли мы прочитать файл с persisted URI
+                            try {
+                                context.contentResolver.openInputStream(persistedUri)?.use {
+                                    android.util.Log.d(TAG, "✅ Successfully opened input stream with persisted URI")
+                                }
+                                // Если успешно, обновляем URI для дальнейшего использования
+                                // Но это не сработает, потому что uri - это val параметр
+                                // Нужно передавать persistedUri дальше в код
+                            } catch (e: SecurityException) {
+                                android.util.Log.e(TAG, "❌ SecurityException with persisted URI: ${e.message}")
+                            }
+                        }
+                    }
+                    
+                    // Проверяем, можем ли мы вообще прочитать файл
+                    // Используем matchedPersistedUri если он есть, иначе original uri
+                    val uriToUse = matchedPersistedUri ?: uri
+                    try {
+                        context.contentResolver.openInputStream(uriToUse)?.use {
+                            android.util.Log.d(TAG, "✅ Successfully opened input stream for URI")
+                        }
+                    } catch (e: SecurityException) {
+                        android.util.Log.e(TAG, "❌ SecurityException: Cannot read URI: ${e.message}")
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Нет доступа к файлу. Пожалуйста, добавьте файл заново через библиотеку."
+                            )
+                        }
+                        return@launch
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "❌ Error checking permissions", e)
+                }
+            }
+            
+            // 🔥 ВАЖНО: Определяем финальный URI для использования
+            // Если нашли persisted URI, используем его, иначе используем original
+            val finalUri = if (uri.scheme == "content") {
+                val persistedUris = context.contentResolver.persistedUriPermissions
+                val uriString = uri.toString()
+                val uriStringDecoded = android.net.Uri.decode(uriString)
+                
+                val matched = persistedUris.find { persistedUri ->
+                    val persistedUriString = persistedUri.uri.toString()
+                    val persistedUriStringDecoded = android.net.Uri.decode(persistedUriString)
+                    
+                    ((persistedUri.uri == uri) ||
+                     (persistedUriString == uriString) ||
+                     (persistedUriStringDecoded == uriString) ||
+                     (persistedUriString == uriStringDecoded) ||
+                     (persistedUriStringDecoded == uriStringDecoded)) &&
+                    persistedUri.isReadPermission
+                }
+                
+                matched?.uri ?: uri
+            } else {
+                uri
+            }
+            
+            if (finalUri != uri) {
+                android.util.Log.d(TAG, "🔄 Using persisted URI instead of decoded URI")
+                android.util.Log.d(TAG, "   Original: $uri")
+                android.util.Log.d(TAG, "   Final: $finalUri")
+            }
+            
             // Закрываем предыдущий reader при открытии новой книги
             try {
                 bookReader?.close()
@@ -167,15 +379,21 @@ class ReaderViewModel @Inject constructor(
             }
 
             try {
-                val reader = readerFactory.create(uri)
-                val result = reader.open(context, uri)
+                android.util.Log.d(TAG, "🔧 Creating reader for URI: $finalUri")
+                val reader = readerFactory.create(finalUri)
+                android.util.Log.d(TAG, "✅ Reader created: ${reader::class.simpleName}")
+                
+                android.util.Log.d(TAG, "📖 Opening book with reader...")
+                val result = reader.open(context, finalUri)
+                
+                android.util.Log.d(TAG, "📊 Open result: success=${result.isSuccess}, failure=${result.isFailure}")
                 
                 if (result.isSuccess) {
                     bookReader = reader // назначаем только после успешного открытия
-                    currentComicId = uri.toString()
+                    currentComicId = finalUri.toString()
                     val metadata = result.getOrThrow()
                     val pageCount = metadata.pageCount
-                    android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
+                    android.util.Log.d(TAG, "✅ Book opened successfully. Page count: $pageCount")
 
                     // Восстанавливаем прогресс чтения
                     val progressResult = getReadingProgressUseCase(currentComicId!!)
@@ -201,12 +419,30 @@ class ReaderViewModel @Inject constructor(
                         _uiState.update { it.copy(isLoading = false) }
                     }
                 } else {
-                    throw result.exceptionOrNull() ?: Exception("Failed to open book")
+                    val exception = result.exceptionOrNull()
+                    android.util.Log.e(TAG, "❌ Failed to open book: ${exception?.message}", exception)
+                    throw exception ?: Exception("Failed to open book")
                 }
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "Failed to open book", e)
+                android.util.Log.e(TAG, "❌ Exception while opening book", e)
+                android.util.Log.e(TAG, "❌ Exception type: ${e::class.simpleName}")
+                android.util.Log.e(TAG, "❌ Exception message: ${e.message}")
+                android.util.Log.e(TAG, "❌ Exception cause: ${e.cause?.message}")
+                
+                val errorMessage = when {
+                    e.message?.contains("Permission Denial") == true || e.message?.contains("ACTION_OPEN_DOCUMENT") == true -> 
+                        "Нет доступа к файлу. Удалите файл из библиотеки и добавьте заново через кнопку \"+\"."
+                    e.message?.contains("В папке не найдено изображений") == true -> 
+                        "В архиве нет изображений. Проверьте содержимое файла."
+                    e.message?.contains("Не удалось открыть файл") == true -> 
+                        "Нет доступа к файлу. Попробуйте добавить файл заново."
+                    e.message?.contains("Failed to open input stream") == true -> 
+                        "Не удалось прочитать файл. Проверьте разрешения."
+                    else -> "Ошибка открытия: ${e.message}"
+                }
+                
                 _uiState.update {
-                    it.copy(isLoading = false, error = "Failed to open file: ${e.message}")
+                    it.copy(isLoading = false, error = errorMessage)
                 }
             }
         }
@@ -244,6 +480,16 @@ class ReaderViewModel @Inject constructor(
                     ReadingMode.PAGE -> "page"
                 }
             )
+            // Analytics: reading mode changed
+            analyticsHelper.track(
+                com.example.core.analytics.AnalyticsEvent.ReadingModeChanged(
+                    mode = when (mode) {
+                        ReadingMode.WEBTOON -> "webtoon"
+                        ReadingMode.PAGE -> "page"
+                    }
+                ),
+                this
+            )
         }
     }
 
@@ -251,7 +497,7 @@ class ReaderViewModel @Inject constructor(
         android.util.Log.d(TAG, "Setting reading direction: $direction")
         _uiState.update { it.copy(readingDirection = direction) }
     }
-
+    
     private fun normalizeReadingMode(raw: String?): String {
         return when (raw?.lowercase()?.trim()) {
             "vertical", "webtoon" -> "webtoon"
@@ -275,6 +521,30 @@ class ReaderViewModel @Inject constructor(
             "landscape" -> "landscape"
             "locked", "lock" -> "locked"
             else -> "auto"
+        }
+    }
+
+    // Throttled zoom tracking
+    private var lastZoomReported: Float = 1.0f
+    private var lastZoomReportTimeMs: Long = 0L
+
+    fun trackZoom(scale: Float) {
+        val now = System.currentTimeMillis()
+        // Report if significant change (>=0.2) or at least every 1.5s
+        val significant = kotlin.math.abs(scale - lastZoomReported) >= 0.2f
+        val timedOut = (now - lastZoomReportTimeMs) >= 1500L
+        if (significant || timedOut) {
+            lastZoomReported = scale
+            lastZoomReportTimeMs = now
+            viewModelScope.launch {
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "zoom",
+                        value = String.format(java.util.Locale.US, "%.2f", scale)
+                    ),
+                    this
+                )
+            }
         }
     }
 
@@ -397,6 +667,37 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Toggle scale mode between fit-width, fit-height, and fit-screen
+     */
+    fun toggleScaleMode() {
+        viewModelScope.launch {
+            val currentMode = _uiState.value.scaleMode
+            val nextMode = when (currentMode) {
+                "width" -> "height"
+                "height" -> "screen"
+                else -> "width"
+            }
+            
+            // Update UI state
+            _uiState.update { it.copy(scaleMode = nextMode) }
+            
+            // Save to settings
+            settingsRepository.setScaleMode(nextMode)
+            
+            // Track analytics
+            analyticsHelper.track(
+                com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                    settingName = "scale_mode",
+                    value = nextMode
+                ),
+                this
+            )
+            
+            android.util.Log.d(TAG, "Scale mode toggled: $currentMode -> $nextMode")
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         android.util.Log.d(TAG, "ViewModel cleared, closing book reader")
@@ -412,4 +713,33 @@ class ReaderViewModel @Inject constructor(
         bookReader = null
         currentComicId = null
     }
+    
+    /**
+     * Toggle pin state for current page
+     */
+    fun togglePin() {
+        _uiState.update { currentState ->
+            val newPinnedState = !currentState.isPinned
+            val newPinnedPage = if (newPinnedState) currentState.currentPageIndex else null
+            
+            currentState.copy(
+                isPinned = newPinnedState,
+                pinnedPage = newPinnedPage
+            )
+        }
+        
+        // Save pin state
+        viewModelScope.launch {
+            // TODO: Save to database when needed
+        }
+    }
+    
+    /**
+     * Check if current page is pinned
+     */
+    fun isCurrentPagePinned(): Boolean {
+        return _uiState.value.isPinned && 
+               _uiState.value.pinnedPage == _uiState.value.currentPageIndex
+    }
+    
 }

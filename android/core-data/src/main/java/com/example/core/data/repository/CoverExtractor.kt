@@ -94,38 +94,85 @@ class CoverExtractorImpl @Inject constructor(
 
     private fun extractCoverFromZip(zipFile: File): Bitmap? {
         return try {
+            android.util.Log.d("CoverExtractor", "📦 Extracting cover from ZIP: ${zipFile.name}")
             ZipFile(zipFile).use { zip ->
+                // Ищем изображения в корне архива или в первой директории
+                val imageExtensions = listOf(".jpg", ".jpeg", ".png", ".webp", ".bmp")
                 val entries = zip.entries().toList()
-                    .filter { !it.isDirectory && (it.name.endsWith(".jpg", ignoreCase = true) || it.name.endsWith(".png", ignoreCase = true)) }
-                    .sortedBy { it.name } // Берем первый файл изображения
+                    .filter { entry ->
+                        !entry.isDirectory && imageExtensions.any { ext -> 
+                            entry.name.lowercase().endsWith(ext) 
+                        }
+                    }
+                    .sortedWith(compareBy<java.util.zip.ZipEntry> { 
+                        // Приоритет файлам в корне или первой папке
+                        it.name.count { c -> c == '/' }
+                    }.thenBy { it.name.lowercase() })
 
-                if (entries.isEmpty()) return null
+                android.util.Log.d("CoverExtractor", "🖼️ Found ${entries.size} image files in archive")
+                if (entries.isEmpty()) {
+                    android.util.Log.w("CoverExtractor", "⚠️ No images found in ZIP archive")
+                    return null
+                }
 
                 val entry = entries.first()
+                android.util.Log.d("CoverExtractor", "✅ Using image: ${entry.name}")
                 val inputStream = zip.getInputStream(entry)
 
-                BitmapFactory.decodeStream(inputStream)
+                val bitmap = BitmapFactory.decodeStream(inputStream)
+                if (bitmap != null) {
+                    android.util.Log.d("CoverExtractor", "✅ Cover extracted successfully: ${bitmap.width}x${bitmap.height}")
+                } else {
+                    android.util.Log.w("CoverExtractor", "⚠️ Failed to decode bitmap from stream")
+                }
+                bitmap
             }
         } catch (e: Exception) {
+            android.util.Log.e("CoverExtractor", "❌ Failed to extract cover from ZIP", e)
             null
         }
     }
 
     private fun extractCoverFromCbr(rarFile: File): Bitmap? {
         return try {
+            android.util.Log.d("CoverExtractor", "📦 Extracting cover from CBR: ${rarFile.name}")
             Archive(rarFile).use { archive ->
-                val imageHeader = archive.fileHeaders
-                    .filter { !it.isDirectory && it.fileName.lowercase().matches(".*\\.(jpe?g|png|webp)$".toRegex()) }
-                    .sortedBy { it.fileName.lowercase() }
-                    .firstOrNull() ?: return null
+                val imageHeaders = archive.fileHeaders
+                    .filter { header -> 
+                        !header.isDirectory && 
+                        header.fileName.lowercase().matches(".*\\.(jpe?g|png|webp|bmp)$".toRegex())
+                    }
+                    .sortedWith(compareBy<com.github.junrar.rarfile.FileHeader> { 
+                        // Приоритет файлам в корне
+                        it.fileName.count { c -> c == '\\' || c == '/' }
+                    }.thenBy { it.fileName.lowercase() })
 
+                android.util.Log.d("CoverExtractor", "🖼️ Found ${imageHeaders.size} image files in CBR archive")
+                val imageHeader = imageHeaders.firstOrNull()
+                if (imageHeader == null) {
+                    android.util.Log.w("CoverExtractor", "⚠️ No images found in CBR archive")
+                    return null
+                }
+
+                android.util.Log.d("CoverExtractor", "✅ Using image: ${imageHeader.fileName}")
                 val output = ByteArrayOutputStream()
                 archive.extractFile(imageHeader, output)
                 val bytes = output.toByteArray()
-                if (bytes.isEmpty()) return null
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bytes.isEmpty()) {
+                    android.util.Log.w("CoverExtractor", "⚠️ Extracted file is empty")
+                    null
+                } else {
+                    val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bitmap != null) {
+                        android.util.Log.d("CoverExtractor", "✅ Cover extracted successfully: ${bitmap.width}x${bitmap.height}")
+                    } else {
+                        android.util.Log.w("CoverExtractor", "⚠️ Failed to decode bitmap from bytes")
+                    }
+                    bitmap
+                }
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("CoverExtractor", "❌ Failed to extract cover from CBR", e)
             null
         }
     }

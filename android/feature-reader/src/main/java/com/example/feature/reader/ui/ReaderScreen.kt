@@ -51,6 +51,10 @@ import androidx.compose.material.icons.filled.ViewStream
 // import me.saket.telephoto.zoomable.zoomable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 
 /**
  * The main entry point for the reader screen.
@@ -251,9 +255,15 @@ private fun WebtoonReader(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        // Плавный скроллинг для webtoon режима с физикой скорости
     ) {
-        items(uiState.pageCount, key = { it }) { pageIndex ->
+        items(
+            uiState.pageCount, 
+            key = { it },
+            // Настройка для предварительной загрузки соседних страниц
+            contentType = { "webtoon_page" }
+        ) { pageIndex ->
             WebtoonPageItem(pageIndex = pageIndex, uiState = uiState)
         }
     }
@@ -265,23 +275,90 @@ private fun WebtoonPageItem(
     uiState: ReaderUiState
 ) {
     val bitmap = uiState.bitmaps[pageIndex]
+    val isCurrentPage = pageIndex == uiState.currentPageIndex
+    val hasError = uiState.error != null && isCurrentPage
 
-    if (bitmap != null) {
-        Image(
-            painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
-            contentDescription = "Page ${pageIndex + 1}",
-            modifier = Modifier.fillMaxWidth(),
-            contentScale = ContentScale.FillWidth
-        )
-    } else {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-        ) {
-            // Placeholder with a common aspect ratio
-            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        when {
+            bitmap != null -> {
+                // Отображаем загруженное изображение с плавным появлением
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = true,
+                    enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(300))
+                ) {
+                    Image(
+                        painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
+                        contentDescription = "Page ${pageIndex + 1}",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (isCurrentPage) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) 
+                                else Color.Transparent
+                            ),
+                        contentScale = ContentScale.FillWidth
+                    )
+                }
+            }
+            hasError -> {
+                // Ошибка загрузки
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .background(
+                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.layout.Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Page ${pageIndex + 1}",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            text = "Failed to load",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+            else -> {
+                // Плейсхолдер загрузки с пропорциями комикса
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(0.707f) // Пропорции A4 для комиксов
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.foundation.layout.Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = "Page ${pageIndex + 1}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }

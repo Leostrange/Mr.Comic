@@ -7,6 +7,9 @@ import com.example.core.data.repository.SettingsRepository
 import com.example.core.model.SortOrder
 import com.example.core.model.LocalDictionary
 import com.example.core.model.LocalModel
+import com.example.core.ui.theme.ThemePreferencesRepository
+import com.example.core.ui.theme.ThemeMode
+import com.example.core.ui.theme.ReaderThemeMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,7 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
-    private val localResourcesRepository: LocalResourcesRepository
+    private val localResourcesRepository: LocalResourcesRepository,
+    private val themePreferencesRepository: ThemePreferencesRepository
 ) : ViewModel() {
 
     private val dictionariesFlow = MutableStateFlow<List<LocalDictionary>>(emptyList())
@@ -37,7 +41,18 @@ class SettingsViewModel @Inject constructor(
         dictionariesFlow,
         modelsFlow,
         selectedDictionaryFlow,
-        selectedModelFlow
+        selectedModelFlow,
+        themePreferencesRepository.themeConfig,
+        themePreferencesRepository.readerThemeConfig,
+        // Reading
+        settingsRepository.readingMode,
+        settingsRepository.scaleMode,
+        settingsRepository.readingDoubleTapZoom,
+        settingsRepository.readingBlockSwipeWhenZoomed,
+        settingsRepository.readerBackground,
+        settingsRepository.readerBrightness,
+        settingsRepository.readerAnimationSpeed,
+        settingsRepository.pageTurnSoundEnabled
     ) { values ->
         val sortOrder = values[0] as SortOrder
         val folders = values[1] as Set<String>
@@ -50,6 +65,16 @@ class SettingsViewModel @Inject constructor(
         val models = values[8] as List<LocalModel>
         val selectedDictionary = values[9] as LocalDictionary?
         val selectedModel = values[10] as LocalModel?
+        val themeConfig = values[11] as com.example.core.ui.theme.ThemeConfig
+        val readerThemeConfig = values[12] as com.example.core.ui.theme.ReaderThemeConfig
+        val readingMode = values[13] as String
+        val scaleMode = values[14] as String
+        val doubleTapZoom = values[15] as Float
+        val blockSwipeWhenZoomed = values[16] as Boolean
+        val readerBackground = values[17] as Long
+        val readerBrightness = values[18] as Float
+        val readerAnimationSpeed = values[19] as Float
+        val pageTurnSoundEnabled = values[20] as Boolean
         SettingsUiState(
             sortOrder = sortOrder,
             libraryFolders = folders,
@@ -61,7 +86,20 @@ class SettingsViewModel @Inject constructor(
             availableDictionaries = dictionaries,
             availableModels = models,
             selectedDictionary = selectedDictionary,
-            selectedModel = selectedModel
+            selectedModel = selectedModel,
+            themeMode = themeConfig.themeMode,
+            useDynamicColor = themeConfig.useDynamicColor,
+            useAmoledDark = themeConfig.useAmoledDark,
+            readerThemeMode = readerThemeConfig.themeMode,
+            readerUseAmoled = readerThemeConfig.useAmoled,
+            readingMode = readingMode,
+            scaleMode = scaleMode,
+            doubleTapZoom = doubleTapZoom,
+            blockSwipeWhenZoomed = blockSwipeWhenZoomed,
+            readerBackground = readerBackground,
+            readerBrightness = readerBrightness,
+            readerAnimationSpeed = readerAnimationSpeed,
+            pageTurnSoundEnabled = pageTurnSoundEnabled
         )
     }.stateIn(
         scope = viewModelScope,
@@ -136,9 +174,96 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun createLocalBackup() {
+        viewModelScope.launch {
+            settingsRepository.createLocalBackup()
+        }
+    }
+
+    fun restoreLocalBackup() {
+        viewModelScope.launch {
+            settingsRepository.restoreLocalBackup()
+        }
+    }
+
+    fun createCloudBackup() {
+        viewModelScope.launch {
+            settingsRepository.createCloudBackup()
+        }
+    }
+
+    fun restoreCloudBackup() {
+        viewModelScope.launch {
+            settingsRepository.restoreCloudBackup()
+        }
+    }
+
+    fun changeAppIcon() {
+        viewModelScope.launch {
+            settingsRepository.changeAppIcon()
+        }
+    }
+
     fun clearCache() {
         viewModelScope.launch {
             settingsRepository.clearCache()
+        }
+    }
+    
+    // Reading-related methods
+    fun onReadingModeChanged(mode: String) {
+        viewModelScope.launch { settingsRepository.setReadingMode(mode) }
+    }
+    fun onScaleModeChanged(mode: String) {
+        viewModelScope.launch { settingsRepository.setScaleMode(mode) }
+    }
+    fun onDoubleTapZoomChanged(value: Float) {
+        viewModelScope.launch { settingsRepository.setReadingDoubleTapZoom(value) }
+    }
+    fun onBlockSwipeWhenZoomedChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setReadingBlockSwipeWhenZoomed(enabled) }
+    }
+    fun onReaderBackgroundChanged(color: Long) {
+        viewModelScope.launch { settingsRepository.setReaderBackground(color) }
+    }
+    fun onReaderBrightnessChanged(value: Float) {
+        viewModelScope.launch { settingsRepository.setReaderBrightness(value) }
+    }
+    fun onReaderAnimationSpeedChanged(value: Float) {
+        viewModelScope.launch { settingsRepository.setReaderAnimationSpeed(value) }
+    }
+    fun onPageTurnSoundChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setPageTurnSoundEnabled(enabled) }
+    }
+
+    // Theme-related methods
+    fun onThemeModeChanged(themeMode: ThemeMode) {
+        viewModelScope.launch {
+            themePreferencesRepository.setThemeMode(themeMode)
+        }
+    }
+    
+    fun onDynamicColorChanged(useDynamicColor: Boolean) {
+        viewModelScope.launch {
+            themePreferencesRepository.setUseDynamicColor(useDynamicColor)
+        }
+    }
+    
+    fun onAmoledDarkChanged(useAmoledDark: Boolean) {
+        viewModelScope.launch {
+            themePreferencesRepository.setUseAmoledDark(useAmoledDark)
+        }
+    }
+    
+    fun onReaderThemeModeChanged(readerThemeMode: ReaderThemeMode) {
+        viewModelScope.launch {
+            themePreferencesRepository.setReaderThemeMode(readerThemeMode)
+        }
+    }
+    
+    fun onReaderUseAmoledChanged(readerUseAmoled: Boolean) {
+        viewModelScope.launch {
+            themePreferencesRepository.setReaderUseAmoled(readerUseAmoled)
         }
     }
 }
