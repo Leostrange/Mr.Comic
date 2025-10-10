@@ -103,9 +103,16 @@ class ZoomController(
         val newOffsetX = offsetX.value - (focusPoint.x * scaleDiff)
         val newOffsetY = offsetY.value - (focusPoint.y * scaleDiff)
         
+        // Применяем ограничения для панорамирования
+        val maxOffsetX = calculateMaxOffsetX()
+        val maxOffsetY = calculateMaxOffsetY()
+        
+        val clampedOffsetX = newOffsetX.coerceIn(-maxOffsetX, maxOffsetX)
+        val clampedOffsetY = newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
+        
         scale.snapTo(newScale)
-        offsetX.snapTo(newOffsetX)
-        offsetY.snapTo(newOffsetY)
+        offsetX.snapTo(clampedOffsetX)
+        offsetY.snapTo(clampedOffsetY)
         
         // Update mode to custom if not at standard scales
         if (!isAtStandardScale(newScale)) {

@@ -188,8 +188,10 @@ private fun ReaderScreenContent(
 ) {
     val contentScale = remember(uiState.scaleMode) {
         when (uiState.scaleMode) {
+            "width" -> ContentScale.FillWidth
             "height" -> ContentScale.FillHeight
             "fit" -> ContentScale.Fit
+            "fill" -> ContentScale.Crop // Fill режим - обрезает изображение
             "custom" -> ContentScale.Fit
             else -> ContentScale.FillWidth
         }
@@ -274,7 +276,7 @@ private fun ReaderScreenContent(
                     currentPage = uiState.currentPageIndex + 1,
                     totalPages = uiState.pageCount,
                     isPinned = isPinned,
-                    visible = showPageIndicator || isPinned,
+                    visible = true, // Постоянный индикатор согласно тасклисту
                     onPinToggle = { 
                         isPinned = !isPinned
                         onTogglePin()
