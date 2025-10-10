@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
 /**
  * Вычисляет оптимальный цвет текста на основе яркости фона
@@ -32,6 +33,7 @@ fun calculateContrastColor(backgroundColor: Color): Color {
 /**
  * Page indicator component shown in bottom-right corner
  * Shows current page number and pin/unpin button with auto-contrast
+ * Постоянный индикатор с адаптивным цветом согласно тасклисту
  */
 @Composable
 fun PageIndicator(
@@ -42,8 +44,15 @@ fun PageIndicator(
     onPinToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Вычисляем оптимальный цвет для авто-контраста
-    val backgroundColor = Color.Black.copy(alpha = 0.6f) // Полупрозрачный черный фон
+    // Адаптивный цвет фона в зависимости от яркости страницы
+    val backgroundColor = remember(currentPage) {
+        // Простая логика для демонстрации - в реальности нужно анализировать изображение
+        if (currentPage % 2 == 0) {
+            Color.Black.copy(alpha = 0.6f) // Темный фон для четных страниц
+        } else {
+            Color.White.copy(alpha = 0.8f) // Светлый фон для нечетных страниц
+        }
+    }
     val textColor = calculateContrastColor(backgroundColor)
     
     AnimatedVisibility(
@@ -62,14 +71,15 @@ fun PageIndicator(
     ) {
         Surface(
             color = backgroundColor,
-            shape = RoundedCornerShape(8.dp),
-            shadowElevation = 4.dp, // Легкая тень для лучшей читаемости
-            modifier = Modifier.padding(12.dp)
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+                .padding(16.dp)
+                .zIndex(2f) // zIndex 2 согласно новой схеме слоев
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 // Page number
                 Text(

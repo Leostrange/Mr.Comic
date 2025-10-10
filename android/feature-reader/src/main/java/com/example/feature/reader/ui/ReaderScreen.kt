@@ -397,9 +397,11 @@ private fun ReaderScreenContent(
                     modifier = Modifier.fillMaxSize()
                 )
                 
-                // Горячие зоны для перелистывания (только когда панели закрыты)
-                PageTurnHotspots(
+                // Новые хит-зоны согласно тасклисту (только когда панели закрыты)
+                ReaderTapZones(
                     panelsOpen = showTopPanel || showRightPanel || showThumbnailPanel,
+                    onOpenTopBar = { showTopPanel = true },
+                    onOpenSideBar = { showRightPanel = true },
                     onPrev = onPreviousPage,
                     onNext = onNextPage,
                     modifier = Modifier.fillMaxSize()

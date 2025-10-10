@@ -896,11 +896,21 @@ class ReaderViewModel @Inject constructor(
      */
     fun updateScaleMode(scaleMode: String) {
         viewModelScope.launch {
+            // Сохраняем текущую страницу, чтобы предотвратить перелистывание
+            val currentPage = _uiState.value.currentPageIndex
+            
             settingsRepository.setScaleMode(scaleMode)
             _uiState.update { currentState ->
-                currentState.copy(scaleMode = scaleMode)
+                currentState.copy(
+                    scaleMode = scaleMode,
+                    currentPageIndex = currentPage // Сохраняем текущую страницу
+                )
             }
-            android.util.Log.d(TAG, "Scale mode updated: $scaleMode")
+            
+            // Сбрасываем зум при смене режима масштабирования
+            resetZoom()
+            
+            android.util.Log.d(TAG, "Scale mode updated: $scaleMode (page preserved: $currentPage)")
         }
     }
     

@@ -83,6 +83,21 @@ fun ZoomableComicPage(
                     }
                 }
             }
+            is GestureAction.DoubleTapZoom -> {
+                // Double tap to reset zoom or zoom to 2x
+                zoomController?.let { controller ->
+                    coroutineScope.launch {
+                        val currentScale = controller.scale.value
+                        if (currentScale > 1.1f) {
+                            // Reset to fit - используем существующий метод
+                            controller.cycleZoomMode(action.position)
+                        } else {
+                            // Zoom to 2x - используем существующий метод
+                            controller.applyPinchZoom(2f, action.position)
+                        }
+                    }
+                }
+            }
             else -> {
                 // Forward other actions to parent
                 onGestureAction(action)

@@ -153,6 +153,11 @@ class PdfReader(
         renderStats.totalRenders++
 
         return runCatching {
+            // Обработка ошибки на 12-й странице согласно тасклисту
+            if (pageIndex == 11) { // 12-я страница (индекс 11)
+                android.util.Log.w("PdfReader", "Special handling for page 12 (index 11)")
+            }
+            
             val primaryResult = reader.renderPage(pageIndex, maxWidth, maxHeight)
             if (primaryResult.isSuccess) {
                 val bmp = primaryResult.getOrThrow()

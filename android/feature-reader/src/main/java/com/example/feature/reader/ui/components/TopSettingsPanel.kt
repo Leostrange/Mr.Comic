@@ -140,25 +140,65 @@ fun TopSettingsPanel(
             FilterChip(
                 selected = currentScaleMode == "width",
                 onClick = { onScaleModeChange("width") },
-                label = { Text("Width", style = MaterialTheme.typography.bodySmall) }, // Smaller text
-                modifier = Modifier.height(32.dp) // Compact height
+                label = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AspectRatio,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Width", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                modifier = Modifier.height(32.dp)
             )
             FilterChip(
                 selected = currentScaleMode == "height",
                 onClick = { onScaleModeChange("height") },
-                label = { Text("Height", style = MaterialTheme.typography.bodySmall) },
+                label = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Height,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Height", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
                 modifier = Modifier.height(32.dp)
             )
             FilterChip(
                 selected = currentScaleMode == "fit",
                 onClick = { onScaleModeChange("fit") },
-                label = { Text("Fit", style = MaterialTheme.typography.bodySmall) },
+                label = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.FitScreen,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Fit", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
                 modifier = Modifier.height(32.dp)
             )
             FilterChip(
                 selected = currentScaleMode == "fill",
                 onClick = { onScaleModeChange("fill") },
-                label = { Text("Fill", style = MaterialTheme.typography.bodySmall) },
+                label = { 
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.CropFree,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Fill", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
                 modifier = Modifier.height(32.dp)
             )
         }
