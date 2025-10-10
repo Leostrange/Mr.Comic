@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:icon="@drawable/a10_device_access_accounts" android:id="@+id/deauthorize" android:title="@string/deauthorizeAccount" app:showAsAction="never|always|withText"/>
-</menu>

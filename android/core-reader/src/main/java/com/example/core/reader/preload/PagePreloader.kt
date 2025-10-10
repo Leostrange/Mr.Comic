@@ -20,15 +20,31 @@ class PagePreloader @Inject constructor(
     
     companion object {
         private const val TAG = "PagePreloader"
-        private const val PRELOAD_RANGE = 3 // Предзагружаем ±3 страницы для более плавного UX
+        private const val PRELOAD_RANGE = 2 // Уменьшаем до ±2 страниц для стабильности
+        private const val MAX_CONCURRENT_PRELOADS = 2 // Ограничиваем количество одновременных загрузок
+        private const val MAX_CACHE_SIZE = 50 // Максимум 50 страниц в кэше для больших библиотек
+        private const val THUMBNAIL_CACHE_SIZE = 200 // Максимум 200 миниатюр в кэше
     }
     
     // Отдельный dispatcher для IO операций предзагрузки
     private val preloadDispatcher = Executors.newFixedThreadPool(2).asCoroutineDispatcher()
-    private val preloadScope = CoroutineScope(preloadDispatcher + SupervisorJob())
+    
+    // Глобальный обработчик исключений для CBR операций
+    private val cbrExceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        android.util.Log.e(TAG, "Unhandled exception in CBR preloader", throwable)
+    }
+    private val preloadScope = CoroutineScope(preloadDispatcher + SupervisorJob() + cbrExceptionHandler)
     
     // Активные задачи предзагрузки
     private val activeJobs = ConcurrentHashMap<String, Job>()
+    
+    // Отслеживание "битых" страниц для предотвращения повторных попыток
+    private val brokenPages = mutableSetOf<Int>()
+    
+    // Флаги готовности
+    private var isReaderReady = false
+    private var isBookSelected = false
+    private var isArchiveValidated = false
     
     // Текущий reader и параметры
     private var currentReader: MediaReader? = null
@@ -50,6 +66,11 @@ class PagePreloader @Inject constructor(
         // Отменяем все предыдущие задачи
         cancelAllPreloading()
         
+        // Сбрасываем флаги готовности
+        isReaderReady = false
+        isBookSelected = false
+        isArchiveValidated = false
+        
         currentReader = reader
         currentUri = uri
         currentMaxWidth = maxWidth
@@ -60,23 +81,65 @@ class PagePreloader @Inject constructor(
     }
     
     /**
+     * Отметить, что книга выбрана и архив валидирован
+     */
+    fun markBookSelected() {
+        isBookSelected = true
+        android.util.Log.d(TAG, "Book selected, ready for preloading")
+    }
+    
+    /**
+     * Отметить, что архив валидирован
+     */
+    fun markArchiveValidated() {
+        isArchiveValidated = true
+        android.util.Log.d(TAG, "Archive validated, ready for preloading")
+    }
+    
+    /**
+     * Отметить, что reader готов
+     */
+    fun markReaderReady() {
+        isReaderReady = true
+        android.util.Log.d(TAG, "Reader ready, preloading can start")
+    }
+    
+    /**
      * Предзагрузить страницы вокруг текущей
      */
     fun preloadAroundPage(currentPage: Int) {
+        // Проверяем готовность системы
+        if (!isReaderReady || !isBookSelected || !isArchiveValidated) {
+            android.util.Log.w(TAG, "Preloading blocked: readerReady=$isReaderReady, bookSelected=$isBookSelected, archiveValidated=$isArchiveValidated")
+            return
+        }
+        
         val reader = currentReader ?: return
         val uri = currentUri ?: return
         val pageCount = reader.getPageCount() ?: return
         
-        android.util.Log.d(TAG, "Preloading around page $currentPage")
+        android.util.Log.d(TAG, "Preloading around page $currentPage for book: $uri")
         
         // Отменяем старые задачи предзагрузки
         cancelPreloadingExcept(currentPage)
         
-        // Предзагружаем страницы в диапазоне
+        // Предзагружаем страницы в диапазоне (с ограничением)
+        var preloadCount = 0
         for (offset in -PRELOAD_RANGE..PRELOAD_RANGE) {
+            if (preloadCount >= MAX_CONCURRENT_PRELOADS) {
+                android.util.Log.d(TAG, "Reached max concurrent preloads, stopping")
+                break
+            }
+            
             val pageIndex = currentPage + offset
             
             if (pageIndex < 0 || pageIndex >= pageCount || pageIndex == currentPage) {
+                continue
+            }
+            
+            // Пропускаем "битые" страницы
+            if (brokenPages.contains(pageIndex)) {
+                android.util.Log.d(TAG, "Skipping broken page $pageIndex")
                 continue
             }
             
@@ -89,6 +152,7 @@ class PagePreloader @Inject constructor(
             
             // Запускаем предзагрузку
             startPreloadingPage(pageIndex, cacheKey, reader)
+            preloadCount++
         }
     }
     
@@ -105,7 +169,10 @@ class PagePreloader @Inject constructor(
             try {
                 android.util.Log.d(TAG, "Starting preload for page $pageIndex")
                 
-                val result = reader.renderPage(pageIndex, currentMaxWidth, currentMaxHeight, currentScale)
+                // Рендерим страницу без таймаута для стабильности CBR
+                val result = withContext(Dispatchers.IO) {
+                    reader.renderPage(pageIndex, currentMaxWidth, currentMaxHeight, currentScale)
+                }
                 
                 if (result.isSuccess) {
                     val bitmap = result.getOrNull()
@@ -118,8 +185,20 @@ class PagePreloader @Inject constructor(
                 }
             } catch (e: CancellationException) {
                 android.util.Log.d(TAG, "Preload cancelled for page $pageIndex")
+            } catch (e: java.lang.AssertionError) {
+                android.util.Log.e(TAG, "AssertionError in junrar PPM block during preload for page $pageIndex: ${e.message}", e)
+                // Не прерываем работу, просто логируем ошибку
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "Error preloading page $pageIndex", e)
+                android.util.Log.e(TAG, "Error preloading page $pageIndex: ${e.message}", e)
+                
+                // Специальная обработка для junrar ошибок
+                if (e.message?.contains("AssertionError") == true || 
+                    e.message?.contains("junrar") == true ||
+                    e.message?.contains("RAR archive corruption") == true) {
+                    android.util.Log.e(TAG, "RAR archive corruption detected for page $pageIndex, marking as broken")
+                    // Помечаем страницу как "битую" для предотвращения повторных попыток
+                    brokenPages.add(pageIndex)
+                }
             } finally {
                 activeJobs.remove(jobKey)
             }
@@ -190,6 +269,15 @@ class PagePreloader @Inject constructor(
                 delay(50)
             }
         }
+    }
+    
+    /**
+     * Получить миниатюру из кэша
+     */
+    suspend fun getThumbnailFromCache(pageIndex: Int): Bitmap? {
+        val uri = currentUri ?: return null
+        val thumbnailKey = bitmapCache.createThumbnailKey(uri, pageIndex)
+        return bitmapCache.getThumbnail(thumbnailKey)
     }
     
     /**

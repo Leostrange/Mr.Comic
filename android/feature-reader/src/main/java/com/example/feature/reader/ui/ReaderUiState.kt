@@ -39,5 +39,14 @@ data class ReaderUiState(
     val showBottomPanel: Boolean = false,
     // Pin settings
     val isPinned: Boolean = false,
-    val pinnedPage: Int? = null
+    val pinnedPage: Int? = null,
+    // Zoom and pan state
+    val currentZoomScale: Float = 1.0f,
+    val zoomCenter: androidx.compose.ui.geometry.Offset = androidx.compose.ui.geometry.Offset.Zero,
+    val offsetX: Float = 0f,
+    val offsetY: Float = 0f,
+    // Reader settings
+    val readerBrightness: Float = 1.0f,
+    // Panel states
+    val anyPanelOpen: Boolean = false
 )

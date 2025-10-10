@@ -25,8 +25,11 @@ fun TopSettingsPanel(
     onDismiss: () -> Unit,
     onBrightnessChange: (Float) -> Unit,
     onOrientationChange: (String) -> Unit,
+    onScaleModeChange: (String) -> Unit,
+    onResetZoom: () -> Unit = {},
     currentBrightness: Float = 1.0f,
     currentOrientation: String = "auto",
+    currentScaleMode: String = "width",
     modifier: Modifier = Modifier
 ) {
     AnimatedVisibility(
@@ -120,6 +123,58 @@ fun TopSettingsPanel(
                         label = { Text("Landscape") }
                     )
                 }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Scale mode control
+                Text(
+                    text = "Scale Mode",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp) // Reduced spacing
+        ) {
+            FilterChip(
+                selected = currentScaleMode == "width",
+                onClick = { onScaleModeChange("width") },
+                label = { Text("Width", style = MaterialTheme.typography.bodySmall) }, // Smaller text
+                modifier = Modifier.height(32.dp) // Compact height
+            )
+            FilterChip(
+                selected = currentScaleMode == "height",
+                onClick = { onScaleModeChange("height") },
+                label = { Text("Height", style = MaterialTheme.typography.bodySmall) },
+                modifier = Modifier.height(32.dp)
+            )
+            FilterChip(
+                selected = currentScaleMode == "fit",
+                onClick = { onScaleModeChange("fit") },
+                label = { Text("Fit", style = MaterialTheme.typography.bodySmall) },
+                modifier = Modifier.height(32.dp)
+            )
+            FilterChip(
+                selected = currentScaleMode == "fill",
+                onClick = { onScaleModeChange("fill") },
+                label = { Text("Fill", style = MaterialTheme.typography.bodySmall) },
+                modifier = Modifier.height(32.dp)
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Reset zoom button
+        Button(
+            onClick = onResetZoom,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.secondary
+            )
+        ) {
+            Text("Reset Zoom")
+        }
             }
         }
     }

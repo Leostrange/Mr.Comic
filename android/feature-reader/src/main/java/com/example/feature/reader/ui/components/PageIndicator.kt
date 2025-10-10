@@ -13,11 +13,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 
 /**
+ * Вычисляет оптимальный цвет текста на основе яркости фона
+ */
+@Composable
+fun calculateContrastColor(backgroundColor: Color): Color {
+    val luminance = backgroundColor.luminance()
+    return if (luminance > 0.5f) {
+        Color.Black // Темный текст на светлом фоне
+    } else {
+        Color.White // Светлый текст на темном фоне
+    }
+}
+
+/**
  * Page indicator component shown in bottom-right corner
- * Shows current page number and pin/unpin button
+ * Shows current page number and pin/unpin button with auto-contrast
  */
 @Composable
 fun PageIndicator(
@@ -28,6 +42,10 @@ fun PageIndicator(
     onPinToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Вычисляем оптимальный цвет для авто-контраста
+    val backgroundColor = Color.Black.copy(alpha = 0.6f) // Полупрозрачный черный фон
+    val textColor = calculateContrastColor(backgroundColor)
+    
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn(animationSpec = tween(200)) + 
@@ -43,10 +61,10 @@ fun PageIndicator(
         modifier = modifier
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(12.dp),
-            shadowElevation = 4.dp,
-            modifier = Modifier.padding(16.dp)
+            color = backgroundColor,
+            shape = RoundedCornerShape(8.dp),
+            shadowElevation = 4.dp, // Легкая тень для лучшей читаемости
+            modifier = Modifier.padding(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -57,7 +75,7 @@ fun PageIndicator(
                 Text(
                     text = "$currentPage / $totalPages",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = textColor // Авто-контрастный цвет текста
                 )
                 
                 // Pin/Unpin button
@@ -69,9 +87,9 @@ fun PageIndicator(
                         imageVector = Icons.Default.PushPin,
                         contentDescription = if (isPinned) "Unpin page" else "Pin page",
                         tint = if (isPinned) {
-                            MaterialTheme.colorScheme.primary
+                            Color.Yellow // Яркий желтый для закрепленного состояния
                         } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            textColor.copy(alpha = 0.7f) // Полупрозрачный цвет текста для незакрепленного
                         },
                         modifier = Modifier.size(20.dp)
                     )

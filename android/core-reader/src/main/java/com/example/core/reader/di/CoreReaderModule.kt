@@ -3,6 +3,7 @@ package com.example.core.reader.di
 import android.content.Context
 import com.example.core.reader.data.cache.BitmapCache
 import com.example.core.reader.data.cache.ThumbnailCache
+import com.example.core.reader.data.CbrToCbzConverter
 import com.example.core.reader.domain.BookReaderFactory
 import dagger.Module
 import dagger.Provides
@@ -17,10 +18,17 @@ object CoreReaderModule {
 
     @Provides
     @Singleton
+    fun provideCbrToCbzConverter(
+        @ApplicationContext context: Context
+    ): CbrToCbzConverter = CbrToCbzConverter(context)
+
+    @Provides
+    @Singleton
     fun provideBookReaderFactory(
         @ApplicationContext context: Context,
         bitmapCache: BitmapCache,
         thumbnailCache: ThumbnailCache,
-    ): BookReaderFactory = BookReaderFactory(context, bitmapCache, thumbnailCache)
+        cbrToCbzConverter: CbrToCbzConverter
+    ): BookReaderFactory = BookReaderFactory(context, bitmapCache, thumbnailCache, cbrToCbzConverter)
 }
 

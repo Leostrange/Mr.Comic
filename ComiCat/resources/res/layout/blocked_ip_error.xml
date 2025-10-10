@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:gravity="center" android:orientation="vertical" android:background="@android:color/white" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
-    <LinearLayout android:gravity="center" android:layout_gravity="center" android:orientation="vertical" android:paddingLeft="40dp" android:paddingTop="10dp" android:paddingRight="40dp" android:paddingBottom="40dp" android:layout_width="match_parent" android:layout_height="wrap_content">
-        <TextView android:gravity="center_horizontal" android:id="@+id/stop_screen_txt" android:paddingBottom="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="@string/blocked_ip_error_message" android:singleLine="false" style="@style/Theme.BoxSdk.Body"/>
-        <Button android:id="@+id/ok" android:paddingLeft="20dp" android:paddingRight="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="10dp" android:text="@string/boxsdk_button_okay" style="@style/Theme.BoxSdk.Button"/>
-    </LinearLayout>
-</ScrollView>

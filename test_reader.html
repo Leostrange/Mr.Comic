@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mr.Comic Reader - Тест производительности</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .gesture-test {
+            width: 100%;
+            height: 300px;
+            background: #2c3e50;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            user-select: none;
+        }
+        .gesture-zone {
+            position: absolute;
+            background: rgba(52, 152, 219, 0.3);
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .gesture-zone:hover {
+            background: rgba(52, 152, 219, 0.5);
+            transform: scale(1.05);
+        }
+        .left-zone {
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 25%;
+            height: 80%;
+        }
+        .center-zone {
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 50%;
+            height: 60%;
+        }
+        .right-zone {
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 25%;
+            height: 80%;
+        }
+        .top-left-zone {
+            left: 0;
+            top: 0;
+            width: 100px;
+            height: 100px;
+        }
+        .bottom-right-zone {
+            right: 0;
+            bottom: 0;
+            width: 100px;
+            height: 100px;
+        }
+        .status {
+            background: #27ae60;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        .error {
+            background: #e74c3c;
+        }
+        .info {
+            background: #3498db;
+        }
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f39c12;
+        }
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+        .test-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .test-btn:hover {
+            background: #2980b9;
+        }
+        .test-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Mr.Comic Reader - Тест производительности</h1>
+            <p>Тестирование жестов, производительности и функциональности</p>
+        </div>
+
+        <div class="test-section">
+            <h2>🎮 Тест зон жестов</h2>
+            <div class="gesture-test" id="gestureTest">
+                <div class="gesture-zone left-zone" data-action="previous">← Назад</div>
+                <div class="gesture-zone center-zone" data-action="toggle">Центр</div>
+                <div class="gesture-zone right-zone" data-action="next">Вперед →</div>
+                <div class="gesture-zone top-left-zone" data-action="top-panel">Верх</div>
+                <div class="gesture-zone bottom-right-zone" data-action="side-panel">Бок</div>
+            </div>
+            <div id="gestureStatus" class="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚡ Метрики производительности</h2>
+            <div class="performance-metrics">
+                <div class="metric">
+                    <div class="metric-value" id="fps">60</div>
+                    <div class="metric-label">FPS</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="memory">0</div>
+                    <div class="metric-label">Память (MB)</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="loadTime">0</div>
+                    <div class="metric-label">Время загрузки (ms)</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-value" id="gestureCount">0</div>
+                    <div class="metric-label">Жестов выполнено</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 Тесты функциональности</h2>
+            <div class="test-buttons">
+                <button class="test-btn" onclick="testMemoryUsage()">Тест памяти</button>
+                <button class="test-btn" onclick="testGesturePerformance()">Тест жестов</button>
+                <button class="test-btn" onclick="testImageLoading()">Тест загрузки изображений</button>
+                <button class="test-btn" onclick="testZoomPerformance()">Тест зума</button>
+                <button class="test-btn" onclick="testPanelAnimations()">Тест анимаций</button>
+                <button class="test-btn" onclick="runFullTest()">Полный тест</button>
+            </div>
+            <div id="testResults"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Результаты тестирования</h2>
+            <div id="testLog" style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let gestureCount = 0;
+        let startTime = performance.now();
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        // Инициализация тестирования
+        function init() {
+            log('🚀 Инициализация тестирования Mr.Comic Reader');
+            startPerformanceMonitoring();
+            setupGestureTesting();
+        }
+
+        // Логирование
+        function log(message) {
+            const logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        // Мониторинг производительности
+        function startPerformanceMonitoring() {
+            function updateMetrics() {
+                // FPS
+                frameCount++;
+                const now = performance.now();
+                if (now - lastTime >= 1000) {
+                    document.getElementById('fps').textContent = frameCount;
+                    frameCount = 0;
+                    lastTime = now;
+                }
+
+                // Память (если доступно)
+                if (performance.memory) {
+                    const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
+                    document.getElementById('memory').textContent = memoryMB;
+                }
+
+                // Время загрузки
+                const loadTime = Math.round(performance.now() - startTime);
+                document.getElementById('loadTime').textContent = loadTime;
+
+                // Количество жестов
+                document.getElementById('gestureCount').textContent = gestureCount;
+
+                requestAnimationFrame(updateMetrics);
+            }
+            updateMetrics();
+        }
+
+        // Настройка тестирования жестов
+        function setupGestureTesting() {
+            const gestureTest = document.getElementById('gestureTest');
+            const status = document.getElementById('gestureStatus');
+
+            gestureTest.addEventListener('click', (e) => {
+                const action = e.target.dataset.action;
+                if (action) {
+                    gestureCount++;
+                    showStatus(`Жест выполнен: ${action}`, 'info');
+                    log(`🎯 Жест: ${action} (всего: ${gestureCount})`);
+                    
+                    // Симуляция задержки обработки жеста
+                    setTimeout(() => {
+                        hideStatus();
+                    }, 1000);
+                }
+            });
+
+            // Тест двойного тапа
+            gestureTest.addEventListener('dblclick', (e) => {
+                gestureCount++;
+                showStatus('Двойной тап - зум', 'info');
+                log(`🔍 Двойной тап - зум (всего: ${gestureCount})`);
+                setTimeout(() => hideStatus(), 1000);
+            });
+
+            // Тест долгого нажатия
+            let longPressTimer;
+            gestureTest.addEventListener('mousedown', () => {
+                longPressTimer = setTimeout(() => {
+                    gestureCount++;
+                    showStatus('Долгое нажатие - панель', 'info');
+                    log(`⏰ Долгое нажатие - панель (всего: ${gestureCount})`);
+                }, 500);
+            });
+
+            gestureTest.addEventListener('mouseup', () => {
+                clearTimeout(longPressTimer);
+            });
+
+            // Тест pinch-to-zoom
+            gestureTest.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                gestureCount++;
+                const direction = e.deltaY > 0 ? 'уменьшение' : 'увеличение';
+                showStatus(`Зум: ${direction}`, 'info');
+                log(`🔍 Зум: ${direction} (всего: ${gestureCount})`);
+                setTimeout(() => hideStatus(), 1000);
+            });
+        }
+
+        // Показать статус
+        function showStatus(message, type = 'info') {
+            const status = document.getElementById('gestureStatus');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        // Скрыть статус
+        function hideStatus() {
+            document.getElementById('gestureStatus').style.display = 'none';
+        }
+
+        // Тест использования памяти
+        function testMemoryUsage() {
+            log('🧠 Запуск теста памяти...');
+            const startMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+            
+            // Создаем массив для нагрузки на память
+            const testData = [];
+            for (let i = 0; i < 10000; i++) {
+                testData.push({
+                    id: i,
+                    data: new Array(100).fill(Math.random()),
+                    timestamp: Date.now()
+                });
+            }
+            
+            setTimeout(() => {
+                const endMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                const memoryUsed = Math.round((endMemory - startMemory) / 1024 / 1024);
+                log(`✅ Тест памяти завершен. Использовано: ${memoryUsed} MB`);
+                
+                // Очистка
+                testData.length = 0;
+                if (window.gc) window.gc();
+            }, 1000);
+        }
+
+        // Тест производительности жестов
+        function testGesturePerformance() {
+            log('🎮 Запуск теста производительности жестов...');
+            const startTime = performance.now();
+            let gestureTests = 0;
+            
+            function simulateGesture() {
+                if (gestureTests < 100) {
+                    gestureTests++;
+                    // Симуляция обработки жеста
+                    const dummy = Math.random() * 1000;
+                    requestAnimationFrame(simulateGesture);
+                } else {
+                    const endTime = performance.now();
+                    const duration = Math.round(endTime - startTime);
+                    log(`✅ Тест жестов завершен. 100 жестов за ${duration}ms (${Math.round(100000/duration)} жестов/сек)`);
+                }
+            }
+            
+            simulateGesture();
+        }
+
+        // Тест загрузки изображений
+        function testImageLoading() {
+            log('🖼️ Запуск теста загрузки изображений...');
+            const startTime = performance.now();
+            let loadedImages = 0;
+            const totalImages = 10;
+            
+            for (let i = 0; i < totalImages; i++) {
+                const img = new Image();
+                img.onload = () => {
+                    loadedImages++;
+                    if (loadedImages === totalImages) {
+                        const endTime = performance.now();
+                        const duration = Math.round(endTime - startTime);
+                        log(`✅ Тест загрузки изображений завершен. ${totalImages} изображений за ${duration}ms`);
+                    }
+                };
+                img.onerror = () => {
+                    loadedImages++;
+                    log(`❌ Ошибка загрузки изображения ${i + 1}`);
+                };
+                // Используем placeholder изображение
+                img.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%23${Math.floor(Math.random()*16777215).toString(16)}"/></svg>`;
+            }
+        }
+
+        // Тест производительности зума
+        function testZoomPerformance() {
+            log('🔍 Запуск теста производительности зума...');
+            const startTime = performance.now();
+            let zoomTests = 0;
+            
+            function simulateZoom() {
+                if (zoomTests < 50) {
+                    zoomTests++;
+                    // Симуляция зума
+                    const scale = 1 + Math.random() * 2;
+                    const dummy = Math.sin(scale) * Math.cos(scale);
+                    requestAnimationFrame(simulateZoom);
+                } else {
+                    const endTime = performance.now();
+                    const duration = Math.round(endTime - startTime);
+                    log(`✅ Тест зума завершен. 50 операций зума за ${duration}ms`);
+                }
+            }
+            
+            simulateZoom();
+        }
+
+        // Тест анимаций панелей
+        function testPanelAnimations() {
+            log('🎭 Запуск теста анимаций панелей...');
+            const startTime = performance.now();
+            
+            // Симуляция анимаций панелей
+            const panels = ['top', 'left', 'right', 'bottom'];
+            let currentPanel = 0;
+            
+            function animatePanel() {
+                if (currentPanel < panels.length) {
+                    const panel = panels[currentPanel];
+                    log(`🎭 Анимация панели: ${panel}`);
+                    
+                    // Симуляция времени анимации
+                    setTimeout(() => {
+                        currentPanel++;
+                        animatePanel();
+                    }, 200);
+                } else {
+                    const endTime = performance.now();
+                    const duration = Math.round(endTime - startTime);
+                    log(`✅ Тест анимаций завершен. ${panels.length} панелей за ${duration}ms`);
+                }
+            }
+            
+            animatePanel();
+        }
+
+        // Полный тест
+        function runFullTest() {
+            log('🚀 Запуск полного теста Mr.Comic Reader...');
+            const tests = [
+                () => testMemoryUsage(),
+                () => testGesturePerformance(),
+                () => testImageLoading(),
+                () => testZoomPerformance(),
+                () => testPanelAnimations()
+            ];
+            
+            let currentTest = 0;
+            
+            function runNextTest() {
+                if (currentTest < tests.length) {
+                    tests[currentTest]();
+                    currentTest++;
+                    setTimeout(runNextTest, 2000);
+                } else {
+                    log('🎉 Полный тест завершен!');
+                }
+            }
+            
+            runNextTest();
+        }
+
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

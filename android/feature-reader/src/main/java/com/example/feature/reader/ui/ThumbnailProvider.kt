@@ -1,138 +1,79 @@
 package com.example.feature.reader.ui
 
 import android.graphics.Bitmap
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import com.example.core.reader.preload.PagePreloader
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
- * Thumbnail provider for generating and caching page thumbnails
- * Optimized for lazy loading
+ * Provider for comic page thumbnails with lazy caching
+ * Uses PagePreloader for efficient thumbnail generation
  */
-class ThumbnailProvider(
-    private val scope: CoroutineScope,
-    private val pageLoader: suspend (Int) -> Bitmap?,
-    private val thumbnailSize: Int = 200 // Max dimension for thumbnail
+@Singleton
+class ThumbnailProvider @Inject constructor(
+    private val pagePreloader: PagePreloader
 ) {
-    private val _thumbnails = MutableStateFlow<Map<Int, Bitmap>>(emptyMap())
-    val thumbnails: StateFlow<Map<Int, Bitmap>> = _thumbnails.asStateFlow()
-    
-    private val loadingJobs = mutableMapOf<Int, Job>()
-    private val maxCacheSize = 50 // Maximum thumbnails in cache
     
     /**
-     * Get thumbnail for page (load if not cached)
+     * Get thumbnail for a specific page
+     * Returns cached thumbnail if available, otherwise triggers preload
      */
-    fun getThumbnail(pageIndex: Int): Bitmap? {
-        val cached = _thumbnails.value[pageIndex]
-        if (cached != null) {
-            return cached
-        }
-        
-        // Start loading if not already loading
-        if (!loadingJobs.containsKey(pageIndex)) {
-            loadThumbnail(pageIndex)
-        }
-        
-        return null
-    }
-    
-    /**
-     * Load thumbnail for page
-     */
-    private fun loadThumbnail(pageIndex: Int) {
-        val job = scope.launch(Dispatchers.IO) {
-            try {
-                val fullBitmap = pageLoader(pageIndex)
-                if (fullBitmap != null) {
-                    val thumbnail = createThumbnail(fullBitmap)
-                    
-                    _thumbnails.value = _thumbnails.value + (pageIndex to thumbnail)
-                    
-                    // Cleanup cache if too large
-                    if (_thumbnails.value.size > maxCacheSize) {
-                        cleanupOldestThumbnails()
-                    }
-                    
-                    // Recycle original if different from thumbnail
-                    if (fullBitmap != thumbnail) {
-                        fullBitmap.recycle()
-                    }
-                }
-            } catch (e: Exception) {
-                // Ignore errors
-            } finally {
-                loadingJobs.remove(pageIndex)
-            }
-        }
-        
-        loadingJobs[pageIndex] = job
-    }
-    
-    /**
-     * Create thumbnail from full bitmap
-     */
-    private fun createThumbnail(bitmap: Bitmap): Bitmap {
-        val width = bitmap.width
-        val height = bitmap.height
-        
-        // Calculate scale to fit within thumbnailSize
-        val scale = minOf(
-            thumbnailSize.toFloat() / width,
-            thumbnailSize.toFloat() / height
-        )
-        
-        if (scale >= 1.0f) {
-            // Already small enough
-            return bitmap
-        }
-        
-        val newWidth = (width * scale).toInt()
-        val newHeight = (height * scale).toInt()
-        
-        return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
-    }
-    
-    /**
-     * Cleanup oldest thumbnails to free memory
-     */
-    private fun cleanupOldestThumbnails() {
-        val currentThumbnails = _thumbnails.value
-        val toKeep = currentThumbnails.entries
-            .sortedByDescending { it.key } // Keep recent pages
-            .take(maxCacheSize / 2)
-            .associate { it.key to it.value }
-        
-        // Recycle removed thumbnails
-        currentThumbnails.forEach { (key, bitmap) ->
-            if (!toKeep.containsKey(key)) {
-                bitmap.recycle()
-            }
-        }
-        
-        _thumbnails.value = toKeep
-    }
-    
-    /**
-     * Preload thumbnails for range
-     */
-    fun preloadThumbnails(startIndex: Int, endIndex: Int) {
-        for (i in startIndex..endIndex) {
-            if (!_thumbnails.value.containsKey(i) && !loadingJobs.containsKey(i)) {
-                loadThumbnail(i)
-            }
+    suspend fun getThumbnail(pageIndex: Int): Bitmap? {
+        return try {
+            // Try to get from preloader's thumbnail cache
+            pagePreloader.getThumbnailFromCache(pageIndex)
+        } catch (e: Exception) {
+            android.util.Log.w("ThumbnailProvider", "Failed to get thumbnail for page $pageIndex", e)
+            null
         }
     }
     
     /**
-     * Clear all thumbnails
+     * Preload thumbnails for a range of pages
      */
-    fun clearCache() {
-        loadingJobs.values.forEach { it.cancel() }
-        loadingJobs.clear()
-        
-        _thumbnails.value.values.forEach { it.recycle() }
-        _thumbnails.value = emptyMap()
+    fun preloadThumbnails(startPage: Int, endPage: Int) {
+        pagePreloader.preloadThumbnails(startPage, endPage)
     }
+}
+
+/**
+ * Composable function to get thumbnail provider
+ */
+@Composable
+fun rememberThumbnailProvider(): ThumbnailProvider {
+    return remember { 
+        ThumbnailProvider(
+            com.example.core.reader.preload.PagePreloader(
+                com.example.core.reader.cache.BitmapCache()
+            )
+        ) 
+    }
+}
+
+/**
+ * Composable function to get thumbnail with loading state
+ */
+@Composable
+fun rememberThumbnail(
+    pageIndex: Int,
+    thumbnailProvider: ThumbnailProvider
+): Bitmap? {
+    val coroutineScope = rememberCoroutineScope()
+    var thumbnail by remember(pageIndex) { mutableStateOf<Bitmap?>(null) }
+    
+    LaunchedEffect(pageIndex) {
+        coroutineScope.launch {
+            thumbnail = thumbnailProvider.getThumbnail(pageIndex)
+        }
+    }
+    
+    return thumbnail
 }

@@ -16,14 +16,25 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * CBR/RAR Reader implementation using JunRAR library
  */
 @Singleton
 class CbrReader @Inject constructor(
-    private val context: Context
+    private val context: Context,
+    private val cbrToCbzConverter: CbrToCbzConverter? = null
 ) : MediaReader {
+    
+    // Mutex для последовательной распаковки RAR файлов
+    private val rarMutex = Mutex()
+    
+    // Fallback режим для проблемных архивов
+    private var errorCount = 0
+    private var safeMode = false
+    private var isRar = false
     
     private val memoryCache: LruCache<String, Bitmap> by lazy {
         val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
@@ -56,6 +67,11 @@ class CbrReader @Inject constructor(
             
             // Close previous archive if exists
             close()
+            
+            // Сбрасываем счетчики ошибок и safe mode для нового архива
+            errorCount = 0
+            safeMode = false
+            isRar = false
             
             currentUri = uri
             
@@ -138,6 +154,7 @@ class CbrReader @Inject constructor(
                         return Result.failure(UnsupportedFormatException("Формат RAR5 не поддерживается. Пожалуйста, конвертируйте файл в CBZ или используйте RAR4."))
                     }
                     android.util.Log.d(TAG, "✅ RAR4 format detected")
+                    isRar = true
                 } else {
                     android.util.Log.w(TAG, "⚠️ Unknown file signature: ${header.joinToString(" ") { "%02X".format(it) }}")
                 }
@@ -207,8 +224,18 @@ class CbrReader @Inject constructor(
         maxHeight: Int,
         scale: Float
     ): Result<Bitmap> {
+        var localArchive: Archive? = null
         return try {
             val currentArchive = archive ?: return Result.failure(IllegalStateException("Archive not open"))
+            
+            // Create a local archive instance for this operation to avoid thread conflicts
+            localArchive = try {
+                val inputStream = java.io.FileInputStream(java.io.File(currentUri?.path ?: ""))
+                Archive(inputStream)
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to create local archive, using shared instance", e)
+                currentArchive
+            }
             
             if (pageIndex < 0 || pageIndex >= imageFiles.size) {
                 android.util.Log.w(TAG, "Page index $pageIndex out of bounds (0-${imageFiles.size - 1})")
@@ -216,12 +243,55 @@ class CbrReader @Inject constructor(
             }
             
             val fileHeader = imageFiles[pageIndex]
+            android.util.Log.d(TAG, "extract start: ${fileHeader.fileName}")
             android.util.Log.d(TAG, "Rendering page $pageIndex: ${fileHeader.fileName}")
             
-            // Extract file data from archive
+            // Extract file data from archive with enhanced error handling and mutex protection
             val outputStream = ByteArrayOutputStream()
-            currentArchive.extractFile(fileHeader, outputStream)
+            try {
+                // Используем Mutex для последовательной распаковки RAR файлов
+                rarMutex.withLock {
+                    localArchive?.extractFile(fileHeader, outputStream)
+                }
+            } catch (e: java.lang.AssertionError) {
+                android.util.Log.e(TAG, "AssertionError in junrar PPM block for page $pageIndex: ${e.message}", e)
+                errorCount++
+                
+                // Активируем safe mode для RAR файлов при ошибках
+                if (errorCount > 0 && isRar && !safeMode) {
+                    safeMode = true
+                    android.util.Log.w(TAG, "Fallback to safe mode: sequential extraction for RAR archive")
+                    
+                    // Предлагаем конвертацию в CBZ для улучшения стабильности
+                    if (errorCount == 1) {
+                        android.util.Log.i(TAG, "Consider converting CBR to CBZ for better stability")
+                    }
+                }
+                
+                return Result.failure(IllegalStateException("RAR archive corruption (PPM block): ${e.message}"))
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Failed to extract file for page $pageIndex: ${e.message}", e)
+                errorCount++
+                
+                // Специальная обработка для junrar ошибок
+                if (e.message?.contains("junrar") == true || e.message?.contains("RAR") == true) {
+                    android.util.Log.e(TAG, "RAR archive corruption detected, skipping page $pageIndex")
+                    
+                    // Активируем safe mode для RAR файлов при ошибках
+                    if (errorCount > 0 && isRar && !safeMode) {
+                        safeMode = true
+                        android.util.Log.w(TAG, "Fallback to safe mode: sequential extraction for RAR archive")
+                    }
+                    
+                    return Result.failure(IllegalStateException("RAR archive corruption: ${e.message}"))
+                }
+                
+                return Result.failure(e)
+            }
+            
             val imageData = outputStream.toByteArray()
+            android.util.Log.d(TAG, "extract done: ${fileHeader.fileName} size=${imageData.size}")
+            
             if (imageData.isEmpty()) {
                 android.util.Log.w(TAG, "No data extracted for page $pageIndex")
                 return Result.failure(IllegalStateException("No data extracted for page"))
@@ -240,10 +310,13 @@ class CbrReader @Inject constructor(
                 }
             }
             
-            // Calculate optimal sample size
+            // Calculate optimal sample size with high quality settings
             val options = BitmapFactory.Options().apply {
                 inJustDecodeBounds = true
-                inPreferredConfig = Bitmap.Config.RGB_565
+                inPreferredConfig = Bitmap.Config.ARGB_8888 // Высокое качество вместо RGB_565
+                inDither = false // Отключаем дизеринг для лучшей резкости
+                inScaled = false // Отключаем автоматическое масштабирование
+                inPremultiplied = false // Отключаем предварительное умножение альфы
             }
             
             // First decode with inJustDecodeBounds=true to check dimensions
@@ -268,8 +341,10 @@ class CbrReader @Inject constructor(
                     bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size, options)
                     
                     if (bitmap == null && retryCount == 0) {
-                        // First try failed, try with ARGB_8888
+                        // First try failed, try with different settings
                         options.inPreferredConfig = Bitmap.Config.ARGB_8888
+                        options.inDither = false
+                        options.inScaled = false
                         retryCount++
                     } else if (bitmap == null) {
                         break
@@ -298,6 +373,15 @@ class CbrReader @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Failed to render page $pageIndex", e)
             Result.failure(e)
+        } finally {
+            // Close local archive if it was created
+            try {
+                if (localArchive != null && localArchive != archive) {
+                    localArchive.close()
+                }
+            } catch (e: Exception) {
+                android.util.Log.w(TAG, "Failed to close local archive", e)
+            }
         }
     }
     

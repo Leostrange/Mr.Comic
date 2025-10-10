@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.core.model.Comic
 
@@ -118,20 +119,46 @@ fun ComicListItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     
-                    // Прогресс
+                    // Прогресс - круговой индикатор с процентом или индикатор "Новое"
                     if (comic.readingProgress > 0f) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            LinearProgressIndicator(
-                                progress = { comic.readingProgress },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(4.dp),
+                            CompactProgressIndicator(
+                                progress = comic.readingProgress,
+                                size = 20.dp
                             )
                             Text(
                                 text = "${(comic.readingProgress * 100).toInt()}%",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    } else if (comic.readingProgress == 0f && comic.pageCount > 0) {
+                        // Индикатор "Новое чтение"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primary,
+                                        shape = androidx.compose.foundation.shape.CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Н",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                            Text(
+                                text = "Новое чтение",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )

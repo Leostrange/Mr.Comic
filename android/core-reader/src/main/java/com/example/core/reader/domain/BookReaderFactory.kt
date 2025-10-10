@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.example.core.reader.data.CachingBookReader
 import com.example.core.reader.data.CbrReader
+import com.example.core.reader.data.CbrToCbzConverter
 import com.example.core.reader.data.CbzReader
 // import com.example.core.reader.data.EpubReader // Temporarily disabled
 import com.example.core.reader.data.ImageSeqReader
@@ -19,7 +20,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 class BookReaderFactory(
     @ApplicationContext private val context: Context,
     private val bitmapCache: BitmapCache,
-    private val thumbnailCache: ThumbnailCache
+    private val thumbnailCache: ThumbnailCache,
+    private val cbrToCbzConverter: CbrToCbzConverter
 ) {
     
     companion object {
@@ -83,11 +85,11 @@ class BookReaderFactory(
         val delegateReader: MediaReader = when (extension) {
             "cbr" -> {
                 android.util.Log.d(TAG, "🔥 DIAGNOSTIC: ✅ Extension matches 'cbr' - Creating CbrReader")
-                CbrReader(context)
+                CbrReader(context, cbrToCbzConverter)
             }
             "rar" -> {
                 android.util.Log.d(TAG, "🔥 DIAGNOSTIC: ✅ Extension matches 'rar' - Creating CbrReader")
-                CbrReader(context)
+                CbrReader(context, cbrToCbzConverter)
             }
             "cbz" -> {
                 android.util.Log.d(TAG, "🔥 DIAGNOSTIC: ✅ Extension matches 'cbz' - Creating CbzReader")

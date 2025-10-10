@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -155,7 +156,9 @@ fun ZoomableComicPage(
                             scaleX = currentScale,
                             scaleY = currentScale,
                             translationX = currentOffsetX,
-                            translationY = currentOffsetY
+                            translationY = currentOffsetY,
+                            // Улучшаем качество рендеринга
+                            renderEffect = null // Отключаем эффекты для лучшей производительности
                         )
                         .readerGesturesDebug(
                             screenSize = screenSize,

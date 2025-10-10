@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent">
-    <TextView android:textAppearance="@style/Theme.BoxSdk.Title" android:gravity="center" android:layout_gravity="center" android:id="@+id/box_avatar_initials" android:layout_width="match_parent" android:layout_height="match_parent" android:textAllCaps="true" android:textAlignment="center"/>
-    <com.box.androidsdk.content.views.BezelImageView android:layout_gravity="center_vertical" android:id="@+id/box_avatar_image" android:visibility="gone" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:layout_centerInParent="true" app:maskDrawable="@drawable/box_circle_mask"/>
-</FrameLayout>

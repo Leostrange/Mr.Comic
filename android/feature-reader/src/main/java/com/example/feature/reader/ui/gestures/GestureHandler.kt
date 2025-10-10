@@ -19,18 +19,20 @@ class GestureHandler(
     fun onTap(position: Offset): GestureAction {
         val zone = getTapZone(position)
         return when (zone) {
-            TapZone.LEFT -> GestureAction.PreviousPage
-            TapZone.RIGHT -> GestureAction.NextPage
+            TapZone.LEFT -> GestureAction.PreviousPage      // Зона 4: листание назад
+            TapZone.RIGHT -> GestureAction.NextPage        // Зона 3: листание вперёд
             TapZone.CENTER -> GestureAction.ToggleUI
+            TapZone.TOP_LEFT -> GestureAction.ShowTopPanel // Зона 2: верхняя панель
+            TapZone.TOP_RIGHT -> GestureAction.ShowRightPanel // Зона 1: боковая панель (только верхний правый угол)
         }
     }
     
     /**
      * Handle double tap gesture
-     * Cycles through zoom modes: fit-width -> fit-height -> fit-screen
+     * Toggles zoom in/out at tap position
      */
     fun onDoubleTap(position: Offset): GestureAction {
-        return GestureAction.CycleZoom(position)
+        return GestureAction.DoubleTapZoom(position)
     }
     
     /**
@@ -43,6 +45,8 @@ class GestureHandler(
             TapZone.LEFT -> GestureAction.ShowLeftPanel
             TapZone.RIGHT -> GestureAction.ShowRightPanel
             TapZone.CENTER -> GestureAction.ShowTopPanel
+            TapZone.TOP_LEFT -> GestureAction.ShowTopPanel
+            TapZone.TOP_RIGHT -> GestureAction.ShowRightPanel
         }
     }
     
@@ -70,12 +74,24 @@ class GestureHandler(
      */
     private fun getTapZone(position: Offset): TapZone {
         val screenWidth = screenSize.width.toFloat()
-        val leftBoundary = screenWidth * tapZoneConfig.leftZoneRatio
-        val rightBoundary = screenWidth * (1f - tapZoneConfig.rightZoneRatio)
+        val screenHeight = screenSize.height.toFloat()
         
+        // Define corner zones (smaller areas for precise targeting)
+        val cornerZoneSize = 100f // 100dp corner zones
+        
+        // Check corner zones first
+        if (position.x < cornerZoneSize && position.y < cornerZoneSize) {
+            return TapZone.TOP_LEFT  // Зона 2: верхняя панель
+        }
+        if (position.x > screenWidth - cornerZoneSize && position.y < cornerZoneSize) {
+            return TapZone.TOP_RIGHT // Зона 1: боковая панель (только верхний правый угол)
+        }
+        
+        // Узкие невидимые зоны для листания (~56dp)
+        val edgeZone = 56f // 56dp edge zones
         return when {
-            position.x < leftBoundary -> TapZone.LEFT
-            position.x > rightBoundary -> TapZone.RIGHT
+            position.x < edgeZone -> TapZone.LEFT  // Зона 4: листание назад
+            position.x > screenWidth - edgeZone -> TapZone.RIGHT // Зона 3: листание вперёд
             else -> TapZone.CENTER
         }
     }
@@ -85,9 +101,11 @@ class GestureHandler(
  * Tap zones for navigation
  */
 enum class TapZone {
-    LEFT,    // Previous page
-    CENTER,  // Toggle UI
-    RIGHT    // Next page
+    LEFT,         // Зона 4: Previous page
+    CENTER,       // Toggle UI
+    RIGHT,        // Зона 3: Next page
+    TOP_LEFT,     // Зона 2: Show top panel
+    TOP_RIGHT     // Зона 1: Show right panel (только верхний правый угол)
 }
 
 /**
@@ -107,7 +125,9 @@ sealed class GestureAction {
     object PreviousPage : GestureAction()
     object NextPage : GestureAction()
     object ToggleUI : GestureAction()
+    object ToggleOrientation : GestureAction()
     data class CycleZoom(val position: Offset) : GestureAction()
+    data class DoubleTapZoom(val position: Offset) : GestureAction()
     object ShowTopPanel : GestureAction()
     object ShowLeftPanel : GestureAction()
     object ShowRightPanel : GestureAction()

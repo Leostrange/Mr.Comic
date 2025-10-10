@@ -117,7 +117,8 @@ class MainActivity : ComponentActivity() {
         try {
             val bitmapCache = com.example.core.reader.data.cache.BitmapCache()
             val thumbnailCache = com.example.core.reader.data.cache.ThumbnailCache(this)
-            val factory = com.example.core.reader.domain.BookReaderFactory(this, bitmapCache, thumbnailCache)
+            val cbrToCbzConverter = com.example.core.reader.data.CbrToCbzConverter(this)
+            val factory = com.example.core.reader.domain.BookReaderFactory(this, bitmapCache, thumbnailCache, cbrToCbzConverter)
             android.util.Log.d("MainActivity", "✅ BookReaderFactory создан успешно: $factory")
         } catch (e: Exception) {
             android.util.Log.e("MainActivity", "❌ Ошибка создания BookReaderFactory", e)

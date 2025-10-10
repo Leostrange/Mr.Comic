@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.core.model.Comic
 
@@ -73,15 +74,35 @@ fun ComicGridItem(
                 }
             }
             
-            // Прогресс чтения
+            // Прогресс чтения - круговой индикатор или индикатор "Новое"
             if (comic.readingProgress > 0f) {
-                LinearProgressIndicator(
-                    progress = { comic.readingProgress },
+                ProgressIndicator(
+                    progress = comic.readingProgress,
+                    size = 32.dp,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .align(Alignment.BottomCenter),
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
                 )
+            } else if (comic.readingProgress == 0f && comic.pageCount > 0) {
+                // Индикатор "Новое чтение"
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary,
+                            shape = androidx.compose.foundation.shape.CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Н",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 12.sp
+                    )
+                }
             }
             
             // Закладка

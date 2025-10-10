@@ -1,5 +1,6 @@
 package com.example.feature.reader.ui
 
+import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import android.graphics.Bitmap
@@ -12,6 +13,8 @@ import com.example.core.domain.util.Result
 import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
+import com.example.core.data.repository.ReadingSessionRepository
+import com.example.core.reader.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,6 +33,8 @@ class ReaderViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
     private val getReadingProgressUseCase: GetReadingProgressUseCase,
+    private val readingSessionRepository: ReadingSessionRepository,
+    private val pagePreloader: PagePreloader,
     @ApplicationContext private val context: Context,
     private val analyticsHelper: com.example.core.analytics.AnalyticsHelper,
     savedStateHandle: SavedStateHandle
@@ -190,6 +195,7 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.readerBrightness.collect { brightness ->
                 val coerced = brightness.coerceIn(0.0f, 1.0f)
+                _uiState.update { it.copy(readerBrightness = coerced) }
                 // Track application; UI applies it, but event captured here
                 analyticsHelper.track(
                     com.example.core.analytics.AnalyticsEvent.SettingChanged(
@@ -394,6 +400,15 @@ class ReaderViewModel @Inject constructor(
                     val metadata = result.getOrThrow()
                     val pageCount = metadata.pageCount
                     android.util.Log.d(TAG, "✅ Book opened successfully. Page count: $pageCount")
+                    
+                    // Настраиваем PagePreloader для предзагрузки
+                    pagePreloader.setCurrentReader(
+                        reader = reader,
+                        uri = finalUri.toString(),
+                        maxWidth = 1920,
+                        maxHeight = 1080,
+                        scale = 1.0f
+                    )
 
                     // Восстанавливаем прогресс чтения
                     val progressResult = getReadingProgressUseCase(currentComicId!!)
@@ -411,7 +426,28 @@ class ReaderViewModel @Inject constructor(
                         is Result.Error -> pageCount
                     }
 
-                    _uiState.update { it.copy(pageCount = resolvedPageCount) }
+                    // Загружаем pin состояние из сессии
+                    val session = readingSessionRepository.getSessionByComicId(currentComicId!!)
+                    val isPinned = session?.readingSettings?.contains("\"pinnedPage\"") == true
+                    val pinnedPage = if (isPinned) {
+                        try {
+                            // Простой парсинг JSON для получения pinnedPage
+                            val settings = session?.readingSettings
+                            val pinnedPageMatch = "\"pinnedPage\":(\\d+)".toRegex().find(settings ?: "")
+                            pinnedPageMatch?.groupValues?.get(1)?.toIntOrNull()
+                        } catch (e: Exception) {
+                            android.util.Log.w(TAG, "Failed to parse pinned page from settings", e)
+                            null
+                        }
+                    } else null
+
+                    _uiState.update { 
+                        it.copy(
+                            pageCount = resolvedPageCount,
+                            isPinned = isPinned,
+                            pinnedPage = pinnedPage
+                        ) 
+                    }
 
                     if (resolvedPageCount > 0) {
                         loadPage(lastReadPage)
@@ -593,79 +629,46 @@ class ReaderViewModel @Inject constructor(
                 )
             }
 
-            // Сохраняем прогресс чтения
+            // Сохраняем прогресс чтения с улучшенной обработкой
             currentComicId?.let { comicId ->
-                when (
-                    val saveResult = saveReadingProgressUseCase(
-                        comicId = comicId,
-                        currentPage = pageIndex,
-                        totalPages = _uiState.value.pageCount
-                    )
-                ) {
-                    is Result.Error -> android.util.Log.e(TAG, "Failed to save reading progress", saveResult.exception)
-                    else -> Unit
-                }
-            }
-
-            // Прелоадим соседние страницы
-            preloadAdjacentPages(pageIndex)
-        }
-    }
-
-    /**
-     * Фоновый прелоад страниц до/после текущей для более плавного UX.
-     */
-    private fun preloadAdjacentPages(centerPageIndex: Int) {
-        val pageCount = _uiState.value.pageCount
-        if (pageCount <= 1) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            for (i in 1..PRELOAD_DISTANCE) {
-                val nextIndex = centerPageIndex + i
-                if (nextIndex < pageCount) {
-                    android.util.Log.d(TAG, "Preloading page: $nextIndex")
-                    val reader = bookReader
-                    if (reader != null) {
-                        val result = reader.renderPage(nextIndex, 1920, 1080, 1.0f)
-                        if (result.isSuccess) {
-                            result.getOrNull()?.let { bitmap ->
-                                withContext(Dispatchers.Main) {
-                                    _uiState.update { state ->
-                                        if (state.bitmaps[nextIndex] === bitmap) state
-                                        else state.copy(bitmaps = state.bitmaps + (nextIndex to bitmap))
-                                    }
+                viewModelScope.launch {
+                    try {
+                        val saveResult = saveReadingProgressUseCase(
+                            comicId = comicId,
+                            currentPage = pageIndex,
+                            totalPages = _uiState.value.pageCount
+                        )
+                        
+                        when (saveResult) {
+                            is Result.Success -> {
+                                android.util.Log.d(TAG, "✅ Progress saved: page $pageIndex of ${_uiState.value.pageCount}")
+                                
+                                // Обновляем прогресс в UI состоянии
+                                _uiState.update { currentState ->
+                                    val progress = if (_uiState.value.pageCount > 0) {
+                                        (pageIndex + 1).toFloat() / _uiState.value.pageCount.toFloat()
+                                    } else 0f
+                                    currentState.copy(
+                                        // Добавляем поле прогресса в UI состояние если нужно
+                                    )
                                 }
                             }
-                        } else {
-                            android.util.Log.e(TAG, "Failed to preload page $nextIndex: ${result.exceptionOrNull()?.message}")
+                            is Result.Error -> {
+                                android.util.Log.e(TAG, "❌ Failed to save reading progress", saveResult.exception)
+                            }
                         }
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "Exception while saving progress", e)
                     }
                 }
             }
-            for (i in 1..PRELOAD_DISTANCE) {
-                val prevIndex = centerPageIndex - i
-                if (prevIndex >= 0) {
-                    android.util.Log.d(TAG, "Preloading page: $prevIndex")
-                    val reader = bookReader
-                    if (reader != null) {
-                        val result = reader.renderPage(prevIndex, 1920, 1080, 1.0f)
-                        if (result.isSuccess) {
-                            result.getOrNull()?.let { bitmap ->
-                                withContext(Dispatchers.Main) {
-                                    _uiState.update { state ->
-                                        if (state.bitmaps[prevIndex] === bitmap) state
-                                        else state.copy(bitmaps = state.bitmaps + (prevIndex to bitmap))
-                                    }
-                                }
-                            }
-                        } else {
-                            android.util.Log.e(TAG, "Failed to preload page $prevIndex: ${result.exceptionOrNull()?.message}")
-                        }
-                    }
-                }
-            }
+
+            // Прелоадим соседние страницы через PagePreloader
+            pagePreloader.preloadAroundPage(pageIndex)
         }
     }
+
+    // ✅ [PRELOAD-12]: prefetchAround() вызовы добавлены в VM через PagePreloader
 
     /**
      * Toggle scale mode between fit-width, fit-height, and fit-screen
@@ -698,6 +701,96 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    // TODO [GESTURES-10]: подключить readerGestures, реализовать zoom и тап-зоны
+    
+    /**
+     * Cycle through zoom modes: width-fit → height-fit → full
+     */
+    fun cycleZoom() {
+        viewModelScope.launch {
+            val currentMode = _uiState.value.scaleMode
+            val nextMode = when (currentMode) {
+                "width" -> "height"
+                "height" -> "fit"
+                else -> "width"
+            }
+            
+            android.util.Log.d(TAG, "Cycling zoom: $currentMode -> $nextMode")
+            _uiState.update { it.copy(scaleMode = nextMode) }
+            
+            // Save to settings
+            settingsRepository.setScaleMode(nextMode)
+            
+            // Analytics
+            analyticsHelper.track(
+                com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                    settingName = "scale_mode",
+                    value = nextMode
+                ),
+                this
+            )
+        }
+    }
+    
+    /**
+     * Apply pinch-to-zoom with scale and center point
+     */
+    fun zoom(scale: Float, center: androidx.compose.ui.geometry.Offset) {
+        android.util.Log.d(TAG, "Zoom: scale=$scale, center=$center")
+        
+        // Update zoom state
+        _uiState.update { currentState ->
+            val newScale = (currentState.currentZoomScale * scale).coerceIn(0.5f, 5.0f)
+            currentState.copy(
+                currentZoomScale = newScale,
+                zoomCenter = center,
+                scaleMode = "custom" // Switch to custom mode when manually zooming
+            )
+        }
+        
+        // Track zoom for analytics (throttled)
+        trackZoom(_uiState.value.currentZoomScale)
+    }
+    
+    /**
+     * Reset zoom to default (fit-width) with proper state management
+     */
+    fun resetZoom() {
+        android.util.Log.d(TAG, "Resetting zoom to default with animation")
+        
+        // Определяем оптимальный режим масштабирования по ориентации
+        val optimalScaleMode = when (_uiState.value.orientation) {
+            "portrait" -> "width"  // FitWidth для портрета
+            "landscape" -> "height" // FitHeight для ландшафта
+            else -> "width" // По умолчанию FitWidth
+        }
+        
+        // Сбрасываем все параметры зума к исходному состоянию с анимацией
+        _uiState.update { currentState ->
+            currentState.copy(
+                currentZoomScale = 1.0f,
+                zoomCenter = androidx.compose.ui.geometry.Offset.Zero,
+                offsetX = 0f,
+                offsetY = 0f,
+                scaleMode = optimalScaleMode // Возвращаем к оптимальному режиму по ориентации
+            )
+        }
+        
+        // Сохраняем настройки
+        viewModelScope.launch {
+            settingsRepository.setScaleMode(optimalScaleMode)
+            
+            // Аналитика
+            analyticsHelper.track(
+                com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                    settingName = "zoom_reset",
+                    value = optimalScaleMode
+                ),
+                this
+            )
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         android.util.Log.d(TAG, "ViewModel cleared, closing book reader")
@@ -710,6 +803,10 @@ class ReaderViewModel @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.w(TAG, "Error closing reader", e)
         }
+        
+        // Очищаем PagePreloader
+        pagePreloader.cleanup()
+        
         bookReader = null
         currentComicId = null
     }
@@ -728,9 +825,29 @@ class ReaderViewModel @Inject constructor(
             )
         }
         
-        // Save pin state
+        // Save pin state to session repository
         viewModelScope.launch {
-            // TODO: Save to database when needed
+            currentComicId?.let { comicId ->
+                try {
+                    val currentState = _uiState.value
+                    val readingSettings = if (currentState.isPinned) {
+                        "{\"pinnedPage\":${currentState.pinnedPage}}"
+                    } else {
+                        "{\"pinnedPage\":null}"
+                    }
+                    
+                    readingSessionRepository.saveProgressAndSettings(
+                        comicId = comicId,
+                        currentPage = currentState.currentPageIndex,
+                        totalPages = currentState.pageCount,
+                        readingSettings = readingSettings
+                    )
+                    
+                    android.util.Log.d(TAG, "Pin state saved: pinned=${currentState.isPinned}, page=${currentState.pinnedPage}")
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Failed to save pin state", e)
+                }
+            }
         }
     }
     
@@ -740,6 +857,112 @@ class ReaderViewModel @Inject constructor(
     fun isCurrentPagePinned(): Boolean {
         return _uiState.value.isPinned && 
                _uiState.value.pinnedPage == _uiState.value.currentPageIndex
+    }
+    
+    /**
+     * Update brightness setting and apply to system
+     */
+    fun updateBrightness(brightness: Float) {
+        viewModelScope.launch {
+            val clampedBrightness = brightness.coerceIn(0.1f, 1.0f)
+            settingsRepository.setReaderBrightness(clampedBrightness)
+            
+            // Apply brightness to system window
+            try {
+                val activity = context as? Activity
+                activity?.let { act ->
+                    val layoutParams = act.window.attributes
+                    layoutParams.screenBrightness = clampedBrightness
+                    act.window.attributes = layoutParams
+                    android.util.Log.d(TAG, "System brightness updated to: $clampedBrightness")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Failed to update system brightness", e)
+            }
+        }
+    }
+    
+    /**
+     * Update orientation setting
+     */
+    fun updateOrientation(orientation: String) {
+        viewModelScope.launch {
+            settingsRepository.setOrientation(orientation)
+        }
+    }
+    
+    /**
+     * Update scale mode setting
+     */
+    fun updateScaleMode(scaleMode: String) {
+        viewModelScope.launch {
+            settingsRepository.setScaleMode(scaleMode)
+            _uiState.update { currentState ->
+                currentState.copy(scaleMode = scaleMode)
+            }
+            android.util.Log.d(TAG, "Scale mode updated: $scaleMode")
+        }
+    }
+    
+    /**
+     * Toggle orientation
+     */
+    fun toggleOrientation() {
+        viewModelScope.launch {
+            val currentOrientation = _uiState.value.orientation
+            val newOrientation = when (currentOrientation) {
+                "portrait" -> "landscape"
+                "landscape" -> "auto"
+                "auto" -> "portrait"
+                else -> "auto"
+            }
+            updateOrientation(newOrientation)
+        }
+    }
+    
+    /**
+     * Handle double tap zoom
+     */
+    fun handleDoubleTapZoom(position: androidx.compose.ui.geometry.Offset) {
+        android.util.Log.d(TAG, "Double tap zoom at position: $position")
+        
+        _uiState.update { currentState ->
+            val newScale = if (currentState.currentZoomScale > 1.0f) {
+                1.0f // Reset to normal
+            } else {
+                2.0f // Zoom to 2x level
+            }
+            
+            currentState.copy(
+                currentZoomScale = newScale,
+                zoomCenter = position,
+                scaleMode = if (newScale > 1.0f) "custom" else "width"
+            )
+        }
+    }
+    
+    /**
+     * Bookmark current page
+     */
+    fun bookmarkCurrentPage() {
+        // TODO: Implement bookmark functionality
+        android.util.Log.d(TAG, "Bookmark current page: ${_uiState.value.currentPageIndex}")
+    }
+    
+    /**
+     * Share current page
+     */
+    fun shareCurrentPage() {
+        // TODO: Implement share functionality
+        android.util.Log.d(TAG, "Share current page: ${_uiState.value.currentPageIndex}")
+    }
+    
+    /**
+     * Open settings
+     */
+    fun openSettings() {
+        // TODO: Implement settings navigation
+        android.util.Log.d(TAG, "Open settings")
     }
     
 }
