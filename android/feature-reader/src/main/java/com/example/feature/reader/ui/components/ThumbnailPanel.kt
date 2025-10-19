@@ -25,7 +25,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Thumbnail panel with horizontal LazyRow
- * Optimized for 500+ pages with lazy loading
+ * Optimized for 500+ pages with lazy loading and thumbnail cache
  */
 @Composable
 fun ThumbnailPanel(
@@ -34,27 +34,28 @@ fun ThumbnailPanel(
     totalPages: Int,
     onPageClick: (Int) -> Unit,
     onDismiss: () -> Unit,
-    getThumbnail: (Int) -> Bitmap?,
+    bitmapCache: com.example.core.reader.cache.BitmapCache,
+    currentUri: String?,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    
+
     // Scroll to current page when panel becomes visible
     LaunchedEffect(visible, currentPage) {
         if (visible) {
             listState.animateScrollToItem(currentPage.coerceIn(0, totalPages - 1))
         }
     }
-    
+
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(animationSpec = tween(200)) + 
+        enter = fadeIn(animationSpec = tween(200)) +
                 slideInVertically(
                     initialOffsetY = { it },
                     animationSpec = tween(200)
                 ),
-        exit = fadeOut(animationSpec = tween(200)) + 
+        exit = fadeOut(animationSpec = tween(200)) +
                slideOutVertically(
                    targetOffsetY = { it },
                    animationSpec = tween(200)
@@ -84,7 +85,7 @@ fun ThumbnailPanel(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    
+
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -93,7 +94,7 @@ fun ThumbnailPanel(
                         )
                     }
                 }
-                
+
                 // Thumbnail list
                 LazyRow(
                     state = listState,
@@ -108,7 +109,8 @@ fun ThumbnailPanel(
                         ThumbnailItem(
                             pageIndex = pageIndex,
                             isCurrentPage = pageIndex == currentPage,
-                            thumbnail = getThumbnail(pageIndex),
+                            bitmapCache = bitmapCache,
+                            currentUri = currentUri ?: "",
                             onClick = { onPageClick(pageIndex) }
                         )
                     }
@@ -125,10 +127,26 @@ fun ThumbnailPanel(
 private fun ThumbnailItem(
     pageIndex: Int,
     isCurrentPage: Boolean,
-    thumbnail: Bitmap?,
+    bitmapCache: com.example.core.reader.cache.BitmapCache,
+    currentUri: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    // Загружаем миниатюру асинхронно из кэша
+    LaunchedEffect(pageIndex, currentUri) {
+        val thumbnailKey = bitmapCache.createThumbnailKey(currentUri, pageIndex)
+        thumbnail = bitmapCache.getThumbnail(thumbnailKey)
+
+        // Если миниатюры нет в кэше, запускаем предзагрузку
+        if (thumbnail == null) {
+            // Запрос на предзагрузку миниатюры можно добавить здесь
+            // Для простоты показываем placeholder пока не загрузится
+        }
+    }
+
     Column(
         modifier = modifier
             .width(80.dp)
@@ -156,7 +174,7 @@ private fun ThumbnailItem(
         ) {
             if (thumbnail != null) {
                 Image(
-                    bitmap = thumbnail.asImageBitmap(),
+                    bitmap = thumbnail!!.asImageBitmap(),
                     contentDescription = "Page ${pageIndex + 1}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
@@ -168,9 +186,9 @@ private fun ThumbnailItem(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(4.dp))
-        
+
         // Page number
         Text(
             text = "${pageIndex + 1}",

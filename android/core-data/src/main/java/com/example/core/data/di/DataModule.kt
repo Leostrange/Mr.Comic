@@ -9,6 +9,7 @@ import com.example.core.data.repository.UserRepository
 import com.example.core.data.repository.UserRepositoryImpl
 import com.example.core.data.repository.WhisperRepository
 import com.example.core.data.repository.WhisperRepositoryImpl
+import com.example.core.data.reader.ReadingModeDetector
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -46,5 +47,11 @@ object DataProvidersModule {
 	@Singleton
 	fun provideLocalResourcesRepository(@ApplicationContext context: Context): LocalResourcesRepository {
 		return LocalResourcesRepositoryImpl(context)
+	}
+	
+	@Provides
+	@Singleton
+	fun provideReadingModeDetector(): ReadingModeDetector {
+		return ReadingModeDetector()
 	}
 }

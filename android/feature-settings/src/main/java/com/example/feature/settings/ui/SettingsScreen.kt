@@ -44,6 +44,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.example.feature.settings.ui.components.BackupProgressDialog
+import com.example.feature.settings.ui.components.RestoreBackupDialog
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -53,6 +59,10 @@ import com.example.core.model.LocalDictionary
 import com.example.core.model.LocalModel
 import com.example.core.ui.theme.ThemeMode
 import com.example.core.ui.theme.ReaderThemeMode
+import com.example.feature.settings.ui.sections.ReaderCustomizationSection
+import com.example.feature.settings.ui.sections.ImageQualitySection
+import com.example.feature.settings.ui.sections.GestureSettingsSection
+import com.example.feature.settings.ui.sections.NotificationSettingsSection
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +71,13 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    
+        // Состояние для диалогов бэкапа
+        var showBackupProgress by remember { mutableStateOf(false) }
+        var showRestoreDialog by remember { mutableStateOf(false) }
+        var backupProgress by remember { mutableStateOf(0f) }
+        var backupMessage by remember { mutableStateOf("") }
+        var backupStatus by remember { mutableStateOf("IDLE") }
 
     Scaffold(topBar = { 
         TopAppBar(
@@ -293,15 +310,130 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
 
+            // Reader Customization Section
+            ReaderCustomizationSection(
+                readerTapZonesSize = uiState.readerTapZonesSize,
+                readerTapZonesSensitivity = uiState.readerTapZonesSensitivity,
+                readerShowPageIndicator = uiState.readerShowPageIndicator,
+                readerShowProgressBar = uiState.readerShowProgressBar,
+                readerAutoHideUI = uiState.readerAutoHideUI,
+                readerAutoHideDelay = uiState.readerAutoHideDelay,
+                readerGestureSensitivity = uiState.readerGestureSensitivity,
+                readerVibrationFeedback = uiState.readerVibrationFeedback,
+                onTapZonesSizeChanged = viewModel::onReaderTapZonesSizeChanged,
+                onTapZonesSensitivityChanged = viewModel::onReaderTapZonesSensitivityChanged,
+                onShowPageIndicatorChanged = viewModel::onReaderShowPageIndicatorChanged,
+                onShowProgressBarChanged = viewModel::onReaderShowProgressBarChanged,
+                onAutoHideUIChanged = viewModel::onReaderAutoHideUIChanged,
+                onAutoHideDelayChanged = viewModel::onReaderAutoHideDelayChanged,
+                onGestureSensitivityChanged = viewModel::onReaderGestureSensitivityChanged,
+                onVibrationFeedbackChanged = viewModel::onReaderVibrationFeedbackChanged
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Image Quality Section
+            ImageQualitySection(
+                imageQuality = uiState.imageQuality,
+                imageRenderDpi = uiState.imageRenderDpi,
+                imageCacheSize = uiState.imageCacheSize,
+                imagePreloadPages = uiState.imagePreloadPages,
+                imageCompressionLevel = uiState.imageCompressionLevel,
+                onImageQualityChanged = viewModel::onImageQualityChanged,
+                onImageRenderDpiChanged = viewModel::onImageRenderDpiChanged,
+                onImageCacheSizeChanged = viewModel::onImageCacheSizeChanged,
+                onImagePreloadPagesChanged = viewModel::onImagePreloadPagesChanged,
+                onImageCompressionLevelChanged = viewModel::onImageCompressionLevelChanged
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Gesture Settings Section
+            GestureSettingsSection(
+                gestureSwipeThreshold = uiState.gestureSwipeThreshold,
+                gestureZoomSensitivity = uiState.gestureZoomSensitivity,
+                gesturePanSensitivity = uiState.gesturePanSensitivity,
+                navigationSwipeEnabled = uiState.navigationSwipeEnabled,
+                navigationTapZonesEnabled = uiState.navigationTapZonesEnabled,
+                navigationKeyboardShortcuts = uiState.navigationKeyboardShortcuts,
+                onGestureSwipeThresholdChanged = viewModel::onGestureSwipeThresholdChanged,
+                onGestureZoomSensitivityChanged = viewModel::onGestureZoomSensitivityChanged,
+                onGesturePanSensitivityChanged = viewModel::onGesturePanSensitivityChanged,
+                onNavigationSwipeEnabledChanged = viewModel::onNavigationSwipeEnabledChanged,
+                onNavigationTapZonesEnabledChanged = viewModel::onNavigationTapZonesEnabledChanged,
+                onNavigationKeyboardShortcutsChanged = viewModel::onNavigationKeyboardShortcutsChanged
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Notification Settings Section
+            NotificationSettingsSection(
+                soundPageTurn = uiState.soundPageTurn,
+                soundVolume = uiState.soundVolume,
+                vibrationPageTurn = uiState.vibrationPageTurn,
+                vibrationIntensity = uiState.vibrationIntensity,
+                notificationProgress = uiState.notificationProgress,
+                onSoundPageTurnChanged = viewModel::onSoundPageTurnChanged,
+                onSoundVolumeChanged = viewModel::onSoundVolumeChanged,
+                onVibrationPageTurnChanged = viewModel::onVibrationPageTurnChanged,
+                onVibrationIntensityChanged = viewModel::onVibrationIntensityChanged,
+                onNotificationProgressChanged = viewModel::onNotificationProgressChanged
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Storage and Backup Section
             StorageSection(
-                onCreateLocalBackup = viewModel::createLocalBackup,
-                onRestoreLocalBackup = viewModel::restoreLocalBackup,
-                onCreateCloudBackup = viewModel::createCloudBackup,
-                onRestoreCloudBackup = viewModel::restoreCloudBackup,
+                    onCreateLocalBackup = {
+                        showBackupProgress = true
+                        backupStatus = "SYNCING"
+                        backupMessage = "Создание резервной копии..."
+                        viewModel.createLocalBackup()
+                    },
+                onRestoreLocalBackup = {
+                    showRestoreDialog = true
+                },
+                onCreateCloudBackup = {
+                    showBackupProgress = true
+                    backupStatus = "SYNCING"
+                    backupMessage = "Синхронизация с облаком..."
+                    viewModel.createCloudBackup()
+                },
+                onRestoreCloudBackup = {
+                    showRestoreDialog = true
+                },
                 onChangeAppIcon = onAppIconSettingsClick
             )
         }
+        
+        // Диалоги бэкапа
+        BackupProgressDialog(
+            isVisible = showBackupProgress,
+            syncStatus = backupStatus,
+            progress = backupProgress,
+            message = backupMessage,
+                onDismiss = {
+                    showBackupProgress = false
+                    backupStatus = "IDLE"
+                }
+        )
+        
+        RestoreBackupDialog(
+            isVisible = showRestoreDialog,
+            availableBackups = listOf("backup_1.zip", "backup_2.zip"), // TODO: получить реальные бэкапы
+                onSelectBackup = { backup ->
+                    showRestoreDialog = false
+                    showBackupProgress = true
+                    backupStatus = "SYNCING"
+                    backupMessage = "Восстановление из $backup..."
+                    viewModel.restoreLocalBackup()
+                },
+            onDismiss = {
+                showRestoreDialog = false
+            }
+        )
     }
 }
 

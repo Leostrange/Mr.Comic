@@ -30,12 +30,20 @@ fun ReaderTapZones(
     onOpenSideBar: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    // Settings
+    tapZonesSize: Float = 1.0f,
+    tapZonesSensitivity: Float = 1.0f,
+    navigationTapZonesEnabled: Boolean = true,
 ) {
     val density = LocalDensity.current
-    val sideWidthDp = 72.dp
-    val cornerSizeDp = 72.dp
-    val sideHeightRatio = 0.56f
-    val sideWidthPercent = 0.08f // 8% ширины для боковых зон
+    // Применяем настройки размера и чувствительности
+    val sideWidthDp = (120.dp * tapZonesSize) // Применяем настройку размера
+    val cornerSizeDp = (120.dp * tapZonesSize) // Применяем настройку размера
+    val sideHeightRatio = 0.7f * tapZonesSize // Применяем настройку размера
+    val sideWidthPercent = 0.15f * tapZonesSize // Применяем настройку размера
+    
+    // Применяем настройку чувствительности к порогам
+    val sensitivityMultiplier = tapZonesSensitivity
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val w = constraints.maxWidth.toFloat()

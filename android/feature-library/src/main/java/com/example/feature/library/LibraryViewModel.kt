@@ -1,5 +1,6 @@
 package com.example.feature.library
 
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.data.cover.CoverService
@@ -536,25 +537,52 @@ class LibraryViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isLoading = true) }
                 
+                // Сканирование папки через DocumentFile API
                 android.util.Log.d("LibraryViewModel", "Scanning directory: $uri")
                 
-                // Для Android 11+ используем DocumentFile для работы с SAF
-                // Пока просто логируем и показываем сообщение
-                android.util.Log.d("LibraryViewModel", "Directory scanning will be implemented with DocumentFile API")
-                
-                // TODO: Реализовать сканирование через DocumentFile API
-                // val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, uri)
-                // documentFile?.listFiles()?.forEach { file ->
-                //     if (file.isFile && file.name?.matches(Regex(".*\\.(cbz|cbr|pdf)$", RegexOption.IGNORE_CASE)) == true) {
-                //         addComicFromUri(file.uri)
-                //     }
-                // }
-                
-                _uiState.update { 
-                    it.copy(
-                        isLoading = false,
-                        error = "Сканирование папок будет реализовано в следующей версии. Пока используйте добавление отдельных файлов."
-                    )
+                val documentFile = DocumentFile.fromTreeUri(context, uri)
+                if (documentFile != null && documentFile.isDirectory) {
+                    var addedCount = 0
+                    var errorCount = 0
+                    
+                    val files = documentFile.listFiles()
+                    for (file in files) {
+                        if (file.isFile) {
+                            val fileName = file.name ?: ""
+                            val isComicFile = fileName.matches(Regex(".*\\.(cbz|cbr|pdf|zip|rar)$", RegexOption.IGNORE_CASE))
+                            
+                            if (isComicFile) {
+                                try {
+                                    addComicFromUri(file.uri)
+                                    addedCount++
+                                    android.util.Log.d("LibraryViewModel", "Added: $fileName")
+                                } catch (e: Exception) {
+                                    errorCount++
+                                    android.util.Log.e("LibraryViewModel", "Failed to add: $fileName", e)
+                                }
+                            }
+                        }
+                    }
+                    
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = if (errorCount > 0) {
+                                "Добавлено: $addedCount, ошибок: $errorCount"
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                    
+                    android.util.Log.d("LibraryViewModel", "Scan complete: added=$addedCount, errors=$errorCount")
+                } else {
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            error = "Не удалось открыть папку"
+                        )
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LibraryViewModel", "Error scanning directory", e)

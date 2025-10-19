@@ -11,6 +11,10 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.with
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -19,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -53,6 +58,9 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.min
 import kotlin.math.max
 import androidx.compose.ui.unit.IntSize
+import com.example.core.ui.FullscreenHandler
+import com.example.core.ui.rememberSystemUiManager
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 
 // Temporarily disabled telephoto zoomable due to dependency issues
@@ -67,14 +75,15 @@ import androidx.compose.foundation.layout.Arrangement
 import com.example.feature.reader.ui.gestures.*
 import com.example.feature.reader.ui.components.*
 import com.example.feature.reader.ui.ThumbnailProvider
+import com.example.core.reader.cache.BitmapCache
 
 /**
  * Безопасное ограничение значения в диапазоне
  * Предотвращает краш при инверсии границ (min > max)
  */
-private fun clamp(value: Float, min: Float, max: Float): Float {
-    val actualMin = min(min, max)
-    val actualMax = max(min, max)
+private fun clamp(value: Float, minValue: Float, maxValue: Float): Float {
+    val actualMin = min(minValue, maxValue)
+    val actualMax = max(minValue, maxValue)
     return value.coerceIn(actualMin, actualMax)
 }
 
@@ -84,15 +93,73 @@ private fun clamp(value: Float, min: Float, max: Float): Float {
  * The URI is automatically received from navigation via SavedStateHandle.
  *
  * @param viewModel The ViewModel responsible for the reader logic.
+ * @param onNavigateBack Callback when back button is pressed
  */
 @Composable
 fun ReaderScreen(
-    viewModel: ReaderViewModel = hiltViewModel()
+    viewModel: ReaderViewModel = hiltViewModel(),
+    onNavigateBack: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val bgColor by viewModel.background.collectAsState()
     val context = LocalContext.current
     val activity = context as? Activity
+    
+    // System UI Manager для полноэкранного режима
+    val systemUiManager = rememberSystemUiManager()
+    
+    // Settings
+    val readerTapZonesSize by viewModel.readerTapZonesSize.collectAsState()
+    val readerTapZonesSensitivity by viewModel.readerTapZonesSensitivity.collectAsState()
+    val readerShowPageIndicator by viewModel.readerShowPageIndicator.collectAsState()
+    val readerShowProgressBar by viewModel.readerShowProgressBar.collectAsState()
+    val readerAutoHideUI by viewModel.readerAutoHideUI.collectAsState()
+    val readerAutoHideDelay by viewModel.readerAutoHideDelay.collectAsState()
+    val readerGestureSensitivity by viewModel.readerGestureSensitivity.collectAsState()
+    val readerVibrationFeedback by viewModel.readerVibrationFeedback.collectAsState()
+    val navigationTapZonesEnabled by viewModel.navigationTapZonesEnabled.collectAsState()
+    val navigationSwipeEnabled by viewModel.navigationSwipeEnabled.collectAsState()
+    val gestureSwipeThreshold by viewModel.gestureSwipeThreshold.collectAsState()
+    val gestureZoomSensitivity by viewModel.gestureZoomSensitivity.collectAsState()
+    val gesturePanSensitivity by viewModel.gesturePanSensitivity.collectAsState()
+    val imageRenderDpi by viewModel.imageRenderDpi.collectAsState()
+    val imagePreloadPages by viewModel.imagePreloadPages.collectAsState()
+    val soundPageTurn by viewModel.soundPageTurn.collectAsState()
+    val vibrationPageTurn by viewModel.vibrationPageTurn.collectAsState()
+    
+    // UI Controller для управления панелями с автоскрытием
+    val uiController = rememberUIController(
+        autoHideDelayMs = readerAutoHideDelay.toLong(),
+        autoHideEnabled = readerAutoHideUI
+    )
+    
+    // Создаем объект настроек для передачи в функции
+    val readerSettings = ReaderSettings(
+        readerTapZonesSize = readerTapZonesSize,
+        readerTapZonesSensitivity = readerTapZonesSensitivity,
+        readerShowPageIndicator = readerShowPageIndicator,
+        readerShowProgressBar = readerShowProgressBar,
+        readerAutoHideUI = readerAutoHideUI,
+        readerAutoHideDelay = readerAutoHideDelay,
+        readerGestureSensitivity = readerGestureSensitivity,
+        readerVibrationFeedback = readerVibrationFeedback,
+        imageQuality = "high", // TODO: добавить в ViewModel
+        imageRenderDpi = imageRenderDpi,
+        imageCacheSize = 100, // TODO: добавить в ViewModel
+        imagePreloadPages = imagePreloadPages,
+        imageCompressionLevel = 80, // TODO: добавить в ViewModel
+        gestureSwipeThreshold = gestureSwipeThreshold,
+        gestureZoomSensitivity = gestureZoomSensitivity,
+        gesturePanSensitivity = gesturePanSensitivity,
+        navigationSwipeEnabled = navigationSwipeEnabled,
+        navigationTapZonesEnabled = navigationTapZonesEnabled,
+        navigationKeyboardShortcuts = true, // TODO: добавить в ViewModel
+        soundPageTurn = soundPageTurn,
+        soundVolume = 0.5f, // TODO: добавить в ViewModel
+        vibrationPageTurn = vibrationPageTurn,
+        vibrationIntensity = 0.5f, // TODO: добавить в ViewModel
+        notificationProgress = true // TODO: добавить в ViewModel
+    )
     
     // Panel visibility states (left panel removed)
     var showTopPanel by remember { mutableStateOf(false) }
@@ -102,6 +169,17 @@ fun ReaderScreen(
     
     // Check if any panel is open
     val anyPanelOpen = showTopPanel || showRightPanel || showThumbnailPanel
+    
+    // Handle back button press
+    androidx.activity.compose.BackHandler(enabled = true) {
+        if (anyPanelOpen) {
+            // Close panels first
+            uiController.hideAll()
+        } else {
+            // Navigate back to library
+            onNavigateBack()
+        }
+    }
     
     // Zoom and pan states
     var scale by remember { mutableFloatStateOf(1.0f) }
@@ -119,6 +197,14 @@ fun ReaderScreen(
         }
     }
 
+    // Save progress when leaving reader
+    DisposableEffect(Unit) {
+        onDispose {
+            // Save current reading progress before leaving
+            viewModel.saveCurrentProgress()
+        }
+    }
+    
     DisposableEffect(uiState.orientation) {
         val previousOrientation = activity?.requestedOrientation
         val newOrientation = when (uiState.orientation) {
@@ -153,7 +239,12 @@ fun ReaderScreen(
         onShare = viewModel::shareCurrentPage,
         onSettings = viewModel::openSettings,
         onDoubleTapZoom = viewModel::handleDoubleTapZoom,
-        backgroundColor = Color(bgColor)
+        backgroundColor = Color(bgColor),
+        bitmapCache = viewModel.bitmapCache,
+        currentComicUri = uiState.currentComicUri,
+        readerSettings = readerSettings,
+        uiController = uiController,
+        systemUiManager = systemUiManager
     )
 }
 
@@ -184,25 +275,29 @@ private fun ReaderScreenContent(
     onShare: () -> Unit,
     onSettings: () -> Unit,
     onDoubleTapZoom: (androidx.compose.ui.geometry.Offset) -> Unit,
-    backgroundColor: Color
+    backgroundColor: Color,
+    bitmapCache: BitmapCache,
+    currentComicUri: String?,
+    readerSettings: ReaderSettings,
+    uiController: UIController,
+    systemUiManager: com.example.core.ui.SystemUiManager
 ) {
     val contentScale = remember(uiState.scaleMode) {
         when (uiState.scaleMode) {
-            "width" -> ContentScale.FillWidth
-            "height" -> ContentScale.FillHeight
-            "fit" -> ContentScale.Fit
-            "fill" -> ContentScale.Crop // Fill режим - обрезает изображение
+            "width" -> ContentScale.FillWidth // Растягивание по ширине
+            "height" -> ContentScale.FillHeight // Растягивание по высоте
+            "fit" -> ContentScale.Fit // Вписывание в экран с сохранением пропорций
+            "fill" -> ContentScale.Crop // Заполнение экрана с обрезкой
             "custom" -> ContentScale.Fit
             else -> ContentScale.FillWidth
         }
     }
     
-    // Panel visibility states (left panel removed)
-    var showPageIndicator by remember { mutableStateOf(false) }
-    var showTopPanel by remember { mutableStateOf(false) }
-    var showRightPanel by remember { mutableStateOf(false) }
-    var showThumbnailPanel by remember { mutableStateOf(false) }
-    var isPinned by remember { mutableStateOf(false) }
+    // Используем UIController для управления панелями
+    val uiVisible by uiController.uiVisible.collectAsState()
+    val showTopPanel by uiController.topPanelVisible.collectAsState()
+    val showRightPanel by uiController.rightPanelVisible.collectAsState()
+    val showThumbnailPanel by uiController.thumbnailPanelVisible.collectAsState()
     
     // Screen size for gesture handling
     val configuration = LocalConfiguration.current
@@ -213,6 +308,14 @@ private fun ReaderScreenContent(
         )
     }
 
+    // FullscreenHandler для управления системными барами
+    FullscreenHandler(
+        isFullscreen = !uiVisible,
+        onSystemBarsVisibilityChanged = { isVisible ->
+            // Логика обработки изменения видимости системных баров
+        }
+    )
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -245,11 +348,10 @@ private fun ReaderScreenContent(
                         onNextPage = onNextPage,
                         onPreviousPage = onPreviousPage,
                         contentScale = contentScale,
-                        onShowPageIndicator = { showPageIndicator = true },
-                        onShowTopPanel = { showTopPanel = true },
+                        onShowTopPanel = { uiController.showTopPanel() },
                         // Left panel removed
-                        onShowRightPanel = { showRightPanel = true },
-                        onShowThumbnailPanel = { showThumbnailPanel = true },
+                        onShowRightPanel = { uiController.showRightPanel() },
+                        onShowThumbnailPanel = { uiController.showThumbnailPanel() },
                         onCycleZoom = onCycleZoom,
                         onZoom = onZoom,
                         onToggleOrientation = onToggleOrientation,
@@ -262,29 +364,124 @@ private fun ReaderScreenContent(
                             // This will be handled in the gesture action
                         },
                         onCloseAllPanels = {
-                            showTopPanel = false
-                            showRightPanel = false
-                            showThumbnailPanel = false
-                        }
+                            uiController.hideAll()
+                        },
+                        readerSettings = readerSettings
                     )
-                    ReadingMode.WEBTOON -> WebtoonReader(uiState)
+                        ReadingMode.WEBTOON -> OptimizedWebtoonLazyColumn(
+                            uiState = uiState,
+                            onNextPage = onNextPage,
+                            onPreviousPage = onPreviousPage,
+                            onShowTopPanel = { uiController.showTopPanel() },
+                            onShowRightPanel = { uiController.showRightPanel() },
+                            onShowThumbnailPanel = { uiController.showThumbnailPanel() },
+                            readerSettings = readerSettings
+                        )
                 }
                 
-                // Page Indicator (bottom-right)
-                // ✅ [PAGE-INDICATOR-11]: компонент интегрирован и связан с session repo
-                PageIndicator(
+                // Persistent Page Indicator (bottom-right)
+                // ✅ [PAGE-INDICATOR-11]: постоянный индикатор согласно тасклисту
+                PersistentPageIndicator(
                     currentPage = uiState.currentPageIndex + 1,
                     totalPages = uiState.pageCount,
-                    isPinned = isPinned,
-                    visible = true, // Постоянный индикатор согласно тасклисту
-                    onPinToggle = { 
-                        isPinned = !isPinned
-                        onTogglePin()
-                    },
+                    backgroundColor = Color.Black.copy(alpha = 0.5f),
                     modifier = Modifier.align(Alignment.BottomEnd)
                 )
                 
-                // Scrim layer for closing panels
+                // ✅ [PANELS-13]: TopSettingsPanel и SideQuickPanel реализованы
+                // Top Settings Panel (поверх основного контента)
+                if (showTopPanel) {
+                    TopSettingsPanel(
+                        visible = true,
+                        onDismiss = { 
+                            uiController.hideAll()
+                        },
+                        onBrightnessChange = onUpdateBrightness,
+                        onBrightnessModeChange = { mode ->
+                    // TODO: Implement brightness mode change
+                },
+                        onOrientationChange = onUpdateOrientation,
+                        onScaleModeChange = onUpdateScaleMode,
+                        onReadingModeChange = { mode ->
+                            val readingMode = when (mode) {
+                                "webtoon" -> ReadingMode.WEBTOON
+                                else -> ReadingMode.PAGE
+                            }
+                            onSetReadingMode(readingMode)
+                        },
+                        onResetZoom = onResetZoom,
+                        currentBrightness = uiState.readerBrightness,
+                        currentBrightnessMode = uiState.readerBrightnessMode,
+                        currentOrientation = uiState.orientation,
+                        currentScaleMode = uiState.scaleMode,
+                        currentReadingMode = when (uiState.readingMode) {
+                            ReadingMode.WEBTOON -> "webtoon"
+                            ReadingMode.PAGE -> "page"
+                        },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .zIndex(10f) // Высокий z-index для отображения поверх всего
+                    )
+                }
+                
+        // Мониторинг памяти (только в debug режиме)
+        // if (BuildConfig.DEBUG) {
+        //     MemoryMonitor(
+        //         isVisible = true,
+        //         modifier = Modifier
+        //             .align(Alignment.TopEnd)
+        //             .padding(8.dp)
+        //     )
+        // }
+                
+                // Left Quick Panel removed - only edge tap zones remain
+                
+                // Right Page List Panel
+                if (showRightPanel) {
+                    PageListPanel(
+                        visible = true,
+                        currentPage = uiState.currentPageIndex,
+                        totalPages = uiState.pageCount,
+                        onPageClick = { pageIndex ->
+                            onLoadPage(pageIndex)
+                            uiController.hideAll()
+                        },
+                        onDismiss = { 
+                            uiController.hideAll()
+                        },
+                        getThumbnail = { pageIndex ->
+                            uiState.bitmaps[pageIndex]
+                        },
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .zIndex(10f) // Высокий z-index для отображения поверх всего
+                    )
+                }
+                
+                // ✅ [THUMBS-14]: панель миниатюр и lazy-кэш добавлены
+                // Thumbnail Panel (bottom) - теперь использует кэш миниатюр
+                if (showThumbnailPanel) {
+                    ThumbnailPanel(
+                        visible = true,
+                        currentPage = uiState.currentPageIndex,
+                        totalPages = uiState.pageCount,
+                        onPageClick = { pageIndex ->
+                            // Navigate to selected page
+                            onLoadPage(pageIndex)
+                            uiController.hideAll()
+                        },
+                        onDismiss = {
+                            uiController.hideAll()
+                        },
+                        bitmapCache = bitmapCache,
+                        currentUri = currentComicUri,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .zIndex(10f) // Высокий z-index для отображения поверх всего
+                    )
+                }
+                
+                // Scrim layer for closing panels (поверх основного контента, под панелями)
                 if (showTopPanel || showRightPanel || showThumbnailPanel) {
                     Box(
                         modifier = Modifier
@@ -293,121 +490,81 @@ private fun ReaderScreenContent(
                             .pointerInput(Unit) {
                                 detectTapGestures {
                                     // Close all panels on tap
-                                    showTopPanel = false
-                                    showRightPanel = false
-                                    showThumbnailPanel = false
+                                    uiController.hideAll()
                                 }
                             }
                     )
                 }
                 
-                // ✅ [PANELS-13]: TopSettingsPanel и SideQuickPanel реализованы
-                // Top Settings Panel
-                TopSettingsPanel(
-                    visible = showTopPanel,
-                    onDismiss = { 
-                        showTopPanel = false
-                        showRightPanel = false
-                        showThumbnailPanel = false
-                    },
-                    onBrightnessChange = onUpdateBrightness,
-                    onOrientationChange = onUpdateOrientation,
-                    onScaleModeChange = onUpdateScaleMode,
-                    onResetZoom = onResetZoom,
-                    currentBrightness = uiState.readerBrightness,
-                    currentOrientation = uiState.orientation,
-                    currentScaleMode = uiState.scaleMode,
-                    modifier = Modifier.align(Alignment.TopCenter)
-                )
-                
-                // Left Quick Panel removed - only edge tap zones remain
-                
-                // Right Page List Panel
-                PageListPanel(
-                    visible = showRightPanel,
-                    currentPage = uiState.currentPageIndex,
-                    totalPages = uiState.pageCount,
-                    onPageClick = { pageIndex ->
-                        onLoadPage(pageIndex)
-                        showRightPanel = false
-                        showTopPanel = false
-                        // Left panel removed
-                        showThumbnailPanel = false
-                    },
-                    onDismiss = { 
-                        showRightPanel = false
-                        showTopPanel = false
-                        // Left panel removed
-                        showThumbnailPanel = false
-                    },
-                    getThumbnail = { pageIndex ->
-                        uiState.bitmaps[pageIndex]
-                    },
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                )
-                
-                // ✅ [THUMBS-14]: панель миниатюр и lazy-кэш добавлены
-                // Thumbnail Panel (bottom)
-                val thumbnailProvider = rememberThumbnailProvider()
-                ThumbnailPanel(
-                    visible = showThumbnailPanel,
-                    currentPage = uiState.currentPageIndex,
-                    totalPages = uiState.pageCount,
-                    onPageClick = { pageIndex ->
-                        // Navigate to selected page
-                        onLoadPage(pageIndex)
-                        showThumbnailPanel = false
-                        showTopPanel = false
-                        // Left panel removed
-                        showRightPanel = false
-                    },
-                    onDismiss = { 
-                        showThumbnailPanel = false
-                        showTopPanel = false
-                        // Left panel removed
-                        showRightPanel = false
-                    },
-                    getThumbnail = { pageIndex ->
-                        // Use existing bitmaps from preloader for now
-                        uiState.bitmaps[pageIndex]
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
-                
-                // ✅ [INDICATOR-11]: PageIndicator интегрирован
-                // Page Indicator (bottom-right)
-                PageIndicator(
-                    currentPage = uiState.currentPageIndex + 1,
-                    totalPages = uiState.pageCount,
-                    isPinned = uiState.isPinned,
-                    visible = showPageIndicator,
-                    onPinToggle = onTogglePin,
-                    modifier = Modifier.align(Alignment.BottomEnd)
-                )
-                
-                // Auto-hide page indicator after 1.5-2 seconds
-                LaunchedEffect(showPageIndicator) {
-                    if (showPageIndicator) {
-                        delay(1500) // 1.5 секунды согласно тасклисту
-                        showPageIndicator = false
-                    }
-                }
-                
-                // Оверлей яркости (zIndex 5)
-                BrightnessOverlay(
-                    brightness = uiState.readerBrightness,
-                    modifier = Modifier.fillMaxSize()
-                )
-                
                 // Новые хит-зоны согласно тасклисту (только когда панели закрыты)
                 ReaderTapZones(
                     panelsOpen = showTopPanel || showRightPanel || showThumbnailPanel,
-                    onOpenTopBar = { showTopPanel = true },
-                    onOpenSideBar = { showRightPanel = true },
-                    onPrev = onPreviousPage,
-                    onNext = onNextPage,
+                    onOpenTopBar = { uiController.showTopPanel() },
+                    onOpenSideBar = { uiController.showRightPanel() },
+                    onPrev = { 
+                        uiController.onUserInteraction()
+                        onPreviousPage() 
+                    },
+                    onNext = { 
+                        uiController.onUserInteraction()
+                        onNextPage() 
+                    },
+                    tapZonesSize = readerSettings.readerTapZonesSize,
+                    tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
+                    navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
                     modifier = Modifier.fillMaxSize()
                 )
+                
+                // Оверлей яркости (самый верхний уровень для предотвращения скачков)
+                BrightnessOverlay(
+                    brightness = uiState.readerBrightness,
+                    brightnessMode = uiState.readerBrightnessMode,
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                // Основной контент ридера
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    // Show content with gesture handling
+                    when (uiState.readingMode) {
+                        ReadingMode.PAGE -> PagedReaderWithGestures(
+                            uiState = uiState,
+                            screenSize = screenSize,
+                            onNextPage = onNextPage,
+                            onPreviousPage = onPreviousPage,
+                            contentScale = contentScale,
+                            onShowTopPanel = { uiController.showTopPanel() },
+                            // Left panel removed
+                            onShowRightPanel = { uiController.showRightPanel() },
+                            onShowThumbnailPanel = { uiController.showThumbnailPanel() },
+                            onCycleZoom = onCycleZoom,
+                            onZoom = onZoom,
+                            onToggleOrientation = onToggleOrientation,
+                            onDoubleTapZoom = onDoubleTapZoom,
+                            showTopPanel = showTopPanel,
+                            showRightPanel = showRightPanel,
+                            showThumbnailPanel = showThumbnailPanel,
+                            onUpdateScaleMode = { scaleMode -> 
+                                // Update scale mode through viewModel
+                                // This will be handled in the gesture action
+                            },
+                            onCloseAllPanels = {
+                                uiController.hideAll()
+                            },
+                            readerSettings = readerSettings
+                        )
+                        ReadingMode.WEBTOON -> WebtoonReader(
+                            uiState = uiState,
+                            onNextPage = onNextPage,
+                            onPreviousPage = onPreviousPage,
+                            onShowTopPanel = { uiController.showTopPanel() },
+                            onShowRightPanel = { uiController.showRightPanel() },
+                            onShowThumbnailPanel = { uiController.showThumbnailPanel() }
+                        )
+                    }
+                }
             }
             else -> {
                 // Show empty state
@@ -432,7 +589,6 @@ private fun PagedReaderWithGestures(
     onNextPage: () -> Unit,
     onPreviousPage: () -> Unit,
     contentScale: ContentScale,
-    onShowPageIndicator: () -> Unit,
     onShowTopPanel: () -> Unit,
     onShowRightPanel: () -> Unit,
     onShowThumbnailPanel: () -> Unit,
@@ -444,14 +600,21 @@ private fun PagedReaderWithGestures(
     showRightPanel: Boolean,
     showThumbnailPanel: Boolean,
     onUpdateScaleMode: (String) -> Unit,
-    onCloseAllPanels: () -> Unit
+    onCloseAllPanels: () -> Unit,
+    readerSettings: ReaderSettings = ReaderSettings()
 ) {
     AnimatedContent(
         targetState = uiState,
         transitionSpec = {
             val forward = targetState.currentPageIndex > initialState.currentPageIndex
-            val slideIn = slideInHorizontally { fullWidth -> if (forward) fullWidth else -fullWidth }
-            val slideOut = slideOutHorizontally { fullWidth -> if (forward) -fullWidth else fullWidth }
+            val slideIn = slideInHorizontally(
+                initialOffsetX = { fullWidth -> if (forward) fullWidth else -fullWidth },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(150))
+            val slideOut = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> if (forward) -fullWidth else fullWidth },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(150))
             (slideIn with slideOut).using(SizeTransform(clip = false))
         },
         label = "PageSlider"
@@ -494,10 +657,8 @@ private fun PagedReaderWithGestures(
                                 if (anyPanelOpen) {
                                     // Close all panels
                                     onCloseAllPanels()
-                                } else {
-                                    // Show page indicator
-                                    onShowPageIndicator()
                                 }
+                                // Page indicator now always visible (PersistentPageIndicator)
                             }
                             is GestureAction.ToggleOrientation -> {
                                 if (!anyPanelOpen) onToggleOrientation()
@@ -615,8 +776,14 @@ private fun PagedReader(
         targetState = uiState,
         transitionSpec = {
             val forward = targetState.currentPageIndex > initialState.currentPageIndex
-            val slideIn = slideInHorizontally { fullWidth -> if (forward) fullWidth else -fullWidth }
-            val slideOut = slideOutHorizontally { fullWidth -> if (forward) -fullWidth else fullWidth }
+            val slideIn = slideInHorizontally(
+                initialOffsetX = { fullWidth -> if (forward) fullWidth else -fullWidth },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeIn(animationSpec = tween(150))
+            val slideOut = slideOutHorizontally(
+                targetOffsetX = { fullWidth -> if (forward) -fullWidth else fullWidth },
+                animationSpec = tween(250, easing = FastOutSlowInEasing)
+            ) + fadeOut(animationSpec = tween(150))
             (slideIn with slideOut).using(SizeTransform(clip = false))
         },
         label = "PageSlider"
@@ -660,21 +827,63 @@ private fun PagedReader(
 
 @Composable
 private fun WebtoonReader(
-    uiState: ReaderUiState
+    uiState: ReaderUiState,
+    onNextPage: () -> Unit,
+    onPreviousPage: () -> Unit,
+    onShowTopPanel: () -> Unit = {},
+    onShowRightPanel: () -> Unit = {},
+    onShowThumbnailPanel: () -> Unit = {},
+    readerSettings: ReaderSettings = ReaderSettings()
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        // Плавный скроллинг для webtoon режима с физикой скорости
+    val listState = rememberLazyListState()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .readerGestures(
+                screenSize = IntSize(0, 0), // Будет рассчитан автоматически
+                onGestureAction = { action ->
+                    when (action) {
+                        is GestureAction.NextPage -> onNextPage()
+                        is GestureAction.PreviousPage -> onPreviousPage()
+                        // Игнорируем остальные жесты для вебтун
+                        else -> {}
+                    }
+                }
+            )
     ) {
-        items(
-            uiState.pageCount, 
-            key = { it },
-            // Настройка для предварительной загрузки соседних страниц
-            contentType = { "webtoon_page" }
-        ) { pageIndex ->
-            WebtoonPageItem(pageIndex = pageIndex, uiState = uiState)
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            // Добавляем плавную прокрутку
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+            // Оптимизации для производительности
+            userScrollEnabled = true,
+            reverseLayout = false
+            // LazyColumn автоматически предзагружает соседние элементы
+        ) {
+            items(
+                count = uiState.pageCount,
+                key = { it },
+                contentType = { "webtoon_page" }
+            ) { pageIndex ->
+                WebtoonPageItem(pageIndex = pageIndex, uiState = uiState)
+            }
         }
+        
+        // Добавляем зоны для открытия панелей в режиме Webtoon
+        ReaderTapZones(
+            panelsOpen = false, // В Webtoon режиме панели всегда доступны
+            onOpenTopBar = onShowTopPanel,
+            onOpenSideBar = onShowRightPanel,
+            onPrev = onPreviousPage,
+            onNext = onNextPage,
+            tapZonesSize = readerSettings.readerTapZonesSize,
+            tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
+            navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -687,10 +896,15 @@ private fun WebtoonPageItem(
     val isCurrentPage = pageIndex == uiState.currentPageIndex
     val hasError = uiState.error != null && isCurrentPage
 
+    // Оптимизация: используем remember для стабильных значений
+    val contentScale = remember { ContentScale.FillWidth }
+    val backgroundColor = if (isCurrentPage) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        else Color.Transparent
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 2.dp)
+            // Убираем зазоры между страницами в режиме Webtoon
     ) {
         when {
             bitmap != null -> {
@@ -702,13 +916,16 @@ private fun WebtoonPageItem(
                     Image(
                         painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
                         contentDescription = "Page ${pageIndex + 1}",
-                        contentScale = ContentScale.FillWidth,
+                        contentScale = contentScale,
+                        // filterQuality = androidx.compose.ui.graphics.FilterQuality.High, // Высокое качество для четкости
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(
-                                if (isCurrentPage) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) 
-                                else Color.Transparent
-                            )
+                            .background(backgroundColor)
+                            // Оптимизация: отключаем клиппинг для лучшей производительности
+                            .graphicsLayer {
+                                // Используем аппаратное ускорение
+                                renderEffect = null
+                            }
                     )
                 }
             }

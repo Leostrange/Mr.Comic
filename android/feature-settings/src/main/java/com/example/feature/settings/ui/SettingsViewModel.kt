@@ -52,7 +52,35 @@ class SettingsViewModel @Inject constructor(
         settingsRepository.readerBackground,
         settingsRepository.readerBrightness,
         settingsRepository.readerAnimationSpeed,
-        settingsRepository.pageTurnSoundEnabled
+        settingsRepository.pageTurnSoundEnabled,
+        // Reader Customization Settings
+        settingsRepository.readerTapZonesSize,
+        settingsRepository.readerTapZonesSensitivity,
+        settingsRepository.readerShowPageIndicator,
+        settingsRepository.readerShowProgressBar,
+        settingsRepository.readerAutoHideUI,
+        settingsRepository.readerAutoHideDelay,
+        settingsRepository.readerGestureSensitivity,
+        settingsRepository.readerVibrationFeedback,
+        // Image Quality Settings
+        settingsRepository.imageQuality,
+        settingsRepository.imageRenderDpi,
+        settingsRepository.imageCacheSize,
+        settingsRepository.imagePreloadPages,
+        settingsRepository.imageCompressionLevel,
+        // Gesture Settings
+        settingsRepository.gestureSwipeThreshold,
+        settingsRepository.gestureZoomSensitivity,
+        settingsRepository.gesturePanSensitivity,
+        settingsRepository.navigationSwipeEnabled,
+        settingsRepository.navigationTapZonesEnabled,
+        settingsRepository.navigationKeyboardShortcuts,
+        // Notification Settings
+        settingsRepository.soundPageTurn,
+        settingsRepository.soundVolume,
+        settingsRepository.vibrationPageTurn,
+        settingsRepository.vibrationIntensity,
+        settingsRepository.notificationProgress
     ) { values ->
         val sortOrder = values[0] as SortOrder
         val folders = values[1] as Set<String>
@@ -75,6 +103,35 @@ class SettingsViewModel @Inject constructor(
         val readerBrightness = values[18] as Float
         val readerAnimationSpeed = values[19] as Float
         val pageTurnSoundEnabled = values[20] as Boolean
+        // Reader Customization Settings
+        val readerTapZonesSize = values[21] as Float
+        val readerTapZonesSensitivity = values[22] as Float
+        val readerShowPageIndicator = values[23] as Boolean
+        val readerShowProgressBar = values[24] as Boolean
+        val readerAutoHideUI = values[25] as Boolean
+        val readerAutoHideDelay = values[26] as Int
+        val readerGestureSensitivity = values[27] as Float
+        val readerVibrationFeedback = values[28] as Boolean
+        // Image Quality Settings
+        val imageQuality = values[29] as String
+        val imageRenderDpi = values[30] as Int
+        val imageCacheSize = values[31] as Int
+        val imagePreloadPages = values[32] as Int
+        val imageCompressionLevel = values[33] as Int
+        // Gesture Settings
+        val gestureSwipeThreshold = values[34] as Float
+        val gestureZoomSensitivity = values[35] as Float
+        val gesturePanSensitivity = values[36] as Float
+        val navigationSwipeEnabled = values[37] as Boolean
+        val navigationTapZonesEnabled = values[38] as Boolean
+        val navigationKeyboardShortcuts = values[39] as Boolean
+        // Notification Settings
+        val soundPageTurn = values[40] as Boolean
+        val soundVolume = values[41] as Float
+        val vibrationPageTurn = values[42] as Boolean
+        val vibrationIntensity = values[43] as Float
+        val notificationProgress = values[44] as Boolean
+        
         SettingsUiState(
             sortOrder = sortOrder,
             libraryFolders = folders,
@@ -99,7 +156,35 @@ class SettingsViewModel @Inject constructor(
             readerBackground = readerBackground,
             readerBrightness = readerBrightness,
             readerAnimationSpeed = readerAnimationSpeed,
-            pageTurnSoundEnabled = pageTurnSoundEnabled
+            pageTurnSoundEnabled = pageTurnSoundEnabled,
+            // Reader Customization Settings
+            readerTapZonesSize = readerTapZonesSize,
+            readerTapZonesSensitivity = readerTapZonesSensitivity,
+            readerShowPageIndicator = readerShowPageIndicator,
+            readerShowProgressBar = readerShowProgressBar,
+            readerAutoHideUI = readerAutoHideUI,
+            readerAutoHideDelay = readerAutoHideDelay,
+            readerGestureSensitivity = readerGestureSensitivity,
+            readerVibrationFeedback = readerVibrationFeedback,
+            // Image Quality Settings
+            imageQuality = imageQuality,
+            imageRenderDpi = imageRenderDpi,
+            imageCacheSize = imageCacheSize,
+            imagePreloadPages = imagePreloadPages,
+            imageCompressionLevel = imageCompressionLevel,
+            // Gesture Settings
+            gestureSwipeThreshold = gestureSwipeThreshold,
+            gestureZoomSensitivity = gestureZoomSensitivity,
+            gesturePanSensitivity = gesturePanSensitivity,
+            navigationSwipeEnabled = navigationSwipeEnabled,
+            navigationTapZonesEnabled = navigationTapZonesEnabled,
+            navigationKeyboardShortcuts = navigationKeyboardShortcuts,
+            // Notification Settings
+            soundPageTurn = soundPageTurn,
+            soundVolume = soundVolume,
+            vibrationPageTurn = vibrationPageTurn,
+            vibrationIntensity = vibrationIntensity,
+            notificationProgress = notificationProgress
         )
     }.stateIn(
         scope = viewModelScope,
@@ -265,5 +350,85 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.setReaderUseAmoled(readerUseAmoled)
         }
+    }
+
+    // Reader Customization Methods
+    fun onReaderTapZonesSizeChanged(size: Float) {
+        viewModelScope.launch { settingsRepository.setReaderTapZonesSize(size) }
+    }
+    fun onReaderTapZonesSensitivityChanged(sensitivity: Float) {
+        viewModelScope.launch { settingsRepository.setReaderTapZonesSensitivity(sensitivity) }
+    }
+    fun onReaderShowPageIndicatorChanged(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setReaderShowPageIndicator(show) }
+    }
+    fun onReaderShowProgressBarChanged(show: Boolean) {
+        viewModelScope.launch { settingsRepository.setReaderShowProgressBar(show) }
+    }
+    fun onReaderAutoHideUIChanged(autoHide: Boolean) {
+        viewModelScope.launch { settingsRepository.setReaderAutoHideUI(autoHide) }
+    }
+    fun onReaderAutoHideDelayChanged(delay: Int) {
+        viewModelScope.launch { settingsRepository.setReaderAutoHideDelay(delay) }
+    }
+    fun onReaderGestureSensitivityChanged(sensitivity: Float) {
+        viewModelScope.launch { settingsRepository.setReaderGestureSensitivity(sensitivity) }
+    }
+    fun onReaderVibrationFeedbackChanged(vibration: Boolean) {
+        viewModelScope.launch { settingsRepository.setReaderVibrationFeedback(vibration) }
+    }
+
+    // Image Quality Methods
+    fun onImageQualityChanged(quality: String) {
+        viewModelScope.launch { settingsRepository.setImageQuality(quality) }
+    }
+    fun onImageRenderDpiChanged(dpi: Int) {
+        viewModelScope.launch { settingsRepository.setImageRenderDpi(dpi) }
+    }
+    fun onImageCacheSizeChanged(size: Int) {
+        viewModelScope.launch { settingsRepository.setImageCacheSize(size) }
+    }
+    fun onImagePreloadPagesChanged(pages: Int) {
+        viewModelScope.launch { settingsRepository.setImagePreloadPages(pages) }
+    }
+    fun onImageCompressionLevelChanged(level: Int) {
+        viewModelScope.launch { settingsRepository.setImageCompressionLevel(level) }
+    }
+
+    // Gesture Settings Methods
+    fun onGestureSwipeThresholdChanged(threshold: Float) {
+        viewModelScope.launch { settingsRepository.setGestureSwipeThreshold(threshold) }
+    }
+    fun onGestureZoomSensitivityChanged(sensitivity: Float) {
+        viewModelScope.launch { settingsRepository.setGestureZoomSensitivity(sensitivity) }
+    }
+    fun onGesturePanSensitivityChanged(sensitivity: Float) {
+        viewModelScope.launch { settingsRepository.setGesturePanSensitivity(sensitivity) }
+    }
+    fun onNavigationSwipeEnabledChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNavigationSwipeEnabled(enabled) }
+    }
+    fun onNavigationTapZonesEnabledChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNavigationTapZonesEnabled(enabled) }
+    }
+    fun onNavigationKeyboardShortcutsChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNavigationKeyboardShortcuts(enabled) }
+    }
+
+    // Notification Settings Methods
+    fun onSoundPageTurnChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setSoundPageTurn(enabled) }
+    }
+    fun onSoundVolumeChanged(volume: Float) {
+        viewModelScope.launch { settingsRepository.setSoundVolume(volume) }
+    }
+    fun onVibrationPageTurnChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setVibrationPageTurn(enabled) }
+    }
+    fun onVibrationIntensityChanged(intensity: Float) {
+        viewModelScope.launch { settingsRepository.setVibrationIntensity(intensity) }
+    }
+    fun onNotificationProgressChanged(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setNotificationProgress(enabled) }
     }
 }

@@ -36,15 +36,7 @@ class CbrReader @Inject constructor(
     private var safeMode = false
     private var isRar = false
     
-    private val memoryCache: LruCache<String, Bitmap> by lazy {
-        val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-        val cacheSize = maxMemory / 8 // Use 1/8th of available memory for cache
-        object : LruCache<String, Bitmap>(cacheSize) {
-            override fun sizeOf(key: String, bitmap: Bitmap): Int {
-                return bitmap.byteCount / 1024
-            }
-        }
-    }
+    private val memoryManager = com.example.core.reader.utils.MemoryManager.getInstance()
     
     companion object {
         private const val TAG = "CbrReader"
@@ -151,7 +143,7 @@ class CbrReader @Inject constructor(
                     if (header[6] == 0x01.toByte()) {
                         android.util.Log.e(TAG, "❌ RAR5 format detected - not supported by junrar")
                         close()
-                        return Result.failure(UnsupportedFormatException("Формат RAR5 не поддерживается. Пожалуйста, конвертируйте файл в CBZ или используйте RAR4."))
+                        return Result.failure(UnsupportedFormatException("Формат RAR5 не поддерживается библиотекой JunRAR. Пожалуйста, конвертируйте файл в CBZ или используйте RAR4. Для поддержки RAR5 требуется обновление библиотеки."))
                     }
                     android.util.Log.d(TAG, "✅ RAR4 format detected")
                     isRar = true
@@ -165,7 +157,20 @@ class CbrReader @Inject constructor(
                 android.util.Log.w(TAG, "Could not check file format", e)
             }
             
-            archive = Archive(tempFile)
+            try {
+                archive = Archive(tempFile)
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "❌ Failed to open RAR archive", e)
+                close()
+                return when {
+                    e.message?.contains("password", ignoreCase = true) == true -> 
+                        Result.failure(UnsupportedFormatException("Архив защищен паролем. Пожалуйста, распакуйте его вручную и конвертируйте в CBZ."))
+                    e.message?.contains("corrupted", ignoreCase = true) == true -> 
+                        Result.failure(UnsupportedFormatException("Архив поврежден или имеет неподдерживаемый формат. Попробуйте пересоздать архив."))
+                    else -> 
+                        Result.failure(UnsupportedFormatException("Не удалось открыть RAR архив: ${e.message}"))
+                }
+            }
             
             // Get all image files from the archive, including those in subdirectories
             imageFiles = archive!!.fileHeaders
@@ -301,12 +306,10 @@ class CbrReader @Inject constructor(
             val cacheKey = "${currentUri?.toString() ?: ""}_$pageIndex"
             
             // Try to get from cache first
-            memoryCache.get(cacheKey)?.let { cachedBitmap ->
+            memoryManager.getBitmap(cacheKey)?.let { cachedBitmap ->
                 if (!cachedBitmap.isRecycled) {
                     android.util.Log.d(TAG, "Cache hit for page $pageIndex")
                     return Result.success(cachedBitmap)
-                } else {
-                    memoryCache.remove(cacheKey)
                 }
             }
             
@@ -338,7 +341,13 @@ class CbrReader @Inject constructor(
             
             while (bitmap == null && retryCount < maxRetries) {
                 try {
-                    bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.size, options)
+                    // Используем улучшенный декодер с поддержкой EXIF
+                    bitmap = com.example.core.reader.utils.BitmapUtils.decodeBitmapWithExif(
+                        imageData,
+                        maxWidth,
+                        maxHeight,
+                        options.inPreferredConfig
+                    )
                     
                     if (bitmap == null && retryCount == 0) {
                         // First try failed, try with different settings
@@ -351,7 +360,7 @@ class CbrReader @Inject constructor(
                     }
                 } catch (e: OutOfMemoryError) {
                     // Clear cache and try again
-                    memoryCache.evictAll()
+                    memoryManager.clearCache()
                     System.gc()
                     retryCount++
                 } catch (e: Exception) {
@@ -362,7 +371,7 @@ class CbrReader @Inject constructor(
             
             bitmap?.let { 
                 // Add to cache
-                memoryCache.put(cacheKey, it)
+                memoryManager.putBitmap(cacheKey, it)
                 android.util.Log.d(TAG, "Successfully rendered page $pageIndex (${it.width}x${it.height})")
                 Result.success(it)
             } ?: run {
@@ -396,7 +405,7 @@ class CbrReader @Inject constructor(
     override suspend fun close() {
         try {
             // Clear memory cache
-            memoryCache.evictAll()
+            memoryManager.clearCache()
             
             // Close and clean up archive
             archive?.close()

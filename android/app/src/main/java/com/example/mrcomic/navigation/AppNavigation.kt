@@ -157,7 +157,11 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
             route = Screen.Reader.route,
             arguments = listOf(navArgument("uri") { type = NavType.StringType })
         ) { _ ->
-            ReaderScreen()
+            ReaderScreen(
+                onNavigateBack = {
+                    navController.navigateUp()
+                }
+            )
         }
     }
 }

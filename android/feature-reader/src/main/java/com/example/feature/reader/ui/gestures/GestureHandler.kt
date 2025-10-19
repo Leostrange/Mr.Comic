@@ -87,8 +87,8 @@ class GestureHandler(
             return TapZone.TOP_RIGHT // Зона 1: боковая панель (только верхний правый угол)
         }
         
-        // Узкие невидимые зоны для листания (~56dp)
-        val edgeZone = 56f // 56dp edge zones
+        // Зоны для листания (увеличены для удобства)
+        val edgeZone = 120f // 120dp edge zones для удобного тапа
         return when {
             position.x < edgeZone -> TapZone.LEFT  // Зона 4: листание назад
             position.x > screenWidth - edgeZone -> TapZone.RIGHT // Зона 3: листание вперёд

@@ -3,6 +3,7 @@ package com.example.core.reader.utils
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.media.ExifInterface
 import kotlin.math.max
 import kotlin.math.min
 
@@ -204,6 +205,121 @@ object BitmapUtils {
         
         // Оставляем 25% памяти для других нужд
         return requiredBytes < (availableMemory * 0.75)
+    }
+    
+    /**
+     * Получить EXIF ориентацию из файла
+     */
+    fun getExifOrientation(filePath: String): Int {
+        return try {
+            val exif = ExifInterface(filePath)
+            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to read EXIF orientation: ${e.message}")
+            ExifInterface.ORIENTATION_NORMAL
+        }
+    }
+    
+    /**
+     * Получить EXIF ориентацию из байтов
+     */
+    fun getExifOrientationFromBytes(data: ByteArray): Int {
+        return try {
+            val exif = ExifInterface(java.io.ByteArrayInputStream(data))
+            exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Failed to read EXIF orientation from bytes: ${e.message}")
+            ExifInterface.ORIENTATION_NORMAL
+        }
+    }
+    
+    /**
+     * Повернуть bitmap согласно EXIF ориентации
+     */
+    fun rotateBitmapByExif(bitmap: Bitmap, orientation: Int): Bitmap {
+        return when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> rotateBitmap(bitmap, 90f)
+            ExifInterface.ORIENTATION_ROTATE_180 -> rotateBitmap(bitmap, 180f)
+            ExifInterface.ORIENTATION_ROTATE_270 -> rotateBitmap(bitmap, 270f)
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> flipBitmap(bitmap, horizontal = true)
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> flipBitmap(bitmap, vertical = true)
+            ExifInterface.ORIENTATION_TRANSPOSE -> {
+                // Поворот на 90° + отражение по горизонтали
+                rotateBitmap(flipBitmap(bitmap, horizontal = true), 90f)
+            }
+            ExifInterface.ORIENTATION_TRANSVERSE -> {
+                // Поворот на 270° + отражение по горизонтали
+                rotateBitmap(flipBitmap(bitmap, horizontal = true), 270f)
+            }
+            else -> bitmap
+        }
+    }
+    
+    /**
+     * Отражение bitmap
+     */
+    fun flipBitmap(source: Bitmap, horizontal: Boolean = false, vertical: Boolean = false): Bitmap {
+        if (!horizontal && !vertical) return source
+        
+        val matrix = Matrix().apply {
+            if (horizontal) postScale(-1f, 1f)
+            if (vertical) postScale(1f, -1f)
+        }
+        
+        return try {
+            Bitmap.createBitmap(source, 0, 0, source.width, source.height, matrix, true)
+        } catch (e: OutOfMemoryError) {
+            android.util.Log.e(TAG, "OutOfMemoryError while flipping bitmap", e)
+            source
+        }
+    }
+    
+    /**
+     * Декодировать bitmap с учетом EXIF ориентации
+     */
+    fun decodeBitmapWithExif(
+        data: ByteArray,
+        reqWidth: Int,
+        reqHeight: Int,
+        config: Bitmap.Config = Bitmap.Config.RGB_565
+    ): Bitmap? {
+        return try {
+            // Получаем EXIF ориентацию
+            val orientation = getExifOrientationFromBytes(data)
+            
+            // Декодируем bitmap
+            val bitmap = decodeSampledBitmap(data, reqWidth, reqHeight, config)
+            
+            // Поворачиваем согласно EXIF
+            bitmap?.let { rotateBitmapByExif(it, orientation) }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to decode bitmap with EXIF", e)
+            null
+        }
+    }
+    
+    /**
+     * Декодировать bitmap из файла с учетом EXIF ориентации
+     */
+    fun decodeBitmapFromFileWithExif(
+        filePath: String,
+        reqWidth: Int,
+        reqHeight: Int,
+        config: Bitmap.Config = Bitmap.Config.RGB_565
+    ): Bitmap? {
+        return try {
+            // Получаем EXIF ориентацию
+            val orientation = getExifOrientation(filePath)
+            
+            // Декодируем bitmap
+            val bitmap = decodeSampledBitmapFromFile(filePath, reqWidth, reqHeight, config)
+            
+            // Поворачиваем согласно EXIF
+            bitmap?.let { rotateBitmapByExif(it, orientation) }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to decode bitmap from file with EXIF", e)
+            null
+        }
     }
     
     /**

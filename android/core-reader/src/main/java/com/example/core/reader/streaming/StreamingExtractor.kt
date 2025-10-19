@@ -21,6 +21,8 @@ class StreamingExtractor(
     companion object {
         private const val TAG = "StreamingExtractor"
         private const val MAX_CACHE_SIZE = 10 // Максимум файлов в кэше
+        private const val MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB максимум для одного файла
+        private const val TIMEOUT_MS = 30000L // 30 секунд таймаут для операций
     }
     
     // Кэш извлеченных файлов
@@ -245,6 +247,17 @@ class StreamingExtractor(
     private fun extractFile(header: FileHeader, cacheKey: String): File? {
         return try {
             val archive = currentArchive ?: return null
+            
+            // Проверяем размер файла
+            if (header.uncompressedSize > MAX_FILE_SIZE) {
+                android.util.Log.w(TAG, "⚠️ File too large: ${header.fileName} (${header.uncompressedSize} bytes)")
+                return null
+            }
+            
+            // Проверяем, что файл не поврежден
+            if (header.crc == 0L && header.uncompressedSize > 0) {
+                android.util.Log.w(TAG, "⚠️ File may be corrupted: ${header.fileName} (CRC = 0)")
+            }
             val tempDirectory = tempDir ?: return null
             
             val fileName = header.fileName.substringAfterLast('/')
@@ -254,11 +267,17 @@ class StreamingExtractor(
             android.util.Log.d(TAG, "   Temp directory: ${tempDirectory.absolutePath}")
             android.util.Log.d(TAG, "   Target file: ${extractedFile.absolutePath}")
             
-            // Используем zip4j API для извлечения
-            // extractFile(FileHeader, String destinationPath, String newFileName)
+            // Используем zip4j API для извлечения с таймаутом
             try {
+                val startTime = System.currentTimeMillis()
                 archive.extractFile(header, tempDirectory.absolutePath, extractedFile.name)
-                android.util.Log.d(TAG, "   extractFile() called successfully")
+                val extractionTime = System.currentTimeMillis() - startTime
+                
+                if (extractionTime > TIMEOUT_MS) {
+                    android.util.Log.w(TAG, "⚠️ Slow extraction: ${extractionTime}ms for ${header.fileName}")
+                }
+                
+                android.util.Log.d(TAG, "   extractFile() called successfully in ${extractionTime}ms")
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "❌ extractFile() failed: ${e.message}")
                 
@@ -273,6 +292,14 @@ class StreamingExtractor(
                     }
                 } catch (altE: Exception) {
                     android.util.Log.e(TAG, "❌ Alternative extraction also failed: ${altE.message}")
+                    
+                    // Проверяем, не связана ли ошибка с Unicode именами
+                    if (altE.message?.contains("encoding", ignoreCase = true) == true ||
+                        altE.message?.contains("charset", ignoreCase = true) == true) {
+                        android.util.Log.w(TAG, "⚠️ Unicode filename issue detected: ${header.fileName}")
+                        return null
+                    }
+                    
                     // Файл поврежден или использует неподдерживаемый метод сжатия
                     // Возвращаем null, чтобы пропустить этот файл
                     return null

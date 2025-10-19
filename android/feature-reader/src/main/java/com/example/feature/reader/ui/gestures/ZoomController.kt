@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
 import kotlinx.coroutines.launch
+import kotlin.math.*
 
 /**
  * Controller for managing zoom state and transitions
@@ -14,7 +15,9 @@ import kotlinx.coroutines.launch
  */
 class ZoomController(
     private val imageSize: IntSize,
-    private val screenSize: IntSize
+    private val screenSize: IntSize,
+    private val zoomSensitivity: Float = 1.0f,
+    private val panSensitivity: Float = 1.0f
 ) {
     // Current zoom scale
     val scale = Animatable(1f)
@@ -44,23 +47,38 @@ class ZoomController(
     }
     
     /**
-     * Calculate scale for fit-screen mode (fit entire image)
+     * Calculate scale for fit-screen mode
+     * FIT = WIDTH (одинаковые - по ширине экрана)
      */
     fun calculateFitScreenScale(): Float {
+        // FIT: вписать целиком без выхода за границы = min(viewW/imgW, viewH/imgH)
         if (imageSize.width == 0 || imageSize.height == 0) return 1f
         val widthScale = screenSize.width.toFloat() / imageSize.width.toFloat()
         val heightScale = screenSize.height.toFloat() / imageSize.height.toFloat()
-        return minOf(widthScale, heightScale)
+        return min(widthScale, heightScale)
+    }
+    
+    /**
+     * Calculate scale for fill mode (fill entire screen, may crop)
+     * Формула: max(viewW/imgW, viewH/imgH) - заполнить экран, может обрезаться
+     */
+    fun calculateFillScale(): Float {
+        if (imageSize.width == 0 || imageSize.height == 0) return 1f
+        val widthScale = screenSize.width.toFloat() / imageSize.width.toFloat()
+        val heightScale = screenSize.height.toFloat() / imageSize.height.toFloat()
+        return max(widthScale, heightScale)
     }
     
     /**
      * Cycle to next zoom mode
+     * Порядок: WIDTH -> HEIGHT -> FIT -> FILL -> WIDTH
      */
     suspend fun cycleZoomMode(focusPoint: Offset = Offset.Zero) {
         val nextMode = when (currentMode) {
             ZoomMode.FIT_WIDTH -> ZoomMode.FIT_HEIGHT
             ZoomMode.FIT_HEIGHT -> ZoomMode.FIT_SCREEN
-            ZoomMode.FIT_SCREEN -> ZoomMode.FIT_WIDTH
+            ZoomMode.FIT_SCREEN -> ZoomMode.FILL
+            ZoomMode.FILL -> ZoomMode.FIT_WIDTH
         }
         
         setZoomMode(nextMode, focusPoint)
@@ -68,6 +86,7 @@ class ZoomController(
     
     /**
      * Set specific zoom mode
+     * Применяет формулы масштабирования и сбрасывает offset
      */
     suspend fun setZoomMode(mode: ZoomMode, focusPoint: Offset = Offset.Zero) {
         currentMode = mode
@@ -76,6 +95,7 @@ class ZoomController(
             ZoomMode.FIT_WIDTH -> calculateFitWidthScale()
             ZoomMode.FIT_HEIGHT -> calculateFitHeightScale()
             ZoomMode.FIT_SCREEN -> calculateFitScreenScale()
+            ZoomMode.FILL -> calculateFillScale()
         }
         
         // Animate to target scale
@@ -87,19 +107,44 @@ class ZoomController(
             )
         )
         
-        // Reset offset when changing modes
+        // Reset offset when changing modes (центрирование)
         offsetX.snapTo(0f)
         offsetY.snapTo(0f)
     }
     
     /**
      * Apply pinch zoom
+     * При приближении к минимальному масштабу автоматически snap к базовому режиму
      */
     suspend fun applyPinchZoom(zoomFactor: Float, focusPoint: Offset) {
-        val newScale = (scale.value * zoomFactor).coerceIn(0.5f, 5f)
+        // Определяем базовый масштаб на основе текущего режима
+        val baseScale = when (currentMode) {
+            ZoomMode.FIT_WIDTH -> calculateFitWidthScale()
+            ZoomMode.FIT_HEIGHT -> calculateFitHeightScale()
+            ZoomMode.FIT_SCREEN -> calculateFitScreenScale()
+            ZoomMode.FILL -> calculateFillScale()
+        }
+        
+        // Применяем настройку чувствительности зума
+        val adjustedZoomFactor = 1f + (zoomFactor - 1f) * zoomSensitivity
+        
+        // Минимум - половина базового масштаба (можно уменьшать)
+        val minScale = baseScale * 0.5f
+        val maxScale = 5f
+        
+        val newScale = (scale.value * adjustedZoomFactor).coerceIn(minScale, maxScale)
+        
+        // Snap к базовому масштабу если близко (в пределах 6%) или если меньше базового
+        val finalScale = if (abs(newScale - baseScale) < baseScale * 0.06f || newScale <= baseScale) {
+            baseScale
+        } else {
+            newScale
+        }
         
         // Calculate new offset to zoom towards focus point
-        val scaleDiff = newScale - scale.value
+        // Формула: новая позиция = старая позиция - (фокусная_точка * изменение_масштаба)
+        // Это обеспечивает что точка под пальцами остаётся на месте при зуме
+        val scaleDiff = finalScale / scale.value - 1f  // Отношение нового масштаба к старому
         val newOffsetX = offsetX.value - (focusPoint.x * scaleDiff)
         val newOffsetY = offsetY.value - (focusPoint.y * scaleDiff)
         
@@ -110,35 +155,85 @@ class ZoomController(
         val clampedOffsetX = newOffsetX.coerceIn(-maxOffsetX, maxOffsetX)
         val clampedOffsetY = newOffsetY.coerceIn(-maxOffsetY, maxOffsetY)
         
-        scale.snapTo(newScale)
-        offsetX.snapTo(clampedOffsetX)
-        offsetY.snapTo(clampedOffsetY)
-        
-        // Update mode to custom if not at standard scales
-        if (!isAtStandardScale(newScale)) {
-            currentMode = ZoomMode.FIT_WIDTH // Keep current mode for now
+        // Если вернулись к базовому масштабу, сбрасываем offset
+        if (finalScale == baseScale) {
+            scale.snapTo(finalScale)
+            offsetX.snapTo(0f)
+            offsetY.snapTo(0f)
+        } else {
+            scale.snapTo(finalScale)
+            offsetX.snapTo(clampedOffsetX)
+            offsetY.snapTo(clampedOffsetY)
         }
+        
+        // Принудительный сброс если зумили слишком сильно
+        forceResetIfNeeded()
     }
     
     /**
-     * Apply pan offset
+     * Apply pan offset with inertia
      */
     suspend fun applyPan(delta: Offset) {
         val maxOffsetX = calculateMaxOffsetX()
         val maxOffsetY = calculateMaxOffsetY()
         
-        val newOffsetX = (offsetX.value + delta.x).coerceIn(-maxOffsetX, maxOffsetX)
-        val newOffsetY = (offsetY.value + delta.y).coerceIn(-maxOffsetY, maxOffsetY)
+        // Применяем настройку чувствительности панорамирования
+        val adjustedDelta = delta * panSensitivity
         
-        offsetX.snapTo(newOffsetX)
-        offsetY.snapTo(newOffsetY)
+        val newOffsetX = (offsetX.value + adjustedDelta.x).coerceIn(-maxOffsetX, maxOffsetX)
+        val newOffsetY = (offsetY.value + adjustedDelta.y).coerceIn(-maxOffsetY, maxOffsetY)
+        
+        // Используем анимированный переход для плавной инерции
+        offsetX.animateTo(newOffsetX, spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ))
+        offsetY.animateTo(newOffsetY, spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ))
     }
     
     /**
-     * Reset zoom to fit-width
+     * Reset zoom to current mode's base scale
+     * Сбрасывает зум к базовому масштабу текущего режима
+     */
+    suspend fun resetToBaseScale() {
+        val targetScale = when (currentMode) {
+            ZoomMode.FIT_WIDTH -> calculateFitWidthScale()
+            ZoomMode.FIT_HEIGHT -> calculateFitHeightScale()
+            ZoomMode.FIT_SCREEN -> calculateFitScreenScale()
+            ZoomMode.FILL -> calculateFillScale()
+        }
+        
+        scale.animateTo(
+            targetValue = targetScale,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessMedium
+            )
+        )
+        
+        offsetX.animateTo(0f)
+        offsetY.animateTo(0f)
+    }
+    
+    /**
+     * Reset zoom to fit-width mode
      */
     suspend fun reset() {
         setZoomMode(ZoomMode.FIT_WIDTH)
+    }
+    
+    /**
+     * Force reset to base scale if zoomed out too much
+     * This fixes the issue where zoom doesn't reset when pinching out
+     */
+    suspend fun forceResetIfNeeded() {
+        val baseScale = getBaseScale()
+        if (scale.value <= baseScale * 0.8f) { // If zoomed out to 80% of base scale or less
+            setZoomMode(currentMode) // Reset to current mode's base scale
+        }
     }
     
     /**
@@ -146,9 +241,35 @@ class ZoomController(
      */
     private fun isAtStandardScale(testScale: Float): Boolean {
         val tolerance = 0.01f
-        return kotlin.math.abs(testScale - calculateFitWidthScale()) < tolerance ||
-               kotlin.math.abs(testScale - calculateFitHeightScale()) < tolerance ||
-               kotlin.math.abs(testScale - calculateFitScreenScale()) < tolerance
+        return abs(testScale - calculateFitWidthScale()) < tolerance ||
+               abs(testScale - calculateFitHeightScale()) < tolerance ||
+               abs(testScale - calculateFitScreenScale()) < tolerance ||
+               abs(testScale - calculateFillScale()) < tolerance
+    }
+    
+    /**
+     * Check if currently at base scale for current mode
+     */
+    fun isAtBaseScale(): Boolean {
+        val baseScale = when (currentMode) {
+            ZoomMode.FIT_WIDTH -> calculateFitWidthScale()
+            ZoomMode.FIT_HEIGHT -> calculateFitHeightScale()
+            ZoomMode.FIT_SCREEN -> calculateFitScreenScale()
+            ZoomMode.FILL -> calculateFillScale()
+        }
+        return abs(scale.value - baseScale) < 0.01f
+    }
+    
+    /**
+     * Get current base scale for the active mode
+     */
+    fun getBaseScale(): Float {
+        return when (currentMode) {
+            ZoomMode.FIT_WIDTH -> calculateFitWidthScale()
+            ZoomMode.FIT_HEIGHT -> calculateFitHeightScale()
+            ZoomMode.FIT_SCREEN -> calculateFitScreenScale()
+            ZoomMode.FILL -> calculateFillScale()
+        }
     }
     
     /**
@@ -156,7 +277,7 @@ class ZoomController(
      */
     private fun calculateMaxOffsetX(): Float {
         val scaledWidth = imageSize.width * scale.value
-        return maxOf(0f, (scaledWidth - screenSize.width) / 2f)
+        return max(0f, (scaledWidth - screenSize.width) / 2f)
     }
     
     /**
@@ -164,17 +285,37 @@ class ZoomController(
      */
     private fun calculateMaxOffsetY(): Float {
         val scaledHeight = imageSize.height * scale.value
-        return maxOf(0f, (scaledHeight - screenSize.height) / 2f)
+        return max(0f, (scaledHeight - screenSize.height) / 2f)
+    }
+    
+    /**
+     * Set zoom mode from string (for compatibility with settings)
+     */
+    suspend fun setZoomModeFromString(modeString: String) {
+        val mode = when (modeString.lowercase()) {
+            "width" -> ZoomMode.FIT_WIDTH
+            "height" -> ZoomMode.FIT_HEIGHT
+            "fit" -> ZoomMode.FIT_SCREEN
+            "fill" -> ZoomMode.FILL
+            else -> ZoomMode.FIT_WIDTH
+        }
+        setZoomMode(mode)
     }
 }
 
 /**
  * Zoom modes for reader
+ * Соответствуют требованиям пользователя:
+ * - WIDTH: растягивание по ширине, высота пропорциональна (может выходить за экран)
+ * - HEIGHT: растягивание по высоте, ширина пропорциональна (может выходить за экран)
+ * - FIT: то же что WIDTH (одинаковые)
+ * - FILL: вписать целиком, не выходя за границы экрана
  */
 enum class ZoomMode {
-    FIT_WIDTH,   // Fit image width to screen width
-    FIT_HEIGHT,  // Fit image height to screen height
-    FIT_SCREEN   // Fit entire image to screen
+    FIT_WIDTH,   // Fit width to screen (scale = viewW / imgW)
+    FIT_HEIGHT,  // Fit height to screen (scale = viewH / imgH)
+    FIT_SCREEN,  // Same as FIT_WIDTH (scale = viewW / imgW)
+    FILL         // Fit entire image without going beyond screen (scale = min(viewW/imgW, viewH/imgH))
 }
 
 /**
@@ -187,5 +328,17 @@ fun rememberZoomController(
 ): ZoomController {
     return remember(imageSize, screenSize) {
         ZoomController(imageSize, screenSize)
+    }
+}
+
+/**
+ * Convert ZoomMode to string for settings
+ */
+fun ZoomMode.toSettingsString(): String {
+    return when (this) {
+        ZoomMode.FIT_WIDTH -> "width"
+        ZoomMode.FIT_HEIGHT -> "height"
+        ZoomMode.FIT_SCREEN -> "fit"
+        ZoomMode.FILL -> "fill"
     }
 }

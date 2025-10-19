@@ -61,6 +61,7 @@ class PdfReaderFactory {
     
     init {
         // Добавляем ридеры в порядке приоритета
+        addReader(OptimizedPdfiumReader())
         addReader(PdfiumReader())
         addReader(PdfBoxReader())
         // Можно добавить другие ридеры в будущем

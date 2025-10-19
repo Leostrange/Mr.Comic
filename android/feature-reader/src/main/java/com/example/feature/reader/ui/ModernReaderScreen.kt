@@ -339,6 +339,9 @@ fun ModernReaderScreen(
                     isZoomed = scale > 1.01f
                     viewModel.trackZoom(scale)
                 },
+                // Настройки жестов из ViewModel
+                zoomSensitivity = uiState.gestureSensitivity,
+                panSensitivity = uiState.gestureSensitivity,
                 modifier = Modifier.fillMaxSize()
             )
         }
