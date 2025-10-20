@@ -197,23 +197,6 @@ fun ModernReaderScreen(
         }
     }
 
-    // Apply reader brightness to Window
-    DisposableEffect(readerBrightness) {
-        val prev = activity?.window?.attributes?.screenBrightness ?: -1f
-        val lp = activity?.window?.attributes
-        if (lp != null) {
-            lp.screenBrightness = readerBrightness.coerceIn(0.0f, 1.0f)
-            activity.window.attributes = lp
-        }
-        onDispose {
-            val restore = activity?.window?.attributes
-            if (restore != null) {
-                restore.screenBrightness = prev
-                activity.window.attributes = restore
-            }
-        }
-    }
-
     // Collect UI state from ViewModel
     LaunchedEffect(Unit) {
         viewModel.uiState.collectLatest { state ->
@@ -662,6 +645,11 @@ fun ModernReaderScreen(
                 .align(Alignment.BottomEnd)
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .zIndex(2f)
+        )
+
+        com.example.feature.reader.ui.components.BrightnessOverlay(
+            brightness = readerBrightness,
+            modifier = Modifier.fillMaxSize()
         )
     }
 }

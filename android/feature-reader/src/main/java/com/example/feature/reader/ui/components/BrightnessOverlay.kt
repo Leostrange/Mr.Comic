@@ -1,6 +1,5 @@
 package com.example.feature.reader.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -8,38 +7,58 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.debounce
 
 /**
- * Оверлей яркости для затемнения экрана
- * Использует graphicsLayer для изменения альфы без перерисовки контента
- * Это предотвращает прыжки изображения при изменении яркости
+ * Оверлей яркости для затемнения/осветления экрана.
+ * Использует drawWithContent и режимы смешивания, чтобы не трогать матрицы изображения.
+ * Это предотвращает прыжки изображения при изменении яркости.
  */
 @Composable
 fun BrightnessOverlay(
-    brightness: Float, // 0f..1f, где 1f = полная яркость, 0f = полная темнота
-    brightnessMode: String = "auto", // "auto" | "manual"
+    brightness: Float, // 0.2f..1.2f, где 1f = стандартная яркость
     modifier: Modifier = Modifier
 ) {
-    // Показываем оверлей только в ручном режиме
-    if (brightnessMode == "manual") {
-        // Вычисляем альфу для оверлея: чем меньше яркость, тем больше затемнение
-        val overlayAlpha = (1f - brightness.coerceIn(0f, 1f))
-        
-        Box(
-            modifier = modifier
-                .fillMaxSize()
-                .zIndex(2f) // zIndex 2 согласно новой схеме слоев
-                .graphicsLayer {
-                    alpha = overlayAlpha
+    val clamped = brightness.coerceIn(MIN_BRIGHTNESS, MAX_BRIGHTNESS)
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .zIndex(2f) // zIndex 2 согласно новой схеме слоев
+            .drawWithContent {
+                drawContent()
+
+                when {
+                    clamped < 1f - EPSILON -> {
+                        val normalized = ((clamped - MIN_BRIGHTNESS) / (1f - MIN_BRIGHTNESS))
+                            .coerceIn(0f, 1f)
+                        val alpha = 1f - normalized
+                        if (alpha > EPSILON) {
+                            drawRect(
+                                color = Color.Black.copy(alpha = alpha),
+                                blendMode = BlendMode.SrcOver
+                            )
+                        }
+                    }
+
+                    clamped > 1f + EPSILON -> {
+                        val normalized = ((clamped - 1f) / (MAX_BRIGHTNESS - 1f))
+                            .coerceIn(0f, 1f)
+                        if (normalized > EPSILON) {
+                            drawRect(
+                                color = Color.White.copy(alpha = normalized),
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                    }
                 }
-                .background(Color.Black)
-        )
-    }
+            }
+    )
 }
 
 /**
@@ -62,8 +81,7 @@ fun BrightnessOverlayWithSmoothing(
 }
 
 /**
- * Оверлей яркости с throttle для предотвращения тряски
- * Использует graphicsLayer для плавного изменения без перерисовки
+ * Оверлей яркости с throttle для предотвращения тряски.
  */
 @Composable
 fun BrightnessOverlayThrottled(
@@ -73,18 +91,15 @@ fun BrightnessOverlayThrottled(
     // Применяем throttle на уровне компонента
     val throttledBrightness = remember(brightness) {
         // Простое сглаживание для предотвращения резких изменений
-        brightness.coerceIn(0f, 1f)
+        brightness.coerceIn(MIN_BRIGHTNESS, MAX_BRIGHTNESS)
     }
-    
-    val overlayAlpha = (1f - throttledBrightness)
-    
-    Box(
+
+    BrightnessOverlay(
+        brightness = throttledBrightness,
         modifier = modifier
-            .fillMaxSize()
-            .zIndex(2f) // zIndex 2 согласно новой схеме слоев
-            .graphicsLayer {
-                alpha = overlayAlpha
-            }
-            .background(Color.Black)
     )
 }
+
+private const val MIN_BRIGHTNESS = 0.2f
+private const val MAX_BRIGHTNESS = 1.2f
+private const val EPSILON = 0.001f

@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 
 /**
  * Top settings panel with semi-transparent background
@@ -26,13 +28,11 @@ fun TopSettingsPanel(
     visible: Boolean,
     onDismiss: () -> Unit,
     onBrightnessChange: (Float) -> Unit,
-    onBrightnessModeChange: (String) -> Unit,
     onOrientationChange: (String) -> Unit,
     onScaleModeChange: (String) -> Unit,
     onReadingModeChange: (String) -> Unit = {},
     onResetZoom: () -> Unit = {},
     currentBrightness: Float = 1.0f,
-    currentBrightnessMode: String = "auto",
     currentOrientation: String = "auto",
     currentScaleMode: String = "width",
     currentReadingMode: String = "page",
@@ -93,33 +93,25 @@ fun TopSettingsPanel(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
-                // Brightness mode selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = currentBrightnessMode == "auto",
-                        onClick = { onBrightnessModeChange("auto") },
-                        label = { Text("Auto") }
-                    )
-                    FilterChip(
-                        selected = currentBrightnessMode == "manual",
-                        onClick = { onBrightnessModeChange("manual") },
-                        label = { Text("Manual") }
-                    )
+                val sliderValue = currentBrightness.coerceIn(0.2f, 1.2f)
+                val brightnessPercent = remember(sliderValue) {
+                    (sliderValue * 100f).coerceIn(20f, 120f)
                 }
-                
-                // Manual brightness slider (only show when manual mode is selected)
-                if (currentBrightnessMode == "manual") {
-                    Slider(
-                        value = currentBrightness,
-                        onValueChange = onBrightnessChange,
-                        valueRange = 0.1f..1.0f,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
-                }
+
+                Slider(
+                    value = sliderValue,
+                    onValueChange = onBrightnessChange,
+                    valueRange = 0.2f..1.2f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("brightness_slider")
+                )
+
+                Text(
+                    text = String.format(java.util.Locale.US, "%.0f%%", brightnessPercent),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 

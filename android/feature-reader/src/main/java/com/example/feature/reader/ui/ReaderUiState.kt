@@ -47,7 +47,6 @@ data class ReaderUiState(
     val offsetY: Float = 0f,
     // Reader settings
     val readerBrightness: Float = 1.0f,
-    val readerBrightnessMode: String = "auto",
     // Current comic metadata
     val currentComicUri: String? = null,
     // Panel states

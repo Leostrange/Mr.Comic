@@ -393,13 +393,10 @@ private fun ReaderScreenContent(
                 if (showTopPanel) {
                     TopSettingsPanel(
                         visible = true,
-                        onDismiss = { 
+                        onDismiss = {
                             uiController.hideAll()
                         },
                         onBrightnessChange = onUpdateBrightness,
-                        onBrightnessModeChange = { mode ->
-                    // TODO: Implement brightness mode change
-                },
                         onOrientationChange = onUpdateOrientation,
                         onScaleModeChange = onUpdateScaleMode,
                         onReadingModeChange = { mode ->
@@ -411,7 +408,6 @@ private fun ReaderScreenContent(
                         },
                         onResetZoom = onResetZoom,
                         currentBrightness = uiState.readerBrightness,
-                        currentBrightnessMode = uiState.readerBrightnessMode,
                         currentOrientation = uiState.orientation,
                         currentScaleMode = uiState.scaleMode,
                         currentReadingMode = when (uiState.readingMode) {
@@ -518,7 +514,6 @@ private fun ReaderScreenContent(
                 // Оверлей яркости (самый верхний уровень для предотвращения скачков)
                 BrightnessOverlay(
                     brightness = uiState.readerBrightness,
-                    brightnessMode = uiState.readerBrightnessMode,
                     modifier = Modifier.fillMaxSize()
                 )
 

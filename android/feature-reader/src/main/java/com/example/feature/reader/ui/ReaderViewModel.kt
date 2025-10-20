@@ -1,9 +1,9 @@
 package com.example.feature.reader.ui
 
-import android.app.Activity
 import android.content.Context
-import android.net.Uri
 import android.graphics.Bitmap
+import android.net.Uri
+import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -223,12 +223,6 @@ class ReaderViewModel @Inject constructor(
         SharingStarted.WhileSubscribed(5_000),
         1.0f
     )
-    
-    val readerBrightnessMode = settingsRepository.readerBrightnessMode.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5_000),
-        "auto"
-    )
 
     val readerAnimationSpeed = settingsRepository.readerAnimationSpeed.stateIn(
         viewModelScope,
@@ -248,7 +242,12 @@ class ReaderViewModel @Inject constructor(
     companion object {
         private const val PRELOAD_DISTANCE = 3 // Preload 3 pages ahead/behind for smoother UX
         private const val TAG = "ReaderViewModel"
+        private const val BRIGHTNESS_MIN = 0.2f
+        private const val BRIGHTNESS_MAX = 1.2f
+        private const val BRIGHTNESS_LOG_THROTTLE_MS = 200L
     }
+
+    private var lastBrightnessLogAt = 0L
 
     init {
         // Путь к файлу приходит как аргумент навигации.
@@ -332,26 +331,13 @@ class ReaderViewModel @Inject constructor(
 
         viewModelScope.launch {
             settingsRepository.readerBrightness.collect { brightness ->
-                val coerced = brightness.coerceIn(0.0f, 1.0f)
+                val coerced = brightness.coerceIn(BRIGHTNESS_MIN, BRIGHTNESS_MAX)
                 _uiState.update { it.copy(readerBrightness = coerced) }
                 // Track application; UI applies it, but event captured here
                 analyticsHelper.track(
                     com.example.core.analytics.AnalyticsEvent.SettingChanged(
                         settingName = "reader_brightness",
                         value = String.format(java.util.Locale.US, "%.2f", coerced)
-                    ),
-                    this
-                )
-            }
-        }
-        
-        viewModelScope.launch {
-            settingsRepository.readerBrightnessMode.collect { mode ->
-                _uiState.update { it.copy(readerBrightnessMode = mode) }
-                analyticsHelper.track(
-                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
-                        settingName = "reader_brightness_mode",
-                        value = mode
                     ),
                     this
                 )
@@ -1036,34 +1022,26 @@ class ReaderViewModel @Inject constructor(
     }
     
     /**
-     * Update brightness setting and apply to system
+     * Update brightness setting. Rendering observes the stored value and applies overlay.
      */
     fun updateBrightness(brightness: Float) {
+        val clampedBrightness = brightness.coerceIn(BRIGHTNESS_MIN, BRIGHTNESS_MAX)
+
+        _uiState.update { it.copy(readerBrightness = clampedBrightness) }
+
         viewModelScope.launch {
-            val clampedBrightness = brightness.coerceIn(0.1f, 1.0f)
             settingsRepository.setReaderBrightness(clampedBrightness)
-            
-            // Apply brightness to system window
-            try {
-                val activity = context as? Activity
-                activity?.let { act ->
-                    val layoutParams = act.window.attributes
-                    layoutParams.screenBrightness = clampedBrightness
-                    act.window.attributes = layoutParams
-                    android.util.Log.d(TAG, "System brightness updated to: $clampedBrightness")
-                }
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "Failed to update system brightness", e)
-            }
         }
-    }
-    
-    /**
-     * Update brightness mode setting
-     */
-    fun updateBrightnessMode(mode: String) {
-        viewModelScope.launch {
-            settingsRepository.setReaderBrightnessMode(mode)
+
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastBrightnessLogAt >= BRIGHTNESS_LOG_THROTTLE_MS) {
+            lastBrightnessLogAt = now
+            android.util.Log.d(
+                TAG,
+                "Brightness change -> value=" +
+                    String.format(java.util.Locale.US, "%.2f", clampedBrightness) +
+                    " page=" + _uiState.value.currentPageIndex
+            )
         }
     }
     

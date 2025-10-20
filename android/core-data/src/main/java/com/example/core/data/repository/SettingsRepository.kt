@@ -90,8 +90,6 @@ interface SettingsRepository {
     suspend fun setReadingBlockSwipeWhenZoomed(enabled: Boolean)
     val readerBrightness: Flow<Float>
     suspend fun setReaderBrightness(value: Float)
-    val readerBrightnessMode: Flow<String> // "auto" | "manual"
-    suspend fun setReaderBrightnessMode(mode: String)
     val readerAnimationSpeed: Flow<Float>
     suspend fun setReaderAnimationSpeed(value: Float)
     val pageTurnSoundEnabled: Flow<Boolean>
@@ -217,7 +215,6 @@ class SettingsRepositoryImpl @Inject constructor(
         val READING_DOUBLE_TAP_ZOOM = stringPreferencesKey("reading_double_tap_zoom")
         val READING_BLOCK_SWIPE_WHEN_ZOOMED = stringPreferencesKey("reading_block_swipe_when_zoomed")
         val READER_BRIGHTNESS = stringPreferencesKey("reader_brightness")
-        val READER_BRIGHTNESS_MODE = stringPreferencesKey("reader_brightness_mode")
         val READER_ANIMATION_SPEED = stringPreferencesKey("reader_animation_speed")
         val PAGE_TURN_SOUND = stringPreferencesKey("page_turn_sound")
 
@@ -413,17 +410,10 @@ class SettingsRepositoryImpl @Inject constructor(
         dataStore.edit { it[PreferencesKeys.READING_BLOCK_SWIPE_WHEN_ZOOMED] = enabled.toString() }
     }
     override val readerBrightness: Flow<Float> = dataStore.data.map {
-        it[PreferencesKeys.READER_BRIGHTNESS]?.toFloatOrNull()?.coerceIn(0.0f, 1.0f) ?: 1.0f
+        it[PreferencesKeys.READER_BRIGHTNESS]?.toFloatOrNull()?.coerceIn(0.2f, 1.2f) ?: 1.0f
     }
     override suspend fun setReaderBrightness(value: Float) {
-        dataStore.edit { it[PreferencesKeys.READER_BRIGHTNESS] = value.coerceIn(0.0f, 1.0f).toString() }
-    }
-    
-    override val readerBrightnessMode: Flow<String> = dataStore.data.map {
-        it[PreferencesKeys.READER_BRIGHTNESS_MODE] ?: "auto"
-    }
-    override suspend fun setReaderBrightnessMode(mode: String) {
-        dataStore.edit { it[PreferencesKeys.READER_BRIGHTNESS_MODE] = mode }
+        dataStore.edit { it[PreferencesKeys.READER_BRIGHTNESS] = value.coerceIn(0.2f, 1.2f).toString() }
     }
     override val readerAnimationSpeed: Flow<Float> = dataStore.data.map {
         it[PreferencesKeys.READER_ANIMATION_SPEED]?.toFloatOrNull()?.coerceIn(0.5f, 2.0f) ?: 1.0f
