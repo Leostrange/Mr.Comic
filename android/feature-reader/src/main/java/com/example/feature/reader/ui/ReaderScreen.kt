@@ -40,6 +40,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -284,12 +286,12 @@ private fun ReaderScreenContent(
 ) {
     val contentScale = remember(uiState.scaleMode) {
         when (uiState.scaleMode) {
-            "width" -> ContentScale.FillWidth // Растягивание по ширине
-            "height" -> ContentScale.FillHeight // Растягивание по высоте
-            "fit" -> ContentScale.Fit // Вписывание в экран с сохранением пропорций
-            "fill" -> ContentScale.Crop // Заполнение экрана с обрезкой
+            "width" -> ContentScale.FillWidth // Заполняет ширину экрана
+            "height" -> ContentScale.FillHeight // Заполняет высоту экрана
+            "fit" -> ContentScale.Fit // Вписывается в экран с сохранением пропорций
+            "fill" -> ContentScale.Crop // Заполняет экран с обрезкой
             "custom" -> ContentScale.Fit
-            else -> ContentScale.FillWidth
+            else -> ContentScale.Fit
         }
     }
     
@@ -397,9 +399,6 @@ private fun ReaderScreenContent(
                             uiController.hideAll()
                         },
                         onBrightnessChange = onUpdateBrightness,
-                        onBrightnessModeChange = { mode ->
-                    // TODO: Implement brightness mode change
-                },
                         onOrientationChange = onUpdateOrientation,
                         onScaleModeChange = onUpdateScaleMode,
                         onReadingModeChange = { mode ->
@@ -411,7 +410,6 @@ private fun ReaderScreenContent(
                         },
                         onResetZoom = onResetZoom,
                         currentBrightness = uiState.readerBrightness,
-                        currentBrightnessMode = uiState.readerBrightnessMode,
                         currentOrientation = uiState.orientation,
                         currentScaleMode = uiState.scaleMode,
                         currentReadingMode = when (uiState.readingMode) {
@@ -496,23 +494,30 @@ private fun ReaderScreenContent(
                     )
                 }
                 
-                // Новые хит-зоны согласно тасклисту (только когда панели закрыты)
+                // ✅ СТРОГИЕ gesture zones поверх всего контента
                 ReaderTapZones(
                     panelsOpen = showTopPanel || showRightPanel || showThumbnailPanel,
                     onOpenTopBar = { uiController.showTopPanel() },
                     onOpenSideBar = { uiController.showRightPanel() },
+                    onOpenLeftPanel = { uiController.showThumbnailPanel() }, // BottomLeft → Thumbnail panel
                     onPrev = { 
-                        uiController.onUserInteraction()
-                        onPreviousPage() 
+                        if (!showTopPanel && !showRightPanel && !showThumbnailPanel) {
+                            uiController.onUserInteraction()
+                            onPreviousPage()
+                        }
                     },
                     onNext = { 
-                        uiController.onUserInteraction()
-                        onNextPage() 
+                        if (!showTopPanel && !showRightPanel && !showThumbnailPanel) {
+                            uiController.onUserInteraction()
+                            onNextPage()
+                        }
                     },
                     tapZonesSize = readerSettings.readerTapZonesSize,
                     tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
                     navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(5f) // Высокий z-index для перехвата всех тапов
                 )
                 
                 // Оверлей яркости (самый верхний уровень для предотвращения скачков)
@@ -640,8 +645,8 @@ private fun PagedReaderWithGestures(
                         enabled = uiState.tapZonesEnabled
                     ),
                     gestureSensitivity = uiState.gestureSensitivity,
-                    isZoomed = scale > 1.0f,
-                    blockSwipeWhenZoomed = uiState.blockSwipeWhenZoomed,
+                    isZoomed = scale > 1.0f + 0.1f, // Block swipe when zoomed above base scale
+                    blockSwipeWhenZoomed = true, // Always block swipe when zoomed
                     onGestureAction = { action ->
                         // Check if any panel is open - if so, only allow closing actions
                         val anyPanelOpen = showTopPanel || showRightPanel || showThumbnailPanel
@@ -725,37 +730,24 @@ private fun PagedReaderWithGestures(
                             translationY = offsetY
                         )
                         .pointerInput(Unit) {
-                            detectTransformGestures(
-                                onGesture = { _, pan, zoom, _ ->
-                        // Check if any panel is open - block gestures if so
-                        val anyPanelOpen = showTopPanel || showRightPanel || showThumbnailPanel
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                // Check if any panel is open - block gestures if so
+                                val anyPanelOpen = showTopPanel || showRightPanel || showThumbnailPanel
+                                if (anyPanelOpen) return@detectTransformGestures
                                 
-                                if (!anyPanelOpen) {
-                                    // Safe scaling with proper limits
-                                    val newScale = clamp(scale * zoom, 1.0f, 5.0f)
-                                    scale = newScale
-                                    
-                                    // Update pan offset with safe limits
-                                    val contentWidth = bitmap.width * newScale
-                                    val contentHeight = bitmap.height * newScale
-                                    val viewportWidth = screenSize.width.toFloat()
-                                    val viewportHeight = screenSize.height.toFloat()
-                                    
-                                    // Calculate safe pan limits
-                                    val panLimitX = max(0f, (contentWidth - viewportWidth) / 2f)
-                                    val panLimitY = max(0f, (contentHeight - viewportHeight) / 2f)
-                                    
-                                    offsetX = clamp(offsetX + pan.x, -panLimitX, panLimitX)
-                                    offsetY = clamp(offsetY + pan.y, -panLimitY, panLimitY)
-                                    
-                                    // Reset offset when zooming out to normal scale
-                                    if (newScale <= 1.0f) {
-                                        offsetX = 0f
-                                        offsetY = 0f
-                                    }
-                                }
+                                // Clamp zoom to minimum scale (1.0f) and update scale
+                                val newScale = (scale * zoom).coerceAtLeast(1.0f)
+                                scale = newScale
+                                
+                                // Update offset with clamping to avoid blank gaps
+                                val newOffsetX = (offsetX + pan.x).coerceIn(-1000f, 1000f)
+                                val newOffsetY = (offsetY + pan.y).coerceIn(-1000f, 1000f)
+                                offsetX = newOffsetX
+                                offsetY = newOffsetY
+                                
+                                // Notify ViewModel of zoom change
+                                onZoom(newScale, Offset.Zero)
                             }
-                        )
                         },
                     contentScale = contentScale
                 )
@@ -861,36 +853,30 @@ private fun WebtoonReader(
             // Оптимизации для производительности
             userScrollEnabled = true,
             reverseLayout = false
-            // LazyColumn автоматически предзагружает соседние элементы
         ) {
             items(
                 count = uiState.pageCount,
                 key = { it },
                 contentType = { "webtoon_page" }
             ) { pageIndex ->
-                WebtoonPageItem(pageIndex = pageIndex, uiState = uiState)
+                WebtoonPageItem(
+                    pageIndex = pageIndex, 
+                    uiState = uiState,
+                    isVisible = true // Всегда видимые в Webtoon режиме
+                )
             }
         }
         
-        // Добавляем зоны для открытия панелей в режиме Webtoon
-        ReaderTapZones(
-            panelsOpen = false, // В Webtoon режиме панели всегда доступны
-            onOpenTopBar = onShowTopPanel,
-            onOpenSideBar = onShowRightPanel,
-            onPrev = onPreviousPage,
-            onNext = onNextPage,
-            tapZonesSize = readerSettings.readerTapZonesSize,
-            tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
-            navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
-            modifier = Modifier.fillMaxSize()
-        )
+        // УБРАНО: дублирующие gesture zones в Webtoon режиме
+        // Gesture zones теперь только в общем ReaderScreen
     }
 }
 
 @Composable
 private fun WebtoonPageItem(
     pageIndex: Int,
-    uiState: ReaderUiState
+    uiState: ReaderUiState,
+    isVisible: Boolean = true
 ) {
     val bitmap = uiState.bitmaps[pageIndex]
     val isCurrentPage = pageIndex == uiState.currentPageIndex
@@ -905,6 +891,7 @@ private fun WebtoonPageItem(
         modifier = Modifier
             .fillMaxWidth()
             // Убираем зазоры между страницами в режиме Webtoon
+            .padding(0.dp) // Убираем все отступы
     ) {
         when {
             bitmap != null -> {
@@ -987,6 +974,29 @@ private fun WebtoonPageItem(
             }
         }
     }
+}
+
+/**
+ * Clamp offset to prevent blank gaps when panning
+ */
+private fun clampOffset(
+    offset: Offset,
+    scale: Float,
+    imageWidth: Float,
+    imageHeight: Float,
+    screenWidth: Float,
+    screenHeight: Float
+): Offset {
+    val scaledWidth = imageWidth * scale
+    val scaledHeight = imageHeight * scale
+    
+    val maxOffsetX = max(0f, (scaledWidth - screenWidth) / 2f)
+    val maxOffsetY = max(0f, (scaledHeight - screenHeight) / 2f)
+    
+    return Offset(
+        x = offset.x.coerceIn(-maxOffsetX, maxOffsetX),
+        y = offset.y.coerceIn(-maxOffsetY, maxOffsetY)
+    )
 }
 
 

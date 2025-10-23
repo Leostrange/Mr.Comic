@@ -23,7 +23,7 @@ class UIController {
     
     // Настройки автоскрытия
     private var autoHideDelayMs = 3000L // 3 секунды по умолчанию
-    private var isAutoHideEnabled = true
+    private var isAutoHideEnabled = false // Отключено по требованию пользователя
     
     // Корутина для автоскрытия
     private var autoHideJob: Job? = null
@@ -164,7 +164,7 @@ class UIController {
 @Composable
 fun rememberUIController(
     autoHideDelayMs: Long = 3000L,
-    autoHideEnabled: Boolean = true
+    autoHideEnabled: Boolean = false // Отключено по требованию пользователя
 ): UIController {
     val controller = remember { UIController() }
     

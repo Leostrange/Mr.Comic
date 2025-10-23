@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.unit.dp
 
 /**
@@ -26,13 +27,11 @@ fun TopSettingsPanel(
     visible: Boolean,
     onDismiss: () -> Unit,
     onBrightnessChange: (Float) -> Unit,
-    onBrightnessModeChange: (String) -> Unit,
     onOrientationChange: (String) -> Unit,
     onScaleModeChange: (String) -> Unit,
     onReadingModeChange: (String) -> Unit = {},
     onResetZoom: () -> Unit = {},
     currentBrightness: Float = 1.0f,
-    currentBrightnessMode: String = "auto",
     currentOrientation: String = "auto",
     currentScaleMode: String = "width",
     currentReadingMode: String = "page",
@@ -93,33 +92,24 @@ fun TopSettingsPanel(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 
-                // Brightness mode selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = currentBrightnessMode == "auto",
-                        onClick = { onBrightnessModeChange("auto") },
-                        label = { Text("Auto") }
-                    )
-                    FilterChip(
-                        selected = currentBrightnessMode == "manual",
-                        onClick = { onBrightnessModeChange("manual") },
-                        label = { Text("Manual") }
-                    )
-                }
-                
-                // Manual brightness slider (only show when manual mode is selected)
-                if (currentBrightnessMode == "manual") {
-                    Slider(
-                        value = currentBrightness,
-                        onValueChange = onBrightnessChange,
-                        valueRange = 0.1f..1.0f,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    )
-                }
+                // Brightness slider (always visible)
+                Spacer(modifier = Modifier.height(8.dp))
+                Slider(
+                    value = currentBrightness,
+                    onValueChange = onBrightnessChange,
+                    valueRange = 0.1f..1.0f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .pointerInput(Unit) {
+                            // Блокируем gesture propagation для слайдера
+                            detectTapGestures { }
+                        }
+                )
+                Text(
+                    text = "Brightness: ${(currentBrightness * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 

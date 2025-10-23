@@ -19,11 +19,12 @@ class GestureHandler(
     fun onTap(position: Offset): GestureAction {
         val zone = getTapZone(position)
         return when (zone) {
-            TapZone.LEFT -> GestureAction.PreviousPage      // Зона 4: листание назад
-            TapZone.RIGHT -> GestureAction.NextPage        // Зона 3: листание вперёд
+            TapZone.LEFT -> GestureAction.PreviousPage      // Листание назад
+            TapZone.RIGHT -> GestureAction.NextPage        // Листание вперёд
             TapZone.CENTER -> GestureAction.ToggleUI
-            TapZone.TOP_LEFT -> GestureAction.ShowTopPanel // Зона 2: верхняя панель
-            TapZone.TOP_RIGHT -> GestureAction.ShowRightPanel // Зона 1: боковая панель (только верхний правый угол)
+            TapZone.TOP_LEFT -> GestureAction.ShowTopPanel // Верхняя панель (верхний левый угол)
+            TapZone.TOP_RIGHT -> GestureAction.ShowRightPanel // Правая панель (верхний правый угол)
+            TapZone.BOTTOM_LEFT -> GestureAction.ShowLeftPanel // Левая панель (нижний левый угол)
         }
     }
     
@@ -47,6 +48,7 @@ class GestureHandler(
             TapZone.CENTER -> GestureAction.ShowTopPanel
             TapZone.TOP_LEFT -> GestureAction.ShowTopPanel
             TapZone.TOP_RIGHT -> GestureAction.ShowRightPanel
+            TapZone.BOTTOM_LEFT -> GestureAction.ShowLeftPanel
         }
     }
     
@@ -76,22 +78,40 @@ class GestureHandler(
         val screenWidth = screenSize.width.toFloat()
         val screenHeight = screenSize.height.toFloat()
         
-        // Define corner zones (smaller areas for precise targeting)
-        val cornerZoneSize = 100f // 100dp corner zones
+        // Define corner zones (larger for better targeting)
+        val cornerZoneSize = 150f // 150dp corner zones для лучшего таргетинга
         
-        // Check corner zones first
+        // Check corner zones first (higher priority than edge zones)
+        // TOP LEFT corner - верхняя панель
         if (position.x < cornerZoneSize && position.y < cornerZoneSize) {
-            return TapZone.TOP_LEFT  // Зона 2: верхняя панель
-        }
-        if (position.x > screenWidth - cornerZoneSize && position.y < cornerZoneSize) {
-            return TapZone.TOP_RIGHT // Зона 1: боковая панель (только верхний правый угол)
+            return TapZone.TOP_LEFT
         }
         
-        // Зоны для листания (увеличены для удобства)
-        val edgeZone = 120f // 120dp edge zones для удобного тапа
+        // TOP RIGHT corner - правая панель
+        if (position.x > screenWidth - cornerZoneSize && position.y < cornerZoneSize) {
+            return TapZone.TOP_RIGHT
+        }
+        
+        // BOTTOM LEFT corner - левая панель
+        if (position.x < cornerZoneSize && position.y > screenHeight - cornerZoneSize) {
+            return TapZone.BOTTOM_LEFT
+        }
+        
+        // Create buffer zones to prevent conflicts between corner and edge zones
+        val bufferZone = 50f // 50dp buffer between corner and edge zones
+        
+        // Зоны для листания (только в середине экрана, не в углах)
+        val edgeZoneStart = cornerZoneSize + bufferZone
+        val edgeZoneEnd = screenWidth - cornerZoneSize - bufferZone
+        val topZoneEnd = cornerZoneSize + bufferZone
+        val bottomZoneStart = screenHeight - cornerZoneSize - bufferZone
+        
         return when {
-            position.x < edgeZone -> TapZone.LEFT  // Зона 4: листание назад
-            position.x > screenWidth - edgeZone -> TapZone.RIGHT // Зона 3: листание вперёд
+            // Левая зона листания (только в середине по вертикали)
+            position.x < edgeZoneStart && position.y > topZoneEnd && position.y < bottomZoneStart -> TapZone.LEFT
+            // Правая зона листания (только в середине по вертикали)
+            position.x > edgeZoneEnd && position.y > topZoneEnd && position.y < bottomZoneStart -> TapZone.RIGHT
+            // Центральная зона - только UI toggle
             else -> TapZone.CENTER
         }
     }
@@ -101,11 +121,12 @@ class GestureHandler(
  * Tap zones for navigation
  */
 enum class TapZone {
-    LEFT,         // Зона 4: Previous page
-    CENTER,       // Toggle UI
-    RIGHT,        // Зона 3: Next page
-    TOP_LEFT,     // Зона 2: Show top panel
-    TOP_RIGHT     // Зона 1: Show right panel (только верхний правый угол)
+    LEFT,         // Previous page (left edge middle, with buffer zone)
+    CENTER,       // Toggle UI (center area, with buffer zones on sides)
+    RIGHT,        // Next page (right edge middle, with buffer zone)
+    TOP_LEFT,     // Show top panel (top-left corner, 150dp)
+    TOP_RIGHT,    // Show right panel (top-right corner, 150dp)
+    BOTTOM_LEFT   // Show left panel (bottom-left corner, 150dp)
 }
 
 /**

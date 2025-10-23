@@ -140,7 +140,7 @@ class OptimizedPdfiumReader : PdfReader {
             // Создаем битмап
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             
-            // Рендерим страницу
+            // Рендерим страницу с высоким DPI для лучшего качества
             pdfiumCore.renderPageBitmap(
                 pdfDocument,
                 bitmap,

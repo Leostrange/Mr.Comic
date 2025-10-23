@@ -48,10 +48,10 @@ class ZoomController(
     
     /**
      * Calculate scale for fit-screen mode
-     * FIT = WIDTH (одинаковые - по ширине экрана)
+     * FIT = min(W/imgW, H/imgH) — вписать целиком без выхода за границы
      */
     fun calculateFitScreenScale(): Float {
-        // FIT: вписать целиком без выхода за границы = min(viewW/imgW, viewH/imgH)
+        // FIT: вписать целиком = min(viewW/imgW, viewH/imgH)
         if (imageSize.width == 0 || imageSize.height == 0) return 1f
         val widthScale = screenSize.width.toFloat() / imageSize.width.toFloat()
         val heightScale = screenSize.height.toFloat() / imageSize.height.toFloat()
@@ -308,14 +308,14 @@ class ZoomController(
  * Соответствуют требованиям пользователя:
  * - WIDTH: растягивание по ширине, высота пропорциональна (может выходить за экран)
  * - HEIGHT: растягивание по высоте, ширина пропорциональна (может выходить за экран)
- * - FIT: то же что WIDTH (одинаковые)
- * - FILL: вписать целиком, не выходя за границы экрана
+ * - FIT: вписать целиком, не выходя за границы экрана (min)
+ * - FILL: заполнить экран с обрезкой (max)
  */
 enum class ZoomMode {
     FIT_WIDTH,   // Fit width to screen (scale = viewW / imgW)
     FIT_HEIGHT,  // Fit height to screen (scale = viewH / imgH)
-    FIT_SCREEN,  // Same as FIT_WIDTH (scale = viewW / imgW)
-    FILL         // Fit entire image without going beyond screen (scale = min(viewW/imgW, viewH/imgH))
+    FIT_SCREEN,  // Fit entire image (scale = min(viewW/imgW, viewH/imgH))
+    FILL         // Fill screen with crop (scale = max(viewW/imgW, viewH/imgH))
 }
 
 /**

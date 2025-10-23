@@ -72,7 +72,7 @@ fun Modifier.readerGestures(
         }
         // Swipe gestures (only when not zoomed)
         .pointerInput(isZoomed, blockSwipeWhenZoomed, screenSize) {
-            if (!isZoomed || !blockSwipeWhenZoomed) {
+            if (!isZoomed) { // Always block swipe when zoomed
                 var startPosition = Offset.Zero
                 var isDragging = false
                 

@@ -838,6 +838,28 @@ class ReaderViewModel @Inject constructor(
 
             // Прелоадим соседние страницы через PagePreloader
             pagePreloader.preloadAroundPage(pageIndex)
+            
+            // ✅ Webtoon mode: предзагрузка ВСЕХ страниц для плавного скроллинга
+            if (_uiState.value.readingMode == ReadingMode.WEBTOON) {
+                viewModelScope.launch {
+                    android.util.Log.d(TAG, "📜 Webtoon mode: preloading all ${_uiState.value.pageCount} pages")
+                    for (i in 0 until _uiState.value.pageCount) {
+                        if (!_uiState.value.bitmaps.containsKey(i)) {
+                            kotlinx.coroutines.delay(30) // Небольшая задержка между загрузками
+                            val pageBitmap = getPage(i)
+                            if (pageBitmap != null) {
+                                _uiState.update { currentState ->
+                                    currentState.copy(
+                                        bitmaps = currentState.bitmaps + (i to pageBitmap)
+                                    )
+                                }
+                                android.util.Log.d(TAG, "✅ Webtoon: loaded page $i")
+                            }
+                        }
+                    }
+                    android.util.Log.d(TAG, "✅ Webtoon: all pages loaded")
+                }
+            }
         }
     }
 
@@ -1064,6 +1086,26 @@ class ReaderViewModel @Inject constructor(
     fun updateBrightnessMode(mode: String) {
         viewModelScope.launch {
             settingsRepository.setReaderBrightnessMode(mode)
+            
+            // Обновляем UI состояние
+            _uiState.update { currentState ->
+                currentState.copy(readerBrightnessMode = mode)
+            }
+            
+            // Для Auto режима восстанавливаем системную яркость
+            if (mode == "auto") {
+                try {
+                    val activity = context as? Activity
+                    activity?.let { act ->
+                        val layoutParams = act.window.attributes
+                        layoutParams.screenBrightness = -1f // -1 = системная яркость
+                        act.window.attributes = layoutParams
+                        android.util.Log.d(TAG, "Brightness mode set to auto (system brightness)")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Failed to set auto brightness", e)
+                }
+            }
         }
     }
     
@@ -1098,6 +1140,20 @@ class ReaderViewModel @Inject constructor(
             }
             
             android.util.Log.d(TAG, "Scale mode updated: $scaleMode (page preserved: $currentPage)")
+        }
+    }
+    
+    /**
+     * Update zoom state
+     */
+    fun updateZoomState(scale: Float, center: androidx.compose.ui.geometry.Offset, offsetX: Float, offsetY: Float) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                currentZoomScale = scale,
+                zoomCenter = center,
+                offsetX = offsetX,
+                offsetY = offsetY
+            )
         }
     }
     
