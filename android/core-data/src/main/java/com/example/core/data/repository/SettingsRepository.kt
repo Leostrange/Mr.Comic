@@ -165,6 +165,62 @@ interface SettingsRepository {
     val notificationProgress: Flow<Boolean>
     suspend fun setNotificationProgress(enabled: Boolean)
 
+    // Reader Customization Settings
+    val readerTapZonesSize: Flow<Float>
+    suspend fun setReaderTapZonesSize(size: Float)
+    val readerTapZonesSensitivity: Flow<Float>
+    suspend fun setReaderTapZonesSensitivity(sensitivity: Float)
+    val readerShowPageIndicator: Flow<Boolean>
+    suspend fun setReaderShowPageIndicator(show: Boolean)
+    val readerShowProgressBar: Flow<Boolean>
+    suspend fun setReaderShowProgressBar(show: Boolean)
+    val readerAutoHideUI: Flow<Boolean>
+    suspend fun setReaderAutoHideUI(autoHide: Boolean)
+    val readerAutoHideDelay: Flow<Int>
+    suspend fun setReaderAutoHideDelay(delay: Int)
+    val readerGestureSensitivity: Flow<Float>
+    suspend fun setReaderGestureSensitivity(sensitivity: Float)
+    val readerVibrationFeedback: Flow<Boolean>
+    suspend fun setReaderVibrationFeedback(vibration: Boolean)
+
+    // Image Quality Settings
+    val imageQuality: Flow<String>
+    suspend fun setImageQuality(quality: String)
+    val imageRenderDpi: Flow<Int>
+    suspend fun setImageRenderDpi(dpi: Int)
+    val imageCacheSize: Flow<Int>
+    suspend fun setImageCacheSize(size: Int)
+    val imagePreloadPages: Flow<Int>
+    suspend fun setImagePreloadPages(pages: Int)
+    val imageCompressionLevel: Flow<Int>
+    suspend fun setImageCompressionLevel(level: Int)
+
+    // Gesture Settings
+    val gestureSwipeThreshold: Flow<Float>
+    suspend fun setGestureSwipeThreshold(threshold: Float)
+    val gestureZoomSensitivity: Flow<Float>
+    suspend fun setGestureZoomSensitivity(sensitivity: Float)
+    val gesturePanSensitivity: Flow<Float>
+    suspend fun setGesturePanSensitivity(sensitivity: Float)
+    val navigationSwipeEnabled: Flow<Boolean>
+    suspend fun setNavigationSwipeEnabled(enabled: Boolean)
+    val navigationTapZonesEnabled: Flow<Boolean>
+    suspend fun setNavigationTapZonesEnabled(enabled: Boolean)
+    val navigationKeyboardShortcuts: Flow<Boolean>
+    suspend fun setNavigationKeyboardShortcuts(enabled: Boolean)
+
+    // Notification Settings
+    val soundPageTurn: Flow<Boolean>
+    suspend fun setSoundPageTurn(enabled: Boolean)
+    val soundVolume: Flow<Float>
+    suspend fun setSoundVolume(volume: Float)
+    val vibrationPageTurn: Flow<Boolean>
+    suspend fun setVibrationPageTurn(enabled: Boolean)
+    val vibrationIntensity: Flow<Float>
+    suspend fun setVibrationIntensity(intensity: Float)
+    val notificationProgress: Flow<Boolean>
+    suspend fun setNotificationProgress(enabled: Boolean)
+
     // UI Settings
     val theme: Flow<String> // system|light|dark|sepia|amoled|manga
     suspend fun setTheme(theme: String)
@@ -475,6 +531,158 @@ class SettingsRepositoryImpl @Inject constructor(
     }
     override suspend fun setResetZoomOnPageChange(enabled: Boolean) {
         dataStore.edit { it[PreferencesKeys.RESET_ZOOM_ON_PAGE_CHANGE] = enabled.toString() }
+    }
+
+    // Reader Customization Settings
+    override val readerTapZonesSize: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_TAP_ZONES_SIZE]?.toFloat() ?: 1.0f
+    }
+    override suspend fun setReaderTapZonesSize(size: Float) {
+        dataStore.edit { it[PreferencesKeys.READER_TAP_ZONES_SIZE] = size.toString() }
+    }
+    override val readerTapZonesSensitivity: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_TAP_ZONES_SENSITIVITY]?.toFloat() ?: 1.0f
+    }
+    override suspend fun setReaderTapZonesSensitivity(sensitivity: Float) {
+        dataStore.edit { it[PreferencesKeys.READER_TAP_ZONES_SENSITIVITY] = sensitivity.toString() }
+    }
+    override val readerShowPageIndicator: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.READER_SHOW_PAGE_INDICATOR]?.toBoolean() ?: true
+    }
+    override suspend fun setReaderShowPageIndicator(show: Boolean) {
+        dataStore.edit { it[PreferencesKeys.READER_SHOW_PAGE_INDICATOR] = show.toString() }
+    }
+    override val readerShowProgressBar: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.READER_SHOW_PROGRESS_BAR]?.toBoolean() ?: true
+    }
+    override suspend fun setReaderShowProgressBar(show: Boolean) {
+        dataStore.edit { it[PreferencesKeys.READER_SHOW_PROGRESS_BAR] = show.toString() }
+    }
+    override val readerAutoHideUI: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.READER_AUTO_HIDE_UI]?.toBoolean() ?: true
+    }
+    override suspend fun setReaderAutoHideUI(autoHide: Boolean) {
+        dataStore.edit { it[PreferencesKeys.READER_AUTO_HIDE_UI] = autoHide.toString() }
+    }
+    override val readerAutoHideDelay: Flow<Int> = dataStore.data.map {
+        it[PreferencesKeys.READER_AUTO_HIDE_DELAY]?.toInt() ?: 3000
+    }
+    override suspend fun setReaderAutoHideDelay(delay: Int) {
+        dataStore.edit { it[PreferencesKeys.READER_AUTO_HIDE_DELAY] = delay.toString() }
+    }
+    override val readerGestureSensitivity: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.READER_GESTURE_SENSITIVITY]?.toFloat() ?: 1.0f
+    }
+    override suspend fun setReaderGestureSensitivity(sensitivity: Float) {
+        dataStore.edit { it[PreferencesKeys.READER_GESTURE_SENSITIVITY] = sensitivity.toString() }
+    }
+    override val readerVibrationFeedback: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.READER_VIBRATION_FEEDBACK]?.toBoolean() ?: true
+    }
+    override suspend fun setReaderVibrationFeedback(vibration: Boolean) {
+        dataStore.edit { it[PreferencesKeys.READER_VIBRATION_FEEDBACK] = vibration.toString() }
+    }
+
+    // Image Quality Settings
+    override val imageQuality: Flow<String> = dataStore.data.map {
+        it[PreferencesKeys.IMAGE_QUALITY] ?: "high"
+    }
+    override suspend fun setImageQuality(quality: String) {
+        dataStore.edit { it[PreferencesKeys.IMAGE_QUALITY] = quality }
+    }
+    override val imageRenderDpi: Flow<Int> = dataStore.data.map {
+        it[PreferencesKeys.IMAGE_RENDER_DPI]?.toInt() ?: 2560
+    }
+    override suspend fun setImageRenderDpi(dpi: Int) {
+        dataStore.edit { it[PreferencesKeys.IMAGE_RENDER_DPI] = dpi.toString() }
+    }
+    override val imageCacheSize: Flow<Int> = dataStore.data.map {
+        it[PreferencesKeys.IMAGE_CACHE_SIZE]?.toInt() ?: 100
+    }
+    override suspend fun setImageCacheSize(size: Int) {
+        dataStore.edit { it[PreferencesKeys.IMAGE_CACHE_SIZE] = size.toString() }
+    }
+    override val imagePreloadPages: Flow<Int> = dataStore.data.map {
+        it[PreferencesKeys.IMAGE_PRELOAD_PAGES]?.toInt() ?: 3
+    }
+    override suspend fun setImagePreloadPages(pages: Int) {
+        dataStore.edit { it[PreferencesKeys.IMAGE_PRELOAD_PAGES] = pages.toString() }
+    }
+    override val imageCompressionLevel: Flow<Int> = dataStore.data.map {
+        it[PreferencesKeys.IMAGE_COMPRESSION_LEVEL]?.toInt() ?: 80
+    }
+    override suspend fun setImageCompressionLevel(level: Int) {
+        dataStore.edit { it[PreferencesKeys.IMAGE_COMPRESSION_LEVEL] = level.toString() }
+    }
+
+    // Gesture Settings
+    override val gestureSwipeThreshold: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.GESTURE_SWIPE_THRESHOLD]?.toFloat() ?: 50f
+    }
+    override suspend fun setGestureSwipeThreshold(threshold: Float) {
+        dataStore.edit { it[PreferencesKeys.GESTURE_SWIPE_THRESHOLD] = threshold.toString() }
+    }
+    override val gestureZoomSensitivity: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.GESTURE_ZOOM_SENSITIVITY]?.toFloat() ?: 1.0f
+    }
+    override suspend fun setGestureZoomSensitivity(sensitivity: Float) {
+        dataStore.edit { it[PreferencesKeys.GESTURE_ZOOM_SENSITIVITY] = sensitivity.toString() }
+    }
+    override val gesturePanSensitivity: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.GESTURE_PAN_SENSITIVITY]?.toFloat() ?: 1.0f
+    }
+    override suspend fun setGesturePanSensitivity(sensitivity: Float) {
+        dataStore.edit { it[PreferencesKeys.GESTURE_PAN_SENSITIVITY] = sensitivity.toString() }
+    }
+    override val navigationSwipeEnabled: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.NAVIGATION_SWIPE_ENABLED]?.toBoolean() ?: true
+    }
+    override suspend fun setNavigationSwipeEnabled(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NAVIGATION_SWIPE_ENABLED] = enabled.toString() }
+    }
+    override val navigationTapZonesEnabled: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.NAVIGATION_TAP_ZONES_ENABLED]?.toBoolean() ?: true
+    }
+    override suspend fun setNavigationTapZonesEnabled(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NAVIGATION_TAP_ZONES_ENABLED] = enabled.toString() }
+    }
+    override val navigationKeyboardShortcuts: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.NAVIGATION_KEYBOARD_SHORTCUTS]?.toBoolean() ?: true
+    }
+    override suspend fun setNavigationKeyboardShortcuts(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NAVIGATION_KEYBOARD_SHORTCUTS] = enabled.toString() }
+    }
+
+    // Notification Settings
+    override val soundPageTurn: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.SOUND_PAGE_TURN]?.toBoolean() ?: false
+    }
+    override suspend fun setSoundPageTurn(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.SOUND_PAGE_TURN] = enabled.toString() }
+    }
+    override val soundVolume: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.SOUND_VOLUME]?.toFloat() ?: 0.5f
+    }
+    override suspend fun setSoundVolume(volume: Float) {
+        dataStore.edit { it[PreferencesKeys.SOUND_VOLUME] = volume.toString() }
+    }
+    override val vibrationPageTurn: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.VIBRATION_PAGE_TURN]?.toBoolean() ?: true
+    }
+    override suspend fun setVibrationPageTurn(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.VIBRATION_PAGE_TURN] = enabled.toString() }
+    }
+    override val vibrationIntensity: Flow<Float> = dataStore.data.map {
+        it[PreferencesKeys.VIBRATION_INTENSITY]?.toFloat() ?: 0.5f
+    }
+    override suspend fun setVibrationIntensity(intensity: Float) {
+        dataStore.edit { it[PreferencesKeys.VIBRATION_INTENSITY] = intensity.toString() }
+    }
+    override val notificationProgress: Flow<Boolean> = dataStore.data.map {
+        it[PreferencesKeys.NOTIFICATION_PROGRESS]?.toBoolean() ?: true
+    }
+    override suspend fun setNotificationProgress(enabled: Boolean) {
+        dataStore.edit { it[PreferencesKeys.NOTIFICATION_PROGRESS] = enabled.toString() }
     }
 
     // Reader Customization Settings
