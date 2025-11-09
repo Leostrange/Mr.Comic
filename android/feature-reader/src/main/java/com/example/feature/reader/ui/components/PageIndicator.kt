@@ -42,17 +42,9 @@ fun PageIndicator(
     isPinned: Boolean,
     visible: Boolean,
     onPinToggle: () -> Unit,
+    backgroundColor: Color = Color.Black.copy(alpha = 0.6f),
     modifier: Modifier = Modifier
 ) {
-    // Адаптивный цвет фона в зависимости от яркости страницы
-    val backgroundColor = remember(currentPage) {
-        // Простая логика для демонстрации - в реальности нужно анализировать изображение
-        if (currentPage % 2 == 0) {
-            Color.Black.copy(alpha = 0.6f) // Темный фон для четных страниц
-        } else {
-            Color.White.copy(alpha = 0.8f) // Светлый фон для нечетных страниц
-        }
-    }
     val textColor = calculateContrastColor(backgroundColor)
     
     AnimatedVisibility(
@@ -138,5 +130,34 @@ fun CompactPageIndicator(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
             )
         }
+    }
+}
+
+/**
+ * Persistent page indicator - always visible in bottom-right corner
+ * Согласно тасклисту: постоянный индикатор в правом нижнем углу с адаптивным цветом
+ */
+@Composable
+fun PersistentPageIndicator(
+    currentPage: Int,
+    totalPages: Int,
+    backgroundColor: Color = Color.Black.copy(alpha = 0.5f),
+    modifier: Modifier = Modifier
+) {
+    val textColor = calculateContrastColor(backgroundColor)
+    
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(topStart = 8.dp),
+        modifier = modifier
+            .padding(0.dp)
+            .zIndex(3f) // Высокий zIndex для постоянной видимости
+    ) {
+        Text(
+            text = "$currentPage / $totalPages",
+            style = MaterialTheme.typography.bodySmall,
+            color = textColor,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }

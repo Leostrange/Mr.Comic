@@ -114,7 +114,7 @@ class PdfReader(
                 close()
                 val message = when {
                     e.message?.contains("Permission Denial") == true -> e.message!!
-                    e.message?.contains("SecurityException") == true -> "Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"
+	                    e.message?.contains("SecurityException") == true -> "Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"
                     else -> "Ошибка при открытии PDF файла: ${e.message ?: "неизвестная ошибка"}"
                 }
                 Result.failure(IllegalStateException(message, e))

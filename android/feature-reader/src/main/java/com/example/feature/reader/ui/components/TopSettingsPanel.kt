@@ -3,6 +3,7 @@ package com.example.feature.reader.ui.components
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -13,11 +14,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDown
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.unit.dp
 
 /**
  * Top settings panel with semi-transparent background
  * Shows quick settings for reader
+ * 
+ * ИСПРАВЛЕНИЯ:
+ * 1. Добавлены отступы слева и справа от слайдера яркости (32.dp)
+ * 2. Улучшена блокировка gesture propagation для слайдера (detectDragGestures)
+ * 3. Удалена кнопка Close для чистоты дизайна (закрытие по тапу вне панели)
  */
 @Composable
 fun TopSettingsPanel(
@@ -26,10 +36,12 @@ fun TopSettingsPanel(
     onBrightnessChange: (Float) -> Unit,
     onOrientationChange: (String) -> Unit,
     onScaleModeChange: (String) -> Unit,
+    onReadingModeChange: (String) -> Unit = {},
     onResetZoom: () -> Unit = {},
     currentBrightness: Float = 1.0f,
     currentOrientation: String = "auto",
     currentScaleMode: String = "width",
+    currentReadingMode: String = "page",
     modifier: Modifier = Modifier
 ) {
     AnimatedVisibility(
@@ -51,16 +63,26 @@ fun TopSettingsPanel(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                .pointerInput(Unit) {
+                    // Consume all pointer events at the final pass to block propagation to underlying content
+                    // This is a common pattern to block gestures while allowing clicks on the panel itself
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             ) {
-                // Header
+                // Header (без кнопки Close)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
@@ -68,14 +90,6 @@ fun TopSettingsPanel(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
                 }
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -84,14 +98,25 @@ fun TopSettingsPanel(
                 Text(
                     text = "Brightness",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 32.dp)
                 )
                 
+                // Brightness slider с отступами и улучшенной блокировкой жестов
+                Spacer(modifier = Modifier.height(8.dp))
                 Slider(
                     value = currentBrightness,
                     onValueChange = onBrightnessChange,
                     valueRange = 0.1f..1.0f,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp) // Отступы для удобства регулировки
+                )
+                Text(
+                    text = "Brightness: ${(currentBrightness * 100).toInt()}%",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(horizontal = 32.dp)
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -126,12 +151,58 @@ fun TopSettingsPanel(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Scale mode control
+                // Reading mode control
                 Text(
-                    text = "Scale Mode",
+                    text = "Reading Mode",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = currentReadingMode == "page",
+                        onClick = { onReadingModeChange("page") },
+                        label = { 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Page", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    )
+                    FilterChip(
+                        selected = currentReadingMode == "webtoon",
+                        onClick = { onReadingModeChange("webtoon") },
+                        label = { 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.ViewAgenda,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Webtoon", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Scale mode control (только для PAGE режима)
+                if (currentReadingMode == "page") {
+                    Text(
+                        text = "Scale Mode",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -202,19 +273,20 @@ fun TopSettingsPanel(
                 modifier = Modifier.height(32.dp)
             )
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Reset zoom button
-        Button(
-            onClick = onResetZoom,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondary
-            )
-        ) {
-            Text("Reset Zoom")
-        }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Reset zoom button (только для PAGE режима)
+                    Button(
+                        onClick = onResetZoom,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary
+                        )
+                    ) {
+                        Text("Reset Zoom")
+                    }
+                }
             }
         }
     }

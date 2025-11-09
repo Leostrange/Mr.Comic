@@ -339,6 +339,9 @@ fun ModernReaderScreen(
                     isZoomed = scale > 1.01f
                     viewModel.trackZoom(scale)
                 },
+                // Настройки жестов из ViewModel
+                zoomSensitivity = uiState.gestureSensitivity,
+                panSensitivity = uiState.gestureSensitivity,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -513,19 +516,7 @@ fun ModernReaderScreen(
             }
             }
         
-        // Page indicator with Pin button (bottom-right corner)
-        var isPinned by remember { mutableStateOf(false) }
-        com.example.feature.reader.ui.components.PageIndicator(
-            currentPage = pagerState.currentPage + 1,
-            totalPages = totalPages,
-            isPinned = isPinned,
-            visible = showControls,
-            onPinToggle = { isPinned = !isPinned },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .zIndex(1f)
-        )
+// Удален дублирующийся PageIndicator (строки 520-531)
         
         // Кнопка гамбургер-меню с оглавлением (правый нижний угол, выше индикатора)
         androidx.compose.animation.AnimatedVisibility(

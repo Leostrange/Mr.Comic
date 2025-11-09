@@ -14,14 +14,24 @@ class BitmapCache @Inject constructor() {
     
     companion object {
         private const val TAG = "BitmapCache"
-        // Целевой размер кэша - 50MB
-        private const val TARGET_CACHE_SIZE_MB = 50
-        private const val BYTES_PER_MB = 1024 * 1024
-        private const val TARGET_CACHE_SIZE_BYTES = TARGET_CACHE_SIZE_MB * BYTES_PER_MB
+        
+        /**
+         * 🔥 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Динамический лимит кэша
+         * Рекомендация из "new/OptimizedCache.kt" и отчёта по анализу
+         * 
+         * Вместо фиксированного размера (50MB), используем 1/8 от доступной памяти приложения.
+         * Это предотвращает OOM на устройствах с малой памятью и оптимально использует ресурсы.
+         */
+        private fun calculateOptimalCacheSize(): Int {
+            val maxMemory = Runtime.getRuntime().maxMemory()
+            val cacheSize = (maxMemory / 8).toInt()
+            android.util.Log.d(TAG, "Calculated optimal cache size: ${cacheSize / 1024 / 1024}MB (1/8 of ${maxMemory / 1024 / 1024}MB)")
+            return cacheSize
+        }
     }
     
-    // LRU кэш для полноразмерных bitmap
-    private val bitmapCache = object : LruCache<String, Bitmap>(TARGET_CACHE_SIZE_BYTES) {
+    // LRU кэш для полноразмерных bitmap с динамическим лимитом
+    private val bitmapCache = object : LruCache<String, Bitmap>(calculateOptimalCacheSize()) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
             return bitmap.byteCount
         }
@@ -33,8 +43,8 @@ class BitmapCache @Inject constructor() {
         }
     }
     
-    // Отдельный кэш для превью (thumbnail)
-    private val thumbnailCache = object : LruCache<String, Bitmap>(TARGET_CACHE_SIZE_BYTES / 4) {
+    // Отдельный кэш для превью (thumbnail) - 1/4 от основного кэша
+    private val thumbnailCache = object : LruCache<String, Bitmap>(calculateOptimalCacheSize() / 4) {
         override fun sizeOf(key: String, bitmap: Bitmap): Int {
             return bitmap.byteCount
         }

@@ -7,8 +7,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -108,13 +108,13 @@ fun ComicGridItem(
             // Закладка
             if (comic.isBookmarked) {
                 Icon(
-                    imageVector = Icons.Default.Star,
+                    imageVector = Icons.Default.Bookmark,
                     contentDescription = "Bookmarked",
                     modifier = Modifier
                         .padding(8.dp)
-                        .size(24.dp)
+                        .size(28.dp)
                         .align(Alignment.TopEnd),
-                    tint = Color.Yellow
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
             

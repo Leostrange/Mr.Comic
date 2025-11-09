@@ -44,6 +44,7 @@ dependencies {
     implementation(libs.bundles.room)
     ksp(libs.androidx.room.compiler)
     implementation(libs.coil.compose)
+    implementation("androidx.documentfile:documentfile:1.0.1")
     testImplementation(libs.bundles.test.unit)
     implementation(libs.accompanist.permissions)
 }

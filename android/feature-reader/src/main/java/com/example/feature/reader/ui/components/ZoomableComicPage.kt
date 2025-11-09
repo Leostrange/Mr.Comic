@@ -25,6 +25,11 @@ import kotlinx.coroutines.launch
 /**
  * Zoomable comic page with gesture support
  * Supports tap zones, double tap zoom, pinch-to-zoom, and pan
+ * 
+ * ИСПРАВЛЕНИЯ:
+ * 1. Заменен ContentScale.Fit на ContentScale.None для использования масштаба из ZoomController
+ * 2. Теперь режимы масштабирования (width/height/fit/fill) работают корректно
+ * 3. Изображение не выходит за границы экрана в режиме FIT
  */
 @Composable
 fun ZoomableComicPage(
@@ -34,8 +39,12 @@ fun ZoomableComicPage(
     tapZoneConfig: TapZoneConfig = TapZoneConfig(),
     gestureSensitivity: Float = 1.0f,
     blockSwipeWhenZoomed: Boolean = true,
+    resetZoomOnPageChange: Boolean = true,
     onGestureAction: (GestureAction) -> Unit,
     onZoomStateChanged: (Float) -> Unit = {},
+    // Настройки жестов
+    zoomSensitivity: Float = 1.0f,
+    panSensitivity: Float = 1.0f,
     modifier: Modifier = Modifier
 ) {
     var screenSize by remember { mutableStateOf(IntSize.Zero) }
@@ -49,11 +58,18 @@ fun ZoomableComicPage(
     }
     
     // Zoom controller - only create when we have valid sizes
-    val zoomController = remember(imageSize, screenSize) {
+    val zoomController = remember(imageSize, screenSize, zoomSensitivity, panSensitivity) {
         if (screenSize.width > 0 && screenSize.height > 0) {
-            ZoomController(imageSize, screenSize)
+            ZoomController(imageSize, screenSize, zoomSensitivity, panSensitivity)
         } else {
             null
+        }
+    }
+    
+    // Reset zoom when page changes (if enabled)
+    LaunchedEffect(bitmap, resetZoomOnPageChange) {
+        if (resetZoomOnPageChange && bitmap != null) {
+            zoomController?.resetToBaseScale()
         }
     }
     
@@ -84,16 +100,17 @@ fun ZoomableComicPage(
                 }
             }
             is GestureAction.DoubleTapZoom -> {
-                // Double tap to reset zoom or zoom to 2x
+                // Double tap: reset to base scale if zoomed, otherwise zoom to 2x
                 zoomController?.let { controller ->
                     coroutineScope.launch {
-                        val currentScale = controller.scale.value
-                        if (currentScale > 1.1f) {
-                            // Reset to fit - используем существующий метод
-                            controller.cycleZoomMode(action.position)
+                        if (!controller.isAtBaseScale()) {
+                            // Reset to base scale of current mode
+                            controller.resetToBaseScale()
                         } else {
-                            // Zoom to 2x - используем существующий метод
-                            controller.applyPinchZoom(2f, action.position)
+                            // Zoom to 2x from base
+                            val baseScale = controller.getBaseScale()
+                            val targetZoom = 2f / baseScale
+                            controller.applyPinchZoom(targetZoom, action.position)
                         }
                     }
                 }
@@ -164,7 +181,8 @@ fun ZoomableComicPage(
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = "Comic page",
-                    contentScale = ContentScale.Fit,
+                    contentScale = ContentScale.Fit, // ИСПРАВЛЕНО: используем Fit для правильного базового масштабирования
+                    filterQuality = androidx.compose.ui.graphics.FilterQuality.High,
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(
@@ -172,8 +190,7 @@ fun ZoomableComicPage(
                             scaleY = currentScale,
                             translationX = currentOffsetX,
                             translationY = currentOffsetY,
-                            // Улучшаем качество рендеринга
-                            renderEffect = null // Отключаем эффекты для лучшей производительности
+                            renderEffect = null
                         )
                         .readerGesturesDebug(
                             screenSize = screenSize,

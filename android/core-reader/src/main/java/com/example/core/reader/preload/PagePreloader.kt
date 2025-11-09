@@ -116,6 +116,15 @@ class PagePreloader @Inject constructor(
         
         val reader = currentReader ?: return
         val uri = currentUri ?: return
+        
+        // ИСПРАВЛЕНИЕ: Для PDF не предзагружаем страницы, пока текущая не загружена
+        if (uri.endsWith(".pdf", ignoreCase = true)) {
+            val currentPageKey = bitmapCache.createKey(uri, currentPage, currentMaxWidth, currentMaxHeight, currentScale)
+            if (!bitmapCache.hasBitmap(currentPageKey)) {
+                android.util.Log.d(TAG, "PDF: Current page $currentPage not loaded yet, skipping preload")
+                return
+            }
+        }
         val pageCount = reader.getPageCount() ?: return
         
         android.util.Log.d(TAG, "Preloading around page $currentPage for book: $uri")

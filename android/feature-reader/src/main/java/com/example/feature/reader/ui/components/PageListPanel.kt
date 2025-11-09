@@ -27,6 +27,9 @@ import kotlinx.coroutines.launch
 /**
  * Right side panel with list of all pages for navigation
  * Shows thumbnails of all pages with current page highlighted
+ * 
+ * ИСПРАВЛЕНИЯ:
+ * 1. Удалена кнопка Close для чистоты дизайна
  */
 @Composable
 fun PageListPanel(
@@ -99,41 +102,21 @@ fun PageListPanel(
         Surface(
             color = Color.Black.copy(alpha = 0.25f), // Very transparent black overlay
             modifier = Modifier
-                .width(200.dp)
+                .width(100.dp)
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp))
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Pages ($totalPages)",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    
-                    IconButton(onClick = onDismiss) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
+                // Header убран для чистоты дизайна
+                // Закрытие панели происходит по тапу вне панели
                 
                 // Page list
                 LazyColumn(
                     state = listState,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(
@@ -164,35 +147,24 @@ private fun PageListItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    Column(
         modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 2.dp, horizontal = 4.dp)
-            .then(
-                if (isCurrentPage) {
-                    Modifier.background(
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                        RoundedCornerShape(8.dp)
-                    )
-                } else {
-                    Modifier
-                }
-            ),
-        verticalAlignment = Alignment.CenterVertically
+            .width(92.dp)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Thumbnail
+        // Thumbnail image
         Box(
             modifier = Modifier
-                .size(40.dp, 60.dp)
-                .clip(RoundedCornerShape(4.dp))
+                .size(92.dp, 130.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant)
                 .then(
                     if (isCurrentPage) {
                         Modifier.border(
-                            width = 2.dp,
+                            width = 3.dp,
                             color = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(8.dp)
                         )
                     } else {
                         Modifier
@@ -208,38 +180,24 @@ private fun PageListItem(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                // Показываем спиннер только если миниатюра действительно загружается
                 CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 1.dp,
-                    color = MaterialTheme.colorScheme.primary
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.width(8.dp))
-        
-        // Page number and info
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = "Page ${pageIndex + 1}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = if (isCurrentPage) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                }
-            )
-            
-            if (isCurrentPage) {
-                Text(
-                    text = "Current",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Page number
+        Text(
+            text = "${pageIndex + 1}",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (isCurrentPage) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurface
             }
-        }
+        )
     }
 }

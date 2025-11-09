@@ -24,15 +24,7 @@ class CbzReader @Inject constructor(
     private val context: Context
 ) : MediaReader {
     
-    private val memoryCache: LruCache<String, Bitmap> by lazy {
-        val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
-        val cacheSize = maxMemory / 8 // Use 1/8th of available memory for cache
-        object : LruCache<String, Bitmap>(cacheSize) {
-            override fun sizeOf(key: String, bitmap: Bitmap): Int {
-                return bitmap.byteCount / 1024
-            }
-        }
-    }
+    private val memoryManager = com.example.core.reader.utils.MemoryManager.getInstance()
     
     private var streamingExtractor: StreamingExtractor? = null
     private var pageCount: Int = 0
@@ -159,12 +151,10 @@ class CbzReader @Inject constructor(
         val cacheKey = "${currentUri?.toString() ?: ""}_$pageIndex"
         
         // Try to get from cache first
-        memoryCache.get(cacheKey)?.let { cachedBitmap ->
+        memoryManager.getBitmap(cacheKey)?.let { cachedBitmap ->
             if (!cachedBitmap.isRecycled) {
                 android.util.Log.d("CbzReader", "Cache hit for page $pageIndex")
                 return@withContext Result.success(cachedBitmap)
-            } else {
-                memoryCache.remove(cacheKey)
             }
         }
         
@@ -200,7 +190,13 @@ class CbzReader @Inject constructor(
                 
                 while (bitmap == null && retryCount < maxRetries) {
                     try {
-                        bitmap = BitmapFactory.decodeFile(file.absolutePath, options)
+                        // Используем улучшенный декодер с поддержкой EXIF
+                        bitmap = com.example.core.reader.utils.BitmapUtils.decodeBitmapFromFileWithExif(
+                            file.absolutePath,
+                            maxWidth,
+                            maxHeight,
+                            options.inPreferredConfig
+                        )
                         
                         if (bitmap == null && retryCount == 0) {
                             // First try failed, try with ARGB_8888
@@ -211,7 +207,7 @@ class CbzReader @Inject constructor(
                         }
                     } catch (e: OutOfMemoryError) {
                         // Clear cache and try again
-                        memoryCache.evictAll()
+                        memoryManager.clearCache()
                         System.gc()
                         retryCount++
                     } catch (e: Exception) {
@@ -222,7 +218,7 @@ class CbzReader @Inject constructor(
                 
                 bitmap?.let { 
                     // Add to cache
-                    memoryCache.put(cacheKey, it)
+                    memoryManager.putBitmap(cacheKey, it)
                     android.util.Log.d("CbzReader", "Successfully rendered page $pageIndex (${it.width}x${it.height})")
                     Result.success(it)
                 } ?: run {
@@ -255,7 +251,7 @@ class CbzReader @Inject constructor(
     private fun cleanup() {
         try {
             // Clear memory cache
-            memoryCache.evictAll()
+            memoryManager.clearCache()
             
             // Clean up extractor
             streamingExtractor?.cleanup()

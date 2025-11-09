@@ -7,13 +7,13 @@ import android.graphics.Bitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core.domain.usecase.GetReadingProgressUseCase
-import com.example.core.domain.usecase.SaveReadingProgressUseCase
+import com.example.feature.reader.domain.SaveReadingProgressUseCase
 import com.example.core.domain.util.Result
 import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.BookReaderFactory
 import com.example.core.data.repository.SettingsRepository
 import com.example.core.data.repository.ReadingSessionRepository
+import com.example.core.data.reader.ReadingModeDetector
 import com.example.core.reader.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -22,19 +22,23 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlin.math.abs
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val readerFactory: BookReaderFactory,
     private val settingsRepository: SettingsRepository,
     private val saveReadingProgressUseCase: SaveReadingProgressUseCase,
-    private val getReadingProgressUseCase: GetReadingProgressUseCase,
     private val readingSessionRepository: ReadingSessionRepository,
+    private val bookmarkRepository: com.example.core.data.repository.BookmarkRepository,
     private val pagePreloader: PagePreloader,
+    private val readingModeDetector: ReadingModeDetector,
+    val bitmapCache: com.example.core.reader.cache.BitmapCache,
     @ApplicationContext private val context: Context,
     private val analyticsHelper: com.example.core.analytics.AnalyticsHelper,
     savedStateHandle: SavedStateHandle
@@ -74,6 +78,134 @@ class ReaderViewModel @Inject constructor(
         true
     )
 
+    // Reader Customization Settings
+    val readerTapZonesSize = settingsRepository.readerTapZonesSize.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+    val readerTapZonesSensitivity = settingsRepository.readerTapZonesSensitivity.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+    val readerShowPageIndicator = settingsRepository.readerShowPageIndicator.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+    val readerShowProgressBar = settingsRepository.readerShowProgressBar.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+    val readerAutoHideUI = settingsRepository.readerAutoHideUI.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+    val readerAutoHideDelay = settingsRepository.readerAutoHideDelay.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        3000
+    )
+    val readerGestureSensitivity = settingsRepository.readerGestureSensitivity.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+    val readerVibrationFeedback = settingsRepository.readerVibrationFeedback.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+
+    // Image Quality Settings
+    val imageQuality = settingsRepository.imageQuality.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "high"
+    )
+    val imageRenderDpi = settingsRepository.imageRenderDpi.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        2560
+    )
+    val imageCacheSize = settingsRepository.imageCacheSize.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        100
+    )
+    val imagePreloadPages = settingsRepository.imagePreloadPages.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        3
+    )
+    val imageCompressionLevel = settingsRepository.imageCompressionLevel.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        80
+    )
+
+    // Gesture Settings
+    val gestureSwipeThreshold = settingsRepository.gestureSwipeThreshold.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        50f
+    )
+    val gestureZoomSensitivity = settingsRepository.gestureZoomSensitivity.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+    val gesturePanSensitivity = settingsRepository.gesturePanSensitivity.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        1.0f
+    )
+    val navigationSwipeEnabled = settingsRepository.navigationSwipeEnabled.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+    val navigationTapZonesEnabled = settingsRepository.navigationTapZonesEnabled.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+    val navigationKeyboardShortcuts = settingsRepository.navigationKeyboardShortcuts.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+
+    // Notification Settings
+    val soundPageTurn = settingsRepository.soundPageTurn.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        false
+    )
+    val soundVolume = settingsRepository.soundVolume.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        0.5f
+    )
+    val vibrationPageTurn = settingsRepository.vibrationPageTurn.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+    val vibrationIntensity = settingsRepository.vibrationIntensity.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        0.5f
+    )
+    val notificationProgress = settingsRepository.notificationProgress.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        true
+    )
+
     val readingOrientation = settingsRepository.orientation.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
@@ -90,6 +222,12 @@ class ReaderViewModel @Inject constructor(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
         1.0f
+    )
+    
+    val readerBrightnessMode = settingsRepository.readerBrightnessMode.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        "auto"
     )
 
     val readerAnimationSpeed = settingsRepository.readerAnimationSpeed.stateIn(
@@ -201,6 +339,19 @@ class ReaderViewModel @Inject constructor(
                     com.example.core.analytics.AnalyticsEvent.SettingChanged(
                         settingName = "reader_brightness",
                         value = String.format(java.util.Locale.US, "%.2f", coerced)
+                    ),
+                    this
+                )
+            }
+        }
+        
+        viewModelScope.launch {
+            settingsRepository.readerBrightnessMode.collect { mode ->
+                _uiState.update { it.copy(readerBrightnessMode = mode) }
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.SettingChanged(
+                        settingName = "reader_brightness_mode",
+                        value = mode
                     ),
                     this
                 )
@@ -401,6 +552,38 @@ class ReaderViewModel @Inject constructor(
                     val pageCount = metadata.pageCount
                     android.util.Log.d(TAG, "✅ Book opened successfully. Page count: $pageCount")
                     
+                    // Автоопределение режима чтения
+                    val autoDetectEnabled = settingsRepository.readingModeAutoDetect.first()
+                    
+                    if (autoDetectEnabled) {
+                        val detectedMode = readingModeDetector.detectReadingMode(finalUri)
+                        val detectedDirection = readingModeDetector.getReadingDirection(detectedMode)
+                        
+                        android.util.Log.d(TAG, "🔍 Auto-detected reading mode: $detectedMode, direction: $detectedDirection")
+                        
+                        // Сохраняем определенный режим для этого комикса
+                        settingsRepository.setReadingModeForComic(currentComicId!!, detectedMode)
+                        
+                        // Обновляем UI с определенным режимом
+                        val readingMode = when (detectedMode) {
+                            "webtoon" -> ReadingMode.WEBTOON
+                            else -> ReadingMode.PAGE
+                        }
+                        
+                        val readingDirection = when (detectedDirection) {
+                            "rtl" -> ReadingDirection.RTL
+                            "ltr" -> ReadingDirection.LTR
+                            else -> ReadingDirection.LTR
+                        }
+                        
+                        _uiState.update { 
+                            it.copy(
+                                readingMode = readingMode,
+                                readingDirection = readingDirection
+                            ) 
+                        }
+                    }
+                    
                     // Настраиваем PagePreloader для предзагрузки
                     pagePreloader.setCurrentReader(
                         reader = reader,
@@ -409,22 +592,21 @@ class ReaderViewModel @Inject constructor(
                         maxHeight = 1080,
                         scale = 1.0f
                     )
+                    
+                    // Устанавливаем флаги готовности для предзагрузки
+                    pagePreloader.markBookSelected()
+                    pagePreloader.markArchiveValidated()
+                    pagePreloader.markReaderReady()
 
                     // Восстанавливаем прогресс чтения
-                    val progressResult = getReadingProgressUseCase(currentComicId!!)
-                    if (progressResult is Result.Error) {
-                        android.util.Log.w(TAG, "Failed to load reading progress", progressResult.exception)
-                    }
-
-                    val lastReadPage = when (progressResult) {
-                        is Result.Success -> progressResult.data.currentPage
-                        is Result.Error -> 0
+                    val lastReadPage = try {
+                        saveReadingProgressUseCase.getProgress(currentComicId!!)
+                    } catch (e: Exception) {
+                        android.util.Log.w(TAG, "Failed to load reading progress", e)
+                        0
                     }.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
 
-                    val resolvedPageCount = when (progressResult) {
-                        is Result.Success -> if (pageCount == 0) progressResult.data.totalPages else pageCount
-                        is Result.Error -> pageCount
-                    }
+                    val resolvedPageCount = pageCount
 
                     // Загружаем pin состояние из сессии
                     val session = readingSessionRepository.getSessionByComicId(currentComicId!!)
@@ -445,7 +627,8 @@ class ReaderViewModel @Inject constructor(
                         it.copy(
                             pageCount = resolvedPageCount,
                             isPinned = isPinned,
-                            pinnedPage = pinnedPage
+                            pinnedPage = pinnedPage,
+                            currentComicUri = finalUri.toString()
                         ) 
                     }
 
@@ -508,24 +691,51 @@ class ReaderViewModel @Inject constructor(
 
     fun setReadingMode(mode: ReadingMode) {
         android.util.Log.d(TAG, "Setting reading mode: $mode")
-        _uiState.update { it.copy(readingMode = mode) }
-        viewModelScope.launch {
-            settingsRepository.setReadingMode(
-                when (mode) {
-                    ReadingMode.WEBTOON -> "webtoon"
-                    ReadingMode.PAGE -> "page"
-                }
-            )
-            // Analytics: reading mode changed
-            analyticsHelper.track(
-                com.example.core.analytics.AnalyticsEvent.ReadingModeChanged(
-                    mode = when (mode) {
+        
+        // 🔥 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Сброс кэша и перезагрузка при смене режима
+        // Это устранит мерцание/наложение при переключении на Webtoon
+        if (mode != _uiState.value.readingMode) {
+            viewModelScope.launch {
+                // 1. Обновляем настройки
+                settingsRepository.setReadingMode(
+                    when (mode) {
                         ReadingMode.WEBTOON -> "webtoon"
                         ReadingMode.PAGE -> "page"
                     }
-                ),
-                this
-            )
+                )
+                
+                // 2. Сбрасываем кэш и UI State
+                bitmapCache.clearCache()
+                _uiState.update { 
+                    it.copy(
+                        readingMode = mode,
+                        bitmaps = emptyMap(), // Сброс кэша
+                        currentPageBitmap = null,
+                        currentPageIndex = 0, // Сброс на первую страницу
+                        pageCount = 0, // Сброс счетчика страниц
+                        error = null,
+                        isLoading = true
+                    )
+                }
+                
+                // 3. Перезагружаем книгу, чтобы пересчитать страницы для Webtoon
+                // (Webtoon может иметь другое количество страниц/частей)
+                val currentUri = _uiState.value.currentComicUri
+                if (!currentUri.isNullOrEmpty()) {
+                    openBook(Uri.parse(currentUri))
+                }
+                
+                // 4. Analytics
+                analyticsHelper.track(
+                    com.example.core.analytics.AnalyticsEvent.ReadingModeChanged(
+                        mode = when (mode) {
+                            ReadingMode.WEBTOON -> "webtoon"
+                            ReadingMode.PAGE -> "page"
+                        }
+                    ),
+                    this
+                )
+            }
         }
     }
 
@@ -545,7 +755,8 @@ class ReaderViewModel @Inject constructor(
         return when (raw?.lowercase()?.trim()) {
             "height" -> "height"
             "fit" -> "fit"
-            "stretch", "fill" -> "fit"
+            "fill" -> "fill" // Новый режим FILL - заполнение с обрезкой
+            "stretch" -> "fill" // Старый stretch теперь маппится на fill
             "custom" -> "custom"
             else -> "width"
         }
@@ -567,7 +778,7 @@ class ReaderViewModel @Inject constructor(
     fun trackZoom(scale: Float) {
         val now = System.currentTimeMillis()
         // Report if significant change (>=0.2) or at least every 1.5s
-        val significant = kotlin.math.abs(scale - lastZoomReported) >= 0.2f
+        val significant = abs(scale - lastZoomReported) >= 0.2f
         val timedOut = (now - lastZoomReportTimeMs) >= 1500L
         if (significant || timedOut) {
             lastZoomReported = scale
@@ -588,7 +799,20 @@ class ReaderViewModel @Inject constructor(
         return withContext(Dispatchers.IO) {
             val reader = bookReader
             if (reader != null) {
-                val result = reader.renderPage(pageIndex, 1920, 1080, 1.0f)
+                // Используем настройки качества изображений
+                val dpi = imageRenderDpi.value
+                val quality = when (imageQuality.value) {
+                    "high" -> 1.0f
+                    "medium" -> 0.8f
+                    "low" -> 0.6f
+                    else -> 1.0f
+                }
+                
+                // Рассчитываем размеры на основе DPI
+                val width = (dpi * 1.6f).toInt() // 16:10 соотношение
+                val height = (dpi * 1.0f).toInt()
+                
+                val result = reader.renderPage(pageIndex, width, height, quality)
                 if (result.isSuccess) {
                     result.getOrNull()
                 } else {
@@ -633,30 +857,11 @@ class ReaderViewModel @Inject constructor(
             currentComicId?.let { comicId ->
                 viewModelScope.launch {
                     try {
-                        val saveResult = saveReadingProgressUseCase(
-                            comicId = comicId,
-                            currentPage = pageIndex,
-                            totalPages = _uiState.value.pageCount
+                        saveReadingProgressUseCase.saveProgress(
+                            filePath = comicId,
+                            pageIndex = pageIndex
                         )
-                        
-                        when (saveResult) {
-                            is Result.Success -> {
-                                android.util.Log.d(TAG, "✅ Progress saved: page $pageIndex of ${_uiState.value.pageCount}")
-                                
-                                // Обновляем прогресс в UI состоянии
-                                _uiState.update { currentState ->
-                                    val progress = if (_uiState.value.pageCount > 0) {
-                                        (pageIndex + 1).toFloat() / _uiState.value.pageCount.toFloat()
-                                    } else 0f
-                                    currentState.copy(
-                                        // Добавляем поле прогресса в UI состояние если нужно
-                                    )
-                                }
-                            }
-                            is Result.Error -> {
-                                android.util.Log.e(TAG, "❌ Failed to save reading progress", saveResult.exception)
-                            }
-                        }
+                        android.util.Log.d(TAG, "✅ Progress saved: page $pageIndex of ${_uiState.value.pageCount}")
                     } catch (e: Exception) {
                         android.util.Log.e(TAG, "Exception while saving progress", e)
                     }
@@ -665,6 +870,28 @@ class ReaderViewModel @Inject constructor(
 
             // Прелоадим соседние страницы через PagePreloader
             pagePreloader.preloadAroundPage(pageIndex)
+            
+            // ✅ Webtoon mode: предзагрузка ВСЕХ страниц для плавного скроллинга
+            if (_uiState.value.readingMode == ReadingMode.WEBTOON) {
+                viewModelScope.launch {
+                    android.util.Log.d(TAG, "📜 Webtoon mode: preloading all ${_uiState.value.pageCount} pages")
+                    for (i in 0 until _uiState.value.pageCount) {
+                        if (!_uiState.value.bitmaps.containsKey(i)) {
+                            kotlinx.coroutines.delay(30) // Небольшая задержка между загрузками
+                            val pageBitmap = getPage(i)
+                            if (pageBitmap != null) {
+                                _uiState.update { currentState ->
+                                    currentState.copy(
+                                        bitmaps = currentState.bitmaps + (i to pageBitmap)
+                                    )
+                                }
+                                android.util.Log.d(TAG, "✅ Webtoon: loaded page $i")
+                            }
+                        }
+                    }
+                    android.util.Log.d(TAG, "✅ Webtoon: all pages loaded")
+                }
+            }
         }
     }
 
@@ -704,7 +931,8 @@ class ReaderViewModel @Inject constructor(
     // TODO [GESTURES-10]: подключить readerGestures, реализовать zoom и тап-зоны
     
     /**
-     * Cycle through zoom modes: width-fit → height-fit → full
+     * Cycle through zoom modes: width → height → fit → fill → width
+     * Обновлено для поддержки нового режима FILL
      */
     fun cycleZoom() {
         viewModelScope.launch {
@@ -712,6 +940,8 @@ class ReaderViewModel @Inject constructor(
             val nextMode = when (currentMode) {
                 "width" -> "height"
                 "height" -> "fit"
+                "fit" -> "fill"
+                "fill" -> "width"
                 else -> "width"
             }
             
@@ -883,6 +1113,35 @@ class ReaderViewModel @Inject constructor(
     }
     
     /**
+     * Update brightness mode setting
+     */
+    fun updateBrightnessMode(mode: String) {
+        viewModelScope.launch {
+            settingsRepository.setReaderBrightnessMode(mode)
+            
+            // Обновляем UI состояние
+            _uiState.update { currentState ->
+                currentState.copy(readerBrightnessMode = mode)
+            }
+            
+            // Для Auto режима восстанавливаем системную яркость
+            if (mode == "auto") {
+                try {
+                    val activity = context as? Activity
+                    activity?.let { act ->
+                        val layoutParams = act.window.attributes
+                        layoutParams.screenBrightness = -1f // -1 = системная яркость
+                        act.window.attributes = layoutParams
+                        android.util.Log.d(TAG, "Brightness mode set to auto (system brightness)")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Failed to set auto brightness", e)
+                }
+            }
+        }
+    }
+    
+    /**
      * Update orientation setting
      */
     fun updateOrientation(orientation: String) {
@@ -913,6 +1172,20 @@ class ReaderViewModel @Inject constructor(
             }
             
             android.util.Log.d(TAG, "Scale mode updated: $scaleMode (page preserved: $currentPage)")
+        }
+    }
+    
+    /**
+     * Update zoom state
+     */
+    fun updateZoomState(scale: Float, center: androidx.compose.ui.geometry.Offset, offsetX: Float, offsetY: Float) {
+        _uiState.update { currentState ->
+            currentState.copy(
+                currentZoomScale = scale,
+                zoomCenter = center,
+                offsetX = offsetX,
+                offsetY = offsetY
+            )
         }
     }
     
@@ -955,10 +1228,38 @@ class ReaderViewModel @Inject constructor(
     
     /**
      * Bookmark current page
+     * Переключает закладку на текущей странице (добавляет или удаляет)
      */
     fun bookmarkCurrentPage() {
-        // TODO: Implement bookmark functionality
-        android.util.Log.d(TAG, "Bookmark current page: ${_uiState.value.currentPageIndex}")
+        currentComicId?.let { comicId ->
+            viewModelScope.launch {
+                try {
+                    val currentPage = _uiState.value.currentPageIndex
+                    val isAdded = bookmarkRepository.toggleBookmark(
+                        comicId = comicId,
+                        pageIndex = currentPage,
+                        note = null
+                    )
+                    
+                    val message = if (isAdded) {
+                        "Закладка добавлена на странице ${currentPage + 1}"
+                    } else {
+                        "Закладка удалена"
+                    }
+                    
+                    android.util.Log.d(TAG, message)
+                    
+                    // Можно добавить Toast или Snackbar для уведомления пользователя
+                    // Обновляем UI state если нужно
+                    _uiState.update { it.copy(
+                        // Можно добавить флаг isCurrentPageBookmarked если нужно
+                    )}
+                    
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Failed to toggle bookmark", e)
+                }
+            }
+        }
     }
     
     /**
@@ -975,6 +1276,27 @@ class ReaderViewModel @Inject constructor(
     fun openSettings() {
         // TODO: Implement settings navigation
         android.util.Log.d(TAG, "Open settings")
+    }
+    
+    /**
+     * Save current reading progress
+     * Called when leaving the reader
+     */
+    fun saveCurrentProgress() {
+        currentComicId?.let { comicId ->
+            viewModelScope.launch {
+                try {
+                    val currentState = _uiState.value
+                    saveReadingProgressUseCase.saveProgress(
+                        filePath = comicId,
+                        pageIndex = currentState.currentPageIndex
+                    )
+                    android.util.Log.d(TAG, "Progress saved: page ${currentState.currentPageIndex + 1}/${currentState.pageCount}")
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Failed to save progress", e)
+                }
+            }
+        }
     }
     
 }

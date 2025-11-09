@@ -54,6 +54,7 @@ fun GestureTestScreen() {
                         is GestureAction.ShowBottomPanel -> "Show Bottom Panel"
                         is GestureAction.HideUI -> "Hide UI"
                         is GestureAction.Zoom -> "Pinch Zoom (scale: ${action.scale})"
+                        is GestureAction.Pan -> "Pan (delta: ${action.delta})"
                     }
                 }
             ),
