@@ -53,84 +53,75 @@ class CbrReader @Inject constructor(
     
     override suspend fun open(context: Context, uri: Uri): Result<MediaMetadata> {
         return try {
-            android.util.Log.d(TAG, "🔥 CBR DIAGNOSTIC: Opening CBR file: $uri")
-            android.util.Log.d(TAG, "🔥 CBR DIAGNOSTIC: Context: $context")
-            android.util.Log.d(TAG, "🔥 CBR DIAGNOSTIC: URI scheme: ${uri.scheme}, path: ${uri.path}")
-            
+            android.util.Log.d(TAG, "Opening CBR file: $uri")
+
             // Close previous archive if exists
             close()
-            
+
             // Сбрасываем счетчики ошибок и safe mode для нового архива
             errorCount = 0
             safeMode = false
             isRar = false
-            
+
             currentUri = uri
-            
+
             // Check and request permissions for content:// URIs
             if (uri.scheme == "content") {
                 try {
                     // Try to take persistable permission
                     context.contentResolver.takePersistableUriPermission(
-                        uri, 
+                        uri,
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
-                    android.util.Log.d(TAG, "✅ CBR DIAGNOSTIC: Persistable permission granted for URI: $uri")
+                    android.util.Log.d(TAG, "Persistable permission granted for URI: $uri")
                 } catch (e: SecurityException) {
-                    android.util.Log.w(TAG, "⚠️ CBR DIAGNOSTIC: Could not take persistable permission: ${e.message}")
+                    android.util.Log.w(TAG, "Could not take persistable permission: ${e.message}")
                     // Continue anyway, might work with temporary permission
                 }
             }
-            
+
             // Open the RAR archive
-            android.util.Log.d(TAG, "🔥 CBR DIAGNOSTIC: Opening input stream for URI: $uri")
             val inputStream = try {
                 context.contentResolver.openInputStream(uri)
             } catch (e: SecurityException) {
-                android.util.Log.e(TAG, "❌ CBR DIAGNOSTIC: SecurityException when opening URI: $uri", e)
+                android.util.Log.e(TAG, "SecurityException when opening URI: $uri", e)
                 return Result.failure(UnsupportedFormatException("Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"))
             }
-            
+
             if (inputStream == null) {
-                android.util.Log.e(TAG, "❌ CBR DIAGNOSTIC: Failed to open input stream for URI: $uri")
-                android.util.Log.e(TAG, "❌ CBR DIAGNOSTIC: URI scheme: ${uri.scheme}, authority: ${uri.authority}")
+                android.util.Log.e(TAG, "Failed to open input stream for URI: $uri")
                 return Result.failure(UnsupportedFormatException("Не удалось открыть файл. Проверьте разрешения на чтение файлов."))
             }
-            
-            android.util.Log.d(TAG, "✅ CBR DIAGNOSTIC: Input stream opened successfully")
-            
+
+            android.util.Log.d(TAG, "Input stream opened successfully")
+
             // Create temporary file for JunRAR (it requires File access)
-            tempFile = File.createTempFile("cbr_temp_${System.currentTimeMillis()}", ".cbr", context.cacheDir).apply {
-                deleteOnExit()
-            }
-            
-            android.util.Log.d(TAG, "📁 CBR DIAGNOSTIC: Copying to temp file: ${tempFile?.absolutePath}")
-            
+            tempFile = File.createTempFile("cbr_", ".cbr", context.cacheDir)
+
             try {
                 inputStream.use { input ->
                     tempFile?.outputStream()?.use { output ->
                         val bytesCount = input.copyTo(output)
-                        android.util.Log.d(TAG, "📦 CBR DIAGNOSTIC: Copied $bytesCount bytes to temp file")
+                        android.util.Log.d(TAG, "Copied $bytesCount bytes to temp file")
                     }
                 }
-                android.util.Log.d(TAG, "✅ CBR DIAGNOSTIC: Temp file created: ${tempFile?.exists()}, size: ${tempFile?.length()} bytes")
+                android.util.Log.d(TAG, "Temp file created: ${tempFile?.exists()}, size: ${tempFile?.length()} bytes")
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "❌ CBR DIAGNOSTIC: Failed to create temporary file", e)
+                android.util.Log.e(TAG, "Failed to create temporary file", e)
                 tempFile?.delete()
-                throw UnsupportedFormatException("Failed to create temporary file: ${e.message}")
+                return Result.failure(UnsupportedFormatException("Failed to create temporary file: ${e.message}"))
             }
             
-            // Проверяем формат файла перед открытием
-            android.util.Log.d(TAG, "🔍 Checking file format...")
+            // Check file format before opening
             try {
-                // Читаем первые байты для определения формата
+                // Read first bytes to identify format
                 val header = ByteArray(8)
                 val bytesRead = tempFile?.inputStream()?.use { it.read(header) } ?: 0
-                android.util.Log.d(TAG, "📄 Read $bytesRead bytes: ${header.joinToString(" ") { "%02X".format(it) }}")
+                android.util.Log.d(TAG, "Read $bytesRead bytes")
                 
                 // ZIP signature: 50 4B 03 04 (PK)
                 if (header[0] == 0x50.toByte() && header[1] == 0x4B.toByte()) {
-                    android.util.Log.e(TAG, "❌ This is a ZIP file, not RAR! File has wrong extension.")
+                    android.util.Log.e(TAG, "This is a ZIP file, not RAR! File has wrong extension.")
                     close()
                     return Result.failure(UnsupportedFormatException("Файл имеет расширение .cbr, но на самом деле это ZIP архив (.cbz). Переименуйте файл в .cbz и попробуйте снова."))
                 }
@@ -141,17 +132,17 @@ class CbrReader @Inject constructor(
                     header[2] == 0x72.toByte() && header[3] == 0x21.toByte()) {
                     
                     if (header[6] == 0x01.toByte()) {
-                        android.util.Log.e(TAG, "❌ RAR5 format detected - not supported by junrar")
+                        android.util.Log.e(TAG, "RAR5 format detected - not supported by junrar")
                         close()
                         return Result.failure(UnsupportedFormatException("Формат RAR5 не поддерживается библиотекой JunRAR. Пожалуйста, конвертируйте файл в CBZ или используйте RAR4. Для поддержки RAR5 требуется обновление библиотеки."))
                     }
-                    android.util.Log.d(TAG, "✅ RAR4 format detected")
+                    android.util.Log.d(TAG, "RAR4 format detected")
                     isRar = true
                 } else {
-                    android.util.Log.w(TAG, "⚠️ Unknown file signature: ${header.joinToString(" ") { "%02X".format(it) }}")
+                    android.util.Log.w(TAG, "Unknown file signature")
                 }
             } catch (e: UnsupportedFormatException) {
-                // Пробрасываем UnsupportedFormatException дальше
+                // Propagate UnsupportedFormatException
                 throw e
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Could not check file format", e)

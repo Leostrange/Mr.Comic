@@ -41,13 +41,13 @@ class CbzReader @Inject constructor(
                         uri, 
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
-                    android.util.Log.d(TAG, "✅ CBZ DIAGNOSTIC: Persistable permission granted for URI: $uri")
+                    android.util.Log.d(TAG, "Persistable permission granted for URI: $uri")
                 } else {
-                    android.util.Log.d(TAG, "✅ CBZ DIAGNOSTIC: Already have permission for URI: $uri")
+                    android.util.Log.d(TAG, "Already have permission for URI: $uri")
                 }
                 true
             } catch (e: SecurityException) {
-                android.util.Log.e(TAG, "❌ CBZ DIAGNOSTIC: Could not take persistable permission: ${e.message}", e)
+                android.util.Log.e(TAG, "Could not take persistable permission: ${e.message}", e)
                 false
             }
         }
@@ -64,9 +64,7 @@ class CbzReader @Inject constructor(
     
     override suspend fun open(context: Context, uri: Uri): Result<MediaMetadata> = withContext(Dispatchers.IO) {
         try {
-            android.util.Log.d("CbzReader", "🔥 CBZ DIAGNOSTIC: Opening CBZ file: $uri")
-            android.util.Log.d("CbzReader", "🔥 CBZ DIAGNOSTIC: Context: $context")
-            android.util.Log.d("CbzReader", "🔥 CBZ DIAGNOSTIC: URI scheme: ${uri.scheme}, path: ${uri.path}")
+            android.util.Log.d(TAG, "Opening CBZ file: $uri")
             cleanup()
             currentUri = uri
             
@@ -80,42 +78,51 @@ class CbzReader @Inject constructor(
             }
             
             // Create a temporary file for the CBZ
-            tempFile = File.createTempFile("cbz_temp_", ".cbz", context.cacheDir).apply {
-                deleteOnExit()
+            tempFile = File.createTempFile("cbz_", ".cbz", context.cacheDir).apply {
                 setReadable(true, false)
                 setWritable(false, false)
             }
             
             // Copy the content to the temporary file
-            android.util.Log.d("CbzReader", "🔥 CBZ DIAGNOSTIC: Opening input stream for URI: $uri")
             val inputStream = try {
                 context.contentResolver.openInputStream(uri)
             } catch (e: SecurityException) {
-                android.util.Log.e("CbzReader", "❌ CBZ DIAGNOSTIC: SecurityException when opening URI: $uri", e)
-                throw UnsupportedFormatException("Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs")
+                android.util.Log.e(TAG, "SecurityException when opening URI: $uri", e)
+                return@withContext Result.failure(
+                    UnsupportedFormatException("Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs")
+                )
             }
             
             if (inputStream == null) {
-                android.util.Log.e("CbzReader", "❌ CBZ DIAGNOSTIC: Failed to open input stream for URI: $uri")
-                android.util.Log.e("CbzReader", "❌ CBZ DIAGNOSTIC: URI scheme: ${uri.scheme}, authority: ${uri.authority}")
-                throw UnsupportedFormatException("Не удалось открыть файл. Проверьте разрешения на чтение файлов.")
+                android.util.Log.e(TAG, "Failed to open input stream for URI: $uri")
+                return@withContext Result.failure(
+                    UnsupportedFormatException("Не удалось открыть файл. Проверьте разрешения на чтение файлов.")
+                )
             }
             
-            android.util.Log.d("CbzReader", "✅ CBZ DIAGNOSTIC: Input stream opened successfully")
-            android.util.Log.d("CbzReader", "📁 CBZ DIAGNOSTIC: Copying to temp file: ${tempFile?.absolutePath}")
+            android.util.Log.d(TAG, "Input stream opened successfully")
             
             inputStream.use { input ->
                 tempFile?.outputStream()?.use { output ->
                     val bytesCount = input.copyTo(output)
-                    android.util.Log.d("CbzReader", "📦 CBZ DIAGNOSTIC: Copied $bytesCount bytes to temp file")
+                    android.util.Log.d(TAG, "Copied $bytesCount bytes to temp file")
                 }
             }
             
-            android.util.Log.d("CbzReader", "✅ CBZ DIAGNOSTIC: Temp file created: ${tempFile?.exists()}, size: ${tempFile?.length()} bytes")
+            android.util.Log.d(TAG, "Temp file created: ${tempFile?.exists()}, size: ${tempFile?.length()} bytes")
             
             // Initialize the streaming extractor with the temp file
-            streamingExtractor = StreamingExtractor(context)
-            val result = streamingExtractor!!.openArchive(Uri.fromFile(tempFile))
+            val extractor = try {
+                StreamingExtractor(context)
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Failed to initialize StreamingExtractor", e)
+                return@withContext Result.failure(
+                    UnsupportedFormatException("Failed to initialize extractor: ${e.message}")
+                )
+            }
+            streamingExtractor = extractor
+            
+            val result = extractor.openArchive(Uri.fromFile(tempFile))
             
             if (result.isSuccess) {
                 val imageFiles = result.getOrNull() ?: emptyList()
