@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.LruCache
 import com.example.core.reader.domain.MediaReader
 import com.example.core.reader.domain.MediaMetadata
 import com.example.core.reader.domain.MediaType
@@ -18,6 +17,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.delay
 
 /**
  * CBR/RAR Reader implementation using JunRAR library
@@ -28,13 +28,15 @@ class CbrReader @Inject constructor(
     private val cbrToCbzConverter: CbrToCbzConverter? = null
 ) : MediaReader {
     
-    // Mutex для последовательной распаковки RAR файлов
-    private val rarMutex = Mutex()
+    // Per-archive mutex для синхронизации доступа к Archive и извлечения
+    private val archiveMutex = Mutex()
     
     // Fallback режим для проблемных архивов
     private var errorCount = 0
     private var safeMode = false
     private var isRar = false
+    private var isRar5 = false
+    private var conversionOffered = false
     
     private val memoryManager = com.example.core.reader.utils.MemoryManager.getInstance()
     
@@ -133,6 +135,16 @@ class CbrReader @Inject constructor(
                     
                     if (header[6] == 0x01.toByte()) {
                         android.util.Log.e(TAG, "RAR5 format detected - not supported by junrar")
+                        isRar5 = true
+                        
+                        // Предлагаем конвертацию в CBZ если доступен конвертер
+                        if (cbrToCbzConverter != null && !conversionOffered) {
+                            android.util.Log.i(TAG, "Offering RAR5 to CBZ conversion")
+                            conversionOffered = true
+                            close()
+                            return Result.failure(UnsupportedFormatException("RAR5_CONVERSION_AVAILABLE"))
+                        }
+                        
                         close()
                         return Result.failure(UnsupportedFormatException("Формат RAR5 не поддерживается библиотекой JunRAR. Пожалуйста, конвертируйте файл в CBZ или используйте RAR4. Для поддержки RAR5 требуется обновление библиотеки."))
                     }
@@ -219,173 +231,177 @@ class CbrReader @Inject constructor(
         maxWidth: Int,
         maxHeight: Int,
         scale: Float
+    ): Result<Bitmap> = archiveMutex.withLock {
+        // Guard all Archive access with the per-archive mutex
+        return@withLock renderPageInternal(pageIndex, maxWidth, maxHeight, scale)
+    }
+    
+    private suspend fun renderPageInternal(
+        pageIndex: Int,
+        maxWidth: Int,
+        maxHeight: Int,
+        scale: Float
     ): Result<Bitmap> {
-        var localArchive: Archive? = null
-        return try {
-            val currentArchive = archive ?: return Result.failure(IllegalStateException("Archive not open"))
-            
-            // Create a local archive instance for this operation to avoid thread conflicts
-            // Use tempFile instead of path for content:// URIs
-            localArchive = try {
-                val fileToUse = tempFile ?: throw IllegalStateException("Temp file not available")
-                if (!fileToUse.exists()) {
-                    throw IllegalStateException("Temp file does not exist")
-                }
-                Archive(fileToUse)
-            } catch (e: Exception) {
-                android.util.Log.w(TAG, "Failed to create local archive, using shared instance", e)
-                currentArchive
-            }
-            
-            if (pageIndex < 0 || pageIndex >= imageFiles.size) {
-                android.util.Log.w(TAG, "Page index $pageIndex out of bounds (0-${imageFiles.size - 1})")
-                return Result.failure(IndexOutOfBoundsException("Page index out of bounds"))
-            }
-            
-            val fileHeader = imageFiles[pageIndex]
-            android.util.Log.d(TAG, "extract start: ${fileHeader.fileName}")
-            android.util.Log.d(TAG, "Rendering page $pageIndex: ${fileHeader.fileName}")
-            
-            // Extract file data from archive with enhanced error handling and mutex protection
-            val outputStream = ByteArrayOutputStream()
+        // Retry configuration
+        val maxRetries = 3
+        val retryDelayMs = 100L
+        
+        var lastError: Throwable? = null
+        
+        for (attempt in 0 until maxRetries) {
             try {
-                // Используем Mutex для последовательной распаковки RAR файлов
-                rarMutex.withLock {
-                    localArchive?.extractFile(fileHeader, outputStream)
-                }
+                return renderPageAttempt(pageIndex, maxWidth, maxHeight, scale)
             } catch (e: java.lang.AssertionError) {
-                android.util.Log.e(TAG, "AssertionError in junrar PPM block for page $pageIndex: ${e.message}", e)
+                android.util.Log.e(TAG, "AssertionError on attempt ${attempt + 1} for page $pageIndex: ${e.message}", e)
+                lastError = e
                 errorCount++
                 
-                // Активируем safe mode для RAR файлов при ошибках
-                if (errorCount > 0 && isRar && !safeMode) {
-                    safeMode = true
-                    android.util.Log.w(TAG, "Fallback to safe mode: sequential extraction for RAR archive")
-                    
-                    // Предлагаем конвертацию в CBZ для улучшения стабильности
-                    if (errorCount == 1) {
-                        android.util.Log.i(TAG, "Consider converting CBR to CBZ for better stability")
-                    }
+                if (attempt < maxRetries - 1) {
+                    delay(retryDelayMs * (attempt + 1))
                 }
-                
-                return Result.failure(IllegalStateException("RAR archive corruption (PPM block): ${e.message}"))
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "Failed to extract file for page $pageIndex: ${e.message}", e)
-                errorCount++
+                android.util.Log.e(TAG, "Error on attempt ${attempt + 1} for page $pageIndex: ${e.message}", e)
+                lastError = e
                 
-                // Специальная обработка для junrar ошибок
-                if (e.message?.contains("junrar") == true || e.message?.contains("RAR") == true) {
-                    android.util.Log.e(TAG, "RAR archive corruption detected, skipping page $pageIndex")
-                    
-                    // Активируем safe mode для RAR файлов при ошибках
-                    if (errorCount > 0 && isRar && !safeMode) {
-                        safeMode = true
-                        android.util.Log.w(TAG, "Fallback to safe mode: sequential extraction for RAR archive")
-                    }
-                    
-                    return Result.failure(IllegalStateException("RAR archive corruption: ${e.message}"))
+                // Don't retry certain errors
+                if (e is IndexOutOfBoundsException || e is IllegalStateException) {
+                    return Result.failure(e)
                 }
                 
-                return Result.failure(e)
-            }
-            
-            val imageData = outputStream.toByteArray()
-            android.util.Log.d(TAG, "extract done: ${fileHeader.fileName} size=${imageData.size}")
-            
-            if (imageData.isEmpty()) {
-                android.util.Log.w(TAG, "No data extracted for page $pageIndex")
-                return Result.failure(IllegalStateException("No data extracted for page"))
-            }
-            
-            // Generate a unique cache key for this page
-            val cacheKey = "${currentUri?.toString() ?: ""}_$pageIndex"
-            
-            // Try to get from cache first
-            memoryManager.getBitmap(cacheKey)?.let { cachedBitmap ->
-                if (!cachedBitmap.isRecycled) {
-                    android.util.Log.d(TAG, "Cache hit for page $pageIndex")
-                    return Result.success(cachedBitmap)
+                if (attempt < maxRetries - 1) {
+                    delay(retryDelayMs * (attempt + 1))
                 }
             }
+        }
+        
+        // Активируем safe mode для RAR файлов при ошибках
+        if (errorCount > 0 && isRar && !safeMode) {
+            safeMode = true
+            android.util.Log.w(TAG, "Fallback to safe mode: sequential extraction for RAR archive")
             
-            // Calculate optimal sample size with high quality settings
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-                inPreferredConfig = Bitmap.Config.ARGB_8888 // Высокое качество вместо RGB_565
-                inDither = false // Отключаем дизеринг для лучшей резкости
-                inScaled = false // Отключаем автоматическое масштабирование
-                inPremultiplied = false // Отключаем предварительное умножение альфы
+            // Предлагаем конвертацию в CBZ для улучшения стабильности
+            if (errorCount == 1 && cbrToCbzConverter != null) {
+                android.util.Log.i(TAG, "Consider converting CBR to CBZ for better stability")
             }
-            
-            // First decode with inJustDecodeBounds=true to check dimensions
-            BitmapFactory.decodeByteArray(imageData, 0, imageData.size, options)
-            
-            // Calculate inSampleSize
-            options.inSampleSize = BitmapUtils.calculateInSampleSize(
-                options,
-                maxWidth,
-                maxHeight
-            )
-            
-            // Decode bitmap with inSampleSize set
-            options.inJustDecodeBounds = false
-            
-            var bitmap: Bitmap? = null
-            var retryCount = 0
-            val maxRetries = 2
-            
-            while (bitmap == null && retryCount < maxRetries) {
-                try {
-                    // Используем улучшенный декодер с поддержкой EXIF
-                    bitmap = com.example.core.reader.utils.BitmapUtils.decodeBitmapWithExif(
-                        imageData,
-                        maxWidth,
-                        maxHeight,
-                        options.inPreferredConfig
-                    )
-                    
-                    if (bitmap == null && retryCount == 0) {
-                        // First try failed, try with different settings
-                        options.inPreferredConfig = Bitmap.Config.ARGB_8888
-                        options.inDither = false
-                        options.inScaled = false
-                        retryCount++
-                    } else if (bitmap == null) {
-                        break
-                    }
-                } catch (e: OutOfMemoryError) {
-                    // Clear cache and try again
-                    memoryManager.clearCache()
-                    System.gc()
-                    retryCount++
-                } catch (e: Exception) {
-                    android.util.Log.e(TAG, "Error decoding bitmap: ${e.message}")
-                    retryCount++
-                }
-            }
-            
-            bitmap?.let { 
-                // Add to cache
-                memoryManager.putBitmap(cacheKey, it)
-                android.util.Log.d(TAG, "Successfully rendered page $pageIndex (${it.width}x${it.height})")
-                Result.success(it)
-            } ?: run {
-                android.util.Log.e(TAG, "Failed to decode page $pageIndex after $maxRetries attempts")
-                Result.failure(IllegalStateException("Failed to decode page $pageIndex"))
-            }
-            
+        }
+        
+        return Result.failure(lastError ?: IllegalStateException("Failed to render page $pageIndex after $maxRetries attempts"))
+    }
+    
+    private fun renderPageAttempt(
+        pageIndex: Int,
+        maxWidth: Int,
+        maxHeight: Int,
+        scale: Float
+    ): Result<Bitmap> {
+        val currentArchive = archive ?: return Result.failure(IllegalStateException("Archive not open"))
+        
+        if (pageIndex < 0 || pageIndex >= imageFiles.size) {
+            android.util.Log.w(TAG, "Page index $pageIndex out of bounds (0-${imageFiles.size - 1})")
+            return Result.failure(IndexOutOfBoundsException("Page index out of bounds"))
+        }
+        
+        val fileHeader = imageFiles[pageIndex]
+        android.util.Log.d(TAG, "Rendering page $pageIndex: ${fileHeader.fileName}")
+        
+        // Extract file data from archive - reuse current Archive instance
+        val outputStream = ByteArrayOutputStream()
+        try {
+            currentArchive.extractFile(fileHeader, outputStream)
+        } catch (e: java.lang.AssertionError) {
+            android.util.Log.e(TAG, "AssertionError in junrar PPM block for page $pageIndex: ${e.message}", e)
+            throw e
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "Failed to render page $pageIndex", e)
-            Result.failure(e)
-        } finally {
-            // Close local archive if it was created
-            try {
-                if (localArchive != null && localArchive != archive) {
-                    localArchive.close()
-                }
-            } catch (e: Exception) {
-                android.util.Log.w(TAG, "Failed to close local archive", e)
+            android.util.Log.e(TAG, "Failed to extract file for page $pageIndex: ${e.message}", e)
+            
+            // Специальная обработка для junrar ошибок
+            if (e.message?.contains("junrar") == true || e.message?.contains("RAR") == true) {
+                android.util.Log.e(TAG, "RAR archive corruption detected for page $pageIndex")
+                throw IllegalStateException("RAR archive corruption: ${e.message}", e)
             }
+            
+            throw e
+        }
+        
+        val imageData = outputStream.toByteArray()
+        android.util.Log.d(TAG, "extract done: ${fileHeader.fileName} size=${imageData.size}")
+        
+        if (imageData.isEmpty()) {
+            android.util.Log.w(TAG, "No data extracted for page $pageIndex")
+            return Result.failure(IllegalStateException("No data extracted for page"))
+        }
+        
+        // Generate a unique cache key for this page
+        val cacheKey = "${currentUri?.toString() ?: ""}_$pageIndex"
+        
+        // Try to get from cache first
+        memoryManager.getBitmap(cacheKey)?.let { cachedBitmap ->
+            if (!cachedBitmap.isRecycled) {
+                android.util.Log.d(TAG, "Cache hit for page $pageIndex")
+                return Result.success(cachedBitmap)
+            }
+        }
+        
+        // Calculate optimal sample size with high quality settings
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+            inDither = false
+            inScaled = false
+            inPremultiplied = false
+        }
+        
+        // First decode with inJustDecodeBounds=true to check dimensions
+        BitmapFactory.decodeByteArray(imageData, 0, imageData.size, options)
+        
+        // Calculate inSampleSize
+        options.inSampleSize = BitmapUtils.calculateInSampleSize(
+            options,
+            maxWidth,
+            maxHeight
+        )
+        
+        // Decode bitmap with inSampleSize set
+        options.inJustDecodeBounds = false
+        
+        var bitmap: Bitmap? = null
+        var bitmapRetryCount = 0
+        val bitmapMaxRetries = 2
+        
+        while (bitmap == null && bitmapRetryCount < bitmapMaxRetries) {
+            try {
+                bitmap = com.example.core.reader.utils.BitmapUtils.decodeBitmapWithExif(
+                    imageData,
+                    maxWidth,
+                    maxHeight,
+                    options.inPreferredConfig
+                )
+                
+                if (bitmap == null && bitmapRetryCount == 0) {
+                    options.inPreferredConfig = Bitmap.Config.ARGB_8888
+                    options.inDither = false
+                    options.inScaled = false
+                    bitmapRetryCount++
+                } else if (bitmap == null) {
+                    break
+                }
+            } catch (e: OutOfMemoryError) {
+                memoryManager.clearCache()
+                System.gc()
+                bitmapRetryCount++
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error decoding bitmap: ${e.message}")
+                bitmapRetryCount++
+            }
+        }
+        
+        return bitmap?.let { 
+            memoryManager.putBitmap(cacheKey, it)
+            android.util.Log.d(TAG, "Successfully rendered page $pageIndex (${it.width}x${it.height})")
+            Result.success(it)
+        } ?: run {
+            android.util.Log.e(TAG, "Failed to decode page $pageIndex after $bitmapMaxRetries attempts")
+            Result.failure(IllegalStateException("Failed to decode page $pageIndex"))
         }
     }
     
@@ -398,6 +414,12 @@ class CbrReader @Inject constructor(
     }
     
     override suspend fun close() {
+        archiveMutex.withLock {
+            closeInternal()
+        }
+    }
+    
+    private fun closeInternal() {
         try {
             // Clear memory cache
             memoryManager.clearCache()
@@ -429,6 +451,26 @@ class CbrReader @Inject constructor(
     override fun isOpen(): Boolean {
         return isOpen
     }
+    
+    /**
+     * Конвертировать текущий CBR в CBZ
+     * @return URI конвертированного файла или null при ошибке
+     */
+    suspend fun convertToCbz(): Uri? {
+        val uri = currentUri ?: return null
+        if (cbrToCbzConverter == null) {
+            android.util.Log.w(TAG, "CbrToCbzConverter not available")
+            return null
+        }
+        
+        android.util.Log.i(TAG, "Starting CBR to CBZ conversion for: $uri")
+        return cbrToCbzConverter.convertCbrToCbz(uri)
+    }
+    
+    /**
+     * Проверить, нужна ли конвертация для текущего архива
+     */
+    fun needsConversion(): Boolean = isRar5
     
     /**
      * Natural order comparator that properly sorts filenames with numbers
