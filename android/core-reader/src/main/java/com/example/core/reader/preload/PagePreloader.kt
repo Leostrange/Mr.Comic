@@ -41,6 +41,27 @@ class PagePreloader @Inject constructor(
     // Отслеживание "битых" страниц для предотвращения повторных попыток
     private val brokenPages = mutableSetOf<Int>()
     
+    /**
+     * Получить список битых страниц
+     */
+    fun getBrokenPages(): Set<Int> = brokenPages.toSet()
+    
+    /**
+     * Добавить страницу в список битых
+     */
+    fun markPageAsBroken(pageIndex: Int) {
+        brokenPages.add(pageIndex)
+        android.util.Log.d(TAG, "Marked page $pageIndex as broken")
+    }
+    
+    /**
+     * Очистить список битых страниц
+     */
+    fun clearBrokenPages() {
+        brokenPages.clear()
+        android.util.Log.d(TAG, "Cleared broken pages list")
+    }
+    
     // Флаги готовности
     private var isReaderReady = false
     private var isBookSelected = false
@@ -65,6 +86,7 @@ class PagePreloader @Inject constructor(
     ) {
         // Отменяем все предыдущие задачи
         cancelAllPreloading()
+        brokenPages.clear()
         
         // Сбрасываем флаги готовности
         isReaderReady = false
@@ -206,7 +228,7 @@ class PagePreloader @Inject constructor(
                     e.message?.contains("RAR archive corruption") == true) {
                     android.util.Log.e(TAG, "RAR archive corruption detected for page $pageIndex, marking as broken")
                     // Помечаем страницу как "битую" для предотвращения повторных попыток
-                    brokenPages.add(pageIndex)
+                    markPageAsBroken(pageIndex)
                 }
             } finally {
                 activeJobs.remove(jobKey)
