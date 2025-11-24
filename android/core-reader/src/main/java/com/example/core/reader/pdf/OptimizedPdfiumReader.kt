@@ -44,18 +44,42 @@ class OptimizedPdfiumReader : PdfReader {
     
     override suspend fun openDocument(context: Context, uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            // Check and request permissions for content:// URIs
+            // Check and request permissions for content:// URIs with proper error handling
             if (uri.scheme == "content") {
-                try {
+                if (!ensureUriPermission(context, uri)) {
+                    return@withContext Result.failure(
+                        SecurityException("Permission denied for PDF: $uri. Please re-select file using file picker.")
+                    )
+                }
+            }
+            
+    companion object {
+        private const val TAG = "OptimizedPdfiumReader"
+        
+        /**
+         * Ensure URI permission with proper error handling
+         */
+        private fun ensureUriPermission(context: Context, uri: Uri): Boolean {
+            return try {
+                // Check if we already have permission
+                val hasPermission = context.contentResolver.persistedUriPermissions
+                    .any { it.uri == uri && it.isReadPermission }
+                    
+                if (!hasPermission) {
                     context.contentResolver.takePersistableUriPermission(
                         uri, 
                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
                     android.util.Log.d(TAG, "✅ PDF DIAGNOSTIC: Persistable permission granted for URI: $uri")
-                } catch (e: SecurityException) {
-                    android.util.Log.w(TAG, "⚠️ PDF DIAGNOSTIC: Could not take persistable permission: ${e.message}")
+                } else {
+                    android.util.Log.d(TAG, "✅ PDF DIAGNOSTIC: Already have permission for URI: $uri")
                 }
+                true
+            } catch (e: SecurityException) {
+                android.util.Log.e(TAG, "❌ PDF DIAGNOSTIC: Could not take persistable permission: ${e.message}", e)
+                false
             }
+        }
             
             // Инициализируем PdfiumCore
             pdfiumCore = PdfiumCore(context)
@@ -165,17 +189,33 @@ class OptimizedPdfiumReader : PdfReader {
     
     override fun close() {
         try {
+            // Clear caches first
             pageCache.evictAll()
             bitmapPool.evictAll()
-            pdfDocument?.let { pdfiumCore?.closeDocument(it) }
-            parcelFileDescriptor?.close()
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Error closing PDF resources", e)
-        } finally {
-            pdfDocument = null
+            
+            // Close PDF document if open
+            pdfDocument?.let { doc ->
+                pdfiumCore?.closeDocument(doc)
+                android.util.Log.d(TAG, "✅ PDF document closed")
+            }
+            
+            // Close file descriptor
+            parcelFileDescriptor?.let { fd ->
+                fd.close()
+                android.util.Log.d(TAG, "✅ File descriptor closed")
+            }
+            
+            // Clear PdfiumCore
             pdfiumCore = null
+            
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "❌ Error closing PDF resources", e)
+        } finally {
+            // Ensure all references are nulled even on exception
+            pdfDocument = null
             parcelFileDescriptor = null
             pageCount = 0
+            android.util.Log.d(TAG, "✅ PDF reader cleanup completed")
         }
     }
     
