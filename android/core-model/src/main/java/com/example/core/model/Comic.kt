@@ -15,7 +15,9 @@ import java.util.Date
         Index(value = ["title"]),
         Index(value = ["addedDate"]),
         Index(value = ["lastReadDate"]),
-        Index(value = ["folderId"])
+        Index(value = ["folderId"]),
+        Index(value = ["displayGroup"]),
+        Index(value = ["isSingle"])
     ]
 )
 @TypeConverters(Converters::class)
@@ -31,6 +33,8 @@ data class Comic(
     val addedDate: Long = System.currentTimeMillis(),
     val lastModified: Long = System.currentTimeMillis(),
     val folderId: String? = null,
+    val displayGroup: String? = null,
+    val isSingle: Boolean = false,
     val lastReadDate: Long? = null,
     val readingProgress: Float = 0f, // 0.0 - 1.0
     val isBookmarked: Boolean = false,

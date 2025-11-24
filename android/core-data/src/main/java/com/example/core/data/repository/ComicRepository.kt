@@ -23,6 +23,18 @@ class ComicRepository @Inject constructor(
         return comicDao.getAllComics()
     }
     
+    fun getSingleComics(): Flow<List<Comic>> {
+        return comicDao.getSingleComics()
+    }
+    
+    fun getComicsByDisplayGroup(displayGroup: String): Flow<List<Comic>> {
+        return comicDao.getComicsByDisplayGroup(displayGroup)
+    }
+    
+    fun getAllDisplayGroups(): Flow<List<String>> {
+        return comicDao.getAllDisplayGroups()
+    }
+    
     /**
      * Получить комиксы по папке
      */

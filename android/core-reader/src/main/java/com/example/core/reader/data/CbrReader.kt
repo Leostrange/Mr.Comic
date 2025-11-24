@@ -151,7 +151,7 @@ class CbrReader @Inject constructor(
             try {
                 archive = Archive(tempFile)
             } catch (e: Exception) {
-                android.util.Log.e(TAG, "❌ Failed to open RAR archive", e)
+                android.util.Log.e(TAG, "Failed to open RAR archive", e)
                 close()
                 return when {
                     e.message?.contains("password", ignoreCase = true) == true -> 
@@ -225,9 +225,13 @@ class CbrReader @Inject constructor(
             val currentArchive = archive ?: return Result.failure(IllegalStateException("Archive not open"))
             
             // Create a local archive instance for this operation to avoid thread conflicts
+            // Use tempFile instead of path for content:// URIs
             localArchive = try {
-                val inputStream = java.io.FileInputStream(java.io.File(currentUri?.path ?: ""))
-                Archive(inputStream)
+                val fileToUse = tempFile ?: throw IllegalStateException("Temp file not available")
+                if (!fileToUse.exists()) {
+                    throw IllegalStateException("Temp file does not exist")
+                }
+                Archive(fileToUse)
             } catch (e: Exception) {
                 android.util.Log.w(TAG, "Failed to create local archive, using shared instance", e)
                 currentArchive

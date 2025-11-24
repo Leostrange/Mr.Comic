@@ -51,4 +51,13 @@ interface ComicDao {
     
     @Query("SELECT * FROM comics WHERE lastReadDate IS NOT NULL ORDER BY lastReadDate DESC LIMIT :limit")
     fun getRecentlyRead(limit: Int = 10): Flow<List<Comic>>
+    
+    @Query("SELECT * FROM comics WHERE isSingle = 1 ORDER BY addedDate DESC")
+    fun getSingleComics(): Flow<List<Comic>>
+    
+    @Query("SELECT * FROM comics WHERE displayGroup = :displayGroup ORDER BY addedDate DESC")
+    fun getComicsByDisplayGroup(displayGroup: String): Flow<List<Comic>>
+    
+    @Query("SELECT DISTINCT displayGroup FROM comics WHERE displayGroup IS NOT NULL ORDER BY displayGroup ASC")
+    fun getAllDisplayGroups(): Flow<List<String>>
 }

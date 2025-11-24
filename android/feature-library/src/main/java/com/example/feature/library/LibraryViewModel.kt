@@ -33,10 +33,10 @@ class LibraryViewModel @Inject constructor(
     val events: SharedFlow<LibraryEvent> = _events.asSharedFlow()
     
     init {
-        android.util.Log.d("LibraryViewModel", "🚀🚀🚀 LIBRARY VIEW MODEL INITIALIZED 🚀🚀🚀")
-        android.util.Log.d("LibraryViewModel", "🚀 Context: $context")
-        android.util.Log.d("LibraryViewModel", "🚀 ComicRepository: $comicRepository")
-        android.util.Log.d("LibraryViewModel", "🚀 Starting loadComics, loadFolders, cleanupInaccessibleComics...")
+        android.util.Log.d("LibraryViewModel", "LIBRARY VIEW MODEL INITIALIZED")
+        android.util.Log.d("LibraryViewModel", "Context: $context")
+        android.util.Log.d("LibraryViewModel", "ComicRepository: $comicRepository")
+        android.util.Log.d("LibraryViewModel", "Starting loadComics, loadFolders, cleanupInaccessibleComics...")
         loadComics()
         loadFolders()
         cleanupInaccessibleComics()
@@ -50,11 +50,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val allComics = comicRepository.getAllComics().first()
-                android.util.Log.d("LibraryViewModel", "🧹 Checking ${allComics.size} comics for accessibility...")
+                android.util.Log.d("LibraryViewModel", "Checking ${allComics.size} comics for accessibility...")
                 
                 // Получаем список всех persisted URIs
                 val persistedUris = context.contentResolver.persistedUriPermissions.map { it.uri.toString() }.toSet()
-                android.util.Log.d("LibraryViewModel", "📋 Current persisted URIs: ${persistedUris.size}")
+                android.util.Log.d("LibraryViewModel", "Current persisted URIs: ${persistedUris.size}")
                 
                 var removedCount = 0
                 val comicUris = allComics.map { android.net.Uri.parse(it.path) }.toSet()
@@ -70,11 +70,11 @@ class LibraryViewModel @Inject constructor(
                             }
                         } catch (e: SecurityException) {
                             // Нет доступа - удаляем из базы
-                            android.util.Log.w("LibraryViewModel", "🗑️ Removing inaccessible comic: ${comic.title}")
+                            android.util.Log.w("LibraryViewModel", "Removing inaccessible comic: ${comic.title}")
                             comicRepository.deleteComicById(comic.id)
                             removedCount++
                         } catch (e: Exception) {
-                            android.util.Log.w("LibraryViewModel", "⚠️ Error checking comic: ${comic.title}", e)
+                            android.util.Log.w("LibraryViewModel", "Error checking comic: ${comic.title}", e)
                         }
                     }
                 }
@@ -83,7 +83,7 @@ class LibraryViewModel @Inject constructor(
                 cleanupUnusedPermissions(comicUris)
                 
                 if (removedCount > 0) {
-                    android.util.Log.d("LibraryViewModel", "✅ Removed $removedCount inaccessible comics")
+                    android.util.Log.d("LibraryViewModel", "Removed $removedCount inaccessible comics")
                     // Перезагружаем список
                     loadComics()
                 }
@@ -124,7 +124,7 @@ class LibraryViewModel @Inject constructor(
                             android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                         )
                         releasedCount++
-                        android.util.Log.d("LibraryViewModel", "🗑️ Released permission for unused URI: $uri")
+                        android.util.Log.d("LibraryViewModel", "Released permission for unused URI: $uri")
                     } catch (e: Exception) {
                         android.util.Log.w("LibraryViewModel", "Failed to release permission for $uri", e)
                     }
@@ -132,7 +132,7 @@ class LibraryViewModel @Inject constructor(
             }
             
             if (releasedCount > 0) {
-                android.util.Log.d("LibraryViewModel", "✅ Released $releasedCount unused permissions")
+                android.util.Log.d("LibraryViewModel", "Released $releasedCount unused permissions")
             }
         } catch (e: Exception) {
             android.util.Log.e("LibraryViewModel", "Error cleaning up unused permissions", e)
