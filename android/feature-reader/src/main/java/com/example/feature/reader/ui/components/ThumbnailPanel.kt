@@ -33,6 +33,7 @@ import kotlinx.coroutines.withContext
  * 1. Добавлена предзагрузка миниатюр для всех страниц при открытии панели
  * 2. Улучшено кэширование миниатюр
  * 3. Удалена кнопка Close для чистоты дизайна
+ * 4. Добавлена поддержка ThumbnailProvider для динамической загрузки
  */
 @Composable
 fun ThumbnailPanel(
@@ -43,6 +44,7 @@ fun ThumbnailPanel(
     onDismiss: () -> Unit,
     bitmapCache: com.example.core.reader.cache.BitmapCache,
     currentUri: String?,
+    thumbnailProvider: com.example.feature.reader.ui.ThumbnailProvider? = null,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -131,7 +133,8 @@ fun ThumbnailPanel(
                             isCurrentPage = pageIndex == currentPage,
                             bitmapCache = bitmapCache,
                             currentUri = currentUri ?: "",
-                            onClick = { onPageClick(pageIndex) }
+                            onClick = { onPageClick(pageIndex) },
+                            thumbnailProvider = thumbnailProvider
                         )
                     }
                 }
@@ -146,6 +149,7 @@ fun ThumbnailPanel(
  * ИСПРАВЛЕНИЯ:
  * 1. Улучшена логика загрузки миниатюр
  * 2. Добавлена обработка отсутствующих миниатюр
+ * 3. На cache miss вызывает loadThumbnailOnCacheMiss для динамической загрузки
  */
 @Composable
 private fun ThumbnailItem(
@@ -154,12 +158,14 @@ private fun ThumbnailItem(
     bitmapCache: com.example.core.reader.cache.BitmapCache,
     currentUri: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    thumbnailProvider: com.example.feature.reader.ui.ThumbnailProvider? = null
 ) {
     var thumbnail by remember { mutableStateOf<Bitmap?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
-    // Загружаем миниатюру асинхронно из кэша
+    // Загружаем миниатюру асинхронно из кэша или через provider
     LaunchedEffect(pageIndex, currentUri) {
         coroutineScope.launch(Dispatchers.IO) {
             val thumbnailKey = bitmapCache.createThumbnailKey(currentUri, pageIndex)
@@ -168,12 +174,28 @@ private fun ThumbnailItem(
             if (cachedThumbnail != null) {
                 withContext(Dispatchers.Main) {
                     thumbnail = cachedThumbnail
+                    isLoading = false
+                }
+            } else if (thumbnailProvider != null) {
+                // На cache miss, попытаемся загрузить через provider
+                isLoading = true
+                try {
+                    val loadedThumbnail = thumbnailProvider.loadThumbnailOnCacheMiss(pageIndex, currentUri)
+                    withContext(Dispatchers.Main) {
+                        thumbnail = loadedThumbnail
+                        isLoading = false
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("ThumbnailItem", "Failed to load thumbnail for page $pageIndex", e)
+                    withContext(Dispatchers.Main) {
+                        isLoading = false
+                    }
                 }
             } else {
-                // Если миниатюры нет в кэше, пытаемся найти полноразмерную страницу
-                // Примечание: полноразмерные страницы могут иметь разные размеры,
-                // поэтому мы не можем точно определить ключ без дополнительной информации
-                // Оставляем загрузку миниатюр на усмотрение основного загрузчика страниц
+                // Если нет provider, просто отмечаем что нет миниатюры
+                withContext(Dispatchers.Main) {
+                    isLoading = false
+                }
             }
         }
     }

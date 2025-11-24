@@ -234,7 +234,8 @@ class PdfReader(
     }
 
     /**
-     * Получает миниатюру страницы
+     * Получает миниатюру страницы и сохраняет в ThumbnailCache
+     * Это основной метод для загрузки миниатюр для панели
      */
     suspend fun getThumbnail(pageIndex: Int): Result<Bitmap> {
         if (!isOpen) {
@@ -256,13 +257,14 @@ class PdfReader(
             renderStats.thumbnailCacheMisses++
             renderStats.thumbnailRenders++
 
-            // Генерируем миниатюру
+            // Генерируем миниатюру через основной ридер
             val reader = currentReader ?: return@withContext Result.failure(IllegalStateException("PDF reader not initialized"))
             val result = reader.renderPage(pageIndex, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
 
             if (result.isSuccess) {
                 val thumbnail = result.getOrThrow()
                 thumbnailCache.putThumbnail(key, thumbnail)
+                android.util.Log.d("PdfReader", "Thumbnail loaded for page $pageIndex")
             }
 
             result

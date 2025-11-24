@@ -22,6 +22,7 @@ class PagePreloader @Inject constructor(
         private const val TAG = "PagePreloader"
         private const val PRELOAD_RANGE = 2 // Уменьшаем до ±2 страниц для стабильности
         private const val MAX_CONCURRENT_PRELOADS = 2 // Ограничиваем количество одновременных загрузок
+        private const val MAX_CONCURRENT_PRELOADS_PDF = 1 // PDF требует синхронизированного доступа
         private const val MAX_CACHE_SIZE = 50 // Максимум 50 страниц в кэше для больших библиотек
         private const val THUMBNAIL_CACHE_SIZE = 200 // Максимум 200 миниатюр в кэше
     }
@@ -132,10 +133,17 @@ class PagePreloader @Inject constructor(
         // Отменяем старые задачи предзагрузки
         cancelPreloadingExcept(currentPage)
         
+        // Для PDF используем ограничение в 1 одновременную загрузку из-за Mutex в Pdfium
+        val maxConcurrent = if (uri.endsWith(".pdf", ignoreCase = true)) {
+            MAX_CONCURRENT_PRELOADS_PDF
+        } else {
+            MAX_CONCURRENT_PRELOADS
+        }
+        
         // Предзагружаем страницы в диапазоне (с ограничением)
         var preloadCount = 0
         for (offset in -PRELOAD_RANGE..PRELOAD_RANGE) {
-            if (preloadCount >= MAX_CONCURRENT_PRELOADS) {
+            if (preloadCount >= maxConcurrent) {
                 android.util.Log.d(TAG, "Reached max concurrent preloads, stopping")
                 break
             }
@@ -245,6 +253,7 @@ class PagePreloader @Inject constructor(
     
     /**
      * Предзагрузить превью для диапазона страниц
+     * Для PDF использует специализированный метод getThumbnail
      */
     fun preloadThumbnails(startPage: Int, endPage: Int) {
         val reader = currentReader ?: return
@@ -257,25 +266,56 @@ class PagePreloader @Inject constructor(
         android.util.Log.d(TAG, "Preloading thumbnails from $actualStartPage to $actualEndPage")
         
         preloadScope.launch {
-            for (pageIndex in actualStartPage..actualEndPage) {
-                val thumbnailKey = bitmapCache.createThumbnailKey(uri, pageIndex)
-                
-                if (!bitmapCache.hasThumbnail(thumbnailKey)) {
-                    try {
-                        val result = reader.renderPage(pageIndex, 200, 200, 0.5f)
-                        if (result.isSuccess) {
-                            val bitmap = result.getOrNull()
-                            if (bitmap != null && !bitmap.isRecycled) {
-                                bitmapCache.putThumbnail(thumbnailKey, bitmap)
+            // Проверяем, является ли это PDF
+            val isPdf = uri.endsWith(".pdf", ignoreCase = true)
+            
+            if (isPdf && reader is com.example.core.reader.data.PdfReader) {
+                // Для PDF используем специализированный метод getThumbnail
+                for (pageIndex in actualStartPage..actualEndPage) {
+                    val thumbnailKey = bitmapCache.createThumbnailKey(uri, pageIndex)
+                    
+                    if (!bitmapCache.hasThumbnail(thumbnailKey)) {
+                        try {
+                            val result = reader.getThumbnail(pageIndex)
+                            if (result.isSuccess) {
+                                val bitmap = result.getOrNull()
+                                if (bitmap != null && !bitmap.isRecycled) {
+                                    bitmapCache.putThumbnail(thumbnailKey, bitmap)
+                                    android.util.Log.d(TAG, "Preloaded PDF thumbnail for page $pageIndex")
+                                }
+                            } else {
+                                android.util.Log.w(TAG, "Failed to preload PDF thumbnail for page $pageIndex: ${result.exceptionOrNull()?.message}")
                             }
+                        } catch (e: Exception) {
+                            android.util.Log.w(TAG, "Exception preloading PDF thumbnail for page $pageIndex", e)
                         }
-                    } catch (e: Exception) {
-                        android.util.Log.w(TAG, "Failed to preload thumbnail for page $pageIndex", e)
                     }
+                    
+                    // Небольшая задержка между превью
+                    delay(50)
                 }
-                
-                // Небольшая задержка между превью
-                delay(50)
+            } else {
+                // Для остальных форматов используем renderPage
+                for (pageIndex in actualStartPage..actualEndPage) {
+                    val thumbnailKey = bitmapCache.createThumbnailKey(uri, pageIndex)
+                    
+                    if (!bitmapCache.hasThumbnail(thumbnailKey)) {
+                        try {
+                            val result = reader.renderPage(pageIndex, 200, 200, 0.5f)
+                            if (result.isSuccess) {
+                                val bitmap = result.getOrNull()
+                                if (bitmap != null && !bitmap.isRecycled) {
+                                    bitmapCache.putThumbnail(thumbnailKey, bitmap)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w(TAG, "Failed to preload thumbnail for page $pageIndex", e)
+                        }
+                    }
+                    
+                    // Небольшая задержка между превью
+                    delay(50)
+                }
             }
         }
     }
