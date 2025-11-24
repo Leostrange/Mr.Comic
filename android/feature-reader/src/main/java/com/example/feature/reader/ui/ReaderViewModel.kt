@@ -252,14 +252,14 @@ class ReaderViewModel @Inject constructor(
 
     init {
         // Путь к файлу приходит как аргумент навигации.
-        android.util.Log.d(TAG, "🎬 ReaderViewModel initialized")
-        android.util.Log.d(TAG, "📋 SavedStateHandle keys: ${savedStateHandle.keys()}")
+        android.util.Log.d(TAG, "ReaderViewModel initialized")
+        android.util.Log.d(TAG, "SavedStateHandle keys: ${savedStateHandle.keys()}")
         observeReaderPreferences()
 
         val uriString = savedStateHandle.get<String>("uri")
-        android.util.Log.d(TAG, "📁 Received URI from navigation: $uriString")
+        android.util.Log.d(TAG, "Received URI from navigation: $uriString")
         if (uriString != null) {
-            android.util.Log.d(TAG, "✅ URI found, opening book...")
+            android.util.Log.d(TAG, "URI found, opening book...")
             val decoded = runCatching { Uri.decode(uriString) }.getOrElse { uriString }
             val uri = runCatching { Uri.parse(decoded) }.getOrElse {
                 android.util.Log.w(TAG, "Failed to parse decoded URI, trying raw", it)
@@ -267,7 +267,7 @@ class ReaderViewModel @Inject constructor(
             }
             openBook(uri)
         } else {
-            android.util.Log.e(TAG, "❌ No URI provided in navigation arguments!")
+            android.util.Log.e(TAG, "No URI provided in navigation arguments!")
             _uiState.update { it.copy(isLoading = false, error = "File URI not provided.") }
         }
     }
@@ -398,16 +398,16 @@ class ReaderViewModel @Inject constructor(
                 )
             }
             
-            // 🔥 КРИТИЧЕСКИ ВАЖНО: Проверяем и запрашиваем permissions для content:// URI
+            // CRITICALLY IMPORTANT: Check and request permissions for content:// URI
             if (uri.scheme == "content") {
                 try {
-                    android.util.Log.d(TAG, "🔐 Checking permissions for content URI: $uri")
+                    android.util.Log.d(TAG, "Checking permissions for content URI: $uri")
                     
                     // Проверяем, есть ли у нас уже persistable permission
                     val persistedUris = context.contentResolver.persistedUriPermissions
                     
-                    // 🔥 ВАЖНО: Проверяем permission для разных вариантов URI (encoded/decoded)
-                    // Потому что Android может сохранять их по-разному
+                    // IMPORTANT: Check permission for different URI variants (encoded/decoded)
+                    // Because Android can save them differently
                     val uriString = uri.toString()
                     val uriStringDecoded = android.net.Uri.decode(uriString)
                     
@@ -427,64 +427,64 @@ class ReaderViewModel @Inject constructor(
                         
                         if (match) {
                             matchedPersistedUri = persistedUri.uri
-                            android.util.Log.d(TAG, "✅ Found matching persisted URI: ${persistedUri.uri}")
+                            android.util.Log.d(TAG, "Found matching persisted URI: ${persistedUri.uri}")
                         }
                         match
                     }
                     
                     if (!hasPermission) {
-                        android.util.Log.w(TAG, "⚠️ No persistable permission found for URI: $uri")
-                        android.util.Log.d(TAG, "📋 Current persisted URIs (${persistedUris.size}):")
+                        android.util.Log.w(TAG, "No persistable permission found for URI: $uri")
+                        android.util.Log.d(TAG, "Current persisted URIs (${persistedUris.size}):")
                         persistedUris.forEach { 
                             android.util.Log.d(TAG, "  - ${it.uri} (read=${it.isReadPermission}, write=${it.isWritePermission})")
                         }
                         
-                        // Пытаемся взять persistable permission (может не сработать, если URI не поддерживает)
+                        // Try to take persistable permission (might not work for some URIs)
                         try {
                             context.contentResolver.takePersistableUriPermission(
                                 uri,
                                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                             )
-                            android.util.Log.d(TAG, "✅ Successfully took persistable URI permission")
+                            android.util.Log.d(TAG, "Successfully took persistable URI permission")
                         } catch (e: SecurityException) {
-                            android.util.Log.w(TAG, "⚠️ Could not take persistable permission: ${e.message}")
-                            // Это нормально для некоторых URI, продолжаем
+                            android.util.Log.w(TAG, "Could not take persistable permission: ${e.message}")
+                            // This is normal for some URIs, continue anyway
                         }
                     } else {
-                        android.util.Log.d(TAG, "✅ Persistable permission already exists for URI")
+                        android.util.Log.d(TAG, "Persistable permission already exists for URI")
                         
-                        // 🔥 КРИТИЧЕСКИ ВАЖНО: Используем persisted URI вместо decoded URI
-                        // Потому что permission работает только с тем URI, для которого он был взят
+                        // CRITICALLY IMPORTANT: Use persisted URI instead of decoded URI
+                        // Because permission only works with the URI it was taken for
                         if (matchedPersistedUri != null && matchedPersistedUri != uri) {
-                            android.util.Log.d(TAG, "🔄 Replacing decoded URI with persisted URI")
+                            android.util.Log.d(TAG, "Replacing decoded URI with persisted URI")
                             android.util.Log.d(TAG, "   Original: $uri")
                             android.util.Log.d(TAG, "   Persisted: $matchedPersistedUri")
-                            // Заменяем URI на persisted вариант для дальнейшего использования
+                            // Replace URI with persisted variant for further use
                             val persistedUri = matchedPersistedUri!!
                             
-                            // Проверяем, можем ли мы прочитать файл с persisted URI
+                            // Check if we can read file with persisted URI
                             try {
                                 context.contentResolver.openInputStream(persistedUri)?.use {
-                                    android.util.Log.d(TAG, "✅ Successfully opened input stream with persisted URI")
+                                    android.util.Log.d(TAG, "Successfully opened input stream with persisted URI")
                                 }
-                                // Если успешно, обновляем URI для дальнейшего использования
-                                // Но это не сработает, потому что uri - это val параметр
-                                // Нужно передавать persistedUri дальше в код
+                                // If successful, update URI for further use
+                                // But this won't work because uri is a val parameter
+                                // Need to pass persistedUri further down
                             } catch (e: SecurityException) {
-                                android.util.Log.e(TAG, "❌ SecurityException with persisted URI: ${e.message}")
+                                android.util.Log.e(TAG, "SecurityException with persisted URI: ${e.message}")
                             }
                         }
                     }
                     
-                    // Проверяем, можем ли мы вообще прочитать файл
-                    // Используем matchedPersistedUri если он есть, иначе original uri
+                    // Check if we can read file at all
+                    // Use matchedPersistedUri if available, otherwise use original uri
                     val uriToUse = matchedPersistedUri ?: uri
                     try {
                         context.contentResolver.openInputStream(uriToUse)?.use {
-                            android.util.Log.d(TAG, "✅ Successfully opened input stream for URI")
+                            android.util.Log.d(TAG, "Successfully opened input stream for URI")
                         }
                     } catch (e: SecurityException) {
-                        android.util.Log.e(TAG, "❌ SecurityException: Cannot read URI: ${e.message}")
+                        android.util.Log.e(TAG, "SecurityException: Cannot read URI: ${e.message}")
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
@@ -494,12 +494,12 @@ class ReaderViewModel @Inject constructor(
                         return@launch
                     }
                 } catch (e: Exception) {
-                    android.util.Log.e(TAG, "❌ Error checking permissions", e)
+                    android.util.Log.e(TAG, "Error checking permissions", e)
                 }
             }
             
-            // 🔥 ВАЖНО: Определяем финальный URI для использования
-            // Если нашли persisted URI, используем его, иначе используем original
+            // IMPORTANT: Determine final URI to use
+            // If found persisted URI, use it, otherwise use original
             val finalUri = if (uri.scheme == "content") {
                 val persistedUris = context.contentResolver.persistedUriPermissions
                 val uriString = uri.toString()
@@ -523,12 +523,12 @@ class ReaderViewModel @Inject constructor(
             }
             
             if (finalUri != uri) {
-                android.util.Log.d(TAG, "🔄 Using persisted URI instead of decoded URI")
+                android.util.Log.d(TAG, "Using persisted URI instead of decoded URI")
                 android.util.Log.d(TAG, "   Original: $uri")
                 android.util.Log.d(TAG, "   Final: $finalUri")
             }
             
-            // Закрываем предыдущий reader при открытии новой книги
+            // Close previous reader when opening new book
             try {
                 bookReader?.close()
             } catch (e: Exception) {
@@ -536,30 +536,30 @@ class ReaderViewModel @Inject constructor(
             }
 
             try {
-                android.util.Log.d(TAG, "🔧 Creating reader for URI: $finalUri")
+                android.util.Log.d(TAG, "Creating reader for URI: $finalUri")
                 val reader = readerFactory.create(finalUri)
-                android.util.Log.d(TAG, "✅ Reader created: ${reader::class.simpleName}")
+                android.util.Log.d(TAG, "Reader created: ${reader::class.simpleName}")
                 
-                android.util.Log.d(TAG, "📖 Opening book with reader...")
+                android.util.Log.d(TAG, "Opening book with reader...")
                 val result = reader.open(context, finalUri)
                 
-                android.util.Log.d(TAG, "📊 Open result: success=${result.isSuccess}, failure=${result.isFailure}")
+                android.util.Log.d(TAG, "Open result: success=${result.isSuccess}, failure=${result.isFailure}")
                 
                 if (result.isSuccess) {
                     bookReader = reader // назначаем только после успешного открытия
                     currentComicId = finalUri.toString()
                     val metadata = result.getOrThrow()
                     val pageCount = metadata.pageCount
-                    android.util.Log.d(TAG, "✅ Book opened successfully. Page count: $pageCount")
+                    android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
                     
-                    // Автоопределение режима чтения
+                    // Auto-detection of reading mode
                     val autoDetectEnabled = settingsRepository.readingModeAutoDetect.first()
                     
                     if (autoDetectEnabled) {
                         val detectedMode = readingModeDetector.detectReadingMode(finalUri)
                         val detectedDirection = readingModeDetector.getReadingDirection(detectedMode)
                         
-                        android.util.Log.d(TAG, "🔍 Auto-detected reading mode: $detectedMode, direction: $detectedDirection")
+                        android.util.Log.d(TAG, "Auto-detected reading mode: $detectedMode, direction: $detectedDirection")
                         
                         // Сохраняем определенный режим для этого комикса
                         settingsRepository.setReadingModeForComic(currentComicId!!, detectedMode)
@@ -1295,6 +1295,42 @@ class ReaderViewModel @Inject constructor(
                 } catch (e: Exception) {
                     android.util.Log.e(TAG, "Failed to save progress", e)
                 }
+            }
+        }
+    }
+    
+    /**
+     * Load thumbnail for a specific page and push into BitmapCache
+     * Used by UI layer when cache miss occurs
+     */
+    suspend fun loadThumbnail(pageIndex: Int): Bitmap? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val reader = bookReader ?: return@withContext null
+                val uri = currentComicId ?: return@withContext null
+                
+                // For PDF readers, call the getThumbnail method directly
+                if (reader is com.example.core.reader.data.PdfReader) {
+                    val result = reader.getThumbnail(pageIndex)
+                    if (result.isSuccess) {
+                        result.getOrNull()
+                    } else {
+                        android.util.Log.w(TAG, "Failed to load PDF thumbnail for page $pageIndex: ${result.exceptionOrNull()?.message}")
+                        null
+                    }
+                } else {
+                    // For other formats, render at thumbnail size
+                    val result = reader.renderPage(pageIndex, 200, 200, 0.5f)
+                    if (result.isSuccess) {
+                        result.getOrNull()
+                    } else {
+                        android.util.Log.w(TAG, "Failed to load thumbnail for page $pageIndex: ${result.exceptionOrNull()?.message}")
+                        null
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Exception loading thumbnail for page $pageIndex", e)
+                null
             }
         }
     }

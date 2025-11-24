@@ -9,11 +9,14 @@ import android.os.ParcelFileDescriptor
 import com.shockwave.pdfium.PdfDocument
 import com.shockwave.pdfium.PdfiumCore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Mutex
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
 /**
  * Реализация PDF ридера с использованием Pdfium
+ * 
+ * ИСПРАВЛЕНИЕ: Добавлена Mutex для синхронизации доступа к Pdfium
  */
 class PdfiumReader : PdfReader {
     
@@ -21,6 +24,9 @@ class PdfiumReader : PdfReader {
     private var pdfDocument: PdfDocument? = null
     private var parcelFileDescriptor: ParcelFileDescriptor? = null
     private var pageCount: Int = 0
+    
+    // Mutex для синхронизации доступа к Pdfium
+    private val pdfiumMutex = Mutex()
     
     override suspend fun openDocument(context: Context, uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -84,10 +90,7 @@ class PdfiumReader : PdfReader {
                 return@withContext Result.failure(IllegalArgumentException("Invalid page index: $pageIndex"))
             }
             
-            // Открываем страницу
-            core.openPage(document, pageIndex)
-            
-            // Получаем размеры страницы
+            // Получаем размеры страницы (можно делать без Mutex)
             val width = core.getPageWidthPoint(document, pageIndex)
             val height = core.getPageHeightPoint(document, pageIndex)
             
@@ -96,12 +99,18 @@ class PdfiumReader : PdfReader {
             val scaledWidth = (width * scale).toInt()
             val scaledHeight = (height * scale).toInt()
             
-            // Создаем bitmap
+            // Создаем bitmap (не требует Mutex)
             val bitmap = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
             
-            // Рендерим страницу (сигнатуры библиотек различаются порядком аргументов)
-            // Попробуем порядок: document, bitmap, index, left, top, width, height
-            core.renderPageBitmap(document, bitmap, pageIndex, 0, 0, scaledWidth, scaledHeight)
+            // КРИТИЧНО: Используем Mutex для синхронизации доступа к Pdfium
+            pdfiumMutex.lock()
+            try {
+                // Открываем страницу и рендерим (требует Mutex)
+                core.openPage(document, pageIndex)
+                core.renderPageBitmap(document, bitmap, pageIndex, 0, 0, scaledWidth, scaledHeight)
+            } finally {
+                pdfiumMutex.unlock()
+            }
             
             Result.success(bitmap)
         } catch (e: Exception) {
@@ -113,8 +122,9 @@ class PdfiumReader : PdfReader {
         try {
             pdfiumCore?.closeDocument(pdfDocument)
             parcelFileDescriptor?.close()
+            android.util.Log.d("PdfiumReader", "PDF resources closed")
         } catch (e: Exception) {
-            // Игнорируем ошибки при закрытии
+            android.util.Log.w("PdfiumReader", "Error closing PDF resources", e)
         } finally {
             pdfiumCore = null
             pdfDocument = null

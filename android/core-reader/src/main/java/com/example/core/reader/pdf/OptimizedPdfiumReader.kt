@@ -10,6 +10,7 @@ import android.util.LruCache
 import com.shockwave.pdfium.PdfDocument
 import com.shockwave.pdfium.PdfiumCore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Mutex
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -19,6 +20,9 @@ import kotlin.math.min
 /**
  * Оптимизированная реализация PDF ридера с использованием Pdfium
  * Включает пул битмапов, кэширование и оптимизации для больших файлов
+ * 
+ * ИСПРАВЛЕНИЕ: Добавлена Mutex для синхронизации доступа к Pdfium,
+ * чтобы избежать race conditions и "PdfiumCore already closed" ошибок
  */
 class OptimizedPdfiumReader : PdfReader {
     
@@ -26,6 +30,9 @@ class OptimizedPdfiumReader : PdfReader {
     private var pdfDocument: PdfDocument? = null
     private var parcelFileDescriptor: ParcelFileDescriptor? = null
     private var pageCount: Int = 0
+    
+    // Mutex для синхронизации доступа к Pdfium (только 1 thread одновременно)
+    private val pdfiumMutex = Mutex()
     
     // Пул битмапов для переиспользования
     private val bitmapPool = LruCache<String, Bitmap>(10) // Максимум 10 битмапов в пуле
@@ -40,8 +47,33 @@ class OptimizedPdfiumReader : PdfReader {
         private const val TAG = "OptimizedPdfiumReader"
         private const val MAX_BITMAP_SIZE = 2048 * 2048 // Максимальный размер битмапа
         private const val CACHE_SIZE_MB = 50 // Размер кэша в МБ
+
+        /**
+         * Ensure URI permission with proper error handling
+         */
+        private fun ensureUriPermission(context: Context, uri: Uri): Boolean {
+            return try {
+                // Check if we already have permission
+                val hasPermission = context.contentResolver.persistedUriPermissions
+                    .any { it.uri == uri && it.isReadPermission }
+
+                if (!hasPermission) {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    android.util.Log.d(TAG, "Persistable permission granted for URI: $uri")
+                } else {
+                    android.util.Log.d(TAG, "Already have permission for URI: $uri")
+                }
+                true
+            } catch (e: SecurityException) {
+                android.util.Log.e(TAG, "Could not take persistable permission: ${e.message}", e)
+                false
+            }
+        }
     }
-    
+
     override suspend fun openDocument(context: Context, uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             // Check and request permissions for content:// URIs with proper error handling
@@ -52,55 +84,27 @@ class OptimizedPdfiumReader : PdfReader {
                     )
                 }
             }
-            
-    companion object {
-        private const val TAG = "OptimizedPdfiumReader"
-        
-        /**
-         * Ensure URI permission with proper error handling
-         */
-        private fun ensureUriPermission(context: Context, uri: Uri): Boolean {
-            return try {
-                // Check if we already have permission
-                val hasPermission = context.contentResolver.persistedUriPermissions
-                    .any { it.uri == uri && it.isReadPermission }
-                    
-                if (!hasPermission) {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri, 
-                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                    android.util.Log.d(TAG, "✅ PDF DIAGNOSTIC: Persistable permission granted for URI: $uri")
-                } else {
-                    android.util.Log.d(TAG, "✅ PDF DIAGNOSTIC: Already have permission for URI: $uri")
-                }
-                true
-            } catch (e: SecurityException) {
-                android.util.Log.e(TAG, "❌ PDF DIAGNOSTIC: Could not take persistable permission: ${e.message}", e)
-                false
-            }
-        }
-            
+
             // Инициализируем PdfiumCore
             pdfiumCore = PdfiumCore(context)
-            
+
             // Открываем файловый дескриптор
             parcelFileDescriptor = try {
                 context.contentResolver.openFileDescriptor(uri, "r")
             } catch (e: SecurityException) {
-                android.util.Log.e(TAG, "❌ PDF DIAGNOSTIC: SecurityException when opening URI: $uri", e)
+                android.util.Log.e(TAG, "SecurityException when opening URI: $uri", e)
                 return@withContext Result.failure(IOException("Permission Denial: reading ${uri.authority} uri $uri requires that you obtain access using ACTION_OPEN_DOCUMENT or related APIs"))
             } ?: return@withContext Result.failure(IOException("Could not open file descriptor for URI: $uri"))
-            
+
             // Открываем PDF документ
             pdfDocument = pdfiumCore?.newDocument(parcelFileDescriptor, null)
             pageCount = pdfiumCore?.getPageCount(pdfDocument) ?: 0
-            
-            android.util.Log.d(TAG, "✅ PDF opened successfully. Page count: $pageCount")
+
+            android.util.Log.d(TAG, "PDF opened successfully. Page count: $pageCount")
             Result.success(Unit)
-            
+
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ Failed to open PDF document", e)
+            android.util.Log.e(TAG, "Failed to open PDF document", e)
             close()
             Result.failure(e)
         }
@@ -116,17 +120,17 @@ class OptimizedPdfiumReader : PdfReader {
                 return@withContext Result.failure(IndexOutOfBoundsException("Page index $pageIndex out of bounds (0-${pageCount - 1})"))
             }
             
-            // Проверяем кэш
+            // Проверяем кэш (это быстро, не требует Mutex)
             val cacheKey = "${pageIndex}_${maxWidth}_${maxHeight}"
             pageCache.get(cacheKey)?.let { cachedBitmap ->
-                android.util.Log.d(TAG, "✅ Cache hit for page $pageIndex")
+                android.util.Log.d(TAG, "Cache hit for page $pageIndex")
                 return@withContext Result.success(cachedBitmap)
             }
             
             val pdfiumCore = this@OptimizedPdfiumReader.pdfiumCore ?: return@withContext Result.failure(IllegalStateException("PDF document not opened"))
             val pdfDocument = this@OptimizedPdfiumReader.pdfDocument ?: return@withContext Result.failure(IllegalStateException("PDF document not opened"))
             
-            // Получаем размеры страницы
+            // Получаем размеры страницы (не требует Mutex)
             val pageWidth = pdfiumCore.getPageWidthPoint(pdfDocument, pageIndex)
             val pageHeight = pdfiumCore.getPageHeightPoint(pdfDocument, pageIndex)
             
@@ -141,7 +145,7 @@ class OptimizedPdfiumReader : PdfReader {
             
             // Проверяем размер битмапа
             if (renderWidth * renderHeight > MAX_BITMAP_SIZE) {
-                android.util.Log.w(TAG, "⚠️ Bitmap size too large: ${renderWidth}x${renderHeight}, reducing quality")
+                android.util.Log.w(TAG, "Bitmap size too large: ${renderWidth}x${renderHeight}, reducing quality")
                 val reductionFactor = sqrt(MAX_BITMAP_SIZE.toFloat() / (renderWidth * renderHeight))
                 val adjustedWidth = (renderWidth * reductionFactor).toInt()
                 val adjustedHeight = (renderHeight * reductionFactor).toInt()
@@ -151,7 +155,7 @@ class OptimizedPdfiumReader : PdfReader {
             renderPageWithSize(pageIndex, renderWidth, renderHeight, cacheKey)
             
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ Failed to render PDF page $pageIndex", e)
+            android.util.Log.e(TAG, "Failed to render PDF page $pageIndex", e)
             Result.failure(e)
         }
     }
@@ -161,16 +165,23 @@ class OptimizedPdfiumReader : PdfReader {
             val pdfiumCore = this@OptimizedPdfiumReader.pdfiumCore ?: return@withContext Result.failure(IllegalStateException("PDF document not opened"))
             val pdfDocument = this@OptimizedPdfiumReader.pdfDocument ?: return@withContext Result.failure(IllegalStateException("PDF document not opened"))
             
-            // Создаем битмап
+            // Создаем битмап (можно делать без Mutex)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             
-            // Рендерим страницу с высоким DPI для лучшего качества
-            pdfiumCore.renderPageBitmap(
-                pdfDocument,
-                bitmap,
-                pageIndex,
-                0, 0, width, height
-            )
+            // КРИТИЧНО: Используем Mutex для синхронизации доступа к Pdfium
+            // Это предотвращает race conditions и "PdfiumCore already closed" ошибки
+            pdfiumMutex.lock()
+            try {
+                // Рендерим страницу (это может быть долгой операцией)
+                pdfiumCore.renderPageBitmap(
+                    pdfDocument,
+                    bitmap,
+                    pageIndex,
+                    0, 0, width, height
+                )
+            } finally {
+                pdfiumMutex.unlock()
+            }
             
             // Добавляем в кэш
             pageCache.put(cacheKey, bitmap)
@@ -178,44 +189,44 @@ class OptimizedPdfiumReader : PdfReader {
             // Обновляем статистику
             renderStats.onPageRendered(pageIndex, System.currentTimeMillis())
             
-            android.util.Log.d(TAG, "✅ Page $pageIndex rendered successfully (${width}x${height})")
+            android.util.Log.d(TAG, "Page $pageIndex rendered successfully (${width}x${height})")
             Result.success(bitmap)
             
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ Failed to render page with size ${width}x${height}", e)
+            android.util.Log.e(TAG, "Failed to render page with size ${width}x${height}", e)
             Result.failure(e)
         }
     }
     
     override fun close() {
         try {
-            // Clear caches first
+            // Clear caches first (prevents bitmap leaks)
             pageCache.evictAll()
             bitmapPool.evictAll()
             
             // Close PDF document if open
             pdfDocument?.let { doc ->
                 pdfiumCore?.closeDocument(doc)
-                android.util.Log.d(TAG, "✅ PDF document closed")
+                android.util.Log.d(TAG, "PDF document closed")
             }
             
             // Close file descriptor
             parcelFileDescriptor?.let { fd ->
                 fd.close()
-                android.util.Log.d(TAG, "✅ File descriptor closed")
+                android.util.Log.d(TAG, "File descriptor closed")
             }
             
             // Clear PdfiumCore
             pdfiumCore = null
             
         } catch (e: Exception) {
-            android.util.Log.e(TAG, "❌ Error closing PDF resources", e)
+            android.util.Log.e(TAG, "Error closing PDF resources", e)
         } finally {
             // Ensure all references are nulled even on exception
             pdfDocument = null
             parcelFileDescriptor = null
             pageCount = 0
-            android.util.Log.d(TAG, "✅ PDF reader cleanup completed")
+            android.util.Log.d(TAG, "PDF reader cleanup completed")
         }
     }
     
