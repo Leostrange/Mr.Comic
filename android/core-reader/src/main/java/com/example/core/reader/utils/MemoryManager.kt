@@ -8,6 +8,7 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.OnLifecycleEvent
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Менеджер памяти для управления кэшем изображений и предотвращения утечек
@@ -42,8 +43,6 @@ class MemoryManager private constructor() : LifecycleObserver {
     private var isAppInBackground = false
     
     init {
-        // Подписываемся на жизненный цикл приложения
-        // ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         startPeriodicCleanup()
     }
     
@@ -62,11 +61,11 @@ class MemoryManager private constructor() : LifecycleObserver {
     fun getBitmap(key: String): Bitmap? {
         val cached = memoryCache.get(key)
         return if (cached != null && !cached.bitmap.isRecycled) {
-            // Обновляем статистику доступа
+            hitCount.incrementAndGet()
             memoryCache.put(key, cached.copy(accessCount = cached.accessCount + 1))
             cached.bitmap
         } else {
-            // Удаляем недействительный кэш
+            missCount.incrementAndGet()
             memoryCache.remove(key)
             null
         }
@@ -165,12 +164,14 @@ class MemoryManager private constructor() : LifecycleObserver {
         )
     }
     
-    private var hitCount = 0
-    private var missCount = 0
+    private val hitCount = AtomicInteger(0)
+    private val missCount = AtomicInteger(0)
     
     private fun calculateHitRate(): Float {
-        val total = hitCount + missCount
-        return if (total > 0) hitCount.toFloat() / total else 0f
+        val hits = hitCount.get()
+        val misses = missCount.get()
+        val total = hits + misses
+        return if (total > 0) hits.toFloat() / total else 0f
     }
     
     /**
@@ -222,7 +223,6 @@ class MemoryManager private constructor() : LifecycleObserver {
     fun destroy() {
         cleanupJob.cancel()
         clearCache()
-        // ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
     }
     
     /**

@@ -2,6 +2,7 @@ package com.example.core.reader.cache
 
 import android.graphics.Bitmap
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +25,7 @@ class BitmapPool @Inject constructor() {
     private val mediumBitmaps = ConcurrentLinkedQueue<Bitmap>() // до 1024x1024
     private val largeBitmaps = ConcurrentLinkedQueue<Bitmap>() // до 2048x2048
     
-    private var poolSize = 0
+    private val poolSize = AtomicInteger(0)
     
     /**
      * Получить bitmap из пула или создать новый
@@ -41,7 +42,7 @@ class BitmapPool @Inject constructor() {
         val reusableBitmap = pool.poll()
         
         return if (reusableBitmap != null && canReuseBitmap(reusableBitmap, width, height, config)) {
-            poolSize--
+            poolSize.decrementAndGet()
             android.util.Log.d(TAG, "Reused bitmap from pool: ${width}x${height}")
             // Очищаем bitmap перед переиспользованием
             reusableBitmap.eraseColor(0)
@@ -58,7 +59,7 @@ class BitmapPool @Inject constructor() {
      * Вернуть bitmap в пул для переиспользования
      */
     fun returnBitmap(bitmap: Bitmap) {
-        if (bitmap.isRecycled || poolSize >= MAX_POOL_SIZE) {
+        if (bitmap.isRecycled || poolSize.get() >= MAX_POOL_SIZE) {
             return
         }
         
@@ -69,7 +70,7 @@ class BitmapPool @Inject constructor() {
         
         val pool = getPoolForSize(bitmapBytes)
         pool.offer(bitmap)
-        poolSize++
+        poolSize.incrementAndGet()
         
         android.util.Log.d(TAG, "Returned bitmap to pool: ${bitmap.width}x${bitmap.height}")
     }
@@ -81,7 +82,7 @@ class BitmapPool @Inject constructor() {
         smallBitmaps.clear()
         mediumBitmaps.clear()
         largeBitmaps.clear()
-        poolSize = 0
+        poolSize.set(0)
         android.util.Log.d(TAG, "Bitmap pools cleared")
     }
     
@@ -90,7 +91,7 @@ class BitmapPool @Inject constructor() {
      */
     fun getPoolStats(): PoolStats {
         return PoolStats(
-            totalPoolSize = poolSize,
+            totalPoolSize = poolSize.get(),
             smallBitmapsCount = smallBitmaps.size,
             mediumBitmapsCount = mediumBitmaps.size,
             largeBitmapsCount = largeBitmaps.size
