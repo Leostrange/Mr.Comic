@@ -83,12 +83,36 @@ class MemoryManager private constructor() : LifecycleObserver {
     }
     
     /**
-     * Проверить, можно ли кэшировать bitmap
+     * Проверить, можно ли кэшировать bitmap с учетом доступной памяти
      */
     private fun canCacheBitmap(bitmap: Bitmap): Boolean {
+        if (bitmap.isRecycled) {
+            android.util.Log.w(TAG, "Cannot cache recycled bitmap")
+            return false
+        }
+        
         val size = bitmap.byteCount
         val maxSize = MAX_MEMORY_CACHE_SIZE / 4 // Максимум 25% от кэша на одно изображение
-        return size <= maxSize
+        
+        // Check available memory
+        val runtime = Runtime.getRuntime()
+        val usedMemory = runtime.totalMemory() - runtime.freeMemory()
+        val availableMemory = runtime.maxMemory() - usedMemory
+        val memoryUsagePercent = usedMemory.toFloat() / runtime.maxMemory().toFloat()
+        
+        // Don't cache if we're using more than 80% of memory
+        if (memoryUsagePercent > 0.8f) {
+            android.util.Log.w(TAG, "High memory usage (${(memoryUsagePercent * 100).toInt()}%), skipping cache")
+            return false
+        }
+        
+        // Don't cache if bitmap is too large or would use too much available memory
+        if (size > maxSize || size > availableMemory / 10) {
+            android.util.Log.w(TAG, "Bitmap too large for cache: ${size / 1024 / 1024}MB, available: ${availableMemory / 1024 / 1024}MB")
+            return false
+        }
+        
+        return true
     }
     
     /**

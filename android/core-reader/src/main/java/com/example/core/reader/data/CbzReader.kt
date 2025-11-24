@@ -24,6 +24,35 @@ class CbzReader @Inject constructor(
     private val context: Context
 ) : MediaReader {
     
+    companion object {
+        private const val TAG = "CbzReader"
+        
+        /**
+         * Ensure URI permission with proper fallback handling
+         */
+        private fun ensureUriPermission(context: Context, uri: Uri): Boolean {
+            return try {
+                // Check if we already have permission
+                val hasPermission = context.contentResolver.persistedUriPermissions
+                    .any { it.uri == uri && it.isReadPermission }
+                    
+                if (!hasPermission) {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri, 
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    android.util.Log.d(TAG, "✅ CBZ DIAGNOSTIC: Persistable permission granted for URI: $uri")
+                } else {
+                    android.util.Log.d(TAG, "✅ CBZ DIAGNOSTIC: Already have permission for URI: $uri")
+                }
+                true
+            } catch (e: SecurityException) {
+                android.util.Log.e(TAG, "❌ CBZ DIAGNOSTIC: Could not take persistable permission: ${e.message}", e)
+                false
+            }
+        }
+    }
+    
     private val memoryManager = com.example.core.reader.utils.MemoryManager.getInstance()
     
     private var streamingExtractor: StreamingExtractor? = null
@@ -43,22 +72,18 @@ class CbzReader @Inject constructor(
             
             // Check and request permissions for content:// URIs
             if (uri.scheme == "content") {
-                try {
-                    // Try to take persistable permission
-                    context.contentResolver.takePersistableUriPermission(
-                        uri, 
-                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                if (!ensureUriPermission(context, uri)) {
+                    return@withContext Result.failure(
+                        SecurityException("Permission denied. Please re-select the file using file picker.")
                     )
-                    android.util.Log.d("CbzReader", "✅ CBZ DIAGNOSTIC: Persistable permission granted for URI: $uri")
-                } catch (e: SecurityException) {
-                    android.util.Log.w("CbzReader", "⚠️ CBZ DIAGNOSTIC: Could not take persistable permission: ${e.message}")
-                    // Continue anyway, might work with temporary permission
                 }
             }
             
             // Create a temporary file for the CBZ
-            tempFile = File.createTempFile("cbz_temp_${System.currentTimeMillis()}", ".cbz", context.cacheDir).apply {
+            tempFile = File.createTempFile("cbz_temp_", ".cbz", context.cacheDir).apply {
                 deleteOnExit()
+                setReadable(true, false)
+                setWritable(false, false)
             }
             
             // Copy the content to the temporary file
