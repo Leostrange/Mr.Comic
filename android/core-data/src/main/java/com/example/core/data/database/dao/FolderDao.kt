@@ -13,6 +13,9 @@ interface FolderDao {
     @Query("SELECT * FROM folders ORDER BY name ASC")
     fun getAllFolders(): Flow<List<Folder>>
     
+    @Query("SELECT * FROM folders ORDER BY name ASC")
+    suspend fun getAllFoldersSync(): List<Folder>
+    
     @Query("SELECT * FROM folders WHERE parentId = :parentId ORDER BY name ASC")
     fun getFoldersByParent(parentId: String?): Flow<List<Folder>>
     
@@ -21,6 +24,9 @@ interface FolderDao {
     
     @Query("SELECT * FROM folders WHERE path = :path")
     suspend fun getByPath(path: String): Folder?
+    
+    @Query("SELECT * FROM folders WHERE treeUri = :treeUri")
+    suspend fun getByTreeUri(treeUri: String): Folder?
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(folder: Folder)

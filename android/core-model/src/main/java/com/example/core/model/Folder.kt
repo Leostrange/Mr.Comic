@@ -11,7 +11,8 @@ import androidx.room.PrimaryKey
     tableName = "folders",
     indices = [
         Index(value = ["name"]),
-        Index(value = ["parentId"])
+        Index(value = ["parentId"]),
+        Index(value = ["treeUri"])
     ]
 )
 data class Folder(
@@ -20,5 +21,14 @@ data class Folder(
     val name: String,
     val path: String,
     val parentId: String? = null,
-    val comicCount: Int = 0
+    val comicCount: Int = 0,
+    val treeUri: String? = null,
+    val displayName: String = name,
+    val storageType: StorageType = StorageType.INTERNAL
 )
+
+enum class StorageType {
+    INTERNAL,
+    EXTERNAL,
+    REMOVABLE
+}
