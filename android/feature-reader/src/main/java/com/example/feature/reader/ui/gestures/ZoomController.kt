@@ -12,12 +12,14 @@ import kotlin.math.*
 /**
  * Controller for managing zoom state and transitions
  * Supports cyclic zoom modes: fit-width -> fit-height -> fit-screen
+ * Derives base scale from scaleMode state
  */
 class ZoomController(
     private val imageSize: IntSize,
     private val screenSize: IntSize,
     private val zoomSensitivity: Float = 1.0f,
-    private val panSensitivity: Float = 1.0f
+    private val panSensitivity: Float = 1.0f,
+    initialScaleMode: String = "width"
 ) {
     // Current zoom scale
     val scale = Animatable(1f)
@@ -26,9 +28,22 @@ class ZoomController(
     val offsetX = Animatable(0f)
     val offsetY = Animatable(0f)
     
-    // Current zoom mode
-    var currentMode by mutableStateOf(ZoomMode.FIT_WIDTH)
+    // Current zoom mode - initialized from scaleMode state
+    var currentMode by mutableStateOf(scaleModeStringToZoomMode(initialScaleMode))
         private set
+    
+    /**
+     * Convert scaleMode string to ZoomMode enum
+     */
+    private fun scaleModeStringToZoomMode(scaleMode: String): ZoomMode {
+        return when (scaleMode.lowercase()) {
+            "width" -> ZoomMode.FIT_WIDTH
+            "height" -> ZoomMode.FIT_HEIGHT
+            "fit" -> ZoomMode.FIT_SCREEN
+            "fill" -> ZoomMode.FILL
+            else -> ZoomMode.FIT_WIDTH
+        }
+    }
     
     /**
      * Calculate scale for fit-width mode
@@ -302,6 +317,17 @@ class ZoomController(
         }
         setZoomMode(mode)
     }
+    
+    /**
+     * Update scale mode from UI state changes
+     * Synchronizes zoom controller with scale mode state
+     */
+    suspend fun updateScaleModeFromState(scaleMode: String) {
+        val mode = scaleModeStringToZoomMode(scaleMode)
+        if (mode != currentMode) {
+            setZoomMode(mode)
+        }
+    }
 }
 
 /**
@@ -321,14 +347,18 @@ enum class ZoomMode {
 
 /**
  * Composable function to remember zoom controller
+ * Accepts scaleMode to derive base scale from state
  */
 @Composable
 fun rememberZoomController(
     imageSize: IntSize,
-    screenSize: IntSize
+    screenSize: IntSize,
+    scaleMode: String = "width",
+    zoomSensitivity: Float = 1.0f,
+    panSensitivity: Float = 1.0f
 ): ZoomController {
-    return remember(imageSize, screenSize) {
-        ZoomController(imageSize, screenSize)
+    return remember(imageSize, screenSize, scaleMode) {
+        ZoomController(imageSize, screenSize, zoomSensitivity, panSensitivity, scaleMode)
     }
 }
 

@@ -464,30 +464,34 @@ private fun ReaderScreenContent(
                 }
                 
                 // ✅ СТРОГИЕ gesture zones поверх всего контента
-                ReaderTapZones(
-                    panelsOpen = showTopPanel || showRightPanel || showThumbnailPanel,
-                    onOpenTopBar = { uiController.showTopPanel() },
-                    onOpenSideBar = { uiController.showRightPanel() },
-                    onOpenLeftPanel = { uiController.showThumbnailPanel() }, // BottomLeft → Thumbnail panel
-                    onPrev = { 
-                        if (!showTopPanel && !showRightPanel && !showThumbnailPanel) {
-                            uiController.onUserInteraction()
-                            onPreviousPage()
-                        }
-                    },
-                    onNext = { 
-                        if (!showTopPanel && !showRightPanel && !showThumbnailPanel) {
-                            uiController.onUserInteraction()
-                            onNextPage()
-                        }
-                    },
-                    tapZonesSize = readerSettings.readerTapZonesSize,
-                    tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
-                    navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(5f) // Высокий z-index для перехвата всех тапов
-                )
+                // Render ReaderTapZones only in PAGE mode with navigation callbacks
+                // Webtoon mode handles its own panel-opening hotspots internally
+                if (uiState.readingMode == ReadingMode.PAGE) {
+                    ReaderTapZones(
+                        panelsOpen = showTopPanel || showRightPanel || showThumbnailPanel,
+                        onOpenTopBar = { uiController.showTopPanel() },
+                        onOpenSideBar = { uiController.showRightPanel() },
+                        onOpenLeftPanel = { uiController.showThumbnailPanel() }, // BottomLeft → Thumbnail panel
+                        onPrev = { 
+                            if (!showTopPanel && !showRightPanel && !showThumbnailPanel) {
+                                uiController.onUserInteraction()
+                                onPreviousPage()
+                            }
+                        },
+                        onNext = { 
+                            if (!showTopPanel && !showRightPanel && !showThumbnailPanel) {
+                                uiController.onUserInteraction()
+                                onNextPage()
+                            }
+                        },
+                        tapZonesSize = readerSettings.readerTapZonesSize,
+                        tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
+                        navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(5f) // Высокий z-index для перехвата всех тапов
+                    )
+                }
                 
                 // Оверлей яркости с сглаживанием (верхний слой, не трогает контент)
                 BrightnessOverlayThrottled(

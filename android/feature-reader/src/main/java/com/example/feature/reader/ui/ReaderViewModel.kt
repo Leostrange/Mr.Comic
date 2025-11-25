@@ -962,8 +962,12 @@ class ReaderViewModel @Inject constructor(
         }
     }
     
+    // Store last preset scale mode before switching to custom
+    private var lastPresetScaleMode: String = "width"
+    
     /**
      * Apply pinch-to-zoom with scale and center point
+     * Flips scaleMode to "custom" when manually zooming
      */
     fun zoom(scale: Float, center: androidx.compose.ui.geometry.Offset) {
         android.util.Log.d(TAG, "Zoom: scale=$scale, center=$center")
@@ -971,6 +975,12 @@ class ReaderViewModel @Inject constructor(
         // Update zoom state
         _uiState.update { currentState ->
             val newScale = (currentState.currentZoomScale * scale).coerceIn(0.5f, 5.0f)
+            
+            // Save last preset before switching to custom
+            if (currentState.scaleMode != "custom") {
+                lastPresetScaleMode = currentState.scaleMode
+            }
+            
             currentState.copy(
                 currentZoomScale = newScale,
                 zoomCenter = center,
@@ -983,16 +993,21 @@ class ReaderViewModel @Inject constructor(
     }
     
     /**
-     * Reset zoom to default (fit-width) with proper state management
+     * Reset zoom to last preset scale mode
+     * Returns to the last preset when resetting from custom zoom
      */
     fun resetZoom() {
-        android.util.Log.d(TAG, "Resetting zoom to default with animation")
+        android.util.Log.d(TAG, "Resetting zoom to last preset with animation")
         
-        // Определяем оптимальный режим масштабирования по ориентации
-        val optimalScaleMode = when (_uiState.value.orientation) {
-            "portrait" -> "width"  // FitWidth для портрета
-            "landscape" -> "height" // FitHeight для ландшафта
-            else -> "width" // По умолчанию FitWidth
+        // Use last preset if available, otherwise determine optimal by orientation
+        val targetScaleMode = if (lastPresetScaleMode.isNotEmpty()) {
+            lastPresetScaleMode
+        } else {
+            when (_uiState.value.orientation) {
+                "portrait" -> "width"  // FitWidth для портрета
+                "landscape" -> "height" // FitHeight для ландшафта
+                else -> "width" // По умолчанию FitWidth
+            }
         }
         
         // Сбрасываем все параметры зума к исходному состоянию с анимацией
@@ -1002,19 +1017,19 @@ class ReaderViewModel @Inject constructor(
                 zoomCenter = androidx.compose.ui.geometry.Offset.Zero,
                 offsetX = 0f,
                 offsetY = 0f,
-                scaleMode = optimalScaleMode // Возвращаем к оптимальному режиму по ориентации
+                scaleMode = targetScaleMode // Возвращаем к последнему preset режиму
             )
         }
         
         // Сохраняем настройки
         viewModelScope.launch {
-            settingsRepository.setScaleMode(optimalScaleMode)
+            settingsRepository.setScaleMode(targetScaleMode)
             
             // Аналитика
             analyticsHelper.track(
                 com.example.core.analytics.AnalyticsEvent.SettingChanged(
                     settingName = "zoom_reset",
-                    value = optimalScaleMode
+                    value = targetScaleMode
                 ),
                 this
             )
@@ -1152,6 +1167,7 @@ class ReaderViewModel @Inject constructor(
     
     /**
      * Update scale mode setting
+     * Routes TopSettingsPanel scale-mode buttons to immediately re-render with new scale
      */
     fun updateScaleMode(scaleMode: String) {
         viewModelScope.launch {
@@ -1172,6 +1188,10 @@ class ReaderViewModel @Inject constructor(
             }
             
             android.util.Log.d(TAG, "Scale mode updated: $scaleMode (page preserved: $currentPage)")
+            
+            // Immediately re-render the current page with new scale
+            // This ensures the bitmap is regenerated with the new scale mode
+            loadPage(currentPage)
         }
     }
     
@@ -1218,10 +1238,15 @@ class ReaderViewModel @Inject constructor(
                 2.0f // Zoom to 2x level
             }
             
+            // Save last preset before switching to custom
+            if (currentState.scaleMode != "custom" && newScale > 1.0f) {
+                lastPresetScaleMode = currentState.scaleMode
+            }
+            
             currentState.copy(
                 currentZoomScale = newScale,
                 zoomCenter = position,
-                scaleMode = if (newScale > 1.0f) "custom" else "width"
+                scaleMode = if (newScale > 1.0f) "custom" else lastPresetScaleMode
             )
         }
     }
