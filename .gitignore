@@ -22,3 +22,6 @@ final_apk/
 # Временные скрипты
 *.ps1
 *.bat
+
+# Log files
+*.log
