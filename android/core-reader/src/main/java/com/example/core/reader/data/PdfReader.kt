@@ -10,6 +10,8 @@ import com.example.core.reader.pdf.PdfReaderFactory
 import com.example.core.reader.data.cache.ThumbnailCache
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.min
@@ -31,6 +33,8 @@ class PdfReader(
     private var metadata: MediaMetadata? = null
     private var isOpen: Boolean = false
     private var currentUri: Uri? = null
+    
+    private val pdfMutex = Mutex()
 
     // Предзагрузка миниатюр
     private val preloadScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -153,52 +157,54 @@ class PdfReader(
         renderStats.totalRenders++
 
         return withContext(Dispatchers.IO) {
-            runCatching {
-                val primaryResult = reader.renderPage(pageIndex, maxWidth, maxHeight)
-                if (primaryResult.isSuccess) {
-                    val bmp = primaryResult.getOrThrow()
-                    val renderTime = System.currentTimeMillis() - startTime
-                    renderStats.successfulRenders++
-                    renderStats.totalRenderTimeMs += renderTime
+            pdfMutex.withLock {
+                runCatching {
+                    val primaryResult = reader.renderPage(pageIndex, maxWidth, maxHeight)
+                    if (primaryResult.isSuccess) {
+                        val bmp = primaryResult.getOrThrow()
+                        val renderTime = System.currentTimeMillis() - startTime
+                        renderStats.successfulRenders++
+                        renderStats.totalRenderTimeMs += renderTime
 
-                    if (!isBlankBitmap(bmp)) {
-                        android.util.Log.d("PdfReader", "Rendered page $pageIndex in ${renderTime}ms")
-                        return@runCatching Result.success(bmp)
+                        if (!isBlankBitmap(bmp)) {
+                            android.util.Log.d("PdfReader", "Rendered page $pageIndex in ${renderTime}ms")
+                            return@runCatching Result.success(bmp)
+                        }
+                        android.util.Log.w("PdfReader", "Primary reader returned blank page, attempting PDFBox fallback for page $pageIndex")
                     }
-                    android.util.Log.w("PdfReader", "Primary reader returned blank page, attempting PDFBox fallback for page $pageIndex")
-                }
 
-                // Fallback с использованием PdfBoxReader
-                val uri = currentUri
-                if (uri != null) {
-                    val pdfBox = com.example.core.reader.pdf.PdfBoxReader()
-                    val openRes = pdfBox.openDocument(context, uri)
-                    if (openRes.isSuccess) {
-                        val fbRender = pdfBox.renderPage(pageIndex, maxWidth, maxHeight)
-                        if (fbRender.isSuccess) {
-                            android.util.Log.d("PdfReader", "Fallback render successful for page $pageIndex")
-                            renderStats.successfulRenders++
-                            renderStats.totalRenderTimeMs += (System.currentTimeMillis() - startTime)
-                            return@runCatching Result.success(fbRender.getOrThrow())
+                    // Fallback с использованием PdfBoxReader
+                    val uri = currentUri
+                    if (uri != null) {
+                        val pdfBox = com.example.core.reader.pdf.PdfBoxReader()
+                        val openRes = pdfBox.openDocument(context, uri)
+                        if (openRes.isSuccess) {
+                            val fbRender = pdfBox.renderPage(pageIndex, maxWidth, maxHeight)
+                            if (fbRender.isSuccess) {
+                                android.util.Log.d("PdfReader", "Fallback render successful for page $pageIndex")
+                                renderStats.successfulRenders++
+                                renderStats.totalRenderTimeMs += (System.currentTimeMillis() - startTime)
+                                return@runCatching Result.success(fbRender.getOrThrow())
+                            } else {
+                                renderStats.failedRenders++
+                                return@runCatching Result.failure(fbRender.exceptionOrNull() ?: Exception("PDFBox failed to render page"))
+                            }
                         } else {
-                            renderStats.failedRenders++
-                            return@runCatching Result.failure(fbRender.exceptionOrNull() ?: Exception("PDFBox failed to render page"))
+                            android.util.Log.w("PdfReader", "PDFBox open failed: ${openRes.exceptionOrNull()?.message}")
                         }
                     } else {
-                        android.util.Log.w("PdfReader", "PDFBox open failed: ${openRes.exceptionOrNull()?.message}")
+                        android.util.Log.w("PdfReader", "No currentUri stored; cannot fallback to PDFBox")
                     }
-                } else {
-                    android.util.Log.w("PdfReader", "No currentUri stored; cannot fallback to PDFBox")
-                }
 
-                // Если дошли сюда, возвращаем ошибку из первичного результата
-                renderStats.failedRenders++
-                primaryResult.exceptionOrNull()?.let { return@runCatching Result.failure(it) }
-                Result.failure(Exception("Failed to render page and fallback"))
-            }.getOrElse { e ->
-                android.util.Log.e("PdfReader", "Failed to render page $pageIndex: ${e.message}", e)
-                renderStats.failedRenders++
-                Result.failure(e)
+                    // Если дошли сюда, возвращаем ошибку из первичного результата
+                    renderStats.failedRenders++
+                    primaryResult.exceptionOrNull()?.let { return@runCatching Result.failure(it) }
+                    Result.failure(Exception("Failed to render page and fallback"))
+                }.getOrElse { e ->
+                    android.util.Log.e("PdfReader", "Failed to render page $pageIndex: ${e.message}", e)
+                    renderStats.failedRenders++
+                    Result.failure(e)
+                }
             }
         }
     }
@@ -257,17 +263,19 @@ class PdfReader(
             renderStats.thumbnailCacheMisses++
             renderStats.thumbnailRenders++
 
-            // Генерируем миниатюру через основной ридер
-            val reader = currentReader ?: return@withContext Result.failure(IllegalStateException("PDF reader not initialized"))
-            val result = reader.renderPage(pageIndex, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
+            pdfMutex.withLock {
+                // Генерируем миниатюру через основной ридер
+                val reader = currentReader ?: return@withContext Result.failure(IllegalStateException("PDF reader not initialized"))
+                val result = reader.renderPage(pageIndex, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
 
-            if (result.isSuccess) {
-                val thumbnail = result.getOrThrow()
-                thumbnailCache.putThumbnail(key, thumbnail)
-                android.util.Log.d("PdfReader", "Thumbnail loaded for page $pageIndex")
+                if (result.isSuccess) {
+                    val thumbnail = result.getOrThrow()
+                    thumbnailCache.putThumbnail(key, thumbnail)
+                    android.util.Log.d("PdfReader", "Thumbnail loaded for page $pageIndex")
+                }
+
+                result
             }
-
-            result
         }
     }
 
