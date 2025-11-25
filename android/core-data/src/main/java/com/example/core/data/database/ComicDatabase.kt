@@ -25,7 +25,7 @@ import com.example.core.model.ReadingSession
         Bookmark::class,
         ReadingSession::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -45,6 +45,13 @@ abstract class ComicDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE comics ADD COLUMN isSingle INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_comics_displayGroup ON comics(displayGroup)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_comics_isSingle ON comics(isSingle)")
+            }
+        }
+        
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE comics ADD COLUMN folderId TEXT DEFAULT NULL")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_comics_folderId ON comics(folderId)")
             }
         }
     }

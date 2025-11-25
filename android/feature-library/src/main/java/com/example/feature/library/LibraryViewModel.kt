@@ -190,7 +190,7 @@ class LibraryViewModel @Inject constructor(
     private fun loadFolders() {
         viewModelScope.launch {
             try {
-                folderRepository.getAllFolders()
+                folderRepository.getAllFoldersWithMisc()
                     .catch { e ->
                         android.util.Log.e("LibraryViewModel", "Error loading folders", e)
                     }
@@ -265,42 +265,48 @@ class LibraryViewModel @Inject constructor(
             try {
                 val filters = _uiState.value.filters
                 val query = _uiState.value.searchQuery
-                
+
                 // Получаем все комиксы
                 val allComics = if (query.isNotBlank()) {
                     comicRepository.searchComics(query).first()
                 } else {
                     comicRepository.getAllComics().first()
                 }
-                
+
                 // Применяем фильтры
                 val filteredComics = allComics.filter { comic ->
                     // Фильтр по формату
                     val formatMatch = filters.formats.isEmpty() || comic.format in filters.formats
-                    
+
                     // Фильтр по папке
-                    val folderMatch = filters.folderId == null || comic.folderId == filters.folderId
-                    
+                    val folderMatch = if (filters.folderId == null) {
+                        true
+                    } else if (filters.folderId == com.example.core.data.repository.FolderRepository.MISC_FOLDER_ID) {
+                        comic.isSingle
+                    } else {
+                        comic.folderId == filters.folderId
+                    }
+
                     // Фильтр по дате
-                    val dateMatch = filters.dateRange == null || 
-                        (comic.addedDate >= filters.dateRange.start && 
+                    val dateMatch = filters.dateRange == null ||
+                        (comic.addedDate >= filters.dateRange.start &&
                          comic.addedDate <= filters.dateRange.end)
-                    
+
                     // Фильтр по статусу чтения
                     val readStatusMatch = when (filters.readStatus) {
                         com.example.feature.library.search.ReadStatus.ALL -> true
                         com.example.feature.library.search.ReadStatus.UNREAD -> comic.readingProgress == 0f
-                        com.example.feature.library.search.ReadStatus.READING -> 
+                        com.example.feature.library.search.ReadStatus.READING ->
                             comic.readingProgress > 0f && comic.readingProgress < 1f
                         com.example.feature.library.search.ReadStatus.COMPLETED -> comic.readingProgress >= 1f
                     }
-                    
+
                     // Фильтр по закладкам
                     val bookmarkMatch = !filters.bookmarkedOnly || comic.isBookmarked
-                    
+
                     formatMatch && folderMatch && dateMatch && readStatusMatch && bookmarkMatch
                 }
-                
+
                 val sortedComics = sortComics(filteredComics, _uiState.value.sortOrder)
                 _uiState.update { it.copy(comics = sortedComics) }
             } catch (e: Exception) {
@@ -334,9 +340,11 @@ class LibraryViewModel @Inject constructor(
      */
     fun selectFolder(folder: Folder?) {
         _uiState.update { it.copy(selectedFolder = folder) }
-        
+
         if (folder == null) {
             loadComics()
+        } else if (folder.id == com.example.core.data.repository.FolderRepository.MISC_FOLDER_ID) {
+            loadMiscComics()
         } else {
             loadComicsFromFolder(folder.id)
         }
@@ -361,7 +369,27 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
-    
+
+    /**
+     * Загрузить комиксы из папки "Разное"
+     */
+    private fun loadMiscComics() {
+        viewModelScope.launch {
+            try {
+                comicRepository.getSingleComics()
+                    .catch { e ->
+                        android.util.Log.e("LibraryViewModel", "Error loading misc comics", e)
+                    }
+                    .collect { comics ->
+                        val sortedComics = sortComics(comics, _uiState.value.sortOrder)
+                        _uiState.update { it.copy(comics = sortedComics) }
+                    }
+            } catch (e: Exception) {
+                android.util.Log.e("LibraryViewModel", "Error loading misc comics", e)
+            }
+        }
+    }
+
     /**
      * Обновить библиотеку
      */
@@ -494,7 +522,9 @@ class LibraryViewModel @Inject constructor(
                     readingProgress = 0f,
                     isBookmarked = false,
                     coverPath = null,
-                    folderId = null
+                    folderId = null,
+                    displayGroup = "Разное",
+                    isSingle = true
                 )
                 
                 // Добавляем в базу данных

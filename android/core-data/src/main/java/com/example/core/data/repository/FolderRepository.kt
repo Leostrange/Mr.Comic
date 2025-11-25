@@ -1,8 +1,11 @@
 package com.example.core.data.repository
 
+import com.example.core.data.database.dao.ComicDao
 import com.example.core.data.database.dao.FolderDao
 import com.example.core.model.Folder
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,8 +15,33 @@ import javax.inject.Singleton
  */
 @Singleton
 class FolderRepository @Inject constructor(
-    private val folderDao: FolderDao
+    private val folderDao: FolderDao,
+    private val comicDao: ComicDao
 ) {
+    
+    companion object {
+        const val MISC_FOLDER_NAME = "Разное"
+        const val MISC_FOLDER_ID = "misc_folder_id"
+    }
+    
+    /**
+     * Получить все папки включая виртуальную папку "Разное"
+     */
+    fun getAllFoldersWithMisc(): Flow<List<Folder>> {
+        return combine(
+            folderDao.getAllFolders(),
+            comicDao.getSingleComics()
+        ) { realFolders, singleComics ->
+            val miscFolder = Folder(
+                id = MISC_FOLDER_ID,
+                name = MISC_FOLDER_NAME,
+                path = "",
+                parentId = null,
+                comicCount = singleComics.size
+            )
+            realFolders + miscFolder
+        }
+    }
     
     /**
      * Получить все папки
@@ -72,17 +100,36 @@ class FolderRepository @Inject constructor(
     }
     
     /**
-     * Удалить папку
+     * Удалить папку и переместить комиксы в Misc
      */
     suspend fun deleteFolder(folder: Folder) {
+        reassignFolderComicsToMisc(folder.id)
         folderDao.delete(folder)
     }
-    
+
     /**
-     * Удалить папку по ID
+     * Удалить папку по ID и переместить комиксы в Misc
      */
     suspend fun deleteFolderById(id: String) {
+        reassignFolderComicsToMisc(id)
         folderDao.deleteById(id)
+    }
+
+    /**
+     * Переместить комиксы папки в Misc при удалении папки
+     */
+    private suspend fun reassignFolderComicsToMisc(folderId: String) {
+        val comics = comicDao.getComicsByFolder(folderId).first()
+        val updatedComics = comics.map { comic ->
+            comic.copy(
+                folderId = null,
+                displayGroup = MISC_FOLDER_NAME,
+                isSingle = true
+            )
+        }
+        if (updatedComics.isNotEmpty()) {
+            comicDao.insertAll(updatedComics)
+        }
     }
     
     /**

@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ComicEntity::class, BookmarkEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +29,14 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL(
                     "UPDATE comics SET totalPages = CASE WHEN totalPages < 0 THEN 0 ELSE totalPages END"
                 )
+            }
+        }
+
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE comics ADD COLUMN folderId TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE comics ADD COLUMN displayGroup TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE comics ADD COLUMN isSingle INTEGER NOT NULL DEFAULT 1")
             }
         }
     }

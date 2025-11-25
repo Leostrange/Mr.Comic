@@ -4,6 +4,7 @@ import com.example.core.data.database.dao.ComicDao
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
