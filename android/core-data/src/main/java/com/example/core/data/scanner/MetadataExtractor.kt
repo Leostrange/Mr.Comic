@@ -40,10 +40,10 @@ class MetadataExtractor @Inject constructor(
                 android.util.Log.w(TAG, "Unsupported file: ${file.name}")
                 return@withContext null
             }
-
+            
             // Парсим файл
             val comicFile = parserFactory.parse(file)
-
+            
             val isSingle = folderId == null
             val displayGroup = if (isSingle) "Разное" else null
 

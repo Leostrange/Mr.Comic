@@ -50,8 +50,16 @@ abstract class ComicDatabase : RoomDatabase() {
         
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // Add folderId to comics for Misc folder grouping
                 db.execSQL("ALTER TABLE comics ADD COLUMN folderId TEXT DEFAULT NULL")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_comics_folderId ON comics(folderId)")
+                
+                // Add SAF support fields to folders
+                db.execSQL("ALTER TABLE folders ADD COLUMN treeUri TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE folders ADD COLUMN displayName TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE folders ADD COLUMN storageType TEXT NOT NULL DEFAULT 'INTERNAL'")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_folders_treeUri ON folders(treeUri)")
+                db.execSQL("UPDATE folders SET displayName = name WHERE displayName = ''")
             }
         }
     }
