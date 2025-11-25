@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.core.model.Folder
+import com.example.core.data.repository.FolderRepository
 
 /**
  * Отображение папок
@@ -36,7 +38,8 @@ fun FolderView(
         ) { folder ->
             FolderItem(
                 folder = folder,
-                onClick = { onFolderClick(folder) }
+                onClick = { onFolderClick(folder) },
+                isMisc = folder.id == FolderRepository.MISC_FOLDER_ID
             )
         }
     }
@@ -49,6 +52,7 @@ fun FolderView(
 private fun FolderItem(
     folder: Folder,
     onClick: () -> Unit,
+    isMisc: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -67,10 +71,10 @@ private fun FolderItem(
         ) {
             // Иконка папки
             Icon(
-                imageVector = Icons.Default.Folder,
+                imageVector = if (isMisc) Icons.Default.FolderOff else Icons.Default.Folder,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
+                tint = if (isMisc) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
             )
             
             // Информация о папке

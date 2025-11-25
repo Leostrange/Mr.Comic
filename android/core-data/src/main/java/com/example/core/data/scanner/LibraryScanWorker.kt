@@ -93,22 +93,22 @@ class LibraryScanWorker @AssistedInject constructor(
             android.util.Log.d(TAG, "Found ${comicFiles.size} comic files")
             
             // Извлекаем метаданные и добавляем в базу
-            var addedCount = 0
-            for (file in comicFiles) {
-                try {
-                    val comic = metadataExtractor.extractMetadata(file)
-                    if (comic != null) {
-                        // Проверяем, не существует ли уже комикс с таким путем
-                        val existing = comicRepository.getComicByPath(file.absolutePath)
-                        if (existing == null) {
-                            comicRepository.addComic(comic)
-                            addedCount++
-                        }
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e(TAG, "Error adding comic: ${file.name}", e)
-                }
-            }
+             var addedCount = 0
+             for (file in comicFiles) {
+                 try {
+                     val comic = metadataExtractor.extractMetadata(file)
+                     if (comic != null) {
+                         // Проверяем, не существует ли уже комикс с таким путем
+                         val existing = comicRepository.getComicByPath(file.absolutePath)
+                         if (existing == null) {
+                             comicRepository.addComic(comic)
+                             addedCount++
+                         }
+                     }
+                 } catch (e: Exception) {
+                     android.util.Log.e(TAG, "Error adding comic: ${file.name}", e)
+                 }
+             }
             
             android.util.Log.d(TAG, "Scan completed. Added $addedCount new comics")
             
