@@ -188,6 +188,8 @@ private fun LoadingPageItem(
  * ИСПРАВЛЕНИЯ:
  * 1. Добавлен callback onLoadPage для автоматической загрузки страниц
  * 2. Передача onLoadPage в OptimizedWebtoonPageItem
+ * 3. Добавлен снимок потока для предзагрузки страниц
+ * 4. Отключены зоны навигации (только панели)
  */
 @Composable
 fun OptimizedWebtoonLazyColumn(
@@ -202,6 +204,34 @@ fun OptimizedWebtoonLazyColumn(
     modifier: Modifier = Modifier
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    
+    // Prefetch pages based on scroll position
+    LaunchedEffect(listState, uiState.pageCount) {
+        kotlinx.coroutines.flow.snapshotFlow { 
+            listState.layoutInfo.visibleItemsInfo 
+        }
+            .kotlinx.coroutines.flow.debounce(150) // Debounce to avoid excessive calls
+            .collect { visibleItems ->
+                if (visibleItems.isNotEmpty()) {
+                    // Find the first and last visible items
+                    val firstVisible = visibleItems.first().index
+                    val lastVisible = visibleItems.last().index
+                    
+                    // Preload upcoming pages (2 pages ahead and 1 behind)
+                    val preloadAhead = 2
+                    val preloadBehind = 1
+                    
+                    for (i in (firstVisible - preloadBehind)..(lastVisible + preloadAhead)) {
+                        if (i in 0 until uiState.pageCount) {
+                            // Only load if not already in cache
+                            if (!uiState.bitmaps.containsKey(i)) {
+                                onLoadPage(i)
+                            }
+                        }
+                    }
+                }
+            }
+    }
 
     Box(
         modifier = modifier
@@ -228,15 +258,17 @@ fun OptimizedWebtoonLazyColumn(
         }
         
         // Добавляем зоны для открытия панелей в режиме Webtoon
+        // Отключены зоны навигации - Webtoon использует только прокрутку
         ReaderTapZones(
             panelsOpen = false,
             onOpenTopBar = onShowTopPanel,
             onOpenSideBar = onShowRightPanel,
-            onPrev = onPreviousPage,
-            onNext = onNextPage,
+            onOpenLeftPanel = onShowThumbnailPanel,
+            onPrev = {}, // Disabled for Webtoon
+            onNext = {}, // Disabled for Webtoon
             tapZonesSize = readerSettings.readerTapZonesSize,
             tapZonesSensitivity = readerSettings.readerTapZonesSensitivity,
-            navigationTapZonesEnabled = readerSettings.navigationTapZonesEnabled,
+            navigationTapZonesEnabled = false, // Disable navigation tap zones for Webtoon
             modifier = Modifier.fillMaxSize()
         )
     }

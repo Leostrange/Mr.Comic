@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.IntSize
 /**
  * Gesture handler for reader interactions
  * Handles taps, double taps, long press, swipes, and pinch-to-zoom
+ * Optimized for PAGE mode - swipe vs tap handling is mutually exclusive
  */
 class GestureHandler(
     private val screenSize: IntSize,
@@ -15,8 +16,13 @@ class GestureHandler(
     /**
      * Handle single tap gesture
      * Returns action based on tap position (left/center/right zones)
+     * Used only for PAGE mode navigation
      */
     fun onTap(position: Offset): GestureAction {
+        if (!tapZoneConfig.enabled) {
+            return GestureAction.ToggleUI
+        }
+        
         val zone = getTapZone(position)
         return when (zone) {
             TapZone.LEFT -> GestureAction.PreviousPage      // Листание назад
@@ -54,13 +60,16 @@ class GestureHandler(
     
     /**
      * Handle swipe gesture
+     * Used for PAGE mode horizontal navigation only
+     * Vertical swipes are ignored (not used in page mode)
      */
     fun onSwipe(direction: SwipeDirection): GestureAction {
         return when (direction) {
             SwipeDirection.LEFT -> GestureAction.NextPage
             SwipeDirection.RIGHT -> GestureAction.PreviousPage
-            SwipeDirection.UP -> GestureAction.ShowBottomPanel
-            SwipeDirection.DOWN -> GestureAction.HideUI
+            // Vertical swipes not used in page mode (Webtoon uses scrolling)
+            SwipeDirection.UP -> GestureAction.ToggleUI
+            SwipeDirection.DOWN -> GestureAction.ToggleUI
         }
     }
     
