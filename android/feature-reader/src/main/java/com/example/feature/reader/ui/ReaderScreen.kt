@@ -41,8 +41,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -288,16 +290,9 @@ private fun ReaderScreenContent(
     uiController: UIController,
     systemUiManager: com.example.core.ui.SystemUiManager
 ) {
-    val contentScale = remember(uiState.scaleMode) {
-        when (uiState.scaleMode) {
-            "width" -> ContentScale.FillWidth // Заполняет ширину экрана
-            "height" -> ContentScale.FillHeight // Заполняет высоту экрана
-            "fit" -> ContentScale.Fit // Вписывается в экран с сохранением пропорций
-            "fill" -> ContentScale.Crop // Заполняет экран с обрезкой
-            "custom" -> ContentScale.Fit
-            else -> ContentScale.Fit
-        }
-    }
+    // ContentScale is now handled by ZoomController, not by ContentScale enum
+    // Use ContentScale.Fit as base and apply scale transformations via ZoomController
+    val contentScale = ContentScale.Fit
     
     // Используем UIController для управления панелями
     val uiVisible by uiController.uiVisible.collectAsState()
@@ -305,12 +300,14 @@ private fun ReaderScreenContent(
     val showRightPanel by uiController.rightPanelVisible.collectAsState()
     val showThumbnailPanel by uiController.thumbnailPanelVisible.collectAsState()
     
-    // Screen size for gesture handling
+    // Screen size for gesture handling (in pixels, not DP)
     val configuration = LocalConfiguration.current
-    val screenSize = remember(configuration) {
+    val context = LocalContext.current
+    val displayMetrics = context.resources.displayMetrics
+    val screenSize = remember(configuration, displayMetrics) {
         IntSize(
-            configuration.screenWidthDp,
-            configuration.screenHeightDp
+            displayMetrics.widthPixels,
+            displayMetrics.heightPixels
         )
     }
 
@@ -600,28 +597,43 @@ private fun PagedReaderWithGestures(
         },
         label = "PageSlider"
     ) { currentPageIndex ->
-        // Per-page zoom state, reset on page change
-        var scale by remember(currentPageIndex) { mutableFloatStateOf(1.0f) }
-        var offsetX by remember(currentPageIndex) { mutableFloatStateOf(0f) }
-        var offsetY by remember(currentPageIndex) { mutableFloatStateOf(0f) }
-
-        // Keep scale in sync with ViewModel zoom state (coerced)
-        LaunchedEffect(uiState.currentZoomScale) {
-            val coerced = uiState.currentZoomScale.coerceIn(1.0f, 5.0f)
-            scale = coerced
-            if (coerced == 1.0f) {
-                offsetX = 0f
-                offsetY = 0f
+        val bitmap = uiState.currentPageBitmap
+        
+        // Create ZoomController with current image and screen size
+        val imageSize = remember(bitmap) {
+            if (bitmap != null) {
+                IntSize(bitmap.width, bitmap.height)
+            } else {
+                IntSize(screenSize.width, screenSize.height)
             }
         }
-
-        // Ensure reset when page index changes
-        LaunchedEffect(currentPageIndex) {
-            scale = 1.0f
-            offsetX = 0f
-            offsetY = 0f
-            onZoom(1.0f, Offset.Zero)
+        
+        // Remember ZoomController with proper dependencies
+        val zoomController = rememberZoomController(
+            imageSize = imageSize,
+            screenSize = screenSize,
+            scaleMode = uiState.scaleMode,
+            zoomSensitivity = readerSettings.gestureZoomSensitivity,
+            panSensitivity = readerSettings.gesturePanSensitivity
+        )
+        
+        // Sync ZoomController when scale mode changes from UI
+        LaunchedEffect(uiState.scaleMode) {
+            zoomController.updateScaleModeFromState(uiState.scaleMode)
         }
+        
+        // Recalculate zoom when page changes to maintain scale mode
+        LaunchedEffect(currentPageIndex) {
+            zoomController.setZoomModeFromString(uiState.scaleMode)
+        }
+        
+        // Use ZoomController's scale values instead of local state
+        val scale by remember { derivedStateOf { zoomController.scale.value } }
+        val offsetX by remember { derivedStateOf { zoomController.offsetX.value } }
+        val offsetY by remember { derivedStateOf { zoomController.offsetY.value } }
+        
+        // Coroutine scope for launching zoom animations
+        val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
 
         BoxWithConstraints(
             modifier = Modifier
@@ -668,48 +680,30 @@ private fun PagedReaderWithGestures(
                                 if (!anyPanelOpen) onShowThumbnailPanel()
                             }
                             is GestureAction.CycleZoom -> {
-                                if (!anyPanelOpen) onCycleZoom()
+                                if (!anyPanelOpen) {
+                                    coroutineScope.launch {
+                                        zoomController.cycleZoomMode(Offset.Zero)
+                                    }
+                                }
                             }
                             is GestureAction.Zoom -> {
                                 if (!anyPanelOpen) {
-                                    val targetScale = (scale * action.scale).coerceIn(1.0f, 5.0f)
-                                    val isNowZoomed = targetScale > 1.0f + 0.001f
-
-                                    // Используем размеры экрана как базу (из screenSize аргумента)
-                                    val screenW = screenSize.width.toFloat()
-                                    val screenH = screenSize.height.toFloat()
-                                    val baseImageW = screenW
-                                    val baseImageH = screenH
-
-                                    val rawOffset = if (isNowZoomed) {
-                                        Offset(
-                                            offsetX + action.focusPoint.x * (targetScale / scale - 1f),
-                                            offsetY + action.focusPoint.y * (targetScale / scale - 1f)
-                                        )
-                                    } else {
-                                        Offset.Zero
+                                    coroutineScope.launch {
+                                        zoomController.applyPinchZoom(action.scale, action.focusPoint)
+                                        onZoom(zoomController.scale.value, action.focusPoint)
                                     }
-
-                                    val clamped = if (isNowZoomed) {
-                                        clampOffset(rawOffset, targetScale, baseImageW, baseImageH, screenW, screenH)
-                                    } else {
-                                        Offset.Zero
-                                    }
-
-                                    scale = targetScale
-                                    offsetX = clamped.x
-                                    offsetY = clamped.y
-
-                                    onZoom(targetScale, action.focusPoint)
                                 }
                             }
                             is GestureAction.DoubleTapZoom -> {
                                 if (!anyPanelOpen) {
-                                    val newScale = if (scale > 1.0f) 1.0f else 2.0f
-                                    scale = newScale
-                                    if (newScale <= 1.0f) {
-                                        offsetX = 0f
-                                        offsetY = 0f
+                                    coroutineScope.launch {
+                                        // Check if at base scale, if yes zoom in, otherwise reset
+                                        if (zoomController.isAtBaseScale()) {
+                                            val targetScale = zoomController.getBaseScale() * 2.0f
+                                            zoomController.scale.snapTo(targetScale.coerceIn(0.5f, 5.0f))
+                                        } else {
+                                            zoomController.resetToBaseScale()
+                                        }
                                     }
                                     onDoubleTapZoom(action.position)
                                 }
@@ -718,7 +712,9 @@ private fun PagedReaderWithGestures(
                                 onCloseAllPanels()
                             }
                             is GestureAction.Pan -> {
-                                // Pan handled in pointerInput below
+                                coroutineScope.launch {
+                                    zoomController.applyPan(action.delta)
+                                }
                             }
                         }
                     }
@@ -726,11 +722,6 @@ private fun PagedReaderWithGestures(
             contentAlignment = Alignment.Center
         ) {
             uiState.currentPageBitmap?.let { bitmap ->
-                val screenW = constraints.maxWidth.toFloat()
-                val screenH = constraints.maxHeight.toFloat()
-                val baseImageW = screenW
-                val baseImageH = screenH
-
                 Image(
                     painter = remember(bitmap) { BitmapPainter(bitmap.asImageBitmap()) },
                     contentDescription = "Page ${currentPageIndex + 1}",
@@ -741,34 +732,7 @@ private fun PagedReaderWithGestures(
                             scaleY = scale,
                             translationX = offsetX,
                             translationY = offsetY
-                        )
-                        .pointerInput(currentPageIndex) {
-                            detectTransformGestures { _, pan, zoomChange, _ ->
-                                val anyPanelOpen = showTopPanel || showRightPanel || showThumbnailPanel
-                                if (anyPanelOpen) return@detectTransformGestures
-
-                                val targetScale = (scale * zoomChange).coerceIn(1.0f, 5.0f)
-                                val isZoomed = targetScale > 1.0f + 0.001f
-
-                                val rawOffset = if (isZoomed) {
-                                    Offset(offsetX + pan.x, offsetY + pan.y)
-                                } else {
-                                    Offset.Zero
-                                }
-
-                                val clamped = if (isZoomed) {
-                                    clampOffset(rawOffset, targetScale, baseImageW, baseImageH, screenW, screenH)
-                                } else {
-                                    Offset.Zero
-                                }
-
-                                scale = targetScale
-                                offsetX = clamped.x
-                                offsetY = clamped.y
-
-                                onZoom(targetScale, Offset.Zero)
-                            }
-                        },
+                        ),
                     contentScale = contentScale
                 )
             }
