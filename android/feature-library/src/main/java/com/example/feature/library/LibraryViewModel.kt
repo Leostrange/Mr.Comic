@@ -1,11 +1,14 @@
 package com.example.feature.library
 
+import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.data.cover.CoverService
+import com.example.core.data.permission.StoragePermissionManager
 import com.example.core.data.repository.ComicRepository
 import com.example.core.data.repository.FolderRepository
+import com.example.core.data.scanner.DocumentTreeScanner
 import com.example.core.data.scanner.LibraryScanManager
 import com.example.core.model.Comic
 import com.example.core.model.Folder
@@ -23,6 +26,8 @@ class LibraryViewModel @Inject constructor(
     private val folderRepository: FolderRepository,
     private val coverService: CoverService,
     private val scanManager: LibraryScanManager,
+    private val documentTreeScanner: DocumentTreeScanner,
+    private val permissionManager: StoragePermissionManager,
     @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     
@@ -39,7 +44,14 @@ class LibraryViewModel @Inject constructor(
         android.util.Log.d("LibraryViewModel", "Starting loadComics, loadFolders, cleanupInaccessibleComics...")
         loadComics()
         loadFolders()
+        checkPersistedPermissions()
         cleanupInaccessibleComics()
+        
+        viewModelScope.launch {
+            permissionManager.permissionState.collect { state ->
+                _uiState.update { it.copy(permissionState = state) }
+            }
+        }
     }
     
     /**
@@ -646,6 +658,144 @@ class LibraryViewModel @Inject constructor(
         } catch (e: Exception) {
             android.util.Log.e("LibraryViewModel", "Error getting comic by ID", e)
             null
+        }
+    }
+    
+    fun addFolderFromTreeUri(treeUri: Uri) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+                
+                android.util.Log.d("LibraryViewModel", "Adding folder from tree URI: $treeUri")
+                
+                context.contentResolver.takePersistableUriPermission(
+                    treeUri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+                
+                val displayName = documentTreeScanner.getDisplayName(treeUri) ?: "Unknown Folder"
+                val storageType = documentTreeScanner.determineStorageType(treeUri)
+                
+                val folder = folderRepository.saveFolderFromTreeUri(
+                    treeUri = treeUri,
+                    displayName = displayName,
+                    storageType = storageType
+                )
+                
+                android.util.Log.d("LibraryViewModel", "Folder saved: ${folder.displayName}")
+                
+                val comics = documentTreeScanner.findComicFiles(treeUri)
+                android.util.Log.d("LibraryViewModel", "Found ${comics.size} comics in folder")
+                
+                var addedCount = 0
+                for (comic in comics) {
+                    try {
+                        val existing = comicRepository.getComicByPath(comic.path)
+                        if (existing == null) {
+                            val comicWithFolder = comic.copy(folderId = folder.id)
+                            comicRepository.addComic(comicWithFolder)
+                            addedCount++
+                            
+                            viewModelScope.launch {
+                                try {
+                                    coverService.getCover(comicWithFolder.id)
+                                } catch (e: Exception) {
+                                    android.util.Log.e("LibraryViewModel", "Error generating cover", e)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("LibraryViewModel", "Error adding comic: ${comic.title}", e)
+                    }
+                }
+                
+                folderRepository.updateComicCount(folder.id, addedCount)
+                
+                android.util.Log.d("LibraryViewModel", "Added $addedCount comics from folder")
+                
+                loadComics()
+                loadFolders()
+                checkPersistedPermissions()
+                
+                _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                android.util.Log.e("LibraryViewModel", "Error adding folder", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Ошибка добавления папки: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+    
+    private fun checkPersistedPermissions() {
+        viewModelScope.launch {
+            try {
+                val foldersNeedingPermission = folderRepository.getFoldersNeedingPermission()
+                if (foldersNeedingPermission.isNotEmpty()) {
+                    android.util.Log.w(
+                        "LibraryViewModel",
+                        "Found ${foldersNeedingPermission.size} folders without permissions"
+                    )
+                }
+                _uiState.update { it.copy(foldersNeedingPermission = foldersNeedingPermission) }
+            } catch (e: Exception) {
+                android.util.Log.e("LibraryViewModel", "Error checking persisted permissions", e)
+            }
+        }
+    }
+    
+    fun refreshPermissions() {
+        permissionManager.refresh()
+        checkPersistedPermissions()
+    }
+    
+    fun getRequiredPermission(): String {
+        return permissionManager.getRequiredPermission()
+    }
+    
+    fun onPermissionResult(granted: Boolean, shouldShowRationale: Boolean) {
+        permissionManager.updatePermissionState(granted, shouldShowRationale)
+    }
+    
+    fun dismissFolderPermissionWarning(folder: Folder) {
+        viewModelScope.launch {
+            try {
+                folderRepository.deleteFolder(folder)
+                val updatedList = _uiState.value.foldersNeedingPermission.filter { it.id != folder.id }
+                _uiState.update { it.copy(foldersNeedingPermission = updatedList) }
+            } catch (e: Exception) {
+                android.util.Log.e("LibraryViewModel", "Error dismissing folder warning", e)
+            }
+        }
+    }
+    
+    fun deleteFolder(folderId: String) {
+        viewModelScope.launch {
+            try {
+                val folder = folderRepository.getFolderById(folderId)
+                if (folder != null) {
+                    if (folder.treeUri != null) {
+                        try {
+                            val uri = Uri.parse(folder.treeUri)
+                            context.contentResolver.releasePersistableUriPermission(
+                                uri,
+                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            )
+                            android.util.Log.d("LibraryViewModel", "Released permission for folder")
+                        } catch (e: Exception) {
+                            android.util.Log.w("LibraryViewModel", "Could not release permission", e)
+                        }
+                    }
+                    
+                    folderRepository.deleteFolder(folder)
+                    loadFolders()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LibraryViewModel", "Error deleting folder", e)
+            }
         }
     }
 }

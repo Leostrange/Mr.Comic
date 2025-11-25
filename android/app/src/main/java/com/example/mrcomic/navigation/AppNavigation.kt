@@ -10,6 +10,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,6 +25,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import android.content.Context
+import androidx.core.app.ActivityCompat
 import com.example.feature.library.LibraryScreen
 import com.example.feature.onboarding.OnboardingScreen
 // Temporarily disabled due to compilation errors
@@ -57,10 +59,13 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
             val libraryViewModel: com.example.feature.library.LibraryViewModel = hiltViewModel()
             val coroutineScope = rememberCoroutineScope()
             
-            // Состояние для отслеживания выбора пользователя (файл или папка)
-            var showAddDialog by remember { mutableStateOf(false) }
+            val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+                onResult = { granted ->
+                    libraryViewModel.onPermissionResult(granted, false)
+                }
+            )
             
-            // File picker для выбора одного файла
             val filePicker = androidx.activity.compose.rememberLauncherForActivityResult(
                 contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
                 onResult = { uri ->
@@ -78,18 +83,12 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
                 }
             )
             
-            // Folder picker для выбора папки
             val folderPicker = androidx.activity.compose.rememberLauncherForActivityResult(
                 contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree(),
                 onResult = { treeUri ->
                     if (treeUri != null) {
                         try {
-                            context.contentResolver.takePersistableUriPermission(
-                                treeUri,
-                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or 
-                                android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                            )
-                            libraryViewModel.addComicsFromDirectory(treeUri)
+                            libraryViewModel.addFolderFromTreeUri(treeUri)
                         } catch (e: Exception) {
                             android.util.Log.e("AppNavHost", "Error adding folder", e)
                         }
@@ -97,9 +96,14 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
                 }
             )
             
+            val uiState by libraryViewModel.uiState.collectAsState()
+            
+            val requestPermission: () -> Unit = {
+                permissionLauncher.launch(libraryViewModel.getRequiredPermission())
+            }
+            
             LibraryScreen(
                 onComicClick = { comicId ->
-                    // Получаем комикс по ID и передаем его path в ридер
                     coroutineScope.launch {
                         try {
                             val comic = libraryViewModel.getComicById(comicId)
@@ -115,13 +119,29 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
                     }
                 },
                 onAddFileClick = {
-                    // Запускаем file picker для выбора одного файла
-                    filePicker.launch(arrayOf("application/zip", "application/x-cbz", "application/x-cbr", "application/pdf", "*/*"))
+                    if (uiState.permissionState.isGranted) {
+                        filePicker.launch(arrayOf("application/zip", "application/x-cbz", "application/x-cbr", "application/pdf", "*/*"))
+                    } else {
+                        requestPermission()
+                    }
                 },
                 onAddFolderClick = {
-                    // Запускаем folder picker для выбора папки
-                    folderPicker.launch(null)
-                }
+                    if (uiState.permissionState.isGranted) {
+                        folderPicker.launch(null)
+                    } else {
+                        requestPermission()
+                    }
+                },
+                onReselectFolderClick = { folder ->
+                    if (uiState.permissionState.isGranted) {
+                        val initialUri = folder.treeUri?.let { Uri.parse(it) }
+                        folderPicker.launch(initialUri)
+                    } else {
+                        requestPermission()
+                    }
+                },
+                onRequestPermission = requestPermission,
+                viewModel = libraryViewModel
             )
         }
         

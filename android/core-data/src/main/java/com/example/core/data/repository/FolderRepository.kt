@@ -1,7 +1,11 @@
 package com.example.core.data.repository
 
+import android.content.Context
+import android.net.Uri
 import com.example.core.data.database.dao.FolderDao
 import com.example.core.model.Folder
+import com.example.core.model.StorageType
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -12,7 +16,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class FolderRepository @Inject constructor(
-    private val folderDao: FolderDao
+    private val folderDao: FolderDao,
+    @ApplicationContext private val context: Context
 ) {
     
     /**
@@ -131,5 +136,55 @@ class FolderRepository @Inject constructor(
         }
         
         return hierarchy
+    }
+    
+    suspend fun saveFolderFromTreeUri(
+        treeUri: Uri,
+        displayName: String,
+        storageType: StorageType
+    ): Folder {
+        val existingFolder = folderDao.getByTreeUri(treeUri.toString())
+        
+        return if (existingFolder != null) {
+            val updatedFolder = existingFolder.copy(
+                displayName = displayName,
+                storageType = storageType
+            )
+            folderDao.update(updatedFolder)
+            updatedFolder
+        } else {
+            val newFolder = Folder(
+                name = displayName,
+                path = treeUri.toString(),
+                treeUri = treeUri.toString(),
+                displayName = displayName,
+                storageType = storageType,
+                comicCount = 0
+            )
+            folderDao.insert(newFolder)
+            newFolder
+        }
+    }
+    
+    suspend fun checkFolderPermissions(): Map<Folder, Boolean> {
+        val folders = folderDao.getAllFoldersSync()
+        val persistedUris = context.contentResolver.persistedUriPermissions.map { it.uri.toString() }.toSet()
+        
+        return folders.filter { it.treeUri != null }.associateWith { folder ->
+            folder.treeUri in persistedUris
+        }
+    }
+    
+    suspend fun getFoldersNeedingPermission(): List<Folder> {
+        val folders = folderDao.getAllFoldersSync()
+        val persistedUris = context.contentResolver.persistedUriPermissions.map { it.uri.toString() }.toSet()
+        
+        return folders.filter { folder ->
+            folder.treeUri != null && folder.treeUri !in persistedUris
+        }
+    }
+    
+    suspend fun getFolderByTreeUri(treeUri: String): Folder? {
+        return folderDao.getByTreeUri(treeUri)
     }
 }

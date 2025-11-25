@@ -1,5 +1,6 @@
 package com.example.feature.library
 
+import com.example.core.data.permission.PermissionState
 import com.example.core.model.Comic
 import com.example.core.model.Folder
 import com.example.feature.library.search.SearchFilters
@@ -17,7 +18,9 @@ data class LibraryUiState(
     val selectedFolder: Folder? = null,
     val searchQuery: String = "",
     val isSearchExpanded: Boolean = false,
-    val filters: SearchFilters = SearchFilters()
+    val filters: SearchFilters = SearchFilters(),
+    val permissionState: PermissionState = PermissionState(),
+    val foldersNeedingPermission: List<Folder> = emptyList()
 )
 
 /**

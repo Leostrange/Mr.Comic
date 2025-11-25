@@ -24,6 +24,8 @@ fun LibraryScreen(
     onAddComicClick: () -> Unit = {},
     onAddFileClick: () -> Unit = {},
     onAddFolderClick: () -> Unit = {},
+    onReselectFolderClick: (Folder) -> Unit = {},
+    onRequestPermission: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     android.util.Log.d("LibraryScreen", "🎨 LibraryScreen composing...")
@@ -32,6 +34,7 @@ fun LibraryScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var showAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog: Comic? by remember { mutableStateOf(null) }
+    var showDeleteFolderDialog: Folder? by remember { mutableStateOf(null) }
     
     Scaffold(
         topBar = {
@@ -73,63 +76,95 @@ fun LibraryScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            when {
-                uiState.isLoading -> {
-                    android.util.Log.d("LibraryScreen", "🔄 Showing loading spinner")
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (!uiState.permissionState.isGranted) {
+                    StoragePermissionBanner(
+                        permissionState = uiState.permissionState,
+                        onRequestPermission = onRequestPermission
                     )
                 }
                 
-                uiState.error != null -> {
-                    android.util.Log.d("LibraryScreen", "❌ Showing error: ${uiState.error}")
-                    ErrorView(
-                        error = uiState.error!!,
-                        onRetry = { viewModel.refresh() },
-                        modifier = Modifier.align(Alignment.Center)
+                if (uiState.foldersNeedingPermission.isNotEmpty()) {
+                    FolderPermissionWarning(
+                        folders = uiState.foldersNeedingPermission,
+                        onReselectFolder = { folder ->
+                            onReselectFolderClick(folder)
+                        },
+                        onDismiss = { folder ->
+                            viewModel.dismissFolderPermissionWarning(folder)
+                        }
                     )
                 }
                 
-                uiState.comics.isEmpty() -> {
-                    android.util.Log.d("LibraryScreen", "📭 Showing empty view (comics list is empty)")
-                    EmptyView(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                
-                else -> {
-                    android.util.Log.d("LibraryScreen", "📚 Showing comics: ${uiState.comics.size} comics, viewMode=${uiState.viewMode}")
-                    when (uiState.viewMode) {
-                        ViewMode.GRID -> {
-                            android.util.Log.d("LibraryScreen", "🔲 Rendering ComicGridView with ${uiState.comics.size} comics")
-                            ComicGridView(
-                                comics = uiState.comics,
-                                onComicClick = { comic -> onComicClick(comic.id) },
-                                onComicLongClick = { comic ->
-                                    showDeleteDialog = comic
-                                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    when {
+                        uiState.isLoading -> {
+                            android.util.Log.d("LibraryScreen", "🔄 Showing loading spinner")
+                            CircularProgressIndicator(
+                                modifier = Modifier.align(Alignment.Center)
                             )
                         }
                         
-                        ViewMode.LIST -> {
-                            android.util.Log.d("LibraryScreen", "📋 Rendering ComicListView with ${uiState.comics.size} comics")
-                            ComicListView(
-                                comics = uiState.comics,
-                                onComicClick = { comic -> onComicClick(comic.id) },
-                                onComicLongClick = { comic ->
-                                    showDeleteDialog = comic
-                                }
+                        uiState.error != null -> {
+                            android.util.Log.d("LibraryScreen", "❌ Showing error: ${uiState.error}")
+                            ErrorView(
+                                error = uiState.error!!,
+                                onRetry = { viewModel.refresh() },
+                                modifier = Modifier.align(Alignment.Center)
                             )
                         }
                         
-                        ViewMode.FOLDER -> {
-                            android.util.Log.d("LibraryScreen", "📁 Rendering FolderView")
-                            FolderView(
-                                folders = uiState.folders,
-                                onFolderClick = { folder ->
-                                    viewModel.selectFolder(folder)
-                                }
+                        uiState.comics.isEmpty() -> {
+                            android.util.Log.d("LibraryScreen", "📭 Showing empty view (comics list is empty)")
+                            EmptyView(
+                                modifier = Modifier.align(Alignment.Center)
                             )
+                        }
+                        
+                        else -> {
+                            android.util.Log.d("LibraryScreen", "📚 Showing comics: ${uiState.comics.size} comics, viewMode=${uiState.viewMode}")
+                            when (uiState.viewMode) {
+                                ViewMode.GRID -> {
+                                    android.util.Log.d("LibraryScreen", "🔲 Rendering ComicGridView with ${uiState.comics.size} comics")
+                                    ComicGridView(
+                                        comics = uiState.comics,
+                                        onComicClick = { comic -> onComicClick(comic.id) },
+                                        onComicLongClick = { comic ->
+                                            showDeleteDialog = comic
+                                        }
+                                    )
+                                }
+                                
+                                ViewMode.LIST -> {
+                                    android.util.Log.d("LibraryScreen", "📋 Rendering ComicListView with ${uiState.comics.size} comics")
+                                    ComicListView(
+                                        comics = uiState.comics,
+                                        onComicClick = { comic -> onComicClick(comic.id) },
+                                        onComicLongClick = { comic ->
+                                            showDeleteDialog = comic
+                                        }
+                                    )
+                                }
+                                
+                                ViewMode.FOLDER -> {
+                                    android.util.Log.d("LibraryScreen", "📁 Rendering FolderView")
+                                    FolderView(
+                                        folders = uiState.folders,
+                                        onFolderClick = { folder ->
+                                            viewModel.selectFolder(folder)
+                                        },
+                                        onFolderLongClick = { folder ->
+                                            showDeleteFolderDialog = folder
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -167,6 +202,16 @@ fun LibraryScreen(
                 onDismiss = { showDeleteDialog = null },
                 onConfirm = {
                     viewModel.deleteComic(comic.id)
+                }
+            )
+        }
+        
+        showDeleteFolderDialog?.let { folder ->
+            DeleteFolderConfirmDialog(
+                folderName = folder.displayName,
+                onDismiss = { showDeleteFolderDialog = null },
+                onConfirm = {
+                    viewModel.deleteFolder(folder.id)
                 }
             )
         }
