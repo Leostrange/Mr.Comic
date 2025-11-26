@@ -3,9 +3,8 @@ package com.example.core.reader.utils
 import android.content.Context
 import android.graphics.Bitmap
 import android.util.LruCache
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleObserver
-import androidx.lifecycle.OnLifecycleEvent
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import kotlinx.coroutines.*
 import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
@@ -13,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Менеджер памяти для управления кэшем изображений и предотвращения утечек
  */
-class MemoryManager private constructor() : LifecycleObserver {
+class MemoryManager private constructor() : DefaultLifecycleObserver {
     
     companion object {
         private const val TAG = "MemoryManager"
@@ -204,15 +203,13 @@ class MemoryManager private constructor() : LifecycleObserver {
         return memoryUsage > 0.8f // 80% использования памяти
     }
     
-    @OnLifecycleEvent(Lifecycle.Event.ON_STOP)
-    fun onAppBackgrounded() {
+    override fun onStop(owner: LifecycleOwner) {
         isAppInBackground = true
         android.util.Log.d(TAG, "App backgrounded, clearing cache")
         clearCache()
     }
     
-    @OnLifecycleEvent(Lifecycle.Event.ON_START)
-    fun onAppForegrounded() {
+    override fun onStart(owner: LifecycleOwner) {
         isAppInBackground = false
         android.util.Log.d(TAG, "App foregrounded")
     }

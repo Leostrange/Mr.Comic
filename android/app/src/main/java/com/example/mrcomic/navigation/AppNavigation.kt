@@ -204,7 +204,9 @@ fun MainNavHost(navController: NavHostController, onOpenReader: (String) -> Unit
                                         treeUri,
                                         android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
                                     )
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) {
+                                    android.util.Log.w("AppNavHost", "Could not take persistable permission for folder: ${e.message}", e)
+                                }
                                 // TODO: Implement addLibraryFolder
                                 // libraryViewModel.addLibraryFolder(context, treeUri)
                             }
