@@ -44,7 +44,7 @@ class PagePreloader(
                                 _preloadedPages.value = _preloadedPages.value + (pageIndex to bitmap)
                             }
                         } catch (e: Exception) {
-                            // Ignore errors during preload
+                            android.util.Log.w("PagePreloader", "Failed to preload page $pageIndex: ${e.message}")
                         }
                     }
                 }
@@ -87,13 +87,7 @@ class PagePreloader(
                 kotlin.math.abs(pageIndex - currentPage) <= preloadRange
             }
             
-            // Recycle bitmaps that are being removed
-            currentCache.forEach { (pageIndex, bitmap) ->
-                if (!pagesToKeep.containsKey(pageIndex)) {
-                    bitmap.recycle()
-                }
-            }
-            
+            // Let GC handle bitmap cleanup - removed manual recycle calls to prevent crashes
             _preloadedPages.value = pagesToKeep
         }
     }
@@ -109,7 +103,7 @@ class PagePreloader(
      * Clear all preloaded pages
      */
     fun clearCache() {
-        _preloadedPages.value.values.forEach { it.recycle() }
+        // Let GC handle bitmap cleanup - removed manual recycle calls to prevent crashes
         _preloadedPages.value = emptyMap()
         currentPreloadJob?.cancel()
     }
