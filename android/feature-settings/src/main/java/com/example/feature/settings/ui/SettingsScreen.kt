@@ -384,8 +384,8 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Storage and Backup Section
-            StorageSection(
+            // Backup Section
+            BackupSection(
                     onCreateLocalBackup = {
                         showBackupProgress = true
                         backupStatus = "SYNCING"
@@ -803,7 +803,7 @@ private fun LocalResourcesSection(
 }
 
 @Composable
-private fun StorageSection(
+private fun BackupSection(
     onCreateLocalBackup: () -> Unit,
     onRestoreLocalBackup: () -> Unit,
     onCreateCloudBackup: () -> Unit,
@@ -811,7 +811,7 @@ private fun StorageSection(
     onChangeAppIcon: () -> Unit
 ) {
     Text(
-        text = "Хранилище и резервные копии",
+        text = "Резервные копии и настройки",
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.primary
     )
