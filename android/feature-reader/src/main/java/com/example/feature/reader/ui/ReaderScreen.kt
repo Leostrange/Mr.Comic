@@ -439,6 +439,7 @@ private fun ReaderScreenContent(
                         },
                         bitmapCache = bitmapCache,
                         currentUri = currentComicUri,
+                        thumbnailProvider = viewModel.thumbnailProvider,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .zIndex(10f) // Высокий z-index для отображения поверх всего

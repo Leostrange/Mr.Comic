@@ -41,6 +41,7 @@ class ReaderViewModel @Inject constructor(
     val bitmapCache: com.example.core.reader.cache.BitmapCache,
     @ApplicationContext private val context: Context,
     private val analyticsHelper: com.example.core.analytics.AnalyticsHelper,
+    val thumbnailProvider: ThumbnailProvider,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -254,6 +255,10 @@ class ReaderViewModel @Inject constructor(
         // Путь к файлу приходит как аргумент навигации.
         android.util.Log.d(TAG, "ReaderViewModel initialized")
         android.util.Log.d(TAG, "SavedStateHandle keys: ${savedStateHandle.keys()}")
+        
+        // Set up ThumbnailProvider with this ViewModel
+        thumbnailProvider.readerViewModel = this
+        
         observeReaderPreferences()
 
         val uriString = savedStateHandle.get<String>("uri")
