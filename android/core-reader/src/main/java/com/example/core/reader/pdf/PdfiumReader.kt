@@ -9,7 +9,7 @@ import android.os.ParcelFileDescriptor
 import com.shockwave.pdfium.PdfDocument
 import com.shockwave.pdfium.PdfiumCore
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Mutex
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import java.io.IOException
 
