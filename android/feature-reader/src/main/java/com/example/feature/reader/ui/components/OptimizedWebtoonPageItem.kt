@@ -22,6 +22,8 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import com.example.feature.reader.ui.ReaderUiState
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.collect
 
 /**
  * Оптимизированный компонент для отображения страниц в режиме Webtoon
@@ -207,10 +209,10 @@ fun OptimizedWebtoonLazyColumn(
     
     // Prefetch pages based on scroll position
     LaunchedEffect(listState, uiState.pageCount) {
-        kotlinx.coroutines.flow.snapshotFlow { 
+        snapshotFlow { 
             listState.layoutInfo.visibleItemsInfo 
         }
-            .kotlinx.coroutines.flow.debounce(150) // Debounce to avoid excessive calls
+            .debounce(150) // Debounce to avoid excessive calls
             .collect { visibleItems ->
                 if (visibleItems.isNotEmpty()) {
                     // Find the first and last visible items

@@ -225,9 +225,10 @@ private fun ThumbnailItem(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            thumbnail?.let { thumb ->
+            val currentThumbnail = thumbnail
+            if (currentThumbnail != null) {
                 Image(
-                    bitmap = thumb.asImageBitmap(),
+                    bitmap = currentThumbnail.asImageBitmap(),
                     contentDescription = "Page ${pageIndex + 1}",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()

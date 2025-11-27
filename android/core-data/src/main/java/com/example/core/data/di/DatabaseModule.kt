@@ -91,8 +91,12 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideFolderRepository(folderDao: FolderDao): FolderRepository {
-        return FolderRepository(folderDao)
+    fun provideFolderRepository(
+        folderDao: FolderDao,
+        comicDao: ComicDao,
+        @ApplicationContext context: Context
+    ): FolderRepository {
+        return FolderRepository(folderDao, comicDao, context)
     }
 
     @Provides

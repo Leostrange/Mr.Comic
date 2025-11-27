@@ -83,16 +83,13 @@ class ThumbnailProvider @Inject constructor(
 
 /**
  * Composable function to get thumbnail provider
+ * Note: ThumbnailProvider should be injected via Hilt instead of created manually
  */
 @Composable
-fun rememberThumbnailProvider(): ThumbnailProvider {
-    return remember { 
-        ThumbnailProvider(
-            com.example.core.reader.preload.PagePreloader(
-                com.example.core.reader.cache.BitmapCache()
-            )
-        ) 
-    }
+@Deprecated("Use Hilt injection instead", ReplaceWith(""))
+fun rememberThumbnailProvider(): ThumbnailProvider? {
+    // ThumbnailProvider should be injected through ReaderViewModel
+    return null
 }
 
 /**

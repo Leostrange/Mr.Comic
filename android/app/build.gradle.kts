@@ -28,6 +28,17 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            // Using debug keystore for release signing (temporary solution)
+            // For production, replace with proper keystore
+            storeFile = rootProject.file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -36,6 +47,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
         
         debug {

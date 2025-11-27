@@ -250,7 +250,8 @@ fun ReaderScreen(
         currentComicUri = uiState.currentComicUri,
         readerSettings = readerSettings,
         uiController = uiController,
-        systemUiManager = systemUiManager
+        systemUiManager = systemUiManager,
+        thumbnailProvider = viewModel.thumbnailProvider
     )
 }
 
@@ -288,7 +289,8 @@ private fun ReaderScreenContent(
     currentComicUri: String?,
     readerSettings: ReaderSettings,
     uiController: UIController,
-    systemUiManager: com.example.core.ui.SystemUiManager
+    systemUiManager: com.example.core.ui.SystemUiManager,
+    thumbnailProvider: ThumbnailProvider
 ) {
     // ContentScale is now handled by ZoomController, not by ContentScale enum
     // Use ContentScale.Fit as base and apply scale transformations via ZoomController
@@ -439,7 +441,7 @@ private fun ReaderScreenContent(
                         },
                         bitmapCache = bitmapCache,
                         currentUri = currentComicUri,
-                        thumbnailProvider = viewModel.thumbnailProvider,
+                        thumbnailProvider = thumbnailProvider,
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .zIndex(10f) // Высокий z-index для отображения поверх всего

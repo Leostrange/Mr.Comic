@@ -6,6 +6,9 @@ import com.example.feature.reader.RoomReaderRepository
 import com.example.feature.reader.ReaderRepository
 import com.example.feature.reader.data.ReaderDatabase
 import com.example.feature.reader.data.ReaderStateDao
+import com.example.feature.reader.ui.ThumbnailProvider
+import com.example.core.reader.preload.PagePreloader
+import com.example.core.reader.cache.BitmapCache
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,4 +30,11 @@ object ReaderModule {
     @Provides
     @Singleton
     fun provideReaderRepository(dao: ReaderStateDao): ReaderRepository = RoomReaderRepository(dao)
-} 
+
+    @Provides
+    @Singleton
+    fun provideThumbnailProvider(
+        pagePreloader: PagePreloader,
+        bitmapCache: BitmapCache
+    ): ThumbnailProvider = ThumbnailProvider(pagePreloader, bitmapCache)
+}
