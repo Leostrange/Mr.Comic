@@ -33,6 +33,7 @@ dependencies {
     ksp(libs.google.hilt.compiler)
 
     implementation("androidx.collection:collection-ktx:1.4.0")
+    implementation(libs.kotlinx.coroutines.android)
 
     // Archive and document format support
     implementation(libs.zip4j)

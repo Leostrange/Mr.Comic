@@ -56,7 +56,6 @@
     <string name="app_icon_note">The app icon change will take effect immediately. You may need to restart your launcher if the icon doesn\'t update right away.</string>
     <string name="appearance">Appearance</string>
     <string name="cbr_module_title">CBR Reader</string>
-</resources>
     
     <!-- Error Messages -->
     <string name="error_permission_denied">Permission denied: %s</string>
@@ -65,3 +64,4 @@
     <string name="error_io_exception">IO error: %s</string>
     <string name="error_unsupported_operation">Unsupported operation</string>
     <string name="error_unknown">Unknown error: %s</string>
+</resources>

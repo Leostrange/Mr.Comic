@@ -1,6 +1,7 @@
 package com.example.core.ui.error
 
 import android.content.Context
+import com.example.core.ui.R
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -42,10 +43,10 @@ class ErrorHandler @Inject constructor(
  */
 sealed class AppError : Exception() {
     object FileNotFoundError : AppError()
-    data class CorruptedFile(val message: String) : AppError()
+    data class CorruptedFile(override val message: String) : AppError()
     data class PermissionDenied(val uri: String) : AppError()
     data class OutOfMemory(val required: Long, val available: Long) : AppError()
     data class UnsupportedFormat(val format: String) : AppError()
-    data class NetworkError(val message: String) : AppError()
+    data class NetworkError(override val message: String) : AppError()
     data class ValidationError(val field: String, val value: String) : AppError()
 }
