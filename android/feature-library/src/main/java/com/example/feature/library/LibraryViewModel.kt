@@ -561,65 +561,93 @@ class LibraryViewModel @Inject constructor(
     
     /**
      * Добавить комиксы из директории
+     * Создает папку и связывает комиксы с ней
      */
     fun addComicsFromDirectory(uri: android.net.Uri) {
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true) }
                 
-                // Сканирование папки через DocumentFile API
-                android.util.Log.d("LibraryViewModel", "Scanning directory: $uri")
+                android.util.Log.d("LibraryViewModel", "Adding comics from directory: $uri")
                 
-                val documentFile = DocumentFile.fromTreeUri(context, uri)
-                if (documentFile != null && documentFile.isDirectory) {
-                    var addedCount = 0
-                    var errorCount = 0
-                    
-                    val files = documentFile.listFiles()
-                    for (file in files) {
-                        if (file.isFile) {
-                            val fileName = file.name ?: ""
-                            val isComicFile = fileName.matches(Regex(".*\\.(cbz|cbr|pdf|zip|rar)$", RegexOption.IGNORE_CASE))
-                            
-                            if (isComicFile) {
-                                try {
-                                    addComicFromUri(file.uri)
-                                    addedCount++
-                                    android.util.Log.d("LibraryViewModel", "Added: $fileName")
-                                } catch (e: Exception) {
-                                    errorCount++
-                                    android.util.Log.e("LibraryViewModel", "Failed to add: $fileName", e)
-                                }
-                            }
+                // Получаем display name и storage type
+                val documentTreeScanner = com.example.core.data.scanner.DocumentTreeScanner(context)
+                val displayName = documentTreeScanner.getDisplayName(uri) ?: "Unknown Folder"
+                val storageType = documentTreeScanner.determineStorageType(uri)
+                
+                android.util.Log.d("LibraryViewModel", "Folder name: $displayName, type: $storageType")
+                
+                // Создаем или обновляем папку
+                val folder = folderRepository.saveFolderFromTreeUri(
+                    treeUri = uri,
+                    displayName = displayName,
+                    storageType = storageType
+                )
+                
+                android.util.Log.d("LibraryViewModel", "Folder saved with ID: ${folder.id}")
+                
+                // Сканируем комиксы в папке
+                val settings = com.example.core.data.scanner.ScanSettings(
+                    cbzMode = com.example.core.data.scanner.ScanMode.ALWAYS,
+                    cbrMode = com.example.core.data.scanner.ScanMode.ALWAYS,
+                    pdfMode = com.example.core.data.scanner.ScanMode.ALWAYS,
+                    folderMode = com.example.core.data.scanner.ScanMode.ALWAYS,
+                    scanSubfolders = true
+                )
+                
+                val comics = documentTreeScanner.findComicFiles(uri, settings, folder.id)
+                
+                android.util.Log.d("LibraryViewModel", "Found ${comics.size} comics in folder")
+                
+                // Добавляем комиксы в репозиторий
+                var addedCount = 0
+                var skippedCount = 0
+                
+                for (comic in comics) {
+                    try {
+                        // Проверяем, не существует ли уже комикс с таким путем
+                        val existing = comicRepository.getComicByPath(comic.path)
+                        if (existing == null) {
+                            comicRepository.addComic(comic)
+                            addedCount++
+                            android.util.Log.d("LibraryViewModel", "Added comic: ${comic.title}")
+                        } else {
+                            skippedCount++
+                            android.util.Log.d("LibraryViewModel", "Skipped existing comic: ${comic.title}")
                         }
-                    }
-                    
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false,
-                            error = if (errorCount > 0) {
-                                "Добавлено: $addedCount, ошибок: $errorCount"
-                            } else {
-                                null
-                            }
-                        )
-                    }
-                    
-                    android.util.Log.d("LibraryViewModel", "Scan complete: added=$addedCount, errors=$errorCount")
-                } else {
-                    _uiState.update { 
-                        it.copy(
-                            isLoading = false,
-                            error = "Не удалось открыть папку"
-                        )
+                    } catch (e: Exception) {
+                        android.util.Log.e("LibraryViewModel", "Error adding comic: ${comic.title}", e)
                     }
                 }
+                
+                // Обновляем количество комиксов в папке
+                folderRepository.updateComicCount(folder.id, addedCount)
+                
+                android.util.Log.d("LibraryViewModel", "Folder scan complete: added=$addedCount, skipped=$skippedCount")
+                
+                _uiState.update { 
+                    it.copy(
+                        isLoading = false,
+                        error = if (addedCount == 0 && comics.isEmpty()) {
+                            "В папке не найдено комиксов"
+                        } else if (addedCount == 0) {
+                            "Все комиксы уже добавлены ($skippedCount)"
+                        } else {
+                            null
+                        }
+                    )
+                }
+                
+                // Обновляем список комиксов и папок
+                loadComics()
+                loadFolders()
+                
             } catch (e: Exception) {
-                android.util.Log.e("LibraryViewModel", "Error scanning directory", e)
+                android.util.Log.e("LibraryViewModel", "Error adding comics from directory", e)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Ошибка сканирования папки: ${e.message}"
+                        error = "Ошибка добавления папки: ${e.message}"
                     )
                 }
             }
