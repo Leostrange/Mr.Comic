@@ -154,6 +154,17 @@ fun ModernReaderScreen(
     val pageTurnSoundEnabled by viewModel.pageTurnSoundEnabled.collectAsStateWithLifecycle(false)
     val readerAnimationSpeed by viewModel.readerAnimationSpeed.collectAsStateWithLifecycle(1.0f)
     
+    // Animatable for smooth brightness transitions (float interpolation, not wrap)
+    val animatedBrightness = remember { Animatable(1.0f) }
+    
+    // Animate brightness changes smoothly
+    LaunchedEffect(readerBrightness) {
+        animatedBrightness.animateTo(
+            targetValue = readerBrightness,
+            animationSpec = tween(durationMillis = 150)
+        )
+    }
+    
     // Track if we should show the UI controls
     var showControls by remember { mutableStateOf(true) }
     var isBookmarked by remember { mutableStateOf(false) }
@@ -197,18 +208,23 @@ fun ModernReaderScreen(
         }
     }
 
-    // Apply reader brightness to Window
-    DisposableEffect(readerBrightness) {
-        val prev = activity?.window?.attributes?.screenBrightness ?: -1f
+    // Apply reader brightness to Window using animated value for smooth interpolation
+    LaunchedEffect(animatedBrightness.value) {
         val lp = activity?.window?.attributes
         if (lp != null) {
-            lp.screenBrightness = readerBrightness.coerceIn(0.0f, 1.0f)
+            // Use animated value for smooth float interpolation (no cycling/wrapping)
+            lp.screenBrightness = animatedBrightness.value.coerceIn(0.0f, 1.0f)
             activity.window.attributes = lp
         }
+    }
+    
+    // Restore original brightness on dispose
+    DisposableEffect(Unit) {
+        val originalBrightness = activity?.window?.attributes?.screenBrightness ?: -1f
         onDispose {
             val restore = activity?.window?.attributes
             if (restore != null) {
-                restore.screenBrightness = prev
+                restore.screenBrightness = originalBrightness
                 activity.window.attributes = restore
             }
         }

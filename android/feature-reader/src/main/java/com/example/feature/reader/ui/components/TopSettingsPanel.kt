@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
  * 1. Добавлены отступы слева и справа от слайдера яркости (32.dp)
  * 2. Улучшена блокировка gesture propagation для слайдера (detectDragGestures)
  * 3. Удалена кнопка Close для чистоты дизайна (закрытие по тапу вне панели)
+ * 4. Brightness slider uses smooth float interpolation (no cycling/wrapping behavior)
+ * 5. Continuous slider (steps=0) for smooth incremental adjustments
  */
 @Composable
 fun TopSettingsPanel(
@@ -102,12 +104,16 @@ fun TopSettingsPanel(
                     modifier = Modifier.padding(horizontal = 32.dp)
                 )
                 
-                // Brightness slider с отступами и улучшенной блокировкой жестов
+                // Brightness slider with smooth float interpolation (no cycling/wrapping)
                 Spacer(modifier = Modifier.height(8.dp))
                 Slider(
-                    value = currentBrightness,
-                    onValueChange = onBrightnessChange,
+                    value = currentBrightness.coerceIn(0.1f, 1.0f),
+                    onValueChange = { newValue ->
+                        // Ensure smooth float interpolation
+                        onBrightnessChange(newValue.coerceIn(0.1f, 1.0f))
+                    },
                     valueRange = 0.1f..1.0f,
+                    steps = 0, // Continuous slider for smooth interpolation
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 32.dp) // Отступы для удобства регулировки
