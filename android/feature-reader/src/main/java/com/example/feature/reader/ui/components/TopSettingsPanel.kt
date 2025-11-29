@@ -121,37 +121,9 @@ fun TopSettingsPanel(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                // Orientation control
-                Text(
-                    text = "Orientation",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = currentOrientation == "auto",
-                        onClick = { onOrientationChange("auto") },
-                        label = { Text("Auto") }
-                    )
-                    FilterChip(
-                        selected = currentOrientation == "portrait",
-                        onClick = { onOrientationChange("portrait") },
-                        label = { Text("Portrait") }
-                    )
-                    FilterChip(
-                        selected = currentOrientation == "landscape",
-                        onClick = { onOrientationChange("landscape") },
-                        label = { Text("Landscape") }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
                 // Reading mode control
+                // IMPORTANT: Reading Mode is INDEPENDENT from Orientation
+                // User can have Auto orientation with Page mode, or Fixed orientation with Webtoon mode
                 Text(
                     text = "Reading Mode",
                     style = MaterialTheme.typography.bodyMedium,
@@ -191,6 +163,38 @@ fun TopSettingsPanel(
                                 Text("Webtoon", style = MaterialTheme.typography.bodySmall)
                             }
                         }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Orientation control
+                // IMPORTANT: Orientation is INDEPENDENT from Reading Mode
+                // Auto orientation does NOT force Webtoon mode
+                Text(
+                    text = "Orientation",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = currentOrientation == "auto",
+                        onClick = { onOrientationChange("auto") },
+                        label = { Text("Auto") }
+                    )
+                    FilterChip(
+                        selected = currentOrientation == "portrait",
+                        onClick = { onOrientationChange("portrait") },
+                        label = { Text("Portrait") }
+                    )
+                    FilterChip(
+                        selected = currentOrientation == "landscape",
+                        onClick = { onOrientationChange("landscape") },
+                        label = { Text("Landscape") }
                     )
                 }
                 

@@ -277,7 +277,20 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Observe reader preferences and update UI state accordingly.
+     * 
+     * IMPORTANT: Reading Mode and Orientation are INDEPENDENT settings.
+     * - Reading Mode: Controls how pages are displayed (PAGE vs WEBTOON)
+     * - Orientation: Controls screen rotation (AUTO, PORTRAIT, LANDSCAPE, LOCKED)
+     * 
+     * These settings do NOT affect each other:
+     * - Auto orientation does NOT force Webtoon mode
+     * - Webtoon mode does NOT force any orientation
+     * - User can have any combination: Auto + Page, Portrait + Webtoon, etc.
+     */
     private fun observeReaderPreferences() {
+        // Reading Mode: Independent setting for page display mode
         viewModelScope.launch {
             settingsRepository.readingMode.collect { mode ->
                 val resolvedMode = when (normalizeReadingMode(mode)) {
@@ -322,6 +335,8 @@ class ReaderViewModel @Inject constructor(
             }
         }
 
+        // Orientation: Independent setting for screen rotation
+        // Does NOT affect reading mode - they are separate settings
         viewModelScope.launch {
             settingsRepository.orientation.collect { orientation ->
                 _uiState.update { it.copy(orientation = normalizeOrientation(orientation)) }
@@ -715,8 +730,16 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Set the reading mode (PAGE or WEBTOON).
+     * 
+     * IMPORTANT: This is INDEPENDENT from orientation setting.
+     * Changing reading mode does NOT change orientation.
+     * 
+     * @param mode The reading mode to set (PAGE or WEBTOON)
+     */
     fun setReadingMode(mode: ReadingMode) {
-        android.util.Log.d(TAG, "Setting reading mode: $mode")
+        android.util.Log.d(TAG, "Setting reading mode: $mode (orientation remains: ${_uiState.value.orientation})")
         
         // 🔥 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Сброс кэша и перезагрузка при смене режима
         // Это устранит мерцание/наложение при переключении на Webtoon
@@ -741,6 +764,7 @@ class ReaderViewModel @Inject constructor(
                         pageCount = 0, // Сброс счетчика страниц
                         error = null,
                         isLoading = true
+                        // NOTE: orientation is NOT changed - it remains as is
                     )
                 }
                 
@@ -1197,11 +1221,19 @@ class ReaderViewModel @Inject constructor(
     }
     
     /**
-     * Update orientation setting
+     * Update orientation setting (auto, portrait, landscape, locked).
+     * 
+     * IMPORTANT: This is INDEPENDENT from reading mode setting.
+     * Changing orientation does NOT change reading mode.
+     * Auto orientation does NOT force Webtoon mode.
+     * 
+     * @param orientation The orientation to set ("auto", "portrait", "landscape", "locked")
      */
     fun updateOrientation(orientation: String) {
+        android.util.Log.d(TAG, "Setting orientation: $orientation (reading mode remains: ${_uiState.value.readingMode})")
         viewModelScope.launch {
             settingsRepository.setOrientation(orientation)
+            // NOTE: readingMode is NOT changed - it remains as is
         }
     }
     
@@ -1250,7 +1282,10 @@ class ReaderViewModel @Inject constructor(
     }
     
     /**
-     * Toggle orientation
+     * Toggle orientation (portrait → landscape → auto → portrait).
+     * 
+     * IMPORTANT: This is INDEPENDENT from reading mode.
+     * Toggling orientation does NOT change reading mode.
      */
     fun toggleOrientation() {
         viewModelScope.launch {

@@ -77,7 +77,11 @@ interface SettingsRepository {
     suspend fun setReaderBackground(color: Long)
 
     // Reading (MVP)
-    val readingMode: Flow<String> // horizontal|vertical
+    // IMPORTANT: readingMode and orientation are INDEPENDENT settings
+    // - readingMode: Controls page display (page/webtoon)
+    // - orientation: Controls screen rotation (auto/portrait/landscape/locked)
+    // They do NOT affect each other - auto orientation does NOT force webtoon mode
+    val readingMode: Flow<String> // page|webtoon - INDEPENDENT from orientation
     suspend fun setReadingMode(mode: String)
     val readingModeAutoDetect: Flow<Boolean>
     suspend fun setReadingModeAutoDetect(enabled: Boolean)
@@ -86,7 +90,7 @@ interface SettingsRepository {
     suspend fun getReadingModeForComic(comicId: String): String?
     val scaleMode: Flow<String> // width|height|fit|custom
     suspend fun setScaleMode(mode: String)
-    val orientation: Flow<String> // auto|portrait|landscape|locked
+    val orientation: Flow<String> // auto|portrait|landscape|locked - INDEPENDENT from readingMode
     suspend fun setOrientation(mode: String)
     val readingDoubleTapZoom: Flow<Float>
     suspend fun setReadingDoubleTapZoom(value: Float)
