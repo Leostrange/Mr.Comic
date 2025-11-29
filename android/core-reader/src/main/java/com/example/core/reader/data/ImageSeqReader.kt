@@ -43,6 +43,10 @@ class ImageSeqReader(
             imageUris = images.sortedBy { it.toString() }
             pageCount = imageUris.size
             
+            if (pageCount <= 0) {
+                throw IllegalStateException("В папке не найдено изображений")
+            }
+            
             // Create metadata
             metadata = MediaMetadata(
                 title = uri.lastPathSegment,

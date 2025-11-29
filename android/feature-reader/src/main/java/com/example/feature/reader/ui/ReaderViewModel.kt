@@ -557,6 +557,12 @@ class ReaderViewModel @Inject constructor(
                     val pageCount = metadata.pageCount
                     android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
                     
+                    // Validate page count
+                    if (pageCount <= 0) {
+                        android.util.Log.e(TAG, "Invalid page count received from metadata: $pageCount")
+                        throw IllegalStateException("Файл не содержит страниц или произошла ошибка при подсчете страниц")
+                    }
+                    
                     // Auto-detection of reading mode
                     val autoDetectEnabled = settingsRepository.readingModeAutoDetect.first()
                     
@@ -636,11 +642,14 @@ class ReaderViewModel @Inject constructor(
                             currentComicUri = finalUri.toString()
                         ) 
                     }
+                    
+                    android.util.Log.d(TAG, "UI state updated with page count: $resolvedPageCount, current page will be: $lastReadPage")
 
                     if (resolvedPageCount > 0) {
                         loadPage(lastReadPage)
                     } else {
-                        _uiState.update { it.copy(isLoading = false) }
+                        android.util.Log.e(TAG, "Resolved page count is 0, not loading any pages")
+                        _uiState.update { it.copy(isLoading = false, error = "Не удалось определить количество страниц") }
                     }
                 } else {
                     val exception = result.exceptionOrNull()
@@ -676,21 +685,33 @@ class ReaderViewModel @Inject constructor(
         val currentState = _uiState.value
         val nextPage = currentState.currentPageIndex + 1
         android.util.Log.d(TAG, "goToNextPage: current=${currentState.currentPageIndex}, next=$nextPage, total=${currentState.pageCount}")
+        
+        if (currentState.pageCount <= 0) {
+            android.util.Log.w(TAG, "Cannot navigate: page count is ${currentState.pageCount}")
+            return
+        }
+        
         if (nextPage < currentState.pageCount) {
             loadPage(nextPage)
         } else {
-            android.util.Log.d(TAG, "Already at last page")
+            android.util.Log.d(TAG, "Already at last page (${currentState.currentPageIndex + 1}/${currentState.pageCount})")
         }
     }
 
     fun goToPreviousPage() {
         val currentState = _uiState.value
         val prevPage = currentState.currentPageIndex - 1
-        android.util.Log.d(TAG, "goToPreviousPage: current=${currentState.currentPageIndex}, prev=$prevPage")
+        android.util.Log.d(TAG, "goToPreviousPage: current=${currentState.currentPageIndex}, prev=$prevPage, total=${currentState.pageCount}")
+        
+        if (currentState.pageCount <= 0) {
+            android.util.Log.w(TAG, "Cannot navigate: page count is ${currentState.pageCount}")
+            return
+        }
+        
         if (prevPage >= 0) {
             loadPage(prevPage)
         } else {
-            android.util.Log.d(TAG, "Already at first page")
+            android.util.Log.d(TAG, "Already at first page (1/${currentState.pageCount})")
         }
     }
 
@@ -832,6 +853,20 @@ class ReaderViewModel @Inject constructor(
 
     fun loadPage(pageIndex: Int) {
         android.util.Log.d(TAG, "Loading page: $pageIndex")
+        
+        val currentState = _uiState.value
+        if (currentState.pageCount <= 0) {
+            android.util.Log.e(TAG, "Cannot load page: pageCount is ${currentState.pageCount}")
+            _uiState.update { it.copy(isLoading = false, error = "Не удалось определить количество страниц") }
+            return
+        }
+        
+        if (pageIndex < 0 || pageIndex >= currentState.pageCount) {
+            android.util.Log.e(TAG, "Invalid page index: $pageIndex (valid range: 0-${currentState.pageCount - 1})")
+            _uiState.update { it.copy(isLoading = false, error = "Недопустимый номер страницы: ${pageIndex + 1}") }
+            return
+        }
+        
         _uiState.update { it.copy(isLoading = true) }
         viewModelScope.launch {
             val bitmap = getPage(pageIndex)

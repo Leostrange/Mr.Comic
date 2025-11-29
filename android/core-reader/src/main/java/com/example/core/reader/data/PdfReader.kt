@@ -95,11 +95,14 @@ class PdfReader(
                 
                 currentReader = result.getOrThrow()
                 currentUri = uri
-                pageCount = currentReader?.getPageCount() ?: 0
+                val retrievedPageCount = currentReader?.getPageCount()
                 
-                if (pageCount <= 0) {
-                    throw IllegalStateException("PDF файл не содержит страниц")
+                if (retrievedPageCount == null || retrievedPageCount <= 0) {
+                    android.util.Log.e("PdfReader", "Failed to get valid page count from PDF reader: $retrievedPageCount")
+                    throw IllegalStateException("PDF файл не содержит страниц или не удалось определить количество страниц")
                 }
+                
+                pageCount = retrievedPageCount
                 
                 android.util.Log.d("PdfReader", "Successfully opened PDF with $pageCount pages using ${currentReader?.javaClass?.simpleName}")
                 

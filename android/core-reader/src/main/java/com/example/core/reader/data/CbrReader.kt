@@ -201,6 +201,9 @@ class CbrReader @Inject constructor(
             }
             
             pageCount = imageFiles.size
+            if (pageCount <= 0) {
+                throw UnsupportedFormatException("В архиве нет изображений. Проверьте содержимое файла.")
+            }
             
             // Create metadata
             metadata = MediaMetadata(
