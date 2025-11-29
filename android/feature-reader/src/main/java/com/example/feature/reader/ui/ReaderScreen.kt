@@ -588,12 +588,12 @@ private fun PagedReaderWithGestures(
             val forward = targetState > initialState
             val slideIn = slideInHorizontally(
                 initialOffsetX = { fullWidth -> if (forward) fullWidth else -fullWidth },
-                animationSpec = tween(250, easing = FastOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(150))
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            )
             val slideOut = slideOutHorizontally(
                 targetOffsetX = { fullWidth -> if (forward) -fullWidth else fullWidth },
-                animationSpec = tween(250, easing = FastOutSlowInEasing)
-            ) + fadeOut(animationSpec = tween(150))
+                animationSpec = tween(300, easing = FastOutSlowInEasing)
+            )
             (slideIn with slideOut).using(SizeTransform(clip = false))
         },
         label = "PageSlider"
