@@ -1170,17 +1170,23 @@ class ReaderViewModel @Inject constructor(
     
     /**
      * Update brightness setting and apply to system
+     * Uses proper float interpolation (not wrapping)
      */
     fun updateBrightness(brightness: Float) {
         viewModelScope.launch {
+            // Clamp to valid range for brightness slider
             val clampedBrightness = brightness.coerceIn(0.1f, 1.0f)
             settingsRepository.setReaderBrightness(clampedBrightness)
             
-            // Apply brightness to system window
+            // Update UI state immediately for smooth slider feedback
+            _uiState.update { it.copy(readerBrightness = clampedBrightness) }
+            
+            // Apply brightness to system window with proper flag
             try {
                 val activity = context as? Activity
                 activity?.let { act ->
                     val layoutParams = act.window.attributes
+                    // Use clamped value directly (no additional wrapping)
                     layoutParams.screenBrightness = clampedBrightness
                     act.window.attributes = layoutParams
                     android.util.Log.d(TAG, "System brightness updated to: $clampedBrightness")
