@@ -13,6 +13,19 @@ enum class ReadingDirection {
     RTL  // Right-to-Left
 }
 
+/**
+ * Reader UI state.
+ * 
+ * IMPORTANT: Reading Mode and Orientation are INDEPENDENT settings:
+ * - readingMode: Controls how pages are displayed (PAGE vs WEBTOON)
+ * - orientation: Controls screen rotation (AUTO, PORTRAIT, LANDSCAPE, LOCKED)
+ * 
+ * These settings do NOT affect each other. Users can have any combination:
+ * - Auto orientation with Page mode
+ * - Portrait orientation with Webtoon mode
+ * - Landscape orientation with either mode
+ * etc.
+ */
 @Immutable
 data class ReaderUiState(
     val isLoading: Boolean = true,
@@ -21,11 +34,13 @@ data class ReaderUiState(
     val currentPageIndex: Int = 0,
     val currentPageBitmap: Bitmap? = null,
     val bitmaps: Map<Int, Bitmap> = emptyMap(),
+    // Reading Mode: INDEPENDENT setting for page display
     val readingMode: ReadingMode = ReadingMode.PAGE,
     val readingDirection: ReadingDirection = ReadingDirection.LTR,
     val scaleMode: String = "width",
     val doubleTapZoom: Float = 2.0f,
     val blockSwipeWhenZoomed: Boolean = true,
+    // Orientation: INDEPENDENT setting for screen rotation
     val orientation: String = "auto",
     // Gesture settings
     val gestureSensitivity: Float = 1.0f,
