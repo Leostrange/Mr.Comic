@@ -100,6 +100,11 @@ class OptimizedPdfiumReader : PdfReader {
             pdfDocument = pdfiumCore?.newDocument(parcelFileDescriptor, null)
             pageCount = pdfiumCore?.getPageCount(pdfDocument) ?: 0
 
+            if (pageCount <= 0) {
+                android.util.Log.e(TAG, "PDF file contains no pages or failed to get page count")
+                return@withContext Result.failure(IOException("PDF file contains no pages"))
+            }
+
             android.util.Log.d(TAG, "PDF opened successfully. Page count: $pageCount")
             Result.success(Unit)
 

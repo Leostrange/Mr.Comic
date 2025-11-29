@@ -128,6 +128,9 @@ class CbzReader @Inject constructor(
                 }
                 
                 pageCount = imageFiles.size
+                if (pageCount <= 0) {
+                    throw UnsupportedFormatException("В архиве нет изображений. Проверьте содержимое файла.")
+                }
                 android.util.Log.d("CbzReader", "Opened CBZ with $pageCount pages using streaming extraction")
                 
                 // Create metadata with file size
