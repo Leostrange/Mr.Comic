@@ -100,7 +100,8 @@ class DocumentTreeScanner @Inject constructor(
     
     suspend fun findComicFiles(
         treeUri: Uri,
-        settings: ScanSettings = ScanSettings()
+        settings: ScanSettings = ScanSettings(),
+        folderId: String? = null
     ): List<Comic> = withContext(Dispatchers.IO) {
         try {
             val documentFile = DocumentFile.fromTreeUri(context, treeUri)
@@ -114,7 +115,7 @@ class DocumentTreeScanner @Inject constructor(
             val comics = mutableListOf<Comic>()
             for (file in allFiles) {
                 if (isComicFile(file, settings)) {
-                    val comic = createComicFromDocumentFile(file)
+                    val comic = createComicFromDocumentFile(file, folderId)
                     if (comic != null) {
                         comics.add(comic)
                     }
@@ -162,7 +163,7 @@ class DocumentTreeScanner @Inject constructor(
         }
     }
     
-    private fun createComicFromDocumentFile(file: DocumentFile): Comic? {
+    private fun createComicFromDocumentFile(file: DocumentFile, folderId: String? = null): Comic? {
         try {
             val uri = file.uri
             val name = file.name ?: return null
@@ -178,6 +179,9 @@ class DocumentTreeScanner @Inject constructor(
             
             if (format == ComicFormat.UNKNOWN) return null
             
+            val isSingle = folderId == null
+            val displayGroup = if (isSingle) "Разное" else null
+            
             return Comic(
                 id = java.util.UUID.randomUUID().toString(),
                 title = name.substringBeforeLast('.'),
@@ -190,7 +194,9 @@ class DocumentTreeScanner @Inject constructor(
                 readingProgress = 0f,
                 isBookmarked = false,
                 coverPath = null,
-                folderId = null
+                folderId = folderId,
+                displayGroup = displayGroup,
+                isSingle = isSingle
             )
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error creating comic from document file", e)
