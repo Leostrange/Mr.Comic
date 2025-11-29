@@ -245,6 +245,40 @@ class ReaderViewModel @Inject constructor(
 
     private var bookReader: MediaReader? = null
     private var currentComicId: String? = null
+    
+    /**
+     * Detects if the given URI points to a PDF file
+     */
+    private fun isPdfFile(uri: Uri): Boolean {
+        // Check extension from URI
+        val extension = when (uri.scheme) {
+            "file" -> uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase() ?: ""
+            "content" -> {
+                // Try to get display name from ContentResolver
+                val name = try {
+                    val cursor = context.contentResolver.query(
+                        uri, 
+                        arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), 
+                        null, 
+                        null, 
+                        null
+                    )
+                    cursor?.use { if (it.moveToFirst()) it.getString(0) else null }
+                } catch (e: Exception) {
+                    android.util.Log.w(TAG, "Failed to get display name for PDF detection", e)
+                    null
+                }
+                
+                name?.substringAfterLast('.', "")?.lowercase() 
+                    ?: uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase()
+                    ?: uri.path?.substringAfterLast('.', "")?.lowercase()
+                    ?: ""
+            }
+            else -> uri.lastPathSegment?.substringAfterLast('.', "")?.lowercase() ?: ""
+        }
+        
+        return extension == "pdf"
+    }
 
     companion object {
         private const val PRELOAD_DISTANCE = 3 // Preload 3 pages ahead/behind for smoother UX
@@ -556,6 +590,15 @@ class ReaderViewModel @Inject constructor(
                     val metadata = result.getOrThrow()
                     val pageCount = metadata.pageCount
                     android.util.Log.d(TAG, "Book opened successfully. Page count: $pageCount")
+                    
+                    // Detect if this is a PDF file and set appropriate scale mode
+                    val isPdf = isPdfFile(finalUri)
+                    if (isPdf) {
+                        android.util.Log.d(TAG, "PDF detected, setting scale mode to fitWidth")
+                        // Set scale mode to fitWidth for PDFs to fill screen width
+                        settingsRepository.setScaleMode("width")
+                        _uiState.update { it.copy(scaleMode = "width") }
+                    }
                     
                     // Auto-detection of reading mode
                     val autoDetectEnabled = settingsRepository.readingModeAutoDetect.first()
