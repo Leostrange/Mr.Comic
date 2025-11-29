@@ -24,6 +24,7 @@ fun LibraryScreen(
     onAddComicClick: () -> Unit = {},
     onAddFileClick: () -> Unit = {},
     onAddFolderClick: () -> Unit = {},
+    onFolderClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     android.util.Log.d("LibraryScreen", "🎨 LibraryScreen composing...")
@@ -127,7 +128,7 @@ fun LibraryScreen(
                             FolderView(
                                 folders = uiState.folders,
                                 onFolderClick = { folder ->
-                                    viewModel.selectFolder(folder)
+                                    onFolderClick(folder.id)
                                 }
                             )
                         }

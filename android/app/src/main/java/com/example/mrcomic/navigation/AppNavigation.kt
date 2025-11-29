@@ -46,6 +46,9 @@ sealed class Screen(val route: String) {
     data object Reader : Screen("reader/{uri}") {
         fun create(uri: String) = "reader/$uri"
     }
+    data object FolderDetails : Screen("folder/{folderId}") {
+        fun create(folderId: String) = "folder/$folderId"
+    }
 }
 
 @Composable
@@ -121,6 +124,9 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
                 onAddFolderClick = {
                     // Запускаем folder picker для выбора папки
                     folderPicker.launch(null)
+                },
+                onFolderClick = { folderId ->
+                    navController.navigate(Screen.FolderDetails.create(folderId))
                 }
             )
         }
@@ -152,6 +158,38 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
             }
         }
 
+        // Folder details screen
+        composable(
+            route = Screen.FolderDetails.route,
+            arguments = listOf(navArgument("folderId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val folderId = backStackEntry.arguments?.getString("folderId") ?: return@composable
+            val coroutineScope = rememberCoroutineScope()
+            val libraryViewModel: com.example.feature.library.LibraryViewModel = hiltViewModel()
+            
+            com.example.feature.library.FolderDetailsScreen(
+                folderId = folderId,
+                onNavigateBack = {
+                    navController.navigateUp()
+                },
+                onComicClick = { comicId ->
+                    coroutineScope.launch {
+                        try {
+                            val comic = libraryViewModel.getComicById(comicId)
+                            if (comic != null) {
+                                val encoded = Uri.encode(comic.path)
+                                navController.navigate(Screen.Reader.create(encoded))
+                            } else {
+                                android.util.Log.e("AppNavHost", "Comic not found: $comicId")
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.e("AppNavHost", "Error opening comic", e)
+                        }
+                    }
+                }
+            )
+        }
+        
         // Reader screen (full screen, outside main navigation)
         composable(
             route = Screen.Reader.route,
