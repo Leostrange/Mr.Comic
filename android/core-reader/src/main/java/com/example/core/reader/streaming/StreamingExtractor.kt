@@ -69,26 +69,40 @@ class StreamingExtractor(
 
             android.util.Log.d(TAG, "Creating temp file with extension: $extension for URI: $uri")
 
-            // Копируем архив во временный файл (поддержка content:// и file://)
-            val tempArchiveFile = File.createTempFile("temp_archive_", extension, cacheDir)
-            when (uri.scheme) {
+            // Use file directly if it's already in cache, otherwise copy to temp file
+            val tempArchiveFile = when (uri.scheme) {
                 "file" -> {
                     val src = File(uri.path ?: return@withContext Result.failure(IllegalArgumentException("Invalid file uri")))
                     if (!src.exists()) {
                         return@withContext Result.failure(IllegalArgumentException("File does not exist: ${src.absolutePath}"))
                     }
-                    src.inputStream().use { input ->
-                        tempArchiveFile.outputStream().use { output ->
-                            input.copyTo(output)
+                    // If file is already in cache, use it directly to avoid double copying
+                    if (src.absolutePath.startsWith(context.cacheDir.absolutePath)) {
+                        android.util.Log.d(TAG, "File already in cache, using directly: ${src.absolutePath}")
+                        src
+                    } else {
+                        // Copy external file to cache
+                        val tempFile = File.createTempFile("temp_archive_", extension, cacheDir)
+                        src.inputStream().use { input ->
+                            tempFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
                         }
+                        tempFile
                     }
                 }
-                else -> {
+                "content" -> {
+                    // Copy content:// URI to temp file
+                    val tempFile = File.createTempFile("temp_archive_", extension, cacheDir)
                     context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                        tempArchiveFile.outputStream().use { outputStream ->
+                        tempFile.outputStream().use { outputStream ->
                             inputStream.copyTo(outputStream)
                         }
                     } ?: return@withContext Result.failure(IllegalStateException("Unable to open input stream for $uri"))
+                    tempFile
+                }
+                else -> {
+                    return@withContext Result.failure(IllegalArgumentException("Unsupported URI scheme: ${uri.scheme}"))
                 }
             }
             

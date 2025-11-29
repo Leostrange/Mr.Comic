@@ -78,10 +78,7 @@ class CbzReader @Inject constructor(
             }
             
             // Create a temporary file for the CBZ
-            tempFile = File.createTempFile("cbz_", ".cbz", context.cacheDir).apply {
-                setReadable(true, false)
-                setWritable(false, false)
-            }
+            tempFile = File.createTempFile("cbz_", ".cbz", context.cacheDir)
             
             // Copy the content to the temporary file
             val inputStream = try {
