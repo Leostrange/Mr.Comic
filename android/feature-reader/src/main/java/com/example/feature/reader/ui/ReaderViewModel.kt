@@ -1424,7 +1424,18 @@ class ReaderViewModel @Inject constructor(
                         android.util.Log.w(TAG, "Failed to load PDF thumbnail for page $pageIndex: ${result.exceptionOrNull()?.message}")
                         null
                     }
-                } else {
+                }
+                // For CBR readers, use the optimized getThumbnail method
+                else if (reader is com.example.core.reader.data.CbrReader) {
+                    val result = reader.getThumbnail(pageIndex)
+                    if (result.isSuccess) {
+                        result.getOrNull()
+                    } else {
+                        android.util.Log.w(TAG, "Failed to load CBR thumbnail for page $pageIndex: ${result.exceptionOrNull()?.message}")
+                        null
+                    }
+                }
+                else {
                     // For other formats, render at thumbnail size
                     val result = reader.renderPage(pageIndex, 200, 200, 0.5f)
                     if (result.isSuccess) {

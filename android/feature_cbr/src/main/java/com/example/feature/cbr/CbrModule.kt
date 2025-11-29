@@ -2,6 +2,7 @@ package com.example.feature.cbr
 
 import android.content.Context
 import com.example.core.reader.data.CbrReader
+import com.example.core.reader.data.cache.ThumbnailCache
 import com.example.core.reader.domain.MediaReader
 import dagger.Module
 import dagger.Provides
@@ -22,8 +23,11 @@ object CbrModule {
     @Provides
     @Singleton
     @Named("cbr_reader")
-    fun provideCbrReader(@ApplicationContext context: Context): MediaReader {
-        return CbrReader(context)
+    fun provideCbrReader(
+        @ApplicationContext context: Context,
+        thumbnailCache: ThumbnailCache
+    ): MediaReader {
+        return CbrReader(context, null, thumbnailCache)
     }
     
     @Provides

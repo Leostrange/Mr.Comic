@@ -9,6 +9,7 @@ import com.example.core.reader.domain.MediaMetadata
 import com.example.core.reader.domain.MediaType
 import com.example.core.reader.domain.UnsupportedFormatException
 import com.example.core.reader.utils.BitmapUtils
+import com.example.core.reader.data.cache.ThumbnailCache
 import com.github.junrar.Archive
 import com.github.junrar.rarfile.FileHeader
 import java.io.ByteArrayOutputStream
@@ -18,14 +19,17 @@ import javax.inject.Singleton
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
- * CBR/RAR Reader implementation using JunRAR library
+ * CBR/RAR Reader implementation using JunRAR library with thumbnail caching support
  */
 @Singleton
 class CbrReader @Inject constructor(
     private val context: Context,
-    private val cbrToCbzConverter: CbrToCbzConverter? = null
+    private val cbrToCbzConverter: CbrToCbzConverter? = null,
+    private val thumbnailCache: ThumbnailCache? = null
 ) : MediaReader {
     
     // Per-archive mutex для синхронизации доступа к Archive и извлечения
@@ -453,6 +457,98 @@ class CbrReader @Inject constructor(
     
     override fun isOpen(): Boolean {
         return isOpen
+    }
+    
+    /**
+     * Get thumbnail for a specific page with caching support
+     * Similar to PdfReader.getThumbnail() - extracts and caches thumbnails efficiently
+     * 
+     * @param pageIndex The page index to get thumbnail for
+     * @return Result containing the thumbnail bitmap or error
+     */
+    suspend fun getThumbnail(pageIndex: Int): Result<Bitmap> {
+        if (!isOpen) {
+            return Result.failure(IllegalStateException("CBR reader is not open"))
+        }
+        
+        if (pageIndex < 0 || pageIndex >= pageCount) {
+            return Result.failure(IndexOutOfBoundsException("Invalid page index: $pageIndex"))
+        }
+        
+        return withContext(Dispatchers.IO) {
+            val uri = currentUri ?: return@withContext Result.failure(IllegalStateException("No URI available"))
+            val key = "${uri.hashCode()}:thumb:$pageIndex"
+            
+            // Check thumbnail cache first
+            thumbnailCache?.getThumbnail(key)?.let { cached ->
+                android.util.Log.d(TAG, "Thumbnail cache hit for page $pageIndex")
+                return@withContext Result.success(cached)
+            }
+            
+            android.util.Log.d(TAG, "Thumbnail cache miss for page $pageIndex, extracting from RAR")
+            
+            // Extract and render thumbnail
+            archiveMutex.withLock {
+                try {
+                    val currentArchive = archive ?: return@withLock Result.failure(
+                        IllegalStateException("Archive not open")
+                    )
+                    
+                    val fileHeader = imageFiles[pageIndex]
+                    android.util.Log.d(TAG, "Extracting thumbnail for page $pageIndex: ${fileHeader.fileName}")
+                    
+                    // Extract file data from archive
+                    val outputStream = ByteArrayOutputStream()
+                    try {
+                        currentArchive.extractFile(fileHeader, outputStream)
+                    } catch (e: java.lang.AssertionError) {
+                        android.util.Log.e(TAG, "AssertionError extracting thumbnail for page $pageIndex: ${e.message}", e)
+                        return@withLock Result.failure(e)
+                    } catch (e: Exception) {
+                        android.util.Log.e(TAG, "Failed to extract thumbnail for page $pageIndex: ${e.message}", e)
+                        return@withLock Result.failure(e)
+                    }
+                    
+                    val imageData = outputStream.toByteArray()
+                    if (imageData.isEmpty()) {
+                        android.util.Log.w(TAG, "No data extracted for thumbnail page $pageIndex")
+                        return@withLock Result.failure(IllegalStateException("No data extracted"))
+                    }
+                    
+                    // Decode at thumbnail size (200x300 similar to PDF)
+                    val options = BitmapFactory.Options().apply {
+                        inJustDecodeBounds = true
+                    }
+                    
+                    BitmapFactory.decodeByteArray(imageData, 0, imageData.size, options)
+                    
+                    // Calculate sample size for thumbnail
+                    options.inSampleSize = BitmapUtils.calculateInSampleSize(options, 200, 300)
+                    options.inJustDecodeBounds = false
+                    options.inPreferredConfig = Bitmap.Config.RGB_565
+                    
+                    val thumbnail = BitmapUtils.decodeBitmapWithExif(
+                        imageData,
+                        200,
+                        300,
+                        options.inPreferredConfig
+                    )
+                    
+                    if (thumbnail != null) {
+                        // Cache the thumbnail
+                        thumbnailCache?.putThumbnail(key, thumbnail)
+                        android.util.Log.d(TAG, "Thumbnail loaded and cached for page $pageIndex")
+                        Result.success(thumbnail)
+                    } else {
+                        android.util.Log.e(TAG, "Failed to decode thumbnail for page $pageIndex")
+                        Result.failure(IllegalStateException("Failed to decode thumbnail"))
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Error getting thumbnail for page $pageIndex", e)
+                    Result.failure(e)
+                }
+            }
+        }
     }
     
     /**

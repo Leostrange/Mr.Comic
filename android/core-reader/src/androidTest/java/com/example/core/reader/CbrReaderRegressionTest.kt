@@ -58,7 +58,7 @@ class CbrReaderRegressionTest {
         // detects it correctly and provides proper error message
         val testFile = createTestZipArchive("plain_test.cbr", false)
         
-        val reader = CbrReader(context, converter)
+        val reader = CbrReader(context, converter, null)
         val result = reader.open(context, Uri.fromFile(testFile))
         
         // Should fail with specific error about ZIP file
@@ -109,7 +109,7 @@ class CbrReaderRegressionTest {
         // Create a file with RAR5 signature
         val testFile = createRar5SignatureFile("rar5_test.cbr")
         
-        val reader = CbrReader(context, converter)
+        val reader = CbrReader(context, converter, null)
         val result = reader.open(context, Uri.fromFile(testFile))
         
         // Should fail with specific RAR5 error
@@ -170,7 +170,7 @@ class CbrReaderRegressionTest {
     fun testRetryLogicExists() {
         // This test verifies that the retry mechanism is in place
         // by checking that the CbrReader can be instantiated with a converter
-        val reader = CbrReader(context, converter)
+        val reader = CbrReader(context, converter, null)
         assertNotNull("Reader should be created", reader)
         assertTrue("Reader should not be open initially", !reader.isOpen())
     }

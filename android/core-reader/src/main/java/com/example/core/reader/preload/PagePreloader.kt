@@ -275,7 +275,7 @@ class PagePreloader @Inject constructor(
     
     /**
      * Предзагрузить превью для диапазона страниц
-     * Для PDF использует специализированный метод getThumbnail
+     * Для PDF и CBR использует специализированный метод getThumbnail
      */
     fun preloadThumbnails(startPage: Int, endPage: Int) {
         val reader = currentReader ?: return
@@ -288,8 +288,9 @@ class PagePreloader @Inject constructor(
         android.util.Log.d(TAG, "Preloading thumbnails from $actualStartPage to $actualEndPage")
         
         preloadScope.launch {
-            // Проверяем, является ли это PDF
+            // Проверяем, является ли это PDF или CBR
             val isPdf = uri.endsWith(".pdf", ignoreCase = true)
+            val isCbr = uri.endsWith(".cbr", ignoreCase = true) || uri.endsWith(".rar", ignoreCase = true)
             
             if (isPdf && reader is com.example.core.reader.data.PdfReader) {
                 // Для PDF используем специализированный метод getThumbnail
@@ -310,6 +311,31 @@ class PagePreloader @Inject constructor(
                             }
                         } catch (e: Exception) {
                             android.util.Log.w(TAG, "Exception preloading PDF thumbnail for page $pageIndex", e)
+                        }
+                    }
+                    
+                    // Небольшая задержка между превью
+                    delay(50)
+                }
+            } else if (isCbr && reader is com.example.core.reader.data.CbrReader) {
+                // Для CBR используем специализированный метод getThumbnail
+                for (pageIndex in actualStartPage..actualEndPage) {
+                    val thumbnailKey = bitmapCache.createThumbnailKey(uri, pageIndex)
+                    
+                    if (!bitmapCache.hasThumbnail(thumbnailKey)) {
+                        try {
+                            val result = reader.getThumbnail(pageIndex)
+                            if (result.isSuccess) {
+                                val bitmap = result.getOrNull()
+                                if (bitmap != null && !bitmap.isRecycled) {
+                                    bitmapCache.putThumbnail(thumbnailKey, bitmap)
+                                    android.util.Log.d(TAG, "Preloaded CBR thumbnail for page $pageIndex")
+                                }
+                            } else {
+                                android.util.Log.w(TAG, "Failed to preload CBR thumbnail for page $pageIndex: ${result.exceptionOrNull()?.message}")
+                            }
+                        } catch (e: Exception) {
+                            android.util.Log.w(TAG, "Exception preloading CBR thumbnail for page $pageIndex", e)
                         }
                     }
                     
