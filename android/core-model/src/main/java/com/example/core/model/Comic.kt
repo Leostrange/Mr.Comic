@@ -17,7 +17,8 @@ import java.util.Date
         Index(value = ["lastReadDate"]),
         Index(value = ["folderId"]),
         Index(value = ["displayGroup"]),
-        Index(value = ["isSingle"])
+        Index(value = ["isSingle"]),
+        Index(value = ["parentTreeUri"])
     ]
 )
 @TypeConverters(Converters::class)
@@ -35,6 +36,7 @@ data class Comic(
     val folderId: String? = null,
     val displayGroup: String? = null,
     val isSingle: Boolean = false,
+    val parentTreeUri: String? = null,
     val lastReadDate: Long? = null,
     val readingProgress: Float = 0f, // 0.0 - 1.0
     val isBookmarked: Boolean = false,

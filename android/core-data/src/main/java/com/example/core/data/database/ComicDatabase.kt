@@ -25,7 +25,7 @@ import com.example.core.model.ReadingSession
         Bookmark::class,
         ReadingSession::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -60,6 +60,14 @@ abstract class ComicDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE folders ADD COLUMN storageType TEXT NOT NULL DEFAULT 'INTERNAL'")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_folders_treeUri ON folders(treeUri)")
                 db.execSQL("UPDATE folders SET displayName = name WHERE displayName = ''")
+            }
+        }
+        
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Add parentTreeUri to comics for SAF folder access tracking
+                db.execSQL("ALTER TABLE comics ADD COLUMN parentTreeUri TEXT DEFAULT NULL")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_comics_parentTreeUri ON comics(parentTreeUri)")
             }
         }
     }

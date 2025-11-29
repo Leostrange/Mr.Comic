@@ -43,7 +43,7 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object AppIconSettings : Screen("app_icon_settings")
     data object Onboarding : Screen("onboarding")
-    data object Reader : Screen("reader/{uri}") {
+    data object Reader : Screen("reader/{uri}?treeUri={treeUri}") {
         fun create(uri: String) = "reader/$uri"
     }
 }
@@ -99,13 +99,18 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
             
             LibraryScreen(
                 onComicClick = { comicId ->
-                    // Получаем комикс по ID и передаем его path в ридер
                     coroutineScope.launch {
                         try {
                             val comic = libraryViewModel.getComicById(comicId)
                             if (comic != null) {
-                                val encoded = Uri.encode(comic.path)
-                                navController.navigate(Screen.Reader.create(encoded))
+                                val pathEncoded = Uri.encode(comic.path)
+                                val treeUriEncoded = if (comic.parentTreeUri != null) {
+                                    Uri.encode(comic.parentTreeUri)
+                                } else {
+                                    ""
+                                }
+                                val route = "reader/$pathEncoded?treeUri=$treeUriEncoded"
+                                navController.navigate(route)
                             } else {
                                 android.util.Log.e("AppNavHost", "Comic not found: $comicId")
                             }
@@ -155,7 +160,14 @@ fun AppNavHost(navController: NavHostController, onOnboardingComplete: () -> Uni
         // Reader screen (full screen, outside main navigation)
         composable(
             route = Screen.Reader.route,
-            arguments = listOf(navArgument("uri") { type = NavType.StringType })
+            arguments = listOf(
+                navArgument("uri") { type = NavType.StringType },
+                navArgument("treeUri") { 
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
         ) { _ ->
             ReaderScreen(
                 onNavigateBack = {

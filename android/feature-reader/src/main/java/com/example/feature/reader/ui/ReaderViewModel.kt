@@ -252,17 +252,18 @@ class ReaderViewModel @Inject constructor(
     }
 
     init {
-        // Путь к файлу приходит как аргумент навигации.
         android.util.Log.d(TAG, "ReaderViewModel initialized")
         android.util.Log.d(TAG, "SavedStateHandle keys: ${savedStateHandle.keys()}")
         
-        // Set up ThumbnailProvider with this ViewModel
         thumbnailProvider.readerViewModel = this
         
         observeReaderPreferences()
 
         val uriString = savedStateHandle.get<String>("uri")
+        val treeUriString = savedStateHandle.get<String>("treeUri")
         android.util.Log.d(TAG, "Received URI from navigation: $uriString")
+        android.util.Log.d(TAG, "Received treeUri from navigation: $treeUriString")
+        
         if (uriString != null) {
             android.util.Log.d(TAG, "URI found, opening book...")
             val decoded = runCatching { Uri.decode(uriString) }.getOrElse { uriString }
@@ -270,7 +271,15 @@ class ReaderViewModel @Inject constructor(
                 android.util.Log.w(TAG, "Failed to parse decoded URI, trying raw", it)
                 Uri.parse(uriString)
             }
-            openBook(uri)
+            
+            val treeUri = if (!treeUriString.isNullOrEmpty()) {
+                val decodedTreeUri = runCatching { Uri.decode(treeUriString) }.getOrElse { treeUriString }
+                runCatching { Uri.parse(decodedTreeUri) }.getOrNull()
+            } else {
+                null
+            }
+            
+            openBook(uri, treeUri)
         } else {
             android.util.Log.e(TAG, "No URI provided in navigation arguments!")
             _uiState.update { it.copy(isLoading = false, error = "File URI not provided.") }
@@ -389,8 +398,8 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun openBook(uri: Uri) {
-        android.util.Log.d(TAG, "Opening book: $uri")
+    fun openBook(uri: Uri, parentTreeUri: Uri? = null) {
+        android.util.Log.d(TAG, "Opening book: $uri with parentTreeUri: $parentTreeUri")
         viewModelScope.launch {
             _uiState.update {
                 it.copy(
@@ -437,14 +446,31 @@ class ReaderViewModel @Inject constructor(
                         match
                     }
                     
-                    if (!hasPermission) {
-                        android.util.Log.w(TAG, "No persistable permission found for URI: $uri")
+                    val hasTreePermission = if (parentTreeUri != null) {
+                        persistedUris.any { persistedUri ->
+                            val treeUriString = parentTreeUri.toString()
+                            val persistedUriString = persistedUri.uri.toString()
+                            val treeUriDecoded = android.net.Uri.decode(treeUriString)
+                            val persistedUriDecoded = android.net.Uri.decode(persistedUriString)
+                            
+                            ((persistedUri.uri == parentTreeUri) ||
+                             (persistedUriString == treeUriString) ||
+                             (persistedUriDecoded == treeUriString) ||
+                             (persistedUriString == treeUriDecoded) ||
+                             (persistedUriDecoded == treeUriDecoded)) &&
+                            persistedUri.isReadPermission
+                        }
+                    } else {
+                        false
+                    }
+                    
+                    if (!hasPermission && !hasTreePermission) {
+                        android.util.Log.w(TAG, "No persistable permission found for URI: $uri or tree: $parentTreeUri")
                         android.util.Log.d(TAG, "Current persisted URIs (${persistedUris.size}):")
                         persistedUris.forEach { 
                             android.util.Log.d(TAG, "  - ${it.uri} (read=${it.isReadPermission}, write=${it.isWritePermission})")
                         }
                         
-                        // Try to take persistable permission (might not work for some URIs)
                         try {
                             context.contentResolver.takePersistableUriPermission(
                                 uri,
@@ -453,8 +479,9 @@ class ReaderViewModel @Inject constructor(
                             android.util.Log.d(TAG, "Successfully took persistable URI permission")
                         } catch (e: SecurityException) {
                             android.util.Log.w(TAG, "Could not take persistable permission: ${e.message}")
-                            // This is normal for some URIs, continue anyway
                         }
+                    } else if (hasTreePermission) {
+                        android.util.Log.d(TAG, "Access granted via parent tree URI: $parentTreeUri")
                     } else {
                         android.util.Log.d(TAG, "Persistable permission already exists for URI")
                         

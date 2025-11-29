@@ -234,4 +234,19 @@ class FolderRepository @Inject constructor(
     suspend fun getFolderByTreeUri(treeUri: String): Folder? {
         return folderDao.getByTreeUri(treeUri)
     }
+    
+    suspend fun validateTreePermissions(): List<String> {
+        val folders = folderDao.getAllFoldersSync()
+        val persistedUris = context.contentResolver.persistedUriPermissions.map { it.uri.toString() }.toSet()
+        
+        return folders.mapNotNull { folder ->
+            folder.treeUri?.let { treeUri ->
+                if (treeUri !in persistedUris) {
+                    treeUri
+                } else {
+                    null
+                }
+            }
+        }
+    }
 }

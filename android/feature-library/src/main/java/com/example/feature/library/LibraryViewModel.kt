@@ -567,8 +567,9 @@ class LibraryViewModel @Inject constructor(
             try {
                 _uiState.update { it.copy(isLoading = true) }
                 
-                // Сканирование папки через DocumentFile API
                 android.util.Log.d("LibraryViewModel", "Scanning directory: $uri")
+                
+                val treeUriString = uri.toString()
                 
                 val documentFile = DocumentFile.fromTreeUri(context, uri)
                 if (documentFile != null && documentFile.isDirectory) {
@@ -583,9 +584,9 @@ class LibraryViewModel @Inject constructor(
                             
                             if (isComicFile) {
                                 try {
-                                    addComicFromUri(file.uri)
+                                    addComicFromUriWithTreeUri(file.uri, treeUriString)
                                     addedCount++
-                                    android.util.Log.d("LibraryViewModel", "Added: $fileName")
+                                    android.util.Log.d("LibraryViewModel", "Added: $fileName (with tree URI: $treeUriString)")
                                 } catch (e: Exception) {
                                     errorCount++
                                     android.util.Log.e("LibraryViewModel", "Failed to add: $fileName", e)
@@ -623,6 +624,87 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+    
+    /**
+     * Добавить комикс из URI файла с указанием родительского tree URI
+     */
+    private suspend fun addComicFromUriWithTreeUri(uri: android.net.Uri, parentTreeUri: String?) {
+        try {
+            android.util.Log.d("LibraryViewModel", "Adding comic from URI: $uri with parentTreeUri: $parentTreeUri")
+            
+            val cursor = context.contentResolver.query(
+                uri,
+                arrayOf(
+                    android.provider.OpenableColumns.DISPLAY_NAME,
+                    android.provider.OpenableColumns.SIZE
+                ),
+                null,
+                null,
+                null
+            )
+            
+            var fileName = "Unknown"
+            var fileSize = 0L
+            
+            cursor?.use {
+                if (it.moveToFirst()) {
+                    val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    val sizeIndex = it.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                    
+                    if (nameIndex != -1) {
+                        fileName = it.getString(nameIndex) ?: "Unknown"
+                    }
+                    if (sizeIndex != -1) {
+                        fileSize = it.getLong(sizeIndex)
+                    }
+                }
+            }
+            
+            val extension = fileName.substringAfterLast('.', "").lowercase()
+            val format = when (extension) {
+                "cbz", "zip" -> com.example.core.model.ComicFormat.CBZ
+                "cbr", "rar" -> com.example.core.model.ComicFormat.CBR
+                "pdf" -> com.example.core.model.ComicFormat.PDF
+                else -> com.example.core.model.ComicFormat.CBZ
+            }
+            
+            val comicId = java.util.UUID.randomUUID().toString()
+            val normalizedUri = android.net.Uri.parse(uri.toString())
+            val uriString = normalizedUri.toString()
+            
+            val comic = Comic(
+                id = comicId,
+                title = fileName.substringBeforeLast('.'),
+                path = uriString,
+                format = format,
+                pageCount = 0,
+                fileSize = fileSize,
+                addedDate = System.currentTimeMillis(),
+                lastReadDate = null,
+                readingProgress = 0f,
+                isBookmarked = false,
+                coverPath = null,
+                folderId = null,
+                displayGroup = "Разное",
+                isSingle = true,
+                parentTreeUri = parentTreeUri
+            )
+            
+            comicRepository.addComic(comic)
+            android.util.Log.d("LibraryViewModel", "Comic added to database: ${comic.title} with parentTreeUri: $parentTreeUri")
+            
+            viewModelScope.launch {
+                try {
+                    coverService.getCover(comicId)
+                } catch (e: Exception) {
+                    android.util.Log.e("LibraryViewModel", "Error generating cover", e)
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("LibraryViewModel", "Error adding comic with tree URI", e)
+            throw e
         }
     }
     

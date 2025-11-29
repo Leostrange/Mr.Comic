@@ -81,4 +81,54 @@ class StoragePermissionManager @Inject constructor(
     fun refresh() {
         _permissionState.value = checkCurrentPermission()
     }
+    
+    fun hasTreePermission(treeUri: android.net.Uri): Boolean {
+        val persistedUris = context.contentResolver.persistedUriPermissions
+        val treeUriString = treeUri.toString()
+        val treeUriDecoded = android.net.Uri.decode(treeUriString)
+        
+        return persistedUris.any { persistedUri ->
+            val persistedUriString = persistedUri.uri.toString()
+            val persistedUriDecoded = android.net.Uri.decode(persistedUriString)
+            
+            ((persistedUri.uri == treeUri) ||
+             (persistedUriString == treeUriString) ||
+             (persistedUriDecoded == treeUriString) ||
+             (persistedUriString == treeUriDecoded) ||
+             (persistedUriDecoded == treeUriDecoded)) &&
+            persistedUri.isReadPermission
+        }
+    }
+    
+    fun validateFileAccess(fileUri: android.net.Uri, parentTreeUri: android.net.Uri?): Boolean {
+        if (fileUri.scheme != "content") {
+            return true
+        }
+        
+        val persistedUris = context.contentResolver.persistedUriPermissions
+        
+        val hasDirectPermission = persistedUris.any { persistedUri ->
+            val fileUriString = fileUri.toString()
+            val persistedUriString = persistedUri.uri.toString()
+            val fileUriDecoded = android.net.Uri.decode(fileUriString)
+            val persistedUriDecoded = android.net.Uri.decode(persistedUriString)
+            
+            ((persistedUri.uri == fileUri) ||
+             (persistedUriString == fileUriString) ||
+             (persistedUriDecoded == fileUriString) ||
+             (persistedUriString == fileUriDecoded) ||
+             (persistedUriDecoded == fileUriDecoded)) &&
+            persistedUri.isReadPermission
+        }
+        
+        if (hasDirectPermission) {
+            return true
+        }
+        
+        if (parentTreeUri != null) {
+            return hasTreePermission(parentTreeUri)
+        }
+        
+        return false
+    }
 }
