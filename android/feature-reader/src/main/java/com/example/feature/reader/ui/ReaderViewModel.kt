@@ -875,6 +875,18 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Load a specific page by index
+     * 
+     * CRITICAL FIX: Updates currentPageIndex IMMEDIATELY (synchronously) before loading bitmap.
+     * This ensures:
+     * 1. Thumbnail panel scrolls to selected page instantly
+     * 2. Visual indicators update immediately
+     * 3. UI state synchronization works correctly
+     * 4. Works in both PAGE and WEBTOON modes
+     * 
+     * Bitmap loading happens asynchronously in the background.
+     */
     fun loadPage(pageIndex: Int) {
         android.util.Log.d(TAG, "Loading page: $pageIndex")
         
@@ -891,7 +903,13 @@ class ReaderViewModel @Inject constructor(
             return
         }
         
-        _uiState.update { it.copy(isLoading = true) }
+        // CRITICAL FIX: Update currentPageIndex IMMEDIATELY for synchronous UI feedback
+        // This ensures thumbnail panel and other UI elements update instantly
+        _uiState.update { it.copy(
+            isLoading = true,
+            currentPageIndex = pageIndex
+        ) }
+        
         viewModelScope.launch {
             val bitmap = getPage(pageIndex)
 
@@ -910,7 +928,6 @@ class ReaderViewModel @Inject constructor(
 
                 currentState.copy(
                     isLoading = false,
-                    currentPageIndex = pageIndex,
                     currentPageBitmap = bitmap,
                     bitmaps = updatedBitmaps,
                     error = if (bitmap == null) "Failed to load page ${pageIndex + 1}" else null

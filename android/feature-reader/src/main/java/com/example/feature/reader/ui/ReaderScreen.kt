@@ -432,7 +432,8 @@ private fun ReaderScreenContent(
                         onPageClick = { pageIndex ->
                             // Navigate to selected page
                             onLoadPage(pageIndex)
-                            uiController.hideAll()
+                            // Don't close panel immediately - let user see the navigation
+                            // Panel will auto-hide after delay or user can close it manually
                         },
                         onDismiss = {
                             uiController.hideAll()

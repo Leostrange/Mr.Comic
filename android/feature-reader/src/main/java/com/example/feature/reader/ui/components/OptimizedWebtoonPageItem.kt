@@ -190,6 +190,7 @@ private fun LoadingPageItem(
  * 2. Передача onLoadPage в OptimizedWebtoonPageItem
  * 3. Добавлен снимок потока для предзагрузки страниц
  * 4. Отключены зоны навигации (только панели)
+ * 5. Добавлена автоматическая прокрутка к текущей странице при изменении currentPageIndex
  */
 @Composable
 fun OptimizedWebtoonLazyColumn(
@@ -204,6 +205,17 @@ fun OptimizedWebtoonLazyColumn(
     modifier: Modifier = Modifier
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Scroll to current page when it changes (e.g., from thumbnail navigation)
+    LaunchedEffect(uiState.currentPageIndex) {
+        if (uiState.pageCount > 0) {
+            val targetPage = uiState.currentPageIndex.coerceIn(0, uiState.pageCount - 1)
+            coroutineScope.launch {
+                listState.animateScrollToItem(targetPage)
+            }
+        }
+    }
     
     // Prefetch pages based on scroll position
     LaunchedEffect(listState, uiState.pageCount) {

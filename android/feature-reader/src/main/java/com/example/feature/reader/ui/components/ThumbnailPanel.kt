@@ -34,6 +34,10 @@ import kotlinx.coroutines.withContext
  * 2. Улучшено кэширование миниатюр
  * 3. Удалена кнопка Close для чистоты дизайна
  * 4. Добавлена поддержка ThumbnailProvider для динамической загрузки
+ * 5. Исправлена синхронизация навигации:
+ *    - Separate LaunchedEffects for visibility and page changes
+ *    - Scroll animation triggers immediately when page changes
+ *    - currentPage updates synchronously from ViewModel
  */
 @Composable
 fun ThumbnailPanel(
@@ -71,10 +75,26 @@ fun ThumbnailPanel(
         }
     }
 
-    // Scroll to current page when panel becomes visible
-    LaunchedEffect(visible, currentPage) {
-        if (visible) {
-            listState.animateScrollToItem(currentPage.coerceIn(0, totalPages - 1))
+    // Scroll to current page when panel becomes visible OR when current page changes
+    // Use separate LaunchedEffect for page changes to ensure it always triggers
+    LaunchedEffect(visible) {
+        if (visible && totalPages > 0) {
+            val targetPage = currentPage.coerceIn(0, totalPages - 1)
+            listState.animateScrollToItem(
+                index = targetPage,
+                scrollOffset = -200 // Center the item by offsetting
+            )
+        }
+    }
+    
+    // Separate effect for page changes while panel is visible
+    LaunchedEffect(currentPage) {
+        if (visible && totalPages > 0) {
+            val targetPage = currentPage.coerceIn(0, totalPages - 1)
+            listState.animateScrollToItem(
+                index = targetPage,
+                scrollOffset = -200 // Center the item by offsetting
+            )
         }
     }
 
