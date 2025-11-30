@@ -1,0 +1,576 @@
+Интеграция видео в качестве сплэш-скрина в Android Compose (Обновлено)
+Введение
+Сплэш-скрин — это первое, что видит пользователь при запуске приложения. Он может служить для отображения логотипа, брендинга или короткой анимации, создавая приятное первое впечатление. Использование видео в качестве сплэш-скрина может значительно улучшить пользовательский опыт, делая запуск приложения более динамичным и привлекательным. В этом документе подробно описаны шаги по интеграции видеофайла в качестве сплэш-скрина в Android-приложение, разработанное с использованием Jetpack Compose, с особым вниманием к адаптации под различные ориентации экрана.
+Предварительные требования
+Перед началом работы убедитесь, что у вас установлены и настроены следующие инструменты:
+
+●	Android Studio: Последняя версия Android Studio с поддержкой Jetpack Compose.
+●	Android SDK: Установленный Android SDK с целевой версией API, совместимой с вашим проектом.
+●	Jetpack Compose: Проект Android, настроенный для использования Jetpack Compose.
+●	Видеофайл: Видеофайл (например, MP4), который будет использоваться в качестве сплэш-скрина. Рекомендуется использовать видео без звука для лучшего пользовательского опыта, так как внезапное воспроизведение звука при запуске приложения может быть нежелательным. Если ваше видео содержит звук, убедитесь, что он удален или отключен перед интеграцией.
+Шаг 1: Добавление видеофайла в проект
+Для того чтобы использовать видеофайл в вашем Android-приложении, его необходимо поместить в соответствующую директорию ресурсов.
+
+1.	Создайте директорию raw: В вашем проекте Android Studio перейдите в app/src/main/res. Если директории raw не существует, создайте ее. Для этого щелкните правой кнопкой мыши на директории res, выберите New -> Android Resource Directory. В диалоговом окне выберите Resource type как raw и нажмите OK.
+
+2.	Скопируйте видеофайл: Скопируйте ваш видеофайл (например, splash_video.mp4) в только что созданную директорию app/src/main/res/raw. Убедитесь, что имя файла состоит только из строчных букв, цифр и символов подчеркивания, без пробелов и специальных символов, так как это требование для имен ресурсов Android.
+
+Пример структуры директории:
+
+your_project/
+
+├── app/
+
+│   └── src/
+
+│       └── main/
+
+│           └── res/
+
+│               ├── drawable/
+
+│               ├── layout/
+
+│               ├── mipmap/
+
+│               ├── raw/                  <-- Ваша видеодиректория
+
+│               │   └── splash_video.mp4  <-- Ваш видеофайл
+
+│               └── values/
+
+└── build.gradle
+
+После выполнения этих шагов видеофайл будет доступен в вашем приложении по идентификатору ресурса R.raw.splash_video.
+Шаг 2: Реализация видео сплэш-скрина с помощью ExoPlayer и Compose
+Для воспроизведения видео в Android рекомендуется использовать библиотеку ExoPlayer. Это мощный и гибкий медиаплеер, который легко интегрируется с Jetpack Compose.
+2.1. Добавление зависимостей ExoPlayer
+Откройте файл build.gradle вашего модуля app и добавьте следующие зависимости в блок dependencies:
+
+dependencies {
+
+    // ... другие зависимости
+
+    implementation 'androidx.media3:media3-exoplayer:1.3.1'
+
+    implementation 'androidx.media3:media3-ui:1.3.1'
+
+    implementation 'androidx.compose.ui:ui-viewbinding:1.6.7' // Для использования AndroidView
+
+}
+
+После добавления зависимостей синхронизируйте проект с Gradle.
+2.2. Создание Composable для видеоплеера
+Создайте новый Composable-файл (например, VideoSplashScreen.kt) и добавьте следующий код. Этот Composable будет отвечать за инициализацию ExoPlayer, воспроизведение видео и уведомление о завершении воспроизведения, а также за адаптацию видео к различным ориентациям экрана.
+
+package com.example.mrcomic.ui.splash
+
+import android.net.Uri
+
+import androidx.compose.foundation.layout.fillMaxSize
+
+import androidx.compose.runtime.Composable
+
+import androidx.compose.runtime.DisposableEffect
+
+import androidx.compose.runtime.remember
+
+import androidx.compose.ui.Modifier
+
+import androidx.compose.ui.platform.LocalContext
+
+import androidx.compose.ui.viewinterop.AndroidView
+
+import androidx.media3.common.MediaItem
+
+import androidx.media3.exoplayer.ExoPlayer
+
+import androidx.media3.ui.PlayerView
+
+import androidx.media3.common.Player
+
+import androidx.media3.ui.AspectRatioFrameLayout // Импортируйте для setResizeMode
+
+@Composable
+
+fun VideoSplashScreen(
+
+    onVideoEnd: () -> Unit
+
+) {
+
+    val context = LocalContext.current
+
+    // Инициализация ExoPlayer
+
+    val exoPlayer = remember {
+
+        ExoPlayer.Builder(context).build().apply {
+
+            setMediaItem(MediaItem.fromUri(Uri.parse("android.resource://" + context.packageName + "/" + R.raw.splash_video)))
+
+            playWhenReady = true
+
+            prepare()
+
+            addListener(object : Player.Listener {
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+
+                    if (playbackState == Player.STATE_ENDED) {
+
+                        onVideoEnd()
+
+                    }
+
+                }
+
+            })
+
+        }
+
+    }
+
+    // Отображение PlayerView в Compose
+
+    AndroidView(
+
+        modifier = Modifier.fillMaxSize(),
+
+        factory = {
+
+            PlayerView(context).apply {
+
+                player = exoPlayer
+
+                useController = false // Отключить элементы управления плеером
+
+                // Адаптация видео к ориентации экрана
+
+                // RESIZE_MODE_ZOOM масштабирует видео так, чтобы оно заполнило PlayerView, обрезая края при необходимости.
+
+                // Это помогает избежать черных полос в портретной ориентации, но может обрезать часть контента.
+
+                setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
+
+            }
+
+        }
+
+    )
+
+    // Освобождение ресурсов плеера при выходе из Composable
+
+    DisposableEffect(Unit) {
+
+        onDispose {
+
+            exoPlayer.release()
+
+        }
+
+    }
+
+}
+
+Пояснения к коду:
+
+●	LocalContext.current: Получает текущий контекст Android, необходимый для инициализации ExoPlayer.
+●	ExoPlayer.Builder(context).build(): Создает экземпляр ExoPlayer.
+●	setMediaItem(MediaItem.fromUri(...)): Устанавливает источник медиафайла. android.resource:// используется для доступа к ресурсам из директории raw. context.packageName — это имя пакета вашего приложения, а R.raw.splash_video — идентификатор вашего видеофайла.
+●	playWhenReady = true: Начинает воспроизведение видео сразу после его готовности.
+●	prepare(): Подготавливает плеер к воспроизведению.
+●	addListener(object : Player.Listener { ... }): Добавляет слушатель для отслеживания состояния воспроизведения. Когда playbackState становится Player.STATE_ENDED, вызывается колбэк onVideoEnd(), который сигнализирует о завершении видео.
+●	AndroidView: Это Composable, который позволяет встраивать традиционные Android View (такие как PlayerView) в иерархию Compose UI. factory создает экземпляр PlayerView, а update (не используется явно здесь, но может быть использован для обновления свойств View) не требуется, так как плеер настраивается один раз.
+●	useController = false: Отключает стандартные элементы управления ExoPlayer (пауза, перемотка и т.д.), что идеально подходит для сплэш-скрина.
+●	setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM): Это ключевое изменение для адаптации. RESIZE_MODE_ZOOM масштабирует видео так, чтобы оно заполнило весь PlayerView, сохраняя при этом исходное соотношение сторон. Это означает, что если соотношение сторон видео не совпадает с соотношением сторон экрана, часть видео может быть обрезана по краям, но при этом не будет черных полос. Это часто является предпочтительным вариантом для сплэш-скринов, чтобы избежать пустых пространств.
+●	DisposableEffect(Unit): Этот эффект используется для управления жизненным циклом ExoPlayer. Когда Composable покидает композицию, вызывается блок onDispose, который освобождает ресурсы плеера (exoPlayer.release()), предотвращая утечки памяти.
+Шаг 3: Интеграция сплэш-скрина в MainActivity
+Теперь необходимо интегрировать VideoSplashScreen в вашу MainActivity так, чтобы он отображался при запуске приложения, а затем переходил к основному контенту.
+
+1.	Измените MainActivity.kt: Откройте app/src/main/java/com/example/mrcomic/MainActivity.kt (или соответствующий файл вашей главной активности) и измените его следующим образом:
+
+package com.example.mrcomic
+
+import android.os.Bundle
+
+import androidx.activity.ComponentActivity
+
+import androidx.activity.compose.setContent
+
+import androidx.compose.foundation.layout.fillMaxSize
+
+import androidx.compose.material3.MaterialTheme
+
+import androidx.compose.material3.Surface
+
+import androidx.compose.runtime.Composable
+
+import androidx.compose.ui.Modifier
+
+import androidx.navigation.NavType
+
+import androidx.navigation.compose.NavHost
+
+import androidx.navigation.compose.composable
+
+import androidx.navigation.compose.rememberNavController
+
+import androidx.navigation.navArgument
+
+import com.example.mrcomic.ui.AddComicScreen
+
+import com.example.mrcomic.ui.ComicDetailScreen
+
+import com.example.mrcomic.ui.LibraryScreen
+
+import com.example.mrcomic.ui.ReaderScreen
+
+import com.example.mrcomic.ui.SettingsScreen
+
+import com.example.mrcomic.ui.theme.MrComicTheme
+
+import dagger.hilt.android.AndroidEntryPoint
+
+import androidx.compose.runtime.getValue
+
+import androidx.compose.runtime.mutableStateOf
+
+import androidx.compose.runtime.setValue
+
+import com.example.mrcomic.ui.splash.VideoSplashScreen // Импортируйте ваш VideoSplashScreen
+
+@AndroidEntryPoint
+
+class MainActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+
+        super.onCreate(savedInstanceState)
+
+        setContent {
+
+            MrComicTheme {
+
+                Surface(
+
+                    modifier = Modifier.fillMaxSize(),
+
+                    color = MaterialTheme.colorScheme.background
+
+                ) {
+
+                    // Добавьте состояние для управления отображением сплэш-скрина
+
+                    var showSplashScreen by remember { mutableStateOf(true) }
+
+                    if (showSplashScreen) {
+
+                        VideoSplashScreen(onVideoEnd = {
+
+                            showSplashScreen = false
+
+                        })
+
+                    } else {
+
+                        MrComicApp() // Ваш основной контент приложения
+
+                    }
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
+// ... Ваш существующий Composable MrComicApp и другие Composable ...
+
+// (Убедитесь, что MrComicApp и другие Composable, которые вы определили ранее, находятся здесь)
+
+@Composable
+
+fun MrComicApp() {
+
+    val navController = rememberNavController()
+
+    
+
+    NavHost(
+
+        navController = navController,
+
+        startDestination = "library"
+
+    ) {
+
+        composable("library") {
+
+            LibraryScreen(
+
+                onNavigateToReader = { comicId ->
+
+                    navController.navigate("reader/$comicId")
+
+                },
+
+                onNavigateToDetail = { comicId ->
+
+                    navController.navigate("detail/$comicId")
+
+                },
+
+                onNavigateToSettings = {
+
+                    navController.navigate("settings")
+
+                }
+
+            )
+
+        }
+
+        
+
+        composable(
+
+            route = "reader/{comicId}",
+
+            arguments = listOf(
+
+                navArgument("comicId") { type = NavType.LongType }
+
+            )
+
+        ) { backStackEntry ->
+
+            val comicId = backStackEntry.arguments?.getLong("comicId") ?: 0L
+
+            ReaderScreen(
+
+                comicId = comicId,
+
+                onNavigateBack = {
+
+                    navController.popBackStack()
+
+                }
+
+            )
+
+        }
+
+        
+
+        composable(
+
+            route = "detail/{comicId}",
+
+            arguments = listOf(
+
+                navArgument("comicId") { type = NavType.LongType }
+
+            )
+
+        ) { backStackEntry ->
+
+            val comicId = backStackEntry.arguments?.getLong("comicId") ?: 0L
+
+            ComicDetailScreen(
+
+                comicId = comicId,
+
+                onNavigateBack = {
+
+                    navController.popBackStack()
+
+                },
+
+                onNavigateToReader = { id ->
+
+                    navController.navigate("reader/$id")
+
+                }
+
+            )
+
+        }
+
+        
+
+        composable("settings") {
+
+            SettingsScreen(
+
+                onNavigateBack = {
+
+                    navController.popBackStack()
+
+                }
+
+            )
+
+        }
+
+    }
+
+}
+
+Пояснения к изменениям:
+
+●	var showSplashScreen by remember { mutableStateOf(true) }: Объявляется состояние showSplashScreen, которое по умолчанию установлено в true. Это состояние будет управлять тем, что отображается на экране: сплэш-скрин или основной контент приложения.
+●	if (showSplashScreen) { ... } else { ... }: Это условное выражение определяет, какой Composable будет отображаться. Если showSplashScreen равно true, отображается VideoSplashScreen. Когда видео завершается, onVideoEnd вызывается, и showSplashScreen устанавливается в false, что приводит к перекомпоновке и отображению MrComicApp (вашего основного контента).
+Шаг 4: Дополнительные рекомендации и оптимизации
+4.1. Обработка ошибок и загрузки
+В реальном приложении может потребоваться добавить обработку ошибок загрузки видео или задержек. Вы можете расширить VideoSplashScreen для отображения индикатора загрузки или сообщения об ошибке, если видео не может быть воспроизведено.
+4.2. Оптимизация размера видео
+Для сплэш-скрина рекомендуется использовать максимально оптимизированное видео с минимальным размером файла. Это поможет уменьшить размер приложения и ускорить его запуск. Рассмотрите возможность сжатия видео и использования подходящего разрешения.
+4.3. Альтернативный сплэш-скрин
+В Android также существует механизм нативного сплэш-скрина, который отображается до того, как Compose UI будет готов. Вы можете использовать его для отображения статического изображения или цвета фона, пока видео сплэш-скрин загружается. Это создаст более плавный переход.
+4.4. Тестирование
+Тщательно протестируйте сплэш-скрин на различных устройствах и версиях Android, чтобы убедиться в его корректной работе и отсутствии задержек. Обратите внимание на производительность и потребление ресурсов.
+Заключение
+Интеграция видео в качестве сплэш-скрина в Android Compose-приложение — это эффективный способ сделать запуск вашего приложения более привлекательным и профессиональным. Следуя этим шагам, вы сможете успешно реализовать эту функциональность, обеспечивая при этом плавный и приятный пользовательский опыт.
+
+Автор: Manus AI
+Адаптация видео к различным ориентациям экрана
+Как было отмечено, отображение видео в качестве сплэш-скрина может столкнуться с проблемами при изменении ориентации экрана, особенно если соотношение сторон видео не совпадает с соотношением сторон устройства. Для решения этой проблемы и обеспечения корректного отображения видео как в горизонтальной, так и в вертикальной ориентации, рекомендуется использовать режим масштабирования RESIZE_MODE_ZOOM для PlayerView ExoPlayer.
+Использование RESIZE_MODE_ZOOM для адаптации
+RESIZE_MODE_ZOOM — это режим масштабирования, который позволяет видео заполнять весь доступный PlayerView, сохраняя при этом исходное соотношение сторон видео. Это достигается путем обрезки краев видео, если его соотношение сторон не совпадает с соотношением сторон PlayerView. Этот подход эффективен для сплэш-скринов, так как он предотвращает появление черных полос (letterboxing или pillarboxing), которые могут отвлекать пользователя и ухудшать визуальное восприятие.
+
+Преимущества RESIZE_MODE_ZOOM:
+
+●	Полное заполнение экрана: Видео всегда будет занимать всю доступную область PlayerView, независимо от соотношения сторон экрана.
+●	Сохранение соотношения сторон: Исходное соотношение сторон видео сохраняется, что предотвращает искажение изображения.
+●	Отсутствие черных полос: Благодаря заполнению всего экрана, черные полосы не появляются, что создает более иммерсивный опыт.
+
+Потенциальные недостатки RESIZE_MODE_ZOOM:
+
+●	Обрезка контента: Если видео содержит важные элементы по краям, они могут быть обрезаны при использовании RESIZE_MODE_ZOOM. Важно учитывать это при создании видео для сплэш-скрина.
+Изменение в VideoSplashScreen.kt
+Для применения RESIZE_MODE_ZOOM вам необходимо внести небольшое изменение в ваш Composable VideoSplashScreen. Убедитесь, что вы импортировали AspectRatioFrameLayout из androidx.media3.ui.
+
+package com.example.mrcomic.ui.splash
+
+import android.net.Uri
+
+import androidx.compose.foundation.layout.fillMaxSize
+
+import androidx.compose.runtime.Composable
+
+import androidx.compose.runtime.DisposableEffect
+
+import androidx.compose.runtime.remember
+
+import androidx.compose.ui.Modifier
+
+import androidx.compose.ui.platform.LocalContext
+
+import androidx.compose.ui.viewinterop.AndroidView
+
+import androidx.media3.common.MediaItem
+
+import androidx.media3.exoplayer.ExoPlayer
+
+import androidx.media3.ui.PlayerView
+
+import androidx.media3.common.Player
+
+import androidx.media3.ui.AspectRatioFrameLayout // Импортируйте для setResizeMode
+
+@Composable
+
+fun VideoSplashScreen(
+
+    onVideoEnd: () -> Unit
+
+) {
+
+    val context = LocalContext.current
+
+    // Инициализация ExoPlayer
+
+    val exoPlayer = remember {
+
+        ExoPlayer.Builder(context).build().apply {
+
+            setMediaItem(MediaItem.fromUri(Uri.parse("android.resource://" + context.packageName + "/" + R.raw.splash_video)))
+
+            playWhenReady = true
+
+            prepare()
+
+            addListener(object : Player.Listener {
+
+                override fun onPlaybackStateChanged(playbackState: Int) {
+
+                    if (playbackState == Player.STATE_ENDED) {
+
+                        onVideoEnd()
+
+                    }
+
+                }
+
+            })
+
+        }
+
+    }
+
+    // Отображение PlayerView в Compose
+
+    AndroidView(
+
+        modifier = Modifier.fillMaxSize(),
+
+        factory = {
+
+            PlayerView(context).apply {
+
+                player = exoPlayer
+
+                useController = false // Отключить элементы управления плеером
+
+                // Адаптация видео к ориентации экрана
+
+                // RESIZE_MODE_ZOOM масштабирует видео так, чтобы оно заполнило PlayerView, обрезая края при необходимости.
+
+                // Это помогает избежать черных полос в портретной ориентации, но может обрезать часть контента.
+
+                setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM)
+
+            }
+
+        }
+
+    )
+
+    // Освобождение ресурсов плеера при выходе из Composable
+
+    DisposableEffect(Unit) {
+
+        onDispose {
+
+            exoPlayer.release()
+
+        }
+
+    }
+
+}
+Рекомендации по созданию видео для сплэш-скрина
+Чтобы максимально эффективно использовать RESIZE_MODE_ZOOM и избежать нежелательной обрезки, при создании видео для сплэш-скрина рекомендуется учитывать следующие моменты:
+
+●	Центрирование важного контента: Убедитесь, что все ключевые элементы (например, логотип, текст) расположены в центральной части видеокадра. Это гарантирует, что они останутся видимыми даже при обрезке краев.
+●	Универсальное соотношение сторон: По возможности, создавайте видео с учетом того, что оно будет отображаться на экранах с различными соотношениями сторон. Избегайте размещения критически важной информации близко к краям кадра.
+●	Тестирование: Всегда тестируйте видео сплэш-скрин на различных устройствах и в разных ориентациях, чтобы убедиться, что он выглядит так, как задумано.
+Заключение
+Внесение изменения setResizeMode(AspectRatioFrameLayout.RESIZE_MODE_ZOOM) в ваш VideoSplashScreen Composable должно значительно улучшить отображение видео в вертикальной ориентации, устраняя проблему черных полос и обеспечивая полное заполнение экрана. Помните о рекомендациях по созданию видеоконтента, чтобы достичь наилучшего визуального результата.
+
+Автор: Manus AI
+
