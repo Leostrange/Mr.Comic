@@ -1,24 +1,20 @@
-# Временные и служебные папки
-.gradle/
-.idea/
+# Build directories
 build/
-node_modules/
-test_cache/
-results/
-__pycache__/
+**/build/
+**/.transforms/
+**/build.gradle.kts.bak
 
-# Декомпилированные APK и анализ
-decompiled_apk/
-analysis/
-
-# Локальные настройки
+# Android Studio
+.idea/
+*.iml
 local.properties
 
-# Старые релизы и APK
-releases/
-final_apk/
-*.apk
+# Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
 
-# Временные скрипты
-*.ps1
-*.bat
+# OS
+.DS_Store
+Thumbs.db
+
