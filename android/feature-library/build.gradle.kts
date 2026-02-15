@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":core-data"))
     implementation(project(":core-domain"))
     implementation(project(":core-model"))
+    implementation(project(":core-reader"))
     implementation(libs.bundles.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.viewmodel.compose)

@@ -16,6 +16,8 @@ import com.example.core.data.repository.SettingsRepository
 import com.example.core.data.repository.ReadingSessionRepository
 import com.example.core.data.reader.ReadingModeDetector
 import com.example.core.reader.preload.PagePreloader
+import com.example.core.reader.utils.ensureUriPermission
+import com.example.core.reader.utils.findPersistedUriFor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +37,8 @@ import kotlin.math.abs
 import kotlinx.coroutines.channels.BufferOverflow
 import android.os.SystemClock
 import androidx.compose.runtime.Immutable
+import com.example.feature.reader.ui.ReadingDirection
+import com.example.feature.reader.ui.ReadingMode
 
 @Immutable
 data class ReaderDiagnostics(

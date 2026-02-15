@@ -5,6 +5,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Progressive page loader with two-stage loading:
@@ -35,7 +37,7 @@ class ProgressivePageLoader(
     val pageStates: StateFlow<Map<Int, PageState>> = _pageStates.asStateFlow()
 
     private var currentLoadJobs = mutableMapOf<Int, Job>()
-    private val loadingSemaphore = kotlinx.coroutines.sync.Semaphore(MAX_CONCURRENT_LOADS)
+    private val loadingSemaphore = Semaphore(MAX_CONCURRENT_LOADS)
 
     /**
      * Load page progressively (thumbnail first, then full-res)
@@ -106,7 +108,7 @@ class ProgressivePageLoader(
     fun preloadPagesProgressive(
         currentPage: Int,
         totalPages: Int,
-        readingDirection: ReadingDirection = ReadingDirection.FORWARD
+        readingDirection: PreloadDirection = PreloadDirection.FORWARD
     ) {
         // Cancel old jobs for pages far from current
         cleanupDistantPages(currentPage)
@@ -144,12 +146,12 @@ class ProgressivePageLoader(
     private fun calculatePreloadPages(
         currentPage: Int,
         totalPages: Int,
-        direction: ReadingDirection
+        direction: PreloadDirection
     ): List<Int> {
         val pages = mutableListOf<Int>()
 
         when (direction) {
-            ReadingDirection.FORWARD -> {
+            PreloadDirection.FORWARD -> {
                 // Priority: current, +1, +2, +3, -1
                 pages.add(currentPage)
                 for (i in 1..PRELOAD_RANGE_FORWARD) {
@@ -158,7 +160,7 @@ class ProgressivePageLoader(
                 }
                 if (currentPage > 0) pages.add(currentPage - 1)
             }
-            ReadingDirection.BACKWARD -> {
+            PreloadDirection.BACKWARD -> {
                 // Priority: current, -1, -2, -3, +1
                 pages.add(currentPage)
                 for (i in 1..PRELOAD_RANGE_FORWARD) {
@@ -234,9 +236,9 @@ class ProgressivePageLoader(
 }
 
 /**
- * Reading direction for adaptive preloading
+ * Preload direction for adaptive page loading
  */
-enum class ReadingDirection {
-    FORWARD,  // Left-to-right, top-to-bottom
-    BACKWARD  // Right-to-left (manga), bottom-to-top
+enum class PreloadDirection {
+    FORWARD,  // Preload ahead (for left-to-right reading)
+    BACKWARD  // Preload behind (for right-to-left reading)
 }
