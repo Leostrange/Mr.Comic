@@ -53,6 +53,9 @@ dependencies {
     implementation(project(":core-model"))
     implementation(project(":core-data"))
 
+    // Feature modules
+    implementation(project(":feature-translate")) // For ML Kit offline translation
+
     // Hilt
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)

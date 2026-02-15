@@ -26,6 +26,15 @@ android {
 dependencies {
     implementation(project(":core-model"))
     implementation(libs.androidx.core.ktx)
+
+    // ML Kit Translate for offline translation
+    implementation(libs.mlkit.translate)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services) // For .await() extension
+
+    // Hilt DI
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
 }
