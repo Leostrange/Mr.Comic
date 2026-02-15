@@ -51,9 +51,14 @@ fun ReaderTapZones(
         val edgeWidthPx = with(density) { edgeWidthDp.toPx() }
         
         // Зоны листания: только в центре по вертикали (не в углах)
-        val edgeHeightRatio = 0.5f // 50% высоты экрана (центральная зона)
+        // Уменьшено с 0.5f до 0.4f для предотвращения перекрытия с углами
+        val edgeHeightRatio = 0.4f // 40% высоты экрана (центральная зона)
         val edgeHeightPx = h * edgeHeightRatio
         val edgeTopOffset = (h - edgeHeightPx) / 2f
+
+        // Безопасные смещения и размеры для предотвращения перекрытия с угловыми зонами
+        val safeEdgeTopOffset = kotlin.math.max(edgeTopOffset, cornerPx)
+        val safeEdgeHeight = kotlin.math.min(edgeHeightPx, h - 2 * cornerPx)
 
         // СТРОГАЯ ЗОНА 1: TopLeft (левый верхний угол) → TopPanel
         Box(
@@ -95,12 +100,12 @@ fun ReaderTapZones(
         )
 
         // СТРОГАЯ ЗОНА 4: Left edge (центр левого края) → Previous page
-        // Исключаем нижний левый угол, чтобы не конфликтовать с LeftPanel
+        // Использует безопасные смещения для предотвращения перекрытия с углами
         if (navigationTapZonesEnabled) {
             Box(
                 Modifier
-                    .offset { IntOffset(0, edgeTopOffset.roundToInt()) }
-                    .size(edgeWidthDp, (edgeHeightPx / density.density).dp)
+                    .offset { IntOffset(0, safeEdgeTopOffset.roundToInt()) }
+                    .size(edgeWidthDp, (safeEdgeHeight / density.density).dp)
                     .zIndex(1f)
                     .conditional(!panelsOpen) {
                         pointerInput(Unit) {
@@ -111,11 +116,12 @@ fun ReaderTapZones(
         }
 
         // СТРОГАЯ ЗОНА 5: Right edge (центр правого края) → Next page
+        // Использует безопасные смещения для предотвращения перекрытия с углами
         if (navigationTapZonesEnabled) {
             Box(
                 Modifier
-                    .offset { IntOffset((w - edgeWidthPx).roundToInt(), edgeTopOffset.roundToInt()) }
-                    .size(edgeWidthDp, (edgeHeightPx / density.density).dp)
+                    .offset { IntOffset((w - edgeWidthPx).roundToInt(), safeEdgeTopOffset.roundToInt()) }
+                    .size(edgeWidthDp, (safeEdgeHeight / density.density).dp)
                     .zIndex(1f)
                     .conditional(!panelsOpen) {
                         pointerInput(Unit) {

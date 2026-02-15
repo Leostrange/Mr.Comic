@@ -698,6 +698,7 @@ private fun PagedReaderWithGestures(
                     gestureSensitivity = uiState.gestureSensitivity,
                     isZoomed = scale > 1.0f + 0.001f,
                     blockSwipeWhenZoomed = true,
+                    navigationSwipeEnabled = readerSettings.navigationSwipeEnabled,
                     onGestureAction = { action ->
                         val anyPanelOpen = showTopPanel || showRightPanel
                         val isZoomed = scale > 1.0f + 0.001f

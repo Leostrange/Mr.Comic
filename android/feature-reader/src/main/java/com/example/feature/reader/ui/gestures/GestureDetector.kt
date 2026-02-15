@@ -11,7 +11,7 @@ import kotlin.math.abs
 
 /**
  * Modifier for detecting reader gestures
- * Handles tap, double tap, long press, and pinch-to-zoom
+ * Handles tap, double tap, long press, pinch-to-zoom, and swipe
  */
 fun Modifier.readerGestures(
     screenSize: IntSize,
@@ -19,6 +19,7 @@ fun Modifier.readerGestures(
     gestureSensitivity: Float = 1.0f,
     isZoomed: Boolean = false,
     blockSwipeWhenZoomed: Boolean = true,
+    navigationSwipeEnabled: Boolean = true,
     onGestureAction: (GestureAction) -> Unit
 ): Modifier {
     val gestureHandler = GestureHandler(screenSize, tapZoneConfig)
@@ -56,9 +57,9 @@ fun Modifier.readerGestures(
                 }
             }
         }
-        // Swipe gestures (only when not zoomed)
-        .pointerInput(isZoomed, blockSwipeWhenZoomed, screenSize) {
-            if (!isZoomed) { // Always block swipe when zoomed
+        // Swipe gestures (only when enabled and not zoomed)
+        .pointerInput(isZoomed, blockSwipeWhenZoomed, navigationSwipeEnabled, screenSize) {
+            if (navigationSwipeEnabled && !isZoomed) { // Check if swipe enabled and not zoomed
                 var startPosition = Offset.Zero
                 var isDragging = false
                 
