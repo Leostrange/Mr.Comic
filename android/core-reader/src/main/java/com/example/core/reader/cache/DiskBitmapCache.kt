@@ -91,6 +91,7 @@ class DiskBitmapCache @Inject constructor(
             if (shouldCleanup()) {
                 cleanupOldFiles()
             }
+            Unit // Explicit return for withContext
         } catch (e: IOException) {
             android.util.Log.e(TAG, "Failed to write to disk cache: $key", e)
         }
@@ -113,6 +114,7 @@ class DiskBitmapCache @Inject constructor(
                 file.delete()
                 android.util.Log.d(TAG, "🗑️ Removed from disk cache: $key")
             }
+            Unit // Explicit return for withContext
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Failed to remove from disk cache: $key", e)
         }
