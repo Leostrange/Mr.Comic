@@ -466,135 +466,33 @@ class ReaderViewModel @Inject constructor(
                     bitmaps = emptyMap()
                 )
             }
-            
-            // 🔥 КРИТИЧЕСКИ ВАЖНО: Проверяем и запрашиваем permissions для content:// URI
+
+            // Ensure we have permission to read the URI
             if (uri.scheme == "content") {
-                try {
-                    android.util.Log.d(TAG, "🔐 Checking permissions for content URI: $uri")
-                    
-                    // Проверяем, есть ли у нас уже persistable permission
-                    val persistedUris = context.contentResolver.persistedUriPermissions
-                    
-                    // 🔥 ВАЖНО: Проверяем permission для разных вариантов URI (encoded/decoded)
-                    // Потому что Android может сохранять их по-разному
-                    val uriString = uri.toString()
-                    val uriStringDecoded = android.net.Uri.decode(uriString)
-                    
-                    // Ищем persisted URI, который соответствует нашему URI
-                    var matchedPersistedUri: Uri? = null
-                    val hasPermission = persistedUris.any { persistedUri ->
-                        val persistedUriString = persistedUri.uri.toString()
-                        val persistedUriStringDecoded = android.net.Uri.decode(persistedUriString)
-                        
-                        // Сравниваем как encoded, так и decoded варианты
-                        val match = ((persistedUri.uri == uri) ||
-                                    (persistedUriString == uriString) ||
-                                    (persistedUriStringDecoded == uriString) ||
-                                    (persistedUriString == uriStringDecoded) ||
-                                    (persistedUriStringDecoded == uriStringDecoded)) &&
-                                   persistedUri.isReadPermission
-                        
-                        if (match) {
-                            matchedPersistedUri = persistedUri.uri
-                            android.util.Log.d(TAG, "✅ Found matching persisted URI: ${persistedUri.uri}")
-                        }
-                        match
+                if (!context.ensureUriPermission(uri)) {
+                    android.util.Log.e(TAG, "❌ Cannot access URI: $uri")
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            error = "Нет доступа к файлу. Пожалуйста, добавьте файл заново через библиотеку."
+                        )
                     }
-                    
-                    if (!hasPermission) {
-                        android.util.Log.w(TAG, "⚠️ No persistable permission found for URI: $uri")
-                        android.util.Log.d(TAG, "📋 Current persisted URIs (${persistedUris.size}):")
-                        persistedUris.forEach { 
-                            android.util.Log.d(TAG, "  - ${it.uri} (read=${it.isReadPermission}, write=${it.isWritePermission})")
-                        }
-                        
-                        // Пытаемся взять persistable permission (может не сработать, если URI не поддерживает)
-                        try {
-                            context.contentResolver.takePersistableUriPermission(
-                                uri,
-                                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                            )
-                            android.util.Log.d(TAG, "✅ Successfully took persistable URI permission")
-                        } catch (e: SecurityException) {
-                            android.util.Log.w(TAG, "⚠️ Could not take persistable permission: ${e.message}")
-                            // Это нормально для некоторых URI, продолжаем
-                        }
-                    } else {
-                        android.util.Log.d(TAG, "✅ Persistable permission already exists for URI")
-                        
-                        // 🔥 КРИТИЧЕСКИ ВАЖНО: Используем persisted URI вместо decoded URI
-                        // Потому что permission работает только с тем URI, для которого он был взят
-                        if (matchedPersistedUri != null && matchedPersistedUri != uri) {
-                            android.util.Log.d(TAG, "🔄 Replacing decoded URI with persisted URI")
-                            android.util.Log.d(TAG, "   Original: $uri")
-                            android.util.Log.d(TAG, "   Persisted: $matchedPersistedUri")
-                            // Заменяем URI на persisted вариант для дальнейшего использования
-                            val persistedUri = matchedPersistedUri!!
-                            
-                            // Проверяем, можем ли мы прочитать файл с persisted URI
-                            try {
-                                context.contentResolver.openInputStream(persistedUri)?.use {
-                                    android.util.Log.d(TAG, "✅ Successfully opened input stream with persisted URI")
-                                }
-                                // Если успешно, обновляем URI для дальнейшего использования
-                                // Но это не сработает, потому что uri - это val параметр
-                                // Нужно передавать persistedUri дальше в код
-                            } catch (e: SecurityException) {
-                                android.util.Log.e(TAG, "❌ SecurityException with persisted URI: ${e.message}")
-                            }
-                        }
-                    }
-                    
-                    // Проверяем, можем ли мы вообще прочитать файл
-                    // Используем matchedPersistedUri если он есть, иначе original uri
-                    val uriToUse = matchedPersistedUri ?: uri
-                    try {
-                        context.contentResolver.openInputStream(uriToUse)?.use {
-                            android.util.Log.d(TAG, "✅ Successfully opened input stream for URI")
-                        }
-                    } catch (e: SecurityException) {
-                        android.util.Log.e(TAG, "❌ SecurityException: Cannot read URI: ${e.message}")
-                        _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                error = "Нет доступа к файлу. Пожалуйста, добавьте файл заново через библиотеку."
-                            )
-                        }
-                        return@launch
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e(TAG, "❌ Error checking permissions", e)
+                    return@launch
                 }
+                android.util.Log.d(TAG, "✅ Permission granted for URI: $uri")
             }
-            
-            // 🔥 ВАЖНО: Определяем финальный URI для использования
-            // Если нашли persisted URI, используем его, иначе используем original
+
+            // Find the persisted URI that matches (if any)
             val finalUri = if (uri.scheme == "content") {
-                val persistedUris = context.contentResolver.persistedUriPermissions
-                val uriString = uri.toString()
-                val uriStringDecoded = android.net.Uri.decode(uriString)
-                
-                val matched = persistedUris.find { persistedUri ->
-                    val persistedUriString = persistedUri.uri.toString()
-                    val persistedUriStringDecoded = android.net.Uri.decode(persistedUriString)
-                    
-                    ((persistedUri.uri == uri) ||
-                     (persistedUriString == uriString) ||
-                     (persistedUriStringDecoded == uriString) ||
-                     (persistedUriString == uriStringDecoded) ||
-                     (persistedUriStringDecoded == uriStringDecoded)) &&
-                    persistedUri.isReadPermission
-                }
-                
-                matched?.uri ?: uri
+                context.findPersistedUriFor(uri)?.also { persistedUri ->
+                    if (persistedUri != uri) {
+                        android.util.Log.d(TAG, "🔄 Using persisted URI")
+                        android.util.Log.d(TAG, "   Original: $uri")
+                        android.util.Log.d(TAG, "   Final: $persistedUri")
+                    }
+                } ?: uri
             } else {
                 uri
-            }
-            
-            if (finalUri != uri) {
-                android.util.Log.d(TAG, "🔄 Using persisted URI instead of decoded URI")
-                android.util.Log.d(TAG, "   Original: $uri")
-                android.util.Log.d(TAG, "   Final: $finalUri")
             }
             
             // Закрываем предыдущий reader при открытии новой книги

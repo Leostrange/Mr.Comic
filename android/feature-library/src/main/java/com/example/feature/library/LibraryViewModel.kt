@@ -11,6 +11,7 @@ import com.example.core.data.repository.FolderRepository
 import com.example.core.data.scanner.LibraryScanManager
 import com.example.core.model.Comic
 import com.example.core.model.Folder
+import com.example.core.reader.utils.requestPersistablePermission
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -488,14 +489,10 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
-                
-                // Persist permissions for the file
-                try {
-                    val flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    context.contentResolver.takePersistableUriPermission(uri, flags)
-                    android.util.Log.d("LibraryViewModel", "✅ Persisted permissions for file: $uri")
-                } catch (e: Exception) {
-                    android.util.Log.w("LibraryViewModel", "Could not take persistable permission for file: $uri", e)
+
+                // Request persistent permission for the file
+                if (!context.requestPersistablePermission(uri)) {
+                    android.util.Log.w("LibraryViewModel", "⚠️ Could not obtain persistent permission for: $uri")
                 }
 
                 importComic(uri, folderId)
@@ -634,14 +631,10 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 _uiState.update { it.copy(isLoading = true, error = null) }
-                
-                // Persist permissions for the directory
-                try {
-                    val flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    context.contentResolver.takePersistableUriPermission(uri, flags)
-                    android.util.Log.d("LibraryViewModel", "✅ Persisted permissions for directory: $uri")
-                } catch (e: Exception) {
-                    android.util.Log.w("LibraryViewModel", "Could not take persistable permission for directory: $uri", e)
+
+                // Request persistent permission for the directory
+                if (!context.requestPersistablePermission(uri)) {
+                    android.util.Log.w("LibraryViewModel", "⚠️ Could not obtain persistent permission for directory: $uri")
                 }
 
                 val stats = withContext(Dispatchers.IO) {
