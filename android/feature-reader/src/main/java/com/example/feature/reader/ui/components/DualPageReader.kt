@@ -101,13 +101,27 @@ fun DualPageReader(
             val rightBitmap = rightPage?.let { uiState.bitmaps[it] }
 
             if (leftBitmap != null) {
-                val imageW = leftBitmap.width.toFloat()
-                val imageH = leftBitmap.height.toFloat()
+                // Исправленный расчет масштаба для разворота
+                val leftW = leftBitmap.width.toFloat()
+                val leftH = leftBitmap.height.toFloat()
+                val rightW = rightBitmap?.width?.toFloat() ?: 0f
 
-                // Базовый масштаб по высоте (две страницы делят ширину пополам)
-                val baseScale = screenH / imageH
-                val spreadWidth = imageW * baseScale * (if (rightBitmap != null) 2f else 1f)
-                val spreadHeight = imageH * baseScale
+                // Общая ширина разворота (левая + правая страница)
+                val totalWidth = leftW + rightW
+
+                // Сначала пробуем вписать по высоте
+                val scaleToFitHeight = screenH / leftH
+                val widthAfterHeightFit = totalWidth * scaleToFitHeight
+
+                // Если после подгонки по высоте разворот не влезает по ширине - ограничиваем ширину
+                val baseScale = if (widthAfterHeightFit > screenW) {
+                    screenW / totalWidth  // Ограничено шириной экрана
+                } else {
+                    scaleToFitHeight      // Ограничено высотой экрана
+                }
+
+                val spreadWidth = totalWidth * baseScale
+                val spreadHeight = leftH * baseScale
 
                 Box(
                     modifier = Modifier
