@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mr.Comic</string>
+    <string name="previous_button">Previous</string>
+    <string name="next_button">Next</string>
+    
+    <!-- App Icon Settings -->
+    <string name="app_icon_settings">App Icon</string>
+    <string name="app_icon_settings_description">Choose your preferred app icon</string>
+    <string name="app_icon_default">Default</string>
+    <string name="app_icon_change_error">Failed to change app icon</string>
+    
+    <!-- Error handling -->
+    <string name="error_log">Error Log</string>
+    <string name="export_errors">Export Errors</string>
+    
+    <!-- Translation Result -->
+    <string name="desc_offline_mode">Offline mode indicator</string>
+    <string name="label_original">Original</string>
+    <string name="label_translation">Translation</string>
+    <string name="label_error">Error</string>
+    <string name="action_share">Share</string>
+    <string name="action_copy">Copy</string>
+    
+    <!-- Navigation -->
+    <string name="library">Library</string>
+    <string name="translation">Translation</string>
+    <string name="settings">Settings</string>
+</resources>
