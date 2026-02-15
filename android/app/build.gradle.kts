@@ -36,8 +36,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // Aggressive optimizations for APK size
+            ndk {
+                debugSymbolLevel = "NONE" // No debug symbols in release
+            }
         }
-        
+
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"
@@ -49,16 +54,32 @@ android {
     // CBR/CBZ support - using regular dependency instead of dynamic feature
     // dynamicFeatures.add(":android:feature_cbr")
     
-    // App Bundle конфигурация
+    // App Bundle configuration for smaller APK sizes
     bundle {
-        language.enableSplit = false
-        density.enableSplit = false
-        abi.enableSplit = false
+        language {
+            enableSplit = true // Separate languages into splits
+        }
+        density {
+            enableSplit = true // Separate densities (xxhdpi, xxxhdpi, etc)
+        }
+        abi {
+            enableSplit = true // Separate ABIs (arm64-v8a, armeabi-v7a, etc)
+        }
     }
-    
-    // Отключаем все сплиты для создания универсального APK
+
+    // APK splits для уменьшения размера (используется при assembleRelease)
     splits {
-        abi.isEnable = false
+        abi {
+            isEnable = true
+            reset() // Clear default includes
+            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64") // Most common ABIs
+            isUniversalApk = true // Also generate universal APK
+        }
+        density {
+            isEnable = true
+            reset()
+            include("mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi")
+        }
     }
     
     compileOptions {
