@@ -15,13 +15,61 @@ object BitmapUtils {
     private const val TAG = "BitmapUtils"
     
     /**
+     * Detect if image has alpha channel
+     */
+    fun hasAlpha(data: ByteArray): Boolean {
+        return try {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeByteArray(data, 0, data.size, options)
+            options.outConfig == Bitmap.Config.ARGB_8888 && options.outWidth > 0
+        } catch (e: Exception) {
+            true // Assume has alpha on error (safer)
+        }
+    }
+
+    /**
+     * Choose optimal bitmap config based on image properties and memory
+     */
+    fun chooseOptimalConfig(
+        hasAlpha: Boolean,
+        forceLowMemory: Boolean = false
+    ): Bitmap.Config {
+        return if (hasAlpha) {
+            Bitmap.Config.ARGB_8888 // Must use ARGB for transparency
+        } else {
+            // For opaque images, use RGB_565 to save 50% memory
+            // Only use ARGB_8888 if high quality explicitly requested and memory allows
+            if (forceLowMemory || isMemoryConstrained()) {
+                android.util.Log.d(TAG, "Using RGB_565 (50% memory savings)")
+                Bitmap.Config.RGB_565
+            } else {
+                Bitmap.Config.ARGB_8888
+            }
+        }
+    }
+
+    /**
+     * Check if device is memory constrained
+     */
+    private fun isMemoryConstrained(): Boolean {
+        val runtime = Runtime.getRuntime()
+        val usedMemory = runtime.totalMemory() - runtime.freeMemory()
+        val maxMemory = runtime.maxMemory()
+        val memoryUsage = usedMemory.toFloat() / maxMemory
+        return memoryUsage > 0.75f // > 75% memory used
+    }
+
+    /**
      * Декодировать bitmap с downsample под размер экрана
+     * Автоматически выбирает оптимальный config (RGB_565 или ARGB_8888)
      */
     fun decodeSampledBitmap(
         data: ByteArray,
         reqWidth: Int,
         reqHeight: Int,
-        config: Bitmap.Config = Bitmap.Config.ARGB_8888 // По умолчанию высокое качество
+        config: Bitmap.Config? = null // null = auto-detect
     ): Bitmap? {
         return try {
             // Сначала декодируем только размеры
@@ -29,20 +77,32 @@ object BitmapUtils {
                 inJustDecodeBounds = true
             }
             BitmapFactory.decodeByteArray(data, 0, data.size, options)
-            
+
+            // Auto-detect optimal config if not specified
+            val finalConfig = config ?: chooseOptimalConfig(
+                hasAlpha = options.outConfig == Bitmap.Config.ARGB_8888,
+                forceLowMemory = false
+            )
+
             // Вычисляем inSampleSize
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
-            
+
             // Декодируем с downsample
             options.inJustDecodeBounds = false
-            options.inPreferredConfig = config
+            options.inPreferredConfig = finalConfig
             options.inDither = false // Отключаем дизеринг для лучшей резкости
             options.inScaled = false // Отключаем автоматическое масштабирование
             options.inPremultiplied = false // Отключаем предварительное умножение альфы
             options.inPurgeable = true
             options.inInputShareable = true
-            
-            BitmapFactory.decodeByteArray(data, 0, data.size, options)
+
+            val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, options)
+
+            if (bitmap != null && finalConfig == Bitmap.Config.RGB_565) {
+                android.util.Log.d(TAG, "✅ Decoded as RGB_565: ${bitmap.width}x${bitmap.height} (50% memory saved)")
+            }
+
+            bitmap
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Failed to decode sampled bitmap", e)
             null
@@ -51,12 +111,13 @@ object BitmapUtils {
     
     /**
      * Декодировать bitmap из файла с downsample
+     * Автоматически выбирает оптимальный config (RGB_565 или ARGB_8888)
      */
     fun decodeSampledBitmapFromFile(
         filePath: String,
         reqWidth: Int,
         reqHeight: Int,
-        config: Bitmap.Config = Bitmap.Config.ARGB_8888 // По умолчанию высокое качество
+        config: Bitmap.Config? = null // null = auto-detect
     ): Bitmap? {
         return try {
             // Сначала декодируем только размеры
@@ -64,18 +125,30 @@ object BitmapUtils {
                 inJustDecodeBounds = true
             }
             BitmapFactory.decodeFile(filePath, options)
-            
+
+            // Auto-detect optimal config if not specified
+            val finalConfig = config ?: chooseOptimalConfig(
+                hasAlpha = options.outConfig == Bitmap.Config.ARGB_8888,
+                forceLowMemory = false
+            )
+
             // Вычисляем inSampleSize
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
-            
+
             // Декодируем с downsample
             options.inJustDecodeBounds = false
-            options.inPreferredConfig = config
+            options.inPreferredConfig = finalConfig
             options.inDither = false // Отключаем дизеринг для лучшей резкости
             options.inScaled = false // Отключаем автоматическое масштабирование
             options.inPremultiplied = false // Отключаем предварительное умножение альфы
-            
-            BitmapFactory.decodeFile(filePath, options)
+
+            val bitmap = BitmapFactory.decodeFile(filePath, options)
+
+            if (bitmap != null && finalConfig == Bitmap.Config.RGB_565) {
+                android.util.Log.d(TAG, "✅ Decoded as RGB_565: ${bitmap.width}x${bitmap.height} (50% memory saved)")
+            }
+
+            bitmap
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Failed to decode sampled bitmap from file: $filePath", e)
             null
