@@ -11,14 +11,13 @@ import com.example.core.reader.domain.MediaType
 import com.example.core.reader.domain.UnsupportedFormatException
 import com.example.core.reader.cache.PageByteCache
 import com.example.core.reader.utils.BitmapUtils
+import com.example.core.reader.utils.ensureUriPermission
 import com.github.junrar.Archive
 import com.github.junrar.rarfile.FileHeader
 import java.io.ByteArrayOutputStream
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /**
  * CBR/RAR Reader implementation using JunRAR library
@@ -28,9 +27,6 @@ class CbrReader @Inject constructor(
     private val context: Context,
     private val cbrToCbzConverter: CbrToCbzConverter? = null
 ) : MediaReader {
-    
-    // Mutex для последовательной распаковки RAR файлов
-    private val rarMutex = Mutex()
     
     // Fallback режим для проблемных архивов
     private var errorCount = 0
@@ -69,19 +65,13 @@ class CbrReader @Inject constructor(
             
             currentUri = uri
             
-            // Check and request permissions for content:// URIs
+            // Ensure we have permission to read the URI
             if (uri.scheme == "content") {
-                try {
-                    // Try to take persistable permission
-                    context.contentResolver.takePersistableUriPermission(
-                        uri, 
-                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                    android.util.Log.d(TAG, "✅ CBR DIAGNOSTIC: Persistable permission granted for URI: $uri")
-                } catch (e: SecurityException) {
-                    android.util.Log.w(TAG, "⚠️ CBR DIAGNOSTIC: Could not take persistable permission: ${e.message}")
-                    // Continue anyway, might work with temporary permission
+                if (!context.ensureUriPermission(uri)) {
+                    android.util.Log.e(TAG, "❌ CBR DIAGNOSTIC: No permission for URI: $uri")
+                    return Result.failure(UnsupportedFormatException("Нет доступа к файлу. Пожалуйста, добавьте файл заново."))
                 }
+                android.util.Log.d(TAG, "✅ CBR DIAGNOSTIC: Permission granted for URI: $uri")
             }
             
             // Open the RAR archive
@@ -254,17 +244,10 @@ class CbrReader @Inject constructor(
             } ?: run {
                 val outputStream = ByteArrayOutputStream()
                 try {
-                    // Create a local archive instance for this operation to avoid thread conflicts
-                    // when extracting files from RAR archives concurrently
-                    val localArchive = Archive(localTempFile)
-                    try {
-                        // Используем Mutex для последовательной распаковки RAR файлов
-                        rarMutex.withLock {
-                            localArchive.extractFile(fileHeader, outputStream)
-                        }
-                    } finally {
-                        // Закрываем локальный экземпляр после использования
-                        localArchive.close()
+                    // Create a thread-local archive instance for concurrent extraction
+                    // Each operation gets its own Archive instance to avoid conflicts
+                    Archive(localTempFile).use { threadLocalArchive ->
+                        threadLocalArchive.extractFile(fileHeader, outputStream)
                     }
                 } catch (e: java.lang.AssertionError) {
                     android.util.Log.e(TAG, "AssertionError in junrar PPM block for page $pageIndex: ${e.message}", e)
