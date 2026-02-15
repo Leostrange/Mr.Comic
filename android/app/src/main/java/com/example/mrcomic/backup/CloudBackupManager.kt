@@ -265,22 +265,158 @@ class CloudBackupManager @Inject constructor(
     suspend fun restoreFromBackup(backupId: String): Result<Unit> {
         return try {
             _syncStatus.value = BackupSyncStatus.SYNCING
-            
-            // TODO: Реализовать восстановление из бэкапа
+
+            // Определяем тип бэкапа по ID
+            when {
+                // Локальный ZIP бэкап (CloudBackupManager)
+                backupId.startsWith("local_") -> {
+                    val timestamp = backupId.removePrefix("local_")
+                    val backupFile = File(context.getExternalFilesDir(null), "backups/mrcomic_backup_$timestamp.zip")
+
+                    if (!backupFile.exists()) {
+                        return Result.failure(Exception("Backup file not found: ${backupFile.name}"))
+                    }
+
+                    restoreFromZipBackup(backupFile)
+                }
+
+                // LibraryBackupManager .mrcomic бэкап
+                backupId.endsWith(".mrcomic") -> {
+                    val downloadsDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "MrComicBackups")
+                    val backupFile = File(downloadsDir, backupId)
+
+                    if (!backupFile.exists()) {
+                        return Result.failure(Exception("Backup file not found: $backupId"))
+                    }
+
+                    // Делегируем в LibraryBackupManager
+                    val result = settingsRepository.restoreLocalBackup(backupId)
+                    Result.success(Unit)
+                }
+
+                else -> {
+                    return Result.failure(Exception("Unknown backup type: $backupId"))
+                }
+            }
+
             _syncStatus.value = BackupSyncStatus.COMPLETED
+            android.util.Log.d(TAG, "✅ Backup restored: $backupId")
             Result.success(Unit)
-            
+
         } catch (e: Exception) {
             _syncStatus.value = BackupSyncStatus.ERROR
+            android.util.Log.e(TAG, "❌ Failed to restore backup: $backupId", e)
             Result.failure(e)
         }
     }
-    
+
+    /**
+     * Восстановление из ZIP архива
+     */
+    private suspend fun restoreFromZipBackup(backupFile: File) {
+        val tempDir = File(context.cacheDir, "restore_temp_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+
+        try {
+            // Распаковываем ZIP
+            java.util.zip.ZipInputStream(backupFile.inputStream()).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val file = File(tempDir, entry.name)
+                    if (!entry.isDirectory) {
+                        file.outputStream().use { output ->
+                            zip.copyTo(output)
+                        }
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
+                }
+            }
+
+            // Восстанавливаем настройки
+            val settingsFile = File(tempDir, "settings.json")
+            if (settingsFile.exists()) {
+                val settingsJson = settingsFile.readText()
+                val snapshot = Gson().fromJson(settingsJson, SettingsRepository.SettingsSnapshot::class.java)
+                settingsRepository.applySettingsSnapshot(snapshot)
+                android.util.Log.d(TAG, "✅ Settings restored from backup")
+            }
+
+            // TODO: Восстановить reading_progress.json в базу данных
+            val progressFile = File(tempDir, "reading_progress.json")
+            if (progressFile.exists()) {
+                android.util.Log.d(TAG, "⚠️ Reading progress restore not yet implemented")
+            }
+
+            // TODO: Восстановить themes.json
+            val themesFile = File(tempDir, "themes.json")
+            if (themesFile.exists()) {
+                android.util.Log.d(TAG, "⚠️ Custom themes restore not yet implemented")
+            }
+
+        } finally {
+            // Очищаем временную директорию
+            if (tempDir.exists()) {
+                tempDir.deleteRecursively()
+            }
+        }
+    }
+
     /**
      * Получить список доступных бэкапов
      */
     suspend fun getAvailableBackups(): List<BackupInfo> {
-        return emptyList() // TODO: Реализовать получение списка бэкапов
+        val backups = mutableListOf<BackupInfo>()
+
+        try {
+            // 1. Сканируем ZIP бэкапы CloudBackupManager
+            val cloudBackupsDir = File(context.getExternalFilesDir(null), "backups")
+            if (cloudBackupsDir.exists()) {
+                cloudBackupsDir.listFiles { file ->
+                    file.name.startsWith("mrcomic_backup_") && file.name.endsWith(".zip")
+                }?.forEach { file ->
+                    // Извлекаем timestamp из имени файла
+                    val timestamp = file.name.removePrefix("mrcomic_backup_").removeSuffix(".zip").toLongOrNull()
+                    if (timestamp != null) {
+                        backups.add(BackupInfo(
+                            id = "local_$timestamp",
+                            provider = "local",
+                            timestamp = timestamp,
+                            size = file.length(),
+                            description = "Локальный ZIP бэкап"
+                        ))
+                    }
+                }
+            }
+
+            // 2. Сканируем .mrcomic бэкапы LibraryBackupManager
+            val downloadsDir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "MrComicBackups")
+            if (downloadsDir.exists()) {
+                downloadsDir.listFiles { file ->
+                    file.name.endsWith(".mrcomic")
+                }?.forEach { file ->
+                    // Извлекаем timestamp из имени файла
+                    val timestamp = file.name.removePrefix("mrcomic_backup_").removeSuffix(".mrcomic").toLongOrNull()
+                    backups.add(BackupInfo(
+                        id = file.name,
+                        provider = "local",
+                        timestamp = timestamp ?: file.lastModified(),
+                        size = file.length(),
+                        description = "Локальный бэкап библиотеки"
+                    ))
+                }
+            }
+
+            // Сортируем по времени (новые сначала)
+            backups.sortByDescending { it.timestamp }
+
+            android.util.Log.d(TAG, "✅ Found ${backups.size} available backups")
+
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "❌ Failed to list available backups", e)
+        }
+
+        return backups
     }
 }
 
