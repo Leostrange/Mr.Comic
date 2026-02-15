@@ -105,10 +105,15 @@ fun computeBaseScale(
     mode: FitMode,
     containerW: Float, containerH: Float,
     imageW: Float, imageH: Float
-): Float = when (mode) {
-    FitMode.FitWidth  -> containerW / imageW
-    FitMode.FitHeight -> containerH / imageH
-    FitMode.Fill      -> max(containerW / imageW, containerH / imageH)
+): Float {
+    // Safety check for zero or negative dimensions
+    if (imageW <= 0 || imageH <= 0) return 1.0f
+
+    return when (mode) {
+        FitMode.FitWidth  -> containerW / imageW
+        FitMode.FitHeight -> containerH / imageH
+        FitMode.Fill      -> max(containerW / imageW, containerH / imageH)
+    }
 }
 
 /**
