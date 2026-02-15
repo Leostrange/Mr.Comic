@@ -36,14 +36,7 @@
             android:name=".splash.VideoSplashActivity"
             android:exported="false"
             android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
-        
-        <!-- App Icon Settings Activity -->
-        <activity
-            android:name=".ui.settings.AppIconSettingsActivity"
-            android:exported="false"
-            android:label="@string/app_icon_settings"
-            android:theme="@style/Theme.MrComic" />
-        
+
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
