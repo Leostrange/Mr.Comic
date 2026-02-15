@@ -127,6 +127,21 @@
                 <data android:scheme="file" android:pathPattern=".*\\.zip" />
                 <data android:scheme="file" android:pathPattern=".*\\.ZIP" />
             </intent-filter>
+
+            <!-- EPUB files -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/epub+zip" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" android:pathPattern=".*\\.epub" />
+                <data android:scheme="file" android:pathPattern=".*\\.EPUB" />
+            </intent-filter>
         </activity>
 
         <!-- Alternative app icons -->

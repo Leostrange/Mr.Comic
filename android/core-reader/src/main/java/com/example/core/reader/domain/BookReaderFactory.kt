@@ -6,7 +6,7 @@ import com.example.core.reader.data.CachingBookReader
 import com.example.core.reader.data.CbrReader
 import com.example.core.reader.data.CbrToCbzConverter
 import com.example.core.reader.data.CbzReader
-// import com.example.core.reader.data.EpubReader // Temporarily disabled
+import com.example.core.reader.data.EpubReader
 import com.example.core.reader.data.ImageSeqReader
 import com.example.core.reader.data.PdfReader
 // import com.example.core.reader.data.DjvuReader // Removed - missing library
@@ -126,11 +126,10 @@ class BookReaderFactory(
                 android.util.Log.d(TAG, "Creating PDF reader")
                 PdfReader(context, thumbnailCache)
             }
-            // "epub" -> {
-            //     android.util.Log.d(TAG, "Creating EPUB reader")
-            //     // EpubReader(context) // Temporarily disabled due to compilation issues
-            //     throw UnsupportedFormatException("EPUB support temporarily disabled")
-            // }
+            "epub" -> {
+                android.util.Log.d(TAG, "Creating EPUB reader")
+                EpubReader(context)
+            }
             // Handle directories as image sequences
             "" -> {
                 android.util.Log.d(TAG, "Creating Image Sequence reader for directory")
