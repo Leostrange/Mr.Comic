@@ -1,0 +1,29 @@
+# Task List for Mr.Comic Library Customization Analysis
+
+[x] Analyze library customization issues from user report
+[x] Investigate SettingsScreen.kt for broken library settings
+[x] Check LibraryVisualStyle.kt for styling logic implementation
+[x] Examine how settings are persisted and applied to library
+[x] Fix card density (Compact/Balanced/Showcase) functionality
+[x] Fix graphic cover styles (Poster/Ink/Minimal) styles
+[x] Fix cover scale (Fill/Fit) implementation
+[x] Fix shelf presets and styles
+[x] Fix background presets and book zones
+[x] Fix shelf depth and card shadow controls
+[x] Clean up non-working settings and overloaded elements
+
+## Runtime Reality Check
+
+This audit file was marking the customization pass as complete too early.
+The core audit items above are done, but runtime library polish is still continuing.
+
+[x] Add a real selected background-image preview in Library settings
+[x] Replace plain text background preset chips with visual preset cards
+[x] Restore shelf style / shelf depth / card shadow controls in the Shelves & background block
+[x] Restore quick presets and saved library themes in the live Settings UI
+[~] Continue device-side visual validation of shelves, presets, and card rhythm
+[x] Bring the live library preview closer to real runtime behavior:
+    card density, cover scale, thumbnail shape, progress visibility and shelf style are now reflected in the preview itself
+[x] Bring quick presets and saved themes back into the real "Shelves & background" screen:
+    the cards are rendered in the live Settings UI instead of existing only in the ViewModel / helper layer
+[x] Keep tasklist2 in sync with the real project state instead of the old "all done" marker

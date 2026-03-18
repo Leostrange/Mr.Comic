@@ -1,0 +1,136 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt.android)
+    alias(libs.plugins.ksp)
+}
+
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
+android {
+    namespace = "com.example.mrcomic"
+    compileSdk = libs.versions.compileSdk.get().toInt()
+
+    // APK/AAB output name
+    base.archivesName = "Mr.Comic"
+
+    defaultConfig {
+        applicationId = "com.example.mrcomic"
+        minSdk = libs.versions.minSdk.get().toInt()
+        targetSdk = libs.versions.targetSdk.get().toInt()
+        versionCode = 2
+        versionName = "2.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        create("mrcomic") {
+            storeFile = file("${rootDir}/keystore/mrcomic.keystore")
+            storePassword = localProps.getProperty("SIGNING_STORE_PASSWORD")
+            keyAlias    = localProps.getProperty("SIGNING_KEY_ALIAS")
+            keyPassword = localProps.getProperty("SIGNING_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("mrcomic")
+        }
+        debug {
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+            signingConfig = signingConfigs.getByName("mrcomic")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
+    buildFeatures { compose = true; buildConfig = true }
+    androidResources {
+        // The packaged Room dictionary has grown beyond what AAPT compression handles reliably.
+        // The shipped dictionaries are precompressed under a custom extension; keep them as-is.
+        noCompress += listOf("db", "sqlite", "sqlite3", "dbpack")
+    }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
+}
+
+dependencies {
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.splashscreen)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.extended)
+
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    implementation(libs.google.hilt.android)
+    ksp(libs.google.hilt.compiler)
+
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
+    implementation(libs.androidx.datastore.preferences)
+
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.session)
+
+    implementation(libs.coil.compose)
+    implementation(libs.material)
+    implementation(libs.google.gson)
+    implementation(libs.zip4j)
+    implementation(libs.junrar)
+    implementation(libs.commons.compress)
+    // PDF рендеринг — android.graphics.pdf.PdfRenderer (встроен, API 21+)
+
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
+
+    implementation(project(":core-model"))
+    implementation(project(":core-data"))
+    implementation(project(":core-domain"))
+    implementation(project(":core-ui"))
+    implementation(project(":engine-formats"))
+    implementation(project(":engine-rendering"))
+    implementation(project(":feature-library"))
+    implementation(project(":feature-reader"))
+    implementation(project(":feature-settings"))
+    implementation(project(":feature-ocr"))
+    implementation(project(":feature-onboarding"))
+
+    testImplementation(libs.test.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+}

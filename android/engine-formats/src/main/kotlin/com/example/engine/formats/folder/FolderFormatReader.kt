@@ -1,0 +1,63 @@
+package com.example.engine.formats.folder
+
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import android.util.Log
+import androidx.documentfile.provider.DocumentFile
+import com.example.engine.formats.base.BitmapAllocator
+import com.example.engine.formats.base.decodeBitmapFromStream
+import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.base.RenderDeviceProfile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class FolderFormatReader(
+    private val context: Context,
+    private val path: String,
+    private val deviceProfile: RenderDeviceProfile,
+    private val bitmapAllocator: BitmapAllocator
+) : FormatReader {
+
+    companion object {
+        private const val TAG = "FolderFormatReader"
+        private val IMAGE_MIMES = setOf("image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp")
+    }
+
+    private val imageFiles: List<DocumentFile> by lazy {
+        try {
+            val uri = Uri.parse(path)
+            val docFile = DocumentFile.fromTreeUri(context, uri) ?: DocumentFile.fromSingleUri(context, uri)
+            docFile?.listFiles()
+                ?.filter { it.isFile && it.type in IMAGE_MIMES }
+                ?.sortedBy { it.name }
+                ?: emptyList()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to list folder", e)
+            emptyList()
+        }
+    }
+
+    override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) { imageFiles.size }
+
+    override suspend fun getPage(index: Int): Bitmap? = getPage(index, 1)
+
+    override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? = withContext(Dispatchers.IO) {
+        if (index < 0 || index >= imageFiles.size) return@withContext null
+        try {
+            val uri = imageFiles[index].uri
+            decodeBitmapFromStream(
+                context = context,
+                openStream = { context.contentResolver.openInputStream(uri) },
+                deviceProfile = deviceProfile,
+                bitmapAllocator = bitmapAllocator,
+                renderQuality = renderQuality
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to decode image at $index", e)
+            null
+        }
+    }
+
+    override fun close() { /* stateless */ }
+}

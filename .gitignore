@@ -1,0 +1,59 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+**/*.keystore
+!debug.keystore
+.kotlin/
+
+# Build output — все модули
+**/build/
+**/.gradle/
+
+# Android Studio
+*.hprof
+.navigation/
+captures/
+lint/
+
+# Keystore files
+*.jks
+*.ks
+
+# Generated sources (Hilt/KSP)
+**/generated/
+
+# Python / dictionary build artifacts
+**/__pycache__/
+*.pyc
+build-dictionary-work/
+Translate/backups/
+Translate/room_build_work/
+Ocr update/
+tmp_freedict/
+
+# Local sample archives
+samples/translation_texts.zip
+samples/translation_texts/udhr_txt_20100325.tar.gz
+Translate/android_reader_dictionary_room_sample_updated_refresh.zip
+
+# Local test books / docs
+6177.epub
+6177.fb2
+Packt.Mastering.Kotlin.for.Android.14.1837631719.pdf
+
+# Local review / scratch files
+old_ComicGridItem.kt
+test.diff
+
+# Design/media source dumps that are not runtime assets
+media/
