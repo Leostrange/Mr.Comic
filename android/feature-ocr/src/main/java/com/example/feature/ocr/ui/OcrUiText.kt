@@ -494,16 +494,16 @@ fun ocrAvailabilityDictionaryReady(language: String): String = when (language) {
     "en" -> "Dictionary fallback is ready for single words"
     "ja" -> "単語用の辞書フォールバックが利用できます"
     "zh" -> "单词可使用词典回退"
-    "ko" -> "단어에는 사전 fallback을 사용할 수 있습니다"
-    else -> "Для одного слова доступен словарный fallback"
+    "ko" -> "단어 하나에는 사전 경로를 사용할 수 있습니다"
+    else -> "Для одного слова доступен словарный путь"
 }
 
 fun ocrAvailabilityDictionaryMissing(language: String): String = when (language) {
     "en" -> "No direct dictionary fallback for this pair"
     "ja" -> "このペアには直接の辞書フォールバックがありません"
     "zh" -> "这组语言没有直接词典回退"
-    "ko" -> "이 언어 쌍에는 직접 사전 fallback이 없습니다"
-    else -> "Для этой пары нет прямого словарного fallback"
+    "ko" -> "이 언어 쌍에는 직접 사전 경로가 없습니다"
+    else -> "Для этой пары нет прямого словарного пути"
 }
 
 fun ocrAvailabilityOfflineReady(language: String): String = when (language) {
@@ -639,17 +639,17 @@ fun ocrOverlayTranslationMetaLabel(
         }
         TranslationProviderType.ONLINE_PROVIDER -> when (language) {
             "en" -> "Online provider"
-            "ja" -> "オンラインプロバイダ"
-            "zh" -> "在线提供方"
-            "ko" -> "온라인 공급자"
-            else -> "Онлайн-провайдер"
+            "ja" -> "オンライン翻訳"
+            "zh" -> "在线翻译"
+            "ko" -> "온라인 번역"
+            else -> "Онлайн-перевод"
         }
         TranslationProviderType.LLM_PROVIDER -> when (language) {
             "en" -> "Explain provider"
-            "ja" -> "説明プロバイダ"
-            "zh" -> "解释提供方"
-            "ko" -> "설명 공급자"
-            else -> "Провайдер пояснений"
+            "ja" -> "解説サービス"
+            "zh" -> "解释服务"
+            "ko" -> "설명 서비스"
+            else -> "Сервис пояснений"
         }
         TranslationProviderType.UNKNOWN -> null
     }

@@ -34,6 +34,7 @@ coil = "2.7.0"
 material = "1.12.0"
 zip4j = "2.11.5"
 junrar = "7.5.5"
+sevenzipjbinding-android = "Release-16.02-2.03"
 commons-compress = "1.27.1"
 pdfium = "2.0.27.0"
 media3 = "1.5.1"
@@ -89,6 +90,7 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
+sevenzipjbinding-android = { group = "com.github.omicronapps", name = "7-Zip-JBinding-4Android", version.ref = "sevenzipjbinding-android" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons-compress" }
 pdfium-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfium" }
 media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }

@@ -24,6 +24,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.model.Comic
+import com.example.core.model.isReadCompleted
+import com.example.core.model.isReadingInProgress
 import com.example.core.ui.library.LibraryShelfBar
 import com.example.core.ui.library.libraryCardElevation
 import com.example.core.ui.locale.AppStrings
@@ -73,7 +75,13 @@ fun ComicGridItem(
     shelfDepth: Float,
     graphicCoverStyle: String,
     cardShadow: Float,
+    titleScale: Float,
+    titleLines: Int,
+    cardStroke: Float,
+    cardCornerRadius: Int,
+    titlePanelOpacity: Float,
     showProgressIndicators: Boolean,
+    showCoverTitles: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -90,7 +98,13 @@ fun ComicGridItem(
             shelfDepth = shelfDepth,
             graphicCoverStyle = graphicCoverStyle,
             cardShadow = cardShadow,
+            titleScale = titleScale,
+            titleLines = titleLines,
+            cardStroke = cardStroke,
+            cardCornerRadius = cardCornerRadius,
+            titlePanelOpacity = titlePanelOpacity,
             showProgressIndicators = showProgressIndicators,
+            showCoverTitles = showCoverTitles,
             onClick = onClick,
             onLongClick = onLongClick,
             modifier = modifier
@@ -107,6 +121,10 @@ fun ComicGridItem(
             shelfDepth = shelfDepth,
             graphicCoverStyle = graphicCoverStyle,
             cardShadow = cardShadow,
+            titleScale = titleScale,
+            titleLines = titleLines,
+            cardStroke = cardStroke,
+            cardCornerRadius = cardCornerRadius,
             showProgressIndicators = showProgressIndicators,
             onClick = onClick,
             onLongClick = onLongClick,
@@ -127,7 +145,13 @@ private fun GridCard(
     shelfDepth: Float,
     graphicCoverStyle: String,
     cardShadow: Float,
+    titleScale: Float,
+    titleLines: Int,
+    cardStroke: Float,
+    cardCornerRadius: Int,
+    titlePanelOpacity: Float,
     showProgressIndicators: Boolean,
+    showCoverTitles: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier
@@ -136,27 +160,16 @@ private fun GridCard(
     val isText = comic.isTextBookFormat()
     val isGraphic = comic.isGraphicVolumeFormat()
     val coverScale = if (coverScaleMode == "FIT") ContentScale.Fit else ContentScale.Crop
+    val radiusBase = cardCornerRadius.coerceIn(6, 24).dp
     val cardShape = when (cardStyle) {
-        "COMPACT" -> RoundedCornerShape(8.dp)
-        "SHOWCASE" -> RoundedCornerShape(14.dp)
-        else -> RoundedCornerShape(10.dp)
-    }
-    val coverShape = when (cardStyle) {
-        "COMPACT" -> RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
-        "SHOWCASE" -> RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 6.dp, bottomEnd = 6.dp)
-        else -> RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp, bottomStart = 5.dp, bottomEnd = 5.dp)
+        "COMPACT" -> RoundedCornerShape(radiusBase * 0.82f)
+        "SHOWCASE" -> RoundedCornerShape(radiusBase * 1.18f)
+        else -> RoundedCornerShape(radiusBase)
     }
     val coverRatio = libraryGridCoverRatio(
         thumbnailMode = thumbnailMode,
         cardStyle = cardStyle
     )
-    val titlePadding = when (cardStyle) {
-        "COMPACT" -> 4.dp
-        "SHOWCASE" -> 6.dp
-        else -> 5.dp
-    }
-
-
     val surfaceAlpha = MaterialTheme.colorScheme.surface.alpha
     val containerColor = when {
         isGraphic -> MaterialTheme.colorScheme.surfaceContainerLowest
@@ -172,11 +185,11 @@ private fun GridCard(
             .copy(alpha = (surfaceAlpha * 0.74f).coerceIn(0.48f, 0.88f))
     }
     val cardBorder = BorderStroke(
-        width = if (isGraphic) 0.85.dp else 0.7.dp,
+        width = (0.65f + cardStroke.coerceIn(0f, 1f) * 0.9f).dp,
         color = when {
-            isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            isText -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.07f)
+            isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.06f + cardStroke.coerceIn(0f, 1f) * 0.18f)
+            isText -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f + cardStroke.coerceIn(0f, 1f) * 0.18f)
+            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.05f + cardStroke.coerceIn(0f, 1f) * 0.16f)
         }
     )
     val titleColor = when {
@@ -219,7 +232,12 @@ private fun GridCard(
                 isGraphic = isGraphic,
                 formatLabel = formatLabel,
                 titleColor = titleColor,
-                showProgressIndicators = showProgressIndicators
+                titleScale = titleScale,
+                titleLines = titleLines,
+                titlePanelOpacity = titlePanelOpacity,
+                badgeShape = RoundedCornerShape((radiusBase * 0.72f).coerceAtLeast(8.dp)),
+                showProgressIndicators = showProgressIndicators,
+                showCoverTitles = showCoverTitles
             )
         }
     }
@@ -232,8 +250,17 @@ private fun BoxScope.GridCardBadges(
     isGraphic: Boolean,
     formatLabel: String?,
     titleColor: Color,
-    showProgressIndicators: Boolean
+    titleScale: Float,
+    titleLines: Int,
+    titlePanelOpacity: Float,
+    badgeShape: RoundedCornerShape,
+    showProgressIndicators: Boolean,
+    showCoverTitles: Boolean
 ) {
+    val showProgressChip = showProgressIndicators && comic.isReadingInProgress()
+    val showCompletedChip = comic.isReadCompleted()
+    val titleBottomPadding = if (showProgressChip || showCompletedChip) 30.dp else 8.dp
+
     // Bookmark badge — top-left
     if (comic.isBookmarked) {
         Surface(
@@ -261,11 +288,28 @@ private fun BoxScope.GridCardBadges(
             FormatBadge(formatLabel, isGraphic = isGraphic)
         }
     }
+    if (showCoverTitles) {
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 6.dp, end = 10.dp, bottom = titleBottomPadding)
+                .widthIn(max = 160.dp),
+            shape = badgeShape,
+            color = Color.Black.copy(alpha = titlePanelOpacity.coerceIn(0.18f, 0.78f)),
+            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.14f))
+        ) {
+            Text(
+                text = comic.title,
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = (12.sp * titleScale.coerceIn(0.85f, 1.3f))),
+                maxLines = titleLines.coerceIn(1, 3),
+                overflow = TextOverflow.Ellipsis,
+                color = titleColor.copy(alpha = 0.98f),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+            )
+        }
+    }
 
-
-
-    // Progress % chip — bottom-left corner
-    if (showProgressIndicators && comic.readingProgress > 0.01f && !comic.isCompleted) {
+    if (showProgressChip) {
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -283,7 +327,7 @@ private fun BoxScope.GridCardBadges(
         }
     }
 
-    if (comic.isCompleted) {
+    if (showCompletedChip) {
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -359,6 +403,10 @@ private fun ListCard(
     shelfDepth: Float,
     graphicCoverStyle: String,
     cardShadow: Float,
+    titleScale: Float,
+    titleLines: Int,
+    cardStroke: Float,
+    cardCornerRadius: Int,
     showProgressIndicators: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
@@ -401,11 +449,11 @@ private fun ListCard(
             .copy(alpha = (listSurfaceAlpha * 0.74f).coerceIn(0.48f, 0.88f))
     }
     val cardBorder = BorderStroke(
-        width = if (isGraphic) 0.85.dp else 0.7.dp,
+        width = (0.65f + cardStroke.coerceIn(0f, 1f) * 0.9f).dp,
         color = when {
-            isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-            isText -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
-            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.07f)
+            isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.06f + cardStroke.coerceIn(0f, 1f) * 0.18f)
+            isText -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f + cardStroke.coerceIn(0f, 1f) * 0.18f)
+            else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.05f + cardStroke.coerceIn(0f, 1f) * 0.16f)
         }
     )
     val titleColor = when {
@@ -414,11 +462,19 @@ private fun ListCard(
         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     }
 
+    val radiusBase = cardCornerRadius.coerceIn(6, 24).dp
+    val cardShape = when (cardStyle) {
+        "COMPACT" -> RoundedCornerShape(radiusBase * 0.82f)
+        "SHOWCASE" -> RoundedCornerShape(radiusBase * 1.18f)
+        else -> RoundedCornerShape(radiusBase)
+    }
+    val thumbShape = RoundedCornerShape((radiusBase * 0.52f).coerceAtLeast(4.dp))
+
     Card(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        shape = RoundedCornerShape(8.dp),
+        shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = containerColor),
         border = cardBorder,
         elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
@@ -428,7 +484,7 @@ private fun ListCard(
                 Box(
                     modifier = Modifier
                         .size(thumbSize.first, thumbSize.second)
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(thumbShape)
                 ) {
                     val coverPath = comic.coverPath
                     CoverArt(
@@ -440,7 +496,7 @@ private fun ListCard(
                     )
                     ComicCoverTreatment(
                         comic = comic,
-                        shape = RoundedCornerShape(4.dp),
+                        shape = thumbShape,
                         graphicCoverStyle = graphicCoverStyle,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -461,13 +517,13 @@ private fun ListCard(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             comic.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 2,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = (14.sp * titleScale.coerceIn(0.85f, 1.3f))),
+                            maxLines = titleLines.coerceIn(1, 3),
                             overflow = TextOverflow.Ellipsis,
                             color = titleColor,
                             modifier = Modifier.weight(1f)
                         )
-                        if (comic.isCompleted) {
+                    if (comic.isReadCompleted()) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 Icons.Filled.CheckCircle,
@@ -489,7 +545,7 @@ private fun ListCard(
                         FormatBadge(formatLabel, isGraphic = isGraphic)
                     }
                     Spacer(Modifier.height(4.dp))
-                    if (showProgressIndicators && comic.readingProgress > 0f) {
+                    if (showProgressIndicators && comic.isReadingInProgress()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -501,12 +557,12 @@ private fun ListCard(
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f)
                             )
                             Text(
-                                if (comic.isCompleted) "100%" else "${(comic.readingProgress * 100).toInt()}%",
+                                if (comic.isReadCompleted()) "100%" else "${(comic.readingProgress * 100).toInt()}%",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    } else if (comic.isCompleted) {
+                    } else if (comic.isReadCompleted()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)

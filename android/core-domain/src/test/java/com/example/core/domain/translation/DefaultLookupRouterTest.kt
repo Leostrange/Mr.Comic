@@ -43,6 +43,7 @@ class DefaultLookupRouterTest {
                 sourceType = TranslationSourceType.BOOK_TEXT,
                 dictionaryAvailable = true,
                 networkAvailable = true,
+                onlineTranslationAvailable = true,
                 preferredTransport = TranslationTransportPreference.ONLINE
             )
         )
@@ -52,6 +53,28 @@ class DefaultLookupRouterTest {
         assertEquals(TranslationMode.DICTIONARY, decision.primaryMode)
         assertEquals(listOf(TranslationMode.ONLINE_MT), decision.secondaryModes)
         assertTrue(decision.shouldOfferPhraseTranslation)
+    }
+
+    @Test
+    fun `two words do not offer phrase translation when network exists but online route is not configured`() = runBlocking {
+        val router = DefaultLookupRouter(FakeLanguageDetector())
+
+        val result = router.route(
+            TranslationRoutingRequest(
+                text = "dzien dobry",
+                sourceType = TranslationSourceType.BOOK_TEXT,
+                dictionaryAvailable = true,
+                networkAvailable = true,
+                onlineTranslationAvailable = false,
+                offlineModelAvailable = false,
+                preferredTransport = TranslationTransportPreference.AUTO
+            )
+        )
+
+        val decision = (result as Result.Success).data
+        assertEquals(LookupRouteKind.DICTIONARY_WITH_TRANSLATION_OPTION, decision.routeKind)
+        assertTrue(decision.secondaryModes.isEmpty())
+        assertFalse(decision.shouldOfferPhraseTranslation)
     }
 
     @Test
@@ -81,6 +104,7 @@ class DefaultLookupRouterTest {
                 text = "??? noisy text ???",
                 sourceType = TranslationSourceType.OCR_TEXT,
                 networkAvailable = true,
+                onlineTranslationAvailable = true,
                 llmAvailable = true,
                 ocrConfidence = 0.3f
             )
@@ -107,6 +131,28 @@ class DefaultLookupRouterTest {
         val decision = (result as Result.Success).data
         assertEquals(LookupRouteKind.UNAVAILABLE, decision.routeKind)
         assertFalse(decision.shouldOfferPhraseTranslation)
+    }
+
+    @Test
+    fun `network alone does not create online route when provider is unavailable`() = runBlocking {
+        val router = DefaultLookupRouter(FakeLanguageDetector())
+
+        val result = router.route(
+            TranslationRoutingRequest(
+                text = "dzien dobry",
+                sourceType = TranslationSourceType.OCR_TEXT,
+                sourceLanguageHint = "pl",
+                fallbackLanguage = "pl",
+                networkAvailable = true,
+                onlineTranslationAvailable = false,
+                offlineModelAvailable = false,
+                dictionaryAvailable = false
+            )
+        )
+
+        val decision = (result as Result.Success).data
+        assertEquals(LookupRouteKind.UNAVAILABLE, decision.routeKind)
+        assertEquals(null, decision.primaryMode)
     }
 
     private class FakeLanguageDetector : LanguageDetector {

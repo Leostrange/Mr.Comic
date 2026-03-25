@@ -42,6 +42,29 @@ data class Comic(
     val isCompleted: Boolean = false
 )
 
+enum class ComicReadingStatus {
+    NEW,
+    READING,
+    COMPLETED
+}
+
+fun Comic.readingStatus(): ComicReadingStatus {
+    val normalizedProgress = readingProgress.coerceIn(0f, 1f)
+    val normalizedPageCount = pageCount.coerceAtLeast(0)
+    val normalizedCurrentPage = currentPage.coerceAtLeast(0)
+    val completedByProgress = normalizedProgress >= 0.999f
+    val completedByPage = normalizedPageCount > 0 && normalizedCurrentPage >= normalizedPageCount - 1
+    return when {
+        isCompleted || completedByProgress || completedByPage -> ComicReadingStatus.COMPLETED
+        normalizedCurrentPage > 0 || normalizedProgress > 0.001f -> ComicReadingStatus.READING
+        else -> ComicReadingStatus.NEW
+    }
+}
+
+fun Comic.isReadingInProgress(): Boolean = readingStatus() == ComicReadingStatus.READING
+
+fun Comic.isReadCompleted(): Boolean = readingStatus() == ComicReadingStatus.COMPLETED
+
 enum class ComicFormat {
     CBZ,
     CBR,

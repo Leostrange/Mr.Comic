@@ -26,6 +26,7 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.example.core.ui.locale.LocalStrings
 import kotlinx.coroutines.delay
 
 @Composable
@@ -38,6 +39,7 @@ fun VideoSplashScreen(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
+    val strings = LocalStrings.current
     val selectedRes = remember(configuration.screenWidthDp, configuration.screenHeightDp, videoResId, horizontalVideoResId) {
         val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
         if (isLandscape && horizontalVideoResId != null) horizontalVideoResId else videoResId
@@ -119,8 +121,20 @@ fun VideoSplashScreen(
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
             ) {
-                Text("Пропустить", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = splashSkipLabel(strings.languageCode),
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
     }
+}
+
+private fun splashSkipLabel(language: String): String = when (language) {
+    "en" -> "Skip"
+    "ja" -> "スキップ"
+    "zh" -> "跳过"
+    "ko" -> "건너뛰기"
+    else -> "Пропустить"
 }

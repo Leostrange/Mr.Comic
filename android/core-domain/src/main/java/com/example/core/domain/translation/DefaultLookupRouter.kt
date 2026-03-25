@@ -151,24 +151,27 @@ class DefaultLookupRouter @Inject constructor(
 
     private fun resolveMachineTranslationMode(
         request: TranslationRoutingRequest
-    ): TranslationMode? = when (request.preferredTransport) {
+    ): TranslationMode? {
+        val onlineTranslationAvailable = request.onlineTranslationAvailable && request.networkAvailable
+        return when (request.preferredTransport) {
         TranslationTransportPreference.AUTO -> when {
             request.offlineModelAvailable -> TranslationMode.OFFLINE_MT
-            request.networkAvailable -> TranslationMode.ONLINE_MT
+            onlineTranslationAvailable -> TranslationMode.ONLINE_MT
             else -> null
         }
 
         TranslationTransportPreference.OFFLINE -> when {
             request.offlineModelAvailable -> TranslationMode.OFFLINE_MT
-            request.networkAvailable -> TranslationMode.ONLINE_MT
+            onlineTranslationAvailable -> TranslationMode.ONLINE_MT
             else -> null
         }
 
         TranslationTransportPreference.ONLINE -> when {
-            request.networkAvailable -> TranslationMode.ONLINE_MT
+            onlineTranslationAvailable -> TranslationMode.ONLINE_MT
             request.offlineModelAvailable -> TranslationMode.OFFLINE_MT
             else -> null
         }
+    }
     }
 
     private fun shouldReviewOcrText(request: TranslationRoutingRequest): Boolean =

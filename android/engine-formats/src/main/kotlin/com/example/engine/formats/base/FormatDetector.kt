@@ -11,6 +11,9 @@ object FormatDetector {
     private val PDF_MAGIC  = byteArrayOf(0x25, 0x50, 0x44, 0x46) // %PDF
     private val SEVENZ_MAGIC = byteArrayOf(0x37, 0x7A, 0xBC.toByte(), 0xAF.toByte(), 0x27, 0x1C)
     private val MOBI_MAGIC = "BOOKMOBI".encodeToByteArray()
+    private val DJVU_CONTAINER_MAGIC = "AT&TFORM".encodeToByteArray()
+    private val DJVU_SINGLE_MAGIC = "DJVU".encodeToByteArray()
+    private val DJVU_MULTI_MAGIC = "DJVM".encodeToByteArray()
 
     /** Detect by content (magic bytes). Falls back to extension if stream fails. */
     fun detect(stream: InputStream, name: String): ComicFormat {
@@ -31,8 +34,8 @@ object FormatDetector {
             "cbt", "tar" -> ComicFormat.TAR
             "pdf"        -> ComicFormat.PDF
             "epub"       -> ComicFormat.EPUB
-        "fb2"        -> ComicFormat.FB2
-        "txt", "text" -> ComicFormat.TXT
+            "fb2"        -> ComicFormat.FB2
+            "txt", "text" -> ComicFormat.TXT
             "htm", "html", "xhtml" -> ComicFormat.HTML
             "md", "markdown" -> ComicFormat.MARKDOWN
             "rtf" -> ComicFormat.RTF
@@ -52,8 +55,14 @@ object FormatDetector {
             header.startsWith(PDF_MAGIC)  -> ComicFormat.PDF
             header.startsWith(SEVENZ_MAGIC) -> ComicFormat.SEVENZ
             header.hasSliceAt(60, MOBI_MAGIC) -> ComicFormat.MOBI
+            header.isDjvuDocument() -> ComicFormat.DJVU
             else -> null
         }
+    }
+
+    private fun ByteArray.isDjvuDocument(): Boolean {
+        return startsWith(DJVU_CONTAINER_MAGIC) &&
+            (hasSliceAt(12, DJVU_SINGLE_MAGIC) || hasSliceAt(12, DJVU_MULTI_MAGIC))
     }
 
     private fun ByteArray.startsWith(other: ByteArray): Boolean {

@@ -1,0 +1,136 @@
+ M PROJECT_CONTEXT_HANDOFF.md
+ D TASKLIST.md
+ M android/app/src/main/java/com/example/mrcomic/MainActivity.kt
+ M android/app/src/main/java/com/example/mrcomic/home/ContinueScreen.kt
+ M android/app/src/main/java/com/example/mrcomic/icons/AppIconManager.kt
+ M android/app/src/main/java/com/example/mrcomic/icons/AppIconSettingsScreen.kt
+ M android/app/src/main/java/com/example/mrcomic/icons/AppIconSettingsViewModel.kt
+ M android/app/src/main/java/com/example/mrcomic/navigation/AppNavigation.kt
+ M android/app/src/main/java/com/example/mrcomic/ui/CrashReportScreen.kt
+ M android/core-data/build.gradle.kts
+ M android/core-data/src/main/java/com/example/core/data/db/AppDatabase.kt
+ M android/core-data/src/main/java/com/example/core/data/di/DatabaseModule.kt
+ M android/core-data/src/main/java/com/example/core/data/dictionary/DictionaryDao.kt
+ M android/core-data/src/main/java/com/example/core/data/dictionary/DictionaryRepository.kt
+ M android/core-data/src/main/java/com/example/core/data/preferences/PreferencesKeys.kt
+ M android/core-data/src/main/java/com/example/core/data/repository/ComicRepository.kt
+ M android/core-domain/build.gradle.kts
+ M android/core-domain/src/main/java/com/example/core/domain/translation/DefaultLookupRouter.kt
+ M android/core-domain/src/main/java/com/example/core/domain/translation/QuickDictionaryEngine.kt
+ M android/core-domain/src/main/java/com/example/core/domain/translation/RoomDictionaryEngine.kt
+ M android/core-domain/src/test/java/com/example/core/domain/translation/DefaultLookupRouterTest.kt
+ M android/core-domain/src/test/java/com/example/core/domain/translation/QuickDictionaryEngineTest.kt
+ M android/core-model/src/main/java/com/example/core/model/TranslationModels.kt
+ M android/core-ui/build.gradle.kts
+ M android/core-ui/src/main/java/com/example/core/ui/library/LibraryVisualPresets.kt
+ M android/core-ui/src/main/java/com/example/core/ui/library/LibraryVisualStyle.kt
+ D android/core-ui/src/main/java/com/example/core/ui/library/LibraryVisualStyle.kt.backup
+ M android/core-ui/src/main/java/com/example/core/ui/locale/AppStrings.kt
+ M android/core-ui/src/main/java/com/example/core/ui/splash/VideoSplashScreen.kt
+ M android/core-ui/src/main/java/com/example/core/ui/theme/Theme.kt
+ M android/core-ui/src/main/java/com/example/core/ui/theme/ThemePreferencesRepository.kt
+ M android/core-ui/src/main/java/com/example/core/ui/theme/ThemePreset.kt
+ M android/engine-formats/build.gradle.kts
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/base/FormatDetector.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/base/FormatFactory.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/di/EngineFormatsModule.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/djvu/DjvuFormatReader.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/folder/FolderFormatReader.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/rar/RarFormatReader.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/sevenz/SevenZFormatReader.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/tar/TarFormatReader.kt
+ M android/engine-formats/src/main/kotlin/com/example/engine/formats/zip/ZipFormatReader.kt
+ M android/engine-rendering/src/main/kotlin/com/example/engine/rendering/preload/PagePreloader.kt
+ M android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt
+ D android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt.backup
+ M android/feature-library/src/main/java/com/example/feature/library/LibraryViewModel.kt
+ M android/feature-library/src/main/java/com/example/feature/library/components/ComicGridItem.kt
+ M android/feature-library/src/main/java/com/example/feature/library/components/LibraryAchievements.kt
+ M android/feature-library/src/main/java/com/example/feature/library/components/LibraryTopBar.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/data/DefaultComicTranslationEngine.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/data/MlKitComicTextDetector.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/di/OcrModule.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/ui/OcrRuntimeText.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/ui/OcrScreen.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/ui/OcrUiText.kt
+ M android/feature-ocr/src/main/java/com/example/feature/ocr/ui/OcrViewModel.kt
+ M android/feature-onboarding/src/main/java/com/example/feature/onboarding/OnboardingScreen.kt
+ M android/feature-onboarding/src/main/java/com/example/feature/onboarding/OnboardingViewModel.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderChromeComponents.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderPanelSurface.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderScreen.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderUiText.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/components/PageView.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/components/ReaderBottomBar.kt
+ M android/feature-reader/src/main/java/com/example/feature/reader/ui/components/WebtoonView.kt
+ M android/feature-settings/build.gradle.kts
+ M android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsScreen.kt
+ M android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsViewModel.kt
+ M gradle/libs.versions.toml
+ D tasklist2
+?? .vscode/
+?? CUSTOMIZATION_LIBRARY_STRUCTURE_BACKUP.md
+?? DJVU_RENDERER_RESEARCH.md
+?? DOCUMENT_RETENTION_AUDIT.md
+?? LOCALIZATION_AUDIT.md
+?? Mr.Comic_gameficator.txt
+?? SETTINGS_CAPABILITY_MAP.md
+?? TASKLIST_00_MASTER_STRUCTURE.md
+?? TASKLIST_01_READER_EXPERIENCE.md
+?? TASKLIST_02_LIBRARY_GAMIFICATION.md
+?? TASKLIST_03_TRANSLATION_AI_TTS.md
+?? TASKLIST_04_SETTINGS_IA_LOCALIZATION.md
+?? TASKLIST_05_PLATFORM_FOUNDATION.md
+?? android/app/src/main/java/com/example/mrcomic/ui/AppModuleText.kt
+?? android/app/src/test/
+?? android/core-data/src/main/java/com/example/core/data/db/AppDatabaseMigrations.kt
+?? android/core-data/src/main/java/com/example/core/data/db/QuoteDao.kt
+?? android/core-data/src/main/java/com/example/core/data/repository/QuoteRepository.kt
+?? android/core-data/src/test/
+?? android/core-domain/src/main/java/com/example/core/domain/analytics/
+?? android/core-domain/src/main/java/com/example/core/domain/translation/SingleWordDictionaryResolver.kt
+?? android/core-domain/src/test/java/com/example/core/domain/analytics/
+?? android/core-domain/src/test/java/com/example/core/domain/translation/RoomDictionaryEngineBridgePolicyTest.kt
+?? android/core-domain/src/test/java/com/example/core/domain/translation/SingleWordDictionaryResolverTest.kt
+?? android/core-model/src/main/java/com/example/core/model/ReaderInteractionConfig.kt
+?? android/core-model/src/main/java/com/example/core/model/ReaderScreenTimeoutMode.kt
+?? android/core-model/src/main/java/com/example/core/model/ReaderTtsProviderType.kt
+?? android/core-model/src/main/java/com/example/core/model/ReaderTtsSleepTimerMode.kt
+?? android/core-model/src/main/java/com/example/core/model/SavedQuote.kt
+?? android/core-model/src/test/
+?? android/core-ui/src/main/java/com/example/core/ui/mascot/
+?? android/core-ui/src/main/java/com/example/core/ui/tts/
+?? android/engine-formats/src/main/kotlin/com/example/engine/formats/djvu/DjvuBackend.kt
+?? android/engine-formats/src/main/kotlin/com/example/engine/formats/djvu/DjvuProbe.kt
+?? android/engine-formats/src/main/kotlin/com/example/engine/formats/djvu/UnavailableDjvuBackend.kt
+?? android/engine-formats/src/test/kotlin/com/example/engine/formats/base/
+?? android/engine-formats/src/test/kotlin/com/example/engine/formats/djvu/
+?? android/feature-library/src/main/java/com/example/feature/library/MrComicProfileConsistency.kt
+?? android/feature-library/src/main/java/com/example/feature/library/MrComicProgressCopy.kt
+?? android/feature-library/src/main/java/com/example/feature/library/MrComicProgressScreen.kt
+?? android/feature-library/src/main/java/com/example/feature/library/MrComicSeasonalLayer.kt
+?? android/feature-library/src/test/
+?? android/feature-ocr/src/main/java/com/example/feature/ocr/data/OcrTranslationFallbackPolicy.kt
+?? android/feature-ocr/src/main/java/com/example/feature/ocr/ui/OcrTranslationAvailabilityPolicy.kt
+?? android/feature-ocr/src/test/
+?? android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderHardwareKeyHost.kt
+?? android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderInteractionPolicy.kt
+?? android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderTextToSpeechController.kt
+?? android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderTranslationAvailabilityPolicy.kt
+?? android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderTranslationRouteMessagePolicy.kt
+?? android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderTtsPolicy.kt
+?? android/feature-reader/src/test/
+?? android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsTextToSpeechPreviewController.kt
+?? customization-library-structure-backup-2026-03-23.zip
+?? docs/
+?? mrcomic-interface-snapshot-2026-03-23.zip
+?? photo_2026-03-24_08-01-00.jpg
+?? photo_2026-03-24_08-01-02.jpg
+?? photo_2026-03-24_08-01-06.jpg
+?? photo_2026-03-24_08-01-08.jpg
+?? photo_2026-03-24_08-01-11.jpg
+?? photo_2026-03-24_08-01-13.jpg
+?? "\320\223\320\265\320\271\320\274\320\270\321\204\320\270\320\272\320\260\321\206\320\270\321\217 \320\277\321\200\320\270\320\273\320\276\320\266\320\265\320\275\320\270\321\217 \320\264\320\273\321\217 \321\207\321\202\320\265\320\275\320\270\321\217 \320\272\320\275\320\270\320\263 \320\270 \320\272\320\276\320\274\320\270\320\272\321\201\320\276\320\262 \321\201 \320\274\320\260\321\201\320\272\320\276\321\202\320\276\320\274.md"
+?? "\320\241\321\200\320\260\320\262\320\275\320\265\320\275\320\270\320\265 \320\270\320\275\321\202\320\265\321\200\321\204\320\265\320\271\321\201\320\260/"
+?? "\320\275\320\276\320\262\321\213\320\265/"

@@ -10,6 +10,8 @@ import com.example.core.ui.theme.ReadingPreset
 import com.example.core.ui.theme.style
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,6 +21,9 @@ class OnboardingViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val prefs = UserPreferences(context.dataStore)
+    val mascotUiEnabled = prefs
+        .get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
 
     fun completeOnboarding(
         preset: ReadingPreset,
@@ -36,7 +41,6 @@ class OnboardingViewModel @Inject constructor(
         if (preset == ReadingPreset.CUSTOM) return
 
         val style = preset.style()
-        prefs.set(PreferencesKeys.READING_BRIGHTNESS, style.brightness)
         prefs.set(PreferencesKeys.READER_IMMERSIVE_MODE, style.immersiveMode)
         prefs.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
         prefs.set(PreferencesKeys.READER_PAGE_SOUND, false)

@@ -13,11 +13,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.domain.translation.ComicTranslationEngine
 import com.example.core.domain.translation.DictionaryEngine
+import com.example.core.domain.translation.LanguageDetector
 import com.example.core.domain.translation.LlmExplainEngine
 import com.example.core.domain.translation.LookupRouter
 import com.example.core.domain.translation.OfflineTranslationEngine
 import com.example.core.domain.translation.OnlineTranslationEngine
+import com.example.core.domain.translation.SingleWordDictionaryMatch
 import com.example.core.domain.translation.TranslationBackendUnavailableException
+import com.example.core.domain.translation.hasMeaningfulTranslationFor
+import com.example.core.domain.translation.resolveBestSingleWordDictionaryMatch
 import com.example.core.domain.util.Result
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
@@ -26,6 +30,7 @@ import com.example.core.data.repository.ComicRepository
 import com.example.core.model.Comic
 import com.example.core.model.DictionaryEntry
 import com.example.core.model.ExplainRequest
+import com.example.core.model.LanguageDetectionResult
 import com.example.core.model.LookupRouteKind
 import com.example.core.model.OcrBlock
 import com.example.core.model.OverlayBlock
@@ -39,9 +44,12 @@ import com.example.core.model.TranslationTransportPreference
 import com.example.feature.ocr.data.MlKitTranslationSupport
 import com.example.feature.ocr.data.OcrPageCache
 import com.example.feature.ocr.data.OcrRepository
+import com.example.feature.ocr.data.shouldAllowOcrDictionaryLookup
+import com.example.feature.ocr.data.shouldUseOcrDictionaryFallback
 import com.example.core.ui.locale.isSupportedOcrSourceLanguageCode
 import com.example.core.ui.locale.isSupportedTranslationLanguageCode
 import com.example.core.ui.locale.normalizeTranslationLanguageCode
+import com.example.core.ui.locale.supportedTranslationLanguageCodes
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -85,7 +93,7 @@ data class OcrUiState(
     val manualExplanation: String? = null,
     val manualExplanationError: String? = null,
     /** Source language code for OCR/manual translation. */
-    val sourceLang: String = "ja",
+    val sourceLang: String = OcrViewModel.AUTO_SOURCE_LANGUAGE,
     /** Target language code for translation output. */
     val targetLang: String = "ru",
     val preferredTransport: TranslationTransportPreference = TranslationTransportPreference.AUTO,
@@ -104,10 +112,15 @@ data class OcrTranslationAvailability(
     val offlinePairSupported: Boolean = false,
     val offlineModelInstalled: Boolean = false,
     val networkAvailable: Boolean = false,
+    val onlineConfigured: Boolean = false,
     val explainToggleEnabled: Boolean = false
 ) {
     val canDownloadOfflineModel: Boolean
         get() = offlinePairSupported && !offlineModelInstalled && networkAvailable
+    val canUseOnlineTranslation: Boolean
+        get() = onlineConfigured && networkAvailable
+    val canUseMachineTranslation: Boolean
+        get() = offlineModelInstalled || canUseOnlineTranslation
 }
 
 @HiltViewModel
@@ -115,6 +128,7 @@ class OcrViewModel @Inject constructor(
     private val ocrRepository: OcrRepository,
     private val comicTranslationEngine: ComicTranslationEngine,
     private val dictionaryEngine: DictionaryEngine,
+    private val languageDetector: LanguageDetector,
     private val llmExplainEngine: LlmExplainEngine,
     private val lookupRouter: LookupRouter,
     private val offlineTranslationEngine: OfflineTranslationEngine,
@@ -170,7 +184,6 @@ class OcrViewModel @Inject constructor(
 
     private suspend fun applyStoredTranslationDefaults() {
         val appLanguage = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first().normalizeLanguageCode() ?: "ru"
-        val ocrLanguage = preferences.get(PreferencesKeys.OCR_LANGUAGE, "JA").first().normalizeLanguageCode() ?: "ja"
         val storedSourceLanguage = normalizeTranslationLanguageCode(
             preferences.get(PreferencesKeys.TRANSLATION_SOURCE_LANGUAGE, "AUTO").first()
         )
@@ -191,10 +204,10 @@ class OcrViewModel @Inject constructor(
                 sourceLang = when {
                     prefersImagePipeline -> storedSourceLanguage
                         ?.takeIf(::isSupportedOcrSourceLanguageCode)
-                        ?: ocrLanguage.coerceToSupportedOcrSourceLanguage()
+                        ?: AUTO_SOURCE_LANGUAGE
                     else -> storedSourceLanguage
                         ?.takeIf(::isSupportedTranslationLanguageCode)
-                        ?: appLanguage.coerceToSupportedManualSourceLanguage()
+                        ?: "AUTO"
                 },
                 targetLang = (storedTargetLanguage ?: appLanguage).coerceToSupportedTargetLanguage(),
                 preferredTransport = runCatching { TranslationTransportPreference.valueOf(storedTransport) }
@@ -277,14 +290,49 @@ class OcrViewModel @Inject constructor(
                         )
                 }
 
-                val sourceLanguage = _uiState.value.sourceLang.normalizeLanguageCode()
-                    ?.takeIf(::isSupportedTranslationLanguageCode)
-                    ?: "en"
                 val targetLanguage = _uiState.value.targetLang.normalizeLanguageCode() ?: "ru"
                 val normalizedText = text.trim().replace(Regex("\\s+"), " ")
                 val tokenCount = normalizedText.countSelectionTokens()
                 val canTranslateAsPhrase = tokenCount <= 3
                 val preferredTransport = _uiState.value.preferredTransport
+                val manualSourceResolution = resolveManualSourceLanguage(normalizedText)
+                val shouldUseDictionaryFallback = shouldUseOcrDictionaryFallback(
+                    rawText = normalizedText,
+                    sourceLanguage = manualSourceResolution.sourceLanguage
+                        ?: manualSourceResolution.detectionResult?.languageCode
+                )
+                val canUseDictionaryLookup = shouldAllowOcrDictionaryLookup(
+                    rawText = normalizedText,
+                    sourceLanguage = manualSourceResolution.sourceLanguage
+                        ?: manualSourceResolution.detectionResult?.languageCode
+                )
+                val singleWordDictionaryMatch = if (shouldUseDictionaryFallback) {
+                    resolveOcrSingleWordDictionaryMatch(
+                        rawWord = normalizedText,
+                        preferredSourceLanguage = manualSourceResolution.sourceLanguage,
+                        detectedLanguage = manualSourceResolution.detectionResult?.languageCode,
+                        detectedCandidates = manualSourceResolution.detectionResult?.candidates
+                            ?.map { it.languageCode }
+                            .orEmpty(),
+                        targetLanguage = targetLanguage
+                    )
+                } else {
+                    null
+                }
+                val sourceLanguage = singleWordDictionaryMatch?.sourceLanguage ?: manualSourceResolution.sourceLanguage
+                if (sourceLanguage == null) {
+                    _uiState.update {
+                        it.copy(
+                            isTranslating = false,
+                            manualResultMode = null,
+                            manualDictionaryEntry = null,
+                            manualExplanation = null,
+                            manualExplanationError = null,
+                            error = ocrTranslationUnavailableMessage(uiLanguage)
+                        )
+                    }
+                    return@launch
+                }
                 if (sourceLanguage == targetLanguage) {
                     _uiState.update {
                         it.copy(
@@ -299,7 +347,7 @@ class OcrViewModel @Inject constructor(
                     return@launch
                 }
 
-                val dictionaryAvailable = when (
+                val dictionaryAvailable = singleWordDictionaryMatch != null || when (
                     val availability = dictionaryEngine.isLookupAvailable(
                         sourceLanguage = sourceLanguage,
                         targetLanguage = targetLanguage
@@ -320,6 +368,11 @@ class OcrViewModel @Inject constructor(
                     Result.Loading -> false
                 }
                 val networkAvailable = isNetworkAvailable()
+                val onlineTranslationAvailable = when (val configured = onlineTranslationEngine.isConfigured()) {
+                    is Result.Success -> configured.data
+                    is Result.Error -> false
+                    Result.Loading -> false
+                }
 
                 val routingDecision = when (
                     val routing = lookupRouter.route(
@@ -330,8 +383,9 @@ class OcrViewModel @Inject constructor(
                             fallbackLanguage = sourceLanguage,
                             preferredTransport = preferredTransport,
                             networkAvailable = networkAvailable,
+                            onlineTranslationAvailable = onlineTranslationAvailable,
                             offlineModelAvailable = offlineAvailable,
-                            dictionaryAvailable = false,
+                            dictionaryAvailable = dictionaryAvailable,
                             llmAvailable = false
                         )
                     )
@@ -341,9 +395,9 @@ class OcrViewModel @Inject constructor(
                     Result.Loading -> null
                 }
 
-                val translationMode = when {
+                var translationMode = when {
                     routingDecision == null -> null
-                    routingDecision.primaryMode == TranslationMode.DICTIONARY && tokenCount > 1 ->
+                    routingDecision.primaryMode == TranslationMode.DICTIONARY && !shouldUseDictionaryFallback ->
                         routingDecision.secondaryModes.firstOrNull {
                             it == TranslationMode.OFFLINE_MT || it == TranslationMode.ONLINE_MT
                         }
@@ -353,18 +407,29 @@ class OcrViewModel @Inject constructor(
                 if (translationMode == TranslationMode.DICTIONARY) {
                     val usedDictionary = applyManualDictionaryFallback(
                         normalizedText = normalizedText,
-                        sourceLanguage = sourceLanguage,
+                        preferredSourceLanguage = sourceLanguage,
+                        detectedLanguage = manualSourceResolution.detectionResult?.languageCode,
+                        detectedCandidates = manualSourceResolution.detectionResult?.candidates
+                            ?.map { it.languageCode }
+                            .orEmpty(),
                         targetLanguage = targetLanguage,
                         uiLanguage = uiLanguage
                     )
                     if (usedDictionary) return@launch
+                    translationMode = routingDecision?.secondaryModes.orEmpty().firstOrNull {
+                        it == TranslationMode.OFFLINE_MT || it == TranslationMode.ONLINE_MT
+                    }
                 }
 
                 if (routingDecision == null || routingDecision.routeKind == LookupRouteKind.UNAVAILABLE || translationMode == null) {
-                    if (tokenCount == 1 && dictionaryAvailable) {
+                    if (canUseDictionaryLookup && dictionaryAvailable) {
                         val usedDictionary = applyManualDictionaryFallback(
                             normalizedText = normalizedText,
-                            sourceLanguage = sourceLanguage,
+                            preferredSourceLanguage = sourceLanguage,
+                            detectedLanguage = manualSourceResolution.detectionResult?.languageCode,
+                            detectedCandidates = manualSourceResolution.detectionResult?.candidates
+                                ?.map { it.languageCode }
+                                .orEmpty(),
                             targetLanguage = targetLanguage,
                             uiLanguage = uiLanguage
                         )
@@ -372,7 +437,14 @@ class OcrViewModel @Inject constructor(
                     }
                     val error = when (routingDecision?.unavailableReason) {
                         TranslationRoutingFailureReason.NO_TRANSLATION_BACKEND ->
-                            ocrTranslationBackendUnavailableMessage(uiLanguage)
+                            resolveOcrTranslationUnavailableMessage(
+                                language = uiLanguage,
+                                preferredTransport = preferredTransport,
+                                availability = _uiState.value.translationAvailability,
+                                dictionaryRouteAvailable = canUseDictionaryLookup && dictionaryAvailable,
+                                sourceLanguage = sourceLanguage,
+                                targetLanguage = targetLanguage
+                            )
                         else -> ocrTranslationUnavailableMessage(uiLanguage)
                     }
                     _uiState.update { it.copy(isTranslating = false, error = error) }
@@ -414,10 +486,14 @@ class OcrViewModel @Inject constructor(
                     }
 
                     is Result.Error -> {
-                        if (tokenCount == 1 && dictionaryAvailable) {
+                        if (canUseDictionaryLookup && dictionaryAvailable) {
                             val usedDictionary = applyManualDictionaryFallback(
                                 normalizedText = normalizedText,
-                                sourceLanguage = sourceLanguage,
+                                preferredSourceLanguage = sourceLanguage,
+                                detectedLanguage = manualSourceResolution.detectionResult?.languageCode,
+                                detectedCandidates = manualSourceResolution.detectionResult?.candidates
+                                    ?.map { it.languageCode }
+                                    .orEmpty(),
                                 targetLanguage = targetLanguage,
                                 uiLanguage = uiLanguage
                             )
@@ -428,7 +504,14 @@ class OcrViewModel @Inject constructor(
                                 isTranslating = false,
                                 error = when (result.exception) {
                                     is TranslationBackendUnavailableException ->
-                                        ocrTranslationBackendUnavailableMessage(uiLanguage)
+                                        resolveOcrTranslationUnavailableMessage(
+                                            language = uiLanguage,
+                                            preferredTransport = preferredTransport,
+                                            availability = _uiState.value.translationAvailability,
+                                            dictionaryRouteAvailable = canUseDictionaryLookup && dictionaryAvailable,
+                                            sourceLanguage = sourceLanguage,
+                                            targetLanguage = targetLanguage
+                                        )
                                     else -> ocrTranslationUnavailableMessage(uiLanguage)
                                 }
                             )
@@ -607,22 +690,35 @@ class OcrViewModel @Inject constructor(
     fun openDictionaryForManualText() {
         if (_uiState.value.isManualScenarioBusy()) return
         val normalizedText = _uiState.value.manualText.trim().replace(Regex("\\s+"), " ")
-        if (normalizedText.isBlank() || normalizedText.countSelectionTokens() != 1) return
+        if (normalizedText.isBlank()) return
 
         viewModelScope.launch {
-            val sourceLanguage = _uiState.value.sourceLang.normalizeLanguageCode()
-                ?.takeIf(::isSupportedTranslationLanguageCode)
-                ?: "en"
             val targetLanguage = _uiState.value.targetLang.normalizeLanguageCode() ?: "ru"
             val uiLanguage = currentUiLanguage()
+            val manualSourceResolution = resolveManualSourceLanguage(normalizedText)
+            val sourceLanguage = manualSourceResolution.sourceLanguage
+            if (!shouldAllowOcrDictionaryLookup(normalizedText, sourceLanguage)) return@launch
             _uiState.update {
                 it.clearManualScenarioState()
                     .clearTransientFeedback()
                     .copy(isTranslating = true)
             }
+            if (sourceLanguage == null) {
+                _uiState.update {
+                    it.copy(
+                        isTranslating = false,
+                        error = ocrDictionaryUnavailableMessage(uiLanguage)
+                    )
+                }
+                return@launch
+            }
             val success = applyManualDictionaryFallback(
                 normalizedText = normalizedText,
-                sourceLanguage = sourceLanguage,
+                preferredSourceLanguage = sourceLanguage,
+                detectedLanguage = manualSourceResolution.detectionResult?.languageCode,
+                detectedCandidates = manualSourceResolution.detectionResult?.candidates
+                    ?.map { it.languageCode }
+                    .orEmpty(),
                 targetLanguage = targetLanguage,
                 uiLanguage = uiLanguage
             )
@@ -643,12 +739,28 @@ class OcrViewModel @Inject constructor(
         if (normalizedText.isBlank()) return
 
         viewModelScope.launch {
-            val sourceLanguage = _uiState.value.sourceLang.normalizeLanguageCode()
-                ?.takeIf(::isSupportedTranslationLanguageCode)
-                ?: "en"
             val targetLanguage = _uiState.value.targetLang.normalizeLanguageCode() ?: "ru"
-            val tokenCount = normalizedText.countSelectionTokens()
             val appLanguage = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first().normalizeLanguageCode() ?: "ru"
+            val manualSourceResolution = resolveManualSourceLanguage(normalizedText)
+            val shouldUseDictionaryFallback = shouldUseOcrDictionaryFallback(
+                rawText = normalizedText,
+                sourceLanguage = manualSourceResolution.sourceLanguage
+                    ?: manualSourceResolution.detectionResult?.languageCode
+            )
+            val singleWordDictionaryMatch = if (shouldUseDictionaryFallback) {
+                resolveOcrSingleWordDictionaryMatch(
+                    rawWord = normalizedText,
+                    preferredSourceLanguage = manualSourceResolution.sourceLanguage,
+                    detectedLanguage = manualSourceResolution.detectionResult?.languageCode,
+                    detectedCandidates = manualSourceResolution.detectionResult?.candidates
+                        ?.map { it.languageCode }
+                        .orEmpty(),
+                    targetLanguage = targetLanguage
+                )
+            } else {
+                null
+            }
+            val sourceLanguage = singleWordDictionaryMatch?.sourceLanguage ?: manualSourceResolution.sourceLanguage
 
             _uiState.update {
                 it.clearTransientFeedback().copy(
@@ -658,31 +770,28 @@ class OcrViewModel @Inject constructor(
                 )
             }
 
-            val dictionaryAvailable = when (
-                val availability = dictionaryEngine.isLookupAvailable(
-                    sourceLanguage = sourceLanguage,
-                    targetLanguage = targetLanguage
-                )
-            ) {
-                is Result.Success -> availability.data
-                is Result.Error -> false
-                Result.Loading -> false
-            }
-
-            if (tokenCount == 1 && dictionaryAvailable) {
+            val dictionaryAvailable = singleWordDictionaryMatch != null || sourceLanguage?.let { resolvedSourceLanguage ->
                 when (
-                    val dictionaryResult = dictionaryEngine.lookup(
-                        rawWord = normalizedText,
-                        sourceLanguage = sourceLanguage,
+                    val availability = dictionaryEngine.isLookupAvailable(
+                        sourceLanguage = resolvedSourceLanguage,
                         targetLanguage = targetLanguage
                     )
                 ) {
-                    is Result.Success -> {
+                    is Result.Success -> availability.data
+                    is Result.Error -> false
+                    Result.Loading -> false
+                }
+            } == true
+
+            if (shouldUseDictionaryFallback && dictionaryAvailable) {
+                when (val match = singleWordDictionaryMatch) {
+                    null -> Unit
+                    else -> {
                         _uiState.update {
                             it.copy(
                                 isExplainingManualText = false,
                                 manualExplanation = ocrDictionaryExplanation(
-                                    entry = dictionaryResult.data,
+                                    entry = match.entry,
                                     language = appLanguage
                                 ),
                                 manualExplanationError = null
@@ -690,10 +799,17 @@ class OcrViewModel @Inject constructor(
                         }
                         return@launch
                     }
-
-                    is Result.Error -> Unit
-                    Result.Loading -> Unit
                 }
+            }
+            if (sourceLanguage == null) {
+                _uiState.update {
+                    it.copy(
+                        isExplainingManualText = false,
+                        manualExplanation = null,
+                        manualExplanationError = ocrExplainUnavailableMessage(appLanguage)
+                    )
+                }
+                return@launch
             }
 
             when (
@@ -943,8 +1059,17 @@ class OcrViewModel @Inject constructor(
                 ?.takeIf { it.isNotBlank() }
                 ?: selectedBlockTranslationInput(block, state)
             val explainContext = buildSelectedBlockExplainContext(block.id, state)
-            val tokenCount = normalizedText.countSelectionTokens()
-            val dictionaryAvailable = when (
+            val shouldUseDictionaryFallback = shouldUseOcrDictionaryFallback(normalizedText, sourceLanguage)
+            val singleWordDictionaryMatch = if (shouldUseDictionaryFallback) {
+                resolveOcrSingleWordDictionaryMatch(
+                    rawWord = normalizedText,
+                    preferredSourceLanguage = sourceLanguage,
+                    targetLanguage = targetLanguage
+                )
+            } else {
+                null
+            }
+            val dictionaryAvailable = singleWordDictionaryMatch != null || when (
                 val availability = dictionaryEngine.isLookupAvailable(
                     sourceLanguage = sourceLanguage,
                     targetLanguage = targetLanguage
@@ -955,20 +1080,15 @@ class OcrViewModel @Inject constructor(
                 Result.Loading -> false
             }
 
-            if (tokenCount == 1 && dictionaryAvailable) {
-                when (
-                    val dictionaryResult = dictionaryEngine.lookup(
-                        rawWord = normalizedText,
-                        sourceLanguage = sourceLanguage,
-                        targetLanguage = targetLanguage
-                    )
-                ) {
-                    is Result.Success -> {
+            if (shouldUseDictionaryFallback && dictionaryAvailable) {
+                when (val match = singleWordDictionaryMatch) {
+                    null -> Unit
+                    else -> {
                         _uiState.update {
                             it.copy(
                                 isExplainingSelectedBlock = false,
                                 selectedBlockExplanation = ocrDictionaryExplanation(
-                                    entry = dictionaryResult.data,
+                                    entry = match.entry,
                                     language = appLanguage
                                 ),
                                 selectedBlockExplanationError = null
@@ -976,8 +1096,6 @@ class OcrViewModel @Inject constructor(
                         }
                         return@launch
                     }
-                    is Result.Error -> Unit
-                    Result.Loading -> Unit
                 }
             }
 
@@ -1284,7 +1402,14 @@ class OcrViewModel @Inject constructor(
                         isTranslating = false,
                         error = when (result.exception) {
                             is TranslationBackendUnavailableException ->
-                                ocrTranslationBackendUnavailableMessage(uiLanguage)
+                                resolveOcrTranslationUnavailableMessage(
+                                    language = uiLanguage,
+                                    preferredTransport = preferredTransport,
+                                    availability = _uiState.value.translationAvailability,
+                                    dictionaryRouteAvailable = false,
+                                    sourceLanguage = _uiState.value.sourceLang,
+                                    targetLanguage = _uiState.value.targetLang
+                                )
                             else -> ocrTranslationUnavailableMessage(uiLanguage)
                         }
                     )
@@ -1436,19 +1561,40 @@ class OcrViewModel @Inject constructor(
 
     private suspend fun applyManualDictionaryFallback(
         normalizedText: String,
-        sourceLanguage: String,
+        preferredSourceLanguage: String?,
+        detectedLanguage: String?,
+        detectedCandidates: List<String>,
         targetLanguage: String,
         uiLanguage: String
     ): Boolean {
-        return when (
-            val dictionaryResult = dictionaryEngine.lookup(
+        val match = resolveOcrSingleWordDictionaryMatch(
+            rawWord = normalizedText,
+            preferredSourceLanguage = preferredSourceLanguage,
+            detectedLanguage = detectedLanguage,
+            detectedCandidates = detectedCandidates,
+            targetLanguage = targetLanguage
+        )
+        val lookupSourceLanguage = match?.sourceLanguage ?: preferredSourceLanguage ?: detectedLanguage
+        return when (val entry = match?.entry ?: lookupSourceLanguage?.let { sourceLanguage ->
+            resolveOcrDictionaryEntry(
                 rawWord = normalizedText,
                 sourceLanguage = sourceLanguage,
                 targetLanguage = targetLanguage
             )
-        ) {
-            is Result.Success -> {
-                val entry = dictionaryResult.data
+        }) {
+            null -> {
+                _uiState.update {
+                    it.copy(
+                        isTranslating = false,
+                        manualResultMode = null,
+                        manualDictionaryEntry = null,
+                        error = ocrDictionaryUnavailableMessage(uiLanguage)
+                    )
+                }
+                false
+            }
+
+            else -> {
                 _uiState.update {
                     it.copy(
                         isTranslating = false,
@@ -1462,20 +1608,44 @@ class OcrViewModel @Inject constructor(
                 }
                 true
             }
+        }
+    }
 
-            is Result.Error -> {
-                _uiState.update {
-                    it.copy(
-                        isTranslating = false,
-                        manualResultMode = null,
-                        manualDictionaryEntry = null,
-                        error = ocrDictionaryUnavailableMessage(uiLanguage)
-                    )
-                }
-                false
+    private suspend fun resolveOcrSingleWordDictionaryMatch(
+        rawWord: String,
+        preferredSourceLanguage: String?,
+        detectedLanguage: String? = preferredSourceLanguage,
+        detectedCandidates: List<String> = emptyList(),
+        targetLanguage: String
+    ): SingleWordDictionaryMatch? {
+        return resolveBestSingleWordDictionaryMatch(
+            rawWord = rawWord,
+            targetLanguage = targetLanguage,
+            dictionaryEngine = dictionaryEngine,
+            preferredSourceLanguage = preferredSourceLanguage,
+            detectedLanguage = detectedLanguage,
+            detectedCandidates = detectedCandidates,
+            fallbackSourceLanguages = supportedTranslationLanguageCodes.filter { it != targetLanguage }
+        )
+    }
+
+    private suspend fun resolveOcrDictionaryEntry(
+        rawWord: String,
+        sourceLanguage: String,
+        targetLanguage: String
+    ): DictionaryEntry? {
+        return when (
+            val dictionaryResult = dictionaryEngine.lookup(
+                rawWord = rawWord,
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage
+            )
+        ) {
+            is Result.Success -> dictionaryResult.data.takeIf { entry ->
+                entry.hasMeaningfulTranslationFor(rawWord) || entry.translations.isNotEmpty() || entry.glosses.isNotEmpty()
             }
-
-            Result.Loading -> false
+            is Result.Error -> null
+            Result.Loading -> null
         }
     }
 
@@ -1491,6 +1661,7 @@ class OcrViewModel @Inject constructor(
         val sourceLanguage = block.detectedLanguage?.normalizeLanguageCode()
             ?: state.sourceLang.normalizeLanguageCode()
             ?: "en"
+        val targetLanguage = state.targetLang.normalizeLanguageCode() ?: "ru"
         val translationInput = selectedBlockTranslationInput(block, state)
         val translationBlock = block.copy(
             textOriginal = translationInput,
@@ -1499,8 +1670,8 @@ class OcrViewModel @Inject constructor(
         when (
             val result = comicTranslationEngine.translateBlocks(
                 blocks = listOf(translationBlock),
-                sourceLanguage = state.sourceLang,
-                targetLanguage = state.targetLang,
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage,
                 preferredTransport = preferredTransport
             )
         ) {
@@ -1532,16 +1703,23 @@ class OcrViewModel @Inject constructor(
             }
 
             is Result.Error -> {
-                _uiState.update {
-                    it.copy(
-                        isTranslatingSelectedBlock = false,
-                        error = when (result.exception) {
-                            is TranslationBackendUnavailableException ->
-                                ocrTranslationBackendUnavailableMessage(uiLanguage)
-                            else -> ocrBlockTranslationFailedMessage(uiLanguage)
-                        }
-                    )
-                }
+                    _uiState.update {
+                        it.copy(
+                            isTranslatingSelectedBlock = false,
+                            error = when (result.exception) {
+                                is TranslationBackendUnavailableException ->
+                                    resolveOcrTranslationUnavailableMessage(
+                                        language = uiLanguage,
+                                        preferredTransport = preferredTransport,
+                                        availability = _uiState.value.translationAvailability,
+                                        dictionaryRouteAvailable = false,
+                                        sourceLanguage = sourceLanguage,
+                                        targetLanguage = targetLanguage
+                                    )
+                                else -> ocrBlockTranslationFailedMessage(uiLanguage)
+                            }
+                        )
+                    }
             }
 
             Result.Loading -> Unit
@@ -1683,6 +1861,11 @@ class OcrViewModel @Inject constructor(
 
         val explainEnabled = preferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, false).first()
         val networkAvailable = isNetworkAvailable()
+        val onlineConfigured = when (val configured = onlineTranslationEngine.isConfigured()) {
+            is Result.Success -> configured.data
+            is Result.Error -> false
+            Result.Loading -> false
+        }
 
         if (sourceLanguage == null || targetLanguage == null || sourceLanguage == targetLanguage) {
             _uiState.update {
@@ -1693,6 +1876,7 @@ class OcrViewModel @Inject constructor(
                         offlinePairSupported = false,
                         offlineModelInstalled = false,
                         networkAvailable = networkAvailable,
+                        onlineConfigured = onlineConfigured,
                         explainToggleEnabled = explainEnabled
                     )
                 )
@@ -1738,6 +1922,7 @@ class OcrViewModel @Inject constructor(
                     offlinePairSupported = offlinePairSupported,
                     offlineModelInstalled = offlineModelInstalled,
                     networkAvailable = networkAvailable,
+                    onlineConfigured = onlineConfigured,
                     explainToggleEnabled = explainEnabled
                 )
             )
@@ -1759,6 +1944,35 @@ class OcrViewModel @Inject constructor(
     private suspend fun currentUiLanguage(): String =
         preferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first().normalizeLanguageCode() ?: "ru"
 
+    private suspend fun resolveManualSourceLanguage(
+        text: String
+    ): ManualSourceResolution {
+        val configuredSourceLanguage = _uiState.value.sourceLang.normalizeLanguageCode()
+            ?.takeIf(::isSupportedTranslationLanguageCode)
+        if (configuredSourceLanguage != null) {
+            return ManualSourceResolution(
+                sourceLanguage = configuredSourceLanguage,
+                detectionResult = LanguageDetectionResult(
+                    languageCode = configuredSourceLanguage,
+                    isReliable = true,
+                    fallbackUsed = true
+                )
+            )
+        }
+
+        val detectionResult = when (val detection = languageDetector.detectLanguage(text)) {
+            is Result.Success -> detection.data
+            is Result.Error -> null
+            Result.Loading -> null
+        }
+        return ManualSourceResolution(
+            sourceLanguage = detectionResult
+                ?.languageCode
+                ?.takeIf(::isSupportedTranslationLanguageCode),
+            detectionResult = detectionResult
+        )
+    }
+
     private fun String.coerceToSupportedTargetLanguage(): String =
         normalizeTranslationLanguageCode(this)
             ?.takeIf(::isSupportedTranslationLanguageCode)
@@ -1770,9 +1984,13 @@ class OcrViewModel @Inject constructor(
             ?: "en"
 
     private fun String.coerceToSupportedOcrSourceLanguage(): String =
-        normalizeTranslationLanguageCode(this)
-            ?.takeIf(::isSupportedOcrSourceLanguageCode)
-            ?: "ja"
+        if (equals(AUTO_SOURCE_LANGUAGE, ignoreCase = true)) {
+            AUTO_SOURCE_LANGUAGE
+        } else {
+            normalizeTranslationLanguageCode(this)
+                ?.takeIf(::isSupportedOcrSourceLanguageCode)
+                ?: AUTO_SOURCE_LANGUAGE
+        }
 
     private fun String.normalizeLanguageCode(): String? =
         normalizeTranslationLanguageCode(this)
@@ -1785,7 +2003,13 @@ class OcrViewModel @Inject constructor(
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    private companion object {
+    companion object {
+        const val AUTO_SOURCE_LANGUAGE = "AUTO"
         val OCR_SELECTION_TOKEN_REGEX = "[\\p{L}\\p{N}]+".toRegex()
     }
 }
+
+private data class ManualSourceResolution(
+    val sourceLanguage: String?,
+    val detectionResult: LanguageDetectionResult?
+)

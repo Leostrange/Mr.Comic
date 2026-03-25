@@ -104,6 +104,6 @@ class ThemePreferencesRepository @Inject constructor(
     }
 
     suspend fun setSurfaceOpacity(value: Float) {
-        dataStore.edit { prefs -> prefs[SURFACE_OPACITY_KEY] = value.coerceIn(0.55f, 1f) }
+        dataStore.edit { prefs -> prefs[SURFACE_OPACITY_KEY] = value.coerceIn(0.35f, 1f) }
     }
 }

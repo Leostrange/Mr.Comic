@@ -958,12 +958,6 @@ fun ReaderScreen(
                     // Нижняя панель прогресса/управления - скрываем, если открыты настройки или оглавление
                     if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
                         when (uiState.chromeState) {
-                            ReaderChromeState.MINIMAL -> ReaderProgressPill(
-                                currentPage = uiState.currentPage,
-                                totalPages = uiState.totalPages,
-                                onClick = viewModel::showExpandedChrome
-                            )
-
                             ReaderChromeState.EXPANDED -> ReaderExpandedBottomPanel(
                                 uiState = uiState,
                                 isLandscape = supportsLandscapeSpread,
@@ -991,12 +985,6 @@ fun ReaderScreen(
                             .displayCutoutPadding()
                     ) {
                         when (uiState.chromeState) {
-                            ReaderChromeState.MINIMAL -> ReaderMinimalBar(
-                                title = uiState.comic?.title.orEmpty(),
-                                onNavigateBack = onNavigateBack,
-                                onExpand = viewModel::showExpandedChrome
-                            )
-
                             ReaderChromeState.EXPANDED -> {
                                 ReaderExpandedBar(
                                     title = uiState.comic?.title.orEmpty(),

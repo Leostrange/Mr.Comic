@@ -3,23 +3,42 @@ package com.example.engine.formats.djvu
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
-import dagger.hilt.android.qualifiers.ApplicationContext
 import com.example.engine.formats.base.FormatReader
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
-import javax.inject.Inject
 
-class DjvuFormatReader @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val path: String
+class DjvuFormatReader(
+    private val context: Context,
+    private val path: String,
+    private val backend: DjvuBackend
 ) : FormatReader {
 
-    private val html by lazy { buildHtml() }
+    private val openMutex = Mutex()
+    private val probeMutex = Mutex()
+    @Volatile private var isClosed = false
+    private var document: DjvuDocument? = null
+    private var placeholderProbe: DjvuProbeResult? = null
 
-    override suspend fun getPageCount(): Int = 1
+    override suspend fun getPageCount(): Int =
+        ensureDocument()?.getPageCount()?.coerceAtLeast(1)
+            ?: ensurePlaceholderProbe()?.pageCount?.coerceAtLeast(1)
+            ?: 1
 
-    override suspend fun getPage(index: Int): Bitmap? = null
+    override suspend fun getPage(index: Int): Bitmap? = getPage(index, 1)
 
-    override suspend fun getHtmlPage(index: Int): String? = if (index == 0) html else null
+    override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? {
+        val currentDocument = ensureDocument() ?: return null
+        if (index < 0) return null
+        return currentDocument.renderPage(index, renderQuality)
+    }
+
+    override suspend fun getHtmlPage(index: Int): String? {
+        if (ensureDocument() != null) return null
+        val totalPages = ensurePlaceholderProbe()?.pageCount?.coerceAtLeast(1) ?: 1
+        if (index < 0 || index >= totalPages) return null
+        return buildPlaceholderHtml(pageIndex = index, totalPages = totalPages)
+    }
 
     override fun htmlBaseUrl(): String? {
         if (path.startsWith("content://")) return null
@@ -27,30 +46,73 @@ class DjvuFormatReader @Inject constructor(
         return Uri.fromFile(parent).toString().trimEnd('/') + "/"
     }
 
-    override fun close() = Unit
-
-    private fun buildHtml(): String {
-        val fileName = runCatching {
-            if (path.startsWith("content://")) {
-                context.contentResolver.query(Uri.parse(path), arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
-                    ?.use { cursor ->
-                        if (cursor.moveToFirst()) cursor.getString(0) else null
-                    }
-            } else {
-                File(path).name
+    override suspend fun getMetadata(): Map<String, String> {
+        val currentDocument = ensureDocument()
+        val placeholderInfo = if (currentDocument == null) ensurePlaceholderProbe() else null
+        return buildMap {
+            put("format", "DjVu")
+            put("fileName", resolveFileName())
+            when (val status = backend.status) {
+                is DjvuBackendStatus.Available -> put("djvuBackend", status.backendName)
+                is DjvuBackendStatus.Unavailable -> {
+                    put("djvuBackend", status.backendName)
+                    put("djvuStatus", status.summary)
+                }
             }
-        }.getOrNull().orEmpty().ifBlank { "DjVu document" }
+            placeholderInfo?.let {
+                put("djvuFormType", it.formType)
+                put("djvuPageCount", it.pageCount.toString())
+            }
+            currentDocument?.getMetadata()?.forEach { (key, value) -> put(key, value) }
+        }
+    }
+
+    override fun close() {
+        isClosed = true
+        document?.close()
+        document = null
+    }
+
+    private suspend fun ensureDocument(): DjvuDocument? {
+        if (isClosed) return null
+        document?.let { return it }
+        return openMutex.withLock {
+            if (isClosed) return@withLock null
+            document?.let { return@withLock it }
+            backend.open(path)?.also { document = it }
+        }
+    }
+
+    private suspend fun ensurePlaceholderProbe(): DjvuProbeResult? {
+        if (isClosed) return null
+        placeholderProbe?.let { return it }
+        return probeMutex.withLock {
+            if (isClosed) return@withLock null
+            placeholderProbe?.let { return@withLock it }
+            openInputStream()?.use(DjvuProbe::probe)?.also { placeholderProbe = it }
+        }
+    }
+
+    private fun buildPlaceholderHtml(pageIndex: Int, totalPages: Int): String {
+        val fileName = resolveFileName()
+        val status = backend.status as? DjvuBackendStatus.Unavailable
+        val statusSummary = status?.summary ?: "DjVu backend is currently unavailable."
+        val statusDetails = status?.details ?: "The document stays in the library, but this build still uses a placeholder path for DjVu."
+        val pageLabel = if (totalPages > 1) "Страница ${pageIndex + 1} из $totalPages" else "Одностраничный placeholder-режим"
 
         val body = """
             <div class="wrap">
               <div class="badge">DjVu</div>
               <h1>${escapeHtml(fileName)}</h1>
-              <p>Файл распознан и импортирован, но в этой сборке пока не подключён безопасный встроенный DjVu renderer.</p>
+              <p><strong>${escapeHtml(pageLabel)}</strong></p>
+              <p>Файл распознан и импортирован, но в этой сборке пока не подключён рабочий встроенный DjVu renderer.</p>
               <p>Документ не потерян: он остаётся в библиотеке и откроется после подключения отдельного DjVu-движка.</p>
+              <p><strong>Текущий статус:</strong> ${escapeHtml(statusSummary)}</p>
+              <p>${escapeHtml(statusDetails)}</p>
               <ul>
-                <li>поддержка DjVu вынесена в отдельный этап</li>
-                <li>текущая блокировка связана с выбором renderer и лицензии</li>
-                <li>приложение не падает и не пропускает файл молча</li>
+                <li>поддержка DjVu уже вынесена в отдельный backend-слой</li>
+                <li>текущий путь не ломает библиотеку, backup и импорт</li>
+                <li>реальный page render можно будет подключить отдельно, без перелома reader pipeline</li>
               </ul>
             </div>
         """.trimIndent()
@@ -107,4 +169,25 @@ class DjvuFormatReader @Inject constructor(
         .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
+
+    private fun resolveFileName(): String = runCatching {
+        if (path.startsWith("content://")) {
+            context.contentResolver.query(
+                Uri.parse(path),
+                arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } else {
+            File(path).name
+        }
+    }.getOrNull().orEmpty().ifBlank { "DjVu document" }
+
+    private fun openInputStream() = when {
+        path.startsWith("content://") -> context.contentResolver.openInputStream(Uri.parse(path))
+        else -> File(path).takeIf(File::exists)?.inputStream()
+    }
 }

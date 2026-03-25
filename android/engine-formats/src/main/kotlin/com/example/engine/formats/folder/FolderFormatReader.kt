@@ -2,6 +2,7 @@ package com.example.engine.formats.folder
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import androidx.documentfile.provider.DocumentFile
@@ -22,16 +23,24 @@ class FolderFormatReader(
     companion object {
         private const val TAG = "FolderFormatReader"
         private val IMAGE_MIMES = setOf("image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp")
+        private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
     }
 
     private val imageFiles: List<DocumentFile> by lazy {
         try {
             val uri = Uri.parse(path)
             val docFile = DocumentFile.fromTreeUri(context, uri) ?: DocumentFile.fromSingleUri(context, uri)
-            docFile?.listFiles()
-                ?.filter { it.isFile && it.type in IMAGE_MIMES }
+            val candidates = docFile?.listFiles()
+                ?.filter { it.isFile }
                 ?.sortedBy { it.name }
                 ?: emptyList()
+
+            val byMimeOrExtension = candidates.filter(::looksLikeImageFile)
+            if (byMimeOrExtension.isNotEmpty()) {
+                byMimeOrExtension
+            } else {
+                candidates.filter(::isBitmapFile)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list folder", e)
             emptyList()
@@ -60,4 +69,23 @@ class FolderFormatReader(
     }
 
     override fun close() { /* stateless */ }
+
+    private fun looksLikeImageFile(file: DocumentFile): Boolean {
+        if (file.type in IMAGE_MIMES) return true
+        val ext = file.name?.lowercase()?.substringAfterLast('.', "") ?: return false
+        return ext in IMAGE_EXTENSIONS
+    }
+
+    private fun isBitmapFile(file: DocumentFile): Boolean {
+        return runCatching {
+            context.contentResolver.openInputStream(file.uri)?.use { input ->
+                val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeStream(input, null, options)
+                options.outWidth > 0 && options.outHeight > 0
+            } ?: false
+        }.getOrElse { error ->
+            Log.w(TAG, "Failed to probe folder image candidate: ${file.uri}", error)
+            false
+        }
+    }
 }

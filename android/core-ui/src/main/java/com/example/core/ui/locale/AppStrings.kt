@@ -71,6 +71,7 @@ data class AppStrings(
     val themePresets: String,
     val themePresetCustom: String,
     val themePresetPaper: String,
+    val themePresetGlass: String,
     val themePresetAmoled: String,
     val themePresetNeon: String,
     val themePresetGray: String,
@@ -162,6 +163,11 @@ data class AppStrings(
     val libraryDeleteComicMessage: String,
     val libraryDeleteFolderTitle: String,
     val libraryDeleteFolderMessage: String,
+    val libraryQuotes: String,
+    val libraryBookmarks: String,
+    val libraryQuotesEmptyHint: String,
+    val libraryBookmarksEmptyHint: String,
+    val libraryDeleteQuoteTitle: String,
     val libraryDeleteAction: String,
     val libraryViewAsList: String,
     val libraryViewAsGrid: String,
@@ -178,6 +184,7 @@ data class AppStrings(
     val libraryStatusSection: String,
     val libraryStatusAll: String,
     val libraryStatusBookmarked: String,
+    val libraryStatusNew: String,
     val libraryStatusReading: String,
     val libraryStatusCompleted: String,
     val libraryFormatSection: String,
@@ -339,16 +346,60 @@ fun AppStrings.librarySetCountLabel(setCount: Int): String = when (languageCode)
     }
 }
 
-fun AppStrings.libraryComicCountLabel(totalComics: Int): String = when (languageCode) {
-    "en" -> if (totalComics == 1) "comic" else "comics"
-    "ja" -> "冊"
-    "zh" -> "册"
-    "ko" -> "권"
+fun AppStrings.libraryQuotePageLabel(page: Int): String = when (languageCode) {
+    "en" -> "Page ${page + 1}"
+    "ja" -> "${page + 1}ページ"
+    "zh" -> "第 ${page + 1} 页"
+    "ko" -> "${page + 1}페이지"
+    else -> "Страница ${page + 1}"
+}
+
+fun AppStrings.libraryQuoteSourceMissingLabel(): String = when (languageCode) {
+    "en" -> "Source unavailable"
+    "ja" -> "元の本が利用できません"
+    "zh" -> "原始书籍不可用"
+    "ko" -> "원본 책을 사용할 수 없습니다"
+    else -> "Источник книги недоступен"
+}
+
+fun AppStrings.libraryQuoteCountLabel(quoteCount: Int): String = when (languageCode) {
+    "en" -> if (quoteCount == 1) "1 quote" else "$quoteCount quotes"
+    "ja" -> "${quoteCount}件の引用"
+    "zh" -> "${quoteCount}条摘录"
+    "ko" -> "문구 ${quoteCount}개"
     else -> when {
-        totalComics % 10 == 1 && totalComics % 100 != 11 -> "комикс"
-        totalComics % 10 in 2..4 && totalComics % 100 !in 12..14 -> "комикса"
-        else -> "комиксов"
+        quoteCount % 10 == 1 && quoteCount % 100 != 11 -> "$quoteCount цитата"
+        quoteCount % 10 in 2..4 && quoteCount % 100 !in 12..14 -> "$quoteCount цитаты"
+        else -> "$quoteCount цитат"
     }
+}
+
+fun AppStrings.libraryQuoteSourceCountLabel(sourceCount: Int): String = when (languageCode) {
+    "en" -> if (sourceCount == 1) "1 source" else "$sourceCount sources"
+    "ja" -> "出典 ${sourceCount}件"
+    "zh" -> "${sourceCount}个来源"
+    "ko" -> "출처 ${sourceCount}개"
+    else -> when {
+        sourceCount % 10 == 1 && sourceCount % 100 != 11 -> "$sourceCount источник"
+        sourceCount % 10 in 2..4 && sourceCount % 100 !in 12..14 -> "$sourceCount источника"
+        else -> "$sourceCount источников"
+    }
+}
+
+fun AppStrings.libraryGraphicSectionLabel(): String = when (languageCode) {
+    "en" -> "Comics, manga, and webtoons"
+    "ja" -> "コミック・マンガ・ウェブトゥーン"
+    "zh" -> "漫画、日漫与条漫"
+    "ko" -> "코믹, 만화, 웹툰"
+    else -> "Комиксы, манга и вебтун"
+}
+
+fun AppStrings.libraryBooksSectionLabel(): String = when (languageCode) {
+    "en" -> "Books"
+    "ja" -> "書籍"
+    "zh" -> "书籍"
+    "ko" -> "책"
+    else -> "Книги"
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -391,7 +442,7 @@ val Russian = AppStrings(
     sectionBackup = "Бэкап",
     sectionBackupDesc = "Прогресс чтения, кэш, авто-сохранение",
     sectionAbout = "О приложении",
-    sectionAboutDesc = "Версия 2.0.0 · Сборка 200",
+    sectionAboutDesc = "Описание, функции, библиотеки, лицензии и контакты",
 
     appLanguage = "Язык интерфейса",
     langRu = "Русский",
@@ -414,6 +465,7 @@ val Russian = AppStrings(
     themePresets = "Пресеты темы",
     themePresetCustom = "Своя",
     themePresetPaper = "Бумага",
+    themePresetGlass = "Стекло",
     themePresetAmoled = "AMOLED",
     themePresetNeon = "Неон",
     themePresetGray = "Серая",
@@ -446,7 +498,7 @@ val Russian = AppStrings(
     appIconDesc = "Выберите один из 7 вариантов дизайна",
     appIconButton = "Открыть выбор иконки",
 
-    readingModeCard = "Режим чтения по умолчанию",
+    readingModeCard = "Режим чтения",
     readingModeDual = "2 страницы",
     readingModeLtr = "Страницы →",
     readingModeRtl = "← Страницы",
@@ -494,6 +546,11 @@ val Russian = AppStrings(
     libraryDeleteComicMessage = "«%s» будет удален из библиотеки. Файл на диске не удаляется.",
     libraryDeleteFolderTitle = "Удалить папку?",
     libraryDeleteFolderMessage = "Папка «%1\$s» и %2\$d элементов внутри неё будут удалены из библиотеки. Файлы на диске не удаляются.",
+    libraryQuotes = "Цитатник",
+    libraryBookmarks = "Закладки",
+    libraryQuotesEmptyHint = "Сохраняйте понравившиеся строки в ридере, и они появятся здесь отдельной коллекцией.",
+    libraryBookmarksEmptyHint = "Добавляйте файлы в закладки из карточки библиотеки, и они будут собраны здесь отдельно.",
+    libraryDeleteQuoteTitle = "Удалить цитату?",
     libraryDeleteAction = "Удалить",
     libraryViewAsList = "Вид: список",
     libraryViewAsGrid = "Вид: сетка",
@@ -510,6 +567,7 @@ val Russian = AppStrings(
     libraryStatusSection = "Статус",
     libraryStatusAll = "Все",
     libraryStatusBookmarked = "Избранное",
+    libraryStatusNew = "Новое",
     libraryStatusReading = "Читаю",
     libraryStatusCompleted = "Прочитано",
     libraryFormatSection = "Формат",
@@ -632,7 +690,7 @@ val English = AppStrings(
     sectionBackup = "Backup",
     sectionBackupDesc = "Reading progress, cache, auto-save",
     sectionAbout = "About",
-    sectionAboutDesc = "Version 2.0.0 · Build 200",
+    sectionAboutDesc = "Description, features, libraries, licenses, and contacts",
 
     appLanguage = "App Language",
     langRu = "Русский",
@@ -655,6 +713,7 @@ val English = AppStrings(
     themePresets = "Theme Presets",
     themePresetCustom = "Custom",
     themePresetPaper = "Paper",
+    themePresetGlass = "Glass",
     themePresetAmoled = "AMOLED",
     themePresetNeon = "Neon",
     themePresetGray = "Gray",
@@ -687,7 +746,7 @@ val English = AppStrings(
     appIconDesc = "Choose from 7 design variants",
     appIconButton = "Open Icon Selector",
 
-    readingModeCard = "Default Reading Mode",
+    readingModeCard = "Reading mode",
     readingModeDual = "2 pages",
     readingModeLtr = "Pages →",
     readingModeRtl = "← Pages",
@@ -735,6 +794,11 @@ val English = AppStrings(
     libraryDeleteComicMessage = "\"%s\" will be removed from the library. The file stays on disk.",
     libraryDeleteFolderTitle = "Delete folder?",
     libraryDeleteFolderMessage = "\"%1\$s\" and %2\$d items inside it will be removed from the library. Files stay on disk.",
+    libraryQuotes = "Quotes",
+    libraryBookmarks = "Bookmarks",
+    libraryQuotesEmptyHint = "Save a line from the reader and it will appear here as a separate collection.",
+    libraryBookmarksEmptyHint = "Bookmark files from the library card and they will appear here as a separate collection.",
+    libraryDeleteQuoteTitle = "Delete quote?",
     libraryDeleteAction = "Delete",
     libraryViewAsList = "View: list",
     libraryViewAsGrid = "View: grid",
@@ -751,6 +815,7 @@ val English = AppStrings(
     libraryStatusSection = "Status",
     libraryStatusAll = "All",
     libraryStatusBookmarked = "Bookmarked",
+    libraryStatusNew = "New",
     libraryStatusReading = "Reading",
     libraryStatusCompleted = "Completed",
     libraryFormatSection = "Format",
@@ -873,7 +938,7 @@ val Japanese = AppStrings(
     sectionBackup = "バックアップ",
     sectionBackupDesc = "読書進捗、キャッシュ、自動保存",
     sectionAbout = "このアプリについて",
-    sectionAboutDesc = "バージョン 2.0.0 · ビルド 200",
+    sectionAboutDesc = "説明、機能、ライブラリ、ライセンス、連絡先",
 
     appLanguage = "表示言語",
     langRu = "Русский",
@@ -896,6 +961,7 @@ val Japanese = AppStrings(
     themePresets = "テーマプリセット",
     themePresetCustom = "カスタム",
     themePresetPaper = "紙",
+    themePresetGlass = "ガラス",
     themePresetAmoled = "AMOLED",
     themePresetNeon = "ネオン",
     themePresetGray = "グレー",
@@ -928,7 +994,7 @@ val Japanese = AppStrings(
     appIconDesc = "7種類のデザインから選択",
     appIconButton = "アイコン選択を開く",
 
-    readingModeCard = "デフォルト読書モード",
+    readingModeCard = "読書モード",
     readingModeDual = "2ページ",
     readingModeLtr = "ページ →",
     readingModeRtl = "← ページ",
@@ -976,6 +1042,11 @@ val Japanese = AppStrings(
     libraryDeleteComicMessage = "「%s」はライブラリから削除されます。ファイル自体はディスクに残ります。",
     libraryDeleteFolderTitle = "フォルダを削除しますか？",
     libraryDeleteFolderMessage = "「%1\$s」と中の %2\$d 件はライブラリから削除されます。ファイル自体はディスクに残ります。",
+    libraryQuotes = "引用",
+    libraryBookmarks = "ブックマーク",
+    libraryQuotesEmptyHint = "リーダーで気に入った一文を保存すると、ここに独立したコレクションとして表示されます。",
+    libraryBookmarksEmptyHint = "ライブラリカードからファイルをブックマークすると、ここに独立したコレクションとして表示されます。",
+    libraryDeleteQuoteTitle = "引用を削除しますか？",
     libraryDeleteAction = "削除",
     libraryViewAsList = "表示: リスト",
     libraryViewAsGrid = "表示: グリッド",
@@ -992,6 +1063,7 @@ val Japanese = AppStrings(
     libraryStatusSection = "ステータス",
     libraryStatusAll = "すべて",
     libraryStatusBookmarked = "ブックマーク",
+    libraryStatusNew = "新規",
     libraryStatusReading = "読書中",
     libraryStatusCompleted = "読了",
     libraryFormatSection = "形式",
@@ -1114,7 +1186,7 @@ val ChineseSimplified = AppStrings(
     sectionBackup = "备份",
     sectionBackupDesc = "阅读进度、缓存、自动保存",
     sectionAbout = "关于",
-    sectionAboutDesc = "版本 2.0.0 · 构建 200",
+    sectionAboutDesc = "说明、功能、库、许可证与联系方式",
 
     appLanguage = "界面语言",
     langRu = "Русский",
@@ -1137,6 +1209,7 @@ val ChineseSimplified = AppStrings(
     themePresets = "主题预设",
     themePresetCustom = "自定义",
     themePresetPaper = "纸质",
+    themePresetGlass = "玻璃",
     themePresetAmoled = "AMOLED",
     themePresetNeon = "霓虹",
     themePresetGray = "灰色",
@@ -1169,7 +1242,7 @@ val ChineseSimplified = AppStrings(
     appIconDesc = "从 7 种设计中选择",
     appIconButton = "打开图标选择",
 
-    readingModeCard = "默认阅读模式",
+    readingModeCard = "阅读模式",
     readingModeDual = "双页",
     readingModeLtr = "页面 →",
     readingModeRtl = "← 页面",
@@ -1217,6 +1290,11 @@ val ChineseSimplified = AppStrings(
     libraryDeleteComicMessage = "“%s”将从书库移除，磁盘上的文件不会删除。",
     libraryDeleteFolderTitle = "删除文件夹？",
     libraryDeleteFolderMessage = "“%1\$s”及其中的 %2\$d 个项目将从书库移除，磁盘上的文件不会删除。",
+    libraryQuotes = "摘录",
+    libraryBookmarks = "书签",
+    libraryQuotesEmptyHint = "在阅读器里保存喜欢的句子，它就会作为独立收藏出现在这里。",
+    libraryBookmarksEmptyHint = "在书库卡片里收藏文件，它们就会在这里单独显示。",
+    libraryDeleteQuoteTitle = "删除摘录？",
     libraryDeleteAction = "删除",
     libraryViewAsList = "视图：列表",
     libraryViewAsGrid = "视图：网格",
@@ -1233,6 +1311,7 @@ val ChineseSimplified = AppStrings(
     libraryStatusSection = "状态",
     libraryStatusAll = "全部",
     libraryStatusBookmarked = "已收藏",
+    libraryStatusNew = "新的",
     libraryStatusReading = "阅读中",
     libraryStatusCompleted = "已读完",
     libraryFormatSection = "格式",
@@ -1355,7 +1434,7 @@ val Korean = AppStrings(
     sectionBackup = "백업",
     sectionBackupDesc = "읽기 진도, 캐시, 자동 저장",
     sectionAbout = "앱 정보",
-    sectionAboutDesc = "버전 2.0.0 · 빌드 200",
+    sectionAboutDesc = "설명, 기능, 라이브러리, 라이선스, 연락처",
 
     appLanguage = "앱 언어",
     langRu = "Русский",
@@ -1378,6 +1457,7 @@ val Korean = AppStrings(
     themePresets = "테마 프리셋",
     themePresetCustom = "사용자 지정",
     themePresetPaper = "종이",
+    themePresetGlass = "글래스",
     themePresetAmoled = "AMOLED",
     themePresetNeon = "네온",
     themePresetGray = "회색",
@@ -1410,7 +1490,7 @@ val Korean = AppStrings(
     appIconDesc = "7가지 디자인 중 선택",
     appIconButton = "아이콘 선택 열기",
 
-    readingModeCard = "기본 읽기 모드",
+    readingModeCard = "읽기 모드",
     readingModeDual = "2페이지",
     readingModeLtr = "페이지 →",
     readingModeRtl = "← 페이지",
@@ -1458,6 +1538,11 @@ val Korean = AppStrings(
     libraryDeleteComicMessage = "\"%s\"는 라이브러리에서만 제거되며 파일은 디스크에 남습니다.",
     libraryDeleteFolderTitle = "폴더를 삭제할까요?",
     libraryDeleteFolderMessage = "\"%1\$s\"와 그 안의 %2\$d개 항목은 라이브러리에서만 제거되며 파일은 디스크에 남습니다.",
+    libraryQuotes = "문구",
+    libraryBookmarks = "북마크",
+    libraryQuotesEmptyHint = "리더에서 마음에 드는 문장을 저장하면 여기에서 별도 컬렉션으로 볼 수 있습니다.",
+    libraryBookmarksEmptyHint = "라이브러리 카드에서 파일을 북마크하면 여기에서 별도 컬렉션으로 볼 수 있습니다.",
+    libraryDeleteQuoteTitle = "문구를 삭제할까요?",
     libraryDeleteAction = "삭제",
     libraryViewAsList = "보기: 목록",
     libraryViewAsGrid = "보기: 그리드",
@@ -1474,6 +1559,7 @@ val Korean = AppStrings(
     libraryStatusSection = "상태",
     libraryStatusAll = "전체",
     libraryStatusBookmarked = "북마크",
+    libraryStatusNew = "새 항목",
     libraryStatusReading = "읽는 중",
     libraryStatusCompleted = "완독",
     libraryFormatSection = "형식",

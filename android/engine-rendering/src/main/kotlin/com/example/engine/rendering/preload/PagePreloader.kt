@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import android.content.Context
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +26,8 @@ class PagePreloader @Inject constructor(
     private val bitmapAllocator: BitmapAllocator,
     @ApplicationContext context: Context
 ) {
-    private data class PageCacheKey(val index: Int, val renderQuality: Int = 1)
+    private data class PageCacheKey(val readerToken: Int, val index: Int, val renderQuality: Int = 1)
+    private data class PreloadWindow(val readerToken: Int, val start: Int, val end: Int)
 
     companion object {
         private const val TAG = "PagePreloader"
@@ -33,15 +36,23 @@ class PagePreloader @Inject constructor(
     }
 
     private var preloadJob: Job? = null
+    private var activePreloadWindow: PreloadWindow? = null
+    private var activeReaderToken: Int? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val deviceProfile = context.resolveRenderDeviceProfile()
+    private val inFlightMutex = Mutex()
+    private val inFlightLoads = mutableMapOf<PageCacheKey, Deferred<Bitmap?>>()
 
     // Reactive page cache — UI observes this instead of polling getPage()
     private val _loadedPages = MutableStateFlow<Map<PageCacheKey, Bitmap>>(emptyMap())
 
     /** Returns a Flow that emits the bitmap for [index] as soon as it becomes available. */
     fun getPageFlow(index: Int, renderQuality: Int = 1): Flow<Bitmap?> =
-        _loadedPages.map { it[PageCacheKey(index, renderQuality)] }.distinctUntilChanged()
+        _loadedPages.map { map ->
+            activeReaderToken?.let { readerToken ->
+                map[PageCacheKey(readerToken, index, renderQuality)]
+            }
+        }.distinctUntilChanged()
 
     /**
      * Starts background preloading around [currentPage].
@@ -56,36 +67,76 @@ class PagePreloader @Inject constructor(
         currentPage: Int,
         totalPages: Int,
         preloadAhead: Int = DEFAULT_PRELOAD_AHEAD
+    ) = preloadAround(
+        reader = reader,
+        visiblePages = listOf(currentPage),
+        totalPages = totalPages,
+        preloadAhead = preloadAhead
+    )
+
+    fun preloadAround(
+        reader: FormatReader,
+        visiblePages: List<Int>,
+        totalPages: Int,
+        preloadAhead: Int = DEFAULT_PRELOAD_AHEAD
     ) {
+        val readerToken = System.identityHashCode(reader)
+        activeReaderToken = readerToken
+        val anchorPages = visiblePages
+            .distinct()
+            .filter { it in 0 until totalPages }
+            .ifEmpty { listOf(0) }
+        val ahead = preloadAhead.coerceIn(1, deviceProfile.maxPreloadPages)
+        val behind = minOf(PRELOAD_BEHIND, deviceProfile.preloadBehindPages)
+        val start = (anchorPages.first() - behind).coerceAtLeast(0)
+        val end = (anchorPages.last() + ahead).coerceAtMost(totalPages - 1)
+        val requestedWindow = PreloadWindow(
+            readerToken = readerToken,
+            start = start,
+            end = end
+        )
+        if (activePreloadWindow == requestedWindow) {
+            if (preloadJob?.isActive == true) return
+
+            val hasAllBasePages = (start..end).all { cache.get(cacheKey(readerToken, it, 1)) != null }
+            if (hasAllBasePages) {
+                (start..end).forEach { pageIndex ->
+                    cache.get(cacheKey(readerToken, pageIndex, 1))?.let { bitmap ->
+                        val key = PageCacheKey(readerToken, pageIndex, 1)
+                        _loadedPages.update { map -> if (key in map) map else map + (key to bitmap) }
+                    }
+                }
+                return
+            }
+        }
         preloadJob?.cancel()
+        activePreloadWindow = requestedWindow
         preloadJob = scope.launch {
-            val ahead = preloadAhead.coerceIn(1, deviceProfile.maxPreloadPages)
-            val behind = minOf(PRELOAD_BEHIND, deviceProfile.preloadBehindPages)
-            val start = (currentPage - behind).coerceAtLeast(0)
-            val end   = (currentPage + ahead).coerceAtMost(totalPages - 1)
             val window = start..end
 
             // Evict pages outside the new window before loading, preventing unbounded growth.
-            val evictedPages = _loadedPages.value.filterKeys { it.index !in window }
-            _loadedPages.update { map -> map.filterKeys { it.index in window } }
+            val evictedPages = _loadedPages.value.filterKeys { it.readerToken == readerToken && it.index !in window }
+            _loadedPages.update { map ->
+                map.filterKeys { key -> key.readerToken != readerToken || key.index in window }
+            }
             evictedPages.forEach { (key, bitmap) ->
-                cache.remove(cacheKey(key.index, key.renderQuality))
+                cache.remove(cacheKey(key.readerToken, key.index, key.renderQuality))
                 releaseWithDelay(bitmap)
             }
 
             for (i in window) {
                 if (!isActive) break
-                if (cache.get(cacheKey(i, 1)) == null) {
+                if (cache.get(cacheKey(readerToken, i, 1)) == null) {
                     try {
-                        reader.getPage(i)?.let { putPage(i, it, 1) }
+                        loadPage(reader, i, 1)
                     } catch (e: Throwable) {
                         // Throwable: junrar может бросить AssertionError (не Exception)
                         Log.e(TAG, "Preload failed for page $i", e)
                     }
                 } else {
                     // Already in the LRU cache — ensure the reactive map is up to date.
-                    cache.get(cacheKey(i, 1))?.let { bm ->
-                        val key = PageCacheKey(i, 1)
+                    cache.get(cacheKey(readerToken, i, 1))?.let { bm ->
+                        val key = PageCacheKey(readerToken, i, 1)
                         _loadedPages.update { map -> if (key in map) map else map + (key to bm) }
                     }
                 }
@@ -98,46 +149,87 @@ class PagePreloader @Inject constructor(
         index: Int,
         renderQuality: Int = 1
     ): Bitmap? {
-        val key = PageCacheKey(index, renderQuality)
-        cache.get(cacheKey(index, renderQuality))?.let { cached ->
+        val readerToken = System.identityHashCode(reader)
+        activeReaderToken = readerToken
+        val key = PageCacheKey(readerToken, index, renderQuality)
+        cache.get(cacheKey(readerToken, index, renderQuality))?.let { cached ->
             _loadedPages.update { map -> if (key in map) map else map + (key to cached) }
             return cached
         }
-        val bitmap = reader.getPage(index, renderQuality) ?: return null
-        putPage(index, bitmap, renderQuality)
-        return bitmap
+        val deferred = inFlightMutex.withLock {
+            inFlightLoads[key]?.takeIf { it.isActive } ?: scope.async(start = CoroutineStart.LAZY) {
+                try {
+                    reader.getPage(index, renderQuality)?.also { bitmap ->
+                        putPage(readerToken, index, bitmap, renderQuality)
+                    }
+                } finally {
+                    inFlightMutex.withLock {
+                        inFlightLoads.remove(key)
+                    }
+                }
+            }.also { created ->
+                inFlightLoads[key] = created
+                created.start()
+            }
+        }
+        return deferred.await()
     }
 
     fun cancelPreload() { preloadJob?.cancel() }
 
     fun getPage(index: Int, renderQuality: Int = 1): Bitmap? =
-        cache.get(cacheKey(index, renderQuality))
+        activeReaderToken?.let { readerToken ->
+            cache.get(cacheKey(readerToken, index, renderQuality))
+        }
 
-    fun putPage(index: Int, bitmap: Bitmap, renderQuality: Int = 1) {
-        val key = PageCacheKey(index, renderQuality)
+    private fun putPage(readerToken: Int, index: Int, bitmap: Bitmap, renderQuality: Int = 1) {
+        if (activeReaderToken != readerToken) {
+            releaseWithDelay(bitmap)
+            return
+        }
+        val key = PageCacheKey(readerToken, index, renderQuality)
         val staleHighQuality = _loadedPages.value
-            .filterKeys { it.index == index && it.renderQuality > 1 && it.renderQuality != renderQuality }
+            .filterKeys {
+                it.readerToken == readerToken &&
+                    it.index == index &&
+                    it.renderQuality > 1 &&
+                    it.renderQuality != renderQuality
+            }
         staleHighQuality.forEach { (staleKey, staleBitmap) ->
-            cache.remove(cacheKey(staleKey.index, staleKey.renderQuality))
+            cache.remove(cacheKey(staleKey.readerToken, staleKey.index, staleKey.renderQuality))
             if (staleBitmap !== bitmap) {
                 releaseWithDelay(staleBitmap)
             }
         }
         _loadedPages.value[key]?.takeIf { it !== bitmap }?.let { releaseWithDelay(it) }
-        cache.put(cacheKey(index, renderQuality), bitmap)
+        cache.put(cacheKey(readerToken, index, renderQuality), bitmap)
         _loadedPages.update {
             it
                 .filterKeys { existing ->
-                    existing.index != index || existing.renderQuality <= 1 || existing.renderQuality == renderQuality
+                    existing.readerToken != readerToken ||
+                        existing.index != index ||
+                        existing.renderQuality <= 1 ||
+                        existing.renderQuality == renderQuality
                 } + (key to bitmap)
         }
     }
 
     fun clearPages() {
+        activePreloadWindow = null
+        activeReaderToken = null
+        cancelInFlightLoads()
         val retained = _loadedPages.value.values.toSet()
         _loadedPages.value = emptyMap()
         cache.clear()
         retained.forEach { releaseWithDelay(it) }
+    }
+
+    fun retainHighQualityPages(indices: Set<Int>) {
+        if (indices.isEmpty()) {
+            evictPages { it.renderQuality > 1 }
+            return
+        }
+        evictPages { it.renderQuality > 1 && it.index !in indices }
     }
 
     @Suppress("DEPRECATION")
@@ -145,6 +237,7 @@ class PagePreloader @Inject constructor(
         cancelPreload()
         when {
             level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
+                activePreloadWindow = null
                 clearPages()
                 bitmapAllocator.trimMemory(level)
             }
@@ -162,8 +255,8 @@ class PagePreloader @Inject constructor(
         }
     }
 
-    private fun cacheKey(index: Int, renderQuality: Int): String =
-        "page_${index}_q$renderQuality"
+    private fun cacheKey(readerToken: Int, index: Int, renderQuality: Int): String =
+        "reader_${readerToken}_page_${index}_q$renderQuality"
 
     /**
      * Releases a bitmap with a grace period delay. This prevents the "trying to use a recycled bitmap"
@@ -182,8 +275,17 @@ class PagePreloader @Inject constructor(
         val evictedPages = _loadedPages.value.filterKeys(predicate)
         _loadedPages.update { map -> map.filterKeys { key -> !predicate(key) } }
         evictedPages.forEach { (key, bitmap) ->
-            cache.remove(cacheKey(key.index, key.renderQuality))
+            cache.remove(cacheKey(key.readerToken, key.index, key.renderQuality))
             releaseWithDelay(bitmap)
+        }
+    }
+
+    private fun cancelInFlightLoads() {
+        scope.launch {
+            inFlightMutex.withLock {
+                inFlightLoads.values.forEach { it.cancel() }
+                inFlightLoads.clear()
+            }
         }
     }
 }

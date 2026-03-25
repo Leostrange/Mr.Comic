@@ -25,10 +25,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.zip4j)
     implementation(libs.junrar)
+    implementation(libs.sevenzipjbinding.android)
     implementation(libs.commons.compress)
     // PDF: android.graphics.pdf.PdfRenderer (встроен, внешние lib не нужны)
     implementation(libs.coil.compose)
     testImplementation(libs.test.junit)
+    testImplementation(libs.test.kotlinx.coroutines)
 }
 
 room {

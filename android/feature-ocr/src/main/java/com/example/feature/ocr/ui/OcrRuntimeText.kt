@@ -2,6 +2,17 @@ package com.example.feature.ocr.ui
 
 import com.example.core.model.DictionaryEntry
 import com.example.core.model.TranslationMode
+import com.example.core.ui.locale.translationLanguageShortLabel
+
+private fun ocrLanguagePairLabel(
+    sourceLanguage: String?,
+    targetLanguage: String?
+): String? {
+    val normalizedSource = sourceLanguage?.trim()?.takeIf { it.isNotBlank() }
+    val normalizedTarget = targetLanguage?.trim()?.takeIf { it.isNotBlank() }
+    if (normalizedSource == null || normalizedTarget == null) return null
+    return "${translationLanguageShortLabel(normalizedSource)} → ${translationLanguageShortLabel(normalizedTarget)}"
+}
 
 internal fun ocrDictionaryExplanation(
     entry: DictionaryEntry,
@@ -52,6 +63,23 @@ internal fun ocrTranslationUnavailableMessage(language: String): String = when (
     else -> "Перевод для этого текста сейчас недоступен."
 }
 
+internal fun ocrTranslationUnavailableMessage(
+    language: String,
+    sourceLanguage: String?,
+    targetLanguage: String?
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) {
+        ocrTranslationUnavailableMessage(language)
+    } else when (language) {
+        "en" -> "Translation is not available for $pair right now."
+        "ja" -> "現在、$pair は翻訳できません。"
+        "zh" -> "当前无法翻译 $pair。"
+        "ko" -> "지금은 $pair 번역을 사용할 수 없습니다."
+        else -> "Перевод для пары $pair сейчас недоступен."
+    }
+}
+
 internal fun ocrPreparingOfflineModelMessage(language: String): String = when (language) {
     "en" -> "Preparing the offline language model…"
     "ja" -> "オフライン言語モデルを準備中…"
@@ -75,20 +103,217 @@ internal fun ocrOfflineModelReadyMessage(
     }
 }
 
-internal fun ocrOfflineModelUnavailableMessage(language: String): String = when (language) {
-    "en" -> "Could not prepare the offline model for this language pair."
-    "ja" -> "この言語ペアのオフラインモデルを準備できませんでした。"
-    "zh" -> "无法为这组语言准备离线模型。"
-    "ko" -> "이 언어 쌍의 오프라인 모델을 준비하지 못했습니다."
-    else -> "Не удалось подготовить офлайн-модель для этой языковой пары."
+internal fun ocrOfflineModelUnavailableMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "Could not prepare the offline model for this language pair."
+        "ja" -> "この言語ペアのオフラインモデルを準備できませんでした。"
+        "zh" -> "无法为这组语言准备离线模型。"
+        "ko" -> "이 언어 쌍의 오프라인 모델을 준비하지 못했습니다."
+        else -> "Не удалось подготовить офлайн-модель для этой языковой пары."
+    } else when (language) {
+        "en" -> "Could not prepare the offline model for $pair."
+        "ja" -> "$pair のオフラインモデルを準備できませんでした。"
+        "zh" -> "无法为 $pair 准备离线模型。"
+        "ko" -> "$pair 오프라인 모델을 준비하지 못했습니다."
+        else -> "Не удалось подготовить офлайн-модель для пары $pair."
+    }
 }
 
-internal fun ocrTranslationBackendUnavailableMessage(language: String): String = when (language) {
-    "en" -> "Online translation is not configured yet, and the offline model for this language pair is not installed."
-    "ja" -> "オンライン翻訳はまだ設定されておらず、この言語ペアのオフラインモデルもインストールされていません。"
-    "zh" -> "在线翻译尚未配置，并且此语言对的离线模型也未安装。"
-    "ko" -> "온라인 번역이 아직 설정되지 않았고, 이 언어 쌍의 오프라인 모델도 설치되어 있지 않습니다."
-    else -> "Онлайн-перевод пока не настроен, а офлайн-модель для этой языковой пары не установлена."
+internal fun ocrTranslationBackendUnavailableMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "Online translation is not configured yet, and the offline model for this language pair is not installed."
+        "ja" -> "オンライン翻訳はまだ設定されておらず、この言語ペアのオフラインモデルもインストールされていません。"
+        "zh" -> "在线翻译尚未配置，并且此语言对的离线模型也未安装。"
+        "ko" -> "온라인 번역이 아직 설정되지 않았고, 이 언어 쌍의 오프라인 모델도 설치되어 있지 않습니다."
+        else -> "Онлайн-перевод пока не настроен, а офлайн-модель для этой языковой пары не установлена."
+    } else when (language) {
+        "en" -> "Online translation is not configured yet, and the offline model for $pair is not installed."
+        "ja" -> "オンライン翻訳はまだ設定されておらず、$pair のオフラインモデルもインストールされていません。"
+        "zh" -> "在线翻译尚未配置，并且 $pair 的离线模型也未安装。"
+        "ko" -> "온라인 번역이 아직 설정되지 않았고, $pair 오프라인 모델도 설치되어 있지 않습니다."
+        else -> "Онлайн-перевод пока не настроен, а офлайн-модель для пары $pair не установлена."
+    }
+}
+
+internal fun ocrOfflineModelMissingMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "The offline model for this language pair is not installed yet."
+        "ja" -> "この言語ペアのオフラインモデルはまだインストールされていません。"
+        "zh" -> "这个语言对的离线模型还未安装。"
+        "ko" -> "이 언어 쌍의 오프라인 모델이 아직 설치되지 않았습니다."
+        else -> "Офлайн-модель для этой языковой пары ещё не установлена."
+    } else when (language) {
+        "en" -> "The offline model for $pair is not installed yet."
+        "ja" -> "$pair のオフラインモデルはまだインストールされていません。"
+        "zh" -> "$pair 的离线模型还未安装。"
+        "ko" -> "$pair 오프라인 모델이 아직 설치되지 않았습니다."
+        else -> "Офлайн-модель для пары $pair ещё не установлена."
+    }
+}
+
+internal fun ocrOfflineModelNeedsNetworkMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "The offline model for this language pair is missing, and the network is unavailable to prepare it."
+        "ja" -> "この言語ペアのオフラインモデルがなく、準備するためのネットワークも利用できません。"
+        "zh" -> "这个语言对缺少离线模型，而且当前网络不可用，无法准备。"
+        "ko" -> "이 언어 쌍의 오프라인 모델이 없고, 준비할 네트워크도 사용할 수 없습니다."
+        else -> "Для этой языковой пары нет офлайн-модели, и сеть сейчас недоступна, чтобы её подготовить."
+    } else when (language) {
+        "en" -> "The offline model for $pair is missing, and the network is unavailable to prepare it."
+        "ja" -> "$pair のオフラインモデルがなく、準備するためのネットワークも利用できません。"
+        "zh" -> "$pair 缺少离线模型，而且当前网络不可用，无法准备。"
+        "ko" -> "$pair 오프라인 모델이 없고, 준비할 네트워크도 사용할 수 없습니다."
+        else -> "Для пары $pair нет офлайн-модели, и сеть сейчас недоступна, чтобы её подготовить."
+    }
+}
+
+internal fun ocrOfflinePairUnsupportedMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "Offline translation does not support this language pair."
+        "ja" -> "オフライン翻訳はこの言語ペアに対応していません。"
+        "zh" -> "离线翻译不支持这个语言对。"
+        "ko" -> "오프라인 번역은 이 언어 쌍을 지원하지 않습니다."
+        else -> "Офлайн-перевод не поддерживает эту языковую пару."
+    } else when (language) {
+        "en" -> "Offline translation does not support $pair."
+        "ja" -> "オフライン翻訳は $pair に対応していません。"
+        "zh" -> "离线翻译不支持 $pair。"
+        "ko" -> "오프라인 번역은 $pair 를 지원하지 않습니다."
+        else -> "Офлайн-перевод не поддерживает пару $pair."
+    }
+}
+
+internal fun ocrOnlineRouteMissingMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "The online translation route is not configured yet."
+        "ja" -> "オンライン翻訳ルートはまだ設定されていません。"
+        "zh" -> "在线翻译路线尚未配置。"
+        "ko" -> "온라인 번역 경로가 아직 설정되지 않았습니다."
+        else -> "Онлайн-маршрут перевода пока не настроен."
+    } else when (language) {
+        "en" -> "The online translation route for $pair is not configured yet."
+        "ja" -> "$pair のオンライン翻訳ルートはまだ設定されていません。"
+        "zh" -> "$pair 的在线翻译路线尚未配置。"
+        "ko" -> "$pair 온라인 번역 경로가 아직 설정되지 않았습니다."
+        else -> "Онлайн-маршрут перевода для пары $pair пока не настроен."
+    }
+}
+
+internal fun ocrDictionaryOnlyRouteMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "Machine translation is unavailable for this pair right now. Dictionary lookup is still available for short text."
+        "ja" -> "このペアでは今すぐ機械翻訳を使えません。短いテキストなら辞書検索は利用できます。"
+        "zh" -> "这个语言对当前无法使用机器翻译，但短文本仍可走词典路线。"
+        "ko" -> "이 언어 쌍은 지금 기계 번역을 사용할 수 없지만, 짧은 텍스트는 사전 경로를 사용할 수 있습니다."
+        else -> "Для этой пары машинный перевод сейчас недоступен, но для короткого текста ещё можно использовать словарь."
+    } else when (language) {
+        "en" -> "Machine translation is unavailable for $pair right now. Dictionary lookup is still available for short text."
+        "ja" -> "$pair では今すぐ機械翻訳を使えません。短いテキストなら辞書検索は利用できます。"
+        "zh" -> "$pair 当前无法使用机器翻译，但短文本仍可走词典路线。"
+        "ko" -> "$pair 는 지금 기계 번역을 사용할 수 없지만, 짧은 텍스트는 사전 경로를 사용할 수 있습니다."
+        else -> "Для пары $pair машинный перевод сейчас недоступен, но для короткого текста ещё можно использовать словарь."
+    }
+}
+
+internal fun ocrMachineRouteUnsupportedMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "Machine translation is not supported for this language pair right now."
+        "ja" -> "現在、この言語ペアでは機械翻訳を使えません。"
+        "zh" -> "当前这个语言对不支持机器翻译。"
+        "ko" -> "현재 이 언어 쌍은 기계 번역을 지원하지 않습니다."
+        else -> "Для этой языковой пары машинный перевод сейчас не поддерживается."
+    } else when (language) {
+        "en" -> "Machine translation is not supported for $pair right now."
+        "ja" -> "現在、$pair では機械翻訳を使えません。"
+        "zh" -> "当前 $pair 不支持机器翻译。"
+        "ko" -> "현재 $pair 는 기계 번역을 지원하지 않습니다."
+        else -> "Для пары $pair машинный перевод сейчас не поддерживается."
+    }
+}
+
+internal fun ocrAvailabilityOnlineReady(language: String): String = when (language) {
+    "en" -> "Online route ready"
+    "ja" -> "オンライン経路あり"
+    "zh" -> "在线路径可用"
+    "ko" -> "온라인 경로 사용 가능"
+    else -> "Онлайн-маршрут доступен"
+}
+
+internal fun ocrAvailabilityOnlineNeedsNetwork(language: String): String = when (language) {
+    "en" -> "Online route needs network"
+    "ja" -> "オンライン経路にはネットワークが必要"
+    "zh" -> "在线路径需要网络"
+    "ko" -> "온라인 경로에 네트워크 필요"
+    else -> "Онлайн-маршруту нужна сеть"
+}
+
+internal fun ocrAvailabilityOnlineMissing(language: String): String = when (language) {
+    "en" -> "Online route missing"
+    "ja" -> "オンライン経路なし"
+    "zh" -> "在线路径未配置"
+    "ko" -> "온라인 경로 없음"
+    else -> "Онлайн-маршрут не настроен"
+}
+
+internal fun ocrOnlineRouteNeedsNetworkMessage(
+    language: String,
+    sourceLanguage: String? = null,
+    targetLanguage: String? = null
+): String {
+    val pair = ocrLanguagePairLabel(sourceLanguage, targetLanguage)
+    return if (pair == null) when (language) {
+        "en" -> "The online translation route needs network access right now."
+        "ja" -> "オンライン翻訳ルートを使うには、今ネットワーク接続が必要です。"
+        "zh" -> "在线翻译路线当前需要网络连接。"
+        "ko" -> "온라인 번역 경로를 사용하려면 지금 네트워크 연결이 필요합니다."
+        else -> "Для онлайн-маршрута перевода сейчас нужна сеть."
+    } else when (language) {
+        "en" -> "The online translation route for $pair needs network access right now."
+        "ja" -> "$pair のオンライン翻訳ルートを使うには、今ネットワーク接続が必要です。"
+        "zh" -> "$pair 的在线翻译路线当前需要网络连接。"
+        "ko" -> "$pair 온라인 번역 경로를 사용하려면 지금 네트워크 연결이 필요합니다."
+        else -> "Для онлайн-маршрута перевода пары $pair сейчас нужна сеть."
+    }
 }
 
 internal fun ocrDictionaryUnavailableMessage(language: String): String = when (language) {
@@ -119,7 +344,7 @@ internal fun ocrRecognitionFailedMessage(language: String): String = when (langu
     "en" -> "OCR failed for this image."
     "ja" -> "この画像の OCR に失敗しました。"
     "zh" -> "这张图片的 OCR 失败了。"
-    "ko" -> "이 이미지의OCR에 실패했습니다."
+    "ko" -> "이 이미지의 OCR에 실패했습니다."
     else -> "Ошибка распознавания для этого изображения."
 }
 

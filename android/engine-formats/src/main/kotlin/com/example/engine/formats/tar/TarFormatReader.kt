@@ -2,6 +2,7 @@ package com.example.engine.formats.tar
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import com.example.engine.formats.base.BitmapAllocator
@@ -39,15 +40,23 @@ class TarFormatReader(
             openStream()?.use { raw ->
                 TarArchiveInputStream(raw).use { tis ->
                     val results = mutableListOf<Pair<String, ByteArray>>()
+                    val fallbackResults = mutableListOf<Pair<String, ByteArray>>()
                     var entry = tis.nextEntry
                     while (entry != null) {
-                        if (!entry.isDirectory && isImage(entry.name ?: "")) {
-                            // readBytes() reads exactly the current entry's data
-                            results.add((entry.name ?: "") to tis.readBytes())
+                        if (!entry.isDirectory) {
+                            val name = entry.name ?: ""
+                            val bytes = tis.readBytes()
+                            if (isImage(name)) {
+                                results.add(name to bytes)
+                            } else if (bytes.isBitmapBytes()) {
+                                fallbackResults.add(name to bytes)
+                            }
                         }
                         entry = tis.nextEntry
                     }
-                    results.sortedBy { it.first }.map { it.second }
+                    (if (results.isNotEmpty()) results else fallbackResults)
+                        .sortedBy { it.first }
+                        .map { it.second }
                 }
             } ?: emptyList()
         } catch (e: Exception) {
@@ -85,4 +94,10 @@ class TarFormatReader(
 
     private fun isImage(name: String): Boolean =
         name.lowercase().substringAfterLast('.', "") in IMAGE_EXTS
+
+    private fun ByteArray.isBitmapBytes(): Boolean {
+        val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(this, 0, size, options)
+        return options.outWidth > 0 && options.outHeight > 0
+    }
 }

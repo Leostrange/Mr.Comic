@@ -1,11 +1,18 @@
 package com.example.engine.formats.di
 
-// FormatFactory is provided via @Inject constructor — no manual @Provides needed.
-// Keeping the module shell so the package exists for future bindings.
+import com.example.engine.formats.djvu.DjvuBackend
+import com.example.engine.formats.djvu.UnavailableDjvuBackend
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-object EngineFormatsModule
+object EngineFormatsModule {
+
+    @Provides
+    fun provideDjvuBackend(
+        backend: UnavailableDjvuBackend
+    ): DjvuBackend = backend
+}

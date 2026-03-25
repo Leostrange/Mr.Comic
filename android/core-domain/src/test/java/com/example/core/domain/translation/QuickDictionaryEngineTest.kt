@@ -56,11 +56,12 @@ class QuickDictionaryEngineTest {
     }
 
     @Test
-    fun `lookup availability follows offline pair or online configuration`() = runBlocking {
+    fun `lookup availability follows offline pair or online route readiness`() = runBlocking {
         val offlineOnly = QuickDictionaryEngine(
             assetOpener = { null },
             offlineTranslationEngine = FakeOfflineTranslationEngine(available = true),
-            onlineTranslationEngine = FakeOnlineTranslationEngine(configured = false)
+            onlineTranslationEngine = FakeOnlineTranslationEngine(configured = false),
+            networkAvailableProvider = { false }
         )
         val offlineResult = offlineOnly.isLookupAvailable("en", "ru")
         require(offlineResult is Result.Success)
@@ -69,11 +70,26 @@ class QuickDictionaryEngineTest {
         val onlineOnly = QuickDictionaryEngine(
             assetOpener = { null },
             offlineTranslationEngine = FakeOfflineTranslationEngine(available = false),
-            onlineTranslationEngine = FakeOnlineTranslationEngine(configured = true)
+            onlineTranslationEngine = FakeOnlineTranslationEngine(configured = true),
+            networkAvailableProvider = { true }
         )
         val onlineResult = onlineOnly.isLookupAvailable("en", "ru")
         require(onlineResult is Result.Success)
         assertTrue(onlineResult.data)
+    }
+
+    @Test
+    fun `lookup availability stays false when online provider is configured but network is absent`() = runBlocking {
+        val engine = QuickDictionaryEngine(
+            assetOpener = { null },
+            offlineTranslationEngine = FakeOfflineTranslationEngine(available = false),
+            onlineTranslationEngine = FakeOnlineTranslationEngine(configured = true),
+            networkAvailableProvider = { false }
+        )
+
+        val result = engine.isLookupAvailable("pl", "ru")
+        require(result is Result.Success)
+        assertTrue(!result.data)
     }
 
     @Test
@@ -99,6 +115,98 @@ class QuickDictionaryEngineTest {
         require(result is Result.Success)
         assertEquals(listOf("книга", "том"), result.data.translations)
         assertEquals("noun", result.data.partOfSpeech)
+    }
+
+    @Test
+    fun `short phrase can fall back to machine assisted dictionary entry`() = runBlocking {
+        val engine = QuickDictionaryEngine(
+            assetOpener = { null },
+            offlineTranslationEngine = FakeOfflineTranslationEngine(
+                available = true,
+                translatedText = "добрый день"
+            ),
+            onlineTranslationEngine = FakeOnlineTranslationEngine(),
+            networkAvailableProvider = { true }
+        )
+
+        val result = engine.lookup(
+            rawWord = "dzień dobry",
+            sourceLanguage = "pl",
+            targetLanguage = "ru"
+        )
+
+        require(result is Result.Success)
+        assertEquals("dzień dobry", result.data.lemma)
+        assertEquals(listOf("добрый день"), result.data.translations)
+        assertEquals(listOf("machine-assisted"), result.data.glosses)
+    }
+
+    @Test
+    fun `short english phrase can fall back to machine assisted dictionary entry`() = runBlocking {
+        val engine = QuickDictionaryEngine(
+            assetOpener = { null },
+            offlineTranslationEngine = FakeOfflineTranslationEngine(
+                available = true,
+                translatedText = "ночной поезд"
+            ),
+            onlineTranslationEngine = FakeOnlineTranslationEngine(),
+            networkAvailableProvider = { true }
+        )
+
+        val result = engine.lookup(
+            rawWord = "night train",
+            sourceLanguage = "en",
+            targetLanguage = "ru"
+        )
+
+        require(result is Result.Success)
+        assertEquals("night train", result.data.lemma)
+        assertEquals(listOf("ночной поезд"), result.data.translations)
+        assertEquals(listOf("machine-assisted"), result.data.glosses)
+    }
+
+    @Test
+    fun `short japanese snippet can fall back to machine assisted dictionary entry`() = runBlocking {
+        val engine = QuickDictionaryEngine(
+            assetOpener = { null },
+            offlineTranslationEngine = FakeOfflineTranslationEngine(
+                available = true,
+                translatedText = "спасибо"
+            ),
+            onlineTranslationEngine = FakeOnlineTranslationEngine(),
+            networkAvailableProvider = { true }
+        )
+
+        val result = engine.lookup(
+            rawWord = "ありがとう",
+            sourceLanguage = "ja",
+            targetLanguage = "ru"
+        )
+
+        require(result is Result.Success)
+        assertEquals("ありがとう", result.data.lemma)
+        assertEquals(listOf("спасибо"), result.data.translations)
+        assertEquals(listOf("machine-assisted"), result.data.glosses)
+    }
+
+    @Test
+    fun `long phrase is still rejected for dictionary lookup`() = runBlocking {
+        val engine = QuickDictionaryEngine(
+            assetOpener = { null },
+            offlineTranslationEngine = FakeOfflineTranslationEngine(
+                available = true,
+                translatedText = "ignored"
+            ),
+            onlineTranslationEngine = FakeOnlineTranslationEngine()
+        )
+
+        val result = engine.lookup(
+            rawWord = "dzień dobry, jak się masz",
+            sourceLanguage = "pl",
+            targetLanguage = "ru"
+        )
+
+        assertTrue(result is Result.Error)
     }
 }
 

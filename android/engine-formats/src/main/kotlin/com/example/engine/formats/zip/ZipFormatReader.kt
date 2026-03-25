@@ -2,9 +2,9 @@ package com.example.engine.formats.zip
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
-import com.example.engine.formats.base.buildDecodeRequest
 import com.example.engine.formats.base.BitmapAllocator
 import com.example.engine.formats.base.decodeBitmapFromStream
 import com.example.engine.formats.base.FormatReader
@@ -33,10 +33,17 @@ class ZipFormatReader(
     private val imageEntries: List<String> by lazy {
         try {
             val zip = ensureZipFile() ?: return@lazy emptyList()
-            zip.fileHeaders
-                .filter { !it.isDirectory && isImageEntry(it.fileName) }
+            val candidates = zip.fileHeaders
+                .filter { !it.isDirectory }
                 .map { it.fileName }
                 .sorted()
+
+            val byExtension = candidates.filter(::isImageEntry)
+            if (byExtension.isNotEmpty()) {
+                byExtension
+            } else {
+                candidates.filter { entryName -> isBitmapEntry(zip, entryName) }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list zip entries", e)
             emptyList()
@@ -110,5 +117,14 @@ class ZipFormatReader(
     private fun isImageEntry(name: String): Boolean {
         val ext = name.lowercase().substringAfterLast('.', "")
         return ext in IMAGE_EXTENSIONS
+    }
+
+    private fun isBitmapEntry(zip: ZipFile, entryName: String): Boolean {
+        val header = zip.getFileHeader(entryName) ?: return false
+        return zip.getInputStream(header).use { input ->
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeStream(input, null, options)
+            options.outWidth > 0 && options.outHeight > 0
+        }
     }
 }

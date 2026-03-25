@@ -2,6 +2,7 @@ package com.example.engine.formats.sevenz
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import com.example.engine.formats.base.BitmapAllocator
@@ -41,10 +42,18 @@ class SevenZFormatReader(
     // Sorted list of image entries — built once via getEntries() (no sequential scan needed)
     private val imageEntries: List<SevenZArchiveEntry> by lazy {
         try {
-            openSevenZFile()?.entries?.toList()
-                ?.filter { !it.isDirectory && isImage(it.name ?: "") }
+            val candidates = openSevenZFile()?.entries?.toList()
+                ?.filter { !it.isDirectory }
                 ?.sortedBy { it.name }
                 ?: emptyList()
+
+            val byExtension = candidates.filter { isImage(it.name ?: "") }
+            if (byExtension.isNotEmpty()) {
+                byExtension
+            } else {
+                val sz = openSevenZFile() ?: return@lazy emptyList()
+                candidates.filter { entry -> isBitmapEntry(sz, entry) }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list 7z entries: $path", e)
             emptyList()
@@ -118,4 +127,16 @@ class SevenZFormatReader(
 
     private fun isImage(name: String): Boolean =
         name.lowercase().substringAfterLast('.', "") in IMAGE_EXTS
+
+    private fun isBitmapEntry(sz: SevenZFile, entry: SevenZArchiveEntry): Boolean {
+        return sz.getInputStream(entry).use { stream ->
+            val bytes = ByteArrayOutputStream().use { output ->
+                stream.copyTo(output)
+                output.toByteArray()
+            }
+            val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+            options.outWidth > 0 && options.outHeight > 0
+        }
+    }
 }

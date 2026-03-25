@@ -1,5 +1,7 @@
 package com.example.core.domain.translation
 
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.content.Context
 import com.example.core.domain.util.Result
 import com.example.core.domain.util.runCatchingResult
@@ -18,7 +20,8 @@ import javax.inject.Singleton
 class QuickDictionaryEngine(
     private val assetOpener: (String) -> InputStream?,
     private val offlineTranslationEngine: OfflineTranslationEngine,
-    private val onlineTranslationEngine: OnlineTranslationEngine
+    private val onlineTranslationEngine: OnlineTranslationEngine,
+    private val networkAvailableProvider: () -> Boolean = { true }
 ) : DictionaryEngine {
 
     @Inject
@@ -29,7 +32,14 @@ class QuickDictionaryEngine(
     ) : this(
         assetOpener = { assetPath -> context.assets.open(assetPath) },
         offlineTranslationEngine = offlineTranslationEngine,
-        onlineTranslationEngine = onlineTranslationEngine
+        onlineTranslationEngine = onlineTranslationEngine,
+        networkAvailableProvider = {
+            val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+            val network = connectivityManager?.activeNetwork
+            val capabilities = network?.let(connectivityManager::getNetworkCapabilities)
+            capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        }
     )
 
     private val dictionaryCache = ConcurrentHashMap<String, Map<String, LocalDictionaryRecord>>()
@@ -65,8 +75,9 @@ class QuickDictionaryEngine(
             is Result.Error -> false
             Result.Loading -> false
         }
+        val onlineAvailable = onlineConfigured && networkAvailableProvider()
 
-        offlineAvailable || onlineConfigured
+        offlineAvailable || onlineAvailable
     }
 
     override suspend fun lookup(
@@ -82,55 +93,62 @@ class QuickDictionaryEngine(
         val originalWord = rawWord.trim()
         val cleanedWord = sanitizeLookupWord(originalWord)
         require(cleanedWord.isNotBlank()) { "No lookup word was provided" }
-        require(!cleanedWord.contains(WHITESPACE_REGEX)) { "Dictionary lookup supports a single word only" }
+        val tokenCount = cleanedWord.countLookupTokens()
+        require(tokenCount <= SHORT_LOOKUP_TOKEN_LIMIT) {
+            "Dictionary lookup supports only a short word or phrase"
+        }
 
-        val lemma = normalizeLemma(cleanedWord, normalizedSource)
-        val guessedPartOfSpeech = guessPartOfSpeech(lemma, normalizedSource)
+        val lookupText = normalizeLookupText(cleanedWord, normalizedSource)
+        val guessedPartOfSpeech = if (tokenCount == 1) {
+            guessPartOfSpeech(lookupText, normalizedSource)
+        } else {
+            null
+        }
         val forms = buildList {
             if (!originalWord.equals(cleanedWord, ignoreCase = false)) add(originalWord)
-            if (!cleanedWord.equals(lemma, ignoreCase = false)) add(cleanedWord)
+            if (!cleanedWord.equals(lookupText, ignoreCase = false)) add(cleanedWord)
         }.distinct()
 
         if (normalizedSource == normalizedTarget) {
             return@runCatchingResult DictionaryEntry(
-                id = buildDictionaryId(normalizedSource, normalizedTarget, lemma),
+                id = buildDictionaryId(normalizedSource, normalizedTarget, lookupText),
                 languageFrom = normalizedSource,
                 languageTo = normalizedTarget,
-                lemma = lemma,
-                normalizedLemma = lemma,
+                lemma = lookupText,
+                normalizedLemma = lookupText,
                 partOfSpeech = guessedPartOfSpeech,
-                translations = listOf(lemma),
+                translations = listOf(lookupText),
                 forms = forms
             )
         }
 
         val bundledEntry = resolveBundledPair(normalizedSource, normalizedTarget)
-            ?.let { loadDictionary(it)[lemma] }
+            ?.let { loadDictionary(it)[lookupText] }
         if (bundledEntry != null) {
             return@runCatchingResult DictionaryEntry(
-                id = buildDictionaryId(normalizedSource, normalizedTarget, lemma),
+                id = buildDictionaryId(normalizedSource, normalizedTarget, lookupText),
                 languageFrom = normalizedSource,
                 languageTo = normalizedTarget,
-                lemma = lemma,
-                normalizedLemma = lemma,
+                lemma = lookupText,
+                normalizedLemma = lookupText,
                 partOfSpeech = bundledEntry.partOfSpeech ?: guessedPartOfSpeech,
                 translations = bundledEntry.translations,
                 forms = forms
             )
         }
 
-        val translation = translateLemma(lemma, normalizedSource, normalizedTarget)
+        val translation = translateSnippet(lookupText, normalizedSource, normalizedTarget)
         val translatedText = translation.translatedText
             .trim()
             .takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("Dictionary lookup returned an empty translation")
 
         DictionaryEntry(
-            id = buildDictionaryId(normalizedSource, normalizedTarget, lemma),
+            id = buildDictionaryId(normalizedSource, normalizedTarget, lookupText),
             languageFrom = normalizedSource,
             languageTo = normalizedTarget,
-            lemma = lemma,
-            normalizedLemma = lemma,
+            lemma = lookupText,
+            normalizedLemma = lookupText,
             partOfSpeech = guessedPartOfSpeech,
             translations = listOf(translatedText),
             glosses = if (translation.provider == TranslationProviderType.ML_KIT) {
@@ -142,8 +160,8 @@ class QuickDictionaryEngine(
         )
     }
 
-    private suspend fun translateLemma(
-        lemma: String,
+    private suspend fun translateSnippet(
+        text: String,
         sourceLanguage: String,
         targetLanguage: String
     ) = when (
@@ -151,7 +169,7 @@ class QuickDictionaryEngine(
             TranslationRequest(
                 id = "dictionary-${System.currentTimeMillis()}",
                 sourceType = TranslationSourceType.BOOK_TEXT,
-                text = lemma,
+                text = text,
                 sourceLanguage = sourceLanguage,
                 targetLanguage = targetLanguage,
                 mode = TranslationMode.OFFLINE_MT,
@@ -165,7 +183,7 @@ class QuickDictionaryEngine(
                 TranslationRequest(
                     id = "dictionary-${System.currentTimeMillis()}",
                     sourceType = TranslationSourceType.BOOK_TEXT,
-                    text = lemma,
+                    text = text,
                     sourceLanguage = sourceLanguage,
                     targetLanguage = targetLanguage,
                     mode = TranslationMode.ONLINE_MT,
@@ -219,6 +237,19 @@ class QuickDictionaryEngine(
             .trim()
             .trim(*EDGE_PUNCTUATION)
             .replace(CURLY_APOSTROPHE, STRAIGHT_APOSTROPHE)
+            .replace(WHITESPACE_REGEX, " ")
+
+    private fun normalizeLookupText(text: String, language: String): String {
+        val normalized = text.trim().replace(WHITESPACE_REGEX, " ")
+        return if (normalized.countLookupTokens() == 1) {
+            normalizeLemma(normalized, language)
+        } else {
+            normalized.lowercase()
+        }
+    }
+
+    private fun String.countLookupTokens(): Int =
+        LOOKUP_TOKEN_REGEX.findAll(this).count().coerceAtLeast(if (isBlank()) 0 else 1)
 
     private fun normalizeLemma(word: String, language: String): String {
         val lowercase = word.lowercase()
@@ -307,6 +338,8 @@ class QuickDictionaryEngine(
             '.', ',', ';', ':', '!', '?', '…', '。', '、', '，', '！', '？'
         )
         val WHITESPACE_REGEX = "\\s+".toRegex()
+        val LOOKUP_TOKEN_REGEX = "[\\p{L}\\p{N}]+".toRegex()
+        const val SHORT_LOOKUP_TOKEN_LIMIT = 3
 
         val BUNDLED_PAIRS = mapOf(
             "en-ru" to "en-ru",

@@ -1,6 +1,5 @@
 package com.example.mrcomic.navigation
 
-import android.net.Uri
 import android.util.Log
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -10,38 +9,48 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -49,40 +58,66 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
 import com.example.feature.library.LibraryScreen
+import com.example.feature.library.MrComicProgressRoute
 import com.example.feature.library.LibraryViewModel
+import com.example.feature.library.components.AchievementStrings
+import com.example.feature.library.components.LibraryAchievementsRow
+import com.example.feature.library.components.computeAchievements
+import com.example.feature.library.components.nextUnlockAchievement
 import com.example.feature.ocr.ui.OcrScreen
 import com.example.feature.onboarding.OnboardingScreen
 import com.example.feature.reader.ui.OcrLaunchRequest
 import com.example.feature.reader.ui.ReaderScreen
 import com.example.feature.settings.ui.SettingsScreen
+import com.example.feature.settings.ui.SettingsViewModel
 import com.example.mrcomic.home.ContinueScreen
 import com.example.mrcomic.icons.AppIconSettingsScreen
 import kotlinx.coroutines.launch
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 sealed class Screen(val route: String) {
     data object Continue : Screen("continue")
     data object Library : Screen("library")
     data object Onboarding : Screen("onboarding")
     data object Settings : Screen("settings")
+    data object ProgressProfile : Screen("progress_profile")
     data object AppIconSettings : Screen("app_icon_settings")
     data object Translation : Screen("translation?imagePath={imagePath}&comicId={comicId}&page={page}") {
         fun create(imagePath: String? = null, comicId: String? = null, page: Int? = null): String {
             val params = buildList {
-                if (imagePath != null) add("imagePath=${Uri.encode(imagePath)}")
-                if (comicId != null) add("comicId=${Uri.encode(comicId)}")
+                if (imagePath != null) add("imagePath=${encodeRouteComponent(imagePath)}")
+                if (comicId != null) add("comicId=${encodeRouteComponent(comicId)}")
                 if (page != null) add("page=$page")
             }
             return if (params.isEmpty()) "translation" else "translation?${params.joinToString("&")}"
         }
     }
 
-    data object Reader : Screen("reader?comicId={comicId}&uri={uri}") {
-        fun createForComic(comicId: String) = "reader?comicId=${Uri.encode(comicId)}"
-        fun createForUri(encodedUri: String) = "reader?uri=$encodedUri"
+    data object Reader : Screen("reader?comicId={comicId}&uri={uri}&page={page}") {
+        fun createForComic(comicId: String, page: Int? = null): String {
+            val params = buildList {
+                add("comicId=${encodeRouteComponent(comicId)}")
+                if (page != null) add("page=$page")
+            }
+            return "reader?${params.joinToString("&")}"
+        }
+        fun createForUri(encodedUri: String, page: Int? = null): String {
+            val params = buildList {
+                add("uri=$encodedUri")
+                if (page != null) add("page=$page")
+            }
+            return "reader?${params.joinToString("&")}"
+        }
     }
+}
+
+private fun encodeRouteComponent(value: String): String {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
 }
 
 private data class NavItem(
@@ -95,8 +130,7 @@ private data class NavItem(
 @Composable
 fun AppNavHost(
     navController: NavHostController,
-    startDestination: String = Screen.Continue.route,
-    onRootRouteChanged: (String) -> Unit = {}
+    startDestination: String = Screen.Continue.route
 ) {
     val isEInk = LocalEInkMode.current
     val strings = LocalStrings.current
@@ -130,12 +164,8 @@ fun AppNavHost(
             )
         )
     }
-    LaunchedEffect(currentRoute) {
-        if (currentRoute != null && menuItems.any { it.route == currentRoute }) {
-            onRootRouteChanged(currentRoute)
-        }
-    }
     val showBottomBar = menuItems.any { it.route == currentRoute }
+    val rootRoutes = remember(menuItems) { menuItems.map { it.route }.toSet() }
 
     Scaffold(
         bottomBar = {
@@ -164,10 +194,42 @@ fun AppNavHost(
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                enterTransition = { if (isEInk) EnterTransition.None else fadeIn(tween(300)) },
-                exitTransition = { if (isEInk) ExitTransition.None else fadeOut(tween(300)) },
-                popEnterTransition = { if (isEInk) EnterTransition.None else fadeIn(tween(300)) },
-                popExitTransition = { if (isEInk) ExitTransition.None else fadeOut(tween(300)) }
+                enterTransition = {
+                    val fromRoute = initialState.destination.route?.substringBefore('?')
+                    val toRoute = targetState.destination.route?.substringBefore('?')
+                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(tween(300))
+                    }
+                },
+                exitTransition = {
+                    val fromRoute = initialState.destination.route?.substringBefore('?')
+                    val toRoute = targetState.destination.route?.substringBefore('?')
+                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(tween(300))
+                    }
+                },
+                popEnterTransition = {
+                    val fromRoute = initialState.destination.route?.substringBefore('?')
+                    val toRoute = targetState.destination.route?.substringBefore('?')
+                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                        EnterTransition.None
+                    } else {
+                        fadeIn(tween(300))
+                    }
+                },
+                popExitTransition = {
+                    val fromRoute = initialState.destination.route?.substringBefore('?')
+                    val toRoute = targetState.destination.route?.substringBefore('?')
+                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                        ExitTransition.None
+                    } else {
+                        fadeOut(tween(300))
+                    }
+                }
             ) {
                 composable(Screen.Onboarding.route) {
                     OnboardingScreen(
@@ -183,10 +245,10 @@ fun AppNavHost(
                     val vm: LibraryViewModel = hiltViewModel()
                     val scope = rememberCoroutineScope()
                     ContinueScreen(
-                        onComicClick = { comicId ->
+                        onComicClick = { comicId, page ->
                             scope.launch {
                                 vm.getComicById(comicId)?.let { comic ->
-                                    navController.navigate(Screen.Reader.createForComic(comic.id))
+                                    navController.navigate(Screen.Reader.createForComic(comic.id, page))
                                 }
                             }
                         },
@@ -194,6 +256,11 @@ fun AppNavHost(
                             navController.navigate(Screen.Library.route) {
                                 launchSingleTop = true
                                 restoreState = true
+                            }
+                        },
+                        onOpenProgressProfile = {
+                            navController.navigate(Screen.ProgressProfile.route) {
+                                launchSingleTop = true
                             }
                         }
                     )
@@ -240,12 +307,19 @@ fun AppNavHost(
                                 }
                             }
                         },
+                        onQuoteClick = { comicId, page ->
+                            navController.navigate(Screen.Reader.createForComic(comicId, page))
+                        },
                         onAddFileClick = {
                             filePicker.launch(
                                 arrayOf(
                                     "application/zip",
                                     "application/x-cbz",
                                     "application/x-cbr",
+                                    "application/vnd.comicbook-rar",
+                                    "application/x-rar-compressed",
+                                    "application/x-rar",
+                                    "application/vnd.rar",
                                     "application/pdf",
                                     "application/epub+zip",
                                     "text/plain",
@@ -267,13 +341,28 @@ fun AppNavHost(
                             )
                         },
                         onAddFolderClick = { folderPicker.launch(null) },
-                        onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                        onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                        onProgressProfileClick = {
+                            navController.navigate(Screen.ProgressProfile.route) {
+                                launchSingleTop = true
+                            }
+                        }
                     )
                 }
 
                 composable(Screen.Settings.route) {
                     SettingsScreen(
-                        onAppIconSettingsClick = { navController.navigate(Screen.AppIconSettings.route) }
+                        onAppIconSettingsClick = { navController.navigate(Screen.AppIconSettings.route) },
+                        onProgressProfileClick = { navController.navigate(Screen.ProgressProfile.route) }
+                    )
+                }
+
+                composable(Screen.ProgressProfile.route) {
+                    MrComicProgressRoute(
+                        onBackClick = { navController.popBackStack() },
+                        onComicClick = { comicId ->
+                            navController.navigate(Screen.Reader.createForComic(comicId))
+                        }
                     )
                 }
 
@@ -315,6 +404,10 @@ fun AppNavHost(
                             type = NavType.StringType
                             nullable = true
                             defaultValue = null
+                        },
+                        navArgument("page") {
+                            type = NavType.IntType
+                            defaultValue = -1
                         }
                     )
                 ) {
@@ -371,7 +464,7 @@ private fun RowScope.UniversalNavigationBarItem(
         onClick = onClick,
         alwaysShowLabel = true,
         colors = NavigationBarItemDefaults.colors(
-            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+            indicatorColor = Color.Transparent,
             selectedIconColor = MaterialTheme.colorScheme.primary,
             selectedTextColor = MaterialTheme.colorScheme.primary,
             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,

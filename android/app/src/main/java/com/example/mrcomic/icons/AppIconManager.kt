@@ -27,20 +27,27 @@ class AppIconManager @Inject constructor(
         private val ICON_ALIAS_PACKAGE = AppIconManager::class.java.packageName.removeSuffix(".icons")
 
         val AVAILABLE_ICONS = listOf(
-            AppIcon("icon_1", "Классическая",  "Стандартная иконка приложения", R.drawable.ic_launcher_1_fg),
-            AppIcon("icon_2", "Тёмная",        "Тёмный вариант для AMOLED-дисплеев", R.drawable.ic_launcher_2_fg),
-            AppIcon("icon_3", "Яркая",         "Яркая иконка с насыщенными цветами", R.drawable.ic_launcher_3_fg),
-            AppIcon("icon_4", "Минимализм",    "Минималистичный дизайн", R.drawable.ic_launcher_4_fg),
-            AppIcon("icon_5", "Ретро",         "Ретро стиль комиксов", R.drawable.ic_launcher_5_fg),
-            AppIcon("icon_6", "Неон",          "Неоновый эффект", R.drawable.ic_launcher_6_fg),
-            AppIcon("icon_7", "Премиум",       "Премиум дизайн с золотыми акцентами", R.drawable.ic_launcher_7_fg)
+            AppIcon("icon_1", R.drawable.ic_launcher_1_fg),
+            AppIcon("icon_2", R.drawable.ic_launcher_2_fg),
+            AppIcon("icon_3", R.drawable.ic_launcher_3_fg),
+            AppIcon("icon_4", R.drawable.ic_launcher_4_fg),
+            AppIcon("icon_5", R.drawable.ic_launcher_5_fg),
+            AppIcon("icon_6", R.drawable.ic_launcher_6_fg),
+            AppIcon("icon_7", R.drawable.ic_launcher_7_fg)
         )
 
         /** Map icon id -> activity-alias suffix used in AndroidManifest */
-        private fun componentNameFor(context: Context, iconId: String): ComponentName {
-            val num = iconId.substringAfter("icon_").ifBlank { "1" }
-            return ComponentName(context.packageName, "$ICON_ALIAS_PACKAGE.MainActivityIcon_$num")
-        }
+    }
+
+    private fun componentNameFor(iconId: String): ComponentName {
+        val num = iconId.substringAfter("icon_").ifBlank { "1" }
+        return ComponentName(context.packageName, "$ICON_ALIAS_PACKAGE.MainActivityIcon_$num")
+    }
+
+    private fun launchIntentForIcon(iconId: String): Intent = Intent(Intent.ACTION_MAIN).apply {
+        addCategory(Intent.CATEGORY_LAUNCHER)
+        component = componentNameFor(iconId)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
     }
 
     val currentIcon: Flow<String> = context.appIconDataStore.data.map { prefs ->
@@ -63,7 +70,7 @@ class AppIconManager @Inject constructor(
 
         return try {
             val pm = context.packageManager
-            val targetCn = componentNameFor(context, iconId)
+            val targetCn = componentNameFor(iconId)
             pm.setComponentEnabledSetting(
                 targetCn,
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
@@ -71,7 +78,7 @@ class AppIconManager @Inject constructor(
             )
             AVAILABLE_ICONS.forEach { appIcon ->
                 if (appIcon.id != iconId) {
-                    val cn = componentNameFor(context, appIcon.id)
+                    val cn = componentNameFor(appIcon.id)
                     try {
                         pm.setComponentEnabledSetting(
                             cn,
@@ -102,7 +109,7 @@ class AppIconManager @Inject constructor(
             .map { it[APP_ICON_PREFERENCE_KEY] ?: DEFAULT_ICON }
             .first()
         val pm = context.packageManager
-        val targetCn = componentNameFor(context, savedIconId)
+        val targetCn = componentNameFor(savedIconId)
         val state = try {
             pm.getComponentEnabledSetting(targetCn)
         } catch (e: Exception) {
@@ -118,21 +125,13 @@ class AppIconManager @Inject constructor(
     fun getAvailableIcons(): List<AppIcon> = AVAILABLE_ICONS
     fun isIconChangeSupported(): Boolean = try { context.packageManager != null } catch (_: Exception) { false }
 
-    fun restartAppForIconChange() {
-        // Queue the app's own launch intent BEFORE killing the process.
-        // getLaunchIntentForPackage returns an intent for the currently-enabled
-        // activity-alias, so the icon and the restart are always in sync.
-        val intent = context.packageManager
-            .getLaunchIntentForPackage(context.packageName)
-            ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK) }
-        if (intent != null) context.startActivity(intent)
+    fun restartAppForIconChange(iconId: String) {
+        context.startActivity(launchIntentForIcon(iconId))
         android.os.Process.killProcess(android.os.Process.myPid())
     }
 }
 
 data class AppIcon(
     val id: String,
-    val name: String,
-    val description: String,
     val previewResId: Int? = null
 )

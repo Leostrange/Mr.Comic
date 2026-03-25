@@ -3,6 +3,7 @@ package com.example.engine.formats.base
 import android.content.Context
 import com.example.core.model.ComicFormat
 import com.example.engine.formats.djvu.DjvuFormatReader
+import com.example.engine.formats.djvu.DjvuBackend
 import com.example.engine.formats.epub.EpubFormatReader
 import com.example.engine.formats.fb2.Fb2FormatReader
 import com.example.engine.formats.folder.FolderFormatReader
@@ -19,7 +20,8 @@ import javax.inject.Singleton
 @Singleton
 class FormatFactory @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val bitmapAllocator: BitmapAllocator
+    private val bitmapAllocator: BitmapAllocator,
+    private val djvuBackend: DjvuBackend
 ) {
     private val deviceProfile by lazy { context.resolveRenderDeviceProfile() }
 
@@ -40,7 +42,7 @@ class FormatFactory @Inject constructor(
             ComicFormat.AZW3,
             ComicFormat.DOCX,
             ComicFormat.ODT                  -> TextFormatReader(context, path, format)
-            ComicFormat.DJVU                 -> DjvuFormatReader(context, path)
+            ComicFormat.DJVU                 -> DjvuFormatReader(context, path, djvuBackend)
             ComicFormat.FOLDER               -> FolderFormatReader(context, path, deviceProfile, bitmapAllocator)
             else -> null
         }

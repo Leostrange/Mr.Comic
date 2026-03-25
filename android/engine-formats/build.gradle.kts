@@ -16,7 +16,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.documentfile)
     implementation(libs.zip4j)
-    implementation(libs.junrar)
+    implementation(libs.sevenzipjbinding.android)
     implementation(libs.commons.compress)
     // PDF: используем встроенный android.graphics.pdf.PdfRenderer — внешние lib не нужны
     implementation(libs.google.hilt.android)

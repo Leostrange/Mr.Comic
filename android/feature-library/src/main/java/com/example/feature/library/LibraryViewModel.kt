@@ -9,20 +9,38 @@ import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
 import com.example.core.data.repository.ComicRepository
+import com.example.core.data.repository.QuoteRepository
+import com.example.core.domain.analytics.ReaderCheckpointStore
+import com.example.core.domain.analytics.DailyReadingGoalState
+import com.example.core.domain.analytics.DailyReadingGoalStore
+import com.example.core.domain.analytics.MascotProgressState
+import com.example.core.domain.analytics.MascotStage
+import com.example.core.domain.analytics.ReadingAnalyticsEvent
+import com.example.core.domain.analytics.ReadingAnalyticsTracker
+import com.example.core.domain.analytics.calculateMascotProgress
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
+import com.example.core.model.SavedQuote
 import com.example.core.model.SortOrder
+import com.example.core.model.isReadCompleted
+import com.example.core.model.isReadingInProgress
 import com.example.core.model.isTextReadingFormat
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
 import com.example.core.ui.library.DEFAULT_LIBRARY_CARD_SHADOW
+import com.example.core.ui.library.DEFAULT_LIBRARY_CARD_CORNER_RADIUS
+import com.example.core.ui.library.DEFAULT_LIBRARY_CARD_STROKE
 import com.example.core.ui.library.DEFAULT_LIBRARY_CARD_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_COVER_SCALE
 import com.example.core.ui.library.DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_SHELF_DEPTH
 import com.example.core.ui.library.DEFAULT_LIBRARY_SHELF_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_THUMBNAIL_MODE
+import com.example.core.ui.library.DEFAULT_LIBRARY_TITLE_LINES
+import com.example.core.ui.library.DEFAULT_LIBRARY_TITLE_PANEL_OPACITY
+import com.example.core.ui.library.DEFAULT_LIBRARY_TITLE_SCALE
 import com.example.core.ui.library.normalizeLibraryBackgroundStyle
 import com.example.core.ui.library.normalizeLibraryGraphicCoverStyle
 import com.example.core.ui.library.normalizeLibraryShelfStyle
@@ -47,6 +65,7 @@ import javax.inject.Inject
 enum class LibraryStatusFilter { ALL, BOOKMARKED, IN_PROGRESS, COMPLETED }
 enum class LibraryFormatFilter { ALL, IMAGE, PDF, TEXT }
 enum class GroupByMode { NONE, SERIES, FOLDER }
+enum class LibraryContentSection { FILES, BOOKMARKS, QUOTES, ACHIEVEMENTS }
 
 data class LibraryBreadcrumb(
     val label: String,
@@ -55,6 +74,12 @@ data class LibraryBreadcrumb(
 
 sealed interface LibraryDisplayItem {
     val key: String
+}
+
+enum class LibraryFileSection { GRAPHIC, BOOKS }
+
+data class LibrarySectionDividerItem(val section: LibraryFileSection) : LibraryDisplayItem {
+    override val key: String = "section_divider_${section.name.lowercase()}"
 }
 
 data class LibraryComicItem(val comic: Comic) : LibraryDisplayItem {
@@ -90,10 +115,14 @@ data class LibraryUiState(
     val cardStyle: String = DEFAULT_LIBRARY_CARD_STYLE,
     val recentStripPosition: String = "TOP",
     val showProgressIndicators: Boolean = true,
+    val showCoverTitlesOnGrid: Boolean = true,
     val coverScale: String = DEFAULT_LIBRARY_COVER_SCALE,
     val backdropStrength: Float = DEFAULT_LIBRARY_BACKDROP_STRENGTH,
     val groupByMode: GroupByMode = GroupByMode.FOLDER,
     val groupSections: List<Pair<String, List<Comic>>> = emptyList(),
+    val bookmarkedComics: List<Comic> = emptyList(),
+    val bookmarkedDisplayItems: List<LibraryDisplayItem> = emptyList(),
+    val bookmarkedGroupSections: List<Pair<String, List<Comic>>> = emptyList(),
     val recentlyRead: List<Comic> = emptyList(),
     val thumbnailMode: String = DEFAULT_LIBRARY_THUMBNAIL_MODE,
     val shelfStyle: String = DEFAULT_LIBRARY_SHELF_STYLE,
@@ -102,19 +131,38 @@ data class LibraryUiState(
     val graphicCoverStyle: String = DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE,
     val backgroundStyle: String = DEFAULT_LIBRARY_BACKGROUND_STYLE,
     val backgroundImageUri: String? = null,
+    val backgroundBlur: Float = DEFAULT_LIBRARY_BACKGROUND_BLUR,
     val backgroundVeil: Float = DEFAULT_LIBRARY_BACKGROUND_VEIL,
     val appLanguage: String = "ru",
+    val titleScale: Float = DEFAULT_LIBRARY_TITLE_SCALE,
+    val titleLines: Int = DEFAULT_LIBRARY_TITLE_LINES,
+    val cardStroke: Float = DEFAULT_LIBRARY_CARD_STROKE,
+    val cardCornerRadius: Int = DEFAULT_LIBRARY_CARD_CORNER_RADIUS,
+    val titlePanelOpacity: Float = DEFAULT_LIBRARY_TITLE_PANEL_OPACITY,
+    val contentSection: LibraryContentSection = LibraryContentSection.FILES,
     val currentFolderPath: String? = null,
     val breadcrumbs: List<LibraryBreadcrumb> = emptyList(),
+    val quotes: List<SavedQuote> = emptyList(),
+    val availableQuoteComicIds: Set<String> = emptySet(),
     val totalComicCount: Int = 0,
+    val totalBookmarkedCount: Int = 0,
+    val totalQuoteCount: Int = 0,
+    val quoteSourceCount: Int = 0,
     val visibleFolderCount: Int = 0,
     val visibleComicCount: Int = 0,
+    val mascotUiEnabled: Boolean = true,
+    val questPromptsEnabled: Boolean = true,
     // Достижения — сырые данные всей библиотеки (без фильтров)
     val allComicsRawCount: Int = 0,
     val completedComicCount: Int = 0,
     val bookmarkedComicCount: Int = 0,
     val rawAuthors: List<String?> = emptyList(),
     val rawGenres: List<String?> = emptyList(),
+    val dailyReadingGoalState: DailyReadingGoalState = DailyReadingGoalState(),
+    val mascotProgress: MascotProgressState = MascotProgressState(),
+    val acknowledgedMascotStageName: String = MascotStage.CHILD.name,
+    val rememberedMascotQuestAchievementId: String? = null,
+    val rememberedMascotQuestAction: String? = null,
     val secretCatUnlocked: Boolean = false
 )
 
@@ -124,6 +172,10 @@ enum class LibraryViewMode { GRID, LIST }
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val comicRepository: ComicRepository,
+    private val quoteRepository: QuoteRepository,
+    private val readerCheckpointStore: ReaderCheckpointStore,
+    private val dailyReadingGoalStore: DailyReadingGoalStore,
+    private val analyticsTracker: ReadingAnalyticsTracker,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -132,17 +184,29 @@ class LibraryViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     private val preferences = UserPreferences(context.dataStore)
+    private val reportedAchievementUnlocks = linkedSetOf<String>()
+    private var lastTrackedMascotStage: MascotStage? = null
 
     /** Raw filtered list from the repository before local sorting/grouping is applied. */
     private var rawComics: List<Comic> = emptyList()
+    private var rawQuotes: List<SavedQuote> = emptyList()
+    private var allLibraryComics: List<Comic> = emptyList()
 
     init {
         repairStoredCovers()
         observeAppLanguage()
         observeLayoutPreferences()
         observeLibraryPreferences()
+        observeCoverTitlePreference()
         observeVisualPreferences()
+        observeMascotUiPreference()
+        observeQuestPromptPreference()
+        observeAcknowledgedMascotStage()
+        observeDailyReadingGoalState()
+        observeRememberedMascotQuest()
+        observeRememberedMascotQuestAction()
         observeSecretCat()
+        observeLibraryAvailability()
         observeSearch()
     }
 
@@ -226,6 +290,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun observeCoverTitlePreference() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true).collect { enabled ->
+                _uiState.update { it.copy(showCoverTitlesOnGrid = enabled) }
+            }
+        }
+    }
+
     private fun observeVisualPreferences() {
         viewModelScope.launch {
             val visualFlowA = combine(
@@ -240,12 +312,23 @@ class LibraryViewModel @Inject constructor(
             val visualFlowB = combine(
                 preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, DEFAULT_LIBRARY_BACKGROUND_STYLE),
                 preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_IMAGE_URI, ""),
+                preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, DEFAULT_LIBRARY_BACKGROUND_BLUR).map { it.coerceIn(0f, 1f) },
                 preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, DEFAULT_LIBRARY_BACKGROUND_VEIL).map { it.coerceIn(0f, 1f) }
-            ) { backgroundStyle, backgroundImageUri, backgroundVeil ->
-                listOf(backgroundStyle, backgroundImageUri, backgroundVeil)
+            ) { backgroundStyle, backgroundImageUri, backgroundBlur, backgroundVeil ->
+                listOf(backgroundStyle, backgroundImageUri, backgroundBlur, backgroundVeil)
             }
 
-            combine(visualFlowA, visualFlowB) { left, right -> left + right }.collect { values ->
+            val visualFlowC = combine(
+                preferences.get(PreferencesKeys.LIBRARY_TITLE_SCALE, DEFAULT_LIBRARY_TITLE_SCALE).map { it.coerceIn(0.85f, 1.3f) },
+                preferences.get(PreferencesKeys.LIBRARY_TITLE_LINES, DEFAULT_LIBRARY_TITLE_LINES).map { it.coerceIn(1, 3) },
+                preferences.get(PreferencesKeys.LIBRARY_CARD_STROKE, DEFAULT_LIBRARY_CARD_STROKE).map { it.coerceIn(0f, 1f) },
+                preferences.get(PreferencesKeys.LIBRARY_CARD_CORNER_RADIUS, DEFAULT_LIBRARY_CARD_CORNER_RADIUS).map { it.coerceIn(6, 24) },
+                preferences.get(PreferencesKeys.LIBRARY_TITLE_PANEL_OPACITY, DEFAULT_LIBRARY_TITLE_PANEL_OPACITY).map { it.coerceIn(0.18f, 0.78f) }
+            ) { titleScale, titleLines, cardStroke, cardCornerRadius, titlePanelOpacity ->
+                listOf(titleScale, titleLines, cardStroke, cardCornerRadius, titlePanelOpacity)
+            }
+
+            combine(visualFlowA, visualFlowB, visualFlowC) { left, middle, right -> left + middle + right }.collect { values ->
                 _uiState.update {
                     it.copy(
                         thumbnailMode = values[0] as String,
@@ -255,7 +338,13 @@ class LibraryViewModel @Inject constructor(
                         graphicCoverStyle = normalizeLibraryGraphicCoverStyle(values[4] as String),
                         backgroundStyle = normalizeLibraryBackgroundStyle(values[5] as String),
                         backgroundImageUri = (values[6] as String).ifBlank { null },
-                        backgroundVeil = values[7] as Float
+                        backgroundBlur = values[7] as Float,
+                        backgroundVeil = values[8] as Float,
+                        titleScale = values[9] as Float,
+                        titleLines = values[10] as Int,
+                        cardStroke = values[11] as Float,
+                        cardCornerRadius = values[12] as Int,
+                        titlePanelOpacity = values[13] as Float
                     )
                 }
             }
@@ -266,6 +355,69 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             preferences.get(PreferencesKeys.LIBRARY_SECRET_CAT_UNLOCKED, false).collect { unlocked ->
                 _uiState.update { it.copy(secretCatUnlocked = unlocked) }
+            }
+        }
+    }
+
+    private fun observeAcknowledgedMascotStage() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.MASCOT_LAST_ACKNOWLEDGED_STAGE, MascotStage.CHILD.name)
+                .collect { stageName ->
+                    _uiState.update { it.copy(acknowledgedMascotStageName = stageName) }
+                }
+        }
+    }
+
+    private fun observeDailyReadingGoalState() {
+        viewModelScope.launch {
+            dailyReadingGoalStore.goalState.collect { goalState ->
+                _uiState.update { it.copy(dailyReadingGoalState = goalState) }
+            }
+        }
+    }
+
+    private fun observeRememberedMascotQuest() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.MASCOT_LAST_QUEST_ACHIEVEMENT_ID, "")
+                .collect { achievementId ->
+                    _uiState.update {
+                        it.copy(
+                            rememberedMascotQuestAchievementId = achievementId
+                                .trim()
+                                .ifBlank { null }
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun observeRememberedMascotQuestAction() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.MASCOT_LAST_QUEST_ACTION, "")
+                .collect { action ->
+                    _uiState.update {
+                        it.copy(
+                            rememberedMascotQuestAction = action
+                                .trim()
+                                .ifBlank { null }
+                        )
+                    }
+                }
+        }
+    }
+
+    private fun observeMascotUiPreference() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true).collect { enabled ->
+                _uiState.update { it.copy(mascotUiEnabled = enabled) }
+            }
+        }
+    }
+
+    private fun observeQuestPromptPreference() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.MASCOT_QUEST_PROMPTS_ENABLED, true).collect { enabled ->
+                _uiState.update { it.copy(questPromptsEnabled = enabled) }
             }
         }
     }
@@ -284,8 +436,11 @@ class LibraryViewModel @Inject constructor(
                     emit(query)
                 }
                 .flatMapLatest { query ->
-                    if (query.isBlank()) comicRepository.getAllComics()
+                    val comicsFlow = if (query.isBlank()) comicRepository.getAllComics()
                     else comicRepository.searchComics(query)
+                    val quotesFlow = if (query.isBlank()) quoteRepository.getAllQuotes()
+                    else quoteRepository.searchQuotes(query)
+                    combine(comicsFlow, quotesFlow) { comics, quotes -> comics to quotes }
                 }
                 .catch { e ->
                     _uiState.update {
@@ -303,8 +458,22 @@ class LibraryViewModel @Inject constructor(
                         )
                     }
                 }
-                .collect { comics ->
+                .collect { (comics, quotes) ->
                     rawComics = comics
+                    rawQuotes = quotes
+                    applyFiltersAndSort()
+                }
+        }
+    }
+
+    private fun observeLibraryAvailability() {
+        viewModelScope.launch {
+            comicRepository.getAllComics()
+                .catch { error ->
+                    Log.w("LibraryViewModel", "Failed to observe full library availability", error)
+                }
+                .collect { comics ->
+                    allLibraryComics = comics
                     applyFiltersAndSort()
                 }
         }
@@ -314,8 +483,11 @@ class LibraryViewModel @Inject constructor(
         val state = _uiState.value
         val filtered = filterComics(rawComics, state.statusFilter, state.formatFilter)
         val sorted = sortComics(filtered, state.sortOrder)
+        val bookmarkedSorted = sorted.filter { it.isBookmarked }
+        val sortedQuotes = rawQuotes.sortedByDescending { it.createdAt }
+        val mascotProgress = calculateMascotProgress(allLibraryComics)
         val recent = rawComics
-            .filter { !it.isCompleted && it.readingProgress > 0f }
+            .filter { it.isReadingInProgress() }
             .sortedByDescending { it.lastReadDate }
             .take(10)
 
@@ -327,11 +499,24 @@ class LibraryViewModel @Inject constructor(
 
         val displayItems = when (state.groupByMode) {
             GroupByMode.FOLDER -> buildFolderDisplayItems(filtered, effectiveFolderPath, state.sortOrder)
-            else -> sorted.map(::LibraryComicItem)
+            else -> buildSeparatedComicDisplayItems(sorted)
         }
 
         val sections = when (state.groupByMode) {
             GroupByMode.SERIES -> buildSections(sorted) {
+                it.series?.takeIf(String::isNotBlank) ?: vmTr(
+                    lang = state.appLanguage,
+                    ru = "Без серии",
+                    en = "No series",
+                    ja = "シリーズなし",
+                    zh = "无系列",
+                    ko = "시리즈 없음"
+                )
+            }
+            else -> emptyList()
+        }
+        val bookmarkedSections = when (state.groupByMode) {
+            GroupByMode.SERIES -> buildSections(bookmarkedSorted) {
                 it.series?.takeIf(String::isNotBlank) ?: vmTr(
                     lang = state.appLanguage,
                     ru = "Без серии",
@@ -349,26 +534,100 @@ class LibraryViewModel @Inject constructor(
                 comics = sorted,
                 displayItems = displayItems,
                 groupSections = sections,
+                bookmarkedComics = bookmarkedSorted,
+                bookmarkedDisplayItems = buildSeparatedComicDisplayItems(bookmarkedSorted),
+                bookmarkedGroupSections = bookmarkedSections,
                 recentlyRead = recent,
                 isLoading = false,
                 currentFolderPath = effectiveFolderPath,
                 breadcrumbs = buildBreadcrumbs(effectiveFolderPath, state.appLanguage),
+                quotes = sortedQuotes,
+                availableQuoteComicIds = allLibraryComics.map { comic -> comic.id }.toSet(),
                 totalComicCount = filtered.size,
+                totalBookmarkedCount = bookmarkedSorted.size,
+                totalQuoteCount = sortedQuotes.size,
+                quoteSourceCount = sortedQuotes.map { it.comicId }.distinct().size,
                 visibleFolderCount = displayItems.count { item -> item is LibraryFolderItem },
                 visibleComicCount = displayItems.count { item -> item is LibraryComicItem },
                 // Данные для достижений берём из полного сырого списка (без фильтров)
                 allComicsRawCount = rawComics.size,
-                completedComicCount = rawComics.count { c -> c.isCompleted },
+                completedComicCount = rawComics.count { c -> c.isReadCompleted() },
                 bookmarkedComicCount = rawComics.count { c -> c.isBookmarked },
                 rawAuthors = rawComics.map { c -> c.author },
-                rawGenres = rawComics.map { c -> c.genre }
+                rawGenres = rawComics.map { c -> c.genre },
+                mascotProgress = mascotProgress
             )
         }
+        if (shouldTrackMascotStageUp(lastTrackedMascotStage, mascotProgress.stage)) {
+            analyticsTracker.track(
+                ReadingAnalyticsEvent.StageUp(
+                    stage = mascotProgress.stage.name,
+                    xp = mascotProgress.xp,
+                    totalTitles = allLibraryComics.size,
+                    completedTitles = allLibraryComics.count { it.isReadCompleted() }
+                )
+            )
+        }
+        lastTrackedMascotStage = mascotProgress.stage
     }
 
     fun search(query: String) {
         _searchQuery.value = query
         _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun setContentSection(section: LibraryContentSection) {
+        _uiState.update { it.copy(contentSection = section) }
+    }
+
+    fun reportAchievementUnlocked(achievementId: String, unlockedCount: Int, totalCount: Int) {
+        if (!reportedAchievementUnlocks.add(achievementId)) return
+        analyticsTracker.track(
+            ReadingAnalyticsEvent.AchievementUnlocked(
+                achievementId = achievementId,
+                unlockedCount = unlockedCount,
+                totalCount = totalCount
+            )
+        )
+    }
+
+    fun reportQuestTransition(
+        previousAchievementId: String,
+        nextAchievementId: String?,
+        previousCompleted: Boolean,
+        actionName: String?
+    ) {
+        buildQuestTransitionAnalyticsEvents(
+            previousAchievementId = previousAchievementId,
+            nextAchievementId = nextAchievementId,
+            previousCompleted = previousCompleted,
+            actionName = actionName
+        ).forEach(analyticsTracker::track)
+    }
+
+    fun acknowledgeMascotStagePreview() {
+        viewModelScope.launch {
+            preferences.set(
+                PreferencesKeys.MASCOT_LAST_ACKNOWLEDGED_STAGE,
+                _uiState.value.mascotProgress.stage.name
+            )
+        }
+    }
+
+    fun rememberMascotQuestTarget(achievementId: String?) {
+        val normalized = achievementId?.trim().orEmpty()
+        if (_uiState.value.rememberedMascotQuestAchievementId == normalized.ifBlank { null }) return
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.MASCOT_LAST_QUEST_ACHIEVEMENT_ID, normalized)
+        }
+    }
+
+    fun rememberMascotQuestAction(actionName: String?) {
+        val normalized = actionName?.trim().orEmpty()
+        if (_uiState.value.rememberedMascotQuestAction == normalized.ifBlank { null }) return
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.MASCOT_LAST_QUEST_ACTION, normalized)
+        }
     }
 
     fun setSortOrder(order: SortOrder) {
@@ -401,6 +660,28 @@ class LibraryViewModel @Inject constructor(
     fun openFolder(path: String?) {
         _uiState.update { it.copy(currentFolderPath = path) }
         applyFiltersAndSort()
+    }
+
+    fun deleteQuote(id: String) {
+        viewModelScope.launch {
+            runCatching { quoteRepository.deleteQuote(id) }
+                .onFailure { error ->
+                    Log.e("LibraryViewModel", "Failed to delete quote", error)
+                    _uiState.update {
+                        it.copy(
+                            error = localizedError(
+                                lang = it.appLanguage,
+                                ru = "Не удалось удалить цитату",
+                                en = "Failed to delete quote",
+                                ja = "引用を削除できませんでした",
+                                zh = "无法删除摘录",
+                                ko = "문구를 삭제할 수 없습니다",
+                                cause = error
+                            )
+                        )
+                    }
+                }
+        }
     }
 
     fun navigateUpFromFolder() {
@@ -488,6 +769,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 comicRepository.deleteComic(comicId)
+                readerCheckpointStore.removeComicCheckpoints(comicId)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -516,6 +798,7 @@ class LibraryViewModel @Inject constructor(
                 }
                 matchingComics.forEach { comic ->
                     comicRepository.deleteComic(comic.id)
+                    readerCheckpointStore.removeComicCheckpoints(comic.id)
                 }
                 if (_uiState.value.currentFolderPath == normalizedPath) {
                     openFolder(normalizedPath.parentFolderPath())
@@ -616,8 +899,8 @@ class LibraryViewModel @Inject constructor(
         val byStatus = when (statusFilter) {
             LibraryStatusFilter.ALL -> comics
             LibraryStatusFilter.BOOKMARKED -> comics.filter { it.isBookmarked }
-            LibraryStatusFilter.IN_PROGRESS -> comics.filter { !it.isCompleted && it.readingProgress > 0f }
-            LibraryStatusFilter.COMPLETED -> comics.filter { it.isCompleted }
+            LibraryStatusFilter.IN_PROGRESS -> comics.filter { it.isReadingInProgress() }
+            LibraryStatusFilter.COMPLETED -> comics.filter { it.isReadCompleted() }
         }
         return when (formatFilter) {
             LibraryFormatFilter.ALL -> byStatus
@@ -674,8 +957,36 @@ class LibraryViewModel @Inject constructor(
     ): List<LibraryDisplayItem> {
         val folders = buildFolderItems(comics, currentFolderPath, sortOrder)
         val directFiles = sortComics(directFilesForPath(comics, currentFolderPath), sortOrder)
-            .map(::LibraryComicItem)
-        return folders + directFiles
+        return folders + buildSeparatedComicDisplayItems(
+            comics = directFiles,
+            forceHeaders = folders.isNotEmpty()
+        )
+    }
+
+    private fun buildSeparatedComicDisplayItems(
+        comics: List<Comic>,
+        forceHeaders: Boolean = false
+    ): List<LibraryDisplayItem> {
+        if (comics.isEmpty()) return emptyList()
+
+        val books = comics.filter { it.format.isTextReadingFormat() }
+        val graphics = comics.filterNot { it.format.isTextReadingFormat() }
+        val shouldShowHeaders = forceHeaders || (graphics.isNotEmpty() && books.isNotEmpty())
+
+        if (!shouldShowHeaders) {
+            return comics.map(::LibraryComicItem)
+        }
+
+        return buildList {
+            if (graphics.isNotEmpty()) {
+                add(LibrarySectionDividerItem(LibraryFileSection.GRAPHIC))
+                addAll(graphics.map(::LibraryComicItem))
+            }
+            if (books.isNotEmpty()) {
+                add(LibrarySectionDividerItem(LibraryFileSection.BOOKS))
+                addAll(books.map(::LibraryComicItem))
+            }
+        }
     }
 
     private fun buildFolderItems(
@@ -698,7 +1009,14 @@ class LibraryViewModel @Inject constructor(
                 }.distinct().size
                 val directChildren = descendants.filter { normalizeFolderId(it.folderId) == path }
                 val representativeSource = if (directChildren.isNotEmpty()) directChildren else descendants
-                val representative = representativeSource.minByOrNull { folderRepresentativeName(it) }
+                val representative = representativeSource
+                    .sortedWith(
+                        compareBy<Comic>(
+                            { it.coverPath.isNullOrBlank() },
+                            { folderRepresentativeName(it) }
+                        )
+                    )
+                    .firstOrNull()
                 LibraryFolderItem(
                     path = path,
                     title = path.substringAfterLast('/'),
@@ -844,4 +1162,33 @@ class LibraryViewModel @Inject constructor(
             ko = "$ko$details"
         )
     }
+}
+
+internal fun shouldTrackMascotStageUp(
+    previousStage: MascotStage?,
+    currentStage: MascotStage
+): Boolean = previousStage != null && currentStage.ordinal > previousStage.ordinal
+
+internal fun buildQuestTransitionAnalyticsEvents(
+    previousAchievementId: String,
+    nextAchievementId: String?,
+    previousCompleted: Boolean,
+    actionName: String?
+): List<ReadingAnalyticsEvent> {
+    val events = mutableListOf<ReadingAnalyticsEvent>()
+    if (previousCompleted) {
+        events += ReadingAnalyticsEvent.QuestCompleted(
+            achievementId = previousAchievementId,
+            nextAchievementId = nextAchievementId,
+            action = actionName
+        )
+    }
+    if (!nextAchievementId.isNullOrBlank() && nextAchievementId != previousAchievementId) {
+        events += ReadingAnalyticsEvent.QuestSwitched(
+            previousAchievementId = previousAchievementId,
+            nextAchievementId = nextAchievementId,
+            action = actionName
+        )
+    }
+    return events
 }

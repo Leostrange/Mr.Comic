@@ -1,6 +1,7 @@
 package com.example.mrcomic
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -26,11 +26,13 @@ import com.example.mrcomic.crash.CrashLogger
 import com.example.mrcomic.navigation.AppNavHost
 import com.example.mrcomic.navigation.Screen
 import com.example.mrcomic.ui.CrashReportScreen
+import com.example.feature.reader.ui.ReaderHardwareKeyHost
 import androidx.lifecycle.lifecycleScope
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.eink.isEInkDevice
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.locale.appStringsForCode
+import com.example.core.ui.locale.normalizeAppLanguageCode
 import com.example.core.ui.performance.LocalPerformanceUiHints
 import com.example.core.ui.performance.PerformanceUiHints
 import com.example.engine.formats.base.RenderDeviceTier
@@ -41,9 +43,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), ReaderHardwareKeyHost {
 
     @Inject lateinit var appIconManager: AppIconManager
+    private var readerHardwareKeyHandler: ((KeyEvent) -> Boolean)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,6 +62,17 @@ class MainActivity : ComponentActivity() {
             val themeRepo = remember { ThemePreferencesRepository(this) }
             MrComicApp(themeRepo, initialDeepLinkUri = deepLink)
         }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (readerHardwareKeyHandler?.invoke(event) == true) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun setReaderHardwareKeyHandler(handler: ((KeyEvent) -> Boolean)?) {
+        readerHardwareKeyHandler = handler
     }
 }
 
@@ -86,6 +100,7 @@ fun MrComicApp(
         .collectAsState(initial = 12)
     val appLanguage by userPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
         .collectAsState(initial = "ru")
+    val normalizedAppLanguage = remember(appLanguage) { normalizeAppLanguageCode(appLanguage) }
     val uiSoundEnabled by userPreferences.get(PreferencesKeys.UI_SOUND_ENABLED, false)
         .collectAsState(initial = false)
     val uiSoundsVolume by userPreferences.get(PreferencesKeys.UI_SOUNDS_VOLUME, 0.6f)
@@ -96,42 +111,33 @@ fun MrComicApp(
 
     CompositionLocalProvider(
         LocalDensity provides Density(
-            density = baseDensity.density * uiDensityScale.coerceIn(0.9f, 1.1f),
+            density = baseDensity.density * uiDensityScale.coerceIn(0.82f, 1.18f),
             fontScale = fontScale
         ),
         LocalEInkMode provides isEInk,
         LocalPerformanceUiHints provides performanceHints,
-        LocalStrings provides appStringsForCode(appLanguage)
+        LocalStrings provides appStringsForCode(normalizedAppLanguage)
     ) {
     MrComicTheme(themeConfig = themeConfig, cornerRadius = cornerRadius) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             val crashLog = remember {
-                try { CrashLogger.getCrashText(context) } catch (_: Exception) { null }
+                runCatching { CrashLogger.getCrashText(context) }.getOrNull()
             }
-            var showError by remember { mutableStateOf<String?>(null) }
+            var showCrashReport by rememberSaveable { mutableStateOf(crashLog != null) }
+            val dismissCrashReport: () -> Unit = {
+                CrashLogger.clear(context)
+                showCrashReport = false
+            }
 
             when {
-                crashLog != null -> {
+                showCrashReport && crashLog != null -> {
                     CrashReportScreen(
                         log = crashLog,
-                        onContinue = { CrashLogger.clear(context) },
-                        onClear = { CrashLogger.clear(context) }
+                        onContinue = dismissCrashReport,
+                        onClear = dismissCrashReport
                     )
                 }
-                showError != null -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Text("Ошибка загрузки", style = MaterialTheme.typography.titleLarge)
-                            Text(showError ?: "Неизвестная ошибка", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
                 else -> {
-                    var restoredRootRoute by rememberSaveable { mutableStateOf<String?>(null) }
-                    val startDestination = restoredRootRoute ?: Screen.Continue.route
                     val navController = rememberNavController()
 
                     LaunchedEffect(initialDeepLinkUri) {
@@ -152,13 +158,7 @@ fun MrComicApp(
                         }
                     }
 
-                    AppNavHost(
-                        navController = navController,
-                        startDestination = startDestination,
-                        onRootRouteChanged = { route ->
-                            restoredRootRoute = route
-                        }
-                    )
+                    AppNavHost(navController = navController)
                 }
             }
         }

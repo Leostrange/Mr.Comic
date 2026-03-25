@@ -15,11 +15,22 @@ import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
 import com.example.core.data.repository.ComicRepository
+import com.example.core.data.repository.QuoteRepository
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
 import com.example.core.model.DictionaryEntry
 import com.example.core.model.ExplainRequest
 import com.example.core.model.ReadingMode
+import com.example.core.model.ReaderInfoSlot
+import com.example.core.model.ReaderImageScaleMode
+import com.example.core.model.ReaderScreenTimeoutMode
+import com.example.core.model.ReaderTapZoneAction
+import com.example.core.model.ReaderTapZoneMode
+import com.example.core.model.ReaderTtsProviderType
+import com.example.core.model.ReaderTtsSleepTimerMode
+import com.example.core.model.TranslationServiceConfig
+import com.example.core.model.supportsHighResZoomTiers
+import com.example.core.model.isTextReadingFormat
 import com.example.core.model.TranslationMode
 import com.example.core.model.TranslationRequest
 import com.example.core.model.TranslationRoutingRequest
@@ -27,33 +38,46 @@ import com.example.core.model.TranslationSourceType
 import com.example.core.model.TranslationTransportPreference
 import com.example.core.domain.translation.DictionaryEngine
 import com.example.core.domain.translation.LlmExplainEngine
+import com.example.core.domain.translation.SingleWordDictionaryMatch
 import com.example.core.domain.translation.TranslationBackendUnavailableException
+import com.example.core.domain.translation.hasMeaningfulTranslationFor
+import com.example.core.domain.analytics.DailyReadingGoalState
+import com.example.core.domain.analytics.DailyReadingGoalStore
+import com.example.core.domain.analytics.ReadingAnalyticsEvent
+import com.example.core.domain.analytics.ReadingAnalyticsTracker
 import com.example.core.ui.locale.normalizeAppLanguageCode
 import com.example.core.ui.locale.normalizeTranslationLanguageCode
+import com.example.core.ui.locale.supportedTranslationLanguageCodes
 import com.example.core.ui.theme.ReadingPreset
 import com.example.core.ui.theme.style
 import com.example.core.domain.translation.LookupRouter
 import com.example.core.domain.translation.LanguageDetector
 import com.example.core.domain.translation.OfflineTranslationEngine
 import com.example.core.domain.translation.OnlineTranslationEngine
+import com.example.core.domain.translation.resolveBestSingleWordDictionaryMatch
+import com.example.core.domain.analytics.ReaderCheckpointStore
 import com.example.core.domain.util.Result
 import com.example.engine.formats.base.FormatFactory
 import com.example.engine.formats.base.FormatDetector
 import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.base.RenderDeviceTier
 import com.example.engine.formats.base.resolveRenderDeviceProfile
 import com.example.engine.formats.base.TocEntry
 import com.example.engine.rendering.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import com.example.core.model.LanguageDetectionResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
-enum class ReaderChromeState { HIDDEN, MINIMAL, EXPANDED }
+enum class ReaderChromeState { HIDDEN, EXPANDED }
 
 enum class FootnotePresentation { PEEK, EXPANDED }
 
@@ -71,9 +95,11 @@ data class ReaderUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     val readingMode: ReadingMode = ReadingMode.PAGE_LTR,
-    val chromeState: ReaderChromeState = ReaderChromeState.MINIMAL,
-    val brightness: Float = 0.5f,
+    val chromeState: ReaderChromeState = ReaderChromeState.HIDDEN,
+    val brightness: Float = -1f,
     val keepScreenOn: Boolean = false,
+    val screenTimeoutMode: String = ReaderScreenTimeoutMode.SYSTEM.storedValue,
+    val landscapeSpreadEnabled: Boolean = true,
     /** true when the screen is in landscape; used to drive automatic DUAL_PAGE switch */
     val isLandscape: Boolean = false,
     /** Page transition animation: "NONE" | "SLIDE" | "FADE" */
@@ -84,6 +110,16 @@ data class ReaderUiState(
     val pageSoundStyle: String = "PAPER",
     /** Immersive (fullscreen) mode — hides system bars while reading */
     val immersiveMode: Boolean = false,
+    /** Whether expanded reader chrome should hide itself after a short pause. */
+    val chromeAutoHideEnabled: Boolean = true,
+    /** Opacity for the expanded top toolbar. */
+    val topToolbarOpacity: Float = 0.86f,
+    /** Opacity for the expanded bottom toolbar. */
+    val bottomToolbarOpacity: Float = 0.9f,
+    /** Soft blur amount for reader chrome and info panels. */
+    val toolbarBlur: Float = READER_TOOLBAR_DEFAULT_BLUR,
+    /** How graphic pages should be fitted on the reader canvas. */
+    val imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
     /** Number of pages to preload ahead of the current page */
     val preloadPages: Int = 3,
     /**
@@ -113,6 +149,36 @@ data class ReaderUiState(
     val textAlignment: String = "justify",
     /** Bold text for text books. */
     val textBold: Boolean = false,
+    /** Tap zone mode for image and text readers. */
+    val tapZoneMode: String = ReaderTapZoneMode.SIMPLE.name,
+    /** Whether the simple three-zone layout should swap left/right actions. */
+    val tapZoneSwap: Boolean = false,
+    /** Whether hardware volume buttons should turn pages inside the reader. */
+    val volumeKeysPagingEnabled: Boolean = false,
+    /** System TTS defaults used by the reader services tab. */
+    val ttsProvider: String = ReaderTtsProviderType.SYSTEM.storedValue,
+    val ttsSpeed: Float = 1.0f,
+    val ttsPitch: Float = 1.0f,
+    val ttsVolume: Float = 1.0f,
+    val ttsVoiceName: String? = null,
+    val ttsSleepTimerMode: String = ReaderTtsSleepTimerMode.OFF.storedValue,
+    /** Custom left zone action. */
+    val tapZoneLeftAction: String = ReaderTapZoneAction.PREVIOUS_PAGE.name,
+    /** Custom center zone action. */
+    val tapZoneCenterAction: String = ReaderTapZoneAction.MENU.name,
+    /** Custom right zone action. */
+    val tapZoneRightAction: String = ReaderTapZoneAction.NEXT_PAGE.name,
+    /** Header/footer slot configuration. */
+    val headerLeftSlot: String = ReaderInfoSlot.BOOK_TITLE.name,
+    val headerCenterSlot: String = ReaderInfoSlot.NONE.name,
+    val headerRightSlot: String = ReaderInfoSlot.TIME.name,
+    val footerLeftSlot: String = ReaderInfoSlot.CHAPTER_TITLE.name,
+    val footerCenterSlot: String = ReaderInfoSlot.PAGE.name,
+    val footerRightSlot: String = ReaderInfoSlot.PROGRESS.name,
+    val headerFooterFontSize: Int = 12,
+    val headerFooterVerticalPadding: Int = 6,
+    val headerFooterLeftPadding: Int = 16,
+    val headerFooterRightPadding: Int = 16,
     /** Whether the text settings bottom sheet is open. */
     val showTextSettings: Boolean = false,
     /** Set of bookmarked page indices for the current comic. */
@@ -128,7 +194,9 @@ data class ReaderUiState(
     /** Whether eye-rest reminders are enabled for reading sessions. */
     val eyeRestEnabled: Boolean = false,
     /** Eye-rest reminder interval in minutes. */
-    val eyeRestMinutes: Int = 20
+    val eyeRestMinutes: Int = 20,
+    /** Global mascot visibility for reader chrome and milestone feedback. */
+    val mascotUiEnabled: Boolean = true
 )
 
 data class SelectedTextTranslationState(
@@ -164,10 +232,68 @@ data class OcrLaunchRequest(
     val page: Int
 )
 
+private data class PendingProgressSave(
+    val comicId: String,
+    val page: Int,
+    val totalPages: Int,
+    val countsTowardReadingProgress: Boolean
+)
+
+private data class PersistedProgressMarker(
+    val comicId: String,
+    val page: Int
+)
+
+private data class ChapterMilestoneMarker(
+    val comicId: String,
+    val chapterPage: Int
+)
+
+enum class ReaderNavigationProgressSource {
+    READING,
+    JUMP
+}
+
+private const val TITLE_COMPLETE_BONUS_XP = 60
+
+enum class ReaderProgressRecapType { CHAPTER, TITLE_COMPLETE }
+
+data class ReaderProgressRecap(
+    val type: ReaderProgressRecapType,
+    val comicId: String,
+    val comicTitle: String,
+    val chapterTitle: String? = null,
+    val currentPage: Int,
+    val totalPages: Int,
+    val pagesDelta: Int,
+    val xpAwarded: Int,
+    val goalEnabled: Boolean,
+    val pagesReadToday: Int,
+    val targetPages: Int,
+    val isDailyGoalComplete: Boolean,
+    val pagesReadThisWeek: Int,
+    val weeklyTargetPages: Int,
+    val isWeeklyPlanComplete: Boolean,
+    val streakEnabled: Boolean,
+    val currentStreak: Int,
+    val emittedAtMillis: Long = System.currentTimeMillis()
+)
+
+private data class ReaderSessionSnapshot(
+    val comicId: String,
+    val format: String,
+    val totalPages: Int,
+    val startPage: Int,
+    val readingMode: String,
+    val startedAtMillis: Long,
+    val resumedFromProgress: Boolean
+)
+
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val comicRepository: ComicRepository,
+    private val quoteRepository: QuoteRepository,
     private val formatFactory: FormatFactory,
     private val pagePreloader: PagePreloader,
     private val languageDetector: LanguageDetector,
@@ -176,6 +302,9 @@ class ReaderViewModel @Inject constructor(
     private val offlineTranslationEngine: OfflineTranslationEngine,
     private val onlineTranslationEngine: OnlineTranslationEngine,
     private val llmExplainEngine: LlmExplainEngine,
+    private val analyticsTracker: ReadingAnalyticsTracker,
+    private val readerCheckpointStore: ReaderCheckpointStore,
+    private val dailyReadingGoalStore: DailyReadingGoalStore,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -187,13 +316,30 @@ class ReaderViewModel @Inject constructor(
     val ocrPagePath: SharedFlow<OcrLaunchRequest> = _ocrPagePath.asSharedFlow()
     private val _eyeRestReminder = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val eyeRestReminder: SharedFlow<Int> = _eyeRestReminder.asSharedFlow()
+    private val _quoteSaveMessages = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val quoteSaveMessages: SharedFlow<String> = _quoteSaveMessages.asSharedFlow()
+    private val _readerProgressRecap = MutableSharedFlow<ReaderProgressRecap>(extraBufferCapacity = 1)
+    val readerProgressRecap: SharedFlow<ReaderProgressRecap> = _readerProgressRecap.asSharedFlow()
 
     private val readerPreferences = UserPreferences(context.dataStore)
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
+    private var loadComicJob: Job? = null
     private var eyeRestJob: Job? = null
+    private var highQualityWarmupJob: Job? = null
+    private var progressSaveJob: Job? = null
+    private var pageTranslationNoteJob: Job? = null
+    private var pendingProgressSave: PendingProgressSave? = null
+    private var lastPersistedProgress: PersistedProgressMarker? = null
+    private val lastChapterMilestone = AtomicReference<ChapterMilestoneMarker?>(null)
+    private var activeReaderSession: ReaderSessionSnapshot? = null
+    private var sessionManualPageTurns: Int = 0
+    private var sessionChapterTransitions: Int = 0
+    private var lastRetainedHighQualityPages: Set<Int> = emptySet()
+    private var currentOpenRequestToken: Long = 0L
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
+    private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
 
     /**
      * The reading mode to restore when rotating back to portrait.
@@ -201,49 +347,81 @@ class ReaderViewModel @Inject constructor(
      * (PAGE_LTR / PAGE_RTL / WEBTOON).
      */
     private var portraitReadingMode: ReadingMode = ReadingMode.PAGE_LTR
+    private var portraitPagedReadingMode: ReadingMode = ReadingMode.PAGE_LTR
 
     init {
-        restoreReaderPreferences()
-        when {
-            !encodedComicId.isNullOrBlank() -> loadComicById(Uri.decode(encodedComicId))
-            !encodedUri.isNullOrBlank() -> loadComic(Uri.decode(encodedUri))
+        viewModelScope.launch {
+            restoreReaderPreferences()
+            when {
+                !encodedComicId.isNullOrBlank() -> loadComicById(Uri.decode(encodedComicId))
+                !encodedUri.isNullOrBlank() -> loadComic(Uri.decode(encodedUri))
+            }
         }
     }
 
     private fun loadComicById(comicId: String) {
-        viewModelScope.launch {
+        loadComicJob?.cancel()
+        val requestToken = ++currentOpenRequestToken
+        loadComicJob = viewModelScope.launch {
             val comic = comicRepository.getComicById(comicId)
+            if (!isOpenRequestCurrent(requestToken)) return@launch
             if (comic == null) {
                 val errorMessage = localizedReaderError(::readerComicNotFoundMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
                 return@launch
             }
-            openComic(comic, comic.path)
+            openComic(comic, comic.path, requestToken)
         }
     }
 
     private fun loadComic(path: String) {
-        viewModelScope.launch {
+        loadComicJob?.cancel()
+        val requestToken = ++currentOpenRequestToken
+        loadComicJob = viewModelScope.launch {
             val comic = comicRepository.getComicByPath(path) ?: run {
                 comicRepository.addComic(Uri.parse(path))
             }
+            if (!isOpenRequestCurrent(requestToken)) return@launch
             if (comic == null) {
                 val errorMessage = localizedReaderError(::readerComicLookupFailedMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
                 return@launch
             }
-            openComic(comic, path)
+            openComic(comic, path, requestToken)
         }
     }
 
-    private suspend fun openComic(comic: Comic, sourcePath: String) {
+    private suspend fun openComic(comic: Comic, sourcePath: String, requestToken: Long) {
         try {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            flushPendingProgressSave()
+            progressSaveJob?.cancel()
+            if (!isOpenRequestCurrent(requestToken)) return
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    error = null,
+                    currentHtmlContent = null,
+                    tableOfContents = emptyList(),
+                    bookmarkedPages = emptySet(),
+                    pageTranslationNote = null,
+                    showTocSheet = false,
+                    showTextSettings = false,
+                    footnotePopup = null,
+                    footnotePresentation = FootnotePresentation.PEEK,
+                    selectedTextActionSheet = null,
+                    selectedTextTranslation = null
+                )
+            }
             eyeRestJob?.cancel()
+            highQualityWarmupJob?.cancel()
+            if (!isOpenRequestCurrent(requestToken)) return
+            lastRetainedHighQualityPages = emptySet()
             pagePreloader.clearPages()
             formatReader?.close()
 
+            if (!isOpenRequestCurrent(requestToken)) return
             val resolvedPath = resolveReadablePath(comic, sourcePath)
+            if (!isOpenRequestCurrent(requestToken)) return
             // Re-detect by extension when stored format might be wrong (e.g. EPUB stored as CBZ
             // because magic bytes of EPUB == ZIP). Extension is always more reliable than magic.
             val detectedFormat = when (comic.format) {
@@ -253,7 +431,12 @@ class ReaderViewModel @Inject constructor(
                 }
                 else -> comic.format
             }
-            formatReader = formatFactory.createReader(resolvedPath, detectedFormat)
+            val newReader = formatFactory.createReader(resolvedPath, detectedFormat)
+            if (!isOpenRequestCurrent(requestToken)) {
+                newReader?.close()
+                return
+            }
+            formatReader = newReader
 
             if (formatReader == null) {
                 val errorMessage = localizedReaderError { language ->
@@ -263,18 +446,49 @@ class ReaderViewModel @Inject constructor(
                 return
             }
 
+            if (!isOpenRequestCurrent(requestToken)) return
             val pages = formatReader?.getPageCount() ?: 0
+            if (!isOpenRequestCurrent(requestToken)) {
+                formatReader?.takeIf { it === newReader }?.close()
+                if (formatReader === newReader) {
+                    formatReader = null
+                }
+                return
+            }
             if (pages <= 0) {
                 val errorMessage = localizedReaderError(::readerNoReadablePagesMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
                 return
             }
 
-            val startPage = comic.currentPage.coerceIn(0, (pages - 1).coerceAtLeast(0))
+            val openingMode = effectiveOpeningModeFor(detectedFormat)
+            val requestedPage = pendingRequestedPage
+            val startPage = normalizePageForMode(
+                page = requestedPage ?: comic.currentPage,
+                mode = openingMode,
+                totalPages = pages
+            )
+            pendingRequestedPage = null
+            lastPersistedProgress = if (requestedPage != null && requestedPage != comic.currentPage) {
+                PersistedProgressMarker(
+                    comicId = comic.id,
+                    page = normalizePageForMode(
+                        page = comic.currentPage,
+                        mode = openingMode,
+                        totalPages = pages
+                    )
+                )
+            } else {
+                PersistedProgressMarker(
+                    comicId = comic.id,
+                    page = startPage
+                )
+            }
             _uiState.update {
                 it.copy(
                     comic = comic,
                     totalPages = pages,
+                    readingMode = openingMode,
                     currentPage = startPage,
                     isLoading = false,
                     htmlBaseUrl = formatReader?.htmlBaseUrl(),
@@ -282,17 +496,50 @@ class ReaderViewModel @Inject constructor(
                     selectedTextTranslation = null
                 )
             }
-            formatReader?.let { reader ->
-                pagePreloader.preloadAround(reader, startPage, pages, _uiState.value.preloadPages)
+            val sessionStartedAtMillis = System.currentTimeMillis()
+            val resumedFromProgress = requestedPage != null || comic.currentPage > 0
+            activeReaderSession = ReaderSessionSnapshot(
+                comicId = comic.id,
+                format = comic.format.name,
+                totalPages = pages,
+                startPage = startPage,
+                readingMode = openingMode.name,
+                startedAtMillis = sessionStartedAtMillis,
+                resumedFromProgress = resumedFromProgress
+            )
+            sessionManualPageTurns = 0
+            sessionChapterTransitions = 0
+            analyticsTracker.track(
+                ReadingAnalyticsEvent.ReaderOpened(
+                    comicId = comic.id,
+                    format = comic.format.name,
+                    totalPages = pages,
+                    startPage = startPage,
+                    readingMode = openingMode.name,
+                    startedAtMillis = sessionStartedAtMillis,
+                    resumedFromProgress = resumedFromProgress
+                )
+            )
+            if (!isOpenRequestCurrent(requestToken)) return
+            val visiblePages = visiblePagesFor(startPage, openingMode)
+            formatReader?.takeUnless { detectedFormat.isTextReadingFormat() }?.let { reader ->
+                pagePreloader.preloadAround(reader, visiblePages, pages, _uiState.value.preloadPages)
             }
-            loadPage(startPage)
+            visiblePages.forEach { visiblePage ->
+                loadPage(visiblePage)
+            }
+            scheduleHighQualityWarmup(startPage)
             loadToc()
-            loadBookmarks(comic.id)
-            loadPageTranslationNote(startPage)
+            loadBookmarks(comic.id, pages)
+            loadPageTranslationNote(comic.id, startPage)
             restartEyeRestTimer()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            if (!isOpenRequestCurrent(requestToken)) return
             Log.e("ReaderViewModel", "Failed to open comic", e)
             eyeRestJob?.cancel()
+            highQualityWarmupJob?.cancel()
             val errorMessage = localizedReaderError(::readerOpenFailedMessage)
             _uiState.update { it.copy(error = errorMessage, isLoading = false) }
         }
@@ -305,6 +552,18 @@ class ReaderViewModel @Inject constructor(
         return messageProvider(languageCode)
     }
 
+    private suspend fun currentReaderUiLanguage(): String =
+        normalizeAppLanguageCode(
+            readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
+        )
+
+    private suspend fun localizedReaderText(): ReaderUiText {
+        val languageCode = normalizeAppLanguageCode(
+            readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
+        )
+        return readerUiText(languageCode)
+    }
+
     fun getPage(index: Int, renderQuality: Int = 1): Bitmap? =
         pagePreloader.getPage(index, renderQuality)
 
@@ -313,19 +572,25 @@ class ReaderViewModel @Inject constructor(
         pagePreloader.getPageFlow(index, renderQuality)
 
     fun loadPage(index: Int, renderQuality: Int = 1) {
+        val comicId = _uiState.value.comic?.id
+        val reader = formatReader
         viewModelScope.launch {
+            if (reader == null || formatReader !== reader) return@launch
             // Try HTML page first (text-based EPUB / FB2 novel)
-            val html = formatReader?.getHtmlPage(index)
+            val html = reader.getHtmlPage(index)
             if (html != null) {
-                _uiState.update { it.copy(currentHtmlContent = html) }
+                if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
+                    _uiState.update { it.copy(currentHtmlContent = html) }
+                }
                 return@launch
             }
             // Bitmap page (image-based formats)
             if (renderQuality == 1) {
-                _uiState.update { it.copy(currentHtmlContent = null) }
+                if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
+                    _uiState.update { it.copy(currentHtmlContent = null) }
+                }
             }
             if (pagePreloader.getPage(index, renderQuality) == null) {
-                val reader = formatReader ?: return@launch
                 pagePreloader.loadPage(reader, index, renderQuality)
             }
             // preloadAround is NOT called here — calling it per-item (e.g. from LazyColumn)
@@ -334,11 +599,29 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun navigateTo(page: Int) {
-        val clamped = page.coerceIn(0, (_uiState.value.totalPages - 1).coerceAtLeast(0))
+    fun navigateTo(
+        page: Int,
+        progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING
+    ) {
+        val clamped = normalizePageForMode(
+            page = page,
+            mode = _uiState.value.readingMode,
+            totalPages = _uiState.value.totalPages
+        )
+        val previousState = _uiState.value
+        val shouldResetInlineState =
+            previousState.selectedTextActionSheet != null || previousState.selectedTextTranslation != null
+        if (clamped == previousState.currentPage && !shouldResetInlineState) {
+            return
+        }
+        if (countsAsManualPageTurn(progressSource)) {
+            sessionManualPageTurns += 1
+        }
         _uiState.update {
             it.copy(
                 currentPage = clamped,
+                footnotePopup = null,
+                footnotePresentation = FootnotePresentation.PEEK,
                 selectedTextActionSheet = null,
                 selectedTextTranslation = null
             )
@@ -351,16 +634,39 @@ class ReaderViewModel @Inject constructor(
                 PageSoundPlayer.play(PageSoundStyle.valueOf(_uiState.value.pageSoundStyle))
             }
         }
-        loadPage(clamped)
-        formatReader?.let { reader ->
-            pagePreloader.preloadAround(reader, clamped, _uiState.value.totalPages, _uiState.value.preloadPages)
-        }
-        saveProgress(clamped)
-        loadPageTranslationNote(clamped)
+        syncReaderPosition(
+            page = clamped,
+            mode = _uiState.value.readingMode,
+            persistProgress = true,
+            progressSource = progressSource
+        )
     }
 
-    fun nextPage() = navigateTo(_uiState.value.currentPage + 1)
-    fun prevPage() = navigateTo(_uiState.value.currentPage - 1)
+    fun setHighQualityFocusPages(indices: Set<Int>?) {
+        if (!activeComicSupportsHighResZoom()) {
+            applyHighQualityRetention(emptySet())
+            return
+        }
+        val totalPages = _uiState.value.totalPages
+        val normalized = indices
+            ?.asSequence()
+            ?.filter { it in 0 until totalPages }
+            ?.toSet()
+            ?.takeIf { it.isNotEmpty() }
+
+        applyHighQualityRetention(
+            normalized ?: visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode).toSet()
+        )
+    }
+
+    fun nextPage() = navigateTo(
+        _uiState.value.currentPage + pageStepForMode(_uiState.value.readingMode),
+        progressSource = ReaderNavigationProgressSource.READING
+    )
+    fun prevPage() = navigateTo(
+        _uiState.value.currentPage - pageStepForMode(_uiState.value.readingMode),
+        progressSource = ReaderNavigationProgressSource.READING
+    )
 
     /**
      * Saves the current page bitmap to the app cache directory and emits the file path
@@ -368,23 +674,74 @@ class ReaderViewModel @Inject constructor(
      */
     fun requestOcr() {
         viewModelScope.launch {
-            val bitmap = getPage(_uiState.value.currentPage) ?: return@launch
+            val pageIndex = _uiState.value.currentPage
+            val comicId = _uiState.value.comic?.id
+            val reader = formatReader ?: return@launch
+            val preferredOcrQualityTier = when (renderProfile.tier) {
+                RenderDeviceTier.HIGH_END -> 3
+                RenderDeviceTier.MID_RANGE -> 2
+                else -> 1
+            }
+            val bitmap = getPage(pageIndex, preferredOcrQualityTier)
+                ?: getPage(pageIndex, 3)
+                ?: getPage(pageIndex, 2)
+                ?: getPage(pageIndex, 1)
+                ?: pagePreloader.loadPage(reader, pageIndex, preferredOcrQualityTier)
+                ?: pagePreloader.loadPage(reader, pageIndex, 3)
+                ?: pagePreloader.loadPage(reader, pageIndex, 2)
+                ?: pagePreloader.loadPage(reader, pageIndex, 1)
+                ?: return@launch
             try {
-                val file = java.io.File(context.cacheDir, "ocr_page.jpg")
+                if (formatReader !== reader || _uiState.value.comic?.id != comicId || _uiState.value.currentPage != pageIndex) {
+                    return@launch
+                }
+                val file = java.io.File.createTempFile(
+                    "ocr_page_${comicId ?: "standalone"}_${pageIndex}_",
+                    ".png",
+                    context.cacheDir
+                )
                 withContext(Dispatchers.IO) {
                     file.outputStream().use { out ->
-                        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, out)
+                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
                     }
                 }
                 _ocrPagePath.emit(
                     OcrLaunchRequest(
                         imagePath = file.absolutePath,
-                        comicId = _uiState.value.comic?.id,
-                        page = _uiState.value.currentPage
+                        comicId = comicId,
+                        page = pageIndex
                     )
                 )
             } catch (e: Exception) {
                 Log.e("ReaderViewModel", "Failed to save page for OCR", e)
+            }
+        }
+    }
+
+    private fun scheduleHighQualityWarmup(page: Int) {
+        if (!activeComicSupportsHighResZoom()) return
+        val warmupTier = when (renderProfile.tier) {
+            RenderDeviceTier.HIGH_END -> 3
+            RenderDeviceTier.MID_RANGE -> 2
+            else -> null
+        } ?: return
+
+        val reader = formatReader ?: return
+        val comicId = _uiState.value.comic?.id ?: return
+        val readingMode = _uiState.value.readingMode
+        val targetPages = visiblePagesFor(page, readingMode)
+
+        highQualityWarmupJob?.cancel()
+        highQualityWarmupJob = viewModelScope.launch {
+            delay(180)
+            if (formatReader !== reader) return@launch
+            if (_uiState.value.comic?.id != comicId) return@launch
+            if (_uiState.value.readingMode != readingMode) return@launch
+            if (visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode) != targetPages) return@launch
+            targetPages.forEach { targetPage ->
+                if (pagePreloader.getPage(targetPage, warmupTier) == null) {
+                    pagePreloader.loadPage(reader, targetPage, warmupTier)
+                }
             }
         }
     }
@@ -433,6 +790,26 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
+    fun saveQuoteFromSelectedTextActions() {
+        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
+        dismissSelectedTextActions()
+        saveQuote(
+            text = selectedText,
+            translatedText = null,
+            sourceLanguage = null,
+            targetLanguage = null
+        )
+    }
+
+    fun saveQuoteDirectly(selectedText: String) {
+        saveQuote(
+            text = selectedText,
+            translatedText = null,
+            sourceLanguage = null,
+            targetLanguage = null
+        )
+    }
+
     fun explainFromSelectedTextActions() {
         val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
         dismissSelectedTextActions()
@@ -454,6 +831,7 @@ class ReaderViewModel @Inject constructor(
         if (normalizedText.isBlank()) return
         val tokenCount = normalizedText.countSelectionTokens()
         val canTranslateAsPhrase = tokenCount <= 3
+        val canUseDictionaryLookup = tokenCount <= 3
 
         viewModelScope.launch {
             val translationSettings = resolveTranslationSettings()
@@ -473,14 +851,36 @@ class ReaderViewModel @Inject constructor(
                     )
             }
 
-            val detectedLanguage = translationSettings.sourceLanguage
-                ?: when (val detection = languageDetector.detectLanguage(normalizedText)) {
-                    is Result.Success -> detection.data.languageCode
-                    is Result.Error -> null
-                    Result.Loading -> null
-                }?.takeUnless { it == "und" }
+            val detectionResult = translationSettings.sourceLanguage?.let { sourceLanguage ->
+                LanguageDetectionResult(
+                    languageCode = sourceLanguage,
+                    isReliable = true,
+                    fallbackUsed = true
+                )
+            } ?: when (val detection = languageDetector.detectLanguage(normalizedText)) {
+                is Result.Success -> detection.data
+                is Result.Error -> null
+                Result.Loading -> null
+            }
 
-            if (detectedLanguage == null) {
+            val detectedLanguage = detectionResult
+                ?.languageCode
+                ?.takeUnless { it == "und" }
+
+            val singleWordDictionaryMatch = if (tokenCount == 1) {
+                resolveSingleWordDictionaryMatch(
+                    rawWord = normalizedText,
+                    targetLanguage = targetLanguage,
+                    preferredSourceLanguage = translationSettings.sourceLanguage,
+                    detectionResult = detectionResult
+                )
+            } else {
+                null
+            }
+
+            val resolvedSourceLanguage = singleWordDictionaryMatch?.sourceLanguage ?: detectedLanguage
+
+            if (resolvedSourceLanguage == null) {
                 val errorMessage = localizedReaderError(::readerTranslationLanguageDetectFailedMessage)
                 _uiState.update {
                     it.copy(
@@ -498,13 +898,13 @@ class ReaderViewModel @Inject constructor(
                 return@launch
             }
 
-            if (detectedLanguage == targetLanguage) {
+            if (resolvedSourceLanguage == targetLanguage) {
                 _uiState.update {
                     it.copy(
                         selectedTextTranslation = SelectedTextTranslationState(
                             originalText = normalizedText,
                             translatedText = normalizedText,
-                            sourceLanguage = detectedLanguage,
+                            sourceLanguage = resolvedSourceLanguage,
                             targetLanguage = targetLanguage,
                             preferredTransport = effectiveTransport,
                             canExplain = canExplainSelection,
@@ -516,9 +916,9 @@ class ReaderViewModel @Inject constructor(
             }
 
             val networkAvailable = isNetworkAvailable()
-            val dictionaryAvailable = when (
+            val dictionaryAvailable = singleWordDictionaryMatch != null || when (
                 val availability = dictionaryEngine.isLookupAvailable(
-                    sourceLanguage = detectedLanguage,
+                    sourceLanguage = resolvedSourceLanguage,
                     targetLanguage = targetLanguage
                 )
             ) {
@@ -529,7 +929,7 @@ class ReaderViewModel @Inject constructor(
 
             val offlineAvailable = when (
                 val availability = offlineTranslationEngine.isLanguagePairAvailable(
-                    sourceLanguage = detectedLanguage,
+                    sourceLanguage = resolvedSourceLanguage,
                     targetLanguage = targetLanguage
                 )
             ) {
@@ -537,16 +937,47 @@ class ReaderViewModel @Inject constructor(
                 is Result.Error -> false
                 Result.Loading -> false
             }
+            val onlineTranslationAvailable = when (val configured = onlineTranslationEngine.isConfigured()) {
+                is Result.Success -> configured.data
+                is Result.Error -> false
+                Result.Loading -> false
+            }
+            val phraseTranslationAvailable = readerPhraseTranslationAvailable(
+                canTranslateAsPhrase = canTranslateAsPhrase,
+                offlineAvailable = offlineAvailable,
+                networkAvailable = networkAvailable,
+                onlineTranslationAvailable = onlineTranslationAvailable
+            )
+            val dictionarySourceLanguage = singleWordDictionaryMatch?.sourceLanguage ?: resolvedSourceLanguage
+            val fallbackDictionaryEntry = if (canUseDictionaryLookup && dictionaryAvailable) {
+                if (tokenCount == 1) {
+                    singleWordDictionaryMatch?.entry ?: resolveReaderDictionaryEntry(
+                        rawWord = normalizedText,
+                        sourceLanguage = resolvedSourceLanguage,
+                        targetLanguage = targetLanguage
+                    )
+                } else {
+                    resolveReaderDictionaryEntry(
+                        rawWord = normalizedText,
+                        sourceLanguage = resolvedSourceLanguage,
+                        targetLanguage = targetLanguage
+                    )
+                }
+            } else {
+                null
+            }
+            val dictionaryActionAvailable = fallbackDictionaryEntry != null
 
             val routingDecision = when (
                 val routeResult = lookupRouter.route(
                     TranslationRoutingRequest(
                         text = normalizedText,
                         sourceType = TranslationSourceType.BOOK_TEXT,
-                        sourceLanguageHint = detectedLanguage,
-                        fallbackLanguage = detectedLanguage,
+                        sourceLanguageHint = resolvedSourceLanguage,
+                        fallbackLanguage = resolvedSourceLanguage,
                         preferredTransport = effectiveTransport,
                         networkAvailable = networkAvailable,
+                        onlineTranslationAvailable = onlineTranslationAvailable,
                         offlineModelAvailable = offlineAvailable,
                         dictionaryAvailable = dictionaryAvailable && preferDictionary,
                         llmAvailable = translationSettings.explainEnabled && false
@@ -568,47 +999,19 @@ class ReaderViewModel @Inject constructor(
             }
 
             if (translationMode == TranslationMode.DICTIONARY) {
-                when (
-                    val dictionaryResult = dictionaryEngine.lookup(
-                        rawWord = normalizedText,
-                        sourceLanguage = detectedLanguage,
-                        targetLanguage = targetLanguage
-                    )
-                ) {
-                    is Result.Success -> {
-                        val entry = dictionaryResult.data
+                when (val entry = fallbackDictionaryEntry) {
+                    null -> {
+                        val errorMessage = localizedReaderError(::readerDictionaryUnavailableMessage)
                         _uiState.update {
                             it.copy(
                                 selectedTextTranslation = SelectedTextTranslationState(
                                     originalText = normalizedText,
-                                    translatedText = entry.translations.firstOrNull().orEmpty(),
-                                    dictionaryEntry = entry,
-                                    sourceLanguage = detectedLanguage,
+                                    sourceLanguage = resolvedSourceLanguage,
                                     targetLanguage = targetLanguage,
                                     mode = TranslationMode.DICTIONARY,
                                     preferredTransport = effectiveTransport,
-                                    canUseDictionary = dictionaryAvailable,
-                                    canTranslateAsPhrase = canTranslateAsPhrase && (offlineAvailable || networkAvailable),
-                                    canExplain = canExplainSelection,
-                                    isLoading = false
-                                )
-                            )
-                        }
-                    }
-
-                    is Result.Error -> {
-                        val errorMessage = dictionaryResult.message
-                            ?: localizedReaderError(::readerDictionaryUnavailableMessage)
-                        _uiState.update {
-                            it.copy(
-                                selectedTextTranslation = SelectedTextTranslationState(
-                                    originalText = normalizedText,
-                                    sourceLanguage = detectedLanguage,
-                                    targetLanguage = targetLanguage,
-                                    mode = TranslationMode.DICTIONARY,
-                                    preferredTransport = effectiveTransport,
-                                    canUseDictionary = dictionaryAvailable,
-                                    canTranslateAsPhrase = canTranslateAsPhrase && (offlineAvailable || networkAvailable),
+                                    canUseDictionary = dictionaryActionAvailable,
+                                    canTranslateAsPhrase = phraseTranslationAvailable,
                                     canExplain = canExplainSelection,
                                     isLoading = false,
                                     error = errorMessage
@@ -617,22 +1020,56 @@ class ReaderViewModel @Inject constructor(
                         }
                     }
 
-                    Result.Loading -> Unit
+                    else -> {
+                        showSelectedTextDictionaryResult(
+                            originalText = normalizedText,
+                            entry = entry,
+                            sourceLanguage = dictionarySourceLanguage,
+                            targetLanguage = targetLanguage,
+                            preferredTransport = effectiveTransport,
+                            canUseDictionary = dictionaryActionAvailable,
+                            canTranslateAsPhrase = phraseTranslationAvailable,
+                            canExplainSelection = canExplainSelection
+                        )
+                    }
                 }
                 return@launch
             }
 
             if (translationMode == null || translationMode == TranslationMode.LLM) {
-                val errorMessage = localizedReaderError(::readerTranslationUnavailableMessage)
+                if (fallbackDictionaryEntry != null) {
+                    showSelectedTextDictionaryResult(
+                        originalText = normalizedText,
+                        entry = fallbackDictionaryEntry,
+                        sourceLanguage = dictionarySourceLanguage,
+                        targetLanguage = targetLanguage,
+                        preferredTransport = effectiveTransport,
+                        canUseDictionary = dictionaryActionAvailable,
+                        canTranslateAsPhrase = phraseTranslationAvailable,
+                        canExplainSelection = canExplainSelection
+                    )
+                    return@launch
+                }
+                val uiLanguage = currentReaderUiLanguage()
+                val errorMessage = resolveReaderTranslationUnavailableMessage(
+                    language = uiLanguage,
+                    preferredTransport = effectiveTransport,
+                    networkAvailable = networkAvailable,
+                    onlineConfigured = onlineTranslationAvailable,
+                    offlineModelAvailable = offlineAvailable,
+                    dictionaryRouteAvailable = dictionaryActionAvailable,
+                    sourceLanguage = resolvedSourceLanguage,
+                    targetLanguage = targetLanguage
+                )
                 _uiState.update {
                     it.copy(
                         selectedTextTranslation = SelectedTextTranslationState(
                             originalText = normalizedText,
-                            sourceLanguage = detectedLanguage,
+                            sourceLanguage = resolvedSourceLanguage,
                             targetLanguage = targetLanguage,
                             preferredTransport = effectiveTransport,
-                            canUseDictionary = tokenCount == 1 && dictionaryAvailable,
-                            canTranslateAsPhrase = canTranslateAsPhrase && (offlineAvailable || networkAvailable),
+                            canUseDictionary = dictionaryActionAvailable,
+                            canTranslateAsPhrase = phraseTranslationAvailable,
                             canExplain = canExplainSelection,
                             isLoading = false,
                             error = errorMessage
@@ -646,7 +1083,7 @@ class ReaderViewModel @Inject constructor(
                 id = "reader-selection-${System.currentTimeMillis()}",
                 sourceType = TranslationSourceType.BOOK_TEXT,
                 text = normalizedText,
-                sourceLanguage = detectedLanguage,
+                sourceLanguage = resolvedSourceLanguage,
                 targetLanguage = targetLanguage,
                 mode = translationMode,
                 createdAt = System.currentTimeMillis()
@@ -670,11 +1107,11 @@ class ReaderViewModel @Inject constructor(
                             selectedTextTranslation = SelectedTextTranslationState(
                                 originalText = normalizedText,
                                 translatedText = translationResult.data.translatedText,
-                                sourceLanguage = detectedLanguage,
+                                sourceLanguage = resolvedSourceLanguage,
                                 targetLanguage = targetLanguage,
                                 mode = resolvedMode,
                                 preferredTransport = effectiveTransport,
-                                canUseDictionary = tokenCount == 1 && dictionaryAvailable,
+                                canUseDictionary = dictionaryActionAvailable,
                                 canExplain = canExplainSelection,
                                 isLoading = false
                             )
@@ -683,57 +1120,55 @@ class ReaderViewModel @Inject constructor(
                 }
 
                 is Result.Error -> {
-                    if (tokenCount == 1 && dictionaryAvailable) {
-                        when (
-                            val dictionaryResult = dictionaryEngine.lookup(
-                                rawWord = normalizedText,
-                                sourceLanguage = detectedLanguage,
-                                targetLanguage = targetLanguage
-                            )
-                        ) {
-                            is Result.Success -> {
-                                val entry = dictionaryResult.data
-                                _uiState.update {
-                                    it.copy(
-                                        selectedTextTranslation = SelectedTextTranslationState(
-                                            originalText = normalizedText,
-                                            translatedText = entry.translations.firstOrNull().orEmpty(),
-                                            dictionaryEntry = entry,
-                                            sourceLanguage = detectedLanguage,
-                                            targetLanguage = targetLanguage,
-                                            mode = TranslationMode.DICTIONARY,
-                                            preferredTransport = effectiveTransport,
-                                            canUseDictionary = true,
-                                            canTranslateAsPhrase = canTranslateAsPhrase && (offlineAvailable || networkAvailable),
-                                            canExplain = canExplainSelection,
-                                            isLoading = false
-                                        )
-                                    )
-                                }
-                                return@launch
-                            }
-
-                            is Result.Error -> Unit
-                            Result.Loading -> Unit
-                        }
+                    if (fallbackDictionaryEntry != null) {
+                        showSelectedTextDictionaryResult(
+                            originalText = normalizedText,
+                            entry = fallbackDictionaryEntry,
+                            sourceLanguage = dictionarySourceLanguage,
+                            targetLanguage = targetLanguage,
+                            preferredTransport = effectiveTransport,
+                            canUseDictionary = dictionaryActionAvailable,
+                            canTranslateAsPhrase = phraseTranslationAvailable,
+                            canExplainSelection = canExplainSelection
+                        )
+                        return@launch
                     }
 
+                    val uiLanguage = currentReaderUiLanguage()
                     val errorMessage = when (translationResult.exception) {
                         is TranslationBackendUnavailableException ->
-                            localizedReaderError(::readerTranslationBackendUnavailableMessage)
+                            resolveReaderTranslationUnavailableMessage(
+                                language = uiLanguage,
+                                preferredTransport = effectiveTransport,
+                                networkAvailable = networkAvailable,
+                                onlineConfigured = onlineTranslationAvailable,
+                                offlineModelAvailable = offlineAvailable,
+                                dictionaryRouteAvailable = dictionaryActionAvailable,
+                                sourceLanguage = resolvedSourceLanguage,
+                                targetLanguage = targetLanguage
+                            )
                         else -> translationResult.message
-                            ?: localizedReaderError(::readerTranslationUnavailableMessage)
+                            ?: resolveReaderTranslationUnavailableMessage(
+                                language = uiLanguage,
+                                preferredTransport = effectiveTransport,
+                                networkAvailable = networkAvailable,
+                                onlineConfigured = onlineTranslationAvailable,
+                                offlineModelAvailable = offlineAvailable,
+                                dictionaryRouteAvailable = dictionaryActionAvailable,
+                                sourceLanguage = resolvedSourceLanguage,
+                                targetLanguage = targetLanguage
+                            )
                     }
                     _uiState.update {
                         it.copy(
                             selectedTextTranslation = SelectedTextTranslationState(
                                 originalText = normalizedText,
-                                sourceLanguage = detectedLanguage,
+                                sourceLanguage = resolvedSourceLanguage,
                                 targetLanguage = targetLanguage,
                                 mode = translationMode,
                                 preferredTransport = effectiveTransport,
-                                canUseDictionary = tokenCount == 1 && dictionaryAvailable,
-                                canTranslateAsPhrase = canTranslateAsPhrase && (offlineAvailable || networkAvailable),
+                                canUseDictionary = dictionaryActionAvailable,
+                                canTranslateAsPhrase = phraseTranslationAvailable,
                                 canExplain = canExplainSelection,
                                 isLoading = false,
                                 error = errorMessage
@@ -785,6 +1220,16 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(selectedTextTranslation = null) }
     }
 
+    fun saveQuoteFromSelectedTextResult() {
+        val state = _uiState.value.selectedTextTranslation ?: return
+        saveQuote(
+            text = state.originalText,
+            translatedText = state.translatedText.ifBlank { null },
+            sourceLanguage = state.sourceLanguage,
+            targetLanguage = state.targetLanguage
+        )
+    }
+
     private fun explainSelectedText(selectedText: String) {
         val normalizedText = selectedText
             .trim()
@@ -801,6 +1246,7 @@ class ReaderViewModel @Inject constructor(
                 ?: translationSettings.preferredTransport
             val tokenCount = normalizedText.countSelectionTokens()
             val canTranslateAsPhrase = tokenCount <= 3
+            val canUseDictionaryLookup = tokenCount <= 3
             val canExplainSelection = true
 
             _uiState.update {
@@ -817,14 +1263,36 @@ class ReaderViewModel @Inject constructor(
                 )
             }
 
-            val detectedLanguage = translationSettings.sourceLanguage
-                ?: when (val detection = languageDetector.detectLanguage(normalizedText)) {
-                    is Result.Success -> detection.data.languageCode
-                    is Result.Error -> null
-                    Result.Loading -> null
-                }?.takeUnless { it == "und" }
+            val detectionResult = translationSettings.sourceLanguage?.let { sourceLanguage ->
+                LanguageDetectionResult(
+                    languageCode = sourceLanguage,
+                    isReliable = true,
+                    fallbackUsed = true
+                )
+            } ?: when (val detection = languageDetector.detectLanguage(normalizedText)) {
+                is Result.Success -> detection.data
+                is Result.Error -> null
+                Result.Loading -> null
+            }
 
-            if (detectedLanguage == null) {
+            val detectedLanguage = detectionResult
+                ?.languageCode
+                ?.takeUnless { it == "und" }
+
+            val singleWordDictionaryMatch = if (tokenCount == 1) {
+                resolveSingleWordDictionaryMatch(
+                    rawWord = normalizedText,
+                    targetLanguage = targetLanguage,
+                    preferredSourceLanguage = translationSettings.sourceLanguage,
+                    detectionResult = detectionResult
+                )
+            } else {
+                null
+            }
+
+            val resolvedSourceLanguage = singleWordDictionaryMatch?.sourceLanguage ?: detectedLanguage
+
+            if (resolvedSourceLanguage == null) {
                 val errorMessage = localizedReaderError(::readerTranslationLanguageDetectFailedMessage)
                 _uiState.update {
                     it.copy(
@@ -846,7 +1314,7 @@ class ReaderViewModel @Inject constructor(
 
             val dictionaryAvailable = when (
                 val availability = dictionaryEngine.isLookupAvailable(
-                    sourceLanguage = detectedLanguage,
+                    sourceLanguage = resolvedSourceLanguage,
                     targetLanguage = targetLanguage
                 )
             ) {
@@ -854,29 +1322,38 @@ class ReaderViewModel @Inject constructor(
                 is Result.Error -> false
                 Result.Loading -> false
             }
+            var dictionaryActionAvailable = false
 
-            if (tokenCount == 1 && dictionaryAvailable) {
-                when (
-                    val dictionaryResult = dictionaryEngine.lookup(
+            if (canUseDictionaryLookup && dictionaryAvailable) {
+                when (val entry = if (tokenCount == 1) {
+                    singleWordDictionaryMatch?.entry ?: resolveReaderDictionaryEntry(
                         rawWord = normalizedText,
-                        sourceLanguage = detectedLanguage,
+                        sourceLanguage = resolvedSourceLanguage,
                         targetLanguage = targetLanguage
                     )
-                ) {
-                    is Result.Success -> {
+                } else {
+                    resolveReaderDictionaryEntry(
+                        rawWord = normalizedText,
+                        sourceLanguage = resolvedSourceLanguage,
+                        targetLanguage = targetLanguage
+                    )
+                }) {
+                    null -> Unit
+                    else -> {
+                        dictionaryActionAvailable = true
                         _uiState.update {
                             it.copy(
                                 selectedTextTranslation = SelectedTextTranslationState(
                                     originalText = normalizedText,
                                     translatedText = buildDictionaryExplanation(
-                                        entry = dictionaryResult.data,
+                                        entry = entry,
                                         uiLanguage = uiLanguage
                                     ),
-                                    sourceLanguage = detectedLanguage,
+                                    sourceLanguage = singleWordDictionaryMatch?.sourceLanguage ?: resolvedSourceLanguage,
                                     targetLanguage = targetLanguage,
                                     mode = TranslationMode.LLM,
                                     preferredTransport = preferredTransport,
-                                    canUseDictionary = true,
+                                    canUseDictionary = dictionaryActionAvailable,
                                     canTranslateAsPhrase = canTranslateAsPhrase,
                                     canExplain = true,
                                     isLoading = false
@@ -885,9 +1362,6 @@ class ReaderViewModel @Inject constructor(
                         }
                         return@launch
                     }
-
-                    is Result.Error -> Unit
-                    Result.Loading -> Unit
                 }
             }
 
@@ -897,7 +1371,7 @@ class ReaderViewModel @Inject constructor(
                         id = "reader-explain-${System.currentTimeMillis()}",
                         sourceType = TranslationSourceType.BOOK_TEXT,
                         text = normalizedText,
-                        sourceLanguage = detectedLanguage,
+                        sourceLanguage = resolvedSourceLanguage,
                         targetLanguage = targetLanguage,
                         translatedText = _uiState.value.selectedTextTranslation
                             ?.translatedText
@@ -912,11 +1386,11 @@ class ReaderViewModel @Inject constructor(
                             selectedTextTranslation = SelectedTextTranslationState(
                                 originalText = normalizedText,
                                 translatedText = explainResult.data.explanation,
-                                sourceLanguage = detectedLanguage,
+                                sourceLanguage = resolvedSourceLanguage,
                                 targetLanguage = targetLanguage,
                                 mode = TranslationMode.LLM,
                                 preferredTransport = preferredTransport,
-                                canUseDictionary = tokenCount == 1 && dictionaryAvailable,
+                                canUseDictionary = dictionaryActionAvailable,
                                 canTranslateAsPhrase = canTranslateAsPhrase,
                                 canExplain = true,
                                 isLoading = false
@@ -931,11 +1405,11 @@ class ReaderViewModel @Inject constructor(
                         it.copy(
                             selectedTextTranslation = SelectedTextTranslationState(
                                 originalText = normalizedText,
-                                sourceLanguage = detectedLanguage,
+                                sourceLanguage = resolvedSourceLanguage,
                                 targetLanguage = targetLanguage,
                                 mode = TranslationMode.LLM,
                                 preferredTransport = preferredTransport,
-                                canUseDictionary = tokenCount == 1 && dictionaryAvailable,
+                                canUseDictionary = dictionaryActionAvailable,
                                 canTranslateAsPhrase = canTranslateAsPhrase,
                                 canExplain = true,
                                 isLoading = false,
@@ -988,8 +1462,7 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 chromeState = when (state.chromeState) {
-                    ReaderChromeState.HIDDEN -> ReaderChromeState.MINIMAL
-                    ReaderChromeState.MINIMAL -> ReaderChromeState.HIDDEN
+                    ReaderChromeState.HIDDEN -> ReaderChromeState.EXPANDED
                     ReaderChromeState.EXPANDED -> ReaderChromeState.HIDDEN
                 }
             )
@@ -998,7 +1471,7 @@ class ReaderViewModel @Inject constructor(
 
     fun hideChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
 
-    fun showMinimalChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.MINIMAL) }
+    fun showMinimalChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
 
     fun showExpandedChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.EXPANDED) }
 
@@ -1084,7 +1557,6 @@ class ReaderViewModel @Inject constructor(
                 textColorScheme = style.textColorScheme,
                 textFontFamily = style.fontFamily,
                 textLineHeight = style.lineHeight,
-                brightness = style.brightness,
                 immersiveMode = style.immersiveMode,
                 readerPageAnimation = style.pageAnimation,
                 chromeState = ReaderChromeState.EXPANDED
@@ -1092,7 +1564,6 @@ class ReaderViewModel @Inject constructor(
         }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, preset.name)
-            readerPreferences.set(PreferencesKeys.READING_BRIGHTNESS, style.brightness)
             readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, style.immersiveMode)
             readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
             readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
@@ -1170,10 +1641,24 @@ class ReaderViewModel @Inject constructor(
     /** Toggles a bookmark on/off for the current page. */
     fun toggleBookmark() {
         val page = _uiState.value.currentPage
+        val comicId = _uiState.value.comic?.id ?: return
         val updated = _uiState.value.bookmarkedPages.toMutableSet()
-        if (page in updated) updated.remove(page) else updated.add(page)
+        val isNowBookmarked = if (page in updated) {
+            updated.remove(page)
+            false
+        } else {
+            updated.add(page)
+            true
+        }
         _uiState.update { it.copy(bookmarkedPages = updated) }
         saveBookmarks(updated)
+        analyticsTracker.track(
+            ReadingAnalyticsEvent.BookmarkToggled(
+                comicId = comicId,
+                page = page,
+                bookmarked = isNowBookmarked
+            )
+        )
     }
 
     /** Removes a specific page bookmark (called from the bookmarks list in TOC). */
@@ -1185,48 +1670,74 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun loadBookmarks(comicId: String) {
+    private fun loadBookmarks(comicId: String, totalPages: Int) {
         viewModelScope.launch {
             val raw = readerPreferences.get(PreferencesKeys.bookmarks(comicId), "").first()
-            val maxPage = (_uiState.value.totalPages - 1).coerceAtLeast(0)
+            val maxPage = (totalPages - 1).coerceAtLeast(0)
             val pages = raw
                 .split(",")
                 .mapNotNull { it.trim().toIntOrNull() }
                 .filter { it in 0..maxPage }
                 .toSet()
+            if (_uiState.value.comic?.id != comicId) return@launch
             _uiState.update { it.copy(bookmarkedPages = pages) }
             if (pages.joinToString(",") != raw) {
-                saveBookmarks(pages)
+                saveBookmarksForComic(comicId, pages)
             }
         }
     }
 
     private fun saveBookmarks(pages: Set<Int>) {
         val comicId = _uiState.value.comic?.id ?: return
+        saveBookmarksForComic(comicId, pages)
+    }
+
+    private fun saveBookmarksForComic(comicId: String, pages: Set<Int>) {
         val raw = pages.sorted().joinToString(",")
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.bookmarks(comicId), raw) }
     }
 
-    private fun loadPageTranslationNote(page: Int = _uiState.value.currentPage) {
-        val comicId = _uiState.value.comic?.id ?: return
-        viewModelScope.launch {
-            val note = readerPreferences.get(PreferencesKeys.translationNote(comicId, page), "").first()
+    private fun loadPageTranslationNote(
+        comicId: String? = _uiState.value.comic?.id,
+        page: Int = _uiState.value.currentPage
+    ) {
+        val resolvedComicId = comicId ?: return
+        pageTranslationNoteJob?.cancel()
+        _uiState.update { it.copy(pageTranslationNote = null) }
+        pageTranslationNoteJob = viewModelScope.launch {
+            val note = readerPreferences.get(PreferencesKeys.translationNote(resolvedComicId, page), "").first()
+            if (_uiState.value.comic?.id != resolvedComicId || _uiState.value.currentPage != page) return@launch
             _uiState.update { it.copy(pageTranslationNote = note.ifBlank { null }) }
         }
     }
 
     /** Loads the TOC from the current format reader (IO-bound, runs on Dispatchers.IO). */
     private fun loadToc() {
+        val reader = formatReader ?: run {
+            _uiState.update { it.copy(tableOfContents = emptyList()) }
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
-            val toc = formatReader?.getTableOfContents() ?: return@launch
-            if (toc.isEmpty()) return@launch
+            val toc = reader.getTableOfContents()
+            if (formatReader !== reader) return@launch
             _uiState.update { it.copy(tableOfContents = toc) }
+            rememberChapterMilestoneAnchor()
         }
     }
 
     fun setReadingMode(mode: ReadingMode) {
+        val currentState = _uiState.value
+        val alignedPage = normalizePageForMode(
+            page = currentState.currentPage,
+            mode = mode,
+            totalPages = currentState.totalPages
+        )
+        if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
+            rememberPortraitMode(mode)
+            return
+        }
         // Remember portrait-specific mode so we can restore it on landscape→portrait rotation
-        if (mode != ReadingMode.DUAL_PAGE) portraitReadingMode = mode
+        rememberPortraitMode(mode)
         markReaderPresetCustom()
         applyReadingMode(mode)
         viewModelScope.launch {
@@ -1244,13 +1755,15 @@ class ReaderViewModel @Inject constructor(
     ) {
         _uiState.update { it.copy(isLandscape = useLandscapeSpread) }
         val currentMode = _uiState.value.readingMode
+        val canAutoLandscapeSpread = _uiState.value.landscapeSpreadEnabled &&
+            supportsAutomaticLandscapeSpread(portraitReadingMode)
         if (isTextReader) {
             if (currentMode == ReadingMode.DUAL_PAGE) {
-                applyReadingMode(portraitReadingMode)
+                applyReadingMode(portraitPagedReadingMode)
             }
             return
         }
-        if (useLandscapeSpread && currentMode != ReadingMode.DUAL_PAGE) {
+        if (useLandscapeSpread && canAutoLandscapeSpread && currentMode != ReadingMode.DUAL_PAGE) {
             applyReadingMode(ReadingMode.DUAL_PAGE)
         } else if (!useLandscapeSpread && currentMode == ReadingMode.DUAL_PAGE) {
             applyReadingMode(portraitReadingMode)
@@ -1258,22 +1771,36 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun applyReadingMode(mode: ReadingMode) {
+        val currentState = _uiState.value
+        val alignedPage = normalizePageForMode(
+            page = currentState.currentPage,
+            mode = mode,
+            totalPages = currentState.totalPages
+        )
+        if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
+            return
+        }
         _uiState.update { state ->
-            val alignedPage = if (mode == ReadingMode.DUAL_PAGE) {
-                (state.currentPage / 2) * 2
-            } else {
-                state.currentPage
-            }
             state.copy(
                 readingMode = mode,
-                currentPage = alignedPage.coerceIn(0, (state.totalPages - 1).coerceAtLeast(0))
+                currentPage = alignedPage
             )
         }
+        syncReaderPosition(
+            page = alignedPage,
+            mode = mode,
+            persistProgress = !isProgressAlreadyPersisted(_uiState.value.comic?.id, alignedPage),
+            announceChapterMilestone = false
+        )
     }
     private var brightnessJob: Job? = null
     fun setBrightness(value: Float) {
         markReaderPresetCustom()
-        val safe = value.coerceIn(0f, 1f)
+        val safe = if (value <= 0.01f) {
+            -1f
+        } else {
+            value.coerceIn(0.05f, 1f)
+        }
         _uiState.update { it.copy(brightness = safe) }   // immediate UI update
         brightnessJob?.cancel()
         brightnessJob = viewModelScope.launch {
@@ -1282,79 +1809,691 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun saveProgress(page: Int) {
+    fun setKeepScreenOn(enabled: Boolean) {
+        _uiState.update { it.copy(keepScreenOn = enabled) }
         viewModelScope.launch {
-            val comic = _uiState.value.comic ?: return@launch
-            try {
-                comicRepository.updateProgress(comic.id, page, _uiState.value.totalPages)
-            } catch (e: Exception) {
-                Log.e("ReaderViewModel", "Failed to save progress", e)
+            readerPreferences.set(PreferencesKeys.READER_KEEP_SCREEN_ON, enabled)
+        }
+    }
+
+    fun setScreenTimeoutMode(mode: String) {
+        val resolved = ReaderScreenTimeoutMode.fromStored(mode)
+        _uiState.update { it.copy(screenTimeoutMode = resolved.storedValue) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_SCREEN_TIMEOUT_MODE, resolved.storedValue)
+        }
+    }
+
+    fun setImmersiveMode(enabled: Boolean) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(immersiveMode = enabled) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, enabled)
+        }
+    }
+
+    fun setLandscapeSpreadEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(landscapeSpreadEnabled = enabled) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, enabled)
+        }
+        onOrientationChanged(
+            useLandscapeSpread = _uiState.value.isLandscape,
+            isTextReader = _uiState.value.currentHtmlContent != null ||
+                (_uiState.value.comic?.format?.isTextReadingFormat() == true)
+        )
+    }
+
+    fun setPreloadPages(count: Int) {
+        val safe = count.coerceIn(2, 8)
+        _uiState.update { it.copy(preloadPages = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRELOAD_PAGES, safe)
+        }
+    }
+
+    fun setPageAnimation(animation: String) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(readerPageAnimation = animation) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, animation)
+        }
+    }
+
+    fun setVolumeKeysPagingEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(volumeKeysPagingEnabled = enabled) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_VOLUME_KEYS_PAGING, enabled)
+        }
+    }
+
+    fun setChromeAutoHideEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(chromeAutoHideEnabled = enabled) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_CHROME_AUTO_HIDE, enabled)
+        }
+    }
+
+    fun setTopToolbarOpacity(value: Float) {
+        val safe = value.coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        _uiState.update { it.copy(topToolbarOpacity = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
+        }
+    }
+
+    fun setBottomToolbarOpacity(value: Float) {
+        val safe = value.coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        _uiState.update { it.copy(bottomToolbarOpacity = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe)
+        }
+    }
+
+    fun setToolbarBlur(value: Float) {
+        val safe = value.coerceIn(0f, 1.0f)
+        _uiState.update { it.copy(toolbarBlur = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TOOLBAR_BLUR, safe)
+        }
+    }
+
+    fun setImageScaleMode(value: String) {
+        val resolved = ReaderImageScaleMode.fromStored(value)
+        _uiState.update { it.copy(imageScaleMode = resolved.storedValue) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_IMAGE_SCALE_MODE, resolved.storedValue)
+        }
+    }
+
+    fun setTtsSpeed(value: Float) {
+        val safe = value.coerceIn(0.5f, 2.0f)
+        _uiState.update { it.copy(ttsSpeed = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TTS_SPEED, safe)
+        }
+    }
+
+    fun setTtsProvider(value: String) {
+        val resolved = ReaderTtsProviderType.fromStored(value)
+        _uiState.update { it.copy(ttsProvider = resolved.storedValue) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TTS_PROVIDER, resolved.storedValue)
+        }
+    }
+
+    fun setTtsPitch(value: Float) {
+        val safe = value.coerceIn(0.5f, 2.0f)
+        _uiState.update { it.copy(ttsPitch = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TTS_PITCH, safe)
+        }
+    }
+
+    fun setTtsVolume(value: Float) {
+        val safe = value.coerceIn(0f, 1.0f)
+        _uiState.update { it.copy(ttsVolume = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TTS_VOLUME, safe)
+        }
+    }
+
+    fun setTtsVoiceName(value: String?) {
+        _uiState.update { it.copy(ttsVoiceName = value?.takeIf(String::isNotBlank)) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TTS_VOICE_NAME, value.orEmpty())
+        }
+    }
+
+    fun setTtsSleepTimerMode(value: String) {
+        val resolved = ReaderTtsSleepTimerMode.fromStored(value)
+        _uiState.update { it.copy(ttsSleepTimerMode = resolved.storedValue) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE, resolved.storedValue)
+        }
+    }
+
+    private fun saveProgress(
+        page: Int,
+        progressSource: ReaderNavigationProgressSource
+    ) {
+        val comic = _uiState.value.comic ?: return
+        val pending = PendingProgressSave(
+            comicId = comic.id,
+            page = page,
+            totalPages = _uiState.value.totalPages,
+            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
+        )
+        if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, page)) return
+        pendingProgressSave = pending
+        progressSaveJob?.cancel()
+        progressSaveJob = viewModelScope.launch {
+            delay(220)
+            flushPendingProgressSave()
+        }
+    }
+
+    private fun rememberChapterMilestoneAnchor(page: Int = _uiState.value.currentPage) {
+        val comicId = _uiState.value.comic?.id ?: return
+        val chapter = currentChapterFor(page) ?: return
+        lastChapterMilestone.set(
+            ChapterMilestoneMarker(
+                comicId = comicId,
+                chapterPage = chapter.pageIndex
+            )
+        )
+    }
+
+    private fun maybeEmitChapterMilestone(
+        page: Int,
+        progressSource: ReaderNavigationProgressSource
+    ) {
+        val comic = _uiState.value.comic ?: return
+        val chapter = currentChapterFor(page) ?: return
+        val chapterTitle = chapter.title.trim()
+        if (chapterTitle.isBlank()) return
+        val totalPages = _uiState.value.totalPages
+        val projectedPagesDelta = navigationProgressDelta(
+            previousPersistedPage = lastPersistedProgress
+                ?.takeIf { it.comicId == comic.id }
+                ?.page,
+            newPage = page,
+            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
+        )
+        val marker = ChapterMilestoneMarker(
+            comicId = comic.id,
+            chapterPage = chapter.pageIndex
+        )
+        if (progressSource != ReaderNavigationProgressSource.READING) {
+            lastChapterMilestone.set(marker)
+            return
+        }
+        val previous = lastChapterMilestone.getAndSet(marker)
+        if (previous == marker) return
+        sessionChapterTransitions += 1
+        viewModelScope.launch {
+            dailyReadingGoalStore.recordCompletedCheckpoint()
+            readerCheckpointStore.recordChapterReached(
+                comicId = comic.id,
+                comicTitle = comic.title,
+                chapterTitle = chapterTitle,
+                page = page
+            )
+            analyticsTracker.track(
+                ReadingAnalyticsEvent.ChapterReached(
+                    comicId = comic.id,
+                    page = page,
+                    chapterTitle = chapterTitle
+                )
+            )
+            if (shouldEmitChapterProgressRecap(page = page, totalPages = totalPages)) {
+                emitProgressRecap(
+                    type = ReaderProgressRecapType.CHAPTER,
+                    comicId = comic.id,
+                    comicTitle = comic.title,
+                    chapterTitle = chapterTitle,
+                    currentPage = page,
+                    totalPages = totalPages,
+                    pagesDelta = projectedPagesDelta,
+                    xpAwarded = projectedPagesDelta,
+                    projectedGoalPagesDelta = projectedPagesDelta
+                )
             }
         }
     }
 
+    private suspend fun emitProgressRecap(
+        type: ReaderProgressRecapType,
+        comicId: String,
+        comicTitle: String,
+        chapterTitle: String? = null,
+        currentPage: Int,
+        totalPages: Int,
+        pagesDelta: Int,
+        xpAwarded: Int,
+        projectedGoalPagesDelta: Int
+    ) {
+        val goalState = dailyReadingGoalStore.goalState
+            .first()
+            .projectReaderProgressRecap(projectedGoalPagesDelta)
+        _readerProgressRecap.emit(
+            ReaderProgressRecap(
+                type = type,
+                comicId = comicId,
+                comicTitle = comicTitle,
+                chapterTitle = chapterTitle,
+                currentPage = currentPage,
+                totalPages = totalPages,
+                pagesDelta = pagesDelta,
+                xpAwarded = xpAwarded,
+                goalEnabled = goalState.enabled,
+                pagesReadToday = goalState.pagesReadToday,
+                targetPages = goalState.targetPages,
+                isDailyGoalComplete = goalState.isCompleted,
+                pagesReadThisWeek = goalState.pagesReadThisWeek,
+                weeklyTargetPages = goalState.weeklyTargetPages,
+                isWeeklyPlanComplete = goalState.isWeeklyPlanCompleted,
+                streakEnabled = goalState.streakEnabled,
+                currentStreak = goalState.currentStreak
+            )
+        )
+    }
+
+    private fun syncReaderPosition(
+        page: Int,
+        mode: ReadingMode,
+        persistProgress: Boolean,
+        progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING,
+        announceChapterMilestone: Boolean = true
+    ) {
+        val visiblePages = visiblePagesFor(page, mode)
+        visiblePages.forEach { visiblePage ->
+            loadPage(visiblePage)
+        }
+        if (activeComicSupportsBitmapPreload()) {
+            applyHighQualityRetention(visiblePages.toSet())
+            formatReader?.let { reader ->
+                pagePreloader.preloadAround(reader, visiblePages, _uiState.value.totalPages, _uiState.value.preloadPages)
+            }
+            scheduleHighQualityWarmup(page)
+        } else {
+            applyHighQualityRetention(emptySet())
+        }
+        loadPageTranslationNote(page = page)
+        if (persistProgress) {
+            saveProgress(page, progressSource)
+        }
+        if (announceChapterMilestone) {
+            maybeEmitChapterMilestone(page, progressSource)
+        }
+    }
+
+    private fun visiblePagesFor(page: Int, mode: ReadingMode): List<Int> {
+        val totalPages = _uiState.value.totalPages
+        val normalizedPage = normalizePageForMode(page, mode, totalPages)
+        return when (mode) {
+            ReadingMode.DUAL_PAGE -> buildList {
+                add(normalizedPage)
+                val rightPage = (normalizedPage + 1).takeIf { it < totalPages }
+                if (rightPage != null) add(rightPage)
+            }
+            else -> listOf(normalizedPage)
+        }
+    }
+
+    private fun currentChapterFor(page: Int): TocEntry? {
+        val toc = _uiState.value.tableOfContents
+        if (toc.isEmpty()) return null
+        return toc.asSequence()
+            .sortedBy { it.pageIndex }
+            .lastOrNull { it.pageIndex <= page }
+    }
+
+    private fun normalizePageForMode(
+        page: Int,
+        mode: ReadingMode,
+        totalPages: Int = _uiState.value.totalPages
+    ): Int {
+        val clamped = page.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+        return when (mode) {
+            ReadingMode.DUAL_PAGE -> (clamped / 2) * 2
+            else -> clamped
+        }
+    }
+
+    private fun pageStepForMode(mode: ReadingMode): Int =
+        if (mode == ReadingMode.DUAL_PAGE) 2 else 1
+
+    private fun effectiveOpeningModeFor(format: ComicFormat): ReadingMode {
+        val state = _uiState.value
+        return when {
+            format.isTextReadingFormat() -> portraitPagedReadingMode
+            state.isLandscape &&
+                state.landscapeSpreadEnabled &&
+                supportsAutomaticLandscapeSpread(portraitReadingMode) &&
+                state.readingMode != ReadingMode.WEBTOON -> ReadingMode.DUAL_PAGE
+            state.readingMode == ReadingMode.DUAL_PAGE -> portraitReadingMode
+            else -> state.readingMode
+        }
+    }
+
+    private fun isOpenRequestCurrent(requestToken: Long): Boolean =
+        requestToken == currentOpenRequestToken
+
+    private fun rememberPortraitMode(mode: ReadingMode) {
+        if (mode == ReadingMode.DUAL_PAGE) return
+        portraitReadingMode = mode
+        if (mode == ReadingMode.PAGE_LTR || mode == ReadingMode.PAGE_RTL) {
+            portraitPagedReadingMode = mode
+        }
+    }
+
+    private fun supportsAutomaticLandscapeSpread(mode: ReadingMode): Boolean =
+        mode == ReadingMode.PAGE_LTR || mode == ReadingMode.PAGE_RTL
+
+    private fun applyHighQualityRetention(indices: Set<Int>) {
+        if (indices == lastRetainedHighQualityPages) return
+        pagePreloader.retainHighQualityPages(indices)
+        lastRetainedHighQualityPages = indices
+    }
+
+    private fun activeComicSupportsBitmapPreload(): Boolean =
+        !(_uiState.value.comic?.format?.isTextReadingFormat() ?: false)
+
+    private fun activeComicSupportsHighResZoom(): Boolean =
+        _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
+
+    private fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
+        comicId != null && lastPersistedProgress == PersistedProgressMarker(comicId = comicId, page = page)
+
+    private suspend fun flushPendingProgressSave() {
+        val pending = pendingProgressSave ?: return
+        pendingProgressSave = null
+        try {
+            val previousPersistedPage = lastPersistedProgress
+                ?.takeIf { it.comicId == pending.comicId }
+                ?.page
+            comicRepository.updateProgress(
+                comicId = pending.comicId,
+                currentPage = pending.page,
+                totalPages = pending.totalPages
+            )
+            val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
+            val goalProgressDelta = navigationProgressDelta(
+                previousPersistedPage = previousPersistedPage,
+                newPage = pending.page,
+                countsTowardReadingProgress = pending.countsTowardReadingProgress
+            )
+            if (goalProgressDelta > 0) {
+                dailyReadingGoalStore.recordProgressDelta(goalProgressDelta)
+                dailyReadingGoalStore.recordXpDelta(goalProgressDelta)
+                resolveGoalCompletedAnalyticsEvent(
+                    comicId = pending.comicId,
+                    previousState = goalStateBeforeProgress,
+                    currentState = dailyReadingGoalStore.goalState.first()
+                )?.let(analyticsTracker::track)
+                analyticsTracker.track(
+                    ReadingAnalyticsEvent.XpAwarded(
+                        comicId = pending.comicId,
+                        amount = goalProgressDelta,
+                        reason = "pages_read"
+                    )
+                )
+            }
+            analyticsTracker.track(
+                ReadingAnalyticsEvent.ProgressPersisted(
+                    comicId = pending.comicId,
+                    page = pending.page,
+                    totalPages = pending.totalPages
+                )
+            )
+            lastPersistedProgress = PersistedProgressMarker(
+                comicId = pending.comicId,
+                page = pending.page
+            )
+            val reachedLastPage = pending.totalPages > 0 && pending.page >= pending.totalPages - 1
+            val currentComic = _uiState.value.comic ?: return
+            val titleCompletionPolicy = resolveTitleCompletionPolicy(
+                reachedLastPage = reachedLastPage,
+                currentComicIdMatches = currentComic.id == pending.comicId,
+                alreadyCompleted = currentComic.isCompleted,
+                countsTowardReadingProgress = pending.countsTowardReadingProgress,
+                sessionManualPageTurns = sessionManualPageTurns,
+                goalProgressDelta = goalProgressDelta
+            )
+            if (titleCompletionPolicy.shouldComplete) {
+                comicRepository.markCompleted(pending.comicId, completed = true)
+                _uiState.update { state ->
+                    state.copy(
+                        comic = state.comic?.copy(
+                            isCompleted = true,
+                            readingProgress = 1f
+                        )
+                    )
+                }
+                dailyReadingGoalStore.recordCompletedCheckpoint()
+                analyticsTracker.track(
+                    ReadingAnalyticsEvent.TitleCompleted(
+                        comicId = pending.comicId,
+                        totalPages = pending.totalPages
+                    )
+                )
+                analyticsTracker.track(
+                    ReadingAnalyticsEvent.XpAwarded(
+                        comicId = pending.comicId,
+                        amount = titleCompletionPolicy.bonusXpAwarded,
+                        reason = "title_complete"
+                    )
+                )
+                dailyReadingGoalStore.recordXpDelta(titleCompletionPolicy.bonusXpAwarded)
+                emitProgressRecap(
+                    type = ReaderProgressRecapType.TITLE_COMPLETE,
+                    comicId = pending.comicId,
+                    comicTitle = currentComic.title,
+                    currentPage = pending.page,
+                    totalPages = pending.totalPages,
+                    pagesDelta = titleCompletionPolicy.recapPagesDelta,
+                    xpAwarded = titleCompletionPolicy.recapXpAwarded,
+                    projectedGoalPagesDelta = 0
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("ReaderViewModel", "Failed to save progress", e)
+        }
+    }
+
     override fun onCleared() {
+        runCatching { kotlinx.coroutines.runBlocking { flushPendingProgressSave() } }
+        emitReaderClosed()
         super.onCleared()
+        loadComicJob?.cancel()
         eyeRestJob?.cancel()
+        highQualityWarmupJob?.cancel()
+        progressSaveJob?.cancel()
+        pageTranslationNoteJob?.cancel()
         formatReader?.close()
         pagePreloader.cancelPreload()
         pagePreloader.clearPages()
     }
 
-    private fun restoreReaderPreferences() {
-        viewModelScope.launch {
-            val storedMode = readerPreferences.get(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name).first()
-            val mode = runCatching { ReadingMode.valueOf(storedMode) }.getOrDefault(ReadingMode.PAGE_LTR)
-            if (mode != ReadingMode.DUAL_PAGE) portraitReadingMode = mode
-            val brightness   = readerPreferences.get(PreferencesKeys.READING_BRIGHTNESS, 0.5f).first().coerceIn(0f, 1f)
-            val keepScreenOn = readerPreferences.get(PreferencesKeys.READER_KEEP_SCREEN_ON, false).first()
-            val animation    = readerPreferences.get(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE").first()
-            val pageSound    = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND, false).first()
-            val soundStyle   = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER").first()
-            val immersive    = readerPreferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false).first()
-            val preload      = readerPreferences.get(
-                PreferencesKeys.READER_PRELOAD_PAGES,
-                renderProfile.defaultPreloadPages
-            ).first()
-                .coerceIn(2, 8)
-                .coerceAtMost(renderProfile.maxPreloadPages)
-            // Text reader settings
-            val fontSize     = readerPreferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).first().coerceIn(12, 32)
-            val colorScheme  = readerPreferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY").first()
-            val fontFamily   = readerPreferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia").first()
-            val lineHeight   = readerPreferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).first().coerceIn(1.0f, 3.0f)
-            val alignment    = readerPreferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify").first()
-            val bold         = readerPreferences.get(PreferencesKeys.TEXT_BOLD, false).first()
-            val eyeRestEnabled = readerPreferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false).first()
-            val eyeRestMinutes = readerPreferences.get(PreferencesKeys.READER_EYE_REST_MINUTES, 20).first().coerceIn(10, 60)
-            val readerPreset = ReadingPreset.fromStored(
-                readerPreferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name).first()
-            )
-            _uiState.update { state ->
-                val effectiveMode = if (state.isLandscape) ReadingMode.DUAL_PAGE else mode
-                state.copy(
-                    readingMode      = effectiveMode,
-                    chromeState      = ReaderChromeState.MINIMAL,
-                    brightness       = brightness,
-                    keepScreenOn     = keepScreenOn,
-                    readerPageAnimation = if (renderProfile.disableAnimations) "NONE" else animation,
-                    pageSoundEnabled = pageSound,
-                    pageSoundStyle   = soundStyle,
-                    immersiveMode    = immersive,
-                    preloadPages     = preload,
-                    textFontSize     = fontSize,
-                    textColorScheme  = colorScheme,
-                    textFontFamily   = fontFamily,
-                    textLineHeight   = lineHeight,
-                    textAlignment    = alignment,
-                    textBold         = bold,
-                    readerPreset     = readerPreset.name,
-                    eyeRestEnabled   = eyeRestEnabled,
-                    eyeRestMinutes   = eyeRestMinutes
-                )
+    private fun emitReaderClosed() {
+        val session = activeReaderSession ?: return
+        activeReaderSession = null
+        val state = _uiState.value
+        val currentComic = state.comic?.takeIf { it.id == session.comicId }
+        val sessionMetrics = resolveReaderClosedSessionMetrics(
+            sessionComicId = session.comicId,
+            currentComicId = currentComic?.id,
+            currentComicCompleted = currentComic?.isCompleted == true,
+            currentPage = state.currentPage,
+            startPage = session.startPage,
+            manualPageTurns = sessionManualPageTurns,
+            chapterTransitions = sessionChapterTransitions
+        )
+        val finishedAtMillis = System.currentTimeMillis()
+        if (shouldRecordReaderSessionMinutes(sessionMetrics)) {
+            runCatching {
+                kotlinx.coroutines.runBlocking {
+                    dailyReadingGoalStore.recordSessionMinutes(
+                        durationMillis = finishedAtMillis - session.startedAtMillis,
+                        nowMillis = finishedAtMillis
+                    )
+                }
+            }.onFailure { error ->
+                Log.e("ReaderViewModel", "Failed to record reading session minutes", error)
             }
-            restartEyeRestTimer()
         }
+        analyticsTracker.track(
+            buildReaderClosedAnalyticsEvent(
+                comicId = session.comicId,
+                format = session.format,
+                totalPages = session.totalPages,
+                readingMode = state.readingMode.name,
+                startedAtMillis = session.startedAtMillis,
+                finishedAtMillis = finishedAtMillis,
+                sessionMetrics = sessionMetrics
+            )
+        )
+    }
+
+    private suspend fun restoreReaderPreferences() {
+        val storedMode = readerPreferences.get(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name).first()
+        val mode = runCatching { ReadingMode.valueOf(storedMode) }.getOrDefault(ReadingMode.PAGE_LTR)
+        rememberPortraitMode(mode)
+        val brightness = readerPreferences.get(PreferencesKeys.READING_BRIGHTNESS, -1f).first().let { stored ->
+            if (stored < 0f) -1f else stored.coerceIn(0.05f, 1f)
+        }
+        val keepScreenOn = readerPreferences.get(PreferencesKeys.READER_KEEP_SCREEN_ON, false).first()
+        val screenTimeoutMode = ReaderScreenTimeoutMode.fromStored(
+            readerPreferences.get(
+                PreferencesKeys.READER_SCREEN_TIMEOUT_MODE,
+                ReaderScreenTimeoutMode.SYSTEM.storedValue
+            ).first()
+        )
+        val landscapeSpreadEnabled = readerPreferences.get(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, true).first()
+        val animation    = readerPreferences.get(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE").first()
+        val pageSound    = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND, false).first()
+        val soundStyle   = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER").first()
+        val immersive    = readerPreferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false).first()
+        val chromeAutoHideEnabled = readerPreferences.get(PreferencesKeys.READER_CHROME_AUTO_HIDE, true).first()
+        val topToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).first().coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        val bottomToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).first().coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        val toolbarBlur = readerPreferences.get(PreferencesKeys.READER_TOOLBAR_BLUR, READER_TOOLBAR_DEFAULT_BLUR).first().coerceIn(0f, 1f)
+        val imageScaleMode = ReaderImageScaleMode.fromStored(
+            readerPreferences.get(
+                PreferencesKeys.READER_IMAGE_SCALE_MODE,
+                ReaderImageScaleMode.FIT_WIDTH.storedValue
+            ).first()
+        )
+        val preload      = readerPreferences.get(
+            PreferencesKeys.READER_PRELOAD_PAGES,
+            renderProfile.defaultPreloadPages
+        ).first()
+            .coerceIn(2, 8)
+            .coerceAtMost(renderProfile.maxPreloadPages)
+        // Text reader settings
+        val fontSize     = readerPreferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).first().coerceIn(12, 32)
+        val colorScheme  = readerPreferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY").first()
+        val fontFamily   = readerPreferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia").first()
+        val lineHeight   = readerPreferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).first().coerceIn(1.0f, 3.0f)
+        val alignment    = readerPreferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify").first()
+        val bold         = readerPreferences.get(PreferencesKeys.TEXT_BOLD, false).first()
+        val tapZoneMode = ReaderTapZoneMode.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name).first()
+        )
+        val tapZoneSwap = readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_SWAP, false).first()
+        val volumeKeysPagingEnabled = readerPreferences.get(PreferencesKeys.READER_VOLUME_KEYS_PAGING, false).first()
+        val ttsProvider = ReaderTtsProviderType.fromStored(
+            readerPreferences.get(
+                PreferencesKeys.READER_TTS_PROVIDER,
+                ReaderTtsProviderType.SYSTEM.storedValue
+            ).first()
+        )
+        val ttsSpeed = readerPreferences.get(PreferencesKeys.READER_TTS_SPEED, 1.0f).first().coerceIn(0.5f, 2.0f)
+        val ttsPitch = readerPreferences.get(PreferencesKeys.READER_TTS_PITCH, 1.0f).first().coerceIn(0.5f, 2.0f)
+        val ttsVolume = readerPreferences.get(PreferencesKeys.READER_TTS_VOLUME, 1.0f).first().coerceIn(0f, 1.0f)
+        val ttsVoiceName = readerPreferences.get(PreferencesKeys.READER_TTS_VOICE_NAME, "").first().ifBlank { null }
+        val ttsSleepTimerMode = ReaderTtsSleepTimerMode.fromStored(
+            readerPreferences.get(
+                PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE,
+                ReaderTtsSleepTimerMode.OFF.storedValue
+            ).first()
+        )
+        val tapZoneLeft = ReaderTapZoneAction.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name).first()
+        )
+        val tapZoneCenter = ReaderTapZoneAction.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name).first()
+        )
+        val tapZoneRight = ReaderTapZoneAction.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name).first()
+        )
+        val headerLeftSlot = ReaderInfoSlot.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_HEADER_LEFT_SLOT, ReaderInfoSlot.BOOK_TITLE.name).first()
+        )
+        val headerCenterSlot = ReaderInfoSlot.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_HEADER_CENTER_SLOT, ReaderInfoSlot.NONE.name).first()
+        )
+        val headerRightSlot = ReaderInfoSlot.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_HEADER_RIGHT_SLOT, ReaderInfoSlot.TIME.name).first()
+        )
+        val footerLeftSlot = ReaderInfoSlot.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_FOOTER_LEFT_SLOT, ReaderInfoSlot.CHAPTER_TITLE.name).first()
+        )
+        val footerCenterSlot = ReaderInfoSlot.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_FOOTER_CENTER_SLOT, ReaderInfoSlot.PAGE.name).first()
+        )
+        val footerRightSlot = ReaderInfoSlot.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_FOOTER_RIGHT_SLOT, ReaderInfoSlot.PROGRESS.name).first()
+        )
+        val headerFooterFontSize = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, 12).first().coerceIn(10, 20)
+        val headerFooterVerticalPadding = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, 6).first().coerceIn(4, 20)
+        val headerFooterLeftPadding = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, 16).first().coerceIn(8, 32)
+        val headerFooterRightPadding = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, 16).first().coerceIn(8, 32)
+        val eyeRestEnabled = readerPreferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false).first()
+        val eyeRestMinutes = readerPreferences.get(PreferencesKeys.READER_EYE_REST_MINUTES, 20).first().coerceIn(10, 60)
+        val mascotUiEnabled = readerPreferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true).first()
+        val readerPreset = ReadingPreset.fromStored(
+            readerPreferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name).first()
+        )
+        _uiState.update { state ->
+            val effectiveMode = if (state.isLandscape && supportsAutomaticLandscapeSpread(mode)) {
+                ReadingMode.DUAL_PAGE
+            } else {
+                mode
+            }
+            state.copy(
+                readingMode      = effectiveMode,
+                chromeState      = ReaderChromeState.HIDDEN,
+                brightness       = brightness,
+                keepScreenOn     = keepScreenOn,
+                screenTimeoutMode = screenTimeoutMode.storedValue,
+                landscapeSpreadEnabled = landscapeSpreadEnabled,
+                readerPageAnimation = if (renderProfile.disableAnimations) "NONE" else animation,
+                pageSoundEnabled = pageSound,
+                pageSoundStyle   = soundStyle,
+                immersiveMode    = immersive,
+                chromeAutoHideEnabled = chromeAutoHideEnabled,
+                topToolbarOpacity = topToolbarOpacity,
+                bottomToolbarOpacity = bottomToolbarOpacity,
+                toolbarBlur = toolbarBlur,
+                imageScaleMode = imageScaleMode.storedValue,
+                preloadPages     = preload,
+                textFontSize     = fontSize,
+                textColorScheme  = colorScheme,
+                textFontFamily   = fontFamily,
+                textLineHeight   = lineHeight,
+                textAlignment    = alignment,
+                textBold         = bold,
+                tapZoneMode      = tapZoneMode.name,
+                tapZoneSwap      = tapZoneSwap,
+                volumeKeysPagingEnabled = volumeKeysPagingEnabled,
+                ttsProvider = ttsProvider.storedValue,
+                ttsSpeed = ttsSpeed,
+                ttsPitch = ttsPitch,
+                ttsVolume = ttsVolume,
+                ttsVoiceName = ttsVoiceName,
+                ttsSleepTimerMode = ttsSleepTimerMode.storedValue,
+                tapZoneLeftAction = tapZoneLeft.name,
+                tapZoneCenterAction = tapZoneCenter.name,
+                tapZoneRightAction = tapZoneRight.name,
+                headerLeftSlot   = headerLeftSlot.name,
+                headerCenterSlot = headerCenterSlot.name,
+                headerRightSlot  = headerRightSlot.name,
+                footerLeftSlot   = footerLeftSlot.name,
+                footerCenterSlot = footerCenterSlot.name,
+                footerRightSlot  = footerRightSlot.name,
+                headerFooterFontSize = headerFooterFontSize,
+                headerFooterVerticalPadding = headerFooterVerticalPadding,
+                headerFooterLeftPadding = headerFooterLeftPadding,
+                headerFooterRightPadding = headerFooterRightPadding,
+                readerPreset     = readerPreset.name,
+                eyeRestEnabled   = eyeRestEnabled,
+                eyeRestMinutes   = eyeRestMinutes,
+                mascotUiEnabled  = mascotUiEnabled
+            )
+        }
+        restartEyeRestTimer()
     }
 
     fun snoozeEyeRestReminder(minutes: Int = 5) {
@@ -1508,7 +2647,7 @@ class ReaderViewModel @Inject constructor(
         return resolveTranslationSettings().targetLanguage
     }
 
-    private suspend fun resolveTranslationSettings(): ReaderTranslationSettings {
+    private suspend fun resolveTranslationSettings(): TranslationServiceConfig {
         val appLanguage = normalizeAppLanguageCode(
             readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
         )
@@ -1526,20 +2665,121 @@ class ReaderViewModel @Inject constructor(
 
         val sourceLanguage = normalizeTranslationLanguageCode(rawSourceLanguage)
 
-        val preferredTransport = runCatching {
-            TranslationTransportPreference.valueOf(rawTransport.uppercase())
-        }.getOrDefault(TranslationTransportPreference.AUTO)
-
-        return ReaderTranslationSettings(
+        return TranslationServiceConfig.fromStored(
+            mode = null,
             sourceLanguage = sourceLanguage,
             targetLanguage = targetLanguage,
-            preferredTransport = preferredTransport,
+            preferredTransport = rawTransport,
             explainEnabled = explainEnabled
         )
     }
 
+    private suspend fun resolveSingleWordDictionaryMatch(
+        rawWord: String,
+        targetLanguage: String,
+        preferredSourceLanguage: String?,
+        detectionResult: LanguageDetectionResult?
+    ): SingleWordDictionaryMatch? {
+        return resolveBestSingleWordDictionaryMatch(
+            rawWord = rawWord,
+            targetLanguage = targetLanguage,
+            dictionaryEngine = dictionaryEngine,
+            preferredSourceLanguage = preferredSourceLanguage,
+            detectedLanguage = detectionResult?.languageCode,
+            detectedCandidates = detectionResult?.candidates?.map { it.languageCode }.orEmpty(),
+            fallbackSourceLanguages = supportedTranslationLanguageCodes.filter { it != targetLanguage }
+        )
+    }
+
+    private suspend fun resolveReaderDictionaryEntry(
+        rawWord: String,
+        sourceLanguage: String,
+        targetLanguage: String
+    ): DictionaryEntry? {
+        return when (
+            val dictionaryResult = dictionaryEngine.lookup(
+                rawWord = rawWord,
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage
+            )
+        ) {
+            is Result.Success -> dictionaryResult.data.takeIf { entry ->
+                entry.hasMeaningfulTranslationFor(rawWord) || entry.translations.isNotEmpty() || entry.glosses.isNotEmpty()
+            }
+            is Result.Error -> null
+            Result.Loading -> null
+        }
+    }
+
+    private fun showSelectedTextDictionaryResult(
+        originalText: String,
+        entry: DictionaryEntry,
+        sourceLanguage: String,
+        targetLanguage: String,
+        preferredTransport: TranslationTransportPreference,
+        canUseDictionary: Boolean,
+        canTranslateAsPhrase: Boolean,
+        canExplainSelection: Boolean
+    ) {
+        _uiState.update {
+            it.copy(
+                selectedTextTranslation = SelectedTextTranslationState(
+                    originalText = originalText,
+                    translatedText = entry.translations.firstOrNull().orEmpty(),
+                    dictionaryEntry = entry,
+                    sourceLanguage = sourceLanguage,
+                    targetLanguage = targetLanguage,
+                    mode = TranslationMode.DICTIONARY,
+                    preferredTransport = preferredTransport,
+                    canUseDictionary = canUseDictionary,
+                    canTranslateAsPhrase = canTranslateAsPhrase,
+                    canExplain = canExplainSelection,
+                    isLoading = false
+                )
+            )
+        }
+    }
+
     private fun String.countSelectionTokens(): Int =
         SELECTION_TOKEN_REGEX.findAll(this).count().coerceAtLeast(if (isBlank()) 0 else 1)
+
+    private fun saveQuote(
+        text: String,
+        translatedText: String?,
+        sourceLanguage: String?,
+        targetLanguage: String?
+    ) {
+        val comic = _uiState.value.comic ?: return
+        val page = _uiState.value.currentPage
+        viewModelScope.launch {
+            runCatching {
+                quoteRepository.saveQuote(
+                    comic = comic,
+                    page = page,
+                    text = text,
+                    translatedText = translatedText,
+                    sourceLanguage = sourceLanguage,
+                    targetLanguage = targetLanguage
+                )
+            }.onSuccess { result ->
+                if (result == null) return@onSuccess
+                val readerText = localizedReaderText()
+                analyticsTracker.track(
+                    ReadingAnalyticsEvent.QuoteSaved(
+                        comicId = comic.id,
+                        page = page,
+                        inserted = result.inserted
+                    )
+                )
+                _quoteSaveMessages.emit(
+                    if (result.inserted) readerText.quoteSaved else readerText.quoteUpdated
+                )
+            }.onFailure { error ->
+                Log.e("ReaderViewModel", "Failed to save quote", error)
+                _quoteSaveMessages.emit(localizedReaderText().quoteSaveFailed)
+            }
+        }
+    }
 
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java) ?: return false
@@ -1554,9 +2794,162 @@ class ReaderViewModel @Inject constructor(
     }
 }
 
-private data class ReaderTranslationSettings(
-    val sourceLanguage: String?,
-    val targetLanguage: String,
-    val preferredTransport: TranslationTransportPreference,
-    val explainEnabled: Boolean
+internal fun positiveProgressDelta(
+    previousPersistedPage: Int?,
+    newPage: Int
+): Int {
+    if (previousPersistedPage == null) return 0
+    return (newPage - previousPersistedPage).coerceAtLeast(0)
+}
+
+internal fun navigationProgressDelta(
+    previousPersistedPage: Int?,
+    newPage: Int,
+    countsTowardReadingProgress: Boolean
+): Int {
+    if (!countsTowardReadingProgress) return 0
+    return positiveProgressDelta(previousPersistedPage = previousPersistedPage, newPage = newPage)
+}
+
+internal fun countsAsManualPageTurn(
+    progressSource: ReaderNavigationProgressSource
+): Boolean = progressSource == ReaderNavigationProgressSource.READING
+
+internal data class TitleCompletionPolicy(
+    val shouldComplete: Boolean,
+    val recapPagesDelta: Int,
+    val recapXpAwarded: Int,
+    val bonusXpAwarded: Int
 )
+
+internal data class ReaderClosedSessionMetrics(
+    val endPage: Int,
+    val completed: Boolean,
+    val manualPageTurns: Int,
+    val chapterTransitions: Int
+)
+
+internal fun resolveGoalCompletedAnalyticsEvent(
+    comicId: String,
+    previousState: DailyReadingGoalState,
+    currentState: DailyReadingGoalState
+): ReadingAnalyticsEvent.GoalCompleted? {
+    val dailyCompleted = currentState.enabled && !previousState.isCompleted && currentState.isCompleted
+    val weeklyCompleted = currentState.enabled &&
+        !previousState.isWeeklyPlanCompleted &&
+        currentState.isWeeklyPlanCompleted
+    if (!dailyCompleted && !weeklyCompleted) return null
+    return ReadingAnalyticsEvent.GoalCompleted(
+        comicId = comicId,
+        targetPages = currentState.targetPages,
+        pagesReadToday = currentState.pagesReadToday,
+        weeklyTargetPages = currentState.weeklyTargetPages,
+        pagesReadThisWeek = currentState.pagesReadThisWeek,
+        completedDaysThisWeek = currentState.completedDaysThisWeek,
+        currentStreak = currentState.currentStreak,
+        dailyCompleted = dailyCompleted,
+        weeklyCompleted = weeklyCompleted
+    )
+}
+
+internal fun shouldRecordReaderSessionMinutes(
+    sessionMetrics: ReaderClosedSessionMetrics
+): Boolean = sessionMetrics.manualPageTurns > 0 || sessionMetrics.chapterTransitions > 0
+
+internal fun buildReaderClosedAnalyticsEvent(
+    comicId: String,
+    format: String,
+    totalPages: Int,
+    readingMode: String,
+    startedAtMillis: Long,
+    finishedAtMillis: Long,
+    sessionMetrics: ReaderClosedSessionMetrics
+): ReadingAnalyticsEvent.ReaderClosed = ReadingAnalyticsEvent.ReaderClosed(
+    comicId = comicId,
+    format = format,
+    totalPages = totalPages,
+    endPage = sessionMetrics.endPage,
+    readingMode = readingMode,
+    startedAtMillis = startedAtMillis,
+    durationMs = (finishedAtMillis - startedAtMillis).coerceAtLeast(0L),
+    completed = sessionMetrics.completed,
+    manualPageTurns = sessionMetrics.manualPageTurns,
+    chapterTransitions = sessionMetrics.chapterTransitions
+)
+
+internal fun shouldAutoCompleteTitle(
+    reachedLastPage: Boolean,
+    currentComicIdMatches: Boolean,
+    alreadyCompleted: Boolean,
+    countsTowardReadingProgress: Boolean,
+    sessionManualPageTurns: Int
+): Boolean {
+    if (!reachedLastPage || !currentComicIdMatches || alreadyCompleted) return false
+    return countsTowardReadingProgress || sessionManualPageTurns > 0
+}
+
+internal fun resolveTitleCompletionPolicy(
+    reachedLastPage: Boolean,
+    currentComicIdMatches: Boolean,
+    alreadyCompleted: Boolean,
+    countsTowardReadingProgress: Boolean,
+    sessionManualPageTurns: Int,
+    goalProgressDelta: Int
+): TitleCompletionPolicy {
+    val shouldComplete = shouldAutoCompleteTitle(
+        reachedLastPage = reachedLastPage,
+        currentComicIdMatches = currentComicIdMatches,
+        alreadyCompleted = alreadyCompleted,
+        countsTowardReadingProgress = countsTowardReadingProgress,
+        sessionManualPageTurns = sessionManualPageTurns
+    )
+    if (!shouldComplete) {
+        return TitleCompletionPolicy(
+            shouldComplete = false,
+            recapPagesDelta = 0,
+            recapXpAwarded = 0,
+            bonusXpAwarded = 0
+        )
+    }
+    val safePagesDelta = goalProgressDelta.coerceAtLeast(0)
+    return TitleCompletionPolicy(
+        shouldComplete = true,
+        recapPagesDelta = safePagesDelta,
+        recapXpAwarded = safePagesDelta + TITLE_COMPLETE_BONUS_XP,
+        bonusXpAwarded = TITLE_COMPLETE_BONUS_XP
+    )
+}
+
+internal fun resolveReaderClosedSessionMetrics(
+    sessionComicId: String,
+    currentComicId: String?,
+    currentComicCompleted: Boolean,
+    currentPage: Int,
+    startPage: Int,
+    manualPageTurns: Int,
+    chapterTransitions: Int
+): ReaderClosedSessionMetrics {
+    val currentComicMatches = currentComicId == sessionComicId
+    return ReaderClosedSessionMetrics(
+        endPage = if (currentComicMatches) currentPage else currentPage.coerceAtLeast(startPage),
+        completed = currentComicMatches && currentComicCompleted,
+        manualPageTurns = manualPageTurns,
+        chapterTransitions = chapterTransitions
+    )
+}
+
+internal fun shouldEmitChapterProgressRecap(
+    page: Int,
+    totalPages: Int
+): Boolean = totalPages <= 0 || page < totalPages - 1
+
+internal fun DailyReadingGoalState.projectReaderProgressRecap(
+    additionalPages: Int
+): DailyReadingGoalState {
+    val safeAdditionalPages = additionalPages.coerceAtLeast(0)
+    if (!enabled || safeAdditionalPages == 0) return this
+    return copy(
+        pagesReadToday = pagesReadToday + safeAdditionalPages,
+        pagesReadThisWeek = pagesReadThisWeek + safeAdditionalPages
+    )
+}

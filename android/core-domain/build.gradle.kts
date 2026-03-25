@@ -16,6 +16,7 @@ dependencies {
     implementation(project(":core-data"))
     implementation(project(":engine-formats"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.datastore.preferences)
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)

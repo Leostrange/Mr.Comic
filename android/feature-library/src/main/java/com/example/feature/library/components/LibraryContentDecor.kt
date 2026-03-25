@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
+import com.example.core.model.isReadCompleted
 import com.example.core.model.isTextReadingFormat
 import com.example.core.ui.library.normalizeLibraryGraphicCoverStyle
 import java.io.File
@@ -150,7 +151,7 @@ internal fun BoxScope.ComicCoverTreatment(
                             )
                         )
                 )
-                if (comic.isCompleted) {
+                if (comic.isReadCompleted()) {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -217,7 +218,7 @@ internal fun BoxScope.ComicCoverTreatment(
                         )
                 )
             }
-            if (comic.isCompleted) {
+            if (comic.isReadCompleted()) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -288,7 +289,7 @@ internal fun BoxScope.ComicCoverTreatment(
                         )
                     }
                 }
-                if (comic.isCompleted) {
+                if (comic.isReadCompleted()) {
                     Box(
                         modifier = modifier
                             .border(
@@ -457,7 +458,7 @@ internal fun BoxScope.ComicCoverTreatment(
                     }
                 }
             }
-            if (comic.isCompleted) {
+            if (comic.isReadCompleted()) {
                 Box(
                     modifier = modifier
                         .border(

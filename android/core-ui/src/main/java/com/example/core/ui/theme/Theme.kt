@@ -167,7 +167,7 @@ fun MrComicTheme(
             val backgroundColor = themeConfig.customBackgroundColor?.let { Color(it.toInt()) } ?: result.background
             val surfaceBaseColor = themeConfig.customSurfaceColor?.let { Color(it.toInt()) }
                 ?: lerp(backgroundColor, if (isDarkTheme) Color.White else Color.Black, if (isDarkTheme) 0.06f else 0.03f)
-            val surfaceAlpha = themeConfig.surfaceOpacity.coerceIn(0.55f, 1f)
+            val surfaceAlpha = themeConfig.surfaceOpacity.coerceIn(0.35f, 1f)
             val effectiveSurface = surfaceBaseColor.copy(alpha = surfaceAlpha)
             val onBackground = backgroundColor.contentColorForBackground()
             val onSurface = surfaceBaseColor.contentColorForBackground()

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.performance.LocalPerformanceUiHints
 import kotlin.math.*
 import kotlin.random.Random
@@ -64,9 +65,38 @@ data class LibraryAchievement(
     val emoji: String,
     val isUnlocked: Boolean,
     val isSecret: Boolean = false,
+    val progressCurrent: Int? = null,
+    val progressTarget: Int? = null,
     val gradientStart: Color = Color(0xFF6C63FF),
     val gradientEnd: Color = Color(0xFFFF6584)
+) {
+    val progressFraction: Float
+        get() = when {
+            progressCurrent == null || progressTarget == null || progressTarget <= 0 -> 0f
+            else -> (progressCurrent.toFloat() / progressTarget.toFloat()).coerceIn(0f, 1f)
+        }
+
+    val remainingSteps: Int?
+        get() = when {
+            progressCurrent == null || progressTarget == null -> null
+            else -> (progressTarget - progressCurrent).coerceAtLeast(0)
+        }
+}
+
+data class AchievementQuestTransition(
+    val tone: AchievementQuestFeedbackTone,
+    val previousAchievementId: AchievementId,
+    val previousTitle: String,
+    val nextAchievementId: AchievementId?,
+    val nextTitle: String?,
+    val previousCompleted: Boolean
 )
+
+enum class AchievementQuestFeedbackTone {
+    COMPLETED,
+    SWITCHED,
+    CLEARED
+}
 
 fun computeAchievements(
     totalComics: Int,
@@ -76,13 +106,19 @@ fun computeAchievements(
     allGenres: List<String?>,
     secretUnlocked: Boolean,
     strings: AchievementStrings
-): List<LibraryAchievement> = listOf(
+): List<LibraryAchievement> {
+    val authorProgress = maxBooksBySingleAuthor(allAuthors)
+    val genreProgress = countDistinctGenres(allGenres)
+
+    return listOf(
     LibraryAchievement(
         id = AchievementId.FIRST_BOOK,
         title = strings.achFirstBook,
         description = strings.achFirstBookDesc,
         emoji = "📖",
         isUnlocked = totalComics >= 1,
+        progressCurrent = totalComics.coerceAtMost(1),
+        progressTarget = 1,
         gradientStart = Color(0xFF43CEA2),
         gradientEnd = Color(0xFF185A9D)
     ),
@@ -92,6 +128,8 @@ fun computeAchievements(
         description = strings.achReaderDesc,
         emoji = "📚",
         isUnlocked = totalComics >= 10,
+        progressCurrent = totalComics.coerceAtMost(10),
+        progressTarget = 10,
         gradientStart = Color(0xFFFFB347),
         gradientEnd = Color(0xFFFF6B6B)
     ),
@@ -101,6 +139,8 @@ fun computeAchievements(
         description = strings.achCollectorDesc,
         emoji = "🏆",
         isUnlocked = totalComics >= 25,
+        progressCurrent = totalComics.coerceAtMost(25),
+        progressTarget = 25,
         gradientStart = Color(0xFFFFD700),
         gradientEnd = Color(0xFFFFA500)
     ),
@@ -110,6 +150,8 @@ fun computeAchievements(
         description = strings.achFirstCompleteDesc,
         emoji = "✅",
         isUnlocked = completedComics >= 1,
+        progressCurrent = completedComics.coerceAtMost(1),
+        progressTarget = 1,
         gradientStart = Color(0xFF56AB2F),
         gradientEnd = Color(0xFFA8E063)
     ),
@@ -119,6 +161,8 @@ fun computeAchievements(
         description = strings.achMarathonDesc,
         emoji = "🌟",
         isUnlocked = completedComics >= 20,
+        progressCurrent = completedComics.coerceAtMost(20),
+        progressTarget = 20,
         gradientStart = Color(0xFF667EEA),
         gradientEnd = Color(0xFF764BA2)
     ),
@@ -127,8 +171,9 @@ fun computeAchievements(
         title = strings.achAuthorFan,
         description = strings.achAuthorFanDesc,
         emoji = "✍️",
-        isUnlocked = allAuthors.filterNotNull().filter { it.isNotBlank() }
-            .groupingBy { it }.eachCount().any { it.value >= 5 },
+        isUnlocked = authorProgress >= 5,
+        progressCurrent = authorProgress.coerceAtMost(5),
+        progressTarget = 5,
         gradientStart = Color(0xFFFF416C),
         gradientEnd = Color(0xFFFF4B2B)
     ),
@@ -137,9 +182,9 @@ fun computeAchievements(
         title = strings.achGenreGourmet,
         description = strings.achGenreGourmetDesc,
         emoji = "🎭",
-        isUnlocked = allGenres.filterNotNull().filter { it.isNotBlank() }
-            .flatMap { it.split(",", ";", "/") }.map { it.trim().lowercase() }
-            .filter { it.isNotEmpty() }.toSet().size >= 3,
+        isUnlocked = genreProgress >= 3,
+        progressCurrent = genreProgress.coerceAtMost(3),
+        progressTarget = 3,
         gradientStart = Color(0xFFFC5C7D),
         gradientEnd = Color(0xFF6A3093)
     ),
@@ -149,6 +194,8 @@ fun computeAchievements(
         description = strings.achBookmarkerDesc,
         emoji = "🔖",
         isUnlocked = bookmarkedComics >= 1,
+        progressCurrent = bookmarkedComics.coerceAtMost(1),
+        progressTarget = 1,
         gradientStart = Color(0xFF4FACFE),
         gradientEnd = Color(0xFF00F2FE)
     ),
@@ -162,7 +209,91 @@ fun computeAchievements(
         gradientStart = Color(0xFFDA22FF),
         gradientEnd = Color(0xFF9733EE)
     )
-)
+    )
+}
+
+fun nextUnlockAchievement(achievements: List<LibraryAchievement>): LibraryAchievement? =
+    achievements
+        .filter { !it.isUnlocked && !it.isSecret && it.progressTarget != null && it.progressTarget > 0 }
+        .sortedWith(
+            compareByDescending<LibraryAchievement> { it.progressFraction }
+                .thenBy { it.remainingSteps ?: Int.MAX_VALUE }
+                .thenBy { it.progressTarget ?: Int.MAX_VALUE }
+        )
+        .firstOrNull()
+
+fun rememberedNextUnlockAchievement(
+    achievements: List<LibraryAchievement>,
+    rememberedAchievementId: String?
+): LibraryAchievement? {
+    val rememberedId = rememberedAchievementId
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { runCatching { AchievementId.valueOf(it) }.getOrNull() }
+
+    val remembered = rememberedId?.let { id ->
+        achievements.firstOrNull { achievement ->
+            achievement.id == id &&
+                !achievement.isUnlocked &&
+                !achievement.isSecret &&
+                achievement.progressTarget != null &&
+                achievement.progressTarget > 0
+        }
+    }
+
+    return remembered ?: nextUnlockAchievement(achievements)
+}
+
+fun questTransitionFeedback(
+    achievements: List<LibraryAchievement>,
+    rememberedAchievementId: String?,
+    nextAchievement: LibraryAchievement?
+): AchievementQuestTransition? {
+    val rememberedId = rememberedAchievementId
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?.let { runCatching { AchievementId.valueOf(it) }.getOrNull() }
+        ?: return null
+
+    if (nextAchievement?.id == rememberedId) return null
+
+    val previousAchievement = achievements.firstOrNull { it.id == rememberedId } ?: return null
+    val tone = when {
+        previousAchievement.isUnlocked -> AchievementQuestFeedbackTone.COMPLETED
+        nextAchievement != null -> AchievementQuestFeedbackTone.SWITCHED
+        else -> AchievementQuestFeedbackTone.CLEARED
+    }
+
+    return AchievementQuestTransition(
+        tone = tone,
+        previousAchievementId = previousAchievement.id,
+        previousTitle = previousAchievement.title,
+        nextAchievementId = nextAchievement?.id,
+        nextTitle = nextAchievement?.title,
+        previousCompleted = previousAchievement.isUnlocked
+    )
+}
+
+private fun maxBooksBySingleAuthor(allAuthors: List<String?>): Int =
+    allAuthors
+        .filterNotNull()
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .groupingBy { it }
+        .eachCount()
+        .maxOfOrNull { it.value }
+        ?: 0
+
+private fun countDistinctGenres(allGenres: List<String?>): Int =
+    allGenres
+        .filterNotNull()
+        .flatMap { raw ->
+            raw.split(",", ";", "/")
+                .map { it.trim().lowercase() }
+        }
+        .filter { it.isNotEmpty() }
+        .toSet()
+        .size
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Achievement row + card
@@ -171,46 +302,62 @@ fun computeAchievements(
 @Composable
 fun LibraryAchievementsRow(
     achievements: List<LibraryAchievement>,
+    showHeader: Boolean = true,
+    maxVisible: Int? = null,
     modifier: Modifier = Modifier
 ) {
     if (achievements.isEmpty()) return
 
+    val strings = LocalStrings.current
     val unlockedCount = achievements.count { it.isUnlocked }
     val totalCount = achievements.size
+    val visibleAchievements = remember(achievements, maxVisible) {
+        achievements.take(maxVisible ?: achievements.size)
+    }
 
     Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "🏅 Достижения",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-            )
-            Spacer(Modifier.weight(1f))
-            Surface(
-                shape = RoundedCornerShape(999.dp),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+        if (showHeader) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "$unlockedCount / $totalCount",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    text = achievementHeaderTitle(strings.languageCode),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 )
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                ) {
+                    Text(
+                        text = "$unlockedCount / $totalCount",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(achievements) { achievement ->
+            items(visibleAchievements) { achievement ->
                 AchievementCard(achievement = achievement)
             }
         }
     }
+}
+
+private fun achievementHeaderTitle(language: String): String = when (language) {
+    "en" -> "🏅 Achievements"
+    "ja" -> "🏅 実績"
+    "zh" -> "🏅 成就"
+    "ko" -> "🏅 업적"
+    else -> "🏅 Достижения"
 }
 
 @Composable
@@ -264,120 +411,143 @@ private fun AchievementCard(achievement: LibraryAchievement) {
     val cardAlpha = if (achievement.isUnlocked) 1f else 0.45f
     val cardScale = if (achievement.isUnlocked) pulseScale else 1f
 
-    Box(
+    Column(
         modifier = Modifier
-            .size(width = 90.dp, height = 110.dp)
+            .width(74.dp)
             .graphicsLayer {
                 scaleX = cardScale
                 scaleY = cardScale
                 alpha = cardAlpha
             },
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Glow halo for unlocked achievements
-        if (achievement.isUnlocked) {
-            Canvas(modifier = Modifier.size(80.dp)) {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        listOf(
-                            achievement.gradientStart.copy(alpha = glowAlpha * 0.5f),
-                            Color.Transparent
+        Box(
+            modifier = Modifier.size(62.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            if (achievement.isUnlocked) {
+                Canvas(modifier = Modifier.size(62.dp)) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(
+                                achievement.gradientStart.copy(alpha = glowAlpha * 0.45f),
+                                Color.Transparent
+                            )
+                        ),
+                        radius = size.minDimension / 1.55f
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(12.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp))
+                        .background(
+                            if (achievement.isUnlocked) achievement.gradientStart.copy(alpha = 0.92f)
+                            else Color(0xFF5F6072)
                         )
-                    ),
-                    radius = size.minDimension / 1.6f
+                )
+                Box(
+                    modifier = Modifier
+                        .width(12.dp)
+                        .height(16.dp)
+                        .clip(RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp))
+                        .background(
+                            if (achievement.isUnlocked) achievement.gradientEnd.copy(alpha = 0.92f)
+                            else Color(0xFF45465A)
+                        )
                 )
             }
-        }
 
-        Card(
-            modifier = Modifier.fillMaxSize(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(
-                defaultElevation = if (achievement.isUnlocked) 6.dp else 2.dp
-            ),
-            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-        ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Gradient background
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    if (achievement.isUnlocked) {
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                listOf(achievement.gradientStart, achievement.gradientEnd),
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, size.height)
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (achievement.isUnlocked) {
+                            Brush.linearGradient(
+                                listOf(achievement.gradientStart, achievement.gradientEnd)
                             )
-                        )
-                        // Shimmer sweep
-                        val sweepX = size.width * (shimmerPhase * 1.4f - 0.2f)
-                        drawRect(
+                        } else {
+                            Brush.linearGradient(
+                                listOf(Color(0xFF555566), Color(0xFF333344))
+                            )
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    drawCircle(
+                        color = Color.White.copy(alpha = if (achievement.isUnlocked) 0.16f else 0.08f),
+                        radius = size.minDimension / 2.5f
+                    )
+                    if (achievement.isUnlocked) {
+                        val sweepX = size.width * (shimmerPhase * 1.3f - 0.15f)
+                        drawCircle(
                             brush = Brush.linearGradient(
                                 colors = listOf(
                                     Color.Transparent,
-                                    Color.White.copy(alpha = 0.18f),
-                                    Color.White.copy(alpha = 0.28f),
-                                    Color.White.copy(alpha = 0.18f),
+                                    Color.White.copy(alpha = 0.14f),
                                     Color.Transparent
                                 ),
-                                start = Offset(sweepX - 30f, 0f),
-                                end = Offset(sweepX + 30f, size.height)
-                            )
-                        )
-                    } else {
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                listOf(Color(0xFF555566), Color(0xFF333344))
-                            )
+                                start = Offset(sweepX - 18f, 0f),
+                                end = Offset(sweepX + 18f, size.height)
+                            ),
+                            radius = size.minDimension / 2f
                         )
                     }
                 }
-
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    // Emoji / icon badge
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = if (achievement.isUnlocked) 0.22f else 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (achievement.isUnlocked) {
-                            AchievementIconCanvas(
-                                id = achievement.id,
-                                gradientStart = achievement.gradientStart,
-                                gradientEnd = achievement.gradientEnd,
-                                shimmerPhase = shimmerPhase,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        } else {
-                            Text(text = "🔒", fontSize = 18.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        text = achievement.title,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 9.sp
-                        ),
-                        color = Color.White,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                if (achievement.isUnlocked) {
+                    AchievementIconCanvas(
+                        id = achievement.id,
+                        gradientStart = achievement.gradientStart,
+                        gradientEnd = achievement.gradientEnd,
+                        shimmerPhase = shimmerPhase,
+                        modifier = Modifier.size(26.dp)
                     )
-                    if (achievement.isUnlocked) {
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            text = achievement.emoji,
-                            fontSize = 12.sp
-                        )
-                    }
+                } else {
+                    Text(text = "🔒", fontSize = 13.sp)
                 }
             }
+        }
+
+        Text(
+            text = achievement.title,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 8.sp
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        if (!achievement.isUnlocked && achievement.progressTarget != null && achievement.progressCurrent != null) {
+            Text(
+                text = "${achievement.progressCurrent}/${achievement.progressTarget}",
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 7.sp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            LinearProgressIndicator(
+                progress = { achievement.progressFraction },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(999.dp)),
+                color = achievement.gradientStart.copy(alpha = 0.92f),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
         }
     }
 }

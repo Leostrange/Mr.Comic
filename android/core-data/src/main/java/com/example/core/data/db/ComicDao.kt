@@ -48,8 +48,9 @@ interface ComicDao {
         UPDATE comics
         SET currentPage = :currentPage,
             readingProgress = :progress,
-            lastReadDate = :lastReadDate
+            lastReadDate = :lastReadDate,
+            pageCount = CASE WHEN :pageCount > pageCount THEN :pageCount ELSE pageCount END
         WHERE id = :id
     """)
-    suspend fun updateProgress(id: String, currentPage: Int, progress: Float, lastReadDate: Long)
+    suspend fun updateProgress(id: String, currentPage: Int, progress: Float, lastReadDate: Long, pageCount: Int)
 }

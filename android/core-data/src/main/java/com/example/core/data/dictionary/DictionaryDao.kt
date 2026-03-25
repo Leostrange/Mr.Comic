@@ -75,4 +75,22 @@ interface DictionaryDao {
         normalizedPrefix: String,
         limit: Int = 12,
     ): List<String>
+
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1
+            FROM entries e
+            JOIN translations t ON t.entry_id = e.id
+            WHERE e.lang = :lang
+              AND t.target_lang = :targetLang
+              AND trim(t.text) != ''
+            LIMIT 1
+        )
+        """
+    )
+    suspend fun hasTranslationsForTarget(
+        lang: String,
+        targetLang: String,
+    ): Boolean
 }

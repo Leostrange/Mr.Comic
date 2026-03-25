@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Crop169
@@ -26,13 +27,12 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.example.core.model.SortOrder
 import com.example.core.ui.locale.LocalStrings
 import com.example.feature.library.GroupByMode
+import com.example.feature.library.LibraryContentSection
 import com.example.feature.library.LibraryFormatFilter
 import com.example.feature.library.LibraryStatusFilter
 import com.example.feature.library.LibraryViewMode
@@ -56,6 +57,7 @@ import com.example.feature.library.LibraryViewMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryTopBar(
+    contentSection: LibraryContentSection,
     isControlsExpanded: Boolean,
     sortOrder: SortOrder,
     statusFilter: LibraryStatusFilter,
@@ -73,10 +75,13 @@ fun LibraryTopBar(
     onNavigateUp: () -> Unit
 ) {
     val strings = LocalStrings.current
-    val filtersActive = statusFilter != LibraryStatusFilter.ALL ||
+    val controlsRelevant = contentSection == LibraryContentSection.FILES
+    val filtersActive = controlsRelevant && (
+        statusFilter != LibraryStatusFilter.ALL ||
         formatFilter != LibraryFormatFilter.ALL ||
         groupByMode != GroupByMode.FOLDER ||
         sortOrder != SortOrder.DATE_ADDED_DESC
+    )
     var addMenuExpanded by remember { mutableStateOf(false) }
     var thumbnailMenuExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
@@ -101,128 +106,140 @@ fun LibraryTopBar(
                 ) + fadeOut()
             ) {
                 Text(
-                    text = strings.navLibrary,
+                    text = when (contentSection) {
+                        LibraryContentSection.QUOTES -> strings.libraryQuotes
+                        LibraryContentSection.BOOKMARKS -> strings.libraryBookmarks
+                        LibraryContentSection.ACHIEVEMENTS -> "Mr.Comic"
+                        LibraryContentSection.FILES -> strings.navLibrary
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         },
-        navigationIcon = {},
+        navigationIcon = {
+            if (canNavigateUp) {
+                IconButton(onClick = onNavigateUp) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = strings.back
+                    )
+                }
+            }
+        },
         actions = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                // Кнопки выезжают влево от гамбургера
-                AnimatedVisibility(
-                    visible = isControlsExpanded,
-                    enter = slideInHorizontally(
-                        initialOffsetX = { it },
-                        animationSpec = slideSpec
-                    ) + fadeIn(),
-                    exit = slideOutHorizontally(
-                        targetOffsetX = { it },
-                        animationSpec = slideSpec
-                    ) + fadeOut()
+            if (controlsRelevant) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(scrollState),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                    // Кнопки выезжают влево от гамбургера
+                    AnimatedVisibility(
+                        visible = isControlsExpanded,
+                        enter = slideInHorizontally(
+                            initialOffsetX = { it },
+                            animationSpec = slideSpec
+                        ) + fadeIn(),
+                        exit = slideOutHorizontally(
+                            targetOffsetX = { it },
+                            animationSpec = slideSpec
+                        ) + fadeOut()
                     ) {
-                        FilledTonalIconButton(onClick = onToggleView) {
-                            Icon(
-                                if (viewMode == LibraryViewMode.GRID) {
-                                    Icons.AutoMirrored.Filled.ViewList
-                                } else {
-                                    Icons.Default.GridView
-                                },
-                                contentDescription = if (viewMode == LibraryViewMode.GRID) {
-                                    strings.libraryViewList
-                                } else {
-                                    strings.libraryViewGrid
-                                }
-                            )
-                        }
-                        FilledTonalIconButton(onClick = onOpenFilters) {
-                            Icon(Icons.Default.Tune, contentDescription = strings.actionSort)
-                        }
-                        Box {
-                            FilledTonalIconButton(onClick = { thumbnailMenuExpanded = true }) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(scrollState),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            FilledTonalIconButton(onClick = onToggleView) {
                                 Icon(
-                                    if (thumbnailMode == "SQUARE") Icons.Default.CropSquare
-                                    else Icons.Default.Crop169,
-                                    contentDescription = if (thumbnailMode == "SQUARE") {
-                                        strings.actionSquare
+                                    if (viewMode == LibraryViewMode.GRID) {
+                                        Icons.AutoMirrored.Filled.ViewList
                                     } else {
-                                        strings.actionRectangle
-                                    }
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = thumbnailMenuExpanded,
-                                onDismissRequest = { thumbnailMenuExpanded = false },
-                                shape = RoundedCornerShape(18.dp),
-                                containerColor = menuContainerColor
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionRectangle) },
-                                    onClick = {
-                                        thumbnailMenuExpanded = false
-                                        onThumbnailModeChange("RECTANGLE")
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionSquare) },
-                                    onClick = {
-                                        thumbnailMenuExpanded = false
-                                        onThumbnailModeChange("SQUARE")
-                                    }
-                                )
-                            }
-                        }
-                        Box {
-                            FilledTonalIconButton(onClick = { addMenuExpanded = true }) {
-                                Icon(Icons.Default.FolderOpen, contentDescription = strings.actionFolder)
-                            }
-                            DropdownMenu(
-                                expanded = addMenuExpanded,
-                                onDismissRequest = { addMenuExpanded = false },
-                                shape = RoundedCornerShape(18.dp),
-                                containerColor = menuContainerColor
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionFile) },
-                                    leadingIcon = {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.InsertDriveFile,
-                                            contentDescription = null
-                                        )
+                                        Icons.Default.GridView
                                     },
-                                    onClick = {
-                                        addMenuExpanded = false
-                                        onAddFileClick()
+                                    contentDescription = if (viewMode == LibraryViewMode.GRID) {
+                                        strings.libraryViewList
+                                    } else {
+                                        strings.libraryViewGrid
                                     }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionFolder) },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.FolderOpen, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        addMenuExpanded = false
-                                        onAddFolderClick()
-                                    }
-                                )
+                            }
+                            FilledTonalIconButton(onClick = onOpenFilters) {
+                                Icon(Icons.Default.Tune, contentDescription = strings.actionSort)
+                            }
+                            Box {
+                                FilledTonalIconButton(onClick = { thumbnailMenuExpanded = true }) {
+                                    Icon(
+                                        if (thumbnailMode == "SQUARE") Icons.Default.CropSquare
+                                        else Icons.Default.Crop169,
+                                        contentDescription = if (thumbnailMode == "SQUARE") {
+                                            strings.actionSquare
+                                        } else {
+                                            strings.actionRectangle
+                                        }
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = thumbnailMenuExpanded,
+                                    onDismissRequest = { thumbnailMenuExpanded = false },
+                                    shape = RoundedCornerShape(18.dp),
+                                    containerColor = menuContainerColor
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionRectangle) },
+                                        onClick = {
+                                            thumbnailMenuExpanded = false
+                                            onThumbnailModeChange("RECTANGLE")
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionSquare) },
+                                        onClick = {
+                                            thumbnailMenuExpanded = false
+                                            onThumbnailModeChange("SQUARE")
+                                        }
+                                    )
+                                }
+                            }
+                            Box {
+                                FilledTonalIconButton(onClick = { addMenuExpanded = true }) {
+                                    Icon(Icons.Default.FolderOpen, contentDescription = strings.actionFolder)
+                                }
+                                DropdownMenu(
+                                    expanded = addMenuExpanded,
+                                    onDismissRequest = { addMenuExpanded = false },
+                                    shape = RoundedCornerShape(18.dp),
+                                    containerColor = menuContainerColor
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionFile) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.InsertDriveFile,
+                                                contentDescription = null
+                                            )
+                                        },
+                                        onClick = {
+                                            addMenuExpanded = false
+                                            onAddFileClick()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionFolder) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.FolderOpen, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            addMenuExpanded = false
+                                            onAddFolderClick()
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                // Гамбургер всегда виден и только раскрывает горизонтальную панель действий.
-                BadgedBox(
-                    badge = { if (filtersActive) Badge() }
-                ) {
+                    // Гамбургер всегда виден и только раскрывает горизонтальную панель действий.
                     Box(
                         modifier = Modifier
                             .clickable(onClick = onToggleControls)

@@ -3,7 +3,14 @@ package com.example.core.data.repository
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.LinearGradient
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.RectF
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.Environment
@@ -16,21 +23,27 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.core.data.db.AppDatabase
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
-import com.github.junrar.Archive
-import com.github.junrar.rarfile.FileHeader
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import net.sf.sevenzipjbinding.ExtractOperationResult
+import net.sf.sevenzipjbinding.IInArchive
+import net.sf.sevenzipjbinding.PropID
+import net.sf.sevenzipjbinding.SevenZip
+import net.sf.sevenzipjbinding.SevenZipException
+import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream
 import net.lingala.zip4j.ZipFile
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.Closeable
 import java.io.File
 import java.io.InputStream
+import java.io.RandomAccessFile
 import java.net.URLDecoder
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
@@ -45,6 +58,7 @@ class ComicRepository @Inject constructor(
     db: AppDatabase
 ) {
     private val comicDao = db.comicDao()
+    private val quoteDao = db.quoteDao()
     private val persistentCoversDir by lazy { File(context.filesDir, "covers").apply { mkdirs() } }
     private val legacyCoversDir by lazy { File(context.cacheDir, "covers").apply { mkdirs() } }
 
@@ -70,6 +84,9 @@ class ComicRepository @Inject constructor(
         private val PDF_MAGIC    = byteArrayOf(0x25, 0x50, 0x44, 0x46)
         private val SEVENZ_MAGIC = byteArrayOf(0x37, 0x7A, 0xBC.toByte(), 0xAF.toByte(), 0x27, 0x1C)
         private val MOBI_MAGIC   = "BOOKMOBI".encodeToByteArray()
+        private val DJVU_CONTAINER_MAGIC = "AT&TFORM".encodeToByteArray()
+        private val DJVU_SINGLE_MAGIC = "DJVU".encodeToByteArray()
+        private val DJVU_MULTI_MAGIC = "DJVM".encodeToByteArray()
         private const val XLINK_NS = "http://www.w3.org/1999/xlink"
     }
 
@@ -91,6 +108,7 @@ class ComicRepository @Inject constructor(
         if (existing != null) {
             val merged = repairComicAccessIfPossible(mergeExistingComicWithBackup(existing, normalized))
             comicDao.updateComic(merged)
+            refreshQuoteSnapshotsForComic(merged)
             return@withContext RestoreComicResult(
                 comic = merged,
                 inserted = false,
@@ -105,6 +123,7 @@ class ComicRepository @Inject constructor(
         ))
         comicDao.insertComic(restored)
         val insertedComic = comicDao.getComicById(comicId) ?: comicDao.getComicByPath(restored.path) ?: restored
+        refreshQuoteSnapshotsForComic(insertedComic)
         RestoreComicResult(
             comic = insertedComic,
             inserted = true,
@@ -184,7 +203,6 @@ class ComicRepository @Inject constructor(
 
         val discovered = mutableListOf<Comic>()
         val now = System.currentTimeMillis()
-        var coverBudget = 80
         val stack = ArrayDeque<Pair<DocumentFile, String>>()
         stack.add(root to rootFolderName)
 
@@ -217,7 +235,7 @@ class ComicRepository @Inject constructor(
                                     title = child.name?.substringBeforeLast('.')?.ifBlank { child.name } ?: "Untitled",
                                     path = readablePath,
                                     format = format,
-                                    coverPath = if (coverBudget-- > 0) generateCoverPath(comicId, readablePath, format) else null,
+                                    coverPath = generateCoverPath(comicId, readablePath, format),
                                     fileSize = child.length().coerceAtLeast(0L),
                                     lastModified = child.lastModified().takeIf { it > 0L } ?: now,
                                     folderId = folderPath,
@@ -248,12 +266,12 @@ class ComicRepository @Inject constructor(
 
     suspend fun updateComicMeta(comicId: String, title: String, tags: String) {
         val comic = comicDao.getComicById(comicId) ?: return
-        comicDao.updateComic(
-            comic.copy(
-                title = title.trim().ifBlank { comic.title },
-                tags  = tags.trim()
-            )
+        val updated = comic.copy(
+            title = title.trim().ifBlank { comic.title },
+            tags  = tags.trim()
         )
+        comicDao.updateComic(updated)
+        refreshQuoteSnapshotsForComic(updated)
     }
 
     suspend fun markCompleted(comicId: String, completed: Boolean = true) {
@@ -271,7 +289,7 @@ class ComicRepository @Inject constructor(
         val maxPage = (totalPages - 1).coerceAtLeast(0)
         val safePage = currentPage.coerceIn(0, maxPage)
         val progress = if (totalPages <= 0) 0f else ((safePage + 1).toFloat() / totalPages.toFloat())
-        comicDao.updateProgress(comicId, safePage, progress.coerceIn(0f, 1f), System.currentTimeMillis())
+        comicDao.updateProgress(comicId, safePage, progress.coerceIn(0f, 1f), System.currentTimeMillis(), totalPages.coerceAtLeast(0))
     }
 
     suspend fun repairLibraryAccess(treeUri: Uri): RepairLibraryAccessResult = withContext(Dispatchers.IO) {
@@ -329,6 +347,7 @@ class ComicRepository @Inject constructor(
                 )
             )
             comicDao.updateComic(updated)
+            refreshQuoteSnapshotsForComic(updated)
             repaired++
         }
 
@@ -416,7 +435,10 @@ class ComicRepository @Inject constructor(
             "application/epub+zip"                         -> ComicFormat.EPUB
             "application/zip", "application/x-cbz"        -> ComicFormat.CBZ
             "application/x-cbr",
-            "application/vnd.comicbook-rar"                -> ComicFormat.CBR
+            "application/vnd.comicbook-rar",
+            "application/x-rar-compressed",
+            "application/x-rar",
+            "application/vnd.rar"                          -> ComicFormat.CBR
             "application/x-fictionbook+xml",
             "text/xml"                                     -> ComicFormat.FB2
             "text/plain"                                   -> ComicFormat.TXT
@@ -700,6 +722,7 @@ class ComicRepository @Inject constructor(
                 header.startsWithMagic(PDF_MAGIC) -> ComicFormat.PDF
                 header.startsWithMagic(SEVENZ_MAGIC) -> ComicFormat.SEVENZ
                 header.hasSliceAt(60, MOBI_MAGIC) -> ComicFormat.MOBI
+                header.isDjvuDocument() -> ComicFormat.DJVU
                 else -> ComicFormat.UNKNOWN
             }
         } catch (e: Exception) {
@@ -750,6 +773,7 @@ class ComicRepository @Inject constructor(
                 ComicFormat.TAR -> extractCoverFromTar(sourcePath)
                 ComicFormat.FB2 -> extractCoverFromFb2(sourcePath)
                 ComicFormat.EPUB -> extractCoverFromEpub(sourcePath)
+                ComicFormat.DJVU -> extractCoverFromDjvuPlaceholder(sourcePath)
                 else -> null
             } ?: return null
 
@@ -768,6 +792,84 @@ class ComicRepository @Inject constructor(
 
     private fun legacyCoverFileForComic(comicId: String): File = File(legacyCoversDir, "$comicId.jpg")
 
+    private fun extractCoverFromDjvuPlaceholder(sourcePath: String): Bitmap? {
+        val width = 600
+        val height = 900
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val background = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            shader = LinearGradient(
+                0f,
+                0f,
+                width.toFloat(),
+                height.toFloat(),
+                intArrayOf(
+                    Color.parseColor("#1C2438"),
+                    Color.parseColor("#344A72"),
+                    Color.parseColor("#101828")
+                ),
+                floatArrayOf(0f, 0.45f, 1f),
+                Shader.TileMode.CLAMP
+            )
+        }
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), background)
+
+        val frameRect = RectF(34f, 34f, width - 34f, height - 34f)
+        val framePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(34, 255, 255, 255)
+            style = Paint.Style.FILL
+        }
+        canvas.drawRoundRect(frameRect, 42f, 42f, framePaint)
+
+        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(86, 255, 255, 255)
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.drawRoundRect(frameRect, 42f, 42f, strokePaint)
+
+        val badgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#EEF2FF")
+            textSize = 40f
+            typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD)
+            letterSpacing = 0.12f
+        }
+        canvas.drawText("DJVU", 74f, 124f, badgePaint)
+
+        val title = resolveDisplayName(sourcePath)
+            .substringBeforeLast('.')
+            .ifBlank { "Document" }
+            .trim()
+            .take(48)
+
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            textSize = 60f
+            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+        }
+        val maxTextWidth = width - 148f
+        drawCoverTextBlock(
+            canvas = canvas,
+            text = title,
+            x = 74f,
+            startY = 270f,
+            maxWidth = maxTextWidth,
+            lineHeight = 72f,
+            maxLines = 5,
+            paint = titlePaint
+        )
+
+        val notePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.argb(220, 232, 236, 245)
+            textSize = 30f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
+        canvas.drawText("DjVu placeholder cover", 74f, height - 116f, notePaint)
+        canvas.drawText("The file is saved and can be reopened later.", 74f, height - 74f, notePaint)
+
+        return bitmap
+    }
+
     private fun extractCoverFromZip(sourcePath: String): Bitmap? {
         var tempFile: File? = null
         var zip: ZipFile? = null
@@ -779,12 +881,21 @@ class ComicRepository @Inject constructor(
                 ZipFile(sourcePath)
             } ?: return null
 
-            val firstImage = zip.fileHeaders
-                .filter { !it.isDirectory && isImageName(it.fileName) }
+            val candidates = zip.fileHeaders
+                .filter { !it.isDirectory }
                 .sortedBy { it.fileName }
-                .firstOrNull() ?: return null
 
-            zip.getInputStream(firstImage).use { decodeCoverBitmap(it) }
+            val coverBitmap = candidates
+                .asSequence()
+                .filter { isImageName(it.fileName) }
+                .mapNotNull { header -> zip.getInputStream(header).use(::decodeCoverBitmap) }
+                .firstOrNull()
+                ?: candidates
+                    .asSequence()
+                    .mapNotNull { header -> zip.getInputStream(header).use(::decodeCoverBitmap) }
+                    .firstOrNull()
+
+            coverBitmap
         } catch (e: Exception) {
             Log.w(TAG, "ZIP cover extraction failed for $sourcePath", e)
             null
@@ -796,29 +907,49 @@ class ComicRepository @Inject constructor(
 
     private fun extractCoverFromRar(sourcePath: String): Bitmap? {
         var tempFile: File? = null
-        var archive: Archive? = null
+        var randomAccessFile: RandomAccessFile? = null
+        var inputStream: RandomAccessFileInStream? = null
+        var archive: IInArchive? = null
         return try {
-            archive = if (sourcePath.startsWith("content://")) {
+            val file = if (sourcePath.startsWith("content://")) {
                 tempFile = copyContentUriToTemp(Uri.parse(sourcePath), "rar")
-                tempFile?.let { Archive(it) }
+                tempFile
             } else {
-                Archive(File(sourcePath))
+                File(sourcePath)
             } ?: return null
 
-            val header = archive.fileHeaders
-                .filter { !it.isDirectory && isImageHeader(it) }
-                .sortedBy { it.fileName }
-                .firstOrNull() ?: return null
+            randomAccessFile = RandomAccessFile(file, "r")
+            inputStream = RandomAccessFileInStream(randomAccessFile)
+            archive = SevenZip.openInArchive(null, inputStream)
 
-            val bytes = ByteArrayOutputStream()
-            archive.extractFile(header, bytes)
-            decodeCoverBitmap(ByteArrayInputStream(bytes.toByteArray()))
+            val itemIndices = (0 until archive.getNumberOfItems())
+                .filter { index ->
+                    val fileName = archive.getStringProperty(index, PropID.PATH)?.trim().orEmpty()
+                    fileName.isNotBlank() && !archive.getProperty(index, PropID.IS_FOLDER).asBooleanFlag()
+                }
+
+            val coverBitmap = itemIndices
+                .asSequence()
+                .filter { index ->
+                    val fileName = archive.getStringProperty(index, PropID.PATH)?.trim().orEmpty()
+                    isImageName(fileName)
+                }
+                .mapNotNull { index -> extractRarEntryBytes(archive, index)?.let(::decodeCoverBytes) }
+                .firstOrNull()
+                ?: itemIndices
+                    .asSequence()
+                    .mapNotNull { index -> extractRarEntryBytes(archive, index)?.let(::decodeCoverBytes) }
+                    .firstOrNull()
+
+            coverBitmap
         } catch (e: Throwable) {
-            // Catch Throwable: junrar PPM decompression can throw AssertionError on some RAR files
+            // Catch Throwable: 7-Zip bindings can still surface native errors for corrupted archives.
             Log.w(TAG, "RAR cover extraction failed for $sourcePath", e)
             null
         } finally {
             try { archive?.close() } catch (_: Exception) {}
+            try { inputStream?.close() } catch (_: Exception) {}
+            try { randomAccessFile?.close() } catch (_: Exception) {}
             tempFile?.delete()
         }
     }
@@ -871,11 +1002,21 @@ class ComicRepository @Inject constructor(
             }
             @Suppress("DEPRECATION")
             szFile = SevenZFile(file)
-            val firstImage = szFile.entries.toList()
-                .filter { !it.isDirectory && isImageName(it.name) }
+            val candidates = szFile.entries.toList()
+                .filter { !it.isDirectory }
                 .sortedBy { it.name }
-                .firstOrNull() ?: return null
-            szFile.getInputStream(firstImage).use { decodeCoverBitmap(it) }
+
+            val coverBitmap = candidates
+                .asSequence()
+                .filter { isImageName(it.name) }
+                .mapNotNull { entry -> szFile.getInputStream(entry).use(::decodeCoverBitmap) }
+                .firstOrNull()
+                ?: candidates
+                    .asSequence()
+                    .mapNotNull { entry -> szFile.getInputStream(entry).use(::decodeCoverBitmap) }
+                    .firstOrNull()
+
+            coverBitmap
         } catch (e: Exception) {
             Log.w(TAG, "7z cover extraction failed for $sourcePath", e)
             null
@@ -892,20 +1033,43 @@ class ComicRepository @Inject constructor(
             else
                 File(sourcePath).inputStream()
             TarArchiveInputStream(inputStream).use { tis ->
+                val fallbackBitmaps = mutableListOf<Pair<String, Bitmap>>()
                 var entry = tis.nextEntry
                 while (entry != null) {
-                    if (!entry.isDirectory && isImageName(entry.name ?: "")) {
-                        return decodeCoverBitmap(ByteArrayInputStream(tis.readBytes()))
+                    if (!entry.isDirectory) {
+                        val name = entry.name ?: ""
+                        val bitmap = decodeCoverBitmap(ByteArrayInputStream(tis.readBytes()))
+                        if (bitmap != null) {
+                            if (isImageName(name)) {
+                                return bitmap
+                            }
+                            fallbackBitmaps += name to bitmap
+                        }
                     }
                     entry = tis.nextEntry
                 }
-                null
+                fallbackBitmaps.sortedBy { it.first }.firstOrNull()?.second
             }
         } catch (e: Exception) {
             Log.w(TAG, "TAR cover extraction failed for $sourcePath", e)
             null
         }
     }
+
+    private fun extractRarEntryBytes(archive: IInArchive, index: Int): ByteArray? {
+        val bytes = ByteArrayOutputStream()
+        val result = archive.extractSlow(index, object : net.sf.sevenzipjbinding.ISequentialOutStream {
+            override fun write(data: ByteArray?): Int {
+                if (data == null || data.isEmpty()) return 0
+                bytes.write(data)
+                return data.size
+            }
+        })
+        return if (result == ExtractOperationResult.OK) bytes.toByteArray() else null
+    }
+
+    private fun decodeCoverBytes(bytes: ByteArray): Bitmap? =
+        decodeCoverBitmap(ByteArrayInputStream(bytes))
 
     private fun extractCoverFromFb2(sourcePath: String): Bitmap? {
         return try {
@@ -1179,6 +1343,59 @@ class ComicRepository @Inject constructor(
         return resized
     }
 
+    private fun resolveDisplayName(sourcePath: String): String = runCatching {
+        if (sourcePath.startsWith("content://")) {
+            context.contentResolver.query(
+                Uri.parse(sourcePath),
+                arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        } else {
+            File(sourcePath).name
+        }
+    }.getOrNull().orEmpty().ifBlank { "Document" }
+
+    private fun drawCoverTextBlock(
+        canvas: Canvas,
+        text: String,
+        x: Float,
+        startY: Float,
+        maxWidth: Float,
+        lineHeight: Float,
+        maxLines: Int,
+        paint: Paint
+    ) {
+        val words = text.split(Regex("\\s+")).filter { it.isNotBlank() }
+        if (words.isEmpty()) return
+
+        val lines = mutableListOf<String>()
+        var currentLine = ""
+        for (word in words) {
+            val candidate = if (currentLine.isBlank()) word else "$currentLine $word"
+            if (paint.measureText(candidate) <= maxWidth || currentLine.isBlank()) {
+                currentLine = candidate
+            } else {
+                lines += currentLine
+                currentLine = word
+                if (lines.size == maxLines - 1) break
+            }
+        }
+        if (currentLine.isNotBlank() && lines.size < maxLines) {
+            lines += currentLine
+        }
+        if (lines.size == maxLines && words.joinToString(" ").length > lines.joinToString(" ").length) {
+            lines[lines.lastIndex] = lines.last().trimEnd('.', '…') + "…"
+        }
+
+        lines.forEachIndexed { index, line ->
+            canvas.drawText(line, x, startY + index * lineHeight, paint)
+        }
+    }
+
     private fun calculateInSampleSize(width: Int, height: Int, reqWidth: Int, reqHeight: Int): Int {
         var inSampleSize = 1
         if (height > reqHeight || width > reqWidth) {
@@ -1271,6 +1488,15 @@ class ComicRepository @Inject constructor(
         return digest.joinToString("") { "%02x".format(it) }.take(24)
     }
 
+    private suspend fun refreshQuoteSnapshotsForComic(comic: Comic) {
+        quoteDao.refreshComicSnapshot(
+            comicId = comic.id,
+            comicTitle = comic.title,
+            comicPath = comic.path,
+            updatedAt = System.currentTimeMillis()
+        )
+    }
+
     private fun openInputStream(uri: Uri): InputStream? = when (uri.scheme) {
         "content" -> context.contentResolver.openInputStream(uri)
         "file" -> uri.path?.let { File(it).takeIf(File::exists)?.inputStream() }
@@ -1286,8 +1512,6 @@ class ComicRepository @Inject constructor(
         return ext in IMAGE_EXTENSIONS
     }
 
-    private fun isImageHeader(header: FileHeader): Boolean = isImageName(header.fileName)
-
     private fun ByteArray.startsWithMagic(other: ByteArray): Boolean {
         if (size < other.size) return false
         return other.indices.all { this[it] == other[it] }
@@ -1297,4 +1521,16 @@ class ComicRepository @Inject constructor(
         if (offset < 0 || size < offset + other.size) return false
         return other.indices.all { index -> this[offset + index] == other[index] }
     }
+
+    private fun ByteArray.isDjvuDocument(): Boolean {
+        return startsWithMagic(DJVU_CONTAINER_MAGIC) &&
+            (hasSliceAt(12, DJVU_SINGLE_MAGIC) || hasSliceAt(12, DJVU_MULTI_MAGIC))
+    }
+}
+
+private fun Any?.asBooleanFlag(): Boolean = when (this) {
+    is Boolean -> this
+    is Number -> toInt() != 0
+    is String -> equals("true", ignoreCase = true) || equals("1")
+    else -> false
 }

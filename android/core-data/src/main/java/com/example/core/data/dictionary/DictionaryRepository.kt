@@ -23,9 +23,39 @@ class DictionaryRepository @Inject constructor(
 
     private val daoCache = mutableMapOf<String, DictionaryDao?>()
 
+    private val routeCache = object : LinkedHashMap<String, Boolean>(64, 0.75f, true) {
+        override fun removeEldestEntry(
+            eldest: MutableMap.MutableEntry<String, Boolean>?
+        ): Boolean = size > ROUTE_CACHE_LIMIT
+    }
+
     fun isLookupAvailable(language: String): Boolean {
         val normalizedLanguage = language.normalizeLanguageCode() ?: return false
         return daoForLanguage(normalizedLanguage) != null
+    }
+
+    suspend fun hasTranslationRoute(
+        language: String,
+        targetLanguage: String,
+    ): Boolean {
+        val normalizedLanguage = language.normalizeLanguageCode() ?: return false
+        val normalizedTarget = targetLanguage.normalizeLanguageCode() ?: return false
+        if (normalizedLanguage == normalizedTarget) {
+            return isLookupAvailable(normalizedLanguage)
+        }
+        val dao = daoForLanguage(normalizedLanguage) ?: return false
+        val cacheKey = "route|$normalizedLanguage|$normalizedTarget"
+        synchronized(routeCache) {
+            routeCache[cacheKey]?.let { return it }
+        }
+        val hasRoute = dao.hasTranslationsForTarget(
+            lang = normalizedLanguage,
+            targetLang = normalizedTarget
+        )
+        synchronized(routeCache) {
+            routeCache[cacheKey] = hasRoute
+        }
+        return hasRoute
     }
 
     suspend fun lookup(
@@ -177,4 +207,5 @@ internal fun String.normalizeLanguageCode(): String? =
 
 private const val LOOKUP_CACHE_LIMIT = 256
 private const val SUGGESTION_CACHE_LIMIT = 256
+private const val ROUTE_CACHE_LIMIT = 128
 private val SPECIALIZED_SOURCES = setOf("wordnet", "jmdict", "cedict", "cc-cedict")

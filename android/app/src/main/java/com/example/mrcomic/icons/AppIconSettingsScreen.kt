@@ -23,7 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
+import com.example.core.ui.locale.LocalStrings
+import com.example.mrcomic.ui.appIconDescription
+import com.example.mrcomic.ui.appIconName
+import com.example.mrcomic.ui.appIconScreenText
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -32,6 +35,8 @@ fun AppIconSettingsScreen(
     onBackClick: () -> Unit = {},
     viewModel: AppIconSettingsViewModel = hiltViewModel()
 ) {
+    val strings = LocalStrings.current
+    val text = remember(strings.languageCode) { appIconScreenText(strings.languageCode) }
     val currentIcon by viewModel.currentIcon.collectAsStateWithLifecycle()
     val availableIcons = viewModel.getAvailableIcons()
     val isLoading by viewModel.isLoading.collectAsState()
@@ -50,10 +55,10 @@ fun AppIconSettingsScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Иконка приложения") },
+                title = { Text(text.title) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
                     }
                 }
             )
@@ -67,9 +72,9 @@ fun AppIconSettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Персонализация", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(text.personalizationTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     Spacer(Modifier.height(4.dp))
-                    Text("Выберите иконку для лаунчера. Приложение перезапустится автоматически.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text(text.personalizationHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -77,15 +82,15 @@ fun AppIconSettingsScreen(
                 items(availableIcons) { icon ->
                     AppIconItem(
                         icon = icon,
+                        title = appIconName(icon.id, strings.languageCode),
+                        description = appIconDescription(icon.id, strings.languageCode),
                         isSelected = icon.id == currentIcon,
                         isLoading = isLoading || isChangingIcon,
+                        selectedContentDescription = text.selected,
                         onClick = {
                             scope.launch {
                                 isChangingIcon = true
-                                if (viewModel.changeIcon(icon.id)) {
-                                    delay(600) // let PackageManager propagate the state
-                                    viewModel.restartApp()
-                                }
+                                viewModel.changeIcon(icon.id)
                                 isChangingIcon = false
                             }
                         }
@@ -99,7 +104,7 @@ fun AppIconSettingsScreen(
                 Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("При выборе иконки приложение перезапустится автоматически.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text.restartHint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -110,8 +115,11 @@ fun AppIconSettingsScreen(
 @Composable
 private fun AppIconItem(
     icon: AppIcon,
+    title: String,
+    description: String,
     isSelected: Boolean,
     isLoading: Boolean,
+    selectedContentDescription: String,
     onClick: () -> Unit
 ) {
     Card(
@@ -130,7 +138,7 @@ private fun AppIconItem(
                 if (icon.previewResId != null) {
                     Image(
                         painter = painterResource(id = icon.previewResId),
-                        contentDescription = icon.name,
+                        contentDescription = title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -140,10 +148,10 @@ private fun AppIconItem(
             }
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(icon.name, style = MaterialTheme.typography.titleMedium, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
-                Text(icon.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (isSelected) Icon(Icons.Default.CheckCircle, contentDescription = "Выбрано", tint = MaterialTheme.colorScheme.primary)
+            if (isSelected) Icon(Icons.Default.CheckCircle, contentDescription = selectedContentDescription, tint = MaterialTheme.colorScheme.primary)
             else Icon(Icons.Default.RadioButtonUnchecked, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

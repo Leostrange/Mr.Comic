@@ -80,6 +80,7 @@ data class TranslationRoutingRequest(
     val fallbackLanguage: String? = null,
     val preferredTransport: TranslationTransportPreference = TranslationTransportPreference.AUTO,
     val networkAvailable: Boolean = false,
+    val onlineTranslationAvailable: Boolean = false,
     val offlineModelAvailable: Boolean = false,
     val dictionaryAvailable: Boolean = false,
     val llmAvailable: Boolean = false,

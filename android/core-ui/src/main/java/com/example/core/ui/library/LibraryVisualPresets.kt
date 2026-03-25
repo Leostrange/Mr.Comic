@@ -8,10 +8,16 @@ data class LibraryThemePresetSnapshot(
     val backgroundStyle: String,
     val backgroundImageUri: String?,
     val backdropStrength: Float,
+    val backgroundBlur: Float,
     val backgroundVeil: Float,
     val shelfStyle: String,
     val shelfDepth: Float,
     val cardShadow: Float,
+    val titleScale: Float,
+    val titleLines: Int,
+    val cardStroke: Float,
+    val cardCornerRadius: Int,
+    val titlePanelOpacity: Float,
     val cardStyle: String,
     val thumbnailMode: String,
     val graphicCoverStyle: String,
@@ -22,10 +28,16 @@ data class LibraryThemePresetSnapshot(
         .put("backgroundStyle", backgroundStyle)
         .put("backgroundImageUri", backgroundImageUri ?: JSONObject.NULL)
         .put("backdropStrength", backdropStrength)
+        .put("backgroundBlur", backgroundBlur)
         .put("backgroundVeil", backgroundVeil)
         .put("shelfStyle", shelfStyle)
         .put("shelfDepth", shelfDepth)
         .put("cardShadow", cardShadow)
+        .put("titleScale", titleScale)
+        .put("titleLines", titleLines)
+        .put("cardStroke", cardStroke)
+        .put("cardCornerRadius", cardCornerRadius)
+        .put("titlePanelOpacity", titlePanelOpacity)
         .put("cardStyle", cardStyle)
         .put("thumbnailMode", thumbnailMode)
         .put("graphicCoverStyle", graphicCoverStyle)
@@ -48,19 +60,25 @@ fun parseLibraryThemePreset(raw: String?): LibraryThemePresetSnapshot? {
                 json.optString("backgroundImageUri").takeIf { it.isNotBlank() && it != "null" }
             },
             backdropStrength = json.optDouble("backdropStrength", DEFAULT_LIBRARY_BACKDROP_STRENGTH.toDouble()).toFloat().coerceIn(0f, 1f),
+            backgroundBlur = json.optDouble("backgroundBlur", DEFAULT_LIBRARY_BACKGROUND_BLUR.toDouble()).toFloat().coerceIn(0f, 1f),
             backgroundVeil = json.optDouble("backgroundVeil", DEFAULT_LIBRARY_BACKGROUND_VEIL.toDouble()).toFloat().coerceIn(0f, 1f),
             shelfStyle = normalizeLibraryShelfStyle(
                 json.optString("shelfStyle", DEFAULT_LIBRARY_SHELF_STYLE)
             ),
             shelfDepth = json.optDouble("shelfDepth", DEFAULT_LIBRARY_SHELF_DEPTH.toDouble()).toFloat().coerceIn(0f, 1f),
             cardShadow = json.optDouble("cardShadow", DEFAULT_LIBRARY_CARD_SHADOW.toDouble()).toFloat().coerceIn(0f, 1f),
+            titleScale = json.optDouble("titleScale", DEFAULT_LIBRARY_TITLE_SCALE.toDouble()).toFloat().coerceIn(0.85f, 1.3f),
+            titleLines = json.optInt("titleLines", DEFAULT_LIBRARY_TITLE_LINES).coerceIn(1, 3),
+            cardStroke = json.optDouble("cardStroke", DEFAULT_LIBRARY_CARD_STROKE.toDouble()).toFloat().coerceIn(0f, 1f),
+            cardCornerRadius = json.optInt("cardCornerRadius", DEFAULT_LIBRARY_CARD_CORNER_RADIUS).coerceIn(6, 24),
+            titlePanelOpacity = json.optDouble("titlePanelOpacity", DEFAULT_LIBRARY_TITLE_PANEL_OPACITY.toDouble()).toFloat().coerceIn(0.18f, 0.78f),
             cardStyle = json.optString("cardStyle", DEFAULT_LIBRARY_CARD_STYLE),
             thumbnailMode = json.optString("thumbnailMode", DEFAULT_LIBRARY_THUMBNAIL_MODE),
             graphicCoverStyle = normalizeLibraryGraphicCoverStyle(
                 json.optString("graphicCoverStyle", DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE)
             ),
             coverScale = json.optString("coverScale", DEFAULT_LIBRARY_COVER_SCALE),
-            surfaceOpacity = json.optDouble("surfaceOpacity", 1.0).toFloat().coerceIn(0.55f, 1f)
+            surfaceOpacity = json.optDouble("surfaceOpacity", 1.0).toFloat().coerceIn(0.35f, 1f)
         )
     }.getOrNull()
 }
@@ -85,10 +103,16 @@ private val libraryQuickPresetSpecs = listOf(
             backgroundStyle = "PAPER_GRAIN",
             backgroundImageUri = null,
             backdropStrength = 0.22f,
+            backgroundBlur = 0.08f,
             backgroundVeil = 0.12f,
             shelfStyle = "OAK",
             shelfDepth = 0.42f,
             cardShadow = 0.18f,
+            titleScale = 1.0f,
+            titleLines = 2,
+            cardStroke = 0.16f,
+            cardCornerRadius = 12,
+            titlePanelOpacity = 0.34f,
             cardStyle = "BALANCED",
             thumbnailMode = "RECTANGLE",
             graphicCoverStyle = "MINIMAL",
@@ -104,10 +128,16 @@ private val libraryQuickPresetSpecs = listOf(
             backgroundStyle = "DARK_STUDY",
             backgroundImageUri = null,
             backdropStrength = 0.3f,
+            backgroundBlur = 0.14f,
             backgroundVeil = 0.3f,
             shelfStyle = "WALNUT",
             shelfDepth = 0.64f,
             cardShadow = 0.34f,
+            titleScale = 1.02f,
+            titleLines = 2,
+            cardStroke = 0.24f,
+            cardCornerRadius = 14,
+            titlePanelOpacity = 0.46f,
             cardStyle = "BALANCED",
             thumbnailMode = "RECTANGLE",
             graphicCoverStyle = "INK",
@@ -123,10 +153,16 @@ private val libraryQuickPresetSpecs = listOf(
             backgroundStyle = "EINK_WASH",
             backgroundImageUri = null,
             backdropStrength = 0.08f,
+            backgroundBlur = 0.02f,
             backgroundVeil = 0.44f,
             shelfStyle = "MINIMAL",
             shelfDepth = 0.18f,
             cardShadow = 0.12f,
+            titleScale = 0.94f,
+            titleLines = 1,
+            cardStroke = 0.08f,
+            cardCornerRadius = 10,
+            titlePanelOpacity = 0.24f,
             cardStyle = "COMPACT",
             thumbnailMode = "RECTANGLE",
             graphicCoverStyle = "MINIMAL",
@@ -142,10 +178,16 @@ private val libraryQuickPresetSpecs = listOf(
             backgroundStyle = "MANGA_INK",
             backgroundImageUri = null,
             backdropStrength = 0.32f,
+            backgroundBlur = 0.08f,
             backgroundVeil = 0.2f,
             shelfStyle = "NEON",
             shelfDepth = 0.62f,
             cardShadow = 0.46f,
+            titleScale = 1.08f,
+            titleLines = 2,
+            cardStroke = 0.34f,
+            cardCornerRadius = 16,
+            titlePanelOpacity = 0.5f,
             cardStyle = "SHOWCASE",
             thumbnailMode = "RECTANGLE",
             graphicCoverStyle = "POSTER",

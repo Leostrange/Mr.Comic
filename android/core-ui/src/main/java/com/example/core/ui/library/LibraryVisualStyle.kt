@@ -85,6 +85,9 @@ fun normalizeLibraryBackgroundStyle(raw: String): String = when (raw.uppercase()
     "ORANGERY" -> "LIGHT_GREENHOUSE"
     "LAB" -> "SCIENCE_LAB"
     "CITY" -> "CITY_LIBRARY"
+    "GLASS" -> "LIQUID_GLASS"
+    "MICA" -> "MIDNIGHT_MICA"
+    "SUNSET" -> "SUNSET_HAZE"
     else -> raw.uppercase()
 }
 
@@ -94,6 +97,9 @@ fun normalizeLibraryShelfStyle(raw: String): String = when (raw.uppercase()) {
     "CHERRY" -> "CHERRY"
     "MAPLE" -> "MAPLE"
     "BLACK_METAL" -> "BLACK_METAL"
+    "ALUMINIUM" -> "ALUMINUM"
+    "FROSTED" -> "FROST"
+    "FLOATING" -> "FLOAT"
     else -> raw.uppercase()
 }
 
@@ -115,9 +121,15 @@ const val DEFAULT_LIBRARY_CARD_STYLE = "BALANCED"
 const val DEFAULT_LIBRARY_THUMBNAIL_MODE = "RECTANGLE"
 const val DEFAULT_LIBRARY_COVER_SCALE = "CROP"
 const val DEFAULT_LIBRARY_BACKDROP_STRENGTH = 0.22f
+const val DEFAULT_LIBRARY_BACKGROUND_BLUR = 0.16f
 const val DEFAULT_LIBRARY_BACKGROUND_VEIL = 0.12f
 const val DEFAULT_LIBRARY_SHELF_DEPTH = 0.42f
 const val DEFAULT_LIBRARY_CARD_SHADOW = 0.18f
+const val DEFAULT_LIBRARY_TITLE_SCALE = 1.0f
+const val DEFAULT_LIBRARY_TITLE_LINES = 2
+const val DEFAULT_LIBRARY_CARD_STROKE = 0.18f
+const val DEFAULT_LIBRARY_CARD_CORNER_RADIUS = 12
+const val DEFAULT_LIBRARY_TITLE_PANEL_OPACITY = 0.42f
 
 private fun resolveLibraryBackdropIntensity(
     backdropStrength: Float,
@@ -134,6 +146,9 @@ private fun resolveLibraryBackdropIntensity(
         "LIGHT_GREENHOUSE" -> 0.78f
         "SCIENCE_LAB" -> 0.82f
         "DARK_STUDY" -> 0.8f
+        "LIQUID_GLASS" -> 0.7f
+        "MIDNIGHT_MICA" -> 0.74f
+        "SUNSET_HAZE" -> 0.76f
         "IMAGE" -> 0.64f
         else -> 0.88f
     }
@@ -155,6 +170,9 @@ private fun resolveLibraryDetailIntensity(
         "LIGHT_GREENHOUSE" -> 0.58f
         "SCIENCE_LAB" -> 0.64f
         "DARK_STUDY" -> 0.66f
+        "LIQUID_GLASS" -> 0.54f
+        "MIDNIGHT_MICA" -> 0.58f
+        "SUNSET_HAZE" -> 0.56f
         "IMAGE" -> 0.0f
         else -> 0.72f
     }
@@ -289,6 +307,109 @@ fun resolveLibraryBackgroundSpec(
             imageVeilColor = backdropVariantColor(variant, Color(0xFFF0F3F5), Color(0xFF0B1015), Color(0xFF010203))
                 .copy(alpha = backdropVariantAlpha(variant, 0.18f, 0.24f, 0.36f) + veilAmount * 0.22f)
         )
+        "LIQUID_GLASS" -> LibraryBackgroundSpec(
+            baseColor = backdropVariantColor(
+                variant,
+                light = Color(0xFFE7EEF8),
+                dark = Color(0xFF101A28),
+                amoled = Color(0xFF02060D)
+            ),
+            overlayBrushes = listOf(
+                Brush.verticalGradient(
+                    listOf(
+                        backdropVariantColor(variant, Color(0xFFF3F7FC), Color(0xFF152233), Color(0xFF060B12)),
+                        backdropVariantColor(variant, Color(0xFFDCE7F4), Color(0xFF101824), Color(0xFF03070B)),
+                        backdropVariantColor(variant, Color(0xFFC8D8EA), Color(0xFF0A1018), Color(0xFF010204))
+                    )
+                ),
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.06f + intensity * backdropVariantAlpha(variant, 0.22f, 0.18f, 0.08f)),
+                        Color.Transparent
+                    )
+                ),
+                Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        Color(0xFF8BC7FF).copy(alpha = 0.05f + intensity * backdropVariantAlpha(variant, 0.14f, 0.18f, 0.1f)),
+                        Color.Transparent
+                    )
+                )
+            ),
+            imageAlpha = backdropVariantAlpha(variant, 0.12f, 0.1f, 0.06f) + intensity * 0.04f,
+            imageVeilColor = backdropVariantColor(
+                variant,
+                Color(0xFFF6FAFF),
+                Color(0xFF09111B),
+                Color(0xFF010305)
+            ).copy(alpha = backdropVariantAlpha(variant, 0.14f, 0.18f, 0.26f) + veilAmount * 0.2f)
+        )
+        "MIDNIGHT_MICA" -> LibraryBackgroundSpec(
+            baseColor = backdropVariantColor(
+                variant,
+                light = Color(0xFFDDE2E9),
+                dark = Color(0xFF0E121A),
+                amoled = Color(0xFF010203)
+            ),
+            overlayBrushes = listOf(
+                Brush.verticalGradient(
+                    listOf(
+                        backdropVariantColor(variant, Color(0xFFEAEFF5), Color(0xFF161C27), Color(0xFF06080B)),
+                        backdropVariantColor(variant, Color(0xFFD5DDE7), Color(0xFF0F141D), Color(0xFF020304)),
+                        backdropVariantColor(variant, Color(0xFFB9C4D2), Color(0xFF080C11), Color(0xFF000101))
+                    )
+                ),
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFBFCBE0).copy(alpha = 0.06f + intensity * backdropVariantAlpha(variant, 0.18f, 0.16f, 0.08f)),
+                        Color.Transparent
+                    )
+                )
+            ),
+            imageAlpha = backdropVariantAlpha(variant, 0.1f, 0.08f, 0.05f) + intensity * 0.03f,
+            imageVeilColor = backdropVariantColor(
+                variant,
+                Color(0xFFF2F4F8),
+                Color(0xFF090D12),
+                Color(0xFF010102)
+            ).copy(alpha = backdropVariantAlpha(variant, 0.16f, 0.22f, 0.34f) + veilAmount * 0.22f)
+        )
+        "SUNSET_HAZE" -> LibraryBackgroundSpec(
+            baseColor = backdropVariantColor(
+                variant,
+                light = Color(0xFFF3E3DA),
+                dark = Color(0xFF22141A),
+                amoled = Color(0xFF080304)
+            ),
+            overlayBrushes = listOf(
+                Brush.verticalGradient(
+                    listOf(
+                        backdropVariantColor(variant, Color(0xFFF9EDE7), Color(0xFF35202A), Color(0xFF100709)),
+                        backdropVariantColor(variant, Color(0xFFF0D3CB), Color(0xFF24161B), Color(0xFF080405)),
+                        backdropVariantColor(variant, Color(0xFFDDA89B), Color(0xFF130B0E), Color(0xFF020101))
+                    )
+                ),
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFB38A).copy(alpha = 0.08f + intensity * backdropVariantAlpha(variant, 0.22f, 0.18f, 0.1f)),
+                        Color.Transparent
+                    )
+                ),
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFCD34D).copy(alpha = 0.04f + intensity * backdropVariantAlpha(variant, 0.1f, 0.08f, 0.04f)),
+                        Color.Transparent
+                    )
+                )
+            ),
+            imageAlpha = backdropVariantAlpha(variant, 0.1f, 0.09f, 0.05f) + intensity * 0.03f,
+            imageVeilColor = backdropVariantColor(
+                variant,
+                Color(0xFFFFF4EE),
+                Color(0xFF140A0D),
+                Color(0xFF030102)
+            ).copy(alpha = backdropVariantAlpha(variant, 0.14f, 0.2f, 0.28f) + veilAmount * 0.2f)
+        )
         "CINEMA_NOIR" -> LibraryBackgroundSpec(
             baseColor = backdropVariantColor(
                 variant,
@@ -400,14 +521,16 @@ fun resolveLibraryBackgroundSpec(
             overlayBrushes = listOf(
                 Brush.verticalGradient(
                     listOf(
-                        background.copy(alpha = 0.68f),
-                        surface.copy(alpha = 0.42f),
-                        background.copy(alpha = 0.82f)
+                        background.copy(alpha = backdropVariantAlpha(variant, 0.12f, 0.2f, 0.28f)),
+                        Color.Transparent,
+                        background.copy(alpha = backdropVariantAlpha(variant, 0.18f, 0.24f, 0.32f))
                     )
                 )
             ),
-            imageAlpha = backdropVariantAlpha(variant, 0.2f, 0.18f, 0.12f) + intensity * 0.05f,
-            imageVeilColor = background.copy(alpha = backdropVariantAlpha(variant, 0.2f, 0.28f, 0.42f) + veilAmount * 0.22f)
+            imageAlpha = backdropVariantAlpha(variant, 0.96f, 0.92f, 0.86f),
+            imageVeilColor = background.copy(
+                alpha = backdropVariantAlpha(variant, 0.08f, 0.14f, 0.22f) + veilAmount * 0.14f
+            )
         )
         else -> LibraryBackgroundSpec(
             baseColor = lerp(background, surface, 0.15f),
@@ -539,6 +662,40 @@ fun resolveLibraryShelfSpec(
             glowBrush = Brush.horizontalGradient(
                 listOf(Color.Transparent, Color(0xFF6E6E6E), Color.Transparent)
             )
+        )
+        "ALUMINUM" -> LibraryShelfSpec(
+            height = height,
+            baseBrush = Brush.verticalGradient(
+                listOf(Color(0xFFD5DCE5), Color(0xFFA1ADB9), Color(0xFF6E7782))
+            ),
+            rimColor = Color(0xFF545C66),
+            highlightColor = Color.White.copy(alpha = 0.72f)
+        )
+        "FROST" -> LibraryShelfSpec(
+            height = 5.dp + (clampedDepth * 5f).dp,
+            baseBrush = Brush.verticalGradient(
+                listOf(
+                    Color(0xFFF7FBFF).copy(alpha = 0.62f),
+                    Color(0xFFDDE9F4).copy(alpha = 0.46f),
+                    Color(0xFF8EA8BC).copy(alpha = 0.34f)
+                )
+            ),
+            rimColor = Color.White.copy(alpha = 0.3f),
+            highlightColor = Color.White.copy(alpha = 0.72f),
+            glowBrush = Brush.horizontalGradient(
+                listOf(Color.Transparent, Color.White.copy(alpha = 0.18f), Color.Transparent)
+            )
+        )
+        "FLOAT" -> LibraryShelfSpec(
+            height = 3.dp + (clampedDepth * 3f).dp,
+            baseBrush = Brush.verticalGradient(
+                listOf(
+                    colorScheme.surfaceContainerHigh.copy(alpha = 0.56f),
+                    colorScheme.surfaceVariant.copy(alpha = 0.38f)
+                )
+            ),
+            rimColor = Color.Transparent,
+            highlightColor = Color.White.copy(alpha = 0.1f)
         )
         "MINIMAL" -> LibraryShelfSpec(
             height = 4.dp + (clampedDepth * 4f).dp,
@@ -937,12 +1094,88 @@ private fun BoxScope.LibraryDecorLayer(
                 center = Offset(size.width * 0.5f, size.height * 0.85f)
             )
         }
+
+        "LIQUID_GLASS" -> Canvas(modifier = modifier.fillMaxSize().blur(46.dp)) {
+            val paneColor = Color.White.copy(alpha = 0.03f + detailIntensity * 0.04f)
+            listOf(
+                Offset(size.width * 0.08f, size.height * 0.12f) to Size(size.width * 0.32f, size.height * 0.2f),
+                Offset(size.width * 0.48f, size.height * 0.22f) to Size(size.width * 0.38f, size.height * 0.18f),
+                Offset(size.width * 0.18f, size.height * 0.58f) to Size(size.width * 0.56f, size.height * 0.16f)
+            ).forEach { (offset, panelSize) ->
+                drawRoundRect(
+                    color = paneColor,
+                    topLeft = offset,
+                    size = panelSize,
+                    cornerRadius = CornerRadius(36f, 36f)
+                )
+            }
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(
+                        Color(0xFF9BCBFF).copy(alpha = 0.06f + detailIntensity * 0.06f),
+                        Color.Transparent
+                    ),
+                    center = Offset(size.width * 0.78f, size.height * 0.14f),
+                    radius = size.minDimension * 0.34f
+                ),
+                radius = size.minDimension * 0.34f,
+                center = Offset(size.width * 0.78f, size.height * 0.14f)
+            )
+        }
+
+        "MIDNIGHT_MICA" -> Canvas(modifier = modifier.fillMaxSize().blur(34.dp)) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.02f + detailIntensity * 0.02f),
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.08f + detailIntensity * 0.05f)
+                    )
+                )
+            )
+            listOf(0.14f, 0.46f, 0.72f).forEach { xFactor ->
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.02f + detailIntensity * 0.015f),
+                    topLeft = Offset(size.width * xFactor, size.height * 0.12f),
+                    size = Size(size.width * 0.18f, size.height * 0.62f),
+                    cornerRadius = CornerRadius(28f, 28f)
+                )
+            }
+        }
+
+        "SUNSET_HAZE" -> Canvas(modifier = modifier.fillMaxSize().blur(48.dp)) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(
+                        Color(0xFFFFC58F).copy(alpha = 0.07f + detailIntensity * 0.08f),
+                        Color.Transparent
+                    ),
+                    center = Offset(size.width * 0.18f, size.height * 0.16f),
+                    radius = size.minDimension * 0.42f
+                ),
+                radius = size.minDimension * 0.42f,
+                center = Offset(size.width * 0.18f, size.height * 0.16f)
+            )
+            drawCircle(
+                brush = Brush.radialGradient(
+                    listOf(
+                        Color(0xFFFF8FA3).copy(alpha = 0.05f + detailIntensity * 0.06f),
+                        Color.Transparent
+                    ),
+                    center = Offset(size.width * 0.82f, size.height * 0.62f),
+                    radius = size.minDimension * 0.36f
+                ),
+                radius = size.minDimension * 0.36f,
+                center = Offset(size.width * 0.82f, size.height * 0.62f)
+            )
+        }
     }
 
     // Vignette for all styled backgrounds
     if (normalizedStyle in setOf(
             "DARK_STUDY", "LIGHT_GREENHOUSE", "SCIENCE_LAB", "CITY_LIBRARY",
-            "CINEMA_NOIR", "PAPER_GRAIN", "MANGA_INK", "EINK_WASH", "AURORA_MIST"
+            "CINEMA_NOIR", "PAPER_GRAIN", "MANGA_INK", "EINK_WASH", "AURORA_MIST",
+            "LIQUID_GLASS", "MIDNIGHT_MICA", "SUNSET_HAZE"
         )
     ) {
         Canvas(modifier = modifier.fillMaxSize()) {
@@ -966,6 +1199,7 @@ fun LibraryBackdropLayer(
     backgroundImageUri: String?,
     colorScheme: ColorScheme,
     backdropStrength: Float,
+    backgroundBlur: Float,
     imageVeil: Float,
     modifier: Modifier = Modifier
 ) {
@@ -982,12 +1216,28 @@ fun LibraryBackdropLayer(
     } else {
         imageVeil
     }
+    val effectiveBackgroundBlur = if (performanceHints.reducedVisualEffects) {
+        backgroundBlur.coerceIn(0f, 1f) * 0.28f
+    } else {
+        backgroundBlur.coerceIn(0f, 1f)
+    }
+    val overlayBlurModifier = if (effectiveBackgroundBlur > 0.01f) {
+        Modifier.blur((6f + effectiveBackgroundBlur * 16f).dp)
+    } else {
+        Modifier
+    }
+    val imageBlurModifier = if (effectiveBackgroundBlur > 0.01f) {
+        Modifier.blur((8f + effectiveBackgroundBlur * 22f).dp)
+    } else {
+        Modifier
+    }
     val spec = remember(
         normalizedStyle,
         colorScheme,
         variant,
         effectiveBackdropStrength,
         effectiveImageVeil,
+        effectiveBackgroundBlur,
         performanceHints.reducedVisualEffects
     ) {
         resolveLibraryBackgroundSpec(
@@ -1006,7 +1256,7 @@ fun LibraryBackdropLayer(
               model = Uri.parse(backgroundImageUri),
               contentDescription = null,
               contentScale = ContentScale.Crop,
-              modifier = modifier.fillMaxSize(),
+              modifier = modifier.fillMaxSize().then(imageBlurModifier),
               alpha = spec.imageAlpha
          )
          Box(
@@ -1022,11 +1272,23 @@ fun LibraryBackdropLayer(
         spec.overlayBrushes
     }
     overlayBrushes.forEach { brush ->
-        Box(modifier = modifier.fillMaxSize().background(brush))
+        Box(modifier = modifier.fillMaxSize().then(overlayBlurModifier).background(brush))
+    }
+
+    if (effectiveBackgroundBlur > 0.01f) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(
+                    colorScheme.surface.copy(
+                        alpha = 0.02f + effectiveBackgroundBlur * if (normalizedStyle == "LIQUID_GLASS") 0.14f else 0.08f
+                    )
+                )
+        )
     }
 
     if (!performanceHints.reducedVisualEffects) {
-        Box(modifier = modifier.fillMaxSize()) {
+        Box(modifier = modifier.fillMaxSize().then(overlayBlurModifier)) {
             LibraryDecorLayer(
                 normalizedStyle = normalizedStyle,
                 intensity = backdropStrength.coerceIn(0f, 1f),
@@ -1054,8 +1316,8 @@ fun LibraryShelfBar(
 
     val normalizedStyle = normalizeLibraryShelfStyle(shelfStyle)
     val clampedDepth = depth.coerceIn(0f, 1f)
-    val isWood = normalizedStyle in setOf("OAK", "WALNUT", "WOOD")
-    val isGlass = normalizedStyle == "GLASS"
+    val isWood = normalizedStyle in setOf("OAK", "WALNUT", "WOOD", "MAHOGANY", "CHERRY", "MAPLE")
+    val isGlass = normalizedStyle in setOf("GLASS", "FROST")
     val isNeon = normalizedStyle == "NEON"
 
     Canvas(

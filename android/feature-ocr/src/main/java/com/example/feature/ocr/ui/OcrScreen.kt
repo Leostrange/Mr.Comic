@@ -24,9 +24,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.OcrBlockType
 import com.example.core.model.OverlayDisplayMode
 import com.example.core.ui.locale.LocalStrings
+import com.example.core.ui.locale.TranslationLanguageOption
 import com.example.core.ui.locale.ocrSourceLanguageOptions
 import com.example.core.ui.locale.translationLanguageShortLabel
 import com.example.core.ui.locale.translationTargetLanguageOptions
+import com.example.feature.ocr.data.shouldAllowOcrDictionaryLookup
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -57,11 +59,34 @@ fun OcrScreen(
             .coerceAtLeast(if (uiState.manualText.isBlank()) 0 else 1)
     }
 
-    val ocrSourceLangs = remember(strings.languageCode) { ocrSourceLanguageOptions(strings.languageCode) }
+    val ocrSourceLangs = remember(strings.languageCode, text.transportAuto) {
+        listOf(
+            TranslationLanguageOption(
+                code = OcrViewModel.AUTO_SOURCE_LANGUAGE,
+                label = text.transportAuto,
+                shortLabel = text.transportAuto
+            )
+        ) + ocrSourceLanguageOptions(strings.languageCode)
+    }
     val targetLangs = remember(strings.languageCode) { translationTargetLanguageOptions(strings.languageCode) }
-    val sourceLangs = if (uiState.imageBitmap != null) ocrSourceLangs else targetLangs
+    val manualSourceLangs = remember(targetLangs, text.transportAuto) {
+        listOf(
+            TranslationLanguageOption(
+                code = OcrViewModel.AUTO_SOURCE_LANGUAGE,
+                label = text.transportAuto,
+                shortLabel = text.transportAuto
+            )
+        ) + targetLangs
+    }
+    val sourceLangs = if (uiState.imageBitmap != null) ocrSourceLangs else manualSourceLangs
     val manualModeLabel = remember(uiState.manualResultMode, strings.languageCode) {
         ocrTranslationModeLabel(uiState.manualResultMode, strings.languageCode)
+    }
+    val sameLanguagePair = remember(uiState.sourceLang, uiState.targetLang) {
+        uiState.sourceLang == uiState.targetLang
+    }
+    val machineTranslationAvailable = remember(uiState.translationAvailability, sameLanguagePair) {
+        !sameLanguagePair && uiState.translationAvailability.canUseMachineTranslation
     }
     val activeLanguagePairLabel = remember(uiState.sourceLang, uiState.targetLang) {
         "${translationLanguageShortLabel(uiState.sourceLang)} → ${translationLanguageShortLabel(uiState.targetLang)}"
@@ -74,6 +99,119 @@ fun OcrScreen(
     val currentModeTitle = if (isImageMode) text.imageModeTitle else text.textModeTitle
     val currentModeHint = if (isImageMode) text.imageModeHint else text.textModeHint
     val sourceLanguageLabel = if (isImageMode) text.ocrLanguage else text.sourceLanguage
+    val manualDictionaryRouteAvailable = remember(
+        uiState.manualText,
+        uiState.sourceLang,
+        sameLanguagePair,
+        uiState.translationAvailability.dictionaryAvailable
+    ) {
+        !sameLanguagePair &&
+            shouldAllowOcrDictionaryLookup(uiState.manualText, uiState.sourceLang) &&
+            uiState.translationAvailability.dictionaryAvailable
+    }
+    val selectedBlockSourceLanguage = remember(selectedBlock, uiState.sourceLang) {
+        selectedBlock?.detectedLanguage ?: uiState.sourceLang
+    }
+    val selectedBlockTextForTranslation = remember(
+        selectedBlock,
+        uiState.selectedBlockCleanedText
+    ) {
+        selectedBlock?.let { block ->
+            uiState.selectedBlockCleanedText
+                ?.takeIf { it.isNotBlank() }
+                ?: block.textNormalized.ifBlank { block.textOriginal }
+                    .trim()
+                    .replace(Regex("\\s+"), " ")
+        }.orEmpty()
+    }
+    val selectedBlockSameLanguagePair = remember(selectedBlockSourceLanguage, uiState.targetLang) {
+        selectedBlockSourceLanguage == uiState.targetLang
+    }
+    val selectedBlockDictionaryRouteAvailable = remember(
+        selectedBlockTextForTranslation,
+        selectedBlockSourceLanguage,
+        selectedBlockSameLanguagePair,
+        uiState.translationAvailability.dictionaryAvailable
+    ) {
+        selectedBlockTextForTranslation.isNotBlank() &&
+            !selectedBlockSameLanguagePair &&
+            shouldAllowOcrDictionaryLookup(
+                rawText = selectedBlockTextForTranslation,
+                sourceLanguage = selectedBlockSourceLanguage
+            ) &&
+            uiState.translationAvailability.dictionaryAvailable
+    }
+    val selectedBlockMachineTranslationAvailable = remember(
+        selectedBlockSameLanguagePair,
+        uiState.translationAvailability
+    ) {
+        !selectedBlockSameLanguagePair && uiState.translationAvailability.canUseMachineTranslation
+    }
+    val selectedBlockTranslateAvailable = remember(
+        selectedBlockMachineTranslationAvailable,
+        selectedBlockDictionaryRouteAvailable
+    ) {
+        selectedBlockMachineTranslationAvailable || selectedBlockDictionaryRouteAvailable
+    }
+    val manualTranslateAvailable = remember(machineTranslationAvailable, manualDictionaryRouteAvailable) {
+        machineTranslationAvailable || manualDictionaryRouteAvailable
+    }
+    val translationBlockedMessage = remember(
+        strings.languageCode,
+        uiState.sourceLang,
+        uiState.targetLang,
+        sameLanguagePair,
+        isImageMode,
+        machineTranslationAvailable,
+        manualTranslateAvailable,
+        uiState.preferredTransport,
+        uiState.translationAvailability
+    ) {
+        when {
+            sameLanguagePair -> ocrAvailabilitySameLanguage(strings.languageCode)
+            isImageMode && !machineTranslationAvailable -> resolveOcrTranslationUnavailableMessage(
+                language = strings.languageCode,
+                preferredTransport = uiState.preferredTransport,
+                availability = uiState.translationAvailability,
+                dictionaryRouteAvailable = false,
+                sourceLanguage = uiState.sourceLang,
+                targetLanguage = uiState.targetLang
+            )
+            !isImageMode && !manualTranslateAvailable -> resolveOcrTranslationUnavailableMessage(
+                language = strings.languageCode,
+                preferredTransport = uiState.preferredTransport,
+                availability = uiState.translationAvailability,
+                dictionaryRouteAvailable = manualDictionaryRouteAvailable,
+                sourceLanguage = uiState.sourceLang,
+                targetLanguage = uiState.targetLang
+            )
+            else -> null
+        }
+    }
+    val selectedBlockTranslationBlockedMessage = remember(
+        strings.languageCode,
+        selectedBlockSourceLanguage,
+        uiState.targetLang,
+        selectedBlockSameLanguagePair,
+        selectedBlockTranslateAvailable,
+        selectedBlockDictionaryRouteAvailable,
+        uiState.preferredTransport,
+        uiState.translationAvailability
+    ) {
+        when {
+            selectedBlock == null -> null
+            selectedBlockSameLanguagePair -> ocrAvailabilitySameLanguage(strings.languageCode)
+            !selectedBlockTranslateAvailable -> resolveOcrTranslationUnavailableMessage(
+                language = strings.languageCode,
+                preferredTransport = uiState.preferredTransport,
+                availability = uiState.translationAvailability,
+                dictionaryRouteAvailable = selectedBlockDictionaryRouteAvailable,
+                sourceLanguage = selectedBlockSourceLanguage,
+                targetLanguage = uiState.targetLang
+            )
+            else -> null
+        }
+    }
     val imageActionsHint = when {
         uiState.translatedBlocks.isNotEmpty() -> text.imageActionsTranslatedHint
         uiState.recognizedBlocks.isNotEmpty() -> text.imageActionsRecognizedHint
@@ -281,6 +419,21 @@ fun OcrScreen(
                                                 )
                                             }
                                         )
+                                        AssistChip(
+                                            onClick = {},
+                                            enabled = false,
+                                            label = {
+                                                Text(
+                                                    if (uiState.translationAvailability.canUseOnlineTranslation) {
+                                                        ocrAvailabilityOnlineReady(strings.languageCode)
+                                                    } else if (uiState.translationAvailability.onlineConfigured) {
+                                                        ocrAvailabilityOnlineNeedsNetwork(strings.languageCode)
+                                                    } else {
+                                                        ocrAvailabilityOnlineMissing(strings.languageCode)
+                                                    }
+                                                )
+                                            }
+                                        )
                                     }
                                     AssistChip(
                                         onClick = {},
@@ -441,7 +594,7 @@ fun OcrScreen(
                         }
                         Button(
                             onClick = viewModel::translateVisiblePage,
-                            enabled = !isInteractionLocked,
+                            enabled = !isInteractionLocked && machineTranslationAvailable,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (uiState.isRecognizing || uiState.isTranslating) {
@@ -457,6 +610,17 @@ fun OcrScreen(
                                 Spacer(Modifier.width(8.dp))
                                 Text(text.translateVisiblePage)
                             }
+                        }
+                        if (!machineTranslationAvailable) {
+                            Text(
+                                text = translationBlockedMessage ?: ocrTranslationBackendUnavailableMessage(
+                                    language = strings.languageCode,
+                                    sourceLanguage = uiState.sourceLang,
+                                    targetLanguage = uiState.targetLang
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
 
                         OutlinedButton(
@@ -585,7 +749,7 @@ fun OcrScreen(
                         )
                         Button(
                             onClick = viewModel::translate,
-                            enabled = hasTextToTranslate && !isManualBusy,
+                            enabled = hasTextToTranslate && !isManualBusy && manualTranslateAvailable,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             if (uiState.isTranslating) {
@@ -599,6 +763,17 @@ fun OcrScreen(
                             } else {
                                 Text(text.translate)
                             }
+                        }
+                        if (hasTextToTranslate && !manualTranslateAvailable) {
+                            Text(
+                                text = translationBlockedMessage ?: ocrTranslationBackendUnavailableMessage(
+                                    language = strings.languageCode,
+                                    sourceLanguage = uiState.sourceLang,
+                                    targetLanguage = uiState.targetLang
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
 
                         if (uiState.manualText.isNotBlank()) {
@@ -1179,7 +1354,7 @@ fun OcrScreen(
                     ) {
                         Button(
                             onClick = viewModel::translateSelectedBlock,
-                            enabled = !isSelectedBlockBusy
+                            enabled = !isSelectedBlockBusy && selectedBlockTranslateAvailable
                         ) {
                             Text(
                                 ocrTranslateBlockAction(
@@ -1194,7 +1369,7 @@ fun OcrScreen(
                                     com.example.core.model.TranslationTransportPreference.AUTO
                                 )
                             },
-                            enabled = !isSelectedBlockBusy
+                            enabled = !isSelectedBlockBusy && selectedBlockTranslateAvailable
                         ) {
                             Text(text.transportAuto)
                         }
@@ -1204,7 +1379,7 @@ fun OcrScreen(
                                     com.example.core.model.TranslationTransportPreference.OFFLINE
                                 )
                             },
-                            enabled = !isSelectedBlockBusy
+                            enabled = !isSelectedBlockBusy && uiState.translationAvailability.offlineModelInstalled
                         ) {
                             Text(text.transportOffline)
                         }
@@ -1214,7 +1389,7 @@ fun OcrScreen(
                                     com.example.core.model.TranslationTransportPreference.ONLINE
                                 )
                             },
-                            enabled = !isSelectedBlockBusy
+                            enabled = !isSelectedBlockBusy && uiState.translationAvailability.canUseOnlineTranslation
                         ) {
                             Text(text.transportOnline)
                         }
@@ -1236,6 +1411,17 @@ fun OcrScreen(
                         ) {
                             Text(text.explain)
                         }
+                    }
+                    if (!selectedBlockTranslateAvailable) {
+                        Text(
+                            text = selectedBlockTranslationBlockedMessage ?: ocrTranslationBackendUnavailableMessage(
+                                language = strings.languageCode,
+                                sourceLanguage = selectedBlockSourceLanguage,
+                                targetLanguage = uiState.targetLang
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

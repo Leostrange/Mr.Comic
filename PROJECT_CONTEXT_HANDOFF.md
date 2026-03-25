@@ -1,6 +1,6 @@
 # Mr.Comic Project Context Handoff
 
-Last updated: 2026-03-14
+Last updated: 2026-03-25
 Project root: `C:\Users\xmeta\projects\Mr.Comic`
 Current branch: `codex/savepoint-library-styling-20260313-2049`
 Primary platform: Android
@@ -9,6 +9,263 @@ UI: Jetpack Compose
 DI: Hilt
 Persistence: DataStore + Room/repository layer
 Build: Gradle Kotlin DSL
+
+## Latest OCR status
+
+- `A5 OCR comic translation completion` moved forward again.
+- OCR availability copy is now pair-aware across:
+  - page translation
+  - manual translation
+  - selected-block translation
+- route failures now mention the active pair for cases like:
+  - missing online route
+  - missing offline model
+  - unsupported machine pair
+  - dictionary-only fallback
+- selected-block translation no longer treats the dictionary as “available” just because the global dictionary backend exists:
+  - the block text itself must qualify for short dictionary lookup
+- the shared dictionary core now supports short phrase lookup (`2–3` words), not just single words:
+  - reader and OCR dictionary-first flows no longer advertise a path the engine cannot execute
+  - when no bundled phrase entry exists, the dictionary path can now produce a machine-assisted short-phrase entry
+- reader-side phrase availability no longer lies about “network means translation”:
+  - `Translate as phrase` is now hidden when there is no offline model and no configured online route, even if raw network connectivity exists
+- OCR online readiness no longer lies about “configured means ready”:
+  - a configured online provider without connectivity now surfaces as `needs network`, not as a ready route
+  - online-only OCR actions are disabled until connectivity is actually present
+- reader selected-text actions no longer keep a dead `Open dictionary` button when the real lookup for the current snippet did not resolve
+- `QuickDictionaryEngine.isLookupAvailable()` is now network-aware:
+  - machine-assisted dictionary fallback is no longer reported as available just because an online provider is configured
+  - this aligns the core dictionary availability contract with the newer reader/OCR UI availability policies
+- `RoomDictionaryEngine.isLookupAvailable()` is now pair-aware too:
+  - the room dictionary path no longer reports “available” only because the source-language database exists
+  - direct target routes and English bridge routes are checked explicitly before exposing the room dictionary route
+- room dictionary results are now stricter for non-English target pairs:
+  - English glosses are no longer surfaced as if they were a real target translation for pairs like `PL→RU` or `JA→RU`
+  - the engine now prefers a real fallback route or fails honestly instead
+- automated regression coverage now explicitly locks the main short-translation pairs for the current runtime:
+  - `PL → RU`
+  - `JA → RU`
+  - `EN → RU`
+  across the shared quick-dictionary path and OCR short-snippet dictionary-first flow
+- latest green verification:
+  - `:core-domain:testDebugUnitTest`
+  - `:feature-reader:testDebugUnitTest`
+  - `:feature-ocr:testDebugUnitTest`
+  - `:app:assembleDebug`
+- remaining strict next step for OCR:
+  - explicit live language-pair regression pass
+
+## 0. Current stop point
+
+The current active stream is the settings IA redesign from `TASKLIST_04_SETTINGS_IA_LOCALIZATION.md`, with the gamification roadmap still preserved but no longer the immediate focus.
+
+Legacy monolithic roadmaps are archived under `docs/archive/roadmaps/`.
+
+Latest completed focus:
+
+- `P1 Reading Calendar / History` is closed.
+- `P2 Progress / Profile Hub v2` is in a strong implemented state:
+  - best week / best streak / completed titles
+  - stage runway
+  - XP integrated into history
+  - achievements progress summary
+  - stage archive
+  - route alignment between `Continue`, `Library -> Mr.Comic`, and `Settings -> About`
+- `P3 Mascot State System` is implemented and closed on the code side:
+  - shared mascot state resolver lives in `android/core-domain/src/main/java/com/example/core/domain/analytics/MrComicMascotState.kt`
+  - shared mascot asset-contract lives in `android/core-ui/src/main/java/com/example/core/ui/mascot/MrComicMascotCopy.kt`
+  - `Continue`, `Library`, `Progress/Profile`, `Reader`, and `Onboarding` are on the common contract for `mini avatar`, `scene lead`, and `stage preview lead`
+  - `Progress/Profile` now also has a visual mascot stage archive that respects quiet-mode
+  - quiet-mode / opt-out direct mascot-only branches were removed from the key surfaces and the package now has green tests + green debug build
+
+Most recent safe cleanup:
+
+- removed project-root Gradle cache folders like `.gradle*` that were just local build trash
+- repaired global Gradle cache issues enough to get `:app:compileDebugKotlin` and later `:app:assembleDebug` green again
+- removed the remaining hardcoded mascot-only lead path from `Continue`/`Library` stage-preview helpers so the shared mascot contract is now consistently `showMascot`-aware
+
+Current next step:
+
+- continue the settings redesign under the new product IA:
+  - `Appearance`
+  - `Reading`
+  - `Library`
+  - `Sync`
+  - `Storage`
+  - `Advanced`
+- immediate target:
+  - rebuild `Reading` into the requested hub with subpages for text, paging, headers, and behavior
+  - keep `Library` logic-only
+  - continue moving visual controls into `Appearance`
+
+Latest settings IA slice completed:
+
+- top-level `Backup`-style mixing was split into real sections:
+  - `Sync`
+  - `Storage`
+  - `Advanced`
+- `Appearance` now owns a dedicated `Covers and library` page for:
+  - library view mode
+  - cover/title visual controls
+  - shelves/background
+  - atmosphere sliders
+- `Library` settings were cut back to logic-first behavior:
+  - sort order
+  - grouping
+  - explicit notice that visuals moved to `Appearance`
+- `Reading` settings were rebuilt into a real hub:
+  - `Text appearance`
+  - `Page layout`
+  - `Headers and footers`
+  - `Paging`
+  - `Behavior`
+- new compact previews were added for:
+  - text appearance
+  - header/footer structure
+  - tap zones
+- newest reader-settings runtime slice completed:
+  - `Headers and footers` now have real saved slot settings:
+    - left / center / right for header
+    - left / center / right for footer
+    - font size and insets
+  - `Paging` now has a real saved tap-zone model:
+    - `Simple / Custom`
+    - swap left/right in simple mode
+    - custom left / center / right actions
+  - these values are now wired into the real reader runtime:
+    - tap zones change actual navigation behavior
+    - calm header/footer overlays render in hidden chrome mode
+  - `Paging` now also supports hardware page turns:
+    - new `volume buttons paging` preference in settings
+    - `MainActivity` acts as a key-event host for the active reader session
+    - volume up = previous page
+    - volume down = next page
+  - green verification:
+    - `:core-model:testDebugUnitTest`
+    - `:feature-reader:testDebugUnitTest`
+    - `:feature-settings:compileDebugKotlin`
+    - `:app:assembleDebug`
+- newest page-layout slice completed:
+  - `Page layout` now has a real compact preview instead of a placeholder info card
+  - reading mode remains explicit through the settings hub
+  - new `landscape spread` preference is wired end-to-end:
+    - stored in prefs
+    - exposed in settings
+    - applied by the reader runtime on wide screens
+  - `preload pages` stays on the same page as an actual layout-performance control
+  - green verification:
+    - `:feature-settings:compileDebugKotlin`
+    - `:app:assembleDebug`
+- newest behavior slice completed:
+  - `Behavior` now includes a real bridge for selected-text tools instead of only screen/wellness cards
+  - the page now exposes:
+    - screen session controls
+    - selection / translation behavior summary
+    - live `Explain` toggle used by the reader runtime
+    - direct route into the dedicated `Translation` settings section
+  - user-facing subtitles on the screen card were cleaned up so they describe behavior rather than raw Android flag names
+  - green verification:
+    - `:feature-settings:compileDebugKotlin`
+    - `:app:assembleDebug`
+- newest in-reader control slice completed:
+  - old text-only sheet inside the reader was replaced with a unified in-reader control center
+  - the runtime reader now has 3 semantic tabs:
+    - `Reading`
+    - `Style`
+    - `Services`
+  - the tabs are format-aware:
+    - text books default into `Style`
+    - image/comic readers default into `Reading`
+    - text-only typography controls are hidden behind a calm explanation for non-text formats
+  - `Reading` tab now exposes live runtime controls for:
+    - reading mode
+    - brightness
+    - keep screen on
+    - immersive mode
+    - landscape spread
+    - volume-button paging
+    - page animation
+    - preload pages
+  - `Services` tab now groups the scattered reader-side service hooks:
+    - TOC / bookmarks
+    - bookmark toggle
+    - OCR / translate for page images
+    - selection-tools guidance for text readers
+    - reserved `Read aloud` slot for the future TTS layer
+  - top reader chrome was cleaned up:
+    - settings button now opens the unified control center
+    - OCR action is no longer shown for text readers
+  - green verification:
+    - `:feature-reader:testDebugUnitTest`
+    - `:app:assembleDebug`
+- newest reader-service slice completed:
+  - `Read aloud / TTS` is now live for text books instead of being a reserved placeholder
+  - a native Android `TextToSpeech` controller now powers reader-side playback with:
+    - play / pause / stop
+    - previous / next chunk
+    - voice selection
+    - speed
+    - pitch
+    - volume
+    - sleep timer
+  - the reader services tab and `Settings -> Read Aloud` now share the same stored defaults
+  - text pages are normalized into calm TTS chunks before playback
+  - comics and image formats keep an honest unavailable state instead of pretending TTS exists there
+  - green verification:
+    - `:core-model:testDebugUnitTest`
+    - `:feature-reader:testDebugUnitTest`
+    - `:feature-settings:compileDebugKotlin`
+    - `:app:assembleDebug`
+- newest TTS-provider slice completed:
+  - a shared `TTS provider` model now exists in prefs/state even though only `System TTS` is active
+  - `Settings -> Read Aloud` now includes:
+    - explicit provider card
+    - live preview playback for the selected voice
+    - shared provider/voice/speed/pitch/volume defaults
+    - honest disabled placeholders for external providers (`OpenAI`, `Azure`, `Aliyun`)
+  - this keeps `A4` moving without pretending that online voices already work
+  - green verification:
+    - `:core-model:testDebugUnitTest`
+    - `:feature-settings:compileDebugKotlin`
+    - `:feature-reader:compileDebugKotlin`
+    - `:app:assembleDebug`
+- newest AI-services slice completed:
+  - `AI Services` is no longer a generic roadmap page
+  - the section now exposes real service-center cards for:
+    - machine translation
+    - `Local Explain`
+    - `Advanced Explain`
+    - `Summary`
+    - OCR page services
+    - external providers
+  - live cards use honest copy:
+    - local / offline paths are described as available
+    - advanced Explain is described as waiting for an external provider
+    - summary is described as not connected yet
+    - online / external providers are described as not connected yet
+  - transport and Explain controls remain editable below the overview cards
+  - green verification:
+    - `:feature-settings:compileDebugKotlin`
+    - `:app:assembleDebug`
+- newest reader-behavior runtime slice completed:
+  - `screen timeout` is no longer just a future note
+  - a shared timeout model now exists in `core-model` and is used by:
+    - `Settings -> Reading -> Behavior`
+    - the in-reader `Reading` tab inside the new control center
+    - the reader window runtime
+  - supported modes:
+    - `System`
+    - `30 sec`
+    - `1 min`
+    - `2 min`
+    - `5 min`
+    - `10 min`
+    - `Never`
+  - `Never` now behaves as an explicit keep-awake mode, while timed modes are applied to the reader window as a best-effort per-window timeout
+  - green verification:
+    - `:core-model:testDebugUnitTest`
+    - `:feature-reader:testDebugUnitTest`
+    - `:app:assembleDebug`
 
 ## 1. What this project is
 
@@ -328,8 +585,8 @@ This is the most important section for a new account continuing development.
 Still open:
 
 - transparency controls for menus/panels need deeper validation
-- library theme presets as reusable user presets are not fully implemented
-- shelf/background system is improved but still not fully "finished" to the user's taste
+- library theme presets as reusable user presets are implemented but still need UX polish
+- shelf/background system now has real new families (`Liquid Glass`, `Midnight Mica`, `Sunset Haze`, `Frost`, `Aluminum`, `Float`) plus actual blur/veil control, but still needs visual tuning to fully satisfy the user
 - some tabs in settings are now compact, but the user is sensitive to any area that still feels too long
 
 ### 7.2 Reader / library parity still needs careful work
@@ -4795,3 +5052,833 @@ Remaining OCR work after this pass is no longer architectural implementation, bu
   - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin :feature-ocr:compileDebugKotlin` -> `SUCCESS`
   - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-settings:compileDebugKotlin` -> `SUCCESS`
   - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :core-domain:testDebugUnitTest` -> `SUCCESS`
+
+## 99. Non-English single-word lookup is now more robust, including Polish
+
+- A new functional bug report came in after the translation/OCR expansion:
+  Polish and some other non-English single-word requests still failed too often even though the shipped dictionary assets existed.
+- The root cause was not missing `pl` data:
+  `dictionary_pl.dbpack` contained real entries/translations, but single-word flows trusted auto-detected source language too early and surfaced bridge/source glosses before trying a better dictionary path.
+- What changed:
+  - added `SingleWordDictionaryResolver` in `core-domain`;
+  - reader and OCR single-word flows now try multiple source-language candidates:
+    preferred source language, detected language, then supported translation languages as fallback candidates;
+  - a match is accepted only if it contains a meaningful translation for the requested target language, instead of taking the first raw dictionary hit;
+  - `RoomDictionaryEngine` bridge fallback was tightened so that when direct target translations are missing it first performs a real bridge lookup through English dictionary data before exposing raw bridge/source glosses.
+- Practical effect:
+  - Polish single-word translation/dictionary/explain is much less likely to fall into a dead-end or a source-language-only result;
+  - the fix also benefits other non-English single-word paths (`fr`, `it`, `tr`, `pt`, etc.) because the issue was systemic, not Polish-only.
+- Files:
+  - [SingleWordDictionaryResolver.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-domain/src/main/java/com/example/core/domain/translation/SingleWordDictionaryResolver.kt)
+  - [SingleWordDictionaryResolverTest.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-domain/src/test/java/com/example/core/domain/translation/SingleWordDictionaryResolverTest.kt)
+  - [RoomDictionaryEngine.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-domain/src/main/java/com/example/core/domain/translation/RoomDictionaryEngine.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+  - [OcrViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-ocr/src/main/java/com/example/feature/ocr/ui/OcrViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :core-domain:testDebugUnitTest :feature-reader:compileDebugKotlin :feature-ocr:compileDebugKotlin` -> `SUCCESS`
+
+## 100. Reader zoom now requests real higher render-quality tiers instead of only scaling the baseline bitmap
+
+- The next active task moved from OCR to the open reader-pipeline/zoom-quality block.
+- The main practical gap was that render-quality tiers already existed in the rendering stack, but the UI still mostly stretched the baseline bitmap during zoom.
+- What changed:
+  - `PageView` now observes base + `q2` + `q3` page flows and picks the best available bitmap for the current zoom scale;
+  - `ReaderPageGestureSurface` exposes current scale so the image reader can request `renderQuality = 2/3` as zoom increases;
+  - `WebtoonView` now does the same per page item, so pinch/double-tap zoom can switch to a higher-detail render tier instead of only magnifying the original decode;
+  - webtoon zoom state is no longer keyed to the concrete bitmap instance, so swapping `q1 -> q2/q3` no longer risks resetting the active zoom just because a sharper bitmap arrived;
+  - OCR export from the reader (`requestOcr()`) now prefers a high-detail current-page render (`q3` / `q2`) before falling back to the baseline bitmap, and writes the temporary page snapshot as lossless PNG instead of JPEG;
+  - webtoon page-index updates are lightly debounced before calling `navigateTo()`, which reduces progress/preload churn while fast-scrolling.
+- Practical effect:
+  - zoom quality should look noticeably cleaner on image-based formats because the reader can swap in a denser decode tier;
+  - OCR launched from the reader gets a sharper source image when a better current render is already available or can be quickly decoded;
+  - webtoon scrolling should produce fewer redundant preload/progress updates.
+- Files:
+  - [PageView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/PageView.kt)
+  - [WebtoonView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/WebtoonView.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 125. Reader pipeline / zoom pass is now complete enough to be treated as a finished stage
+
+- The current reader pass is no longer a loose collection of perf tweaks; it now covers the practical runtime faults that were still leaking between page turns, mode switches, and fast book changes:
+  - high-res zoom tiers (`q2 / q3`) are real and warm up predictably;
+  - text formats are isolated from the bitmap/image pipeline;
+  - `PAGE_RTL`, `DUAL_PAGE`, and explicit `WEBTOON` behavior are aligned more consistently;
+  - stale open/export/note/bookmark jobs are constrained by latest-only/session-aware guards;
+  - progress writes, preload windows, and decode jobs are deduplicated more aggressively.
+- That means `Этап 3: оптимизация reader pipeline и качества zoom` can now be treated as complete in the main tasklist.
+
+## 126. DjVu now has a pluggable backend path and a real library-facing placeholder cover
+
+- `DjVu` is no longer modeled as just one hardcoded HTML placeholder reader.
+- What changed:
+  - `engine-formats` now has a dedicated `DjvuBackend` / `DjvuDocument` contract and a default `UnavailableDjvuBackend`;
+  - `FormatFactory` injects that backend into `DjvuFormatReader`, so a future renderer can plug into the existing path without reworking the rest of the format factory;
+  - `DjvuFormatReader` now reports backend status in its placeholder HTML/metadata and will automatically switch to bitmap page rendering once a real backend is provided;
+  - `ComicRepository` now generates a dedicated placeholder cover for `DjVu`, so DjVu entries no longer show up in the library as blank coverless items while renderer work is still pending.
+- Practical effect:
+  - current builds still keep DjVu on the safe placeholder path;
+  - the library/runtime path is cleaner and more future-ready;
+  - the next renderer integration step can focus on decoding/rendering instead of also having to redesign the import/cover/reader flow.
+
+## 127. DjVu renderer research is now recorded explicitly, so the next integration step starts from facts instead of memory
+
+- Added:
+  - [DJVU_RENDERER_RESEARCH.md](C:/Users/xmeta/projects/Mr.Comic/DJVU_RENDERER_RESEARCH.md)
+- The current conclusion is:
+  - `DjVuLibre` is mature but GPL-based;
+  - `DjVu.js` keeps the actual library under GPL v2 even though the viewer shell is more permissive;
+  - `SnDjVu` looks licensing-friendly (`Apache-2.0 / MIT`) but is still explicitly "not yet useful".
+- Practical effect:
+  - the project now has a written explanation for why DjVu is still on a safe staged runtime path;
+  - the next renderer attempt can start from the recorded tradeoffs instead of repeating the same research.
+
+## 128. Library quote strings now go through AppStrings instead of local per-screen language helpers
+
+- `LibraryScreen` still had one visible localization tail around the quote section:
+  labels like `Quotes`, the empty-state hint, delete-title, and page label were still produced by local `when(language)` helpers in the screen file itself.
+- What changed:
+  - quote-section labels were moved into `AppStrings`;
+  - `libraryQuotePageLabel(...)` is now a shared locale helper next to the other library plural/utility labels;
+  - `LibraryScreen` now uses `strings.navLibrary` for the files section and `strings.libraryQuotes` for the quote section, instead of its own fallback translation helpers.
+- Practical effect:
+  - the quote tab is cleaner and more consistent with the rest of the app-level localization path;
+  - the hardcoded-strings sweep for `LibraryScreen` is smaller and more honest now.
+
+## 101. High-quality zoom tiers are now trimmed more aggressively when the reader moves on
+
+- After higher render-quality zoom tiers were wired into the UI, the next practical risk was memory drift:
+  once `q2/q3` pages start appearing during zoom, it is easy to quietly keep too many of them around while navigating.
+- What changed:
+  - `PagePreloader` now has `retainHighQualityPages(indices)` so the reader can explicitly keep only the current visible spread/page in high-quality form;
+  - `ReaderViewModel.navigateTo(...)` calls that retention pass before starting the normal preload window;
+  - dual-page mode keeps the current two-page spread, while other modes keep only the current page as the high-quality survivor set.
+- Practical effect:
+  - zoom quality still improves on demand, but high-res pages are less likely to accumulate around the session;
+  - this keeps the new zoom-quality pass aligned with the older memory-pressure work instead of undoing it.
+- Files:
+  - [PagePreloader.kt](C:/Users/xmeta/projects/Mr.Comic/android/engine-rendering/src/main/kotlin/com/example/engine/rendering/preload/PagePreloader.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :engine-rendering:compileDebugKotlin :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 102. Reader now warms a higher-quality render tier after navigation, so zoom sharpens faster
+
+- After wiring high-res zoom tiers and trimming their memory more aggressively, the next gap was responsiveness:
+  the sharper `q2/q3` bitmap only started loading after the user had already zoomed, which made the first zoom moment feel softer than necessary.
+- What changed:
+  - `ReaderViewModel` now keeps a small `highQualityWarmupJob`;
+  - after opening a comic or navigating to another page/spread, mid/high-end devices schedule a short delayed warmup of the current visible page:
+    - `MID_RANGE` warms `q2`;
+    - `HIGH_END` warms `q3`;
+  - dual-page mode warms the visible spread, not just the left page;
+  - warmup jobs are cancelled on re-navigation, open failure, and `onCleared()` so the reader does not keep stale background work alive.
+- Practical effect:
+  - zoom should sharpen faster on capable devices because the denser render tier is often already decoded by the time the user pinches/double-taps;
+  - low-end/e-ink devices are left alone, so the optimization does not push them into unnecessary decode work.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 103. Reader progress saving is now quieter during rapid scrolling, but still flushes on exit
+
+- After the zoom/render-quality passes, a remaining pipeline inefficiency was persistence churn:
+  `saveProgress()` still wrote too eagerly while webtoon scrolling or scrubbing quickly through pages.
+- What changed:
+  - `ReaderViewModel` now debounces progress writes through `progressSaveJob`;
+  - it skips scheduling when the page is already pending or already persisted;
+  - the pending page is flushed explicitly in `onCleared()`, so the session still closes with the latest page stored.
+- Practical effect:
+  - fewer pointless Room writes during fast webtoon scrolling and slider scrubbing;
+  - less DB churn without turning progress restore into a "best effort maybe later" feature.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 104. PagePreloader now deduplicates in-flight decodes for the same page/quality
+
+- Once zoom tiers and warmup were added, another hidden inefficiency became more likely:
+  the same page could be requested concurrently by preload, warmup, and UI collection paths before it ever reached the cache.
+- What changed:
+  - `PagePreloader` now tracks `inFlightLoads` keyed by `(pageIndex, renderQuality)`;
+  - concurrent requests for the same page/quality now await the same deferred decode instead of starting parallel renders;
+  - `preloadAround()` was switched to go through `loadPage(...)` so it also benefits from the same dedupe path;
+  - in-flight decode jobs are cancelled when the preloader is fully cleared.
+- Practical effect:
+  - fewer redundant image/PDF decodes under rapid navigation and zoom;
+  - the reader pipeline is less likely to waste CPU and I/O when several code paths converge on the same page at once.
+- Files:
+  - [PagePreloader.kt](C:/Users/xmeta/projects/Mr.Comic/android/engine-rendering/src/main/kotlin/com/example/engine/rendering/preload/PagePreloader.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :engine-rendering:compileDebugKotlin :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 105. Reading-mode switches now resync preload/warmup/note/progress instead of only mutating UI state
+
+- Another reader-pipeline gap was mode switching:
+  `applyReadingMode()` changed `readingMode/currentPage`, but it did not always immediately realign the rest of the runtime pipeline around that new anchor page/spread.
+- What changed:
+  - `ReaderViewModel` now has a shared `syncReaderPosition(page, mode, persistProgress)` helper;
+  - `navigateTo(...)` uses that helper instead of reimplementing the side effects inline;
+  - `applyReadingMode(...)` now also runs the same sync path after aligning the current page for dual-page mode;
+  - visible pages for the current mode are resolved through a shared `visiblePagesFor(...)` helper used by preload/high-quality retention/warmup.
+- Practical effect:
+  - switching between `PAGE_LTR / PAGE_RTL / DUAL_PAGE / WEBTOON` keeps preload, high-quality retention, OCR-ready page notes, and persisted progress aligned with the new runtime anchor page;
+  - dual-page alignment is no longer just a cosmetic `currentPage` rewrite.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 106. Reader preload now anchors on the full visible spread, not only the left/anchor page
+
+- Another remaining reader-pipeline gap was spread-aware preloading:
+  even after mode-sync improvements, `PagePreloader.preloadAround(...)` still built its window from a single anchor page.
+  In dual-page mode that meant "current left page plus N ahead" instead of "whole visible spread plus N ahead".
+- What changed:
+  - `PagePreloader` now has a `visiblePages` overload for `preloadAround(...)`;
+  - the preload window is built from the first/last actually visible pages instead of only one page index;
+  - initial book open now loads the whole visible spread immediately instead of only the left page;
+  - `ReaderViewModel.syncReaderPosition(...)` now passes the resolved visible pages into preload as well.
+- Practical effect:
+  - dual-page mode behaves more like a real spread pipeline;
+  - the first open and later navigation are less likely to leave the right page one step behind the left page in runtime readiness.
+- Files:
+  - [PagePreloader.kt](C:/Users/xmeta/projects/Mr.Comic/android/engine-rendering/src/main/kotlin/com/example/engine/rendering/preload/PagePreloader.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :engine-rendering:compileDebugKotlin :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 107. Page translation notes now use a latest-only load path
+
+- A smaller but real runtime issue remained around `pageTranslationNote`:
+  rapid navigation could allow a slow note read from page A to arrive after the user had already moved to page B.
+- What changed:
+  - `ReaderViewModel` now tracks `pageTranslationNoteJob`;
+  - every new note request cancels the previous one;
+  - the visible note is cleared immediately while the new page note loads;
+  - the result is only applied if the requested page is still the current page when the read completes.
+- Practical effect:
+  - stale translation-note content should no longer briefly flash from the previous page during fast reader navigation;
+  - note loading is now aligned with the same "latest wins" direction already applied to progress and preload work.
+- Files:
+  - [ReaderViewModel.kt](C:/Users\xmeta\projects\Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 109. High-quality zoom retention now follows the actual zoom focus, not only the navigation anchor
+
+- Another remaining reader-pipeline gap was hidden high-resolution memory drift:
+  `q2/q3` pages were already trimmed around navigation, but in practice webtoon zoom and page zoom could still load higher tiers for a page that was no longer the current navigation anchor.
+- What changed:
+  - `ReaderViewModel` now exposes `setHighQualityFocusPages(indices)` and deduplicates retention updates through `lastRetainedHighQualityPages`;
+  - `syncReaderPosition(...)` still resets retention to the visible navigation page/spread after normal page changes;
+  - `PageView` now reports a high-quality focus set while the current page/spread is actually zoomed;
+  - `WebtoonView` now reports the real `zoomedPageIndex`, so high-resolution retention follows the page the user is enlarging instead of whichever page is currently first visible in the list.
+- Practical effect:
+  - zoom quality still sharpens through `q2/q3`, but stale high-resolution pages are less likely to linger after the user zooms a different page in webtoon or exits zoom without changing the navigation anchor;
+  - this closes another quiet memory-pressure gap in the current reader pipeline pass.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+  - [PageView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/PageView.kt)
+  - [WebtoonView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/WebtoonView.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin :engine-rendering:compileDebugKotlin` -> `SUCCESS`
+
+## 110. PagePreloader now skips redundant restarts of the same base preload window
+
+- Another remaining reader-pipeline inefficiency was not decode duplication itself, but window churn:
+  even when the effective base preload window had not changed, `preloadAround(...)` still cancelled the old job and rebuilt the same request.
+- What changed:
+  - `PagePreloader` now tracks an `activePreloadWindow` keyed by reader instance + `start/end` page range;
+  - if the exact same window is requested again and all base pages are already cached, it simply rehydrates `_loadedPages` and returns instead of restarting work;
+  - if the exact same window is still actively loading, it returns early and lets the in-flight preload continue.
+- Practical effect:
+  - fewer pointless preload cancellations/restarts during repeated sync calls that resolve to the same page window;
+  - the reader pipeline now wastes less work not only on duplicate decode requests, but also on duplicate preload scheduling.
+- Files:
+  - [PagePreloader.kt](C:/Users/xmeta/projects/Mr.Comic/android/engine-rendering/src/main/kotlin/com/example/engine/rendering/preload/PagePreloader.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :engine-rendering:compileDebugKotlin :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 108. Quote notebook added as a separate library section, with reader save actions and backup support
+
+- A dedicated quote pipeline is now in the project, separate from normal library files:
+  - new Room model/table: `SavedQuote` / `saved_quotes`;
+  - new DAO/repository: `QuoteDao`, `QuoteRepository`;
+  - `AppDatabase` bumped to version `2` with `MIGRATION_1_2`.
+- Reader-side quote saving is now wired end-to-end:
+  - quotes can be saved from the selected-text action sheet;
+  - quotes can be saved from the selected-text translation sheet;
+  - text selection in the WebView now exposes a direct `Save quote` action alongside `Translate / Dictionary / Explain`;
+  - save feedback is emitted through `quoteSaveMessages` and shown as a toast.
+- Library-side separation is now explicit:
+  - `LibraryContentSection` splits the library into `FILES` and `QUOTES`;
+  - quote search/listing is powered by `QuoteRepository`;
+  - tapping a quote reopens the reader on the linked book and stored page;
+  - long-press on a quote opens delete.
+- Backup/import now includes quotes:
+  - backup JSON version was raised to `5`;
+  - quotes are exported/restored alongside comics, settings, and reading progress.
+- Files:
+  - [SavedQuote.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-model/src/main/java/com/example/core/model/SavedQuote.kt)
+  - [QuoteDao.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/db/QuoteDao.kt)
+  - [AppDatabase.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/db/AppDatabase.kt)
+  - [AppDatabaseMigrations.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/db/AppDatabaseMigrations.kt)
+  - [QuoteRepository.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/repository/QuoteRepository.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+  - [ReaderScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderScreen.kt)
+  - [ReaderUiText.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderUiText.kt)
+  - [LibraryViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryViewModel.kt)
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+  - [SettingsViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsViewModel.kt)
+  - [AppNavigation.kt](C:/Users/xmeta/projects/Mr.Comic/android/app/src/main/java/com/example/mrcomic/navigation/AppNavigation.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin :feature-library:compileDebugKotlin :feature-settings:compileDebugKotlin :app:assembleDebug` -> `SUCCESS`
+
+## 111. Reader state now resets cleanly across books, and redundant same-page/same-mode syncs are skipped
+
+- Another remaining reader-pipeline tail was state stickiness:
+  some internal reader state was keyed only by page index or mode, not by the actual comic,
+  so reopening another book on the same page could inherit stale zoom/list state.
+- What changed:
+  - `PageView` now keys its zoom/reset state and animated content by `comic.id` as well as page/mode;
+  - `WebtoonView` now keys `LazyListState`, `zoomedPageIndex`, per-item zoom scale, and reset tokens by `comic.id`;
+  - `ReaderViewModel.navigateTo(...)` now returns early when the request points to the already active page and there is no inline selection state to clear;
+  - `ReaderViewModel.setReadingMode(...)` / `applyReadingMode(...)` now no-op when the requested mode is already active and does not change the aligned page.
+- Practical effect:
+  - opening a different book on page `0` should no longer inherit the previous book's zoom/pan/list state;
+  - repeated taps on the already active reading mode should no longer trigger unnecessary `syncReaderPosition(...)`, preload, warmup, or progress-save work;
+  - repeated same-page navigation requests waste less work and should feel calmer around fast mode toggles and re-entry.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+  - [PageView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/PageView.kt)
+  - [WebtoonView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/WebtoonView.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 112. Reader no longer carries stale TOC, bookmarks, notes, or inline footnotes into the next book
+
+- Another repeat-entry tail was stale reader-side metadata:
+  opening a new book could briefly keep TOC, bookmark, note, or inline-footnote state from the previous one,
+  and `loadToc()` even left the old TOC intact when the next book simply had no TOC at all.
+- What changed:
+  - `openComic(...)` now clears `currentHtmlContent`, `tableOfContents`, `bookmarkedPages`, `pageTranslationNote`, TOC sheet visibility, and inline-footnote state before initializing the next reader session;
+  - `loadToc()` now captures the current `FormatReader` instance and always writes the resulting TOC list back, including the empty case;
+  - TOC updates are ignored if the reader instance has already changed underneath the async load.
+- Practical effect:
+  - new books should no longer flash the previous book's TOC/bookmarks/note while loading;
+  - books without a TOC no longer inherit the old TOC just because the next `getTableOfContents()` call returned empty.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 113. Async bookmark and page-note loads are now bound to the active comic, not only to the active page
+
+- There was still one quiet re-entry race left:
+  `loadBookmarks(...)` and `loadPageTranslationNote(...)` were async, but they only partially checked current state.
+  In particular, `pageTranslationNote` only guarded by page index, so a fast switch to another book on the same page number could still apply the old book's note.
+- What changed:
+  - `openComic(...)` now passes the explicit `comic.id` and page count into bookmark/note loading;
+  - `loadBookmarks(...)` validates that the active comic is still the same before writing bookmark state back;
+  - normalized bookmark saves now target the original `comicId` explicitly instead of whichever comic happens to be active later;
+  - `loadPageTranslationNote(...)` now captures an explicit `comicId` and requires both `comic.id` and page index to still match before applying the loaded note.
+- Practical effect:
+  - fast book switches should no longer import bookmark or translation-note state from the previous book when page numbers happen to line up;
+  - bookmark normalization during load is less likely to write into the wrong comic preference bucket.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 114. Reader page cache is now session-aware across books, and text-page HTML updates are latest-only
+
+- A deeper reader-pipeline collision still remained underneath the UI:
+  `PagePreloader` already keyed preload windows by reader instance, but its actual bitmap cache keys and in-flight decode keys were still only `page + quality`.
+  That meant two different books could theoretically collide internally if they hit the same page index during a fast switch.
+- What changed:
+  - `PagePreloader.PageCacheKey` now includes `readerToken`;
+  - bitmap cache keys are now `readerToken + page + quality`, not only `page + quality`;
+  - in-flight decode deduplication is now also per reader session, not globally per page index;
+  - stale decode completions from a previous reader session are dropped instead of being written back into the active cache;
+  - `_loadedPages` and high-quality eviction now operate per active reader token;
+  - `ReaderViewModel.loadPage(...)` now treats `currentHtmlContent` as latest-only state:
+    HTML and `currentHtmlContent = null` updates are only applied if the same comic and same page are still active when the async read completes.
+- Practical effect:
+  - fast switches between books should no longer risk sharing a page bitmap just because both sessions were on page `0/1/...`;
+  - text-reader pages should no longer briefly revert to older HTML content after a quick page jump;
+  - this closes one of the last serious "same index, different session" holes in the current reader pipeline pass.
+- Files:
+  - [PagePreloader.kt](C:/Users/xmeta/projects/Mr.Comic/android/engine-rendering/src/main/kotlin/com/example/engine/rendering/preload/PagePreloader.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :engine-rendering:compileDebugKotlin :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 115. Dual-page anchoring is now normalized end-to-end, and opening mode respects the new book's format
+
+- Another subtle reader-pipeline inconsistency was dual-page anchoring:
+  page normalization to an even spread anchor existed in several places, but not from one shared rule.
+  That left room for odd-page spread anchors during open/navigate flows and a concrete text-book bug:
+  after reading a comic in `DUAL_PAGE`, opening a text book could silently align the requested page backward to an even spread page before the text-reader portrait correction happened.
+- What changed:
+  - `ReaderViewModel` now uses a shared `normalizePageForMode(...)` helper for:
+    opening a book, normal navigation, visible-page computation, and reading-mode switches;
+  - `nextPage()/prevPage()` now step by `2` in `DUAL_PAGE`, so normalization does not trap them on the same spread;
+  - `effectiveOpeningModeFor(format)` now chooses the initial mode from the new book's actual format and current orientation:
+    text formats open in the portrait reader mode, while image formats can still open in landscape spread mode;
+  - `openComic(...)` now applies that effective opening mode before choosing `startPage`;
+  - `loadPage(...)` now captures the current `FormatReader` before launching async work and refuses to apply results if that reader is no longer active;
+  - `ReaderScreen` now keys local UI state such as the brightness row and eye-rest reminder dialog by `comic.id`, so those local surfaces do not bleed into the next book.
+- Practical effect:
+  - dual-page reading should no longer quietly operate from an odd-page anchor;
+  - text books opened after comics should land on the requested/stored page, not on the previous spread's left page;
+  - repeated entry into another book should feel cleaner both in underlying page selection and in small local UI state.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+  - [ReaderScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderScreen.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 116. Reader mode switches now animate more honestly, and landscape auto-spread no longer overrides an explicit WEBTOON choice
+
+- Another remaining reader-pipeline tail was that some transitions still *looked* like ordinary page flips even when they were not:
+  switching between single-page and dual-page layout, or jumping a long distance, could still reuse the slide animation meant for adjacent page navigation.
+  There was also a mode-consistency issue on wide landscape screens:
+  the reader could still auto-push an image-based book back into `DUAL_PAGE` even when the user had explicitly chosen `WEBTOON`.
+- What changed:
+  - `PageView` now uses a cut transition when:
+    - the comic identity changes,
+    - the layout mode changes (`single <-> dual`),
+    - the page jump is larger than a near-neighbor change;
+  - `ReaderViewModel.onOrientationChanged(...)` now auto-enters `DUAL_PAGE` only for page-based portrait modes (`PAGE_LTR / PAGE_RTL`);
+  - `effectiveOpeningModeFor(...)` now preserves `WEBTOON` across landscape reopen while still allowing page-based modes to auto-open in spread mode on wide screens.
+- Practical effect:
+  - mode switches and large jumps should feel less like a fake page-flip and more like a layout/state change;
+  - landscape image readers should no longer silently override a deliberate `WEBTOON` choice just because the screen is wide.
+- Files:
+  - [PageView.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/components/PageView.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 117. Pending reader progress saves are now bound to the comic session, not just the page index
+
+- One more subtle reader-pipeline race remained around debounced progress persistence:
+  `saveProgress()` delayed writes by a few hundred milliseconds, but the pending state only stored a page number.
+  If the user switched books before that debounce completed, the later flush could end up resolving against the new active comic.
+- What changed:
+  - `ReaderViewModel` now stores pending progress as an explicit `(comicId, page, totalPages)` payload;
+  - last-persisted progress is also tracked as `(comicId, page)`, not only a bare page number;
+  - `openComic(...)` now flushes any pending progress write before swapping to the next reader session and cancels the old debounce job afterward.
+- Practical effect:
+  - quick switches between books should no longer risk writing the previous book's pending page into the new book;
+  - this also makes the debounce path more honest under fast reopen / rapid library navigation, because the old session is finalized before the next one takes over.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 118. Delayed high-quality warmup is now latest-only, so stale q2/q3 decodes do not keep trailing behind quick navigation
+
+- Another quiet reader-pipeline inefficiency remained in the zoom-quality pass:
+  after navigation the app intentionally delayed high-quality warmup for a short moment,
+  but that job still only relied on cancellation timing.
+  Under very quick page/mode/book switches, an older warmup could still wake up and start decoding no-longer-relevant `q2/q3` pages.
+- What changed:
+  - `scheduleHighQualityWarmup(...)` now captures the active `comicId`, `FormatReader`, reading mode, and target visible pages;
+  - after the warmup delay it re-validates that the same reader session, same mode, and same visible-page set are still active before decoding anything.
+- Practical effect:
+  - rapid page turns, mode switches, or book switches should waste less background work on stale high-resolution pages;
+  - this reduces another source of quiet decode spikes while keeping the warmup benefit when the user actually stays on the page.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 119. Text-reader no longer runs the bitmap preload/high-res zoom pipeline unnecessarily
+
+- Another quiet inefficiency in the current reader pass was that text-based books still flowed through parts of the image pipeline:
+  `syncReaderPosition(...)` always tried bitmap preload, high-quality retention, and warmup even for EPUB/FB2/TXT/HTML/Markdown/RTF/MOBI/AZW3/DOCX/ODT, where those bitmap tiers are meaningless.
+- What changed:
+  - `ReaderViewModel` now distinguishes between:
+    - formats that support bitmap preload at all;
+    - formats that support true high-res zoom tiers;
+  - text books still load their current HTML page through `loadPage(...)`, but they no longer schedule bitmap preload, retain high-quality image tiers, or warm up `q2/q3` pages.
+- Practical effect:
+  - text-reader navigation wastes less background work;
+  - switching between image books and text books should carry less unnecessary preload/high-quality churn from the image pipeline;
+  - this keeps the current zoom-quality pass focused on the formats that can actually benefit from it.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 120. Text-reader opening mode is now isolated from WEBTOON history, so text books no longer inherit a stale comic-only mode
+
+- Another subtle reader-state leak remained around opening modes:
+  the app already remembered the last non-dual portrait mode in `portraitReadingMode`, but that also included `WEBTOON`.
+  After reading an image comic in `WEBTOON`, opening a text book could therefore restore a comic-only portrait mode into the text reader.
+- What changed:
+  - `ReaderViewModel` now separately tracks the last page-based portrait mode (`PAGE_LTR / PAGE_RTL`) in `portraitPagedReadingMode`;
+  - text formats now open from that page-based portrait mode instead of the broader `portraitReadingMode`;
+  - `onOrientationChanged(...)` now collapses text readers from `DUAL_PAGE` back to the page-based portrait mode;
+  - `restoreReaderPreferences()` no longer forces `DUAL_PAGE` in landscape when the stored mode is `WEBTOON`.
+- Practical effect:
+  - EPUB/FB2/TXT and other text-based books should stop inheriting a stale `WEBTOON` mode from a previous image-based session;
+  - starting the app in landscape with a stored `WEBTOON` preference no longer routes reader state through an unnecessary `DUAL_PAGE` detour.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 121. Text-reader opening path is now cleaner: no first-open image preload, and requested page overrides are single-use
+
+- Two smaller but real reader-pipeline leaks were still left in the book-opening path:
+  - text books no longer used bitmap preload during normal navigation, but `openComic(...)` still called `preloadAround(...)` once on first open;
+  - the navigation `page` argument was stored as a long-lived `requestedPage`, which meant a one-time deep-link/quote/restore page override could keep affecting later book opens inside the same `ReaderViewModel` session.
+- What changed:
+  - `openComic(...)` now skips `PagePreloader.preloadAround(...)` for text formats as well, so the first open path matches the later text-reader navigation path;
+  - `requestedPage` was replaced with a mutable `pendingRequestedPage`, which is consumed once when the opening page is resolved and then cleared.
+- Practical effect:
+  - the very first open of EPUB/FB2/TXT/HTML/Markdown/RTF/MOBI/AZW3/DOCX/ODT no longer kicks the bitmap preload pipeline by inertia;
+  - page overrides coming from quote jumps or navigation args now behave like a one-shot instruction instead of quietly biasing later opens in the same reader session.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 122. Reader tap zones now respect PAGE_RTL consistently, instead of only the toolbar direction toggle
+
+- Another user-visible inconsistency remained in the reader:
+  the expanded toolbar already knew about `PAGE_RTL`, but the actual left/right tap zones still always treated the left edge as "previous" and the right edge as "next".
+- What changed:
+  - `ReaderScreen` now derives shared `navigateBackward` / `navigateForward` lambdas from the current mode and page step;
+  - left/right page taps are routed through `onLeftZoneTap` / `onRightZoneTap`, which swap direction automatically for `PAGE_RTL`;
+  - this is applied consistently to:
+    - `HtmlPageView`;
+    - `PageView`;
+    - `WebtoonView`.
+- Practical effect:
+  - when the user switches reader direction to `PAGE_RTL`, tap-zone navigation now matches that choice everywhere, not only in the toolbar controls;
+  - text books and image readers should feel directionally consistent again.
+- Files:
+  - [ReaderScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderScreen.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 123. Reader opening/export flow is now latest-only, and page-scoped UI state no longer leaks across books/pages
+
+- Another group of subtle reader issues remained around session transitions:
+  - opening one book and then another in quick succession still allowed the older open coroutine to keep running too far;
+  - reader preferences were restored in parallel with the first open, which meant a book could initially start on defaults and only later get corrected by stored preferences;
+  - `requestOcr()` from the reader could still finish after the user had already switched page/book and emit an OCR launch for stale context;
+  - some UI state was still leaking too far:
+    `Text settings` could survive a book switch, and inline footnotes could survive a page change.
+- What changed:
+  - `ReaderViewModel` now tracks `loadComicJob` + `currentOpenRequestToken`, so the latest open request wins and stale open paths stop updating state;
+  - `restoreReaderPreferences()` is now a suspend initialization step and runs before the first encoded `comicId/uri` open request is started;
+  - `requestOcr()` now captures `(reader, comicId, page)` up front, re-validates that the same context is still active before emitting, and writes to a unique temp PNG instead of reusing one fixed cache file;
+  - `openComic(...)` now clears `showTextSettings`;
+  - `navigateTo(...)` now also clears `footnotePopup` / resets `FootnotePresentation`, so inline notes do not linger on the next page.
+- Practical effect:
+  - rapid switches between books should no longer let the old open request repaint the new session late;
+  - the first opened book now starts from restored reader preferences more predictably;
+  - OCR launched from the reader should track the page the user actually requested, instead of occasionally opening stale context after a fast switch;
+  - text-settings and inline footnotes now behave more like page/book-scoped UI, not sticky global reader state.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 124. Stale open requests are now checked around the destructive phases of `openComic(...)`, not only at the edges
+
+- After adding latest-only open requests, one more subtle race still remained:
+  if a new book-open request arrived in the tiny window after the old request had already passed its first token check,
+  the old request could still briefly reach destructive steps like `clearPages()` / `formatReader.close()` before the next suspension point.
+- What changed:
+  - `openComic(...)` now re-checks the active open-request token before and after the destructive phases:
+    - after reader UI is put into loading state;
+    - before `pagePreloader.clearPages()` / `formatReader.close()`;
+    - before/after `resolveReadablePath(...)`;
+    - before `getPageCount()`.
+- Practical effect:
+  - quick switches between books are less likely to let an already-stale open request tear down the newly active reader session;
+  - this makes the latest-only reader opening path more robust under very fast library taps / reopen flows.
+- Files:
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin` -> `SUCCESS`
+
+## 125. Library settings text layer was tightened further, and quote-save errors no longer use a local inline language switch
+
+- The next cleanup pass stayed in the remaining localization debt instead of starting a new feature.
+- `SettingsScreen` still had one honest chunk of library-specific text living outside the centralized `LibrarySectionText`:
+  - library tab labels/hints;
+  - the `Image` background option label;
+  - saved-theme card labels;
+  - group-by labels.
+- `ReaderViewModel` also still had one local `when (language)` just for the quote-save failure path.
+- What changed:
+  - `LibrarySectionText` now also owns:
+    - `tabLabels`;
+    - `tabHints`;
+    - `imageBackgroundOption`;
+    - `groupByLabels`;
+    - saved-theme labels (`title`, `hint`, `slot prefix`, `save/apply/clear/empty`);
+  - the library subsection inside `SettingsScreen` now reads those values directly instead of building more inline `when (uiState.appLanguage)` maps;
+  - `LibraryThemePresetCard` now gets the saved-theme slot prefix from the section text instead of constructing its own local language switch for `Slot N`;
+  - `ReaderUiText` gained `quoteSaveFailed`, and `ReaderViewModel` now emits that shared text instead of keeping an inline `when (language)` for quote-save failures.
+- Practical effect:
+  - the library settings screen is now more internally consistent and less likely to regress into mixed-language labels when that section changes again;
+  - quote saving in the reader now follows the same text-layer path as the rest of the quote actions.
+- Files:
+  - [SettingsScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsScreen.kt)
+  - [ReaderUiText.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderUiText.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-reader:compileDebugKotlin :feature-settings:compileDebugKotlin` -> `SUCCESS`
+
+## 126. The large UI hardcoded-string sweep is now finished as a package, not just "almost done"
+
+- One more pass was used to verify the remaining debt honestly instead of leaving the task in a permanent `almost done` state.
+- What changed:
+  - `SettingsScreen` color swatches no longer carry unused Russian color names in `COLOR_PALETTE`; the palette is now stored as plain ARGB values because those labels were not rendered anywhere;
+  - the raw `✕` in the clear-color swatch was replaced with a normal `Close` icon;
+  - a final grep-based sweep was run across `ReaderScreen`, `LibraryScreen`, and `SettingsScreen` to separate real remaining user-facing literals from:
+    - centralized text-layer definitions;
+    - intentional symbols such as `A`, `+`, `−`, emoji badges;
+    - utility formatting logic.
+- Practical conclusion:
+  - the broad localization/hardcoded-string cleanup for those three screens is now considered complete;
+  - future findings in those areas should be treated as normal regression bugs, not as an unfinished project-wide sweep.
+- Files:
+  - [SettingsScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsScreen.kt)
+  - [TASKLIST.md](C:/Users/xmeta/projects/Mr.Comic/TASKLIST.md)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-settings:compileDebugKotlin :feature-reader:compileDebugKotlin :feature-library:compileDebugKotlin` -> `SUCCESS`
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :app:assembleDebug` -> `SUCCESS`
+
+## 127. Settings runtime backup/cache/repair messages now follow the app language instead of one hardcoded language
+
+- After the large screen-level sweep was marked complete, one practical localization tail was still left in live runtime behavior:
+  `SettingsViewModel` still emitted hardcoded messages for cache clearing, backup export/import, access repair, and the fallback backup title `Untitled`.
+- What changed:
+  - `SettingsViewModel` now routes those runtime messages through language-aware helpers keyed off `uiState.appLanguage`;
+  - localized helpers now cover:
+    - cache clear success / already empty;
+    - export success / export failure;
+    - import read failure / import summary / import failure;
+    - access rebind summary / rebind failure;
+    - fallback untitled label used while parsing backup entries.
+- Practical effect:
+  - the backup/maintenance section is now much less likely to regress into mixed-language runtime status toasts/messages even though its screen labels were already cleaned up;
+  - importing backups with missing titles no longer silently falls back to a single-language `Untitled` label.
+- Files:
+  - [SettingsViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-settings:compileDebugKotlin :app:assembleDebug` -> `SUCCESS`
+
+## 128. Quote notebook is now safer as a section separate from files, instead of behaving like a broken library link when the source book is unavailable
+
+- Once the quote notebook existed as its own library section, one stabilizing gap became obvious:
+  quotes intentionally outlive the normal file list, but the UI still treated every quote card as a guaranteed working deep-link back into a book.
+- What changed:
+  - `QuoteDao` / `ComicRepository` now refresh the saved `comicTitle/comicPath` snapshot for quotes when the linked comic changes via:
+    - metadata edit / rename;
+    - backup restore;
+    - SAF access repair / path rebinding;
+  - `LibraryUiState` now exposes which quote sources are currently available in the library;
+  - `QuoteCard` now shows a localized `source unavailable` state for orphaned/unavailable sources and stops pretending that the card is a working reopen action in that case;
+  - long-press delete still remains available, so the quote notebook can keep independent quotes without forcing the user into a broken tap path.
+- Practical effect:
+  - quotes remain a separate notebook instead of being silently tied to normal file rows;
+  - when the source book is temporarily missing, the quote card now behaves honestly instead of looking like a valid reopen link;
+  - after restore/rebind/metadata changes, quote cards stay in sync with the current comic title/path snapshot.
+- Files:
+  - [QuoteDao.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/db/QuoteDao.kt)
+  - [QuoteRepository.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/repository/QuoteRepository.kt)
+  - [ComicRepository.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/repository/ComicRepository.kt)
+  - [LibraryViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryViewModel.kt)
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+  - [AppStrings.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-ui/src/main/java/com/example/core/ui/locale/AppStrings.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :core-data:compileDebugKotlin :feature-library:compileDebugKotlin :app:assembleDebug` -> `SUCCESS`
+
+## 129. App-shell localization is now finished as a real package, not left half in viewmodels and half in Russian payload objects
+
+- After the screen-level sweep and the runtime `SettingsViewModel` cleanup, the next honest tail was the app shell itself:
+  `ContinueScreen`, app icon settings, crash report UI, and app-load error fallback still needed to behave as one localized layer instead of a loose collection of helpers plus a few hidden Russian payload objects.
+- What changed:
+  - `ContinueScreen` now consistently passes the shared `ContinueScreenText` model into its empty-state cards instead of leaving a half-finished refactor behind;
+  - `AppIconManager` no longer stores localized `name/description` strings inside the icon registry, so the manager only carries stable icon ids and preview resources, while UI-facing names/descriptions come from the app-level text layer;
+  - `MainActivity` now normalizes the stored app language before providing `LocalStrings` and before showing app-load fallback messages, so shell-level error UI follows the same language normalization path as the rest of the app;
+  - the app-shell text helper layer remains the single source of truth for:
+    - continue screen copy;
+    - app icon screen labels and runtime failures;
+    - crash report share/continue labels;
+    - app load-error fallback title/body.
+- Practical effect:
+  - the app shell is less likely to regress into mixed-language UI during future refactors;
+  - launcher icon metadata is now structurally neutral instead of carrying Russian display text in a non-UI manager;
+  - the continue screen refactor is stabilized instead of silently depending on recomputing text inside every empty-state card.
+- Files:
+  - [ContinueScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/app/src/main/java/com/example/mrcomic/home/ContinueScreen.kt)
+  - [AppIconManager.kt](C:/Users/xmeta/projects/Mr.Comic/android/app/src/main/java/com/example/mrcomic/icons/AppIconManager.kt)
+  - [MainActivity.kt](C:/Users/xmeta/projects/Mr.Comic/android/app/src/main/java/com/example/mrcomic/MainActivity.kt)
+  - [AppModuleText.kt](C:/Users/xmeta/projects/Mr.Comic/android/app/src/main/java/com/example/mrcomic/ui/AppModuleText.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :app:compileDebugKotlin` -> `SUCCESS`
+
+## 130. The file library now separates graphic volumes from text books instead of mixing them into one uninterrupted shelf
+
+- A practical library UX issue appeared once both comics and books lived in the same file section:
+  even with the existing content-aware card styling, mixed shelves still read as one continuous stream, so manga/webtoons/comics and text books visually blended together too easily.
+- What changed:
+  - `LibraryViewModel` gained a lightweight `LibrarySectionDividerItem` model and a `LibraryFileSection` enum;
+  - flat file lists now split into:
+    - graphic volumes (`CBZ/CBR/ZIP/RAR/7Z/TAR/FOLDER/PDF and other non-text reading formats`);
+    - books (`EPUB/FB2/TXT/HTML/Markdown/RTF/MOBI/AZW3/DOCX/ODT`);
+  - folder mode also uses the same split for direct files inside the currently opened folder, while folder cards themselves still stay above the file rows;
+  - `LibraryScreen` renders those dividers as full-width labeled separators inside the existing grid/list pipeline instead of introducing a parallel render path.
+- Practical effect:
+  - mixed libraries no longer feel like one visually confused shelf;
+  - users can scan graphic reading material and text books as separate bands without changing filters first;
+  - the behavior stays compatible with existing sorting, folder navigation, and the separate quote notebook section.
+- Files:
+  - [LibraryViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryViewModel.kt)
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+  - [AppStrings.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-ui/src/main/java/com/example/core/ui/locale/AppStrings.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-library:compileDebugKotlin :app:assembleDebug` -> `SUCCESS`
+
+## 131. Quote notebook now behaves like its own library mode instead of inheriting file-shelf stats and controls
+
+- After separating `Files` and `Quotes`, one UX mismatch still remained:
+  the quote section inherited the file library shell too literally, so it still showed comic/completion stats and could keep file controls/filter sheet open even though those controls were not relevant there.
+- What changed:
+  - entering the `Quotes` section now automatically closes the file controls strip and the filter sheet;
+  - the header stats block is now section-aware:
+    - `Files` keeps the normal library stats bar;
+    - `Quotes` shows its own quote stats bar with:
+      - total saved quotes;
+      - distinct source count.
+- Practical effect:
+  - the quote notebook now feels more like a separate reading-memory section and less like “the file library with the wrong numbers”;
+  - users no longer switch into quotes and still see file/completion stats from the other mode.
+- Files:
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+  - [AppStrings.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-ui/src/main/java/com/example/core/ui/locale/AppStrings.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-library:compileDebugKotlin :app:assembleDebug` -> `SUCCESS`
+
+## 132. Quote notebook no longer shows file-only top bar controls and badges
+
+- One more UX mismatch remained after the quote-specific stats pass:
+  the top bar still belonged to the file library too literally, so the quote section could still expose the file hamburger badge and file-only controls when those actions were irrelevant there.
+- What changed:
+  - `LibraryTopBar` is now section-aware via `LibraryContentSection`;
+  - in `Quotes` mode:
+    - the title switches to `Quotes`;
+    - file-only actions disappear instead of merely being auto-closed:
+      - hamburger/filters badge;
+      - view toggle;
+      - thumbnail mode;
+      - add file/folder menu.
+  - the filter sheet is additionally guarded so it cannot render while the quote section is active even if stale UI state tries to keep it open.
+- Practical effect:
+  - the quote notebook now reads as its own mode in both the content area and the app bar;
+  - users no longer see file-library controls that do nothing for saved quotes.
+- Files:
+  - [LibraryTopBar.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/components/LibraryTopBar.kt)
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-library:compileDebugKotlin :app:assembleDebug` -> `SUCCESS`
+
+## 133. Library shell was brought in line with the March 20 screenshot feedback
+
+- The 5 photos from the repo root highlighted four concrete library issues:
+  - the main files stats chip still said `comics` even though the shelf mixes books and graphic volumes;
+  - the section switcher needed a third tab for bookmarked files;
+  - grid cards and folder cards still used a detached lower title block (the `chin` effect);
+  - folder covers should prefer the first real child cover instead of a placeholder representative.
+- What changed:
+  - `LibraryStatsBar` now uses the generic file count label instead of the old comic-only wording;
+  - `LibraryContentSection` gained `BOOKMARKS`, and the library section switcher is now a three-way equal-width row:
+    - `Library`;
+    - `Bookmarks`;
+    - `Quotes`;
+  - the new bookmarks section is backed by the existing `isBookmarked` flag on library items and has its own empty state and title handling;
+  - grid file cards now render the title inside the lower part of the cover via a gradient overlay instead of relying on a detached lower text zone;
+  - grid folder cards now place the folder title inside the cover and drop the old lower title block;
+  - folder representatives now prefer entries that already have a real cover path;
+  - directory import no longer stops generating covers after the first 80 files.
+- Practical effect:
+  - mixed libraries no longer present themselves as if everything were a comic;
+  - favorites have their own quick-access section without being merged into quotes;
+  - grid cards read more like real cover tiles and less like covers sitting on top of a blank footer;
+  - newly imported large folders should stop producing long rows of placeholder-only items just because they exceeded the old cover budget.
+- Files:
+  - [AppStrings.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-ui/src/main/java/com/example/core/ui/locale/AppStrings.kt)
+  - [LibraryViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryViewModel.kt)
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+  - [LibraryTopBar.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/components/LibraryTopBar.kt)
+  - [ComicGridItem.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/components/ComicGridItem.kt)
+  - [ComicRepository.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/repository/ComicRepository.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-library:compileDebugKotlin` -> `SUCCESS`
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :app:assembleDebug` -> `SUCCESS`
+
+## 134. Library Theme Studio now has deeper manual card controls
+
+- The next settings pass moved `Theme Studio` beyond atmosphere-only tuning and into real per-card construction.
+- What changed:
+  - library themes now store manual card-level parameters in addition to background and shelf mood:
+    - `title scale`;
+    - `title lines`;
+    - `card stroke`;
+    - `card corner radius`;
+    - `title panel opacity`;
+  - the settings preview now reflects those values instead of showing a generic mock card;
+  - the live library cards and list items now respect the same tuning, so `Theme Studio` changes are visible in the actual library, not only in settings;
+  - saved library theme slots preserve the deeper card tuning instead of flattening everything into background/shelf presets.
+- Practical effect:
+  - `Theme Studio` can now materially change card personality and readability, not just the canvas behind them;
+  - custom themes are closer to a real constructor rather than a renamed preset picker.
+- Files:
+  - [SettingsScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsScreen.kt)
+  - [SettingsViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsViewModel.kt)
+  - [LibraryViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryViewModel.kt)
+  - [LibraryScreen.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/LibraryScreen.kt)
+  - [ComicGridItem.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-library/src/main/java/com/example/feature/library/components/ComicGridItem.kt)
+  - [LibraryVisualPresets.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-ui/src/main/java/com/example/core/ui/library/LibraryVisualPresets.kt)
+  - [LibraryVisualStyle.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-ui/src/main/java/com/example/core/ui/library/LibraryVisualStyle.kt)
+  - [PreferencesKeys.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-data/src/main/java/com/example/core/data/preferences/PreferencesKeys.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-settings:compileDebugKotlin` -> `SUCCESS`
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :feature-library:compileDebugKotlin` -> `SUCCESS`
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :app:assembleDebug` -> `SUCCESS`
+
+## 135. Translation and TTS now use shared service config contracts instead of duplicated raw flags
+
+- Platform foundation work moved `translation` and `reader TTS` away from scattered raw strings/floats and into shared `core-model` contracts.
+- What changed:
+  - added shared models:
+    - `TranslationServiceConfig`
+    - `ReaderTtsConfig`
+  - `SettingsUiState` now stores those typed configs directly and exposes legacy UI values as derived getters instead of owning the raw flags itself;
+  - `SettingsViewModel` now assembles both configs as typed flows instead of shipping `Any` lists all the way into state;
+  - `ReaderViewModel` no longer keeps a private duplicate `ReaderTranslationSettings` type and now resolves reader translation settings via the shared `TranslationServiceConfig`.
+- Practical effect:
+  - settings and reader now read the same transport/explain contract instead of maintaining parallel shapes;
+  - next provider/TTS work can extend the shared models without bloating feature view models again.
+- Files:
+  - [ServiceConfigModels.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-model/src/main/java/com/example/core/model/ServiceConfigModels.kt)
+  - [ServiceConfigModelsTest.kt](C:/Users/xmeta/projects/Mr.Comic/android/core-model/src/test/java/com/example/core/model/ServiceConfigModelsTest.kt)
+  - [SettingsViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-settings/src/main/java/com/example/feature/settings/ui/SettingsViewModel.kt)
+  - [ReaderViewModel.kt](C:/Users/xmeta/projects/Mr.Comic/android/feature-reader/src/main/java/com/example/feature/reader/ui/ReaderViewModel.kt)
+- Validation:
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :core-model:testDebugUnitTest :feature-settings:compileDebugKotlin :feature-reader:compileDebugKotlin` -> `SUCCESS`
+  - `cmd /c C:\Users\xmeta\projects\Mr.Comic\gradlew.bat :app:assembleDebug` -> `SUCCESS`
