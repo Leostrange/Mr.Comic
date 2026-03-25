@@ -19,7 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -43,11 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -105,7 +100,7 @@ fun ReaderExpandedBar(
     showTextSettings: Boolean,
     showOcrAction: Boolean = true,
     canSwapDirection: Boolean,
-    isRtl: Boolean,
+    directionShortcutActive: Boolean,
     showBrightnessRow: Boolean,
     useDirectActions: Boolean = false,
     onNavigateBack: () -> Unit,
@@ -116,83 +111,47 @@ fun ReaderExpandedBar(
     onToggleBrightness: () -> Unit
 ) {
     val strings = LocalStrings.current
-    var showInlineActions by remember { mutableStateOf(false) }
     val actionScrollState = rememberScrollState()
-    TopAppBar(
-        title = {
-            if (showInlineActions && !useDirectActions) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(actionScrollState),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    ReaderExpandedActionButtons(
-                        canShowToc = canShowToc,
-                        showTextSettings = showTextSettings,
-                        showOcrAction = showOcrAction,
-                        canSwapDirection = canSwapDirection,
-                        isRtl = isRtl,
-                        showBrightnessRow = showBrightnessRow,
-                        onToggleToc = onToggleToc,
-                        onToggleTextSettings = onToggleTextSettings,
-                        onSwapDirection = onSwapDirection,
-                        onRequestOcr = onRequestOcr,
-                        onToggleBrightness = onToggleBrightness
-                    )
-                }
-            } else {
-                Text(
-                    text = title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
-        },
-        navigationIcon = {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.width(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
             IconButton(onClick = onNavigateBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
             }
-        },
-        actions = {
-            if (useDirectActions) {
-                Row(
-                    modifier = Modifier.horizontalScroll(actionScrollState),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
-                    ReaderExpandedActionButtons(
-                        canShowToc = canShowToc,
-                        showTextSettings = showTextSettings,
-                        showOcrAction = showOcrAction,
-                        canSwapDirection = canSwapDirection,
-                        isRtl = isRtl,
-                        showBrightnessRow = showBrightnessRow,
-                        onToggleToc = onToggleToc,
-                        onToggleTextSettings = onToggleTextSettings,
-                        onSwapDirection = onSwapDirection,
-                        onRequestOcr = onRequestOcr,
-                        onToggleBrightness = onToggleBrightness
-                    )
-                }
-            } else {
-                IconButton(onClick = { showInlineActions = !showInlineActions }) {
-                    Icon(
-                        if (showInlineActions) Icons.AutoMirrored.Filled.KeyboardArrowRight else Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = if (showInlineActions) strings.controlsHide else strings.controlsShow
-                    )
-                }
+        }
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier.horizontalScroll(actionScrollState),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                ReaderExpandedActionButtons(
+                    canShowToc = canShowToc,
+                    showTextSettings = showTextSettings,
+                    showOcrAction = showOcrAction,
+                    canSwapDirection = canSwapDirection,
+                    directionShortcutActive = directionShortcutActive,
+                    showBrightnessRow = showBrightnessRow,
+                    onToggleToc = onToggleToc,
+                    onToggleTextSettings = onToggleTextSettings,
+                    onSwapDirection = onSwapDirection,
+                    onRequestOcr = onRequestOcr,
+                    onToggleBrightness = onToggleBrightness
+                )
             }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurface
-        )
-    )
+        }
+        Spacer(Modifier.width(48.dp))
+    }
 }
 
 @Composable
@@ -201,7 +160,7 @@ private fun ReaderExpandedActionButtons(
     showTextSettings: Boolean,
     showOcrAction: Boolean,
     canSwapDirection: Boolean,
-    isRtl: Boolean,
+    directionShortcutActive: Boolean,
     showBrightnessRow: Boolean,
     onToggleToc: () -> Unit,
     onToggleTextSettings: () -> Unit,
@@ -226,7 +185,11 @@ private fun ReaderExpandedActionButtons(
             Icon(
                 Icons.Default.SwapHoriz,
                 contentDescription = readerText.directionToggle,
-                tint = if (isRtl) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                tint = if (directionShortcutActive) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         }
     }

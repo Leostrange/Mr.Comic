@@ -88,6 +88,15 @@ private const val DEFAULT_TEXT_LINE_HEIGHT = 1.6f
 private const val DEFAULT_TEXT_ALIGNMENT = "justify"
 private const val DEFAULT_TEXT_BOLD = false
 
+private fun normalizeTapZoneActionName(value: String?): String {
+    val action = ReaderTapZoneAction.fromStored(value)
+    return if (action == ReaderTapZoneAction.TOGGLE_UI) {
+        ReaderTapZoneAction.MENU.name
+    } else {
+        action.name
+    }
+}
+
 data class ReaderUiState(
     val comic: Comic? = null,
     val currentPage: Int = 0,
@@ -1469,6 +1478,18 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun toggleChromeUi() {
+        _uiState.update { state ->
+            state.copy(
+                chromeState = if (state.chromeState == ReaderChromeState.HIDDEN) {
+                    ReaderChromeState.EXPANDED
+                } else {
+                    ReaderChromeState.HIDDEN
+                }
+            )
+        }
+    }
+
     fun hideChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
 
     fun showMinimalChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
@@ -1864,6 +1885,76 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(volumeKeysPagingEnabled = enabled) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_VOLUME_KEYS_PAGING, enabled)
+        }
+    }
+
+    fun setTapZoneMode(value: String) {
+        val resolved = ReaderTapZoneMode.fromStored(value)
+        _uiState.update { it.copy(tapZoneMode = resolved.name) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_MODE, resolved.name)
+        }
+    }
+
+    fun setTapZoneSwap(enabled: Boolean) {
+        _uiState.update { it.copy(tapZoneSwap = enabled) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_SWAP, enabled)
+        }
+    }
+
+    fun setTapZoneAction(position: String, action: String) {
+        val normalizedActionName = normalizeTapZoneActionName(action)
+        val normalizedPosition = position.uppercase()
+        _uiState.update {
+            when (normalizedPosition) {
+                "LEFT" -> it.copy(
+                    tapZoneMode = ReaderTapZoneMode.CUSTOM.name,
+                    tapZoneLeftAction = normalizedActionName
+                )
+                "CENTER" -> it.copy(
+                    tapZoneMode = ReaderTapZoneMode.CUSTOM.name,
+                    tapZoneCenterAction = normalizedActionName
+                )
+                else -> it.copy(
+                    tapZoneMode = ReaderTapZoneMode.CUSTOM.name,
+                    tapZoneRightAction = normalizedActionName
+                )
+            }
+        }
+        val key = when (normalizedPosition) {
+            "LEFT" -> PreferencesKeys.READER_TAP_ZONE_LEFT
+            "CENTER" -> PreferencesKeys.READER_TAP_ZONE_CENTER
+            else -> PreferencesKeys.READER_TAP_ZONE_RIGHT
+        }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.CUSTOM.name)
+            readerPreferences.set(key, normalizedActionName)
+        }
+    }
+
+    fun toggleTapZoneDirectionShortcut() {
+        val state = _uiState.value
+        val mode = ReaderTapZoneMode.fromStored(state.tapZoneMode)
+        if (mode == ReaderTapZoneMode.CUSTOM) {
+            val left = state.tapZoneLeftAction
+            val right = state.tapZoneRightAction
+            _uiState.update {
+                it.copy(
+                    tapZoneLeftAction = right,
+                    tapZoneRightAction = left
+                )
+            }
+            viewModelScope.launch {
+                readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_LEFT, right)
+                readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_RIGHT, left)
+            }
+        } else {
+            val nextSwap = !state.tapZoneSwap
+            _uiState.update { it.copy(tapZoneSwap = nextSwap) }
+            viewModelScope.launch {
+                readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_SWAP, nextSwap)
+            }
         }
     }
 
@@ -2399,13 +2490,13 @@ class ReaderViewModel @Inject constructor(
                 ReaderTtsSleepTimerMode.OFF.storedValue
             ).first()
         )
-        val tapZoneLeft = ReaderTapZoneAction.fromStored(
+        val tapZoneLeft = normalizeTapZoneActionName(
             readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name).first()
         )
-        val tapZoneCenter = ReaderTapZoneAction.fromStored(
+        val tapZoneCenter = normalizeTapZoneActionName(
             readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name).first()
         )
-        val tapZoneRight = ReaderTapZoneAction.fromStored(
+        val tapZoneRight = normalizeTapZoneActionName(
             readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name).first()
         )
         val headerLeftSlot = ReaderInfoSlot.fromStored(
@@ -2474,9 +2565,9 @@ class ReaderViewModel @Inject constructor(
                 ttsVolume = ttsVolume,
                 ttsVoiceName = ttsVoiceName,
                 ttsSleepTimerMode = ttsSleepTimerMode.storedValue,
-                tapZoneLeftAction = tapZoneLeft.name,
-                tapZoneCenterAction = tapZoneCenter.name,
-                tapZoneRightAction = tapZoneRight.name,
+                tapZoneLeftAction = tapZoneLeft,
+                tapZoneCenterAction = tapZoneCenter,
+                tapZoneRightAction = tapZoneRight,
                 headerLeftSlot   = headerLeftSlot.name,
                 headerCenterSlot = headerCenterSlot.name,
                 headerRightSlot  = headerRightSlot.name,

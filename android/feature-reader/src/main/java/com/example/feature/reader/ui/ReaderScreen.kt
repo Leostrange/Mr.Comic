@@ -1,11 +1,14 @@
 package com.example.feature.reader.ui
 
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
 import android.view.ActionMode
+import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -58,9 +61,13 @@ import android.webkit.WebViewClient
 import org.json.JSONTokener
 import com.example.core.model.isTextReadingFormat
 import com.example.core.model.ReadingMode
+import com.example.core.model.ReaderTapZoneAction
+import com.example.core.model.ReaderTapZoneMode
 import com.example.core.model.ReaderTtsSleepTimerMode
 import com.example.core.model.TranslationMode
 import com.example.core.model.TranslationTransportPreference
+import com.example.core.model.resolveReaderSimpleTapZoneLayout
+import com.example.core.model.resolveReaderTapZoneLayout
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.theme.ReadingPreset
@@ -259,6 +266,12 @@ private fun readerMaterialColorScheme(
 
 private fun normalizedTocTitle(title: String): String =
     title.replace(Regex("\\s+"), " ").trim()
+
+private tailrec fun findReaderHardwareKeyHost(context: Context): ReaderHardwareKeyHost? = when (context) {
+    is ReaderHardwareKeyHost -> context
+    is ContextWrapper -> findReaderHardwareKeyHost(context.baseContext)
+    else -> null
+}
 
 /** Map of display font name → asset file name. */
 private val CUSTOM_FONTS = mapOf(
@@ -704,6 +717,7 @@ fun ReaderScreen(
     val isEInk = LocalEInkMode.current
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
+    val readerHardwareKeyHost = remember(context) { findReaderHardwareKeyHost(context) }
     val clipboardManager = LocalClipboardManager.current
     val ttsController = remember { ReaderTextToSpeechController(context) }
     val ttsRuntimeState by ttsController.state.collectAsState()
@@ -755,11 +769,101 @@ fun ReaderScreen(
         }
     }
 
-    // In DUAL_PAGE mode advance 2 pages per tap; otherwise 1
-    val pageStep = if (uiState.readingMode == ReadingMode.DUAL_PAGE) 2 else 1
+    val tapZoneLayout = remember(
+        uiState.tapZoneMode,
+        uiState.tapZoneSwap,
+        uiState.tapZoneLeftAction,
+        uiState.tapZoneCenterAction,
+        uiState.tapZoneRightAction,
+        uiState.readingMode
+    ) {
+        resolveReaderTapZoneLayout(
+            mode = ReaderTapZoneMode.fromStored(uiState.tapZoneMode),
+            readingMode = uiState.readingMode,
+            swapped = uiState.tapZoneSwap,
+            leftAction = uiState.tapZoneLeftAction,
+            centerAction = uiState.tapZoneCenterAction,
+            rightAction = uiState.tapZoneRightAction
+        )
+    }
+    val directionShortcutActive = remember(
+        uiState.tapZoneMode,
+        uiState.tapZoneSwap,
+        uiState.tapZoneLeftAction,
+        uiState.tapZoneCenterAction,
+        uiState.tapZoneRightAction,
+        uiState.readingMode
+    ) {
+        when (ReaderTapZoneMode.fromStored(uiState.tapZoneMode)) {
+            ReaderTapZoneMode.SIMPLE -> uiState.tapZoneSwap
+            ReaderTapZoneMode.CUSTOM -> {
+                val defaultLayout = resolveReaderSimpleTapZoneLayout(
+                    readingMode = uiState.readingMode,
+                    swapped = false
+                )
+                uiState.tapZoneLeftAction == defaultLayout.right.name &&
+                    uiState.tapZoneCenterAction == defaultLayout.center.name &&
+                    uiState.tapZoneRightAction == defaultLayout.left.name
+            }
+        }
+    }
+
+    val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
+        tapZoneLayout,
+        uiState.currentPage,
+        uiState.tableOfContents
+    ) {
+        { action ->
+            when (action) {
+                ReaderTapZoneAction.PREVIOUS_PAGE -> viewModel.prevPage()
+                ReaderTapZoneAction.NEXT_PAGE -> viewModel.nextPage()
+                ReaderTapZoneAction.MENU,
+                ReaderTapZoneAction.TOGGLE_UI -> {
+                    showBrightnessRow = false
+                    viewModel.toggleChromeUi()
+                }
+                ReaderTapZoneAction.PREVIOUS_CHAPTER -> {
+                    previousReaderChapterPage(uiState.tableOfContents, uiState.currentPage)?.let { page ->
+                        viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
+                    }
+                }
+                ReaderTapZoneAction.NEXT_CHAPTER -> {
+                    nextReaderChapterPage(uiState.tableOfContents, uiState.currentPage)?.let { page ->
+                        viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
+                    }
+                }
+                ReaderTapZoneAction.NONE -> Unit
+            }
+        }
+    }
 
     DisposableEffect(ttsController) {
         onDispose { ttsController.release() }
+    }
+
+    val latestVolumeKeysPagingEnabled by rememberUpdatedState(uiState.volumeKeysPagingEnabled)
+    val latestHandleHardwarePageTurn by rememberUpdatedState<(Int) -> Unit> { step ->
+        when {
+            step < 0 -> viewModel.prevPage()
+            step > 0 -> viewModel.nextPage()
+        }
+    }
+
+    DisposableEffect(readerHardwareKeyHost) {
+        readerHardwareKeyHost?.setReaderHardwareKeyHandler { event ->
+            val decision = resolveReaderHardwareKeyDecision(
+                event = event,
+                volumePagingEnabled = latestVolumeKeysPagingEnabled
+            )
+            if (!decision.consume) {
+                return@setReaderHardwareKeyHandler false
+            }
+            decision.pageStep?.let(latestHandleHardwarePageTurn)
+            true
+        }
+        onDispose {
+            readerHardwareKeyHost?.setReaderHardwareKeyHandler(null)
+        }
     }
 
     LaunchedEffect(
@@ -887,12 +991,9 @@ fun ReaderScreen(
                         HtmlPageView(
                             html = htmlContent,
                             baseUrl = uiState.htmlBaseUrl,
-                            onLeftTap   = { viewModel.navigateTo(uiState.currentPage - pageStep) },
-                            onRightTap  = { viewModel.navigateTo(uiState.currentPage + pageStep) },
-                            onCenterTap = {
-                                showBrightnessRow = false
-                                viewModel.onCenterTap()
-                            },
+                            onLeftTap   = { handleTapZoneAction(tapZoneLayout.left) },
+                            onRightTap  = { handleTapZoneAction(tapZoneLayout.right) },
+                            onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
                             onAnchorClick = viewModel::onAnchorClick,
                             onInlineFootnote = viewModel::showInlineFootnote,
                             onTranslateSelection = { selectedText ->
@@ -922,23 +1023,17 @@ fun ReaderScreen(
                         WebtoonView(
                             viewModel = viewModel,
                             uiState = uiState,
-                            onLeftTap = { viewModel.navigateTo(uiState.currentPage - pageStep) },
-                            onRightTap = { viewModel.navigateTo(uiState.currentPage + pageStep) },
-                            onCenterTap = {
-                                showBrightnessRow = false
-                                viewModel.onCenterTap()
-                            }
+                            onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
+                            onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
+                            onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
                         )
                     } else {
                         PageView(
                             viewModel = viewModel,
                             uiState = uiState,
-                            onLeftTap = { viewModel.navigateTo(uiState.currentPage - pageStep) },
-                            onRightTap = { viewModel.navigateTo(uiState.currentPage + pageStep) },
-                            onCenterTap = {
-                                showBrightnessRow = false
-                                viewModel.onCenterTap()
-                            }
+                            onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
+                            onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
+                            onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
                         )
                     }
                 }
@@ -1018,20 +1113,13 @@ fun ReaderScreen(
                                     showOcrAction = !isTextReader,
                                     canSwapDirection = uiState.readingMode == ReadingMode.PAGE_LTR ||
                                         uiState.readingMode == ReadingMode.PAGE_RTL,
-                                    isRtl = uiState.readingMode == ReadingMode.PAGE_RTL,
+                                    directionShortcutActive = directionShortcutActive,
                                     showBrightnessRow = showBrightnessRow,
                                     useDirectActions = isTextReader,
                                     onNavigateBack = onNavigateBack,
                                     onToggleToc = viewModel::toggleTocSheet,
                                     onToggleTextSettings = viewModel::toggleTextSettings,
-                                    onSwapDirection = {
-                                        val next = if (uiState.readingMode == ReadingMode.PAGE_LTR) {
-                                            ReadingMode.PAGE_RTL
-                                        } else {
-                                            ReadingMode.PAGE_LTR
-                                        }
-                                        viewModel.setReadingMode(next)
-                                    },
+                                    onSwapDirection = viewModel::toggleTapZoneDirectionShortcut,
                                     onRequestOcr = viewModel::requestOcr,
                                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow }
                                 )
@@ -1088,6 +1176,9 @@ fun ReaderScreen(
             onLandscapeSpreadChange = viewModel::setLandscapeSpreadEnabled,
             onPreloadPagesChange = viewModel::setPreloadPages,
             onPageAnimationChange = viewModel::setPageAnimation,
+            onTapZoneModeChange = viewModel::setTapZoneMode,
+            onTapZoneSwapChange = viewModel::setTapZoneSwap,
+            onTapZoneActionChange = viewModel::setTapZoneAction,
             onVolumePagingChange = viewModel::setVolumeKeysPagingEnabled,
             onChromeAutoHideChange = viewModel::setChromeAutoHideEnabled,
             onTopToolbarOpacityChange = viewModel::setTopToolbarOpacity,

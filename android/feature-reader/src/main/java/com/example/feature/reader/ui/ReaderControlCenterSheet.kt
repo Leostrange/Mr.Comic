@@ -36,9 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.core.model.ReaderTapZoneAction
+import com.example.core.model.ReaderTapZoneMode
 import com.example.core.model.ReaderImageScaleMode
 import com.example.core.model.ReaderScreenTimeoutMode
 import com.example.core.model.ReaderTtsSleepTimerMode
+import com.example.core.model.resolveReaderTapZoneLayout
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.theme.ReadingPreset
 
@@ -70,6 +73,9 @@ internal fun ReaderControlCenterSheet(
     onLandscapeSpreadChange: (Boolean) -> Unit,
     onPreloadPagesChange: (Int) -> Unit,
     onPageAnimationChange: (String) -> Unit,
+    onTapZoneModeChange: (String) -> Unit,
+    onTapZoneSwapChange: (Boolean) -> Unit,
+    onTapZoneActionChange: (String, String) -> Unit,
     onVolumePagingChange: (Boolean) -> Unit,
     onChromeAutoHideChange: (Boolean) -> Unit,
     onTopToolbarOpacityChange: (Float) -> Unit,
@@ -130,6 +136,9 @@ internal fun ReaderControlCenterSheet(
                         onLandscapeSpreadChange = onLandscapeSpreadChange,
                         onPreloadPagesChange = onPreloadPagesChange,
                         onPageAnimationChange = onPageAnimationChange,
+                        onTapZoneModeChange = onTapZoneModeChange,
+                        onTapZoneSwapChange = onTapZoneSwapChange,
+                        onTapZoneActionChange = onTapZoneActionChange,
                         onVolumePagingChange = onVolumePagingChange,
                         onChromeAutoHideChange = onChromeAutoHideChange,
                         onTopToolbarOpacityChange = onTopToolbarOpacityChange,
@@ -187,6 +196,9 @@ private fun ReaderReadingTab(
     onLandscapeSpreadChange: (Boolean) -> Unit,
     onPreloadPagesChange: (Int) -> Unit,
     onPageAnimationChange: (String) -> Unit,
+    onTapZoneModeChange: (String) -> Unit,
+    onTapZoneSwapChange: (Boolean) -> Unit,
+    onTapZoneActionChange: (String, String) -> Unit,
     onVolumePagingChange: (Boolean) -> Unit,
     onChromeAutoHideChange: (Boolean) -> Unit,
     onTopToolbarOpacityChange: (Float) -> Unit,
@@ -196,6 +208,23 @@ private fun ReaderReadingTab(
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
+    val resolvedTapZoneLayout = remember(
+        uiState.tapZoneMode,
+        uiState.readingMode,
+        uiState.tapZoneSwap,
+        uiState.tapZoneLeftAction,
+        uiState.tapZoneCenterAction,
+        uiState.tapZoneRightAction
+    ) {
+        resolveReaderTapZoneLayout(
+            mode = ReaderTapZoneMode.fromStored(uiState.tapZoneMode),
+            readingMode = uiState.readingMode,
+            swapped = uiState.tapZoneSwap,
+            leftAction = uiState.tapZoneLeftAction,
+            centerAction = uiState.tapZoneCenterAction,
+            rightAction = uiState.tapZoneRightAction
+        )
+    }
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
@@ -258,6 +287,64 @@ private fun ReaderReadingTab(
                 checked = uiState.landscapeSpreadEnabled,
                 onCheckedChange = onLandscapeSpreadChange
             )
+        }
+        item { ReaderSectionTitle(readerTapZonesTitle(strings.languageCode)) }
+        item {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ReaderTapZoneMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = uiState.tapZoneMode == mode.name,
+                        onClick = { onTapZoneModeChange(mode.name) },
+                        label = { Text(readerTapZoneModeLabel(mode, strings.languageCode)) }
+                    )
+                }
+            }
+        }
+        item {
+            ReaderSwitchRow(
+                title = readerTapZoneSwapTitle(strings.languageCode),
+                checked = uiState.tapZoneSwap,
+                onCheckedChange = onTapZoneSwapChange,
+                subtitle = if (uiState.tapZoneMode == ReaderTapZoneMode.SIMPLE.name) {
+                    readerTapZoneLayoutSummary(
+                        left = resolvedTapZoneLayout.left,
+                        center = resolvedTapZoneLayout.center,
+                        right = resolvedTapZoneLayout.right,
+                        language = strings.languageCode
+                    )
+                } else {
+                    null
+                }
+            )
+        }
+        if (uiState.tapZoneMode == ReaderTapZoneMode.CUSTOM.name) {
+            item {
+                ReaderTapZoneActionPicker(
+                    title = readerTapZoneLeftTitle(strings.languageCode),
+                    selectedAction = uiState.tapZoneLeftAction,
+                    language = strings.languageCode,
+                    onActionSelected = { onTapZoneActionChange("LEFT", it) }
+                )
+            }
+            item {
+                ReaderTapZoneActionPicker(
+                    title = readerTapZoneCenterTitle(strings.languageCode),
+                    selectedAction = uiState.tapZoneCenterAction,
+                    language = strings.languageCode,
+                    onActionSelected = { onTapZoneActionChange("CENTER", it) }
+                )
+            }
+            item {
+                ReaderTapZoneActionPicker(
+                    title = readerTapZoneRightTitle(strings.languageCode),
+                    selectedAction = uiState.tapZoneRightAction,
+                    language = strings.languageCode,
+                    onActionSelected = { onTapZoneActionChange("RIGHT", it) }
+                )
+            }
         }
         item {
             ReaderSwitchRow(
@@ -352,6 +439,41 @@ private fun ReaderReadingTab(
                 valueRange = 0f..1f,
                 onValueChange = onToolbarBlurChange
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReaderTapZoneActionPicker(
+    title: String,
+    selectedAction: String,
+    language: String,
+    onActionSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            val normalizedSelectedAction = if (ReaderTapZoneAction.fromStored(selectedAction) == ReaderTapZoneAction.TOGGLE_UI) {
+                ReaderTapZoneAction.MENU.name
+            } else {
+                ReaderTapZoneAction.fromStored(selectedAction).name
+            }
+            ReaderTapZoneAction.entries
+                .filter { it != ReaderTapZoneAction.TOGGLE_UI }
+                .forEach { action ->
+                FilterChip(
+                    selected = normalizedSelectedAction == action.name,
+                    onClick = { onActionSelected(action.name) },
+                    label = { Text(readerTapZoneActionLabel(action, language)) }
+                )
+            }
         }
     }
 }
@@ -860,6 +982,122 @@ private fun readerImmersiveTitle(language: String): String = when (language) {
     "zh" -> "沉浸模式"
     "ko" -> "몰입 모드"
     else -> "Immersive mode"
+}
+
+private fun readerTapZonesTitle(language: String): String = when (language) {
+    "ru" -> "Зоны нажатия"
+    "ja" -> "タップゾーン"
+    "zh" -> "点击区域"
+    "ko" -> "탭 영역"
+    else -> "Tap zones"
+}
+
+private fun readerTapZoneModeLabel(mode: ReaderTapZoneMode, language: String): String = when (mode) {
+    ReaderTapZoneMode.SIMPLE -> when (language) {
+        "ru" -> "Простой"
+        "ja" -> "シンプル"
+        "zh" -> "简单"
+        "ko" -> "기본"
+        else -> "Simple"
+    }
+    ReaderTapZoneMode.CUSTOM -> when (language) {
+        "ru" -> "Настраиваемый"
+        "ja" -> "カスタム"
+        "zh" -> "自定义"
+        "ko" -> "사용자 지정"
+        else -> "Custom"
+    }
+}
+
+private fun readerTapZoneSwapTitle(language: String): String = when (language) {
+    "ru" -> "Поменять левую и правую зоны"
+    "ja" -> "左右のゾーンを入れ替える"
+    "zh" -> "交换左右区域"
+    "ko" -> "좌우 영역 바꾸기"
+    else -> "Swap left and right zones"
+}
+
+private fun readerTapZoneLeftTitle(language: String): String = when (language) {
+    "ru" -> "Левая зона"
+    "ja" -> "左ゾーン"
+    "zh" -> "左侧区域"
+    "ko" -> "왼쪽 영역"
+    else -> "Left zone"
+}
+
+private fun readerTapZoneCenterTitle(language: String): String = when (language) {
+    "ru" -> "Центральная зона"
+    "ja" -> "中央ゾーン"
+    "zh" -> "中间区域"
+    "ko" -> "가운데 영역"
+    else -> "Center zone"
+}
+
+private fun readerTapZoneRightTitle(language: String): String = when (language) {
+    "ru" -> "Правая зона"
+    "ja" -> "右ゾーン"
+    "zh" -> "右侧区域"
+    "ko" -> "오른쪽 영역"
+    else -> "Right zone"
+}
+
+private fun readerTapZoneActionLabel(action: ReaderTapZoneAction, language: String): String = when (action) {
+    ReaderTapZoneAction.PREVIOUS_PAGE -> when (language) {
+        "ru" -> "Назад"
+        "ja" -> "前へ"
+        "zh" -> "上一页"
+        "ko" -> "이전 페이지"
+        else -> "Previous page"
+    }
+    ReaderTapZoneAction.MENU,
+    ReaderTapZoneAction.TOGGLE_UI -> when (language) {
+        "ru" -> "Меню"
+        "ja" -> "メニュー"
+        "zh" -> "菜单"
+        "ko" -> "메뉴"
+        else -> "Menu"
+    }
+    ReaderTapZoneAction.NEXT_PAGE -> when (language) {
+        "ru" -> "Вперёд"
+        "ja" -> "次へ"
+        "zh" -> "下一页"
+        "ko" -> "다음 페이지"
+        else -> "Next page"
+    }
+    ReaderTapZoneAction.NONE -> when (language) {
+        "ru" -> "Без действия"
+        "ja" -> "なし"
+        "zh" -> "无动作"
+        "ko" -> "동작 없음"
+        else -> "No action"
+    }
+    ReaderTapZoneAction.PREVIOUS_CHAPTER -> when (language) {
+        "ru" -> "Предыдущая глава"
+        "ja" -> "前の章"
+        "zh" -> "上一章"
+        "ko" -> "이전 챕터"
+        else -> "Previous chapter"
+    }
+    ReaderTapZoneAction.NEXT_CHAPTER -> when (language) {
+        "ru" -> "Следующая глава"
+        "ja" -> "次の章"
+        "zh" -> "下一章"
+        "ko" -> "다음 챕터"
+        else -> "Next chapter"
+    }
+}
+
+private fun readerTapZoneLayoutSummary(
+    left: ReaderTapZoneAction,
+    center: ReaderTapZoneAction,
+    right: ReaderTapZoneAction,
+    language: String
+): String = when (language) {
+    "ru" -> "Слева: ${readerTapZoneActionLabel(left, language)} · Центр: ${readerTapZoneActionLabel(center, language)} · Справа: ${readerTapZoneActionLabel(right, language)}"
+    "ja" -> "左: ${readerTapZoneActionLabel(left, language)} · 中央: ${readerTapZoneActionLabel(center, language)} · 右: ${readerTapZoneActionLabel(right, language)}"
+    "zh" -> "左侧：${readerTapZoneActionLabel(left, language)} · 中间：${readerTapZoneActionLabel(center, language)} · 右侧：${readerTapZoneActionLabel(right, language)}"
+    "ko" -> "왼쪽: ${readerTapZoneActionLabel(left, language)} · 가운데: ${readerTapZoneActionLabel(center, language)} · 오른쪽: ${readerTapZoneActionLabel(right, language)}"
+    else -> "Left: ${readerTapZoneActionLabel(left, language)} · Center: ${readerTapZoneActionLabel(center, language)} · Right: ${readerTapZoneActionLabel(right, language)}"
 }
 
 private fun readerTtsSleepTimerLabel(mode: ReaderTtsSleepTimerMode, language: String): String = when (mode) {

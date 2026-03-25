@@ -89,6 +89,15 @@ import java.io.File
 import java.net.URLDecoder
 import javax.inject.Inject
 
+private fun normalizeTapZoneActionName(value: String?): String {
+    val action = ReaderTapZoneAction.fromStored(value)
+    return if (action == ReaderTapZoneAction.TOGGLE_UI) {
+        ReaderTapZoneAction.MENU.name
+    } else {
+        action.name
+    }
+}
+
 data class LibraryThemePresetSlot(
     val index: Int,
     val serialized: String? = null
@@ -622,11 +631,11 @@ class SettingsViewModel @Inject constructor(
 
     private val extrasFlow7c1b = combine(
         preferences.get(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name)
-            .map { ReaderTapZoneAction.fromStored(it).name },
+            .map { normalizeTapZoneActionName(it) },
         preferences.get(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name)
-            .map { ReaderTapZoneAction.fromStored(it).name },
+            .map { normalizeTapZoneActionName(it) },
         preferences.get(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name)
-            .map { ReaderTapZoneAction.fromStored(it).name }
+            .map { normalizeTapZoneActionName(it) }
     ) { leftAction, centerAction, rightAction ->
         listOf<Any>(leftAction, centerAction, rightAction)
     }
@@ -1288,7 +1297,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setReaderTapZoneAction(position: String, action: String) {
-        val normalizedAction = ReaderTapZoneAction.fromStored(action).name
+        val normalizedAction = normalizeTapZoneActionName(action)
         val key = when (position.uppercase()) {
             "LEFT" -> PreferencesKeys.READER_TAP_ZONE_LEFT
             "CENTER" -> PreferencesKeys.READER_TAP_ZONE_CENTER

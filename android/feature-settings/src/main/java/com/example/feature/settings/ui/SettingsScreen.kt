@@ -4634,7 +4634,8 @@ private fun readerTapZoneActionLabel(language: String, action: String): String =
         "ko" -> "뒤로"
         else -> "Назад"
     }
-    ReaderTapZoneAction.MENU -> when (language) {
+    ReaderTapZoneAction.MENU,
+    ReaderTapZoneAction.TOGGLE_UI -> when (language) {
         "en" -> "Menu"
         "ja" -> "メニュー"
         "zh" -> "菜单"
@@ -4669,13 +4670,6 @@ private fun readerTapZoneActionLabel(language: String, action: String): String =
         "ko" -> "다음 장"
         else -> "Следующая глава"
     }
-    ReaderTapZoneAction.TOGGLE_UI -> when (language) {
-        "en" -> "Toggle UI"
-        "ja" -> "UI 切替"
-        "zh" -> "切换界面"
-        "ko" -> "UI 전환"
-        else -> "Переключить UI"
-    }
 }
 
 private fun readerInfoSlotPreviewValue(language: String, slot: String): String = when (ReaderInfoSlot.fromStored(slot)) {
@@ -4702,7 +4696,6 @@ private fun readerTapZonePickerOptions(language: String): List<ReaderPickerOptio
     ReaderPickerOption(ReaderTapZoneAction.NEXT_PAGE.name, readerTapZoneActionLabel(language, ReaderTapZoneAction.NEXT_PAGE.name)),
     ReaderPickerOption(ReaderTapZoneAction.PREVIOUS_CHAPTER.name, readerTapZoneActionLabel(language, ReaderTapZoneAction.PREVIOUS_CHAPTER.name)),
     ReaderPickerOption(ReaderTapZoneAction.NEXT_CHAPTER.name, readerTapZoneActionLabel(language, ReaderTapZoneAction.NEXT_CHAPTER.name)),
-    ReaderPickerOption(ReaderTapZoneAction.TOGGLE_UI.name, readerTapZoneActionLabel(language, ReaderTapZoneAction.TOGGLE_UI.name)),
     ReaderPickerOption(ReaderTapZoneAction.NONE.name, readerTapZoneActionLabel(language, ReaderTapZoneAction.NONE.name))
 )
 
