@@ -58,6 +58,7 @@ import android.webkit.WebViewClient
 import org.json.JSONTokener
 import com.example.core.model.isTextReadingFormat
 import com.example.core.model.ReadingMode
+import com.example.core.model.ReaderTtsSleepTimerMode
 import com.example.core.model.TranslationMode
 import com.example.core.model.TranslationTransportPreference
 import com.example.core.ui.eink.LocalEInkMode
@@ -704,6 +705,8 @@ fun ReaderScreen(
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val ttsController = remember { ReaderTextToSpeechController(context) }
+    val ttsRuntimeState by ttsController.state.collectAsState()
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTextReader = uiState.currentHtmlContent != null ||
         (uiState.comic?.format?.isTextReadingFormat() == true)
@@ -754,6 +757,28 @@ fun ReaderScreen(
 
     // In DUAL_PAGE mode advance 2 pages per tap; otherwise 1
     val pageStep = if (uiState.readingMode == ReadingMode.DUAL_PAGE) 2 else 1
+
+    DisposableEffect(ttsController) {
+        onDispose { ttsController.release() }
+    }
+
+    LaunchedEffect(
+        uiState.currentHtmlContent,
+        uiState.ttsVoiceName,
+        uiState.ttsSpeed,
+        uiState.ttsPitch,
+        uiState.ttsVolume,
+        uiState.ttsSleepTimerMode
+    ) {
+        ttsController.updateContent(
+            rawHtml = uiState.currentHtmlContent,
+            preferredVoiceName = uiState.ttsVoiceName,
+            speed = uiState.ttsSpeed,
+            pitch = uiState.ttsPitch,
+            volume = uiState.ttsVolume,
+            sleepTimerMode = ReaderTtsSleepTimerMode.fromStored(uiState.ttsSleepTimerMode)
+        )
+    }
 
     // Применяем яркость экрана через WindowManager
     DisposableEffect(uiState.brightness, context) {
@@ -989,7 +1014,8 @@ fun ReaderScreen(
                                 ReaderExpandedBar(
                                     title = uiState.comic?.title.orEmpty(),
                                     canShowToc = uiState.tableOfContents.isNotEmpty() || uiState.bookmarkedPages.isNotEmpty(),
-                                    showTextSettings = uiState.currentHtmlContent != null,
+                                    showTextSettings = true,
+                                    showOcrAction = !isTextReader,
                                     canSwapDirection = uiState.readingMode == ReadingMode.PAGE_LTR ||
                                         uiState.readingMode == ReadingMode.PAGE_RTL,
                                     isRtl = uiState.readingMode == ReadingMode.PAGE_RTL,
@@ -1006,7 +1032,7 @@ fun ReaderScreen(
                                         }
                                         viewModel.setReadingMode(next)
                                     },
-                                    onRequestOcr = {},
+                                    onRequestOcr = viewModel::requestOcr,
                                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow }
                                 )
                                 if (showBrightnessRow) {
@@ -1042,23 +1068,47 @@ fun ReaderScreen(
 
     // ── Настройки текста (ModalBottomSheet) ────────────────────────────────────
     if (uiState.showTextSettings) {
-        TextSettingsSheet(
-            fontSize         = uiState.textFontSize,
-            colorScheme      = uiState.textColorScheme,
-            fontFamily       = uiState.textFontFamily,
-            lineHeight       = uiState.textLineHeight,
-            textAlignment    = uiState.textAlignment,
-            bold             = uiState.textBold,
-            currentPreset    = uiState.readerPreset,
+        ReaderControlCenterSheet(
+            uiState = uiState,
+            isTextReader = isTextReader,
+            ttsRuntimeState = ttsRuntimeState,
+            onDismiss = viewModel::toggleTextSettings,
             onApplyReadingPreset = viewModel::applyReadingPreset,
-            onFontSizeChange    = viewModel::setTextFontSize,
+            onFontSizeChange = viewModel::setTextFontSize,
             onColorSchemeChange = viewModel::setTextColorScheme,
-            onFontFamilyChange  = viewModel::setTextFontFamily,
-            onLineHeightChange  = viewModel::setTextLineHeight,
-            onTextAlignChange   = viewModel::setTextAlignment,
-            onBoldChange        = viewModel::setTextBold,
-            onReset             = viewModel::resetTextSettings,
-            onDismiss           = viewModel::toggleTextSettings
+            onFontFamilyChange = viewModel::setTextFontFamily,
+            onLineHeightChange = viewModel::setTextLineHeight,
+            onTextAlignChange = viewModel::setTextAlignment,
+            onBoldChange = viewModel::setTextBold,
+            onResetStyle = viewModel::resetTextSettings,
+            onReadingModeChange = viewModel::setReadingMode,
+            onKeepScreenOnChange = viewModel::setKeepScreenOn,
+            onScreenTimeoutChange = viewModel::setScreenTimeoutMode,
+            onImmersiveModeChange = viewModel::setImmersiveMode,
+            onLandscapeSpreadChange = viewModel::setLandscapeSpreadEnabled,
+            onPreloadPagesChange = viewModel::setPreloadPages,
+            onPageAnimationChange = viewModel::setPageAnimation,
+            onVolumePagingChange = viewModel::setVolumeKeysPagingEnabled,
+            onChromeAutoHideChange = viewModel::setChromeAutoHideEnabled,
+            onTopToolbarOpacityChange = viewModel::setTopToolbarOpacity,
+            onBottomToolbarOpacityChange = viewModel::setBottomToolbarOpacity,
+            onToolbarBlurChange = viewModel::setToolbarBlur,
+            onImageScaleModeChange = viewModel::setImageScaleMode,
+            onOpenToc = viewModel::toggleTocSheet,
+            onToggleBookmark = viewModel::toggleBookmark,
+            onRequestOcr = viewModel::requestOcr,
+            onTtsTogglePlayback = ttsController::togglePlayback,
+            onTtsStop = ttsController::stop,
+            onTtsPrevious = ttsController::previousChunk,
+            onTtsNext = ttsController::nextChunk,
+            onTtsVoiceNameChange = { value ->
+                viewModel.setTtsVoiceName(value)
+                ttsController.selectVoice(value)
+            },
+            onTtsSpeedChange = viewModel::setTtsSpeed,
+            onTtsPitchChange = viewModel::setTtsPitch,
+            onTtsVolumeChange = viewModel::setTtsVolume,
+            onTtsSleepTimerChange = viewModel::setTtsSleepTimerMode
         )
     }
     uiState.selectedTextActionSheet?.let { actionState ->

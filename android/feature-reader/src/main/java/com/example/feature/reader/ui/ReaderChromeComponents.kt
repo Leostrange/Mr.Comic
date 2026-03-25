@@ -103,6 +103,7 @@ fun ReaderExpandedBar(
     title: String,
     canShowToc: Boolean,
     showTextSettings: Boolean,
+    showOcrAction: Boolean = true,
     canSwapDirection: Boolean,
     isRtl: Boolean,
     showBrightnessRow: Boolean,
@@ -130,6 +131,7 @@ fun ReaderExpandedBar(
                     ReaderExpandedActionButtons(
                         canShowToc = canShowToc,
                         showTextSettings = showTextSettings,
+                        showOcrAction = showOcrAction,
                         canSwapDirection = canSwapDirection,
                         isRtl = isRtl,
                         showBrightnessRow = showBrightnessRow,
@@ -164,6 +166,7 @@ fun ReaderExpandedBar(
                     ReaderExpandedActionButtons(
                         canShowToc = canShowToc,
                         showTextSettings = showTextSettings,
+                        showOcrAction = showOcrAction,
                         canSwapDirection = canSwapDirection,
                         isRtl = isRtl,
                         showBrightnessRow = showBrightnessRow,
@@ -196,6 +199,7 @@ fun ReaderExpandedBar(
 private fun ReaderExpandedActionButtons(
     canShowToc: Boolean,
     showTextSettings: Boolean,
+    showOcrAction: Boolean,
     canSwapDirection: Boolean,
     isRtl: Boolean,
     showBrightnessRow: Boolean,
@@ -226,8 +230,10 @@ private fun ReaderExpandedActionButtons(
             )
         }
     }
-    IconButton(onClick = onRequestOcr) {
-        Icon(Icons.Default.Translate, contentDescription = readerText.ocrTranslation)
+    if (showOcrAction) {
+        IconButton(onClick = onRequestOcr) {
+            Icon(Icons.Default.Translate, contentDescription = readerText.ocrTranslation)
+        }
     }
     IconButton(onClick = onToggleBrightness) {
         Icon(
