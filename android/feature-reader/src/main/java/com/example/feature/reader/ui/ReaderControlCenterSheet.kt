@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -17,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -923,6 +925,12 @@ private fun ReaderServicesTab(
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
+    val activeReaderPreset = ReadingPreset.fromStored(uiState.readerPreset)
+    val voiceMenuSurface = readerPanelSurfaceColor(
+        base = MaterialTheme.colorScheme.surface,
+        emphasis = if (activeReaderPreset == ReadingPreset.EINK) 1f else 0.99f,
+        minAlpha = 1f
+    )
     val isBookmarked = uiState.bookmarkedPages.contains(uiState.currentPage)
     val selectedVoiceLabel = remember(ttsRuntimeState.selectedVoiceName, ttsRuntimeState.availableVoices) {
         ttsRuntimeState.availableVoices.firstOrNull { it.name == ttsRuntimeState.selectedVoiceName }?.label
@@ -938,7 +946,7 @@ private fun ReaderServicesTab(
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 item("toc") {
-                    Button(
+                    ReaderFilledActionButton(
                         onClick = {
                             onDismiss()
                             onOpenToc()
@@ -948,7 +956,7 @@ private fun ReaderServicesTab(
                     }
                 }
                 item("bookmark") {
-                    OutlinedButton(onClick = onToggleBookmark) {
+                    ReaderOutlinedActionButton(onClick = onToggleBookmark) {
                         Text(
                             if (isBookmarked) strings.readerBookmarked else strings.readerBookmark,
                             style = MaterialTheme.typography.labelSmall
@@ -957,7 +965,7 @@ private fun ReaderServicesTab(
                 }
                 if (!isTextReader) {
                     item("ocr") {
-                        OutlinedButton(
+                        ReaderOutlinedActionButton(
                             onClick = {
                                 onDismiss()
                                 onRequestOcr()
@@ -1000,7 +1008,10 @@ private fun ReaderServicesTab(
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     item("play") {
-                        Button(onClick = onTtsTogglePlayback, enabled = ttsRuntimeState.ready) {
+                        ReaderFilledActionButton(
+                            onClick = onTtsTogglePlayback,
+                            enabled = ttsRuntimeState.ready
+                        ) {
                             Text(
                                 if (ttsRuntimeState.isSpeaking) readerText.ttsPause else readerText.ttsPlay,
                                 style = MaterialTheme.typography.labelSmall
@@ -1008,17 +1019,26 @@ private fun ReaderServicesTab(
                         }
                     }
                     item("stop") {
-                        OutlinedButton(onClick = onTtsStop, enabled = ttsRuntimeState.ready) {
+                        ReaderOutlinedActionButton(
+                            onClick = onTtsStop,
+                            enabled = ttsRuntimeState.ready
+                        ) {
                             Text(readerText.ttsStop, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     item("previous") {
-                        OutlinedButton(onClick = onTtsPrevious, enabled = ttsRuntimeState.ready) {
+                        ReaderOutlinedActionButton(
+                            onClick = onTtsPrevious,
+                            enabled = ttsRuntimeState.ready
+                        ) {
                             Text(readerText.ttsPrevious, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     item("next") {
-                        OutlinedButton(onClick = onTtsNext, enabled = ttsRuntimeState.ready) {
+                        ReaderOutlinedActionButton(
+                            onClick = onTtsNext,
+                            enabled = ttsRuntimeState.ready
+                        ) {
                             Text(readerText.ttsNext, style = MaterialTheme.typography.labelSmall)
                         }
                     }
@@ -1027,7 +1047,7 @@ private fun ReaderServicesTab(
             item { ReaderSectionTitle(readerText.ttsVoiceTitle) }
             item {
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(
+                    ReaderOutlinedActionButton(
                         onClick = { isVoiceMenuExpanded = true },
                         enabled = ttsRuntimeState.availableVoices.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth()
@@ -1048,7 +1068,11 @@ private fun ReaderServicesTab(
                     DropdownMenu(
                         expanded = isVoiceMenuExpanded,
                         onDismissRequest = { isVoiceMenuExpanded = false },
-                        modifier = Modifier.heightIn(max = 320.dp)
+                        modifier = Modifier.heightIn(max = 320.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        containerColor = voiceMenuSurface,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 8.dp
                     ) {
                         DropdownMenuItem(
                             text = { Text(readerText.ttsVoiceDefault) },
@@ -1163,6 +1187,52 @@ private fun ReaderChoiceChip(
             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         label = label
+    )
+}
+
+@Composable
+private fun ReaderFilledActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 30.dp),
+        shape = RoundedCornerShape(999.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        content = content
+    )
+}
+
+@Composable
+private fun ReaderOutlinedActionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 30.dp),
+        shape = RoundedCornerShape(999.dp),
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            disabledContainerColor = MaterialTheme.colorScheme.surface,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        content = content
     )
 }
 

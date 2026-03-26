@@ -28,18 +28,24 @@ import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -70,6 +76,14 @@ import com.example.core.domain.analytics.resolveGamificationMetricsSnapshot
 import com.example.core.domain.analytics.resolveMascotStagePreview
 import com.example.core.domain.analytics.resolveMrComicMascotState
 import com.example.core.model.Comic
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
+import com.example.core.ui.library.LibraryBackdropLayer
+import com.example.core.ui.library.RootChromePanelShape
+import com.example.core.ui.library.RootChromePillShape
+import com.example.core.ui.library.RootChromeTone
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.mascot.MrComicMiniAvatar
 import com.example.core.ui.mascot.MrComicStagePreviewLead
@@ -77,6 +91,13 @@ import com.example.core.ui.mascot.mrComicMascotStageHint
 import com.example.core.ui.mascot.mrComicMascotStageLabel
 import com.example.core.ui.mascot.mrComicMascotStagePreviewText
 import com.example.core.ui.mascot.mrComicMascotStagePreviewTitle
+import com.example.core.ui.library.rootChromeBackdropStrength
+import com.example.core.ui.library.rootChromeBackdropVeil
+import com.example.core.ui.library.rootChromeIconContainerColor
+import com.example.core.ui.library.rootChromePanelColor
+import com.example.core.ui.library.rootChromePillContainerColor
+import com.example.core.ui.library.rootChromePillContentColor
+import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.mrcomic.ui.ContinueScreenText
 import com.example.mrcomic.ui.continueScreenText
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -148,6 +169,14 @@ internal enum class ContinueReturnSupportTone {
     GRACE_SPENT,
     WEEKLY_DONE
 }
+
+data class ContinueLibraryChrome(
+    val backgroundStyle: String = DEFAULT_LIBRARY_BACKGROUND_STYLE,
+    val backgroundImageUri: String? = null,
+    val backdropStrength: Float = DEFAULT_LIBRARY_BACKDROP_STRENGTH,
+    val backgroundBlur: Float = DEFAULT_LIBRARY_BACKGROUND_BLUR,
+    val backgroundVeil: Float = DEFAULT_LIBRARY_BACKGROUND_VEIL
+)
 
 @HiltViewModel
 class ContinueViewModel @Inject constructor(
@@ -417,6 +446,7 @@ fun ContinueScreen(
     onComicClick: (String, Int?) -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenProgressProfile: () -> Unit = {},
+    libraryChrome: ContinueLibraryChrome = ContinueLibraryChrome(),
     viewModel: ContinueViewModel = hiltViewModel()
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
@@ -475,142 +505,230 @@ fun ContinueScreen(
         )
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = text.title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = if (uiState.hasLibraryContent) {
-                        text.introWithLibrary
-                    } else {
-                        text.introEmptyLibrary
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+    Scaffold(
+        topBar = {
+            ContinueTopBar(
+                title = text.title,
+                onOpenProgressProfile = onOpenProgressProfile
+            )
+        },
+        containerColor = Color.Transparent
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            LibraryBackdropLayer(
+                backgroundStyle = libraryChrome.backgroundStyle,
+                backgroundImageUri = libraryChrome.backgroundImageUri,
+                colorScheme = MaterialTheme.colorScheme,
+                backdropStrength = rootChromeBackdropStrength(libraryChrome.backdropStrength),
+                backgroundBlur = libraryChrome.backgroundBlur,
+                imageVeil = rootChromeBackdropVeil(libraryChrome.backgroundVeil),
+                modifier = Modifier.fillMaxSize()
+            )
 
-        if (!uiState.hasLibraryContent) {
-            item {
-                EmptyContinueState(
-                    onOpenLibrary = onOpenLibrary,
-                    text = text,
-                    showMascot = uiState.mascotRecapEnabled
-                )
-            }
-        } else if (!uiState.hasActiveReading) {
-            returnPrompt
-                ?.takeIf { showReturnPrompt }
-                ?.let { prompt ->
-                    item {
-                        ContinueReturnCard(
-                            prompt = prompt,
-                            goalState = uiState.dailyReadingGoal,
-                            appLanguage = strings.languageCode,
-                            showMascot = uiState.mascotRecapEnabled,
-                            actionLabel = text.continueReading,
-                            onOpenTarget = { onComicClick(prompt.comicId, prompt.page) }
-                        )
-                    }
-                }
-            dedupedCheckpointTrail
-                .takeIf { showCheckpointRecap }
-                ?.let { checkpointTrail ->
-                    item {
-                        CheckpointRecapChip(
-                            checkpointTrail = checkpointTrail,
-                            text = text,
-                            showMascot = uiState.mascotRecapEnabled,
-                            onDismiss = { viewModel.clearCheckpoint() },
-                            onCheckpointClick = { checkpoint ->
-                                onComicClick(checkpoint.comicId, checkpoint.page)
-                            }
-                        )
-                    }
-                }
-            item {
-                EmptyContinueReadingState(
-                    onOpenLibrary = onOpenLibrary,
-                    text = text,
-                    showMascot = uiState.mascotRecapEnabled
-                )
-            }
-        } else {
-            uiState.continueReading?.let { comic ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 item {
-                    ContinueReadingCard(
-                        comic = comic,
-                        onClick = { onComicClick(comic.id, null) }
+                    ContinueIntroCard(
+                        intro = if (uiState.hasLibraryContent) text.introWithLibrary else text.introEmptyLibrary,
+                        status = if (uiState.hasLibraryContent) {
+                            text.inProgressCount(uiState.currentlyReading.size + if (uiState.continueReading != null) 1 else 0)
+                        } else {
+                            null
+                        }
                     )
                 }
-            }
-            if (uiState.currentlyReading.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SectionTitle(text.currentlyReading)
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
-                        ) {
-                            Text(
-                                text = text.inProgressCount(uiState.currentlyReading.size + 1),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                if (!uiState.hasLibraryContent) {
+                    item {
+                        EmptyContinueState(
+                            onOpenLibrary = onOpenLibrary,
+                            text = text,
+                            showMascot = uiState.mascotRecapEnabled
+                        )
+                    }
+                } else if (!uiState.hasActiveReading) {
+                    returnPrompt
+                        ?.takeIf { showReturnPrompt }
+                        ?.let { prompt ->
+                            item {
+                                ContinueReturnCard(
+                                    prompt = prompt,
+                                    goalState = uiState.dailyReadingGoal,
+                                    appLanguage = strings.languageCode,
+                                    showMascot = uiState.mascotRecapEnabled,
+                                    actionLabel = text.continueReading,
+                                    onOpenTarget = { onComicClick(prompt.comicId, prompt.page) }
+                                )
+                            }
+                        }
+                    dedupedCheckpointTrail
+                        .takeIf { showCheckpointRecap }
+                        ?.let { checkpointTrail ->
+                            item {
+                                CheckpointRecapChip(
+                                    checkpointTrail = checkpointTrail,
+                                    text = text,
+                                    showMascot = uiState.mascotRecapEnabled,
+                                    onDismiss = { viewModel.clearCheckpoint() },
+                                    onCheckpointClick = { checkpoint ->
+                                        onComicClick(checkpoint.comicId, checkpoint.page)
+                                    }
+                                )
+                            }
+                        }
+                    item {
+                        EmptyContinueReadingState(
+                            onOpenLibrary = onOpenLibrary,
+                            text = text,
+                            showMascot = uiState.mascotRecapEnabled
+                        )
+                    }
+                } else {
+                    uiState.continueReading?.let { comic ->
+                        item {
+                            ContinueReadingCard(
+                                comic = comic,
+                                onClick = { onComicClick(comic.id, null) }
                             )
                         }
                     }
-                }
-                item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(uiState.currentlyReading, key = { "reading_${it.id}" }) { comic ->
-                            ContinueComicCard(comic = comic, onClick = { onComicClick(comic.id, null) })
+                    if (uiState.currentlyReading.isNotEmpty()) {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                SectionTitle(text.currentlyReading)
+                                Surface(
+                                    shape = RoundedCornerShape(999.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f)
+                                ) {
+                                    Text(
+                                        text = text.inProgressCount(uiState.currentlyReading.size + 1),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                        item {
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                items(uiState.currentlyReading, key = { "reading_${it.id}" }) { comic ->
+                                    ContinueComicCard(comic = comic, onClick = { onComicClick(comic.id, null) })
+                                }
+                            }
                         }
                     }
+                    returnPrompt
+                        ?.takeIf { showReturnPrompt }
+                        ?.let { prompt ->
+                            item {
+                                ContinueReturnCard(
+                                    prompt = prompt,
+                                    goalState = uiState.dailyReadingGoal,
+                                    appLanguage = strings.languageCode,
+                                    showMascot = uiState.mascotRecapEnabled,
+                                    actionLabel = text.continueReading,
+                                    onOpenTarget = { onComicClick(prompt.comicId, prompt.page) }
+                                )
+                            }
+                        }
+                    dedupedCheckpointTrail
+                        .takeIf { showCheckpointRecap }
+                        ?.let { checkpointTrail ->
+                            item {
+                                CheckpointRecapChip(
+                                    checkpointTrail = checkpointTrail,
+                                    text = text,
+                                    showMascot = uiState.mascotRecapEnabled,
+                                    onDismiss = { viewModel.clearCheckpoint() },
+                                    onCheckpointClick = { checkpoint ->
+                                        onComicClick(checkpoint.comicId, checkpoint.page)
+                                    }
+                                )
+                            }
+                        }
                 }
             }
-            returnPrompt
-                ?.takeIf { showReturnPrompt }
-                ?.let { prompt ->
-                    item {
-                        ContinueReturnCard(
-                            prompt = prompt,
-                            goalState = uiState.dailyReadingGoal,
-                            appLanguage = strings.languageCode,
-                            showMascot = uiState.mascotRecapEnabled,
-                            actionLabel = text.continueReading,
-                            onOpenTarget = { onComicClick(prompt.comicId, prompt.page) }
-                        )
-                    }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ContinueTopBar(
+    title: String,
+    onOpenProgressProfile: () -> Unit
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        colors = rootChromeTopBarColors(),
+        actions = {
+            FilledTonalIconButton(onClick = onOpenProgressProfile) {
+                Icon(
+                    imageVector = Icons.Default.TaskAlt,
+                    contentDescription = null
+                )
+            }
+        }
+    )
+}
+
+@Composable
+private fun ContinueIntroCard(
+    intro: String,
+    status: String?
+) {
+    Surface(
+        shape = RootChromePanelShape,
+        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT),
+        tonalElevation = 1.dp,
+        shadowElevation = 4.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = rootChromeIconContainerColor(MaterialTheme.colorScheme)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        modifier = Modifier.padding(10.dp).size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
-            dedupedCheckpointTrail
-                .takeIf { showCheckpointRecap }
-                ?.let { checkpointTrail ->
-                    item {
-                        CheckpointRecapChip(
-                            checkpointTrail = checkpointTrail,
-                            text = text,
-                            showMascot = uiState.mascotRecapEnabled,
-                            onDismiss = { viewModel.clearCheckpoint() },
-                            onCheckpointClick = { checkpoint ->
-                                onComicClick(checkpoint.comicId, checkpoint.page)
-                            }
-                        )
-                    }
+                status?.let {
+                    ContinueSummaryChip(text = it)
                 }
+            }
+            Text(
+                text = intro,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -626,8 +744,8 @@ private fun ContinueReturnCard(
 ) {
     val supportTone = remember(goalState) { resolveContinueReturnSupportTone(goalState) }
     Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.58f)
+        shape = RootChromePanelShape,
+        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.ACCENT)
     ) {
         Column(
             modifier = Modifier
@@ -646,7 +764,7 @@ private fun ContinueReturnCard(
                     neutralIcon = Icons.AutoMirrored.Filled.MenuBook,
                     framedNeutral = true,
                     neutralTint = MaterialTheme.colorScheme.primary,
-                    neutralContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    neutralContainerColor = rootChromeIconContainerColor(MaterialTheme.colorScheme)
                 )
                 Column(
                     modifier = Modifier.weight(1f),
@@ -1235,7 +1353,11 @@ private fun ContinueReadingCard(
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        shape = RootChromePanelShape,
+        colors = CardDefaults.cardColors(
+            containerColor = rootChromePanelColor(MaterialTheme.colorScheme)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -1266,8 +1388,8 @@ private fun ContinueReadingCard(
                     )
                 }
                 Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.surface
+                    shape = RootChromePillShape,
+                    color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
                 ) {
                     Text(
                         text = text.pageProgress(comic.currentPage + 1, (comic.readingProgress * 100).toInt()),
@@ -1277,6 +1399,21 @@ private fun ContinueReadingCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ContinueSummaryChip(text: String) {
+    Surface(
+        shape = RootChromePillShape,
+        color = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true)
+        )
     }
 }
 

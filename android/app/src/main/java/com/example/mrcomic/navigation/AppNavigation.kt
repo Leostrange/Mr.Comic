@@ -74,6 +74,7 @@ import com.example.feature.reader.ui.OcrLaunchRequest
 import com.example.feature.reader.ui.ReaderScreen
 import com.example.feature.settings.ui.SettingsScreen
 import com.example.feature.settings.ui.SettingsViewModel
+import com.example.mrcomic.home.ContinueLibraryChrome
 import com.example.mrcomic.home.ContinueScreen
 import com.example.mrcomic.icons.AppIconSettingsScreen
 import kotlinx.coroutines.launch
@@ -244,6 +245,7 @@ fun AppNavHost(
                 composable(Screen.Continue.route) {
                     val vm: LibraryViewModel = hiltViewModel()
                     val scope = rememberCoroutineScope()
+                    val libraryUiState by vm.uiState.collectAsStateWithLifecycle()
                     ContinueScreen(
                         onComicClick = { comicId, page ->
                             scope.launch {
@@ -262,7 +264,14 @@ fun AppNavHost(
                             navController.navigate(Screen.ProgressProfile.route) {
                                 launchSingleTop = true
                             }
-                        }
+                        },
+                        libraryChrome = ContinueLibraryChrome(
+                            backgroundStyle = libraryUiState.backgroundStyle,
+                            backgroundImageUri = libraryUiState.backgroundImageUri,
+                            backdropStrength = libraryUiState.backdropStrength,
+                            backgroundBlur = libraryUiState.backgroundBlur,
+                            backgroundVeil = libraryUiState.backgroundVeil
+                        )
                     )
                 }
 
@@ -389,7 +398,21 @@ fun AppNavHost(
                         }
                     )
                 ) {
-                    OcrScreen(onNavigateBack = { navController.popBackStack() })
+                    val vm: LibraryViewModel = hiltViewModel()
+                    val libraryUiState by vm.uiState.collectAsStateWithLifecycle()
+                    val imagePath = it.arguments?.getString("imagePath")
+                    val comicId = it.arguments?.getString("comicId")
+                    val page = it.arguments?.getInt("page") ?: -1
+                    OcrScreen(
+                        imagePath = imagePath,
+                        onNavigateBack = { navController.popBackStack() },
+                        showBackButton = !imagePath.isNullOrBlank() || !comicId.isNullOrBlank() || page >= 0,
+                        backgroundStyle = libraryUiState.backgroundStyle,
+                        backgroundImageUri = libraryUiState.backgroundImageUri,
+                        backdropStrength = libraryUiState.backdropStrength,
+                        backgroundBlur = libraryUiState.backgroundBlur,
+                        backgroundVeil = libraryUiState.backgroundVeil
+                    )
                 }
 
                 composable(

@@ -129,8 +129,12 @@ import com.example.core.model.isReadCompleted
 import com.example.core.model.isReadingInProgress
 import com.example.core.model.readingStatus
 import com.example.core.ui.library.LibraryBackdropLayer
+import com.example.core.ui.library.RootChromePillShape
 import com.example.core.ui.library.LibraryShelfBar
 import com.example.core.ui.library.libraryCardElevation
+import com.example.core.ui.library.rootChromePillBorder
+import com.example.core.ui.library.rootChromePillContainerColor
+import com.example.core.ui.library.rootChromePillContentColor
 import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.locale.libraryBooksSectionLabel
@@ -4216,25 +4220,49 @@ private fun LibrarySectionSwitcher(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        FilterChip(
+        LibrarySectionChip(
+            text = strings.navLibrary,
             selected = current == LibraryContentSection.FILES,
-            onClick = { onSectionChange(LibraryContentSection.FILES) },
-            label = { Text(strings.navLibrary, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            onClick = { onSectionChange(LibraryContentSection.FILES) }
         )
-        FilterChip(
+        LibrarySectionChip(
+            text = strings.libraryBookmarks,
             selected = current == LibraryContentSection.BOOKMARKS,
-            onClick = { onSectionChange(LibraryContentSection.BOOKMARKS) },
-            label = { Text(strings.libraryBookmarks, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            onClick = { onSectionChange(LibraryContentSection.BOOKMARKS) }
         )
-        FilterChip(
+        LibrarySectionChip(
+            text = strings.libraryQuotes,
             selected = current == LibraryContentSection.QUOTES,
-            onClick = { onSectionChange(LibraryContentSection.QUOTES) },
-            label = { Text(strings.libraryQuotes, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            onClick = { onSectionChange(LibraryContentSection.QUOTES) }
         )
-        FilterChip(
+        LibrarySectionChip(
+            text = "Mr.Comic",
             selected = current == LibraryContentSection.ACHIEVEMENTS,
-            onClick = { onSectionChange(LibraryContentSection.ACHIEVEMENTS) },
-            label = { Text("Mr.Comic", maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            onClick = { onSectionChange(LibraryContentSection.ACHIEVEMENTS) }
+        )
+    }
+}
+
+@Composable
+private fun LibrarySectionChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.clickable(onClick = onClick),
+        shape = RootChromePillShape,
+        color = rootChromePillContainerColor(colorScheme, selected),
+        border = rootChromePillBorder(colorScheme, selected)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = rootChromePillContentColor(colorScheme, selected),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

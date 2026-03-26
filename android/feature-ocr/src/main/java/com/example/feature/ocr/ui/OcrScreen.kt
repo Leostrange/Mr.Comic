@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,6 +17,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -23,11 +25,28 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.core.model.OcrBlockType
 import com.example.core.model.OverlayDisplayMode
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
+import com.example.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
+import com.example.core.ui.library.LibraryBackdropLayer
+import com.example.core.ui.library.RootChromeDensePillShape
+import com.example.core.ui.library.RootChromePanelShape
+import com.example.core.ui.library.RootChromePillShape
+import com.example.core.ui.library.RootChromeTone
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.locale.TranslationLanguageOption
 import com.example.core.ui.locale.ocrSourceLanguageOptions
 import com.example.core.ui.locale.translationLanguageShortLabel
 import com.example.core.ui.locale.translationTargetLanguageOptions
+import com.example.core.ui.library.rootChromeBackdropStrength
+import com.example.core.ui.library.rootChromeBackdropVeil
+import com.example.core.ui.library.rootChromePanelColor
+import com.example.core.ui.library.rootChromePillBorder
+import com.example.core.ui.library.rootChromePillContainerColor
+import com.example.core.ui.library.rootChromePillContentColor
+import com.example.core.ui.library.rootChromeTextFieldColors
+import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.feature.ocr.data.shouldAllowOcrDictionaryLookup
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -35,6 +54,12 @@ import com.example.feature.ocr.data.shouldAllowOcrDictionaryLookup
 fun OcrScreen(
     imagePath: String? = null,
     onNavigateBack: () -> Unit,
+    showBackButton: Boolean = false,
+    backgroundStyle: String = DEFAULT_LIBRARY_BACKGROUND_STYLE,
+    backgroundImageUri: String? = null,
+    backdropStrength: Float = DEFAULT_LIBRARY_BACKDROP_STRENGTH,
+    backgroundBlur: Float = DEFAULT_LIBRARY_BACKGROUND_BLUR,
+    backgroundVeil: Float = DEFAULT_LIBRARY_BACKGROUND_VEIL,
     viewModel: OcrViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -247,35 +272,45 @@ fun OcrScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
                 title = { Text(text.screenTitle) },
+                colors = rootChromeTopBarColors(),
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
+                    if (showBackButton) {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
+                        }
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                )
+        Box(modifier = Modifier.fillMaxSize()) {
+            LibraryBackdropLayer(
+                backgroundStyle = backgroundStyle,
+                backgroundImageUri = backgroundImageUri,
+                colorScheme = MaterialTheme.colorScheme,
+                backdropStrength = rootChromeBackdropStrength(backdropStrength),
+                backgroundBlur = backgroundBlur,
+                imageVeil = rootChromeBackdropVeil(backgroundVeil),
+                modifier = Modifier.fillMaxSize()
+            )
+
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+                OcrPanelCard(tone = OcrPanelTone.SOFT) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                     Text(
                         text = text.translationProfileTitle,
                         style = MaterialTheme.typography.titleSmall
@@ -347,11 +382,8 @@ fun OcrScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Card(
+                    OcrPanelCard(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                        )
                     ) {
                         Column(
                             modifier = Modifier.padding(10.dp),
@@ -501,12 +533,10 @@ fun OcrScreen(
                 }
             }
 
-            if (activeOperationMessage != null) {
-                Card(
+                if (activeOperationMessage != null) {
+                    OcrPanelCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
-                    )
+                    tone = OcrPanelTone.ACCENT
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -527,8 +557,8 @@ fun OcrScreen(
             }
 
             // ── Image mode (page from reader) ─────────────────────────────
-            if (isImageMode) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                if (isImageMode) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -554,11 +584,9 @@ fun OcrScreen(
                     }
                 }
 
-                Card(
+                    OcrPanelCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                    )
+                    tone = OcrPanelTone.SOFT
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -633,12 +661,10 @@ fun OcrScreen(
                     }
                 }
 
-                if (uiState.recognizedText.isNotBlank()) {
-                    Card(
+                    if (uiState.recognizedText.isNotBlank()) {
+                        OcrPanelCard(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        tone = OcrPanelTone.SOFT
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text(
@@ -655,8 +681,8 @@ fun OcrScreen(
                     }
                 }
 
-                if (uiState.recognizedBlocks.isNotEmpty()) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    if (uiState.recognizedBlocks.isNotEmpty()) {
+                        OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                         Column(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -716,17 +742,17 @@ fun OcrScreen(
                         .fillMaxWidth()
                         .heightIn(min = 120.dp),
                     maxLines = 8,
-                    enabled = !isManualBusy
+                    enabled = !isManualBusy,
+                    shape = RootChromePanelShape,
+                    colors = rootChromeTextFieldColors()
                 )
             }
 
             val hasTextToTranslate = uiState.imageBitmap == null && uiState.manualText.isNotBlank()
             if (uiState.imageBitmap == null) {
-                Card(
+                    OcrPanelCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                    )
+                    tone = OcrPanelTone.SOFT
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -810,8 +836,8 @@ fun OcrScreen(
                 }
             }
 
-            if (uiState.translatedText.isNotBlank()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                if (uiState.translatedText.isNotBlank()) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             text.translation,
@@ -907,9 +933,9 @@ fun OcrScreen(
                 }
             }
 
-            if (uiState.imageBitmap == null && uiState.manualDictionaryEntry != null) {
+                if (uiState.imageBitmap == null && uiState.manualDictionaryEntry != null) {
                 val entry = uiState.manualDictionaryEntry!!
-                Card(modifier = Modifier.fillMaxWidth()) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -955,13 +981,13 @@ fun OcrScreen(
                 }
             }
 
-            if (
-                uiState.imageBitmap == null &&
-                (uiState.isExplainingManualText ||
-                    !uiState.manualExplanation.isNullOrBlank() ||
-                    !uiState.manualExplanationError.isNullOrBlank())
-            ) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                if (
+                    uiState.imageBitmap == null &&
+                    (uiState.isExplainingManualText ||
+                        !uiState.manualExplanation.isNullOrBlank() ||
+                        !uiState.manualExplanationError.isNullOrBlank())
+                ) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1004,8 +1030,8 @@ fun OcrScreen(
                 }
             }
 
-            if (uiState.translatedBlocks.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                if (uiState.translatedBlocks.isNotEmpty()) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1045,12 +1071,10 @@ fun OcrScreen(
                 }
             }
 
-            uiState.saveMessage?.let { saveMessage ->
-                Card(
+                uiState.saveMessage?.let { saveMessage ->
+                    OcrPanelCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer
-                    )
+                    tone = OcrPanelTone.ACCENT
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -1069,12 +1093,10 @@ fun OcrScreen(
             }
 
             // ── Error ─────────────────────────────────────────────────────
-            if (uiState.error != null) {
-                Card(
+                if (uiState.error != null) {
+                    OcrPanelCard(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.errorContainer
-                    )
+                    tone = OcrPanelTone.ERROR
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -1091,12 +1113,21 @@ fun OcrScreen(
                     }
                 }
             }
+            }
         }
     }
 
     if (selectedBlock != null) {
         ModalBottomSheet(
-            onDismissRequest = viewModel::dismissSelectedBlock
+            onDismissRequest = viewModel::dismissSelectedBlock,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+            scrimColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f),
+            dragHandle = {
+                BottomSheetDefaults.DragHandle(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.45f)
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
@@ -1108,7 +1139,7 @@ fun OcrScreen(
                     text = text.translationBlockTitle,
                     style = MaterialTheme.typography.titleMedium
                 )
-                Card(modifier = Modifier.fillMaxWidth()) {
+                OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1156,7 +1187,7 @@ fun OcrScreen(
                 }
 
                 if (selectedBlockContext.first != null || selectedBlockContext.second != null) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth(), tone = OcrPanelTone.SOFT) {
                         Column(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1196,7 +1227,7 @@ fun OcrScreen(
                     }
                 }
 
-                Card(modifier = Modifier.fillMaxWidth()) {
+                OcrPanelCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1256,7 +1287,7 @@ fun OcrScreen(
                     !uiState.selectedBlockCleanedText.isNullOrBlank() ||
                     !uiState.selectedBlockCleanupError.isNullOrBlank()
                 ) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth(), tone = OcrPanelTone.SOFT) {
                         Column(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1304,7 +1335,7 @@ fun OcrScreen(
                     !uiState.selectedBlockExplanation.isNullOrBlank() ||
                     !uiState.selectedBlockExplanationError.isNullOrBlank()
                 ) {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    OcrPanelCard(modifier = Modifier.fillMaxWidth(), tone = OcrPanelTone.SOFT) {
                         Column(
                             modifier = Modifier.padding(12.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -1486,6 +1517,197 @@ private fun buildSelectedBlockContextPreview(
         .mapNotNull(::contextSnippet)
         .firstOrNull()
     return before to after
+}
+
+private enum class OcrPanelTone {
+    NORMAL,
+    SOFT,
+    ACCENT,
+    ERROR
+}
+
+@Composable
+private fun OcrPanelCard(
+    modifier: Modifier = Modifier,
+    tone: OcrPanelTone = OcrPanelTone.NORMAL,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = when (tone) {
+        OcrPanelTone.NORMAL -> rootChromePanelColor(colorScheme)
+        OcrPanelTone.SOFT -> rootChromePanelColor(colorScheme, RootChromeTone.SOFT)
+        OcrPanelTone.ACCENT -> rootChromePanelColor(colorScheme, RootChromeTone.ACCENT)
+        OcrPanelTone.ERROR -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.94f)
+    }
+    Card(
+        modifier = modifier,
+        shape = RootChromePanelShape,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (tone == OcrPanelTone.NORMAL) 4.dp else 2.dp
+        ),
+        content = content
+    )
+}
+
+@Composable
+private fun AssistChip(
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null
+) {
+    RootChromeChip(
+        modifier = modifier,
+        selected = false,
+        enabled = enabled,
+        onClick = onClick,
+        label = label,
+        leadingIcon = leadingIcon
+    )
+}
+
+@Composable
+private fun FilterChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null
+) {
+    RootChromeChip(
+        modifier = modifier,
+        selected = selected,
+        enabled = enabled,
+        onClick = onClick,
+        label = label,
+        leadingIcon = leadingIcon
+    )
+}
+
+@Composable
+private fun RootChromeChip(
+    modifier: Modifier = Modifier,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    leadingIcon: (@Composable () -> Unit)? = null
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = rootChromePillContainerColor(colorScheme, selected).let {
+        if (enabled) it else it.copy(alpha = 0.72f)
+    }
+    val contentColor = rootChromePillContentColor(colorScheme, selected).let {
+        if (enabled) it else it.copy(alpha = 0.58f)
+    }
+    Surface(
+        modifier = modifier,
+        shape = RootChromeDensePillShape,
+        color = containerColor,
+        border = rootChromePillBorder(colorScheme, selected)
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable(enabled = enabled, onClick = onClick)
+                .defaultMinSize(minHeight = 36.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            leadingIcon?.let {
+                CompositionLocalProvider(LocalContentColor provides contentColor) {
+                    it()
+                }
+            }
+            CompositionLocalProvider(LocalContentColor provides contentColor) {
+                ProvideTextStyle(MaterialTheme.typography.labelMedium) {
+                    label()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Button(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = if (enabled) colorScheme.primary else colorScheme.primary.copy(alpha = 0.55f)
+    val contentColor = if (enabled) colorScheme.onPrimary else colorScheme.onPrimary.copy(alpha = 0.72f)
+    Surface(
+        modifier = modifier,
+        shape = RootChromePillShape,
+        color = containerColor
+    ) {
+        Box(
+            modifier = Modifier
+                .clickable(enabled = enabled, onClick = onClick)
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 44.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompositionLocalProvider(LocalContentColor provides contentColor) {
+                    ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                        content()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val containerColor = rootChromePanelColor(colorScheme, RootChromeTone.SOFT).let {
+        if (enabled) it else it.copy(alpha = 0.72f)
+    }
+    val contentColor = colorScheme.onSurface.let {
+        if (enabled) it else it.copy(alpha = 0.58f)
+    }
+    Surface(
+        modifier = modifier,
+        shape = RootChromePillShape,
+        color = containerColor,
+        border = rootChromePillBorder(colorScheme, selected = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .clickable(enabled = enabled, onClick = onClick)
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = 42.dp)
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CompositionLocalProvider(LocalContentColor provides contentColor) {
+                    ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                        content()
+                    }
+                }
+            }
+        }
+    }
 }
 
 private fun contextSnippet(block: com.example.core.model.OcrBlock): String? {
