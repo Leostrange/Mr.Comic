@@ -112,6 +112,7 @@ fun ReaderExpandedBar(
 ) {
     val strings = LocalStrings.current
     val actionScrollState = rememberScrollState()
+    val chromeIconTint = MaterialTheme.colorScheme.onSurface
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -123,7 +124,11 @@ fun ReaderExpandedBar(
             contentAlignment = Alignment.Center
         ) {
             IconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = strings.back,
+                    tint = chromeIconTint
+                )
             }
         }
         Box(
@@ -142,6 +147,7 @@ fun ReaderExpandedBar(
                     canSwapDirection = canSwapDirection,
                     directionShortcutActive = directionShortcutActive,
                     showBrightnessRow = showBrightnessRow,
+                    chromeIconTint = chromeIconTint,
                     onToggleToc = onToggleToc,
                     onToggleTextSettings = onToggleTextSettings,
                     onSwapDirection = onSwapDirection,
@@ -162,6 +168,7 @@ private fun ReaderExpandedActionButtons(
     canSwapDirection: Boolean,
     directionShortcutActive: Boolean,
     showBrightnessRow: Boolean,
+    chromeIconTint: Color,
     onToggleToc: () -> Unit,
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
@@ -172,12 +179,20 @@ private fun ReaderExpandedActionButtons(
     val readerText = readerUiText(strings.languageCode)
     if (canShowToc) {
         IconButton(onClick = onToggleToc) {
-            Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = strings.readerToc)
+            Icon(
+                Icons.AutoMirrored.Filled.FormatListBulleted,
+                contentDescription = strings.readerToc,
+                tint = chromeIconTint
+            )
         }
     }
     if (showTextSettings) {
         IconButton(onClick = onToggleTextSettings) {
-            Icon(Icons.Default.Settings, contentDescription = strings.readerTextStyle)
+            Icon(
+                Icons.Default.Settings,
+                contentDescription = strings.readerTextStyle,
+                tint = chromeIconTint
+            )
         }
     }
     if (canSwapDirection) {
@@ -195,7 +210,11 @@ private fun ReaderExpandedActionButtons(
     }
     if (showOcrAction) {
         IconButton(onClick = onRequestOcr) {
-            Icon(Icons.Default.Translate, contentDescription = readerText.ocrTranslation)
+            Icon(
+                Icons.Default.Translate,
+                contentDescription = readerText.ocrTranslation,
+                tint = chromeIconTint
+            )
         }
     }
     IconButton(onClick = onToggleBrightness) {
