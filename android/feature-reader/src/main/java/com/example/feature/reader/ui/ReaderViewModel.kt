@@ -2038,7 +2038,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun setTopToolbarOpacity(value: Float) {
-        val safe = value.coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(topToolbarOpacity = safe) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
@@ -2046,9 +2046,23 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun setBottomToolbarOpacity(value: Float) {
-        val safe = value.coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(bottomToolbarOpacity = safe) }
         viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe)
+        }
+    }
+
+    fun setToolbarOpacity(value: Float) {
+        val safe = value.coerceIn(0f, 1.0f)
+        _uiState.update {
+            it.copy(
+                topToolbarOpacity = safe,
+                bottomToolbarOpacity = safe
+            )
+        }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
             readerPreferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe)
         }
     }
@@ -2519,8 +2533,8 @@ class ReaderViewModel @Inject constructor(
         val soundStyle   = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER").first()
         val immersive    = readerPreferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false).first()
         val chromeAutoHideEnabled = readerPreferences.get(PreferencesKeys.READER_CHROME_AUTO_HIDE, true).first()
-        val topToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).first().coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
-        val bottomToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).first().coerceIn(READER_TOOLBAR_MIN_OPACITY, 1.0f)
+        val topToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).first().coerceIn(0f, 1.0f)
+        val bottomToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).first().coerceIn(0f, 1.0f)
         val toolbarBlur = readerPreferences.get(PreferencesKeys.READER_TOOLBAR_BLUR, READER_TOOLBAR_DEFAULT_BLUR).first().coerceIn(0f, 1f)
         val imageScaleMode = ReaderImageScaleMode.fromStored(
             readerPreferences.get(

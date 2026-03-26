@@ -89,7 +89,7 @@ import java.util.Locale
 
 // ──────────── Navigation model ────────────
 
-private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.52f
+private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
 
 private enum class SettingsSection {
     APPEARANCE,
@@ -5363,22 +5363,15 @@ private fun ReaderScreenCard(
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(6.dp))
+        val combinedReaderToolbarOpacity = ((uiState.readerTopToolbarOpacity + uiState.readerBottomToolbarOpacity) * 0.5f)
+            .coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1f)
         SettingsSliderTile(
-            title = readerTopToolbarOpacityTitle(strings.languageCode),
-            valueLabel = "${(uiState.readerTopToolbarOpacity * 100).toInt()}%",
-            value = uiState.readerTopToolbarOpacity,
-            onValueChange = viewModel::setReaderTopToolbarOpacity,
+            title = readerToolbarOpacityTitle(strings.languageCode),
+            valueLabel = "${(combinedReaderToolbarOpacity * 100).toInt()}%",
+            value = combinedReaderToolbarOpacity,
+            onValueChange = viewModel::setReaderToolbarOpacity,
             valueRange = SETTINGS_READER_MIN_TOOLBAR_OPACITY..1f,
-            steps = 12
-        )
-        Spacer(Modifier.height(8.dp))
-        SettingsSliderTile(
-            title = readerBottomToolbarOpacityTitle(strings.languageCode),
-            valueLabel = "${(uiState.readerBottomToolbarOpacity * 100).toInt()}%",
-            value = uiState.readerBottomToolbarOpacity,
-            onValueChange = viewModel::setReaderBottomToolbarOpacity,
-            valueRange = SETTINGS_READER_MIN_TOOLBAR_OPACITY..1f,
-            steps = 12
+            steps = 10
         )
         Spacer(Modifier.height(8.dp))
         SettingsSliderTile(
@@ -5407,20 +5400,12 @@ private fun readerToolbarSectionTitle(language: String): String = when (language
     else -> "Панели"
 }
 
-private fun readerTopToolbarOpacityTitle(language: String): String = when (language) {
-    "en" -> "Top toolbar opacity"
-    "ja" -> "上部ツールバーの透明度"
-    "zh" -> "顶部工具栏透明度"
-    "ko" -> "상단 툴바 투명도"
-    else -> "Прозрачность верхнего тулбара"
-}
-
-private fun readerBottomToolbarOpacityTitle(language: String): String = when (language) {
-    "en" -> "Bottom toolbar opacity"
-    "ja" -> "下部ツールバーの透明度"
-    "zh" -> "底部工具栏透明度"
-    "ko" -> "하단 툴바 투명도"
-    else -> "Прозрачность нижнего тулбара"
+private fun readerToolbarOpacityTitle(language: String): String = when (language) {
+    "en" -> "Panel opacity"
+    "ja" -> "パネルの不透明度"
+    "zh" -> "面板不透明度"
+    "ko" -> "패널 불투명도"
+    else -> "Непрозрачность панелей"
 }
 
 private fun readerToolbarBlurTitle(language: String): String = when (language) {
