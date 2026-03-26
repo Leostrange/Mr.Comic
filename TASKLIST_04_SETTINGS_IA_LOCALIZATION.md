@@ -57,7 +57,7 @@ The reference app’s biggest UI strength is information architecture:
   - debug/legacy
 
 Status:
-- completed in [SETTINGS_CAPABILITY_MAP.md](C:/Users/xmeta/projects/Mr.Comic/SETTINGS_CAPABILITY_MAP.md)
+- completed in [SETTINGS_CAPABILITY_MAP.md](C:/Users/xmeta/projects/Mr.Comic/docs/active/SETTINGS_CAPABILITY_MAP.md)
 
 Acceptance:
 - every setting has a clear home
