@@ -72,8 +72,19 @@ import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import com.example.core.ui.library.LibraryBackdropLayer
 import com.example.core.ui.library.LibraryShelfBar
 import com.example.core.ui.library.LibraryThemePresetSnapshot
+import com.example.core.ui.library.RootChromePanelShape
+import com.example.core.ui.library.RootChromePillShape
+import com.example.core.ui.library.RootChromeTone
 import com.example.core.ui.library.libraryCardElevation
 import com.example.core.ui.library.parseLibraryThemePreset
+import com.example.core.ui.library.rootChromeBackdropStrength
+import com.example.core.ui.library.rootChromeBackdropVeil
+import com.example.core.ui.library.rootChromeIconContainerColor
+import com.example.core.ui.library.rootChromePanelColor
+import com.example.core.ui.library.rootChromePillContainerColor
+import com.example.core.ui.library.rootChromePillContentColor
+import com.example.core.ui.library.rootChromeTextFieldColors
+import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.locale.ocrSourceLanguageOptions
@@ -3005,104 +3016,120 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent,
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(sectionTitle) },
+                colors = rootChromeTopBarColors(),
                 navigationIcon = {
-                    IconButton(onClick = {
-                        navigateUp()
-                    }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                    if (currentSection != null || onBackClick != null) {
+                        IconButton(onClick = {
+                            navigateUp()
+                        }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                        }
                     }
                 }
             )
         }
     ) { padding ->
-        when (currentSection) {
-            null -> SettingsMainMenu(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                onSectionClick = {
-                    currentSectionName = it.name
-                    currentAppearancePageName = AppearanceSettingsPage.OVERVIEW.name
-                    currentReaderPageName = ReaderSettingsPage.OVERVIEW.name
-                    currentLibraryPageName = LibrarySettingsPage.OVERVIEW.name
-                    currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
-                },
-                modifier = Modifier.padding(padding)
+        Box(modifier = Modifier.fillMaxSize()) {
+            LibraryBackdropLayer(
+                backgroundStyle = uiState.libraryBackgroundStyle,
+                backgroundImageUri = uiState.libraryBackgroundImageUri,
+                colorScheme = MaterialTheme.colorScheme,
+                backdropStrength = rootChromeBackdropStrength(uiState.libraryBackdropStrength),
+                backgroundBlur = uiState.libraryBackgroundBlur,
+                imageVeil = rootChromeBackdropVeil(uiState.libraryBackgroundVeil),
+                modifier = Modifier.fillMaxSize()
             )
-            SettingsSection.APPEARANCE -> AppearanceSection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                currentPage = currentAppearancePage,
-                onPageChange = { currentAppearancePageName = it.name },
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.READER -> ReaderSection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                currentPage = currentReaderPage,
-                onPageChange = { currentReaderPageName = it.name },
-                onOpenTranslationSettings = {
-                    currentSectionName = SettingsSection.TRANSLATION.name
-                    currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
-                },
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.LIBRARY -> LibrarySection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                currentPage = currentLibraryPage,
-                onPageChange = { currentLibraryPageName = it.name },
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.TRANSLATION -> TranslationSection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                currentPage = currentTranslationPage,
-                onPageChange = { currentTranslationPageName = it.name },
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.SYNC -> SyncSection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.AI_SERVICES -> AiServicesSection(
-                uiState = uiState,
-                strings = strings,
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.READ_ALOUD -> ReadAloudSection(
-                uiState = uiState,
-                viewModel = viewModel,
-                strings = strings,
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.STORAGE -> StorageSection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.ADVANCED -> AdvancedSection(
-                uiState = uiState,
-                strings = strings,
-                viewModel = viewModel,
-                onAppIconSettingsClick = onAppIconSettingsClick,
-                modifier = Modifier.padding(padding)
-            )
-            SettingsSection.ABOUT -> AboutSection(
-                strings = strings,
-                modifier = Modifier.padding(padding)
-            )
+
+            when (currentSection) {
+                null -> SettingsMainMenu(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    onSectionClick = {
+                        currentSectionName = it.name
+                        currentAppearancePageName = AppearanceSettingsPage.OVERVIEW.name
+                        currentReaderPageName = ReaderSettingsPage.OVERVIEW.name
+                        currentLibraryPageName = LibrarySettingsPage.OVERVIEW.name
+                        currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
+                    },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.APPEARANCE -> AppearanceSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    currentPage = currentAppearancePage,
+                    onPageChange = { currentAppearancePageName = it.name },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.READER -> ReaderSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    currentPage = currentReaderPage,
+                    onPageChange = { currentReaderPageName = it.name },
+                    onOpenTranslationSettings = {
+                        currentSectionName = SettingsSection.TRANSLATION.name
+                        currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
+                    },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.LIBRARY -> LibrarySection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    currentPage = currentLibraryPage,
+                    onPageChange = { currentLibraryPageName = it.name },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.TRANSLATION -> TranslationSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    currentPage = currentTranslationPage,
+                    onPageChange = { currentTranslationPageName = it.name },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.SYNC -> SyncSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.AI_SERVICES -> AiServicesSection(
+                    uiState = uiState,
+                    strings = strings,
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.READ_ALOUD -> ReadAloudSection(
+                    uiState = uiState,
+                    viewModel = viewModel,
+                    strings = strings,
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.STORAGE -> StorageSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.ADVANCED -> AdvancedSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    onAppIconSettingsClick = onAppIconSettingsClick,
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.ABOUT -> AboutSection(
+                    strings = strings,
+                    modifier = Modifier.padding(padding)
+                )
+            }
         }
     }
 }
@@ -3183,7 +3210,8 @@ private fun SettingsMainMenu(
                 placeholder = { Text(menuText.searchPlaceholder) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
-                shape = MaterialTheme.shapes.extraLarge
+                shape = RootChromePanelShape,
+                colors = rootChromeTextFieldColors()
             )
         }
         item {
@@ -3244,7 +3272,7 @@ private fun SettingsNavItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Surface(
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+            color = rootChromeIconContainerColor(MaterialTheme.colorScheme),
             shape = CircleShape
         ) {
             Icon(
@@ -3267,13 +3295,13 @@ private fun SettingsNavItem(
             summary?.let {
                 Spacer(Modifier.height(6.dp))
                 Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    shape = RootChromePillShape,
+                    color = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true)
                 ) {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
@@ -3295,8 +3323,8 @@ private fun SettingsSectionLead(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.surfaceVariant
+        shape = RootChromePanelShape,
+        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -3337,13 +3365,13 @@ private fun SettingsCompactSummaryCard(
                     modifier = Modifier.weight(1f)
                 )
                 Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    shape = RootChromePillShape,
+                    color = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true)
                 ) {
                     Text(
                         text = value,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
@@ -3387,8 +3415,8 @@ private fun SettingsStudioOverviewCard(
             ) {
                 summaryItems.forEach { (label, value) ->
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+                        shape = RootChromePillShape,
+                        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
                     ) {
                         Column(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -9047,13 +9075,13 @@ private fun SettingsCard(
 ) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RootChromePanelShape,
         border = BorderStroke(
             width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
         ),
         colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = rootChromePanelColor(MaterialTheme.colorScheme)
         )
     ) {
         Column(

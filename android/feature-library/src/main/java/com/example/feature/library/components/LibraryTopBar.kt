@@ -47,7 +47,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.core.model.SortOrder
+import com.example.core.ui.library.RootChromeTone
 import com.example.core.ui.locale.LocalStrings
+import com.example.core.ui.library.rootChromePanelColor
+import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.feature.library.GroupByMode
 import com.example.feature.library.LibraryContentSection
 import com.example.feature.library.LibraryFormatFilter
@@ -85,7 +88,7 @@ fun LibraryTopBar(
     var addMenuExpanded by remember { mutableStateOf(false) }
     var thumbnailMenuExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    val menuContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val menuContainerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.NEUTRAL)
     val slideSpec = spring<IntOffset>(
         stiffness = Spring.StiffnessMediumLow,
         dampingRatio = Spring.DampingRatioNoBouncy
@@ -117,6 +120,7 @@ fun LibraryTopBar(
                 )
             }
         },
+        colors = rootChromeTopBarColors(),
         navigationIcon = {
             if (canNavigateUp) {
                 IconButton(onClick = onNavigateUp) {
