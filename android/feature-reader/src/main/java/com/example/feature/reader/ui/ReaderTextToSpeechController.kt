@@ -177,6 +177,11 @@ internal class ReaderTextToSpeechController(
             _state.update { it.copy(selectedVoiceName = voiceName) }
             return
         }
+        if (voiceName.isNullOrBlank()) {
+            engine.defaultVoice?.let { engine.voice = it }
+            _state.update { it.copy(selectedVoiceName = null) }
+            return
+        }
         val voice = engine.voices
             ?.firstOrNull { it.name == voiceName }
         if (voice != null) {
