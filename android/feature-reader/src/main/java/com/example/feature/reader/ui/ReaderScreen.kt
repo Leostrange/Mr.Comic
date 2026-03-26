@@ -174,8 +174,18 @@ private fun colorSchemePalette(scheme: String): Pair<String, String> = when (sch
     else    -> "#fafafa"  to "#1a1a1a"
 }
 
+private fun colorSchemePaletteForPreset(
+    scheme: String,
+    readerPreset: ReadingPreset
+): Pair<String, String> = when {
+    scheme == "DAY" && readerPreset == ReadingPreset.PAPER -> "#f6f1e7" to "#2b2118"
+    scheme == "DAY" && readerPreset == ReadingPreset.EINK -> "#f0efe9" to "#121212"
+    else -> colorSchemePalette(scheme)
+}
+
 private fun readerMaterialColorScheme(
     isTextReader: Boolean,
+    readerPreset: ReadingPreset,
     textColorScheme: String,
     fallback: ColorScheme
 ): ColorScheme {
@@ -202,8 +212,8 @@ private fun readerMaterialColorScheme(
             onError = fallback.onError
         )
     } else {
-        when (textColorScheme) {
-            "NIGHT" -> darkColorScheme(
+        when {
+            textColorScheme == "NIGHT" -> darkColorScheme(
                 primary = Color(0xFF7DB7E8),
                 onPrimary = Color(0xFF0F1C29),
                 primaryContainer = Color(0xFF253748),
@@ -221,7 +231,7 @@ private fun readerMaterialColorScheme(
                 outline = Color(0xFF716A60),
                 outlineVariant = Color(0xFF3B403E)
             )
-            "SEPIA" -> lightColorScheme(
+            textColorScheme == "SEPIA" -> lightColorScheme(
                 primary = Color(0xFF2F6B94),
                 onPrimary = Color(0xFFF7F1E4),
                 primaryContainer = Color(0xFFD5E7F4),
@@ -238,6 +248,42 @@ private fun readerMaterialColorScheme(
                 onSurfaceVariant = Color(0xFF6A543B),
                 outline = Color(0xFF94785A),
                 outlineVariant = Color(0xFFC7B08C)
+            )
+            readerPreset == ReadingPreset.PAPER -> lightColorScheme(
+                primary = Color(0xFF345C7C),
+                onPrimary = Color(0xFFF9F4EA),
+                primaryContainer = Color(0xFFDCE6ED),
+                onPrimaryContainer = Color(0xFF142D3D),
+                secondary = Color(0xFF8B6841),
+                onSecondary = Color(0xFFF9F1E7),
+                secondaryContainer = Color(0xFFE8D8BF),
+                onSecondaryContainer = Color(0xFF382411),
+                background = Color(0xFFF6F1E7),
+                onBackground = Color(0xFF2F241A),
+                surface = Color(0xFFEEE6D7),
+                onSurface = Color(0xFF2F241A),
+                surfaceVariant = Color(0xFFE2D6C3),
+                onSurfaceVariant = Color(0xFF675745),
+                outline = Color(0xFF8F7D67),
+                outlineVariant = Color(0xFFCDBEAA)
+            )
+            readerPreset == ReadingPreset.EINK -> lightColorScheme(
+                primary = Color(0xFF1A1A1A),
+                onPrimary = Color(0xFFF3F3F1),
+                primaryContainer = Color(0xFFD7D7D3),
+                onPrimaryContainer = Color(0xFF111111),
+                secondary = Color(0xFF4C4C4C),
+                onSecondary = Color(0xFFF5F5F3),
+                secondaryContainer = Color(0xFFE0E0DC),
+                onSecondaryContainer = Color(0xFF1E1E1E),
+                background = Color(0xFFF0EFE9),
+                onBackground = Color(0xFF111111),
+                surface = Color(0xFFE4E3DD),
+                onSurface = Color(0xFF111111),
+                surfaceVariant = Color(0xFFD7D6D0),
+                onSurfaceVariant = Color(0xFF4A4A47),
+                outline = Color(0xFF777773),
+                outlineVariant = Color(0xFFBDBCB7)
             )
             else -> lightColorScheme(
                 primary = Color(0xFF1A6F9A),
@@ -543,6 +589,7 @@ private fun HtmlPageView(
     onInlineFootnote: (String) -> Unit = {},
     fontSize: Int    = 18,
     colorScheme: String = "DAY",
+    readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
     fontFamily: String  = "Georgia",
     lineHeight: Float   = 1.8f,
     textAlign: String   = "justify",
@@ -555,7 +602,7 @@ private fun HtmlPageView(
     // pushes the WebView content below the status bar / camera notch, so we only need a
     // small gap here regardless of whether the top bar is visible (it overlays as an overlay).
     val topPaddingPx = 8
-    val (bg, fg) = colorSchemePalette(colorScheme)
+    val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
     val bgColor = remember(bg) { android.graphics.Color.parseColor(bg) }
     val themedHtml = remember(html, bg, fg) { buildThemedHtmlDocument(html, bg, fg) }
 
@@ -570,6 +617,7 @@ private fun HtmlPageView(
     val onInlineNote     = rememberUpdatedState(onInlineFootnote)
     val currentFs        = rememberUpdatedState(fontSize)
     val currentScheme    = rememberUpdatedState(colorScheme)
+    val currentPreset    = rememberUpdatedState(readerPreset)
     val currentFamily    = rememberUpdatedState(fontFamily)
     val currentLH        = rememberUpdatedState(lineHeight)
     val currentAlign     = rememberUpdatedState(textAlign)
@@ -634,7 +682,9 @@ private fun HtmlPageView(
                 webViewClient = object : WebViewClient() {
                     override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                         view.setBackgroundColor(
-                            android.graphics.Color.parseColor(colorSchemePalette(currentScheme.value).first)
+                            android.graphics.Color.parseColor(
+                                colorSchemePaletteForPreset(currentScheme.value, currentPreset.value).first
+                            )
                         )
                     }
 
@@ -653,7 +703,7 @@ private fun HtmlPageView(
                     // Inject the tap listener + restore text settings after every page load
                     override fun onPageFinished(view: WebView, url: String) {
                         view.evaluateJavascript(JS_TAP_HANDLER, null)
-                        val (bg, fg) = colorSchemePalette(currentScheme.value)
+                        val (bg, fg) = colorSchemePaletteForPreset(currentScheme.value, currentPreset.value)
                         view.evaluateJavascript(
                             textSettingsJs(
                                 currentFs.value, bg, fg,
@@ -730,6 +780,9 @@ fun ReaderScreen(
     val isTextReader = uiState.currentHtmlContent != null ||
         (uiState.comic?.format?.isTextReadingFormat() == true)
     val supportsLandscapeSpread = !isTextReader && isLandscape && configuration.screenWidthDp >= 600
+    val activeReaderPreset = remember(uiState.readerPreset) {
+        ReadingPreset.fromStored(uiState.readerPreset)
+    }
     var showBrightnessRow by remember { mutableStateOf(false) }
     var eyeRestReminderMinutes by remember { mutableStateOf<Int?>(null) }
     val readerColorScheme = if (isEInk) {
@@ -737,6 +790,7 @@ fun ReaderScreen(
     } else {
         readerMaterialColorScheme(
             isTextReader = isTextReader,
+            readerPreset = activeReaderPreset,
             textColorScheme = uiState.textColorScheme,
             fallback = inheritedColorScheme
         )
@@ -1073,6 +1127,7 @@ fun ReaderScreen(
                             onExplainSelection = viewModel::explainSelectedTextDirect,
                             fontSize     = uiState.textFontSize,
                             colorScheme  = uiState.textColorScheme,
+                            readerPreset = activeReaderPreset,
                             fontFamily   = uiState.textFontFamily,
                             lineHeight   = uiState.textLineHeight,
                             textAlign    = uiState.textAlignment,
@@ -1101,20 +1156,18 @@ fun ReaderScreen(
                 }
 
                 // Расчет цвета для панелей (затемнение меню)
-                val topChromeSurface = readerPanelSurfaceColor(
+                val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
+                val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
+                val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
+                val chromeSurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
-                    emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) uiState.topToolbarOpacity else 0.94f,
-                    minAlpha = 0.72f
+                    emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.06f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
+                    minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else READER_TOOLBAR_MIN_OPACITY
                 )
-                val bottomChromeSurface = readerPanelSurfaceColor(
+                val overlaySurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
-                    emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) uiState.bottomToolbarOpacity else 0.94f,
-                    minAlpha = 0.72f
-                )
-                val infoOverlaySurface = readerPanelSurfaceColor(
-                    base = MaterialTheme.colorScheme.surface,
-                    emphasis = 0.84f,
-                    minAlpha = 0.78f
+                    emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.03f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
+                    minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else READER_TOOLBAR_MIN_OPACITY
                 )
 
                 if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
@@ -1123,7 +1176,7 @@ fun ReaderScreen(
                             .align(Alignment.TopCenter)
                             .fillMaxWidth(),
                         shape = RoundedCornerShape(0.dp),
-                        color = infoOverlaySurface
+                        color = overlaySurface
                     ) {
                         ReaderHeaderFooterTextRow(
                             line = headerOverlayLine,
@@ -1143,7 +1196,7 @@ fun ReaderScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(if (uiState.chromeState == ReaderChromeState.EXPANDED) bottomChromeSurface else Color.Transparent)
+                        .background(if (uiState.chromeState == ReaderChromeState.EXPANDED) chromeSurface else Color.Transparent)
                         .then(
                             if (uiState.chromeState == ReaderChromeState.EXPANDED) {
                                 Modifier.navigationBarsPadding()
@@ -1170,7 +1223,7 @@ fun ReaderScreen(
                             onExpand = viewModel::expandFootnote,
                             onCollapse = viewModel::collapseFootnote,
                             modifier = Modifier.padding(horizontal = if (uiState.chromeState == ReaderChromeState.HIDDEN) 12.dp else 0.dp),
-                            palette = ::colorSchemePalette
+                            palette = { scheme -> colorSchemePaletteForPreset(scheme, activeReaderPreset) }
                         )
                     }
 
@@ -1193,7 +1246,7 @@ fun ReaderScreen(
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(0.dp),
-                                color = infoOverlaySurface
+                                color = overlaySurface
                             ) {
                                 ReaderHeaderFooterTextRow(
                                     line = footerOverlayLine,
@@ -1216,7 +1269,7 @@ fun ReaderScreen(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .background(topChromeSurface)
+                            .background(chromeSurface)
                             .statusBarsPadding()
                             .displayCutoutPadding()
                     ) {
@@ -1261,6 +1314,9 @@ fun ReaderScreen(
             entries = uiState.tableOfContents,
             currentPage = uiState.currentPage,
             bookmarkedPages = uiState.bookmarkedPages,
+            readerPreset = activeReaderPreset,
+            toolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f),
+            toolbarBlur = uiState.toolbarBlur,
             onNavigate = { page ->
                 viewModel.navigateTo(page)
                 viewModel.toggleTocSheet()
@@ -1303,8 +1359,7 @@ fun ReaderScreen(
             onHeaderFooterLeftPaddingChange = viewModel::setHeaderFooterLeftPadding,
             onHeaderFooterRightPaddingChange = viewModel::setHeaderFooterRightPadding,
             onChromeAutoHideChange = viewModel::setChromeAutoHideEnabled,
-            onTopToolbarOpacityChange = viewModel::setTopToolbarOpacity,
-            onBottomToolbarOpacityChange = viewModel::setBottomToolbarOpacity,
+            onToolbarOpacityChange = viewModel::setToolbarOpacity,
             onToolbarBlurChange = viewModel::setToolbarBlur,
             onImageScaleModeChange = viewModel::setImageScaleMode,
             onOpenToc = viewModel::toggleTocSheet,
@@ -1716,9 +1771,10 @@ private fun FootnotePopupPanel(
     val readerText = readerUiText(strings.languageCode)
     val fgColor = MaterialTheme.colorScheme.onSurface
     val accentColor = MaterialTheme.colorScheme.primary
+    val panelColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
+        color = panelColor,
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         shadowElevation = 8.dp
     ) {
@@ -1763,12 +1819,30 @@ private fun TocBottomSheet(
     entries: List<TocEntry>,
     currentPage: Int,
     bookmarkedPages: Set<Int>,
+    readerPreset: ReadingPreset,
+    toolbarOpacity: Float,
+    toolbarBlur: Float,
     onNavigate: (Int) -> Unit,
     onRemoveBookmark: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
+    val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(toolbarOpacity, readerPreset)
+    val effectiveToolbarBlur = readerEffectiveToolbarBlur(toolbarBlur, readerPreset)
+    val sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    val sheetSurface = readerPanelSurfaceColor(
+        base = MaterialTheme.colorScheme.surface,
+        emphasis = if (readerPreset == ReadingPreset.EINK) {
+            1f
+        } else {
+            (effectiveToolbarOpacity + 0.18f + effectiveToolbarBlur * 0.08f).coerceIn(0.92f, 1f)
+        },
+        minAlpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.94f
+    )
+    val itemSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.98f)
+    val activeItemSurface = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.92f)
+    val secondaryPillSurface = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
     var selectedTab by remember(entries, bookmarkedPages) {
         mutableStateOf(if (entries.isEmpty() && bookmarkedPages.isNotEmpty()) "bookmarks" else "chapters")
     }
@@ -1791,33 +1865,50 @@ private fun TocBottomSheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        scrimColor = Color.Transparent
+        shape = sheetShape,
+        containerColor = sheetSurface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = readerPanelTonalElevation(effectiveToolbarBlur, base = 0f, extra = 1f),
+        scrimColor = readerPanelScrimColor(MaterialTheme.colorScheme.onSurface, effectiveToolbarBlur),
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+            )
+        }
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            // Вкладки
-            TabRow(selectedTabIndex = selectedTabIndex) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+        ) {
+            TabRow(
+                modifier = Modifier.heightIn(min = 42.dp),
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.Transparent
+            ) {
                 if (showChaptersTab) {
                     Tab(
+                        modifier = Modifier.heightIn(min = 42.dp),
                         selected = selectedTab == "chapters",
                         onClick = { selectedTab = "chapters" },
                         text = {
                             Text(
                                 readerText.chapters,
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.labelMedium
                             )
                         }
                     )
                 }
                 if (showBookmarksTab) {
                     Tab(
+                        modifier = Modifier.heightIn(min = 42.dp),
                         selected = selectedTab == "bookmarks",
                         onClick = { selectedTab = "bookmarks" },
                         text = {
                             val count = bookmarkedPages.size
                             Text(
                                 readerBookmarksTabLabel(count, strings.languageCode),
-                                style = MaterialTheme.typography.labelLarge
+                                style = MaterialTheme.typography.labelMedium
                             )
                         }
                     )
@@ -1827,142 +1918,149 @@ private fun TocBottomSheet(
             when (selectedTab) {
                 "chapters" -> {
                     if (!showChaptersTab) return@Column
-                    // ── Список глав ────────────────────────────────────────────
                     LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 456.dp),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         itemsIndexed(entries) { idx, entry ->
                             val nextPageIndex = entries.getOrNull(idx + 1)?.pageIndex ?: Int.MAX_VALUE
                             val isCurrentChapter = currentPage >= entry.pageIndex && currentPage < nextPageIndex
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onNavigate(entry.pageIndex) }
-                                    .background(
-                                        if (isCurrentChapter)
-                                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                        else Color.Transparent
-                                    )
-                                    .padding(horizontal = 20.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isCurrentChapter) activeItemSurface else itemSurface
                             ) {
-                                Text(
-                                    text = normalizedTocTitle(entry.title),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (isCurrentChapter) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (isCurrentChapter)
-                                        MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(999.dp),
-                                    color = if (isCurrentChapter) {
-                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceVariant
-                                    }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onNavigate(entry.pageIndex) }
+                                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "${entry.pageIndex + 1}",
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                        style = MaterialTheme.typography.labelSmall,
+                                        text = normalizedTocTitle(entry.title),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = if (isCurrentChapter) FontWeight.SemiBold else FontWeight.Normal,
                                         color = if (isCurrentChapter)
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = if (isCurrentChapter) FontWeight.SemiBold else FontWeight.Normal
+                                            MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
+                                    Spacer(Modifier.width(12.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(999.dp),
+                                        color = if (isCurrentChapter) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                        } else {
+                                            secondaryPillSurface
+                                        }
+                                    ) {
+                                        Text(
+                                            text = "${entry.pageIndex + 1}",
+                                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (isCurrentChapter)
+                                                MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontWeight = if (isCurrentChapter) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
                                 }
                             }
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 20.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                            )
                         }
                         item { Spacer(Modifier.navigationBarsPadding()) }
                     }
                 }
                 "bookmarks" -> {
                     if (!showBookmarksTab) return@Column
-                    // ── Список закладок ────────────────────────────────────────
                     val sortedBookmarks = remember(bookmarkedPages) { bookmarkedPages.sorted() }
                     if (sortedBookmarks.isEmpty()) {
-                        Box(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
+                                .padding(top = 8.dp)
+                                .height(176.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            color = itemSurface
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Default.BookmarkBorder,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    readerText.noBookmarks,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        readerText.noBookmarks,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
                         }
                     } else {
                         LazyColumn(
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 456.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             items(sortedBookmarks) { page ->
                                 val isCurrent = page == currentPage
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onNavigate(page) }
-                                        .background(
-                                            if (isCurrent)
-                                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                                            else Color.Transparent
-                                        )
-                                        .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isCurrent) activeItemSurface else itemSurface
                                 ) {
-                                    Icon(
-                                        Icons.Default.Bookmark,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(
-                                        text = readerPageLabel(page, strings.languageCode),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = if (isCurrent)
-                                            MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    IconButton(
-                                        onClick = { onRemoveBookmark(page) },
-                                        modifier = Modifier.size(36.dp)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onNavigate(page) }
+                                            .padding(start = 14.dp, end = 6.dp, top = 9.dp, bottom = 9.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = readerText.deleteBookmark,
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            Icons.Default.Bookmark,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(18.dp)
                                         )
+                                        Spacer(Modifier.width(12.dp))
+                                        Text(
+                                            text = readerPageLabel(page, strings.languageCode),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                                            color = if (isCurrent)
+                                                MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        IconButton(
+                                            onClick = { onRemoveBookmark(page) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = readerText.deleteBookmark,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
                                 }
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(start = 20.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-                                )
                             }
                             item { Spacer(Modifier.navigationBarsPadding()) }
                         }

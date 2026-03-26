@@ -330,8 +330,8 @@ private data class StatusState(
     val message: String? = null
 )
 
-private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.52f
-private const val SETTINGS_READER_DEFAULT_TOOLBAR_BLUR = 0.18f
+private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
+private const val SETTINGS_READER_DEFAULT_TOOLBAR_BLUR = 0f
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -1025,6 +1025,14 @@ class SettingsViewModel @Inject constructor(
     fun setReaderBottomToolbarOpacity(value: Float) {
         setSlider("readerBottomToolbarOpacity") {
             preferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, value.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f))
+        }
+    }
+
+    fun setReaderToolbarOpacity(value: Float) {
+        val safe = value.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f)
+        setSlider("readerToolbarOpacity") {
+            preferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
+            preferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe)
         }
     }
 

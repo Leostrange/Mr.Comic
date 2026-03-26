@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,12 +76,12 @@ fun ReaderMinimalBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = onNavigateBack) {
+            ReaderChromeIconButton(onClick = onNavigateBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
             }
         },
         actions = {
-            IconButton(onClick = onExpand) {
+            ReaderChromeIconButton(onClick = onExpand) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = strings.controlsShow)
             }
         },
@@ -89,6 +91,42 @@ fun ReaderMinimalBar(
             navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
             actionIconContentColor = MaterialTheme.colorScheme.onSurface
         )
+    )
+}
+
+@Composable
+private fun ReaderChromeIconButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(42.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+internal fun ReaderPanelChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    label: @Composable () -> Unit
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 38.dp),
+        shape = RoundedCornerShape(999.dp),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        label = label
     )
 }
 
@@ -116,14 +154,14 @@ fun ReaderExpandedBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.width(48.dp),
+            modifier = Modifier.width(44.dp),
             contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onNavigateBack) {
+            ReaderChromeIconButton(onClick = onNavigateBack) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = strings.back,
@@ -138,7 +176,7 @@ fun ReaderExpandedBar(
             Row(
                 modifier = Modifier.horizontalScroll(actionScrollState),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
             ) {
                 ReaderExpandedActionButtons(
                     canShowToc = canShowToc,
@@ -156,7 +194,7 @@ fun ReaderExpandedBar(
                 )
             }
         }
-        Spacer(Modifier.width(48.dp))
+        Spacer(Modifier.width(44.dp))
     }
 }
 
@@ -178,7 +216,7 @@ private fun ReaderExpandedActionButtons(
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     if (canShowToc) {
-        IconButton(onClick = onToggleToc) {
+        ReaderChromeIconButton(onClick = onToggleToc) {
             Icon(
                 Icons.AutoMirrored.Filled.FormatListBulleted,
                 contentDescription = strings.readerToc,
@@ -187,7 +225,7 @@ private fun ReaderExpandedActionButtons(
         }
     }
     if (showTextSettings) {
-        IconButton(onClick = onToggleTextSettings) {
+        ReaderChromeIconButton(onClick = onToggleTextSettings) {
             Icon(
                 Icons.Default.Settings,
                 contentDescription = strings.readerTextStyle,
@@ -196,7 +234,7 @@ private fun ReaderExpandedActionButtons(
         }
     }
     if (canSwapDirection) {
-        IconButton(onClick = onSwapDirection) {
+        ReaderChromeIconButton(onClick = onSwapDirection) {
             Icon(
                 Icons.Default.SwapHoriz,
                 contentDescription = readerText.directionToggle,
@@ -209,7 +247,7 @@ private fun ReaderExpandedActionButtons(
         }
     }
     if (showOcrAction) {
-        IconButton(onClick = onRequestOcr) {
+        ReaderChromeIconButton(onClick = onRequestOcr) {
             Icon(
                 Icons.Default.Translate,
                 contentDescription = readerText.ocrTranslation,
@@ -217,7 +255,7 @@ private fun ReaderExpandedActionButtons(
             )
         }
     }
-    IconButton(onClick = onToggleBrightness) {
+    ReaderChromeIconButton(onClick = onToggleBrightness) {
         Icon(
             if (showBrightnessRow) Icons.Default.BrightnessHigh else Icons.Default.BrightnessLow,
             contentDescription = strings.readerBrightness,
@@ -282,11 +320,7 @@ fun ReaderProgressPill(
             .padding(horizontal = 16.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(999.dp),
-        color = readerPanelSurfaceColor(
-            base = MaterialTheme.colorScheme.surface,
-            emphasis = 0.62f,
-            minAlpha = 0.34f
-        )
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.96f)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -343,7 +377,7 @@ fun ReaderExpandedBottomPanel(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterChip(
+            ReaderPanelChip(
                 selected = uiState.currentPage in uiState.bookmarkedPages,
                 onClick = onToggleBookmark,
                 label = {
@@ -358,10 +392,10 @@ fun ReaderExpandedBottomPanel(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK).forEach { preset ->
-                        FilterChip(
-                            selected = uiState.readerPreset == preset.name,
-                            onClick = { onApplyPreset(preset) },
-                            label = {
+                    ReaderPanelChip(
+                        selected = uiState.readerPreset == preset.name,
+                        onClick = { onApplyPreset(preset) },
+                        label = {
                                 Text(
                                     readerPresetLabel(preset, strings.languageCode)
                                 )
@@ -413,11 +447,7 @@ private fun ReaderCompactLandscapeBottomPanel(
         ) {
             Surface(
                 shape = RoundedCornerShape(999.dp),
-                color = readerPanelSurfaceColor(
-                    base = MaterialTheme.colorScheme.surfaceVariant,
-                    emphasis = 0.82f,
-                    minAlpha = 0.42f
-                )
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
             ) {
                 Row(
                     modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
@@ -462,7 +492,9 @@ private fun ReaderCompactLandscapeBottomPanel(
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
                 )
             )
         }
@@ -523,10 +555,11 @@ fun ReaderNotePanel(
     val readerText = readerUiText(LocalStrings.current.languageCode)
     val fgColor = MaterialTheme.colorScheme.onSurface
     val accentColor = MaterialTheme.colorScheme.primary
+    val panelColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
+        color = panelColor,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
         shadowElevation = 8.dp
     ) {
