@@ -1958,6 +1958,78 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun setHeaderSlot(position: String, slot: String) {
+        val normalizedSlot = ReaderInfoSlot.fromStored(slot).name
+        val normalizedPosition = position.uppercase()
+        _uiState.update {
+            when (normalizedPosition) {
+                "LEFT" -> it.copy(headerLeftSlot = normalizedSlot)
+                "CENTER" -> it.copy(headerCenterSlot = normalizedSlot)
+                else -> it.copy(headerRightSlot = normalizedSlot)
+            }
+        }
+        val key = when (normalizedPosition) {
+            "LEFT" -> PreferencesKeys.READER_HEADER_LEFT_SLOT
+            "CENTER" -> PreferencesKeys.READER_HEADER_CENTER_SLOT
+            else -> PreferencesKeys.READER_HEADER_RIGHT_SLOT
+        }
+        viewModelScope.launch {
+            readerPreferences.set(key, normalizedSlot)
+        }
+    }
+
+    fun setFooterSlot(position: String, slot: String) {
+        val normalizedSlot = ReaderInfoSlot.fromStored(slot).name
+        val normalizedPosition = position.uppercase()
+        _uiState.update {
+            when (normalizedPosition) {
+                "LEFT" -> it.copy(footerLeftSlot = normalizedSlot)
+                "CENTER" -> it.copy(footerCenterSlot = normalizedSlot)
+                else -> it.copy(footerRightSlot = normalizedSlot)
+            }
+        }
+        val key = when (normalizedPosition) {
+            "LEFT" -> PreferencesKeys.READER_FOOTER_LEFT_SLOT
+            "CENTER" -> PreferencesKeys.READER_FOOTER_CENTER_SLOT
+            else -> PreferencesKeys.READER_FOOTER_RIGHT_SLOT
+        }
+        viewModelScope.launch {
+            readerPreferences.set(key, normalizedSlot)
+        }
+    }
+
+    fun setHeaderFooterFontSize(size: Int) {
+        val safe = size.coerceIn(10, 20)
+        _uiState.update { it.copy(headerFooterFontSize = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, safe)
+        }
+    }
+
+    fun setHeaderFooterVerticalPadding(padding: Int) {
+        val safe = padding.coerceIn(4, 20)
+        _uiState.update { it.copy(headerFooterVerticalPadding = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, safe)
+        }
+    }
+
+    fun setHeaderFooterLeftPadding(padding: Int) {
+        val safe = padding.coerceIn(8, 32)
+        _uiState.update { it.copy(headerFooterLeftPadding = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, safe)
+        }
+    }
+
+    fun setHeaderFooterRightPadding(padding: Int) {
+        val safe = padding.coerceIn(8, 32)
+        _uiState.update { it.copy(headerFooterRightPadding = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, safe)
+        }
+    }
+
     fun setChromeAutoHideEnabled(enabled: Boolean) {
         _uiState.update { it.copy(chromeAutoHideEnabled = enabled) }
         viewModelScope.launch {

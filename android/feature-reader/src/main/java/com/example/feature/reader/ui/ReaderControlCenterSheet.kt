@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -37,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.model.ReaderTapZoneAction
+import com.example.core.model.ReaderInfoSlot
 import com.example.core.model.ReaderTapZoneMode
 import com.example.core.model.ReaderImageScaleMode
 import com.example.core.model.ReaderScreenTimeoutMode
@@ -77,6 +79,12 @@ internal fun ReaderControlCenterSheet(
     onTapZoneSwapChange: (Boolean) -> Unit,
     onTapZoneActionChange: (String, String) -> Unit,
     onVolumePagingChange: (Boolean) -> Unit,
+    onHeaderSlotChange: (String, String) -> Unit,
+    onFooterSlotChange: (String, String) -> Unit,
+    onHeaderFooterFontSizeChange: (Int) -> Unit,
+    onHeaderFooterVerticalPaddingChange: (Int) -> Unit,
+    onHeaderFooterLeftPaddingChange: (Int) -> Unit,
+    onHeaderFooterRightPaddingChange: (Int) -> Unit,
     onChromeAutoHideChange: (Boolean) -> Unit,
     onTopToolbarOpacityChange: (Float) -> Unit,
     onBottomToolbarOpacityChange: (Float) -> Unit,
@@ -140,6 +148,12 @@ internal fun ReaderControlCenterSheet(
                         onTapZoneSwapChange = onTapZoneSwapChange,
                         onTapZoneActionChange = onTapZoneActionChange,
                         onVolumePagingChange = onVolumePagingChange,
+                        onHeaderSlotChange = onHeaderSlotChange,
+                        onFooterSlotChange = onFooterSlotChange,
+                        onHeaderFooterFontSizeChange = onHeaderFooterFontSizeChange,
+                        onHeaderFooterVerticalPaddingChange = onHeaderFooterVerticalPaddingChange,
+                        onHeaderFooterLeftPaddingChange = onHeaderFooterLeftPaddingChange,
+                        onHeaderFooterRightPaddingChange = onHeaderFooterRightPaddingChange,
                         onChromeAutoHideChange = onChromeAutoHideChange,
                         onTopToolbarOpacityChange = onTopToolbarOpacityChange,
                         onBottomToolbarOpacityChange = onBottomToolbarOpacityChange,
@@ -200,6 +214,12 @@ private fun ReaderReadingTab(
     onTapZoneSwapChange: (Boolean) -> Unit,
     onTapZoneActionChange: (String, String) -> Unit,
     onVolumePagingChange: (Boolean) -> Unit,
+    onHeaderSlotChange: (String, String) -> Unit,
+    onFooterSlotChange: (String, String) -> Unit,
+    onHeaderFooterFontSizeChange: (Int) -> Unit,
+    onHeaderFooterVerticalPaddingChange: (Int) -> Unit,
+    onHeaderFooterLeftPaddingChange: (Int) -> Unit,
+    onHeaderFooterRightPaddingChange: (Int) -> Unit,
     onChromeAutoHideChange: (Boolean) -> Unit,
     onTopToolbarOpacityChange: (Float) -> Unit,
     onBottomToolbarOpacityChange: (Float) -> Unit,
@@ -354,6 +374,109 @@ private fun ReaderReadingTab(
                 subtitle = readerText.volumePagingHint
             )
         }
+        item { HorizontalDivider() }
+        item { ReaderSectionTitle(readerHeaderFooterSectionTitle(strings.languageCode)) }
+        item {
+            Text(
+                text = readerHeaderFooterHint(strings.languageCode),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        item {
+            ReaderHeaderFooterPreview(
+                uiState = uiState,
+                language = strings.languageCode
+            )
+        }
+        item {
+            ReaderInfoSlotPickerRow(
+                title = "${readerHeaderTitle(strings.languageCode)} · ${readerLeftLabel(strings.languageCode)}",
+                selectedSlot = uiState.headerLeftSlot,
+                language = strings.languageCode,
+                onSlotSelected = { onHeaderSlotChange("LEFT", it) }
+            )
+        }
+        item {
+            ReaderInfoSlotPickerRow(
+                title = "${readerHeaderTitle(strings.languageCode)} · ${readerCenterLabel(strings.languageCode)}",
+                selectedSlot = uiState.headerCenterSlot,
+                language = strings.languageCode,
+                onSlotSelected = { onHeaderSlotChange("CENTER", it) }
+            )
+        }
+        item {
+            ReaderInfoSlotPickerRow(
+                title = "${readerHeaderTitle(strings.languageCode)} · ${readerRightLabel(strings.languageCode)}",
+                selectedSlot = uiState.headerRightSlot,
+                language = strings.languageCode,
+                onSlotSelected = { onHeaderSlotChange("RIGHT", it) }
+            )
+        }
+        item {
+            ReaderInfoSlotPickerRow(
+                title = "${readerFooterTitle(strings.languageCode)} · ${readerLeftLabel(strings.languageCode)}",
+                selectedSlot = uiState.footerLeftSlot,
+                language = strings.languageCode,
+                onSlotSelected = { onFooterSlotChange("LEFT", it) }
+            )
+        }
+        item {
+            ReaderInfoSlotPickerRow(
+                title = "${readerFooterTitle(strings.languageCode)} · ${readerCenterLabel(strings.languageCode)}",
+                selectedSlot = uiState.footerCenterSlot,
+                language = strings.languageCode,
+                onSlotSelected = { onFooterSlotChange("CENTER", it) }
+            )
+        }
+        item {
+            ReaderInfoSlotPickerRow(
+                title = "${readerFooterTitle(strings.languageCode)} · ${readerRightLabel(strings.languageCode)}",
+                selectedSlot = uiState.footerRightSlot,
+                language = strings.languageCode,
+                onSlotSelected = { onFooterSlotChange("RIGHT", it) }
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerHeaderFooterFontSizeTitle(strings.languageCode),
+                valueText = "${uiState.headerFooterFontSize}sp",
+                value = uiState.headerFooterFontSize.toFloat(),
+                valueRange = 10f..20f,
+                steps = 9,
+                onValueChange = { onHeaderFooterFontSizeChange(it.toInt()) }
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerHeaderFooterVerticalPaddingTitle(strings.languageCode),
+                valueText = "${uiState.headerFooterVerticalPadding}dp",
+                value = uiState.headerFooterVerticalPadding.toFloat(),
+                valueRange = 4f..20f,
+                steps = 15,
+                onValueChange = { onHeaderFooterVerticalPaddingChange(it.toInt()) }
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerHeaderFooterLeftInsetTitle(strings.languageCode),
+                valueText = "${uiState.headerFooterLeftPadding}dp",
+                value = uiState.headerFooterLeftPadding.toFloat(),
+                valueRange = 8f..32f,
+                steps = 23,
+                onValueChange = { onHeaderFooterLeftPaddingChange(it.toInt()) }
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerHeaderFooterRightInsetTitle(strings.languageCode),
+                valueText = "${uiState.headerFooterRightPadding}dp",
+                value = uiState.headerFooterRightPadding.toFloat(),
+                valueRange = 8f..32f,
+                steps = 23,
+                onValueChange = { onHeaderFooterRightPaddingChange(it.toInt()) }
+            )
+        }
         item {
             ReaderSwitchRow(
                 title = readerText.chromeAutoHideTitle,
@@ -439,6 +562,131 @@ private fun ReaderReadingTab(
                 valueRange = 0f..1f,
                 onValueChange = onToolbarBlurChange
             )
+        }
+    }
+}
+
+@Composable
+private fun ReaderHeaderFooterPreview(
+    uiState: ReaderUiState,
+    language: String
+) {
+    val clockText = rememberReaderClockText()
+    val chapterTitle = remember(uiState.tableOfContents, uiState.currentPage) {
+        resolveReaderCurrentChapterTitle(uiState.tableOfContents, uiState.currentPage)
+    }
+    val headerLine = remember(
+        uiState.headerLeftSlot,
+        uiState.headerCenterSlot,
+        uiState.headerRightSlot,
+        uiState.comic?.title,
+        chapterTitle,
+        clockText,
+        uiState.currentPage,
+        uiState.totalPages,
+        uiState.readingMode
+    ) {
+        resolveReaderInfoOverlayLine(
+            startSlot = uiState.headerLeftSlot,
+            centerSlot = uiState.headerCenterSlot,
+            endSlot = uiState.headerRightSlot,
+            comicTitle = uiState.comic?.title,
+            chapterTitle = chapterTitle,
+            clockText = clockText,
+            currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages,
+            readingMode = uiState.readingMode
+        )
+    }
+    val footerLine = remember(
+        uiState.footerLeftSlot,
+        uiState.footerCenterSlot,
+        uiState.footerRightSlot,
+        uiState.comic?.title,
+        chapterTitle,
+        clockText,
+        uiState.currentPage,
+        uiState.totalPages,
+        uiState.readingMode
+    ) {
+        resolveReaderInfoOverlayLine(
+            startSlot = uiState.footerLeftSlot,
+            centerSlot = uiState.footerCenterSlot,
+            endSlot = uiState.footerRightSlot,
+            comicTitle = uiState.comic?.title,
+            chapterTitle = chapterTitle,
+            clockText = clockText,
+            currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages,
+            readingMode = uiState.readingMode
+        )
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = readerHeaderFooterPreviewTitle(language),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (headerLine.hasVisibleContent) {
+                    ReaderHeaderFooterTextRow(
+                        line = headerLine,
+                        fontSizeSp = uiState.headerFooterFontSize,
+                        leftPaddingDp = uiState.headerFooterLeftPadding,
+                        rightPaddingDp = uiState.headerFooterRightPadding,
+                        verticalPaddingDp = uiState.headerFooterVerticalPadding
+                    )
+                }
+                if (headerLine.hasVisibleContent && footerLine.hasVisibleContent) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                }
+                if (footerLine.hasVisibleContent) {
+                    ReaderHeaderFooterTextRow(
+                        line = footerLine,
+                        fontSizeSp = uiState.headerFooterFontSize,
+                        leftPaddingDp = uiState.headerFooterLeftPadding,
+                        rightPaddingDp = uiState.headerFooterRightPadding,
+                        verticalPaddingDp = uiState.headerFooterVerticalPadding
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ReaderInfoSlotPickerRow(
+    title: String,
+    selectedSlot: String,
+    language: String,
+    onSlotSelected: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ReaderInfoSlot.entries.forEach { slot ->
+                FilterChip(
+                    selected = ReaderInfoSlot.fromStored(selectedSlot) == slot,
+                    onClick = { onSlotSelected(slot.name) },
+                    label = { Text(readerInfoSlotLabel(language, slot.name)) }
+                )
+            }
         }
     }
 }
