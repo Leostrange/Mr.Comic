@@ -1,6 +1,7 @@
 package com.example.feature.reader.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -10,13 +11,17 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -24,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -32,8 +38,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -86,8 +95,7 @@ internal fun ReaderControlCenterSheet(
     onHeaderFooterLeftPaddingChange: (Int) -> Unit,
     onHeaderFooterRightPaddingChange: (Int) -> Unit,
     onChromeAutoHideChange: (Boolean) -> Unit,
-    onTopToolbarOpacityChange: (Float) -> Unit,
-    onBottomToolbarOpacityChange: (Float) -> Unit,
+    onToolbarOpacityChange: (Float) -> Unit,
     onToolbarBlurChange: (Float) -> Unit,
     onImageScaleModeChange: (String) -> Unit,
     onOpenToc: () -> Unit,
@@ -105,31 +113,67 @@ internal fun ReaderControlCenterSheet(
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
+    val activeReaderPreset = ReadingPreset.fromStored(uiState.readerPreset)
+    val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
+    val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
+    val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
+    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val sheetChromeEmphasis = when (activeReaderPreset) {
+        ReadingPreset.EINK -> 1f
+        ReadingPreset.PAPER -> 0.98f
+        ReadingPreset.NIGHT_INK -> 0.96f
+        else -> 0.97f
+    }
+    val sheetVisualBlur = if (activeReaderPreset == ReadingPreset.EINK) 0f else 0.14f
+    val sheetSurface = readerPanelSurfaceColor(
+        base = MaterialTheme.colorScheme.surface,
+        emphasis = sheetChromeEmphasis,
+        minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else 0.94f
+    )
     var selectedTab by remember(isTextReader) {
         mutableStateOf(if (isTextReader) ReaderControlTab.STYLE else ReaderControlTab.READING)
     }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        dragHandle = { BottomSheetDefaults.DragHandle() }
+        shape = sheetShape,
+        containerColor = sheetSurface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        tonalElevation = readerPanelTonalElevation(sheetVisualBlur, base = 0f, extra = 1f),
+        scrimColor = readerPanelScrimColor(MaterialTheme.colorScheme.onSurface, sheetVisualBlur),
+        dragHandle = {
+            BottomSheetDefaults.DragHandle(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
+            )
+        }
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val maxSheetHeight = maxHeight * 0.74f
+            val maxSheetHeight = maxHeight * 0.62f
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = maxSheetHeight)
             ) {
-                TabRow(selectedTabIndex = selectedTab.ordinal) {
+                TabRow(
+                    modifier = Modifier.heightIn(min = 38.dp),
+                    selectedTabIndex = selectedTab.ordinal,
+                    containerColor = Color.Transparent
+                ) {
                     listOf(
                         ReaderControlTab.READING to readerText.controlTabReading,
                         ReaderControlTab.STYLE to readerText.controlTabStyle,
                         ReaderControlTab.SERVICES to readerText.controlTabServices
                     ).forEach { (tab, label) ->
                         Tab(
+                            modifier = Modifier.heightIn(min = 38.dp),
                             selected = selectedTab == tab,
                             onClick = { selectedTab = tab },
-                            text = { Text(label) }
+                            text = {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         )
                     }
                 }
@@ -151,15 +195,14 @@ internal fun ReaderControlCenterSheet(
                         onHeaderSlotChange = onHeaderSlotChange,
                         onFooterSlotChange = onFooterSlotChange,
                         onHeaderFooterFontSizeChange = onHeaderFooterFontSizeChange,
-                        onHeaderFooterVerticalPaddingChange = onHeaderFooterVerticalPaddingChange,
-                        onHeaderFooterLeftPaddingChange = onHeaderFooterLeftPaddingChange,
-                        onHeaderFooterRightPaddingChange = onHeaderFooterRightPaddingChange,
-                        onChromeAutoHideChange = onChromeAutoHideChange,
-                        onTopToolbarOpacityChange = onTopToolbarOpacityChange,
-                        onBottomToolbarOpacityChange = onBottomToolbarOpacityChange,
-                        onToolbarBlurChange = onToolbarBlurChange,
-                        onImageScaleModeChange = onImageScaleModeChange
-                    )
+                            onHeaderFooterVerticalPaddingChange = onHeaderFooterVerticalPaddingChange,
+                            onHeaderFooterLeftPaddingChange = onHeaderFooterLeftPaddingChange,
+                            onHeaderFooterRightPaddingChange = onHeaderFooterRightPaddingChange,
+                            onChromeAutoHideChange = onChromeAutoHideChange,
+                            onToolbarOpacityChange = onToolbarOpacityChange,
+                            onToolbarBlurChange = onToolbarBlurChange,
+                            onImageScaleModeChange = onImageScaleModeChange
+                        )
 
                     ReaderControlTab.STYLE -> ReaderStyleTab(
                         uiState = uiState,
@@ -221,13 +264,16 @@ private fun ReaderReadingTab(
     onHeaderFooterLeftPaddingChange: (Int) -> Unit,
     onHeaderFooterRightPaddingChange: (Int) -> Unit,
     onChromeAutoHideChange: (Boolean) -> Unit,
-    onTopToolbarOpacityChange: (Float) -> Unit,
-    onBottomToolbarOpacityChange: (Float) -> Unit,
+    onToolbarOpacityChange: (Float) -> Unit,
     onToolbarBlurChange: (Float) -> Unit,
     onImageScaleModeChange: (String) -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
+    val activeReaderPreset = ReadingPreset.fromStored(uiState.readerPreset)
+    val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
+    val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
+    val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
     val resolvedTapZoneLayout = remember(
         uiState.tapZoneMode,
         uiState.readingMode,
@@ -247,8 +293,8 @@ private fun ReaderReadingTab(
     }
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item { ReaderSectionTitle(readerText.readingModeTitle) }
         item {
@@ -261,7 +307,7 @@ private fun ReaderReadingTab(
                     com.example.core.model.ReadingMode.PAGE_RTL to strings.readingModeRtl,
                     com.example.core.model.ReadingMode.WEBTOON to strings.readingModeWebtoon
                 ).forEach { (mode, label) ->
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.readingMode == mode,
                         onClick = { onReadingModeChange(mode) },
                         label = { Text(label) }
@@ -277,7 +323,7 @@ private fun ReaderReadingTab(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ReaderImageScaleMode.entries.forEach { mode ->
-                        FilterChip(
+                        ReaderChoiceChip(
                             selected = uiState.imageScaleMode == mode.storedValue,
                             onClick = { onImageScaleModeChange(mode.storedValue) },
                             label = { Text(readerImageScaleLabel(mode, strings.languageCode)) }
@@ -315,7 +361,7 @@ private fun ReaderReadingTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ReaderTapZoneMode.entries.forEach { mode ->
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.tapZoneMode == mode.name,
                         onClick = { onTapZoneModeChange(mode.name) },
                         label = { Text(readerTapZoneModeLabel(mode, strings.languageCode)) }
@@ -379,7 +425,7 @@ private fun ReaderReadingTab(
         item {
             Text(
                 text = readerHeaderFooterHint(strings.languageCode),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -390,51 +436,40 @@ private fun ReaderReadingTab(
             )
         }
         item {
-            ReaderInfoSlotPickerRow(
-                title = "${readerHeaderTitle(strings.languageCode)} · ${readerLeftLabel(strings.languageCode)}",
-                selectedSlot = uiState.headerLeftSlot,
+            ReaderHeaderFooterSlotStrip(
                 language = strings.languageCode,
-                onSlotSelected = { onHeaderSlotChange("LEFT", it) }
-            )
-        }
-        item {
-            ReaderInfoSlotPickerRow(
-                title = "${readerHeaderTitle(strings.languageCode)} · ${readerCenterLabel(strings.languageCode)}",
-                selectedSlot = uiState.headerCenterSlot,
-                language = strings.languageCode,
-                onSlotSelected = { onHeaderSlotChange("CENTER", it) }
-            )
-        }
-        item {
-            ReaderInfoSlotPickerRow(
-                title = "${readerHeaderTitle(strings.languageCode)} · ${readerRightLabel(strings.languageCode)}",
-                selectedSlot = uiState.headerRightSlot,
-                language = strings.languageCode,
-                onSlotSelected = { onHeaderSlotChange("RIGHT", it) }
-            )
-        }
-        item {
-            ReaderInfoSlotPickerRow(
-                title = "${readerFooterTitle(strings.languageCode)} · ${readerLeftLabel(strings.languageCode)}",
-                selectedSlot = uiState.footerLeftSlot,
-                language = strings.languageCode,
-                onSlotSelected = { onFooterSlotChange("LEFT", it) }
-            )
-        }
-        item {
-            ReaderInfoSlotPickerRow(
-                title = "${readerFooterTitle(strings.languageCode)} · ${readerCenterLabel(strings.languageCode)}",
-                selectedSlot = uiState.footerCenterSlot,
-                language = strings.languageCode,
-                onSlotSelected = { onFooterSlotChange("CENTER", it) }
-            )
-        }
-        item {
-            ReaderInfoSlotPickerRow(
-                title = "${readerFooterTitle(strings.languageCode)} · ${readerRightLabel(strings.languageCode)}",
-                selectedSlot = uiState.footerRightSlot,
-                language = strings.languageCode,
-                onSlotSelected = { onFooterSlotChange("RIGHT", it) }
+                slotItems = listOf(
+                    ReaderInfoSlotPickerItem(
+                        title = "${readerHeaderTitle(strings.languageCode)} · ${readerLeftLabel(strings.languageCode)}",
+                        selectedSlot = uiState.headerLeftSlot,
+                        onSlotSelected = { onHeaderSlotChange("LEFT", it) }
+                    ),
+                    ReaderInfoSlotPickerItem(
+                        title = "${readerHeaderTitle(strings.languageCode)} · ${readerCenterLabel(strings.languageCode)}",
+                        selectedSlot = uiState.headerCenterSlot,
+                        onSlotSelected = { onHeaderSlotChange("CENTER", it) }
+                    ),
+                    ReaderInfoSlotPickerItem(
+                        title = "${readerHeaderTitle(strings.languageCode)} · ${readerRightLabel(strings.languageCode)}",
+                        selectedSlot = uiState.headerRightSlot,
+                        onSlotSelected = { onHeaderSlotChange("RIGHT", it) }
+                    ),
+                    ReaderInfoSlotPickerItem(
+                        title = "${readerFooterTitle(strings.languageCode)} · ${readerLeftLabel(strings.languageCode)}",
+                        selectedSlot = uiState.footerLeftSlot,
+                        onSlotSelected = { onFooterSlotChange("LEFT", it) }
+                    ),
+                    ReaderInfoSlotPickerItem(
+                        title = "${readerFooterTitle(strings.languageCode)} · ${readerCenterLabel(strings.languageCode)}",
+                        selectedSlot = uiState.footerCenterSlot,
+                        onSlotSelected = { onFooterSlotChange("CENTER", it) }
+                    ),
+                    ReaderInfoSlotPickerItem(
+                        title = "${readerFooterTitle(strings.languageCode)} · ${readerRightLabel(strings.languageCode)}",
+                        selectedSlot = uiState.footerRightSlot,
+                        onSlotSelected = { onFooterSlotChange("RIGHT", it) }
+                    )
+                )
             )
         }
         item {
@@ -486,12 +521,9 @@ private fun ReaderReadingTab(
         }
         item { ReaderSectionTitle(readerText.screenTimeoutTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ReaderScreenTimeoutMode.entries.forEach { mode ->
-                    FilterChip(
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(ReaderScreenTimeoutMode.entries) { mode ->
+                    ReaderChoiceChip(
                         selected = uiState.screenTimeoutMode == mode.storedValue,
                         onClick = { onScreenTimeoutChange(mode.storedValue) },
                         label = { Text(readerScreenTimeoutLabel(mode, strings.languageCode)) }
@@ -507,7 +539,7 @@ private fun ReaderReadingTab(
             ) {
                 listOf("NONE", "SLIDE", "FADE").forEach { animation ->
                     val enabled = uiState.readingMode != com.example.core.model.ReadingMode.WEBTOON
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.readerPageAnimation == animation,
                         onClick = { if (enabled) onPageAnimationChange(animation) },
                         enabled = enabled,
@@ -538,30 +570,32 @@ private fun ReaderReadingTab(
         item { HorizontalDivider() }
         item {
             ReaderSliderRow(
-                title = readerText.topToolbarOpacityTitle,
-                valueText = "${(uiState.topToolbarOpacity * 100).toInt()}%",
-                value = uiState.topToolbarOpacity,
+                title = readerText.toolbarOpacityTitle,
+                valueText = "${(effectiveToolbarOpacity * 100).toInt()}%",
+                value = effectiveToolbarOpacity,
                 valueRange = READER_TOOLBAR_MIN_OPACITY..1f,
-                onValueChange = onTopToolbarOpacityChange
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerText.bottomToolbarOpacityTitle,
-                valueText = "${(uiState.bottomToolbarOpacity * 100).toInt()}%",
-                value = uiState.bottomToolbarOpacity,
-                valueRange = READER_TOOLBAR_MIN_OPACITY..1f,
-                onValueChange = onBottomToolbarOpacityChange
+                onValueChange = onToolbarOpacityChange,
+                enabled = activeReaderPreset != ReadingPreset.EINK
             )
         }
         item {
             ReaderSliderRow(
                 title = readerText.toolbarBlurTitle,
-                valueText = "${(uiState.toolbarBlur * 100).toInt()}%",
-                value = uiState.toolbarBlur,
+                valueText = "${(effectiveToolbarBlur * 100).toInt()}%",
+                value = effectiveToolbarBlur,
                 valueRange = 0f..1f,
-                onValueChange = onToolbarBlurChange
+                onValueChange = onToolbarBlurChange,
+                enabled = activeReaderPreset != ReadingPreset.EINK
             )
+        }
+        if (activeReaderPreset == ReadingPreset.EINK) {
+            item {
+                Text(
+                    text = readerText.einkPanelModeHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -634,7 +668,7 @@ private fun ReaderHeaderFooterPreview(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (headerLine.hasVisibleContent) {
@@ -673,15 +707,15 @@ private fun ReaderInfoSlotPickerRow(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+        Text(text = title, style = MaterialTheme.typography.bodyMedium)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             ReaderInfoSlot.entries.forEach { slot ->
-                FilterChip(
+                ReaderChoiceChip(
                     selected = ReaderInfoSlot.fromStored(selectedSlot) == slot,
                     onClick = { onSlotSelected(slot.name) },
                     label = { Text(readerInfoSlotLabel(language, slot.name)) }
@@ -701,12 +735,12 @@ private fun ReaderTapZoneActionPicker(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text = title, style = MaterialTheme.typography.bodyLarge)
+        Text(text = title, style = MaterialTheme.typography.bodyMedium)
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val normalizedSelectedAction = if (ReaderTapZoneAction.fromStored(selectedAction) == ReaderTapZoneAction.TOGGLE_UI) {
                 ReaderTapZoneAction.MENU.name
@@ -716,7 +750,7 @@ private fun ReaderTapZoneActionPicker(
             ReaderTapZoneAction.entries
                 .filter { it != ReaderTapZoneAction.TOGGLE_UI }
                 .forEach { action ->
-                FilterChip(
+                ReaderChoiceChip(
                     selected = normalizedSelectedAction == action.name,
                     onClick = { onActionSelected(action.name) },
                     label = { Text(readerTapZoneActionLabel(action, language)) }
@@ -746,8 +780,8 @@ private fun ReaderStyleTab(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = readerText.styleUnavailableTitle,
@@ -765,8 +799,8 @@ private fun ReaderStyleTab(
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item { ReaderSectionTitle(readerText.quickPresetsTitle) }
         item {
@@ -775,7 +809,7 @@ private fun ReaderStyleTab(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK).forEach { preset ->
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.readerPreset == preset.name,
                         onClick = { onApplyReadingPreset(preset) },
                         label = { Text(readerPresetLabel(preset, strings.languageCode)) }
@@ -794,7 +828,7 @@ private fun ReaderStyleTab(
                     "SEPIA" to readerText.sepia,
                     "NIGHT" to readerText.night
                 ).forEach { (id, label) ->
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.textColorScheme == id,
                         onClick = { onColorSchemeChange(id) },
                         label = { Text(label) }
@@ -807,7 +841,7 @@ private fun ReaderStyleTab(
             val fonts = listOf("Georgia", "Merriweather", "Open Sans", "Roboto Slab", "PT Serif", "Literata")
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(fonts) { font ->
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.textFontFamily == font,
                         onClick = { onFontFamilyChange(font) },
                         label = { Text(font) }
@@ -854,7 +888,7 @@ private fun ReaderStyleTab(
                     "right" to readerText.alignRight,
                     "center" to readerText.alignCenter
                 ).forEach { (id, label) ->
-                    FilterChip(
+                    ReaderChoiceChip(
                         selected = uiState.textAlignment == id,
                         onClick = { onTextAlignChange(id) },
                         label = { Text(label) }
@@ -897,10 +931,15 @@ private fun ReaderServicesTab(
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val isBookmarked = uiState.bookmarkedPages.contains(uiState.currentPage)
+    val selectedVoiceLabel = remember(ttsRuntimeState.selectedVoiceName, ttsRuntimeState.availableVoices) {
+        ttsRuntimeState.availableVoices.firstOrNull { it.name == ttsRuntimeState.selectedVoiceName }?.label
+            ?: readerText.ttsVoiceDefault
+    }
+    var isVoiceMenuExpanded by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item { ReaderSectionTitle(readerText.servicesQuickActionsTitle) }
         item {
@@ -950,7 +989,7 @@ private fun ReaderServicesTab(
         }
         if (isTextReader) {
             item {
-                FilterChip(
+                ReaderChoiceChip(
                     selected = ttsRuntimeState.ready,
                     onClick = {},
                     enabled = false,
@@ -980,21 +1019,46 @@ private fun ReaderServicesTab(
             }
             item { ReaderSectionTitle(readerText.ttsVoiceTitle) }
             item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = ttsRuntimeState.selectedVoiceName == null,
-                        onClick = { onTtsVoiceNameChange(null) },
-                        label = { Text(readerText.ttsVoiceDefault) }
-                    )
-                    ttsRuntimeState.availableVoices.take(8).forEach { voice ->
-                        FilterChip(
-                            selected = ttsRuntimeState.selectedVoiceName == voice.name,
-                            onClick = { onTtsVoiceNameChange(voice.name) },
-                            label = { Text(voice.label) }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { isVoiceMenuExpanded = true },
+                        enabled = ttsRuntimeState.availableVoices.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(selectedVoiceLabel)
+                            Text(
+                                text = "v",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = isVoiceMenuExpanded,
+                        onDismissRequest = { isVoiceMenuExpanded = false },
+                        modifier = Modifier.heightIn(max = 320.dp)
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(readerText.ttsVoiceDefault) },
+                            onClick = {
+                                onTtsVoiceNameChange(null)
+                                isVoiceMenuExpanded = false
+                            }
                         )
+                        ttsRuntimeState.availableVoices.forEach { voice ->
+                            DropdownMenuItem(
+                                text = { Text(voice.label) },
+                                onClick = {
+                                    onTtsVoiceNameChange(voice.name)
+                                    isVoiceMenuExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -1027,12 +1091,9 @@ private fun ReaderServicesTab(
             }
             item { ReaderSectionTitle(readerText.ttsSleepTimerTitle) }
             item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ReaderTtsSleepTimerMode.entries.forEach { mode ->
-                        FilterChip(
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(ReaderTtsSleepTimerMode.entries) { mode ->
+                        ReaderChoiceChip(
                             selected = uiState.ttsSleepTimerMode == mode.storedValue,
                             onClick = { onTtsSleepTimerChange(mode.storedValue) },
                             label = { Text(readerTtsSleepTimerLabel(mode, strings.languageCode)) }
@@ -1048,9 +1109,52 @@ private fun ReaderServicesTab(
 private fun ReaderSectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.3.sp
+        letterSpacing = 0.2.sp
+    )
+}
+
+@Composable
+private fun ReaderSettingsCard(
+    modifier: Modifier = Modifier,
+    fillMaxWidth: Boolean = true,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = if (fillMaxWidth) modifier.fillMaxWidth() else modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ReaderChoiceChip(
+    selected: Boolean,
+    onClick: () -> Unit,
+    label: @Composable () -> Unit,
+    enabled: Boolean = true
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(999.dp),
+        modifier = Modifier.heightIn(min = 30.dp),
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        ),
+        label = label
     )
 }
 
@@ -1061,25 +1165,37 @@ private fun ReaderSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     subtitle: String? = null
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+    ReaderSettingsCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            subtitle?.let {
-                Text(
-                    text = it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(text = title, style = MaterialTheme.typography.bodyMedium)
+                subtitle?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.scale(0.94f),
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surface
+                )
+            )
         }
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -1090,29 +1206,68 @@ private fun ReaderSliderRow(
     value: Float,
     valueRange: ClosedFloatingPointRange<Float>,
     onValueChange: (Float) -> Unit,
-    steps: Int = 0
+    steps: Int = 0,
+    enabled: Boolean = true
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
+    ReaderSettingsCard {
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(text = title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                text = valueText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = title, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = valueText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Slider(
+                value = value,
+                onValueChange = onValueChange,
+                enabled = enabled,
+                valueRange = valueRange,
+                steps = steps,
+                colors = androidx.compose.material3.SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
+                )
             )
         }
-        Slider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            steps = steps
-        )
+    }
+}
+
+private data class ReaderInfoSlotPickerItem(
+    val title: String,
+    val selectedSlot: String,
+    val onSlotSelected: (String) -> Unit
+)
+
+@Composable
+private fun ReaderHeaderFooterSlotStrip(
+    language: String,
+    slotItems: List<ReaderInfoSlotPickerItem>
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(slotItems) { item ->
+            ReaderSettingsCard(
+                modifier = Modifier.width(232.dp),
+                fillMaxWidth = false
+            ) {
+                ReaderInfoSlotPickerRow(
+                    title = item.title,
+                    selectedSlot = item.selectedSlot,
+                    language = language,
+                    onSlotSelected = item.onSlotSelected
+                )
+            }
+        }
     }
 }
 
