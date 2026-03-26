@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -19,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.core.model.ReadingMode
 import com.example.core.ui.locale.LocalStrings
+import com.example.feature.reader.ui.ReaderPanelChip
 
 @Composable
 fun ReaderBottomBar(
@@ -70,24 +70,24 @@ fun ReaderBottomBar(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
                 if (isTextBook) {
-                    FilterChip(
+                    ReaderPanelChip(
                         selected = true,
                         onClick = {},
                         label = { Text(strings.readerPages) }
                     )
                 } else if (isLandscape) {
-                    FilterChip(
+                    ReaderPanelChip(
                         selected = true,
                         onClick = {},
                         label = { Text(strings.readingModeDual) }
                     )
                 } else {
-                    FilterChip(
+                    ReaderPanelChip(
                         selected = readingMode == ReadingMode.PAGE_LTR || readingMode == ReadingMode.PAGE_RTL,
                         onClick = { onReadingModeChange(ReadingMode.PAGE_LTR) },
                         label = { Text(strings.readerPages) }
                     )
-                    FilterChip(
+                    ReaderPanelChip(
                         selected = readingMode == ReadingMode.WEBTOON,
                         onClick = { onReadingModeChange(ReadingMode.WEBTOON) },
                         label = { Text(strings.readingModeWebtoon) }
@@ -118,7 +118,9 @@ fun ReaderBottomBar(
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
                 )
             )
         }
