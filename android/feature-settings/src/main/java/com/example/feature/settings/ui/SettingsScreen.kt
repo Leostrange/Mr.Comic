@@ -8348,18 +8348,37 @@ private fun ReadAloudSection(
         }
         item {
             SettingsCard(title = sectionText.title) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.RecordVoiceOver,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = when (strings.languageCode) {
+                            "en" -> "Uses installed system voices and stays in sync with the reader service panel."
+                            "ja" -> "インストール済みのシステム音声を使い、リーダー内のサービス欄と同期します。"
+                            "zh" -> "使用已安装的系统语音，并与阅读器服务面板保持同步。"
+                            "ko" -> "설치된 시스템 음성을 사용하며 리더 서비스 패널과 동기화됩니다."
+                            else -> "Использует установленные системные голоса и синхронизируется с сервисной панелью ридера."
+                        },
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
                 SettingsPickerTile(
                     title = readAloudVoiceTitle(strings.languageCode),
                     value = previewState.availableVoices.firstOrNull { it.name == uiState.readerTtsVoiceName }?.label
                         ?: readAloudVoiceSummaryLabel(uiState.readerTtsVoiceName, strings.languageCode),
                     onClick = { showVoicePicker = true },
-                    subtitle = when (strings.languageCode) {
-                        "en" -> "Uses installed system voices and stays in sync with the reader service panel."
-                        "ja" -> "インストール済みのシステム音声を使い、リーダー内のサービス欄と同期します。"
-                        "zh" -> "使用已安装的系统语音，并与阅读器服务面板保持同步。"
-                        "ko" -> "설치된 시스템 음성을 사용하며 리더 서비스 패널과 동기화됩니다."
-                        else -> "Использует установленные системные голоса и синхронизируется с сервисной панелью ридера."
-                    }
+                    compact = true
                 )
                 Spacer(Modifier.height(10.dp))
                 SettingsSliderTile(
@@ -8437,18 +8456,35 @@ private fun ReadAloudSection(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     FilledTonalButton(
+                        modifier = Modifier.weight(1f),
                         enabled = provider == ReaderTtsProviderType.SYSTEM && previewState.ready,
                         onClick = { previewController.togglePreview(readAloudPreviewSample(strings.languageCode)) }
                     ) {
-                        Text(if (previewState.isSpeaking) readAloudPreviewStopLabel(strings.languageCode) else readAloudPreviewPlayLabel(strings.languageCode))
+                        Text(
+                            text = if (previewState.isSpeaking) {
+                                readAloudPreviewStopLabel(strings.languageCode)
+                            } else {
+                                readAloudPreviewPlayLabel(strings.languageCode)
+                            },
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                     OutlinedButton(
+                        modifier = Modifier.weight(1f),
                         enabled = previewState.isSpeaking,
                         onClick = previewController::stop
                     ) {
-                        Text(readAloudPreviewStopLabel(strings.languageCode))
+                        Text(
+                            text = readAloudPreviewStopLabel(strings.languageCode),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }
@@ -9174,7 +9210,8 @@ private fun SettingsPickerTile(
     title: String,
     value: String,
     onClick: () -> Unit,
-    subtitle: String? = null
+    subtitle: String? = null,
+    compact: Boolean = false
 ) {
     Surface(
         modifier = Modifier
@@ -9189,7 +9226,7 @@ private fun SettingsPickerTile(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = if (compact) 10.dp else 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -9206,13 +9243,18 @@ private fun SettingsPickerTile(
             }
             Spacer(Modifier.width(12.dp))
             Row(
+                modifier = Modifier.widthIn(max = 220.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Text(
                     value,
+                    modifier = Modifier.widthIn(max = 180.dp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End
                 )
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
@@ -9289,11 +9331,18 @@ private fun SettingsPickerDialog(
     onSelect: (String) -> Unit
 ) {
     val language = LocalStrings.current.languageCode
+    val scrollState = rememberScrollState()
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 420.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 options.forEach { option ->
                     Surface(
                         modifier = Modifier
@@ -9316,8 +9365,15 @@ private fun SettingsPickerDialog(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(option.label, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = option.label,
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             if (selectedValue == option.value) {
+                                Spacer(Modifier.width(8.dp))
                                 Icon(
                                     Icons.Default.Check,
                                     contentDescription = null,

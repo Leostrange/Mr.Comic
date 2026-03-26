@@ -13,22 +13,24 @@ data class SystemTtsVoiceOption(
 )
 
 fun mapSystemTtsVoiceOptions(voices: Set<Voice>?): List<SystemTtsVoiceOption> {
+    val deviceLocale = Locale.getDefault()
     return voices
         .orEmpty()
         .asSequence()
-        .filter { !it.isNetworkConnectionRequired }
+        .distinctBy { it.name.lowercase(deviceLocale) }
         .sortedWith(
             compareBy<Voice>(
-                { it.locale?.language.orEmpty() != Locale.getDefault().language },
+                { it.locale?.language.orEmpty() != deviceLocale.language },
+                { it.isNetworkConnectionRequired },
                 { it.locale?.displayName.orEmpty() },
-                { it.name }
+                { it.name.lowercase(deviceLocale) }
             )
         )
         .map { voice ->
             val localeLabel = voice.locale
                 ?.takeIf { !it.language.isNullOrBlank() }
-                ?.getDisplayName(Locale.getDefault())
-                ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+                ?.getDisplayName(deviceLocale)
+                ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(deviceLocale) else it.toString() }
                 .orEmpty()
             val label = buildString {
                 if (localeLabel.isNotBlank()) {
