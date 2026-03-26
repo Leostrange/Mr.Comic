@@ -57,7 +57,9 @@ import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -2068,7 +2070,7 @@ private fun LibraryStatsBar(
         if (inProgressCount > 0) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f)
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.82f)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -2079,7 +2081,7 @@ private fun LibraryStatsBar(
                     Text(
                         text = "$inProgressCount $inProgressLabel",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
@@ -3738,14 +3740,33 @@ private fun MrComicRecentCard(
             if (compact) {
                 AssistChip(
                     onClick = onOpenRecent,
+                    colors = AssistChipDefaults.assistChipColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
+                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        leadingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
                     label = { Text(mrComicOpenRecentLabel(appLanguage)) },
                     leadingIcon = {
-                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
                     }
                 )
             } else {
-                FilledTonalButton(onClick = onOpenRecent) {
-                    Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null)
+                FilledTonalButton(
+                    onClick = onOpenRecent,
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text(mrComicOpenRecentLabel(appLanguage))
                 }

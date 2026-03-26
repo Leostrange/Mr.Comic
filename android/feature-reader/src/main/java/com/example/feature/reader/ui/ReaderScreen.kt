@@ -865,7 +865,8 @@ fun ReaderScreen(
             readingMode = uiState.readingMode
         )
     }
-    val showHeaderFooterOverlay = uiState.chromeState == ReaderChromeState.HIDDEN &&
+    val showHeaderFooterOverlay = !uiState.chromeAutoHideEnabled &&
+        uiState.chromeState == ReaderChromeState.HIDDEN &&
         !uiState.showTextSettings &&
         !uiState.showTocSheet
 
@@ -1103,41 +1104,37 @@ fun ReaderScreen(
                 val topChromeSurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
                     emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) uiState.topToolbarOpacity else 0.94f,
-                    minAlpha = 0.5f // Гарантирует "затемнение", чтобы прозрачные меню были читаемы
+                    minAlpha = 0.72f
                 )
                 val bottomChromeSurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
                     emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) uiState.bottomToolbarOpacity else 0.94f,
-                    minAlpha = 0.5f
+                    minAlpha = 0.72f
                 )
                 val infoOverlaySurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
-                    emphasis = 0.28f,
-                    minAlpha = 0.14f
+                    emphasis = 0.84f,
+                    minAlpha = 0.78f
                 )
 
                 if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
-                    Box(
+                    Surface(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .displayCutoutPadding()
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .fillMaxWidth(),
+                        shape = RoundedCornerShape(0.dp),
+                        color = infoOverlaySurface
                     ) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.large,
-                            color = infoOverlaySurface
-                        ) {
-                            ReaderHeaderFooterTextRow(
-                                line = headerOverlayLine,
-                                fontSizeSp = uiState.headerFooterFontSize,
-                                leftPaddingDp = uiState.headerFooterLeftPadding,
-                                rightPaddingDp = uiState.headerFooterRightPadding,
-                                verticalPaddingDp = uiState.headerFooterVerticalPadding
-                            )
-                        }
+                        ReaderHeaderFooterTextRow(
+                            line = headerOverlayLine,
+                            fontSizeSp = uiState.headerFooterFontSize,
+                            leftPaddingDp = uiState.headerFooterLeftPadding,
+                            rightPaddingDp = uiState.headerFooterRightPadding,
+                            verticalPaddingDp = uiState.headerFooterVerticalPadding,
+                            modifier = Modifier
+                                .statusBarsPadding()
+                                .displayCutoutPadding()
+                        )
                     }
                 }
 
@@ -1147,7 +1144,13 @@ fun ReaderScreen(
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(if (uiState.chromeState == ReaderChromeState.EXPANDED) bottomChromeSurface else Color.Transparent)
-                        .navigationBarsPadding(),
+                        .then(
+                            if (uiState.chromeState == ReaderChromeState.EXPANDED) {
+                                Modifier.navigationBarsPadding()
+                            } else {
+                                Modifier
+                            }
+                        ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     uiState.pageTranslationNote?.let { note ->
@@ -1188,8 +1191,8 @@ fun ReaderScreen(
                     } else if (uiState.chromeState == ReaderChromeState.HIDDEN) {
                         if (showHeaderFooterOverlay && footerOverlayLine.hasVisibleContent) {
                             Surface(
-                                modifier = Modifier.padding(horizontal = 12.dp),
-                                shape = MaterialTheme.shapes.large,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(0.dp),
                                 color = infoOverlaySurface
                             ) {
                                 ReaderHeaderFooterTextRow(
@@ -1197,11 +1200,13 @@ fun ReaderScreen(
                                     fontSizeSp = uiState.headerFooterFontSize,
                                     leftPaddingDp = uiState.headerFooterLeftPadding,
                                     rightPaddingDp = uiState.headerFooterRightPadding,
-                                    verticalPaddingDp = uiState.headerFooterVerticalPadding
+                                    verticalPaddingDp = uiState.headerFooterVerticalPadding,
+                                    modifier = Modifier.navigationBarsPadding()
                                 )
                             }
+                        } else {
+                            Spacer(Modifier.navigationBarsPadding())
                         }
-                        Spacer(Modifier.navigationBarsPadding())
                     }
                 }
 
