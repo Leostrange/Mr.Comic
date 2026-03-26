@@ -293,25 +293,24 @@ private fun ReaderReadingTab(
     }
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item { ReaderSectionTitle(readerText.readingModeTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(
                     com.example.core.model.ReadingMode.PAGE_LTR to strings.readingModeLtr,
                     com.example.core.model.ReadingMode.PAGE_RTL to strings.readingModeRtl,
                     com.example.core.model.ReadingMode.WEBTOON to strings.readingModeWebtoon
                 ).forEach { (mode, label) ->
-                    ReaderChoiceChip(
-                        selected = uiState.readingMode == mode,
-                        onClick = { onReadingModeChange(mode) },
-                        label = { Text(label) }
-                    )
+                    item(mode.name) {
+                        ReaderChoiceChip(
+                            selected = uiState.readingMode == mode,
+                            onClick = { onReadingModeChange(mode) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
                 }
             }
         }
@@ -521,7 +520,7 @@ private fun ReaderReadingTab(
         }
         item { ReaderSectionTitle(readerText.screenTimeoutTitle) }
         item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(ReaderScreenTimeoutMode.entries) { mode ->
                     ReaderChoiceChip(
                         selected = uiState.screenTimeoutMode == mode.storedValue,
@@ -533,18 +532,17 @@ private fun ReaderReadingTab(
         }
         item { ReaderSectionTitle(readerText.pageAnimationTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("NONE", "SLIDE", "FADE").forEach { animation ->
                     val enabled = uiState.readingMode != com.example.core.model.ReadingMode.WEBTOON
-                    ReaderChoiceChip(
-                        selected = uiState.readerPageAnimation == animation,
-                        onClick = { if (enabled) onPageAnimationChange(animation) },
-                        enabled = enabled,
-                        label = { Text(readerPageAnimationLabel(animation, strings.languageCode)) }
-                    )
+                    item(animation) {
+                        ReaderChoiceChip(
+                            selected = uiState.readerPageAnimation == animation,
+                            onClick = { if (enabled) onPageAnimationChange(animation) },
+                            enabled = enabled,
+                            label = { Text(readerPageAnimationLabel(animation, strings.languageCode), style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
                 }
             }
         }
@@ -799,39 +797,33 @@ private fun ReaderStyleTab(
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item { ReaderSectionTitle(readerText.quickPresetsTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK).forEach { preset ->
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK)) { preset ->
                     ReaderChoiceChip(
                         selected = uiState.readerPreset == preset.name,
                         onClick = { onApplyReadingPreset(preset) },
-                        label = { Text(readerPresetLabel(preset, strings.languageCode)) }
+                        label = { Text(readerPresetLabel(preset, strings.languageCode), style = MaterialTheme.typography.labelSmall) }
                     )
                 }
             }
         }
         item { ReaderSectionTitle(readerText.colorSchemeTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(listOf(
                     "DAY" to readerText.day,
                     "SEPIA" to readerText.sepia,
                     "NIGHT" to readerText.night
-                ).forEach { (id, label) ->
+                )) { (id, label) ->
                     ReaderChoiceChip(
                         selected = uiState.textColorScheme == id,
                         onClick = { onColorSchemeChange(id) },
-                        label = { Text(label) }
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
                     )
                 }
             }
@@ -839,7 +831,7 @@ private fun ReaderStyleTab(
         item { ReaderSectionTitle(readerText.fontTitle) }
         item {
             val fonts = listOf("Georgia", "Merriweather", "Open Sans", "Roboto Slab", "PT Serif", "Literata")
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(fonts) { font ->
                     ReaderChoiceChip(
                         selected = uiState.textFontFamily == font,
@@ -878,9 +870,9 @@ private fun ReaderStyleTab(
         }
         item { ReaderSectionTitle(readerText.textAlignTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 listOf(
                     "justify" to readerText.alignJustify,
@@ -889,9 +881,10 @@ private fun ReaderStyleTab(
                     "center" to readerText.alignCenter
                 ).forEach { (id, label) ->
                     ReaderChoiceChip(
+                        modifier = Modifier.weight(1f),
                         selected = uiState.textAlignment == id,
                         onClick = { onTextAlignChange(id) },
-                        label = { Text(label) }
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
                     )
                 }
             }
@@ -938,34 +931,40 @@ private fun ReaderServicesTab(
     var isVoiceMenuExpanded by remember { mutableStateOf(false) }
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item { ReaderSectionTitle(readerText.servicesQuickActionsTitle) }
         item {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        onDismiss()
-                        onOpenToc()
-                    }
-                ) {
-                    Text(strings.readerToc)
-                }
-                OutlinedButton(onClick = onToggleBookmark) {
-                    Text(if (isBookmarked) strings.readerBookmarked else strings.readerBookmark)
-                }
-                if (!isTextReader) {
-                    OutlinedButton(
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                item("toc") {
+                    Button(
                         onClick = {
                             onDismiss()
-                            onRequestOcr()
+                            onOpenToc()
                         }
                     ) {
-                        Text(readerText.ocrTranslation)
+                        Text(strings.readerToc, style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                item("bookmark") {
+                    OutlinedButton(onClick = onToggleBookmark) {
+                        Text(
+                            if (isBookmarked) strings.readerBookmarked else strings.readerBookmark,
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+                if (!isTextReader) {
+                    item("ocr") {
+                        OutlinedButton(
+                            onClick = {
+                                onDismiss()
+                                onRequestOcr()
+                            }
+                        ) {
+                            Text(readerText.ocrTranslation, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
@@ -974,7 +973,7 @@ private fun ReaderServicesTab(
         item {
             Text(
                 text = if (isTextReader) readerText.servicesSelectionBody else readerText.servicesOcrBody,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -983,7 +982,7 @@ private fun ReaderServicesTab(
         item {
             Text(
                 text = if (isTextReader) readerText.servicesTtsBody else readerText.servicesTtsUnavailableBody,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -999,21 +998,29 @@ private fun ReaderServicesTab(
                 )
             }
             item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(onClick = onTtsTogglePlayback, enabled = ttsRuntimeState.ready) {
-                        Text(if (ttsRuntimeState.isSpeaking) readerText.ttsPause else readerText.ttsPlay)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item("play") {
+                        Button(onClick = onTtsTogglePlayback, enabled = ttsRuntimeState.ready) {
+                            Text(
+                                if (ttsRuntimeState.isSpeaking) readerText.ttsPause else readerText.ttsPlay,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
-                    OutlinedButton(onClick = onTtsStop, enabled = ttsRuntimeState.ready) {
-                        Text(readerText.ttsStop)
+                    item("stop") {
+                        OutlinedButton(onClick = onTtsStop, enabled = ttsRuntimeState.ready) {
+                            Text(readerText.ttsStop, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
-                    OutlinedButton(onClick = onTtsPrevious, enabled = ttsRuntimeState.ready) {
-                        Text(readerText.ttsPrevious)
+                    item("previous") {
+                        OutlinedButton(onClick = onTtsPrevious, enabled = ttsRuntimeState.ready) {
+                            Text(readerText.ttsPrevious, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
-                    OutlinedButton(onClick = onTtsNext, enabled = ttsRuntimeState.ready) {
-                        Text(readerText.ttsNext)
+                    item("next") {
+                        OutlinedButton(onClick = onTtsNext, enabled = ttsRuntimeState.ready) {
+                            Text(readerText.ttsNext, style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }
@@ -1091,7 +1098,7 @@ private fun ReaderServicesTab(
             }
             item { ReaderSectionTitle(readerText.ttsSleepTimerTitle) }
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     items(ReaderTtsSleepTimerMode.entries) { mode ->
                         ReaderChoiceChip(
                             selected = uiState.ttsSleepTimerMode == mode.storedValue,
@@ -1109,9 +1116,9 @@ private fun ReaderServicesTab(
 private fun ReaderSectionTitle(title: String) {
     Text(
         text = title,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.2.sp
+        letterSpacing = 0.15.sp
     )
 }
 
@@ -1123,12 +1130,12 @@ private fun ReaderSettingsCard(
 ) {
     Surface(
         modifier = if (fillMaxWidth) modifier.fillMaxWidth() else modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             content()
         }
@@ -1140,14 +1147,15 @@ private fun ReaderChoiceChip(
     selected: Boolean,
     onClick: () -> Unit,
     label: @Composable () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     FilterChip(
         selected = selected,
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(999.dp),
-        modifier = Modifier.heightIn(min = 30.dp),
+        modifier = modifier.heightIn(min = 28.dp),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = MaterialTheme.colorScheme.surface,
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -1173,9 +1181,9 @@ private fun ReaderSwitchRow(
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
-                Text(text = title, style = MaterialTheme.typography.bodyMedium)
+                Text(text = title, style = MaterialTheme.typography.bodySmall)
                 subtitle?.let {
                     Text(
                         text = it,
@@ -1187,7 +1195,7 @@ private fun ReaderSwitchRow(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                modifier = Modifier.scale(0.94f),
+                modifier = Modifier.scale(0.88f),
                 colors = SwitchDefaults.colors(
                     checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                     checkedTrackColor = MaterialTheme.colorScheme.primary,
@@ -1212,16 +1220,16 @@ private fun ReaderSliderRow(
     ReaderSettingsCard {
         Column(
             modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = title, style = MaterialTheme.typography.bodyMedium)
+                Text(text = title, style = MaterialTheme.typography.bodySmall)
                 Text(
                     text = valueText,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
