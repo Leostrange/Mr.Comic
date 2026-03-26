@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,6 +62,7 @@ import android.webkit.WebViewClient
 import org.json.JSONTokener
 import com.example.core.model.isTextReadingFormat
 import com.example.core.model.ReadingMode
+import com.example.core.model.ReaderInfoSlot
 import com.example.core.model.ReaderTapZoneAction
 import com.example.core.model.ReaderTapZoneMode
 import com.example.core.model.ReaderTtsSleepTimerMode
@@ -75,6 +77,9 @@ import com.example.engine.formats.base.TocEntry
 import com.example.feature.reader.ui.components.PageView
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
+import kotlinx.coroutines.delay
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 /**
  * JS snippet injected via evaluateJavascript after each page load.
@@ -807,6 +812,62 @@ fun ReaderScreen(
             }
         }
     }
+    val clockText = rememberReaderClockText()
+    val currentChapterTitle = remember(uiState.tableOfContents, uiState.currentPage) {
+        resolveReaderCurrentChapterTitle(
+            tableOfContents = uiState.tableOfContents,
+            currentPage = uiState.currentPage
+        )
+    }
+    val headerOverlayLine = remember(
+        uiState.headerLeftSlot,
+        uiState.headerCenterSlot,
+        uiState.headerRightSlot,
+        uiState.comic?.title,
+        currentChapterTitle,
+        clockText,
+        uiState.currentPage,
+        uiState.totalPages,
+        uiState.readingMode
+    ) {
+        resolveReaderInfoOverlayLine(
+            startSlot = uiState.headerLeftSlot,
+            centerSlot = uiState.headerCenterSlot,
+            endSlot = uiState.headerRightSlot,
+            comicTitle = uiState.comic?.title,
+            chapterTitle = currentChapterTitle,
+            clockText = clockText,
+            currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages,
+            readingMode = uiState.readingMode
+        )
+    }
+    val footerOverlayLine = remember(
+        uiState.footerLeftSlot,
+        uiState.footerCenterSlot,
+        uiState.footerRightSlot,
+        uiState.comic?.title,
+        currentChapterTitle,
+        clockText,
+        uiState.currentPage,
+        uiState.totalPages,
+        uiState.readingMode
+    ) {
+        resolveReaderInfoOverlayLine(
+            startSlot = uiState.footerLeftSlot,
+            centerSlot = uiState.footerCenterSlot,
+            endSlot = uiState.footerRightSlot,
+            comicTitle = uiState.comic?.title,
+            chapterTitle = currentChapterTitle,
+            clockText = clockText,
+            currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages,
+            readingMode = uiState.readingMode
+        )
+    }
+    val showHeaderFooterOverlay = uiState.chromeState == ReaderChromeState.HIDDEN &&
+        !uiState.showTextSettings &&
+        !uiState.showTocSheet
 
     val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
         tapZoneLayout,
@@ -1039,18 +1100,53 @@ fun ReaderScreen(
                 }
 
                 // Расчет цвета для панелей (затемнение меню)
-                val chromeSurface = readerPanelSurfaceColor(
+                val topChromeSurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
-                    emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) 1f else 0.94f,
+                    emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) uiState.topToolbarOpacity else 0.94f,
                     minAlpha = 0.5f // Гарантирует "затемнение", чтобы прозрачные меню были читаемы
                 )
+                val bottomChromeSurface = readerPanelSurfaceColor(
+                    base = MaterialTheme.colorScheme.surface,
+                    emphasis = if (uiState.chromeState == ReaderChromeState.EXPANDED) uiState.bottomToolbarOpacity else 0.94f,
+                    minAlpha = 0.5f
+                )
+                val infoOverlaySurface = readerPanelSurfaceColor(
+                    base = MaterialTheme.colorScheme.surface,
+                    emphasis = 0.28f,
+                    minAlpha = 0.14f
+                )
+
+                if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .displayCutoutPadding()
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large,
+                            color = infoOverlaySurface
+                        ) {
+                            ReaderHeaderFooterTextRow(
+                                line = headerOverlayLine,
+                                fontSizeSp = uiState.headerFooterFontSize,
+                                leftPaddingDp = uiState.headerFooterLeftPadding,
+                                rightPaddingDp = uiState.headerFooterRightPadding,
+                                verticalPaddingDp = uiState.headerFooterVerticalPadding
+                            )
+                        }
+                    }
+                }
 
                 // Нижняя область: Информационные панели (заметки, сноски) и Тулбар
                 Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(if (uiState.chromeState == ReaderChromeState.EXPANDED) chromeSurface else Color.Transparent)
+                        .background(if (uiState.chromeState == ReaderChromeState.EXPANDED) bottomChromeSurface else Color.Transparent)
                         .navigationBarsPadding(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -1090,6 +1186,21 @@ fun ReaderScreen(
                             else -> Unit
                         }
                     } else if (uiState.chromeState == ReaderChromeState.HIDDEN) {
+                        if (showHeaderFooterOverlay && footerOverlayLine.hasVisibleContent) {
+                            Surface(
+                                modifier = Modifier.padding(horizontal = 12.dp),
+                                shape = MaterialTheme.shapes.large,
+                                color = infoOverlaySurface
+                            ) {
+                                ReaderHeaderFooterTextRow(
+                                    line = footerOverlayLine,
+                                    fontSizeSp = uiState.headerFooterFontSize,
+                                    leftPaddingDp = uiState.headerFooterLeftPadding,
+                                    rightPaddingDp = uiState.headerFooterRightPadding,
+                                    verticalPaddingDp = uiState.headerFooterVerticalPadding
+                                )
+                            }
+                        }
                         Spacer(Modifier.navigationBarsPadding())
                     }
                 }
@@ -1100,7 +1211,7 @@ fun ReaderScreen(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .background(chromeSurface)
+                            .background(topChromeSurface)
                             .statusBarsPadding()
                             .displayCutoutPadding()
                     ) {
@@ -1180,6 +1291,12 @@ fun ReaderScreen(
             onTapZoneSwapChange = viewModel::setTapZoneSwap,
             onTapZoneActionChange = viewModel::setTapZoneAction,
             onVolumePagingChange = viewModel::setVolumeKeysPagingEnabled,
+            onHeaderSlotChange = viewModel::setHeaderSlot,
+            onFooterSlotChange = viewModel::setFooterSlot,
+            onHeaderFooterFontSizeChange = viewModel::setHeaderFooterFontSize,
+            onHeaderFooterVerticalPaddingChange = viewModel::setHeaderFooterVerticalPadding,
+            onHeaderFooterLeftPaddingChange = viewModel::setHeaderFooterLeftPadding,
+            onHeaderFooterRightPaddingChange = viewModel::setHeaderFooterRightPadding,
             onChromeAutoHideChange = viewModel::setChromeAutoHideEnabled,
             onTopToolbarOpacityChange = viewModel::setTopToolbarOpacity,
             onBottomToolbarOpacityChange = viewModel::setBottomToolbarOpacity,

@@ -10,9 +10,9 @@ It groups the already collected context into focused tasklists so development ca
 - Split master tasklists: `TASKLIST_01_READER_EXPERIENCE.md` to `TASKLIST_05_PLATFORM_FOUNDATION.md`
 - Archived legacy roadmaps: `docs/archive/roadmaps/`
 - Handoff log: `PROJECT_CONTEXT_HANDOFF.md`
-- Localization audit: `LOCALIZATION_AUDIT.md`
-- Translation requirements: `TRANSLATION_MODULE_TZ.md`
-- Dictionaries and licensing notes: `THIRD_PARTY_DICTIONARIES.md`
+- Localization audit: `docs/active/LOCALIZATION_AUDIT.md`
+- Translation requirements: `docs/active/TRANSLATION_MODULE_TZ.md`
+- Dictionaries and licensing notes: `docs/active/THIRD_PARTY_DICTIONARIES.md`
 - OCR update notes: `Ocr update/updated_TZ.md`
 - UI reference screenshots: `Сравнение интерфейса/`
 - External code reference: `https://github.com/Anxcye/anx-reader`

@@ -1734,7 +1734,7 @@ The next sequential process-improvement pass added a dedicated validation checkl
 
 Added file:
 
-- `C:\Users\xmeta\projects\Mr.Comic\QA_REGRESSION_CHECKLIST.md`
+- `C:\Users\xmeta\projects\Mr.Comic\docs\active\QA_REGRESSION_CHECKLIST.md`
 
 What it covers:
 
@@ -1758,7 +1758,7 @@ Tasklist impact:
 
 Relevant files:
 
-- `C:\Users\xmeta\projects\Mr.Comic\QA_REGRESSION_CHECKLIST.md`
+- `C:\Users\xmeta\projects\Mr.Comic\docs\active\QA_REGRESSION_CHECKLIST.md`
 - `C:\Users\xmeta\projects\Mr.Comic\TASKLIST.md`
 
 ## 41. Library visual presets moved into shared data layer
@@ -2005,7 +2005,7 @@ What is still missing relative to the accepted spec:
 What was added in this pass:
 
 - a root-level translation spec file:
-  - `C:\Users\xmeta\projects\Mr.Comic\TRANSLATION_MODULE_TZ.md`
+  - `C:\Users\xmeta\projects\Mr.Comic\docs\active\TRANSLATION_MODULE_TZ.md`
 - a dedicated translation section in the project tasklist with staged implementation:
   - stage 1: text translation MVP
   - stage 2: OCR translate for comics
@@ -2014,7 +2014,7 @@ What was added in this pass:
 
 Relevant files:
 
-- `C:\Users\xmeta\projects\Mr.Comic\TRANSLATION_MODULE_TZ.md`
+- `C:\Users\xmeta\projects\Mr.Comic\docs\active\TRANSLATION_MODULE_TZ.md`
 - `C:\Users\xmeta\projects\Mr.Comic\TASKLIST.md`
 
 ## 58. Translation stage 1 started with shared domain models
@@ -2445,7 +2445,7 @@ Files touched in this pass:
 - `C:\Users\xmeta\projects\Mr.Comic\android\core-domain\src\main\java\com\example\core\domain\translation\TranslationModule.kt`
 - `C:\Users\xmeta\projects\Mr.Comic\Translate\build_dictionary.py`
 - `C:\Users\xmeta\projects\Mr.Comic\Translate\build_dictionary_room.py`
-- `C:\Users\xmeta\projects\Mr.Comic\THIRD_PARTY_DICTIONARIES.md`
+- `C:\Users\xmeta\projects\Mr.Comic\docs\active\THIRD_PARTY_DICTIONARIES.md`
 - `C:\Users\xmeta\projects\Mr.Comic\TASKLIST.md`
 
 Build status after this pass:
@@ -2587,7 +2587,7 @@ Bundled offline dictionaries:
 - generated assets location:
   - `C:\Users\xmeta\projects\Mr.Comic\android\core-domain\src\main\assets\dictionaries\freedict`
 - attribution/license notes:
-  - `C:\Users\xmeta\projects\Mr.Comic\THIRD_PARTY_DICTIONARIES.md`
+  - `C:\Users\xmeta\projects\Mr.Comic\docs\active\THIRD_PARTY_DICTIONARIES.md`
   - `C:\Users\xmeta\projects\Mr.Comic\android\core-domain\src\main\assets\dictionaries\freedict\ATTRIBUTION.md`
   - `C:\Users\xmeta\projects\Mr.Comic\android\core-domain\src\main\assets\dictionaries\freedict\COPYING-FreeDict-CC-BY-SA-3.0.txt`
 
@@ -2623,7 +2623,7 @@ Files touched in this pass:
 - `C:\Users\xmeta\projects\Mr.Comic\android\feature-reader\src\main\java\com\example\feature\reader\ui\ReaderScreen.kt`
 - `C:\Users\xmeta\projects\Mr.Comic\android\feature-reader\src\main\java\com\example\feature\reader\ui\ReaderUiText.kt`
 - `C:\Users\xmeta\projects\Mr.Comic\scripts\import_freedict.py`
-- `C:\Users\xmeta\projects\Mr.Comic\THIRD_PARTY_DICTIONARIES.md`
+- `C:\Users\xmeta\projects\Mr.Comic\docs\active\THIRD_PARTY_DICTIONARIES.md`
 
 Build status after this pass:
 
@@ -5125,7 +5125,7 @@ Remaining OCR work after this pass is no longer architectural implementation, bu
 ## 127. DjVu renderer research is now recorded explicitly, so the next integration step starts from facts instead of memory
 
 - Added:
-  - [DJVU_RENDERER_RESEARCH.md](C:/Users/xmeta/projects/Mr.Comic/DJVU_RENDERER_RESEARCH.md)
+  - [DJVU_RENDERER_RESEARCH.md](C:/Users/xmeta/projects/Mr.Comic/docs/active/DJVU_RENDERER_RESEARCH.md)
 - The current conclusion is:
   - `DjVuLibre` is mature but GPL-based;
   - `DjVu.js` keeps the actual library under GPL v2 even though the viewer shell is more permissive;
