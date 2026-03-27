@@ -2257,11 +2257,11 @@ private fun settingsSectionItems(
             title = settingsSectionMeta(SettingsSection.ADVANCED, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.ADVANCED, strings.languageCode, strings).description,
             summary = when (strings.languageCode) {
-                "en" -> "App icon · Service elements"
-                "ja" -> "アプリアイコン・補助要素"
-                "zh" -> "应用图标与附加元素"
-                "ko" -> "앱 아이콘과 보조 요소"
-                else -> "Иконка приложения · Служебные элементы"
+                "en" -> "App icon · Splash ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
+                "ja" -> "アプリアイコン・スプラッシュ ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
+                "zh" -> "应用图标 · 启动画面 ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
+                "ko" -> "앱 아이콘 · 스플래시 ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
+                else -> "Иконка приложения · Заставка ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
             }
         ),
         SettingsMainMenuSectionItem(
@@ -8873,6 +8873,25 @@ private fun AdvancedSection(
     ) {
         item {
             SettingsCard(title = appearanceText.serviceElementsTitle) {
+                SwitchRow(
+                    title = when (strings.languageCode) {
+                        "en" -> "Video splash"
+                        "ja" -> "ビデオスプラッシュ"
+                        "zh" -> "视频启动页"
+                        "ko" -> "비디오 스플래시"
+                        else -> "Видеозаставка"
+                    },
+                    subtitle = when (strings.languageCode) {
+                        "en" -> "Shows the animated startup video before the app opens. Disabled by default on e-ink devices."
+                        "ja" -> "アプリ起動前にアニメーション付きの開始動画を表示します。E-Ink 端末では既定でオフです。"
+                        "zh" -> "在应用打开前显示启动视频动画。E-Ink 设备默认关闭。"
+                        "ko" -> "앱이 열리기 전에 시작 비디오를 재생합니다. E-ink 기기에서는 기본적으로 꺼집니다."
+                        else -> "Показывает анимированную видеозаставку перед открытием приложения. На E-Ink устройствах по умолчанию выключена."
+                    },
+                    checked = uiState.appVideoSplashEnabled,
+                    onCheckedChange = viewModel::setAppVideoSplashEnabled
+                )
+                Spacer(Modifier.height(10.dp))
                 SwitchRow(
                     title = appearanceText.mascotRecapTitle,
                     subtitle = appearanceText.mascotRecapSubtitle,

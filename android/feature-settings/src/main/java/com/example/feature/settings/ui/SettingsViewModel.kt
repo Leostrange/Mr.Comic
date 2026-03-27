@@ -62,6 +62,7 @@ import com.example.core.ui.library.normalizeLibraryBackgroundStyle
 import com.example.core.ui.library.normalizeLibraryGraphicCoverStyle
 import com.example.core.ui.library.normalizeLibraryShelfStyle
 import com.example.core.ui.library.parseLibraryThemePreset
+import com.example.core.ui.eink.isEInkDevice
 import com.example.core.ui.locale.normalizeAppLanguageCode
 import com.example.core.ui.theme.ReadingPreset
 import com.example.core.ui.theme.ThemeMode
@@ -187,6 +188,7 @@ data class SettingsUiState(
     val readerPageSoundStyle: String = "PAPER",
     val uiSoundEnabled: Boolean = false,
     val uiSoundsVolume: Float = 0.6f,
+    val appVideoSplashEnabled: Boolean = true,
     val textFontSize: Int = 18,
     val textColorScheme: String = "DAY",
     val textFontFamily: String = "Georgia",
@@ -816,6 +818,10 @@ class SettingsViewModel @Inject constructor(
         )
     }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state, showCoverTitles ->
         state.copy(libraryShowCoverTitles = showCoverTitles)
+    }.combine(
+        preferences.get(PreferencesKeys.APP_VIDEO_SPLASH_ENABLED, !context.isEInkDevice())
+    ) { state, appVideoSplashEnabled ->
+        state.copy(appVideoSplashEnabled = appVideoSplashEnabled)
     }.combine(dailyReadingGoalStore.goalState) { state, goalState ->
         state.copy(
             dailyReadingGoalEnabled = goalState.enabled,
@@ -1301,6 +1307,12 @@ class SettingsViewModel @Inject constructor(
         val resolved = ReaderTtsSleepTimerMode.fromStored(value)
         viewModelScope.launch {
             preferences.set(PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE, resolved.storedValue)
+        }
+    }
+
+    fun setAppVideoSplashEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.APP_VIDEO_SPLASH_ENABLED, enabled)
         }
     }
 

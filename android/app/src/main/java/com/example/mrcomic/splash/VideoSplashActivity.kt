@@ -25,6 +25,12 @@ class VideoSplashActivity : ComponentActivity() {
             return
         }
 
+        if (!isStartupVideoSplashEnabled()) {
+            app.splashPlayedInProcess = true
+            navigateToMain()
+            return
+        }
+
         // E-ink / e-paper screens have no GPU animation pipeline and near-zero refresh rate.
         // Playing video on such a display causes severe ghosting — skip straight to main.
         if (isEInkDevice()) {  // uses Context.isEInkDevice() from core-ui
@@ -52,6 +58,7 @@ class VideoSplashActivity : ComponentActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             }
         )
+        overridePendingTransition(0, 0)
         finish()
     }
 

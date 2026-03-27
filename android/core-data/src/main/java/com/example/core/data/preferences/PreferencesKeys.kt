@@ -132,6 +132,7 @@ object PreferencesKeys {
     val UI_SOUND_ENABLED          = booleanPreferencesKey("ui_sound_enabled")
     // Громкость UIFeedback (0.0 .. 1.0), default 0.6
     val UI_SOUNDS_VOLUME          = floatPreferencesKey("ui_sounds_volume")
+    val APP_VIDEO_SPLASH_ENABLED  = booleanPreferencesKey("app_video_splash_enabled")
     // Настройки текстового ридера (FB2 / EPUB)
     val TEXT_FONT_SIZE            = intPreferencesKey("text_font_size")      // 12..32, default 18
     val TEXT_COLOR_SCHEME         = stringPreferencesKey("text_color_scheme") // DAY/SEPIA/NIGHT

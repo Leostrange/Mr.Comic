@@ -16,6 +16,22 @@ import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
 import java.net.URLDecoder
+import java.util.Base64
+
+internal fun sanitizeInlineEpubCss(css: String): String {
+    val fontFaceRegex = Regex("""(?is)@font-face\s*\{.*?}""")
+    return fontFaceRegex.replace(css, "").trim()
+}
+
+internal fun simplifySingleImageSvgContent(html: String): String {
+    val simpleSvgImageRegex = Regex(
+        """(?is)<svg\b[^>]*>\s*<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["']([^"']+)["'][^>]*?/?>\s*</svg>"""
+    )
+    return simpleSvgImageRegex.replace(html) { match ->
+        val imageSrc = match.groupValues[1]
+        """<div class="epub-inline-cover"><img src="$imageSrc" alt="" style="max-width:100%;height:auto;display:block;margin:0 auto;"/></div>"""
+    }
+}
 
 /**
  * EPUB reader — handles both image-based (manga) and text-based (novel) EPUBs.
@@ -50,11 +66,6 @@ class EpubFormatReader(
         private val IMG_SRC_RE    = Regex("""(<img\b[^>]*?\bsrc\s*=\s*["'])([^"']+)(["'][^>]*?>)""", RegexOption.IGNORE_CASE)
         private val XLINK_HREF_RE = Regex("""(<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["'])([^"']+)(["'][^>]*?/?>)""", RegexOption.IGNORE_CASE)
         private val CSS_LINK_RE   = Regex("""<link\b[^>]+\bhref\s*=\s*["']([^"']+\.css)["'][^>]*?/?>""", RegexOption.IGNORE_CASE)
-        private val NOTES_TITLE_RE = Regex("""^\s*(примечани[ея]|notes?|endnotes?|footnotes?)\s*$""", RegexOption.IGNORE_CASE)
-        private val NOTE_ID_RE = Regex("""^FbAutId_\d+$""", RegexOption.IGNORE_CASE)
-        private val HEADING_RE = Regex("""(?is)<h[1-6][^>]*>(.*?)</h[1-6]>""")
-        private val BODY_RE = Regex("""(?is)<body[^>]*>(.*)</body>""")
-
         /**
          * Viewport meta + minimal reader CSS injected at the end of <head>.
          * Low-specificity selectors ensure publisher CSS wins for custom elements;
@@ -301,6 +312,7 @@ class EpubFormatReader(
         data class SpineItem(val page: EpubPage.Html, val uncompressedSize: Long)
         val rawResult = mutableListOf<EpubPage>()
         val htmlSizes = mutableMapOf<String, Long>()   // entry → uncompressed byte size
+        val imageOnlyHtmlEntries = mutableSetOf<String>()
         spineLoop@ for (idref in spine) {
             val rawHref = manifest[idref] ?: continue
             val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
@@ -315,6 +327,9 @@ class EpubFormatReader(
                     htmlSizes[entry] = header.uncompressedSize
                     val (charCount, imgCount) = if (header.uncompressedSize > 150L)
                         estimateContent(zip, entry) else Pair(0, 0)
+                    if (charCount == 0 && imgCount > 0) {
+                        imageOnlyHtmlEntries += entry
+                    }
                     // Skip structurally-empty pages: no text AND no images.
                     // Image-only wrapper pages (charCount=0, imgCount>0) are kept as a single page.
                     if (charCount == 0 && imgCount == 0) {
@@ -359,6 +374,7 @@ class EpubFormatReader(
         while (i < normalized.size) {
             val pg = normalized[i]
             if (pg is EpubPage.Html && pg.totalChunks == 1 &&
+                pg.entry !in imageOnlyHtmlEntries &&
                 (htmlSizes[pg.entry] ?: Long.MAX_VALUE) < TINY_BYTES
             ) {
                 val extras = mutableListOf<String>()
@@ -616,8 +632,6 @@ class EpubFormatReader(
                 }
             }
 
-    private data class NoteItem(val anchorId: String, val number: String, val text: String)
-
     private fun readTextEntry(zip: ZipFile, entry: String): String? {
         val header = findHeader(zip, entry) ?: return null
         return try {
@@ -632,16 +646,11 @@ class EpubFormatReader(
 
     private fun isNotesTitlePage(zip: ZipFile, entry: String): Boolean {
         val raw = readTextEntry(zip, entry) ?: return false
-        val bodyText = BODY_RE.find(raw)?.groupValues?.get(1)
-            ?.let { HTML_TAG_RE.replace(it, " ") }
-            ?.replace(Regex("\\s+"), " ")
-            ?.trim()
-            ?: return false
-        return NOTES_TITLE_RE.matches(bodyText)
+        return EpubFootnoteParser.hasNotesTitle(raw)
     }
 
     private fun isFootnotePage(zip: ZipFile, entry: String): Boolean =
-        extractFootnoteItem(zip, entry) != null
+        extractFootnoteItems(zip, entry).isNotEmpty()
 
     private fun buildFootnoteMap(
         manifest: Map<String, String>,
@@ -657,41 +666,20 @@ class EpubFormatReader(
             val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
             val ext = entry.substringAfterLast('.', "").lowercase()
             if (ext !in XHTML_EXTENSIONS) continue
-            val note = extractFootnoteItem(zip, entry) ?: continue
-            result.putIfAbsent(note.anchorId, note.text)
+            extractFootnoteItems(zip, entry).forEach { note ->
+                result.putIfAbsent(note.anchorId, note.text)
+            }
         }
         return result
     }
 
-    private fun extractFootnoteItem(zip: ZipFile, entry: String): NoteItem? {
-        val raw = readTextEntry(zip, entry) ?: return null
-        val body = BODY_RE.find(raw)?.groupValues?.get(1)?.trim().orEmpty()
-        if (body.isEmpty()) return null
-
-        val headingMatch = HEADING_RE.find(body) ?: return null
-        val anchorId = Regex("""\bid\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(headingMatch.value)?.groupValues?.get(1).orEmpty()
-        if (!NOTE_ID_RE.matches(anchorId)) return null
-
-        val number = HTML_TAG_RE.replace(headingMatch.groupValues[1], " ")
-            .replace(Regex("\\s+"), " ")
-            .trim()
-            .ifEmpty { anchorId.substringAfterLast('_') }
-
-        val text = body.removeRange(headingMatch.range)
-            .replace(Regex("""(?is)<a\b[^>]*></a>"""), "")
-            .replace(Regex("""(?is)<br\s*/?>"""), " ")
-            .replace(Regex("""(?is)</?(?:div|p|section|article|aside|blockquote|ul|ol|li)[^>]*>"""), " ")
-            .let { HTML_TAG_RE.replace(it, " ") }
-            .replace(Regex("\\s+"), " ")
-            .trim()
-        if (text.isBlank()) return null
-
-        return NoteItem(anchorId = anchorId, number = number, text = text)
+    private fun extractFootnoteItems(zip: ZipFile, entry: String): List<EpubFootnoteItem> {
+        val raw = readTextEntry(zip, entry) ?: return emptyList()
+        return EpubFootnoteParser.extractItems(raw)
     }
 
     private fun buildSyntheticNotePages(titleEntry: String, noteEntries: List<String>, zip: ZipFile): List<EpubPage> {
-        val noteItems = noteEntries.mapNotNull { extractFootnoteItem(zip, it) }
+        val noteItems = noteEntries.flatMap { extractFootnoteItems(zip, it) }
         if (noteItems.isEmpty()) {
             return listOf(
                 EpubPage.SyntheticHtml(
@@ -766,36 +754,52 @@ class EpubFormatReader(
 
     private fun inlineImages(html: String, xhtmlEntry: String, opfDir: String, zip: ZipFile): String {
         val xhtmlDir = xhtmlEntry.substringBeforeLast('/', "")
+        val strippedHtml = html.replaceFirst(Regex("""^\s*<\?xml[^>]*\?>\s*""", RegexOption.IGNORE_CASE), "")
 
-        fun resolveHeader(src: String): FileHeader? {
+        fun resolveHeader(src: String, baseDir: String = xhtmlDir): FileHeader? {
             if (src.startsWith("data:") || src.startsWith("http")) return null
             val decoded = try { URLDecoder.decode(src, "UTF-8") } catch (_: Exception) { src }
             val entry = normalizePath(
                 if (decoded.startsWith("/")) decoded.trimStart('/')
-                else if (xhtmlDir.isEmpty()) decoded else "$xhtmlDir/$decoded"
+                else if (baseDir.isEmpty()) decoded else "$baseDir/$decoded"
             )
             return findHeader(zip, entry)
         }
 
-        fun resolveAndEncode(src: String): String? {
-            val header = resolveHeader(src) ?: return null
+        fun resolveAndEncode(src: String, baseDir: String = xhtmlDir): String? {
+            val header = resolveHeader(src, baseDir) ?: return null
             val ext  = header.fileName.substringAfterLast('.', "jpeg").lowercase()
             val mime = when (ext) {
                 "png"  -> "image/png"; "gif" -> "image/gif"; "webp" -> "image/webp"
+                "svg"  -> "image/svg+xml"
+                "otf"  -> "font/otf"
+                "ttf"  -> "font/ttf"
+                "woff" -> "font/woff"
+                "woff2" -> "font/woff2"
                 else   -> "image/jpeg"
             }
             return try {
                 val bytes = zip.getInputStream(header).use { it.readBytes() }
-                "data:$mime;base64,${android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)}"
+                "data:$mime;base64,${Base64.getEncoder().encodeToString(bytes)}"
             } catch (_: Exception) { null }
         }
 
         // Step 1: Inline linked CSS stylesheets as <style> blocks
-        var result = CSS_LINK_RE.replace(html) { mr ->
+        val inlinedCssEntries = mutableSetOf<String>()
+        var result = CSS_LINK_RE.replace(strippedHtml) { mr ->
             val header = resolveHeader(mr.groupValues[1]) ?: return@replace ""
+            if (!inlinedCssEntries.add(header.fileName.lowercase())) return@replace ""
             try {
-                val css = zip.getInputStream(header).use { it.readBytes().toString(Charsets.UTF_8) }
-                "<style>$css</style>"
+                val cssBytes = zip.getInputStream(header).use { it.readBytes() }
+                val cssDir = header.fileName.substringBeforeLast('/', "")
+                val css = cssBytes.toString(detectCharset(cssBytes))
+                val sanitizedCss = sanitizeInlineEpubCss(css).replace(
+                    Regex("""url\((['"]?)([^'")]+)\1\)""", RegexOption.IGNORE_CASE)
+                ) { urlMatch ->
+                    val rawUrl = urlMatch.groupValues[2].trim()
+                    resolveAndEncode(rawUrl, cssDir)?.let { encoded -> "url('$encoded')" } ?: urlMatch.value
+                }
+                "<style>$sanitizedCss</style>"
             } catch (_: Exception) { "" }
         }
 
@@ -808,6 +812,7 @@ class EpubFormatReader(
             val dataUri = resolveAndEncode(m.groupValues[2]) ?: return@replace m.value
             "${m.groupValues[1]}$dataUri${m.groupValues[3]}"
         }
+        result = simplifySingleImageSvgContent(result)
 
         // Step 3: Inject reader CSS + viewport meta at end of <head>
         return when {

@@ -1,7 +1,7 @@
 package com.example.engine.formats.di
 
 import com.example.engine.formats.djvu.DjvuBackend
-import com.example.engine.formats.djvu.UnavailableDjvuBackend
+import com.example.engine.formats.djvu.StructuredDjvuBackend
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,6 +13,6 @@ object EngineFormatsModule {
 
     @Provides
     fun provideDjvuBackend(
-        backend: UnavailableDjvuBackend
+        backend: StructuredDjvuBackend
     ): DjvuBackend = backend
 }

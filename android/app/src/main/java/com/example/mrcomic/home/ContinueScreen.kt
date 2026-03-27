@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -115,6 +116,7 @@ import java.util.TimeZone
 import javax.inject.Inject
 
 data class ContinueUiState(
+    val isLoading: Boolean = true,
     val continueReading: Comic? = null,
     val currentlyReading: List<Comic> = emptyList(),
     val hasLibraryContent: Boolean = false,
@@ -229,6 +231,9 @@ class ContinueViewModel @Inject constructor(
             val dailyReadingGoal = inputs.dailyReadingGoal
             val acknowledgedMascotStageName = inputs.acknowledgedMascotStageName
             val questPromptsEnabled = analyticsPrefs.questPromptsEnabled
+            val incompleteComicIds = comics.asSequence()
+                .filterNot { it.isCompleted }
+                .mapTo(linkedSetOf()) { it.id }
             val activeReading = comics
                 .filter { !it.isCompleted && it.readingProgress > 0f }
                 .sortedByDescending { it.lastReadDate }
@@ -237,7 +242,8 @@ class ContinueViewModel @Inject constructor(
             val libraryComicIds = comics.mapTo(linkedSetOf()) { it.id }
             val libraryTrail = visibleCheckpointTrail(
                 trail = trail,
-                libraryComicIds = libraryComicIds
+                libraryComicIds = libraryComicIds,
+                activeComicIds = incompleteComicIds
             )
             if (trail.size != libraryTrail.size) {
                 viewModelScope.launch {
@@ -246,10 +252,11 @@ class ContinueViewModel @Inject constructor(
             }
 
             ContinueUiState(
+                isLoading = false,
                 continueReading = currentlyReading.firstOrNull(),
                 currentlyReading = currentlyReading.drop(1),
                 hasLibraryContent = comics.isNotEmpty(),
-                hasActiveReading = currentlyReading.isNotEmpty(),
+                hasActiveReading = activeReading.isNotEmpty(),
                 checkpointTrail = libraryTrail,
                 mascotRecapEnabled = mascotRecapEnabled,
                 questPromptsEnabled = questPromptsEnabled,
@@ -262,7 +269,7 @@ class ContinueViewModel @Inject constructor(
                     completedTitles = comics.count { it.isCompleted },
                     bookmarkedTitles = comics.count { it.isBookmarked },
                     goalState = dailyReadingGoal,
-                    recentComic = currentlyReading.firstOrNull(),
+                    recentComic = activeReading.firstOrNull(),
                     acknowledgedStageName = acknowledgedMascotStageName
                 ),
                 acknowledgedMascotStageName = acknowledgedMascotStageName,
@@ -276,7 +283,7 @@ class ContinueViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ContinueUiState()
+            initialValue = ContinueUiState(isLoading = true)
         )
 
     fun clearCheckpoint() {
@@ -356,10 +363,11 @@ class ContinueViewModel @Inject constructor(
 
 internal fun visibleCheckpointTrail(
     trail: List<ReaderCheckpoint>,
-    libraryComicIds: Set<String>
+    libraryComicIds: Set<String>,
+    activeComicIds: Set<String>
 ): List<ReaderCheckpoint> {
     return trail
-        .filter { checkpoint -> checkpoint.comicId in libraryComicIds }
+        .filter { checkpoint -> checkpoint.comicId in libraryComicIds && checkpoint.comicId in activeComicIds }
         .take(3)
 }
 
@@ -543,7 +551,11 @@ fun ContinueScreen(
                     )
                 }
 
-                if (!uiState.hasLibraryContent) {
+                if (uiState.isLoading) {
+                    item {
+                        ContinueLoadingState()
+                    }
+                } else if (!uiState.hasLibraryContent) {
                     item {
                         EmptyContinueState(
                             onOpenLibrary = onOpenLibrary,
@@ -1273,6 +1285,49 @@ private fun CheckpointRecapChip(
 private fun formatCheckpointTime(reachedAtMillis: Long): String {
     return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
         .format(Date(reachedAtMillis))
+}
+
+@Composable
+private fun ContinueLoadingState() {
+    val language = LocalStrings.current.languageCode
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(22.dp),
+                strokeWidth = 2.5.dp
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = when (language) {
+                        "en" -> "Preparing Continue"
+                        "ja" -> "続き画面を準備中"
+                        "zh" -> "正在准备继续页面"
+                        "ko" -> "이어읽기 화면 준비 중"
+                        else -> "Подготавливаю экран Продолжить"
+                    },
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Text(
+                    text = when (language) {
+                        "en" -> "Loading reading progress and recent checkpoints."
+                        "ja" -> "進捗と最近のチェックポイントを読み込んでいます。"
+                        "zh" -> "正在加载阅读进度和最近的检查点。"
+                        "ko" -> "읽기 진행도와 최근 체크포인트를 불러오는 중입니다."
+                        else -> "Загружаю прогресс чтения и последние контрольные точки."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
 
 @Composable

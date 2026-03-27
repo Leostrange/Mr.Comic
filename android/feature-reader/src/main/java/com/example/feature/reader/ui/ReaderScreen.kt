@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
+import android.util.Log
 import android.view.ActionMode
 import android.view.KeyEvent
 import android.view.Menu
@@ -56,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.webkit.JavascriptInterface
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -77,7 +79,10 @@ import com.example.engine.formats.base.TocEntry
 import com.example.feature.reader.ui.components.PageView
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -148,6 +153,26 @@ private const val JS_TAP_HANDLER = """(function(){
     if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
   },false);
 })();"""
+
+private const val HTML_READER_TAG = "ReaderHtmlView"
+
+private sealed interface ReaderHtmlPageSource {
+    val loadToken: String
+
+    data class FileUrl(val url: String) : ReaderHtmlPageSource {
+        override val loadToken: String = "file:$url"
+    }
+
+    data class Inline(val baseUrl: String, val html: String) : ReaderHtmlPageSource {
+        override val loadToken: String = "inline:${html.hashCode()}"
+    }
+}
+
+private fun readerHtmlCacheFile(context: Context, themedHtml: String): File {
+    val cacheDir = File(context.cacheDir, "reader_html_pages").apply { mkdirs() }
+    val fileName = "page_${Integer.toHexString(themedHtml.hashCode())}.html"
+    return File(cacheDir, fileName)
+}
 
 private const val JS_SELECTED_TEXT_HANDLER = """(function(){
   try{
@@ -423,6 +448,31 @@ private fun buildThemedHtmlDocument(
           body {
             margin: 0 !important;
           }
+          body [style*="background"],
+          body [style*="background-color"],
+          body article,
+          body aside,
+          body section,
+          body main,
+          body div,
+          body p,
+          body span,
+          body blockquote,
+          body pre,
+          body table,
+          body thead,
+          body tbody,
+          body tr,
+          body td,
+          body th,
+          body li,
+          body ul,
+          body ol,
+          body figure,
+          body figcaption {
+            background-color: transparent !important;
+            background-image: none !important;
+          }
         </style>
     """.trimIndent()
 
@@ -598,6 +648,7 @@ private fun HtmlPageView(
     dictionaryActionLabel: String,
     explainActionLabel: String
 ) {
+    val context = LocalContext.current
     // Small constant breathing room at the top. statusBarsPadding() on the modifier already
     // pushes the WebView content below the status bar / camera notch, so we only need a
     // small gap here regardless of whether the top bar is visible (it overlays as an overlay).
@@ -605,6 +656,25 @@ private fun HtmlPageView(
     val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
     val bgColor = remember(bg) { android.graphics.Color.parseColor(bg) }
     val themedHtml = remember(html, bg, fg) { buildThemedHtmlDocument(html, bg, fg) }
+    var pageSource by remember(themedHtml, baseUrl, context.cacheDir.absolutePath) {
+        mutableStateOf<ReaderHtmlPageSource?>(null)
+    }
+
+    LaunchedEffect(themedHtml, baseUrl, context.cacheDir.absolutePath) {
+        pageSource = withContext(Dispatchers.IO) {
+            runCatching {
+                val tmpFile = readerHtmlCacheFile(context, themedHtml)
+                tmpFile.writeText(themedHtml, Charsets.UTF_8)
+                ReaderHtmlPageSource.FileUrl("file://${tmpFile.absolutePath}")
+            }.getOrElse { error ->
+                Log.w(HTML_READER_TAG, "Failed to cache reader HTML page, falling back to inline load", error)
+                ReaderHtmlPageSource.Inline(
+                    baseUrl = baseUrl ?: "about:blank",
+                    html = themedHtml
+                )
+            }
+        }
+    }
 
     // rememberUpdatedState keeps the lambdas current without recreating the WebView
     val onLeft           = rememberUpdatedState(onLeftTap)
@@ -628,6 +698,8 @@ private fun HtmlPageView(
         factory = { ctx ->
             ReaderWebView(ctx).apply {
                 settings.javaScriptEnabled  = true   // required for tap bridge
+                settings.domStorageEnabled  = true
+                settings.loadsImagesAutomatically = true
                 settings.allowFileAccess    = true
                 settings.allowContentAccess = true
                 // Fix: textZoom=100 prevents system accessibility font scale from
@@ -639,6 +711,9 @@ private fun HtmlPageView(
                 settings.loadWithOverviewMode  = true
                 // Match the current reading theme before first paint.
                 setBackgroundColor(bgColor)
+                // Avoid GPU/compositor blank frames on some devices when large HTML chapters
+                // are attached through WebView inside the reader surface stack.
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 // Disable overscroll bounce but allow natural vertical scrolling within a page.
                 overScrollMode = android.view.View.OVER_SCROLL_NEVER
 
@@ -681,6 +756,7 @@ private fun HtmlPageView(
 
                 webViewClient = object : WebViewClient() {
                     override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
+                        Log.d(HTML_READER_TAG, "WebView page started: ${url ?: "about:blank"}")
                         view.setBackgroundColor(
                             android.graphics.Color.parseColor(
                                 colorSchemePaletteForPreset(currentScheme.value, currentPreset.value).first
@@ -702,6 +778,7 @@ private fun HtmlPageView(
 
                     // Inject the tap listener + restore text settings after every page load
                     override fun onPageFinished(view: WebView, url: String) {
+                        Log.d(HTML_READER_TAG, "WebView page finished: $url")
                         view.evaluateJavascript(JS_TAP_HANDLER, null)
                         val (bg, fg) = colorSchemePaletteForPreset(currentScheme.value, currentPreset.value)
                         view.evaluateJavascript(
@@ -712,6 +789,30 @@ private fun HtmlPageView(
                                 topPaddingPx = topPaddingPx
                             ), null
                         )
+                        view.post {
+                            view.requestLayout()
+                            view.invalidate()
+                        }
+                    }
+
+                    override fun onPageCommitVisible(view: WebView, url: String?) {
+                        Log.d(HTML_READER_TAG, "WebView page commit visible: ${url ?: "about:blank"}")
+                        view.post {
+                            view.requestLayout()
+                            view.invalidate()
+                        }
+                    }
+
+                    override fun onReceivedError(
+                        view: WebView,
+                        request: WebResourceRequest,
+                        error: WebResourceError
+                    ) {
+                        Log.w(
+                            HTML_READER_TAG,
+                            "WebView error for ${request.url}: ${error.description} (${error.errorCode})"
+                        )
+                        super.onReceivedError(view, request, error)
                     }
                 }
             }
@@ -734,24 +835,25 @@ private fun HtmlPageView(
                 textSettingsJs(fontSize, bg, fg, fontFamily, lineHeight, textAlign, bold,
                     topPaddingPx = topPaddingPx), null
             )
+            val currentSource = pageSource ?: return@AndroidView
             // Only reload when content actually changes — prevents scroll position
             // from resetting on every recompose (e.g. when controls are toggled).
             val cached = webView.tag as? String
-            if (cached != themedHtml) {
-                webView.tag = themedHtml
-                // Write to a local file and load via file:// to avoid two pitfalls of
-                // loadDataWithBaseURL(): (1) the ~1 MB Binder IPC limit that silently
-                // truncates large chapters; (2) null-encoding mojibake for Cyrillic text.
-                // All CSS/images are already inlined as base64, so no cross-origin issues.
-                try {
-                    val tmpFile = java.io.File(webView.context.cacheDir, "reader_page.html")
-                    tmpFile.writeText(themedHtml, Charsets.UTF_8)
-                    webView.loadUrl("file://${tmpFile.absolutePath}")
-                } catch (_: Exception) {
-                    // Fallback if file write fails (low storage etc.)
-                    webView.loadDataWithBaseURL(
-                        baseUrl ?: "about:blank", themedHtml, "text/html", "UTF-8", null
+            if (cached != currentSource.loadToken) {
+                webView.tag = currentSource.loadToken
+                when (currentSource) {
+                    is ReaderHtmlPageSource.FileUrl -> webView.loadUrl(currentSource.url)
+                    is ReaderHtmlPageSource.Inline -> webView.loadDataWithBaseURL(
+                        currentSource.baseUrl,
+                        currentSource.html,
+                        "text/html",
+                        "UTF-8",
+                        null
                     )
+                }
+                webView.post {
+                    webView.requestLayout()
+                    webView.invalidate()
                 }
             }
         }

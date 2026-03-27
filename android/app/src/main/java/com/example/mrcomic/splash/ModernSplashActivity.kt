@@ -43,7 +43,7 @@ class ModernSplashActivity : ComponentActivity() {
             slideUp.duration = 500L
             slideUp.doOnEnd {
                 splashScreenView.remove()
-                navigateToVideoSplash()
+                navigateToStartupDestination()
             }
             slideUp.start()
         }
@@ -52,7 +52,15 @@ class ModernSplashActivity : ComponentActivity() {
 
     private fun setupLegacySplashScreen() {
         val videoResourceId = resources.getIdentifier("splash_video", "raw", packageName)
-        if (videoResourceId != 0) {
+        if (videoResourceId != 0 && isStartupVideoSplashEnabled()) {
+            navigateToVideoSplash()
+        } else {
+            navigateToMainActivity()
+        }
+    }
+
+    private fun navigateToStartupDestination() {
+        if (isStartupVideoSplashEnabled()) {
             navigateToVideoSplash()
         } else {
             navigateToMainActivity()
@@ -61,11 +69,13 @@ class ModernSplashActivity : ComponentActivity() {
 
     private fun navigateToVideoSplash() {
         startActivity(Intent(this, VideoSplashActivity::class.java))
+        overridePendingTransition(0, 0)
         finish()
     }
 
     private fun navigateToMainActivity() {
         startActivity(Intent(this, MainActivity::class.java))
+        overridePendingTransition(0, 0)
         finish()
     }
 }
