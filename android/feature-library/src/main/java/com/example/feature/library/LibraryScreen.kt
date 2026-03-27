@@ -414,8 +414,21 @@ fun LibraryScreen(
         }
     }
 
-    BackHandler(enabled = showMrComicProgress) {
-        showMrComicProgress = false
+    val canNavigateUpWithinLibrary = showMrComicProgress ||
+        uiState.contentSection != LibraryContentSection.FILES ||
+        (uiState.groupByMode == GroupByMode.FOLDER && uiState.currentFolderPath != null)
+    val navigateUpWithinLibrary = {
+        if (showMrComicProgress) {
+            showMrComicProgress = false
+        } else if (uiState.contentSection != LibraryContentSection.FILES) {
+            viewModel.setContentSection(LibraryContentSection.FILES)
+        } else {
+            viewModel.navigateUpFromFolder()
+        }
+    }
+
+    BackHandler(enabled = canNavigateUpWithinLibrary) {
+        navigateUpWithinLibrary()
     }
 
     Scaffold(
@@ -441,17 +454,8 @@ fun LibraryScreen(
                 onThumbnailModeChange = viewModel::setThumbnailMode,
                 onAddFileClick = onAddFileClick,
                 onAddFolderClick = onAddFolderClick,
-                canNavigateUp = uiState.contentSection != LibraryContentSection.FILES ||
-                    (uiState.groupByMode == GroupByMode.FOLDER && uiState.currentFolderPath != null),
-                onNavigateUp = {
-                    if (showMrComicProgress) {
-                        showMrComicProgress = false
-                    } else if (uiState.contentSection != LibraryContentSection.FILES) {
-                        viewModel.setContentSection(LibraryContentSection.FILES)
-                    } else {
-                        viewModel.navigateUpFromFolder()
-                    }
-                }
+                canNavigateUp = canNavigateUpWithinLibrary,
+                onNavigateUp = navigateUpWithinLibrary
             )
         }
     ) { padding ->

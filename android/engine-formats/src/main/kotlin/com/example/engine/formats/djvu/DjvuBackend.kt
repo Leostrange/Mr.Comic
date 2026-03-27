@@ -16,9 +16,19 @@ sealed interface DjvuBackendStatus {
     ) : DjvuBackendStatus
 }
 
+data class DjvuPageSource(
+    val index: Int,
+    val documentBytes: ByteArray,
+    val info: DjvuPageInfo? = null,
+    val fileOffset: Long? = null,
+    val byteLength: Long? = null
+)
+
 interface DjvuDocument {
     suspend fun getPageCount(): Int
     suspend fun renderPage(index: Int, renderQuality: Int = 1): Bitmap?
+    suspend fun getHtmlPage(index: Int): String? = null
+    suspend fun getPageSource(index: Int): DjvuPageSource? = null
     suspend fun getMetadata(): Map<String, String> = emptyMap()
     fun close()
 }

@@ -8,7 +8,7 @@ import org.junit.Test
 class ContinueCheckpointTrailPolicyTest {
 
     @Test
-    fun visibleCheckpointTrail_keepsRecentLibraryHistoryEvenWhenTitlesAreCompleted() {
+    fun visibleCheckpointTrail_keepsOnlyRecentActiveLibraryHistory() {
         val trail = listOf(
             checkpoint("completed-title", 300L),
             checkpoint("active-title", 200L),
@@ -17,11 +17,12 @@ class ContinueCheckpointTrailPolicyTest {
 
         val visible = visibleCheckpointTrail(
             trail = trail,
-            libraryComicIds = setOf("completed-title", "active-title", "older-title")
+            libraryComicIds = setOf("completed-title", "active-title", "older-title"),
+            activeComicIds = setOf("active-title", "older-title")
         )
 
         assertEquals(
-            listOf("completed-title", "active-title", "older-title"),
+            listOf("active-title", "older-title"),
             visible.map { it.comicId }
         )
     }
@@ -36,7 +37,8 @@ class ContinueCheckpointTrailPolicyTest {
 
         val visible = visibleCheckpointTrail(
             trail = trail,
-            libraryComicIds = setOf("library-title", "other-library-title")
+            libraryComicIds = setOf("library-title", "other-library-title"),
+            activeComicIds = setOf("library-title", "other-library-title")
         )
 
         assertEquals(listOf("library-title", "other-library-title"), visible.map { it.comicId })
@@ -54,7 +56,8 @@ class ContinueCheckpointTrailPolicyTest {
 
         val visible = visibleCheckpointTrail(
             trail = trail,
-            libraryComicIds = setOf("comic-1", "comic-2", "comic-3", "comic-4")
+            libraryComicIds = setOf("comic-1", "comic-2", "comic-3", "comic-4"),
+            activeComicIds = setOf("comic-1", "comic-2", "comic-3", "comic-4")
         )
 
         assertEquals(listOf("comic-1", "comic-2", "comic-3"), visible.map { it.comicId })
