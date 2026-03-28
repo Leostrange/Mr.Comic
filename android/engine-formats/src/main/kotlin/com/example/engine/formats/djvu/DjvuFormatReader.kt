@@ -4,8 +4,10 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import com.example.engine.formats.base.FormatReader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class DjvuFormatReader(
@@ -20,28 +22,30 @@ class DjvuFormatReader(
     private var document: DjvuDocument? = null
     private var placeholderProbe: DjvuProbeResult? = null
 
-    override suspend fun getPageCount(): Int =
+    override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
         ensureDocument()?.getPageCount()?.coerceAtLeast(1)
             ?: ensurePlaceholderProbe()?.pageCount?.coerceAtLeast(1)
             ?: 1
+    }
 
     override suspend fun getPage(index: Int): Bitmap? = getPage(index, 1)
 
-    override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? {
-        val currentDocument = ensureDocument() ?: return null
-        if (index < 0) return null
-        return currentDocument.renderPage(index, renderQuality)
-    }
+    override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? =
+        withContext(Dispatchers.IO) {
+            val currentDocument = ensureDocument() ?: return@withContext null
+            if (index < 0) return@withContext null
+            currentDocument.renderPage(index, renderQuality)
+        }
 
-    override suspend fun getHtmlPage(index: Int): String? {
+    override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
         val currentDocument = ensureDocument()
         if (currentDocument != null) {
-            return currentDocument.getHtmlPage(index)
+            return@withContext currentDocument.getHtmlPage(index)
         }
         val structure = ensurePlaceholderProbe()
         val totalPages = structure?.pageCount?.coerceAtLeast(1) ?: 1
-        if (index < 0 || index >= totalPages) return null
-        return buildDjvuPlaceholderHtml(
+        if (index < 0 || index >= totalPages) return@withContext null
+        buildDjvuPlaceholderHtml(
             fileName = resolveFileName(),
             pageIndex = index,
             totalPages = totalPages,

@@ -18,6 +18,12 @@ dependencies {
     implementation(libs.zip4j)
     implementation(libs.sevenzipjbinding.android)
     implementation(libs.commons.compress)
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.ext.autolink)
+    implementation(libs.commonmark.ext.gfm.strikethrough)
+    implementation(libs.commonmark.ext.gfm.tables)
+    implementation(libs.commonmark.ext.footnotes)
+    implementation(libs.jsoup)
     // PDF: используем встроенный android.graphics.pdf.PdfRenderer — внешние lib не нужны
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)

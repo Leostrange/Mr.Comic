@@ -26,12 +26,30 @@ internal fun extractDjvuTextLayer(documentBytes: ByteArray): DjvuTextLayer? {
                 isCompressed = false
             )
         }
+        if (chunkId == "TXTz") {
+            val payload = documentBytes.copyOfRange(payloadStart, payloadEnd)
+            val decompressed = DjvuBzzDecoder.decode(payload)
+            if (decompressed != null) {
+                val text = parseTxTaPayload(decompressed)
+                if (text != null) {
+                    return DjvuTextLayer(
+                        text = text,
+                        sourceChunkId = chunkId,
+                        isCompressed = true
+                    )
+                }
+            }
+        }
 
         offset = payloadEnd + if (chunkSize % 2 == 1) 1 else 0
     }
     return null
 }
 
+/**
+ * Returns true only if a TXTz chunk is present but BZZ decoding failed (still undecoded).
+ * If decoding succeeded, extractDjvuTextLayer already handles it.
+ */
 internal fun hasCompressedDjvuTextLayer(documentBytes: ByteArray): Boolean {
     if (!documentBytes.startsWith(DJVU_TEXT_MAGIC_PREFIX)) return false
     if (documentBytes.readAsciiAt(12, 4) != DJVU_TEXT_FORM_TYPE) return false
@@ -43,7 +61,12 @@ internal fun hasCompressedDjvuTextLayer(documentBytes: ByteArray): Boolean {
         val payloadStart = offset + 8
         val payloadEnd = payloadStart + chunkSize
         if (payloadEnd > documentBytes.size) return false
-        if (chunkId == "TXTz") return true
+        if (chunkId == "TXTz") {
+            // Only report "compressed and undecodable" if BZZ decode fails
+            val payload = documentBytes.copyOfRange(payloadStart, payloadEnd)
+            val decompressed = DjvuBzzDecoder.decode(payload)
+            return decompressed == null || parseTxTaPayload(decompressed) == null
+        }
         offset = payloadEnd + if (chunkSize % 2 == 1) 1 else 0
     }
     return false
@@ -54,10 +77,11 @@ private fun parseTxTaPayload(payload: ByteArray): String? {
     val textSize = ((payload[0].toInt() and 0xFF) shl 16) or
         ((payload[1].toInt() and 0xFF) shl 8) or
         (payload[2].toInt() and 0xFF)
-    if (textSize < 0 || 3 + textSize >= payload.size) return null
+    if (textSize < 0 || 3 + textSize > payload.size) return null
     val textBytes = payload.copyOfRange(3, 3 + textSize)
-    return runCatching { textBytes.toString(Charsets.UTF_8) }.getOrNull()
+    return runCatching { textBytes.toString(Charsets.UTF_8) }.getOrNull()?.takeIf { it.isNotBlank() }
 }
+
 
 private val DJVU_TEXT_MAGIC_PREFIX = "AT&TFORM".encodeToByteArray()
 private const val DJVU_TEXT_FORM_TYPE = "DJVU"

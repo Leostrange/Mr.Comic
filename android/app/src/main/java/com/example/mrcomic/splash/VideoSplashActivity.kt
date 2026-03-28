@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.util.UnstableApi
 import com.example.core.ui.eink.isEInkDevice
 import com.example.core.ui.splash.VideoSplashScreen
@@ -12,9 +13,17 @@ import com.example.core.ui.theme.ThemeConfig
 import com.example.mrcomic.ComicApplication
 import com.example.mrcomic.MainActivity
 import com.example.mrcomic.R
+import com.example.mrcomic.home.ContinueWarmState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @UnstableApi
 class VideoSplashActivity : ComponentActivity() {
+
+    private var navigationJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,8 +55,31 @@ class VideoSplashActivity : ComponentActivity() {
                 VideoSplashScreen(
                     videoResId = R.raw.splash_video,
                     horizontalVideoResId = R.raw.splash_video_horizontal,
-                    onSplashFinished = { navigateToMain() }
+                    onSplashFinished = { navigateToMainWhenReady() }
                 )
+            }
+        }
+    }
+
+    private fun navigateToMainWhenReady() {
+        if (navigationJob != null) return
+        val app = application as ComicApplication
+        // Kick off warmUp immediately — don't wait for the coroutine body to reach it.
+        if (app.continueStartupWarmStore.state.value == ContinueWarmState.Idle) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                runCatching { app.continueStartupWarmStore.warmUp() }
+            }
+        }
+        navigationJob = lifecycleScope.launch {
+            // Wait up to 4 s for a warm snapshot; if it times out — navigate anyway
+            // (ContinueScreen will show a loading spinner while Room catches up).
+            withTimeoutOrNull(4_000L) {
+                app.continueStartupWarmStore.state.first { state ->
+                    state !is ContinueWarmState.Idle && state !is ContinueWarmState.Loading
+                }
+            }
+            if (!isFinishing && !isDestroyed) {
+                navigateToMain()
             }
         }
     }

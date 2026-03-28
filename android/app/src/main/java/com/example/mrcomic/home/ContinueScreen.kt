@@ -180,13 +180,50 @@ data class ContinueLibraryChrome(
     val backgroundVeil: Float = DEFAULT_LIBRARY_BACKGROUND_VEIL
 )
 
+internal data class ContinueResolvedStartupData(
+    val comics: List<Comic>,
+    val trail: List<ReaderCheckpoint>,
+    val isLoading: Boolean
+)
+
+internal fun resolveContinueStartupData(
+    liveComics: List<Comic>,
+    liveTrail: List<ReaderCheckpoint>,
+    warmState: ContinueWarmState
+): ContinueResolvedStartupData {
+    return when {
+        liveComics.isNotEmpty() -> ContinueResolvedStartupData(
+            comics = liveComics,
+            trail = liveTrail,
+            isLoading = false
+        )
+        warmState is ContinueWarmState.Ready -> ContinueResolvedStartupData(
+            comics = warmState.snapshot.comics,
+            trail = warmState.snapshot.trail,
+            isLoading = false
+        )
+        warmState == ContinueWarmState.Loading || warmState == ContinueWarmState.Idle ->
+            ContinueResolvedStartupData(
+                comics = liveComics,
+                trail = liveTrail,
+                isLoading = true
+            )
+        else -> ContinueResolvedStartupData(
+            comics = liveComics,
+            trail = liveTrail,
+            isLoading = false
+        )
+    }
+}
+
 @HiltViewModel
 class ContinueViewModel @Inject constructor(
     comicRepository: ComicRepository,
     @ApplicationContext context: Context,
     private val readerCheckpointStore: ReaderCheckpointStore,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
-    private val analyticsTracker: ReadingAnalyticsTracker
+    private val analyticsTracker: ReadingAnalyticsTracker,
+    private val continueStartupWarmStore: ContinueStartupWarmStore
 ) : ViewModel() {
     private val preferences = UserPreferences(context.dataStore)
     private var lastMetricsSnapshotKey: String? = null
@@ -223,10 +260,16 @@ class ContinueViewModel @Inject constructor(
 
     val uiState = combine(
         continueUiInputs,
-        continueAnalyticsPrefs
-    ) { inputs, analyticsPrefs ->
-            val comics = inputs.comics
-            val trail = inputs.trail
+        continueAnalyticsPrefs,
+        continueStartupWarmStore.state
+    ) { inputs, analyticsPrefs, warmState ->
+            val startupData = resolveContinueStartupData(
+                liveComics = inputs.comics,
+                liveTrail = inputs.trail,
+                warmState = warmState
+            )
+            val comics = startupData.comics
+            val trail = startupData.trail
             val mascotRecapEnabled = inputs.mascotRecapEnabled
             val dailyReadingGoal = inputs.dailyReadingGoal
             val acknowledgedMascotStageName = inputs.acknowledgedMascotStageName
@@ -252,7 +295,7 @@ class ContinueViewModel @Inject constructor(
             }
 
             ContinueUiState(
-                isLoading = false,
+                isLoading = startupData.isLoading,
                 continueReading = currentlyReading.firstOrNull(),
                 currentlyReading = currentlyReading.drop(1),
                 hasLibraryContent = comics.isNotEmpty(),
@@ -283,7 +326,26 @@ class ContinueViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ContinueUiState(isLoading = true)
+            initialValue = run {
+                val ws = continueStartupWarmStore.state.value
+                if (ws is ContinueWarmState.Ready) {
+                    val comics = ws.snapshot.comics
+                    val activeReading = comics
+                        .filter { !it.isCompleted && it.readingProgress > 0f }
+                        .sortedByDescending { it.lastReadDate }
+                    ContinueUiState(
+                        isLoading = false,
+                        continueReading = activeReading.firstOrNull(),
+                        currentlyReading = activeReading.drop(1).take(11),
+                        hasLibraryContent = comics.isNotEmpty(),
+                        hasActiveReading = activeReading.isNotEmpty(),
+                        totalTitles = comics.size,
+                        completedTitles = comics.count { it.isCompleted }
+                    )
+                } else {
+                    ContinueUiState(isLoading = true)
+                }
+            }
         )
 
     fun clearCheckpoint() {
@@ -540,22 +602,24 @@ fun ContinueScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                item {
-                    ContinueIntroCard(
-                        intro = if (uiState.hasLibraryContent) text.introWithLibrary else text.introEmptyLibrary,
-                        status = if (uiState.hasLibraryContent) {
-                            text.inProgressCount(uiState.currentlyReading.size + if (uiState.continueReading != null) 1 else 0)
-                        } else {
-                            null
-                        }
-                    )
-                }
-
                 if (uiState.isLoading) {
                     item {
                         ContinueLoadingState()
                     }
-                } else if (!uiState.hasLibraryContent) {
+                } else {
+                    item {
+                        ContinueIntroCard(
+                            intro = if (uiState.hasLibraryContent) text.introWithLibrary else text.introEmptyLibrary,
+                            status = if (uiState.hasLibraryContent) {
+                                text.inProgressCount(uiState.currentlyReading.size + if (uiState.continueReading != null) 1 else 0)
+                            } else {
+                                null
+                            }
+                        )
+                    }
+                }
+
+                if (!uiState.isLoading && !uiState.hasLibraryContent) {
                     item {
                         EmptyContinueState(
                             onOpenLibrary = onOpenLibrary,
@@ -563,7 +627,7 @@ fun ContinueScreen(
                             showMascot = uiState.mascotRecapEnabled
                         )
                     }
-                } else if (!uiState.hasActiveReading) {
+                } else if (!uiState.isLoading && !uiState.hasActiveReading) {
                     returnPrompt
                         ?.takeIf { showReturnPrompt }
                         ?.let { prompt ->
@@ -600,7 +664,7 @@ fun ContinueScreen(
                             showMascot = uiState.mascotRecapEnabled
                         )
                     }
-                } else {
+                } else if (!uiState.isLoading) {
                     uiState.continueReading?.let { comic ->
                         item {
                             ContinueReadingCard(
