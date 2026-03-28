@@ -26,7 +26,15 @@ internal fun extractDjvuAnnotations(documentBytes: ByteArray): DjvuAnnotations? 
                 }.getOrNull()?.trim()
                 if (!text.isNullOrEmpty()) parts += text
             }
-            "ANTz" -> hasCompressed = true
+            "ANTz" -> {
+                val payload = documentBytes.copyOfRange(payloadStart, payloadEnd)
+                val decompressed = DjvuBzzDecoder.decode(payload)
+                val text = decompressed?.let {
+                    runCatching { it.toString(Charsets.UTF_8) }.getOrNull()?.trim()
+                }
+                if (!text.isNullOrEmpty()) parts += text
+                else hasCompressed = true   // BZZ failed — still opaque
+            }
         }
 
         offset = payloadEnd + if (chunkSize % 2 == 1) 1 else 0

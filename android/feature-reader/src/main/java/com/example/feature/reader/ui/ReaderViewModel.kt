@@ -585,8 +585,10 @@ class ReaderViewModel @Inject constructor(
         val reader = formatReader
         viewModelScope.launch {
             if (reader == null || formatReader !== reader) return@launch
-            // Try HTML page first (text-based EPUB / FB2 novel)
-            val html = reader.getHtmlPage(index)
+            // Try HTML page first (text-based EPUB / FB2 novel).
+            // Always dispatch to IO so heavy work (ZIP reads, BZZ/ZP decoding, etc.)
+            // never blocks the main thread regardless of the FormatReader implementation.
+            val html = withContext(Dispatchers.IO) { reader.getHtmlPage(index) }
             if (html != null) {
                 if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
                     _uiState.update { it.copy(currentHtmlContent = html) }
@@ -1505,10 +1507,31 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * Called by the WebView JS bridge when the user taps a footnote / anchor link.
-     * If the format reader has text for that anchor, shows it in the footnote popup.
+     * Called by the WebView JS bridge when the user taps an anchor link.
+     *
+     * [href] may be:
+     *  - a bare anchor id (`FbAutId_1`, `note_42`) — footnote lookup
+     *  - `#fragment` — footnote lookup by fragment
+     *  - `chapter.xhtml` — navigate to the page for that file
+     *  - `chapter.xhtml#fragment` — navigate to page for that file; footnote lookup for fragment
      */
-    fun onAnchorClick(anchorId: String) {
+    fun onAnchorClick(href: String) {
+        val cleanHref = href.trimStart('/')
+        val hashIdx = cleanHref.indexOf('#')
+        val filePart = if (hashIdx >= 0) cleanHref.substring(0, hashIdx) else cleanHref
+        val fragPart = if (hashIdx >= 0) cleanHref.substring(hashIdx + 1) else cleanHref
+
+        // 1. Try cross-file page navigation when a filename is present
+        if (filePart.isNotBlank() && filePart.contains('.')) {
+            val pageIdx = formatReader?.resolveHrefToPage(cleanHref)
+            if (pageIdx != null && pageIdx >= 0) {
+                navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
+                return
+            }
+        }
+
+        // 2. Fall back to footnote popup using the fragment (or the whole href for bare ids)
+        val anchorId = fragPart.ifBlank { cleanHref }
         val text = formatReader?.getFootnoteText(anchorId) ?: return
         if (text.isBlank()) return
         // Strip HTML tags, soft hyphens, and leading note-number prefix (e.g. "2 ")
@@ -2808,7 +2831,9 @@ class ReaderViewModel @Inject constructor(
 
     private fun isLocalFileReadable(path: String): Boolean {
         return runCatching {
-            java.io.File(path).exists()
+            java.io.File(path).let { file ->
+                file.exists() && file.isFile && file.canRead()
+            }
         }.getOrDefault(false)
     }
 

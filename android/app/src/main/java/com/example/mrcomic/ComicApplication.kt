@@ -6,6 +6,7 @@ import com.example.core.ui.sound.UIFeedback
 import com.example.engine.rendering.preload.PagePreloader
 import com.example.mrcomic.crash.CrashLogger
 import com.example.mrcomic.backup.AutoBackupManager
+import com.example.mrcomic.home.ContinueStartupWarmStore
 import com.example.mrcomic.icons.AppIconManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -29,12 +30,18 @@ class ComicApplication : Application() {
     @Inject
     lateinit var pagePreloader: PagePreloader
 
+    @Inject
+    lateinit var continueStartupWarmStore: ContinueStartupWarmStore
+
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         CrashLogger.install(this)
         UIFeedback.init(this)
+        applicationScope.launch {
+            try { continueStartupWarmStore.warmUp() } catch (_: Exception) {}
+        }
         applicationScope.launch {
             try { appIconManager.ensureIconConsistency() } catch (_: Exception) {}
             try { autoBackupManager.maybeBackupOnStartup() } catch (_: Exception) {}

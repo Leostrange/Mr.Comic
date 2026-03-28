@@ -46,6 +46,13 @@ interface FormatReader {
      */
     fun getFootnoteText(anchorId: String): String? = null
 
+    /**
+     * Resolves an internal href (e.g. `chapter2.xhtml` or `chapter2.xhtml#anchor`) to
+     * the 0-based reader page index that displays that content.
+     * Returns null when the href cannot be resolved (non-EPUB formats, unknown href).
+     */
+    fun resolveHrefToPage(href: String): Int? = null
+
     /** Release all resources */
     fun close()
 }

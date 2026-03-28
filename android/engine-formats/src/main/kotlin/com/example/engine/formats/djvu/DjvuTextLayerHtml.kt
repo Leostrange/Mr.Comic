@@ -10,17 +10,18 @@ internal fun buildDjvuTextLayerHtml(
 ): String {
     val pageLabel = if (totalPages > 1) "Страница ${pageIndex + 1} из $totalPages" else "Одностраничный текстовый слой"
     val compressedNote = if (hasCompressedFallback) {
-        "<p><strong>Примечание:</strong> у документа также встречается <code>TXTz</code>, но BZZ-декодер пока ещё не подключён.</p>"
+        """<p class="subtle-note">Дополнительно у документа есть сжатый текстовый слой.</p>"""
     } else {
         ""
     }
     val annotationBlock = annotations?.let { renderAnnotations(it) }.orEmpty()
     val body = """
         <div class="wrap">
-          <div class="badge">DjVu text</div>
+          <div class="meta-row">
+            <div class="badge">DjVu</div>
+            <div class="page-label">${escapeDjvuTextHtml(pageLabel)}</div>
+          </div>
           <h1>${escapeDjvuTextHtml(fileName)}</h1>
-          <p><strong>${escapeDjvuTextHtml(pageLabel)}</strong></p>
-          <p>Эта страница пока не отрисовывается как изображение, но у неё уже извлечён встроенный текстовый слой из <code>${escapeDjvuTextHtml(textLayer.sourceChunkId)}</code>.</p>
           $compressedNote
           <article class="sheet">${renderParagraphs(textLayer.text)}</article>
           $annotationBlock
@@ -47,6 +48,14 @@ internal fun buildDjvuTextLayerHtml(
               margin: 0 auto;
               line-height: 1.7;
             }
+            .meta-row {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 12px;
+              margin-bottom: 12px;
+              flex-wrap: wrap;
+            }
             .badge {
               display: inline-block;
               padding: 6px 10px;
@@ -55,18 +64,26 @@ internal fun buildDjvuTextLayerHtml(
               letter-spacing: 0.08em;
               text-transform: uppercase;
               background: rgba(128,128,128,0.16);
-              margin-bottom: 14px;
+            }
+            .page-label {
+              font-size: 14px;
+              opacity: 0.72;
             }
             h1 {
-              margin: 0 0 12px;
-              font-size: 26px;
+              margin: 0 0 18px;
+              font-size: 24px;
               line-height: 1.2;
             }
             p {
               font-size: 17px;
             }
+            .subtle-note {
+              margin: 0 0 14px;
+              font-size: 14px;
+              opacity: 0.72;
+            }
             .sheet {
-              margin-top: 18px;
+              margin-top: 8px;
               padding: 18px 20px;
               border-radius: 22px;
               background: rgba(128,128,128,0.08);

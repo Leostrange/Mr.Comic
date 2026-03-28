@@ -17,10 +17,8 @@ class StructuredDjvuBackend @Inject constructor(
     @ApplicationContext private val context: Context
 ) : DjvuBackend {
 
-    override val status: DjvuBackendStatus = DjvuBackendStatus.Unavailable(
-        backendName = "structured-partial-render",
-        summary = "Clean-room DjVu partial render mode",
-        details = "This build parses DjVu containers and per-page INFO chunks, and already renders simple BGjp-based pages. More complex DjVu pages still fall back to the structured placeholder path."
+    override val status: DjvuBackendStatus = DjvuBackendStatus.Available(
+        backendName = "structured-iw44-render"
     )
 
     override suspend fun open(path: String): DjvuDocument? {
@@ -104,14 +102,25 @@ private class StructuredDjvuDocument(
     override suspend fun getPageCount(): Int = probe.pageCount.coerceAtLeast(1)
 
     override suspend fun renderPage(index: Int, renderQuality: Int): Bitmap? {
-        val renderPlan = loadRenderableRenderPlan(index) ?: return null
-        return decodeJpegBitmap(renderPlan.jpegPayload, renderQuality)
+        // ── Path 1: BGjp (JPEG background) — fast, no wavelet needed ─────────
+        val renderPlan = loadRenderableRenderPlan(index)
+        if (renderPlan != null) return decodeJpegBitmap(renderPlan.jpegPayload, renderQuality)
+
+        // ── Path 2: BG44 (IW44 wavelet background) ───────────────────────────
+        val source = getPageSource(index)
+        if (source != null && hasIw44Background(source.documentBytes)) {
+            return extractIw44Bitmap(source.documentBytes, renderQuality)
+        }
+        return null
     }
 
     override suspend fun getHtmlPage(index: Int): String? {
         val totalPages = probe.pageCount.coerceAtLeast(1)
         if (index !in 0 until totalPages) return null
+        // If BGjp or IW44 rendering is available, ReaderViewModel renders as Bitmap
         if (loadRenderableRenderPlan(index) != null) return null
+        val source = getPageSource(index)
+        if (source != null && hasIw44Background(source.documentBytes)) return null
         val textLayer = loadTextLayer(index)
         val hasCompressedTextLayer = hasCompressedTextLayer(index)
         val annotations = loadAnnotations(index)
@@ -184,7 +193,10 @@ private class StructuredDjvuDocument(
             firstPage.fileOffset?.let { put("djvuFirstPageOffset", it.toString()) }
             firstPage.byteLength?.let { put("djvuFirstPageLength", it.toString()) }
         }
+        val firstSource = getPageSource(0)
+        val firstHasIw44 = firstSource != null && hasIw44Background(firstSource.documentBytes)
         put("djvuFirstPageHasSimpleBitmapRender", (loadRenderableRenderPlan(0) != null).toString())
+        put("djvuFirstPageHasIw44Render", firstHasIw44.toString())
         put("djvuFirstPageHasUndecodableSimpleBitmapPlan", hasUndecodableRenderPlan(0).toString())
         loadVisualLayerPlan(0)?.let { visualLayerPlan ->
             put("djvuFirstPageHasVisualLayerPlan", true.toString())

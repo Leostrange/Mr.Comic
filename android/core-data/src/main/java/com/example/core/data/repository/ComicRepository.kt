@@ -683,7 +683,7 @@ class ComicRepository @Inject constructor(
             path.startsWith("content://") -> runCatching {
                 context.contentResolver.openInputStream(Uri.parse(path))?.use { true } ?: false
             }.getOrDefault(false)
-            else -> File(path).exists()
+            else -> File(path).let { file -> file.exists() && file.isFile && file.canRead() }
         }
     }
 

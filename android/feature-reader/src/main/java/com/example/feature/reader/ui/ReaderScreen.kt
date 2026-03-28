@@ -91,7 +91,9 @@ import java.time.format.DateTimeFormatter
  *
  * Behaviour:
  *  • Click on <a href="fbanchor://id"> → call onAnchorClick(id) for footnote popup.
- *  • Click on any other <a href="#fragment"> → call onAnchorClick(fragment).
+ *  • Click on <a href="#frag"> or <a href="file.xhtml#frag"> → onAnchorClick(fullHref).
+ *  • Click on <a href="file.xhtml"> (no fragment) → onAnchorClick(fullHref) for page nav.
+ *  • Click on <a href="http(s)://..."> → call onExternalLink(url) to open in browser.
  *  • Click anywhere else → call onTap(xPercent) for page-turn navigation.
  * The guard flag prevents double-registration across multiple onPageFinished calls.
  */
@@ -99,6 +101,8 @@ private const val JS_TAP_HANDLER = """(function(){
   if(window.__tapAdded)return;
   window.__tapAdded=true;
   window.__readerTouchStartTs=0;
+  window.__readerTouchStartX=0;
+  window.__readerTouchStartY=0;
   window.__readerTouchMoved=false;
   window.__readerSelectionTs=0;
   document.addEventListener('selectionchange',function(){
@@ -109,12 +113,33 @@ private const val JS_TAP_HANDLER = """(function(){
       }
     }catch(e){}
   },false);
-  document.addEventListener('touchstart',function(){
+  document.addEventListener('touchstart',function(e){
     window.__readerTouchStartTs=Date.now();
     window.__readerTouchMoved=false;
+    if(e.touches&&e.touches.length===1){
+      window.__readerTouchStartX=e.touches[0].clientX;
+      window.__readerTouchStartY=e.touches[0].clientY;
+    }
   },{passive:true});
   document.addEventListener('touchmove',function(){
     window.__readerTouchMoved=true;
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    var now=Date.now();
+    var elapsed=now-window.__readerTouchStartTs;
+    if(elapsed<=0||elapsed>500)return;
+    var selected='';
+    try{selected=(window.getSelection&&window.getSelection().toString())||'';selected=(selected||'').trim();}catch(err){}
+    if(selected.length>0)return;
+    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<700);
+    if(hasRecentSelection)return;
+    var ch=e.changedTouches&&e.changedTouches[0];
+    if(!ch)return;
+    var dx=ch.clientX-window.__readerTouchStartX;
+    var dy=ch.clientY-window.__readerTouchStartY;
+    if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.5){
+      if(typeof _NativeReader!='undefined')_NativeReader.onTap(dx>0?0.1:0.9);
+    }
   },{passive:true});
   document.addEventListener('click',function(e){
     var now=Date.now();
@@ -137,13 +162,17 @@ private const val JS_TAP_HANDLER = """(function(){
         if(href.indexOf('fbanchor://')===0){
           var id=href.slice(11);
           if(id&&typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(id);
-        } else if(href.indexOf('#')>=0&&href.indexOf('://')<0){
-          var frag=href.split('#')[1]||'';
+        } else if(href.indexOf('http://')===0||href.indexOf('https://')===0){
+          if(typeof _NativeReader!='undefined')_NativeReader.onExternalLink(href);
+        } else if(href&&href.indexOf('://')<0){
           if(title&&typeof _NativeReader!='undefined'){
             _NativeReader.onInlineFootnote(title);
             return;
           }
-          if(frag&&typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(frag);
+          if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
+        } else {
+          var x=e.clientX/window.innerWidth;
+          if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
         }
         return;
       }
@@ -155,11 +184,32 @@ private const val JS_TAP_HANDLER = """(function(){
 })();"""
 
 private const val HTML_READER_TAG = "ReaderHtmlView"
+private const val HTML_READER_BASE_URL = "https://appassets.androidplatform.net/reader/"
+private const val HTML_READER_BLANK_CHECK_JS = """(function(){
+  try{
+    var body=document.body;
+    var root=document.documentElement;
+    var text=(body&&body.innerText?body.innerText:'').trim().length;
+    var images=(document.images&&document.images.length)||0;
+    var media=document.querySelectorAll?document.querySelectorAll('img,svg,figure,table,blockquote,h1,h2,h3,h4,h5,h6,p,div').length:0;
+    var height=Math.max(
+      body&&body.scrollHeight?body.scrollHeight:0,
+      root&&root.scrollHeight?root.scrollHeight:0
+    );
+    return JSON.stringify({text:text,images:images,media:media,height:height});
+  }catch(e){
+    return JSON.stringify({error:String(e)});
+  }
+})();"""
 
 private sealed interface ReaderHtmlPageSource {
     val loadToken: String
 
-    data class FileUrl(val url: String) : ReaderHtmlPageSource {
+    data class FileUrl(
+        val url: String,
+        val fallbackBaseUrl: String,
+        val fallbackHtml: String
+    ) : ReaderHtmlPageSource {
         override val loadToken: String = "file:$url"
     }
 
@@ -186,6 +236,7 @@ private const val JS_SELECTED_TEXT_HANDLER = """(function(){
 private const val TRANSLATE_SELECTION_MENU_ID = 0x6F4352
 private const val DICTIONARY_SELECTION_MENU_ID = 0x6F4353
 private const val EXPLAIN_SELECTION_MENU_ID = 0x6F4354
+private const val MAX_INLINE_HTML_SOURCE_LENGTH = 6_000_000
 
 private enum class ReaderSelectionAction {
     TRANSLATE,
@@ -448,28 +499,23 @@ private fun buildThemedHtmlDocument(
           body {
             margin: 0 !important;
           }
-          body [style*="background"],
-          body [style*="background-color"],
-          body article,
-          body aside,
-          body section,
-          body main,
-          body div,
-          body p,
-          body span,
-          body blockquote,
-          body pre,
-          body table,
-          body thead,
-          body tbody,
-          body tr,
-          body td,
-          body th,
-          body li,
-          body ul,
-          body ol,
-          body figure,
-          body figcaption {
+          body [bgcolor],
+          body [style*="background-color:#fff"],
+          body [style*="background-color: #fff"],
+          body [style*="background-color:#ffffff"],
+          body [style*="background-color: #ffffff"],
+          body [style*="background:#fff"],
+          body [style*="background: #fff"],
+          body [style*="background:#ffffff"],
+          body [style*="background: #ffffff"],
+          body [style*="background-color:white"],
+          body [style*="background-color: white"],
+          body [style*="background:white"],
+          body [style*="background: white"],
+          body [style*="background-color:rgb(255"],
+          body [style*="background-color: rgb(255"],
+          body [style*="background:rgb(255"],
+          body [style*="background: rgb(255"] {
             background-color: transparent !important;
             background-image: none !important;
           }
@@ -493,6 +539,16 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     var dictionarySelectionLabel: String = ""
     var explainSelectionLabel: String = ""
     var onSelectionActionRequest: ((ReaderSelectionAction, String) -> Unit)? = null
+    private var committedLoadToken: String? = null
+    private var inlineFallback: PendingInlineFallback? = null
+    private var inlineFallbackRunnable: Runnable? = null
+    private var inlineFallbackAttempts: Int = 0
+
+    private data class PendingInlineFallback(
+        val loadToken: String,
+        val baseUrl: String,
+        val html: String
+    )
 
     override fun startActionMode(callback: ActionMode.Callback?): ActionMode? =
         super.startActionMode(wrapSelectionCallback(callback))
@@ -612,6 +668,86 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             rawValue.trim('"')
         }
     }
+
+    fun markLoadRequested(loadToken: String) {
+        committedLoadToken = null
+        cancelInlineFallback()
+        inlineFallback = null
+        inlineFallbackAttempts = 0
+        tag = loadToken
+    }
+
+    fun markLoadCommitted() {
+        committedLoadToken = tag as? String
+        inlineFallbackRunnable?.let(::removeCallbacks)
+        inlineFallbackRunnable = null
+    }
+
+    fun scheduleInlineFallback(
+        loadToken: String,
+        baseUrl: String,
+        html: String,
+        delayMillis: Long = 1_500L
+    ) {
+        cancelInlineFallback()
+        inlineFallback = PendingInlineFallback(loadToken, baseUrl, html)
+        inlineFallbackRunnable = Runnable {
+            val pending = inlineFallback ?: return@Runnable
+            val currentToken = tag as? String
+            if (pending.loadToken == currentToken && committedLoadToken != currentToken) {
+                Log.w(HTML_READER_TAG, "WebView file load did not commit in time, retrying inline: $currentToken")
+                loadInlineFallbackNow()
+            }
+        }.also { postDelayed(it, delayMillis) }
+    }
+
+    fun loadInlineFallbackNow() {
+        val pending = inlineFallback ?: return
+        if (inlineFallbackAttempts >= 1) return
+        inlineFallbackAttempts += 1
+        cancelInlineFallback()
+        committedLoadToken = pending.loadToken
+        loadDataWithBaseURL(
+            pending.baseUrl,
+            pending.html,
+            "text/html",
+            "UTF-8",
+            null
+        )
+    }
+
+    private fun cancelInlineFallback() {
+        inlineFallbackRunnable?.let(::removeCallbacks)
+        inlineFallbackRunnable = null
+    }
+
+    fun verifyVisibleContentOrFallback() {
+        val expectedToken = tag as? String ?: return
+        evaluateJavascript(HTML_READER_BLANK_CHECK_JS) { rawValue ->
+            val currentToken = tag as? String
+            if (currentToken != expectedToken) return@evaluateJavascript
+            val parsed = runCatching { JSONTokener(rawValue).nextValue() }.getOrNull()
+            val json = parsed as? org.json.JSONObject ?: return@evaluateJavascript
+            val visibleText = json.optInt("text", 0)
+            val visibleImages = json.optInt("images", 0)
+            val visibleMedia = json.optInt("media", 0)
+            val visibleHeight = json.optInt("height", 0)
+            val looksBlank = visibleText == 0 &&
+                visibleImages == 0 &&
+                visibleMedia <= 1 &&
+                visibleHeight < 48
+            if (looksBlank) {
+                Log.w(
+                    HTML_READER_TAG,
+                    "WebView committed visually blank content, retrying inline fallback: $expectedToken"
+                )
+                loadInlineFallbackNow()
+            } else {
+                inlineFallback = null
+                inlineFallbackAttempts = 0
+            }
+        }
+    }
 }
 
 /**
@@ -655,23 +791,37 @@ private fun HtmlPageView(
     val topPaddingPx = 8
     val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
     val bgColor = remember(bg) { android.graphics.Color.parseColor(bg) }
-    val themedHtml = remember(html, bg, fg) { buildThemedHtmlDocument(html, bg, fg) }
-    var pageSource by remember(themedHtml, baseUrl, context.cacheDir.absolutePath) {
+    // pageSource resets to null whenever the source html / colours / url change,
+    // then LaunchedEffect rebuilds it off the main thread (Default for theming, IO for file write).
+    var pageSource by remember(html, bg, fg, baseUrl, context.cacheDir.absolutePath) {
         mutableStateOf<ReaderHtmlPageSource?>(null)
     }
 
-    LaunchedEffect(themedHtml, baseUrl, context.cacheDir.absolutePath) {
+    LaunchedEffect(html, bg, fg, baseUrl, context.cacheDir.absolutePath) {
+        // Build the themed HTML on the Default dispatcher to avoid blocking composition.
+        val themedHtml = withContext(Dispatchers.Default) { buildThemedHtmlDocument(html, bg, fg) }
         pageSource = withContext(Dispatchers.IO) {
-            runCatching {
-                val tmpFile = readerHtmlCacheFile(context, themedHtml)
-                tmpFile.writeText(themedHtml, Charsets.UTF_8)
-                ReaderHtmlPageSource.FileUrl("file://${tmpFile.absolutePath}")
-            }.getOrElse { error ->
-                Log.w(HTML_READER_TAG, "Failed to cache reader HTML page, falling back to inline load", error)
+            if (themedHtml.length <= MAX_INLINE_HTML_SOURCE_LENGTH) {
                 ReaderHtmlPageSource.Inline(
-                    baseUrl = baseUrl ?: "about:blank",
+                    baseUrl = baseUrl ?: HTML_READER_BASE_URL,
                     html = themedHtml
                 )
+            } else {
+                runCatching {
+                    val tmpFile = readerHtmlCacheFile(context, themedHtml)
+                    tmpFile.writeText(themedHtml, Charsets.UTF_8)
+                    ReaderHtmlPageSource.FileUrl(
+                        url = "file://${tmpFile.absolutePath}",
+                        fallbackBaseUrl = baseUrl ?: HTML_READER_BASE_URL,
+                        fallbackHtml = themedHtml
+                    )
+                }.getOrElse { error ->
+                    Log.w(HTML_READER_TAG, "Failed to cache reader HTML page, falling back to inline load", error)
+                    ReaderHtmlPageSource.Inline(
+                        baseUrl = baseUrl ?: HTML_READER_BASE_URL,
+                        html = themedHtml
+                    )
+                }
             }
         }
     }
@@ -709,11 +859,11 @@ private fun HtmlPageView(
                 // Required for proper viewport scaling on tablets / wide screens.
                 settings.useWideViewPort       = true
                 settings.loadWithOverviewMode  = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    settings.offscreenPreRaster = true
+                }
                 // Match the current reading theme before first paint.
                 setBackgroundColor(bgColor)
-                // Avoid GPU/compositor blank frames on some devices when large HTML chapters
-                // are attached through WebView inside the reader surface stack.
-                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 // Disable overscroll bounce but allow natural vertical scrolling within a page.
                 overScrollMode = android.view.View.OVER_SCROLL_NEVER
 
@@ -741,6 +891,19 @@ private fun HtmlPageView(
                         post { onInlineNote.value(text) }
                     }
 
+                    @JavascriptInterface
+                    fun onExternalLink(url: String) {
+                        post {
+                            try {
+                                val intent = android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(url)
+                                )
+                                context.startActivity(intent)
+                            } catch (_: Exception) {}
+                        }
+                    }
+
                 }, "_NativeReader")
 
                 translateSelectionLabel = translateActionLabel
@@ -764,16 +927,26 @@ private fun HtmlPageView(
                         )
                     }
 
-                    // Block external navigation; handle fbanchor:// as footnote fallback
+                    // Handle special schemes; open http/https in the system browser.
                     override fun shouldOverrideUrlLoading(
                         view: WebView, request: WebResourceRequest
                     ): Boolean {
                         val uri = request.url
-                        if (uri.scheme == "fbanchor") {
-                            val id = uri.host ?: uri.path?.trimStart('/') ?: ""
-                            if (id.isNotEmpty()) post { onAnchor.value(id) }
+                        when (uri.scheme) {
+                            "fbanchor" -> {
+                                val id = uri.host ?: uri.path?.trimStart('/') ?: ""
+                                if (id.isNotEmpty()) post { onAnchor.value(id) }
+                            }
+                            "http", "https" -> {
+                                try {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW, uri
+                                    )
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            }
                         }
-                        return true  // always block actual URL loads
+                        return true  // always block WebView from navigating away
                     }
 
                     // Inject the tap listener + restore text settings after every page load
@@ -793,10 +966,14 @@ private fun HtmlPageView(
                             view.requestLayout()
                             view.invalidate()
                         }
+                        (view as? ReaderWebView)?.post {
+                            (view as? ReaderWebView)?.verifyVisibleContentOrFallback()
+                        }
                     }
 
                     override fun onPageCommitVisible(view: WebView, url: String?) {
                         Log.d(HTML_READER_TAG, "WebView page commit visible: ${url ?: "about:blank"}")
+                        (view as? ReaderWebView)?.markLoadCommitted()
                         view.post {
                             view.requestLayout()
                             view.invalidate()
@@ -812,6 +989,9 @@ private fun HtmlPageView(
                             HTML_READER_TAG,
                             "WebView error for ${request.url}: ${error.description} (${error.errorCode})"
                         )
+                        if (request.isForMainFrame) {
+                            (view as? ReaderWebView)?.loadInlineFallbackNow()
+                        }
                         super.onReceivedError(view, request, error)
                     }
                 }
@@ -840,16 +1020,31 @@ private fun HtmlPageView(
             // from resetting on every recompose (e.g. when controls are toggled).
             val cached = webView.tag as? String
             if (cached != currentSource.loadToken) {
-                webView.tag = currentSource.loadToken
+                webView.markLoadRequested(currentSource.loadToken)
                 when (currentSource) {
-                    is ReaderHtmlPageSource.FileUrl -> webView.loadUrl(currentSource.url)
-                    is ReaderHtmlPageSource.Inline -> webView.loadDataWithBaseURL(
-                        currentSource.baseUrl,
-                        currentSource.html,
-                        "text/html",
-                        "UTF-8",
-                        null
-                    )
+                    is ReaderHtmlPageSource.FileUrl -> {
+                        webView.loadUrl(currentSource.url)
+                        webView.scheduleInlineFallback(
+                            loadToken = currentSource.loadToken,
+                            baseUrl = currentSource.fallbackBaseUrl,
+                            html = currentSource.fallbackHtml
+                        )
+                    }
+                    is ReaderHtmlPageSource.Inline -> {
+                        webView.loadDataWithBaseURL(
+                            currentSource.baseUrl,
+                            currentSource.html,
+                            "text/html",
+                            "UTF-8",
+                            null
+                        )
+                        webView.scheduleInlineFallback(
+                            loadToken = currentSource.loadToken,
+                            baseUrl = currentSource.baseUrl,
+                            html = currentSource.html,
+                            delayMillis = 900L
+                        )
+                    }
                 }
                 webView.post {
                     webView.requestLayout()
@@ -1107,7 +1302,10 @@ fun ReaderScreen(
         val activity = context as? Activity
         val window = activity?.window
         window?.attributes = window?.attributes?.apply {
-            screenBrightness = uiState.brightness.coerceIn(0.01f, 1f)
+            screenBrightness = if (uiState.brightness >= 0f)
+                uiState.brightness.coerceIn(0.01f, 1f)
+            else
+                WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
         }
         onDispose {
             // Восстанавливаем системную яркость при закрытии ридера
