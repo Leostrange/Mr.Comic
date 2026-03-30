@@ -16,6 +16,7 @@ object PreferencesKeys {
     // Библиотека
     val LIBRARY_GRID_COLUMNS      = intPreferencesKey("library_grid_columns")   // 2..4, default 3
     val LIBRARY_VIEW_GRID         = booleanPreferencesKey("library_view_grid")  // true=grid, false=list
+    val LIBRARY_VIEW_MODE         = stringPreferencesKey("library_view_mode")   // GRID/LIST/STRIPS
     // Ридер
     val READER_PRELOAD_PAGES      = intPreferencesKey("reader_preload_pages")   // 2..8, default 3
     val READER_IMMERSIVE_MODE     = booleanPreferencesKey("reader_immersive_mode")
@@ -82,6 +83,8 @@ object PreferencesKeys {
     val UI_FONT_SCALE             = floatPreferencesKey("ui_font_scale")       // 0.85/1.0/1.15/1.3
     val UI_DENSITY_SCALE          = floatPreferencesKey("ui_density_scale")    // 0.9..1.1
     val UI_CORNER_RADIUS          = intPreferencesKey("ui_corner_radius")      // 4/8/12/16/20 dp
+    val UI_REDUCED_MOTION         = booleanPreferencesKey("ui_reduced_motion")
+    val UI_REDUCED_VISUAL_EFFECTS = booleanPreferencesKey("ui_reduced_visual_effects")
     val APP_THEME_PRESET_1        = stringPreferencesKey("app_theme_preset_1")
     val APP_THEME_PRESET_2        = stringPreferencesKey("app_theme_preset_2")
     val APP_THEME_PRESET_3        = stringPreferencesKey("app_theme_preset_3")
@@ -104,6 +107,7 @@ object PreferencesKeys {
     val LIBRARY_CARD_STYLE        = stringPreferencesKey("library_card_style") // COMPACT/BALANCED/SHOWCASE
     val LIBRARY_SHOW_PROGRESS     = booleanPreferencesKey("library_show_progress")
     val LIBRARY_SHOW_COVER_TITLES = booleanPreferencesKey("library_show_cover_titles")
+    val LIBRARY_SHOW_STATUS_CHIPS = booleanPreferencesKey("library_show_status_chips")
     val LIBRARY_COVER_SCALE       = stringPreferencesKey("library_cover_scale") // CROP/FIT
     val LIBRARY_BACKDROP_STRENGTH = floatPreferencesKey("library_backdrop_strength")
     val LIBRARY_RECENT_STRIP_POSITION = stringPreferencesKey("library_recent_strip_position") // TOP/BOTTOM/HIDDEN
@@ -145,12 +149,28 @@ object PreferencesKeys {
     val APP_LANGUAGE              = stringPreferencesKey("app_language")
     // Пресет ридера: CUSTOM / NOVEL / MANGA / NIGHT / STUDY
     val READER_PRESET             = stringPreferencesKey("reader_preset")
+    val READER_CHROME_ICON_ORDER  = stringPreferencesKey("reader_chrome_icon_order")
+    val READER_CHROME_SHOW_TOC    = booleanPreferencesKey("reader_chrome_show_toc")
+    val READER_CHROME_SHOW_STYLE  = booleanPreferencesKey("reader_chrome_show_style")
+    val READER_CHROME_SHOW_AUDIO  = booleanPreferencesKey("reader_chrome_show_audio")
+    val READER_CHROME_SHOW_DIRECTION = booleanPreferencesKey("reader_chrome_show_direction")
+    val READER_CHROME_SHOW_TRANSLATE = booleanPreferencesKey("reader_chrome_show_translate")
+    val READER_CHROME_SHOW_BRIGHTNESS = booleanPreferencesKey("reader_chrome_show_brightness")
+
+    // Последняя секция библиотеки (FILES/AUDIOBOOKS/BOOKMARKS/QUOTES/ACHIEVEMENTS)
+    val LIBRARY_CONTENT_SECTION    = stringPreferencesKey("library_content_section")
 
     // Пасхалка — «Читатель-мастер»
     val LIBRARY_SECRET_CAT_UNLOCKED = booleanPreferencesKey("library_secret_cat_unlocked")
 
     // Закладки — сохраняются отдельно для каждого комикса: "0,5,12,…"
     fun bookmarks(comicId: String) = stringPreferencesKey("bookmarks_$comicId")
+
+    fun audiobookBookmarkChapter(audiobookId: String) =
+        intPreferencesKey("audiobook_bookmark_${audiobookId}_chapter")
+
+    fun audiobookBookmarkPosition(audiobookId: String) =
+        longPreferencesKey("audiobook_bookmark_${audiobookId}_position")
 
     // Заметка/сохранённый перевод для конкретной страницы комикса
     fun translationNote(comicId: String, page: Int) = stringPreferencesKey("translation_note_${comicId}_$page")

@@ -260,34 +260,6 @@ private fun BoxScope.GridCardBadges(
     val showProgressChip = showProgressIndicators && comic.isReadingInProgress()
     val showCompletedChip = comic.isReadCompleted()
     val titleBottomPadding = if (showProgressChip || showCompletedChip) 30.dp else 8.dp
-
-    // Bookmark badge — top-left
-    if (comic.isBookmarked) {
-        Surface(
-            modifier = Modifier
-                .padding(6.dp)
-                .align(Alignment.TopStart),
-            shape = RoundedCornerShape(12.dp),
-            color = Color.Black.copy(alpha = 0.25f),
-            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
-        ) {
-            Icon(
-                Icons.Filled.Bookmark,
-                contentDescription = bookmarkCd(strings),
-                modifier = Modifier
-                    .padding(4.dp)
-                    .size(14.dp),
-                tint = Color.White
-            )
-        }
-    }
-
-    // Format badge — top-right
-    if (formatLabel != null) {
-        Box(modifier = Modifier.align(Alignment.TopEnd).padding(6.dp)) {
-            FormatBadge(formatLabel, isGraphic = isGraphic)
-        }
-    }
     if (showCoverTitles) {
         Surface(
             modifier = Modifier
@@ -295,15 +267,20 @@ private fun BoxScope.GridCardBadges(
                 .padding(start = 6.dp, end = 10.dp, bottom = titleBottomPadding)
                 .widthIn(max = 160.dp),
             shape = badgeShape,
-            color = Color.Black.copy(alpha = titlePanelOpacity.coerceIn(0.18f, 0.78f)),
-            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.14f))
+            color = MaterialTheme.colorScheme.surface.copy(
+                alpha = (0.82f + titlePanelOpacity.coerceIn(0.18f, 0.78f) * 0.12f).coerceIn(0.84f, 0.94f)
+            ),
+            border = BorderStroke(
+                0.6.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)
+            )
         ) {
             Text(
                 text = comic.title,
                 style = MaterialTheme.typography.labelMedium.copy(fontSize = (12.sp * titleScale.coerceIn(0.85f, 1.3f))),
                 maxLines = titleLines.coerceIn(1, 3),
                 overflow = TextOverflow.Ellipsis,
-                color = titleColor.copy(alpha = 0.98f),
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f),
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
             )
         }
@@ -315,13 +292,13 @@ private fun BoxScope.GridCardBadges(
                 .align(Alignment.BottomStart)
                 .padding(start = 6.dp, bottom = 6.dp),
             shape = RoundedCornerShape(6.dp),
-            color = Color.Black.copy(alpha = 0.3f), // Glassmorphic base
-            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f))
         ) {
             Text(
                 "${(comic.readingProgress * 100).toInt()}%",
                 style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
             )
         }
@@ -333,8 +310,8 @@ private fun BoxScope.GridCardBadges(
                 .align(Alignment.BottomStart)
                 .padding(start = 6.dp, bottom = 6.dp),
             shape = RoundedCornerShape(999.dp),
-            color = Color.Black.copy(alpha = 0.3f), // Glass backdrop
-            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+            border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f))
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
@@ -350,7 +327,7 @@ private fun BoxScope.GridCardBadges(
                 Text(
                     "100%",
                     style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -416,7 +393,7 @@ private fun ListCard(
     val isText = comic.isTextBookFormat()
     val isGraphic = comic.isGraphicVolumeFormat()
     val coverScale = if (coverScaleMode == "FIT") ContentScale.Fit else ContentScale.Crop
-    val listBaseHeight = (tileSizeDp * 0.52f).coerceIn(56f, 120f).dp
+    val listBaseHeight = (tileSizeDp * 0.82f).coerceIn(92f, 176f).dp
     val styleFactor = when (cardStyle) {
         "COMPACT" -> 0.92f
         "SHOWCASE" -> 1.12f
@@ -582,11 +559,7 @@ private fun ListCard(
                     }
                 }
             }
-            ShelfFooter(
-                shelfStyle = shelfStyle,
-                shelfDepth = shelfDepth,
-                modifier = Modifier.padding(top = 10.dp)
-            )
+            Spacer(Modifier.height(2.dp))
         }
     }
 }

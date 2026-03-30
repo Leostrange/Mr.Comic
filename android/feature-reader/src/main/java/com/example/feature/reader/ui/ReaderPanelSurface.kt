@@ -1,11 +1,13 @@
 package com.example.feature.reader.ui
 
-import com.example.core.ui.theme.ReadingPreset
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.example.core.ui.theme.ReadingPreset
 import kotlin.math.max
 
 internal const val READER_TOOLBAR_MIN_OPACITY = 0.72f
@@ -76,3 +78,4 @@ internal fun readerPanelTonalElevation(
 
 internal fun readerPanelScrimColor(contentColor: Color, blurAmount: Float): Color =
     contentColor.copy(alpha = 0.06f + blurAmount.coerceIn(0f, 1f) * 0.14f)
+

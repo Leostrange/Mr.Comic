@@ -18,6 +18,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.data.preferences.APP_ICON_PREFERENCE_KEY
 import com.example.core.data.preferences.DEFAULT_APP_ICON_ID
+import com.example.core.data.preferences.PerfProfile
+import com.example.core.data.preferences.PerfRenderQuality
+import com.example.core.data.preferences.PerformanceDefaults
+import com.example.core.data.preferences.PerformancePreferencesKeys
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.appIconDataStore
@@ -172,6 +176,7 @@ data class SettingsUiState(
     val readerLandscapeSpreadEnabled: Boolean = true,
     // Библиотека
     val libraryGridColumns: Int = 3,
+    val libraryViewMode: String = "GRID",
     val libraryViewGrid: Boolean = true,
     // Ридер (расширенные)
     val readerPreloadPages: Int = 3,
@@ -235,6 +240,15 @@ data class SettingsUiState(
     val uiFontScale: Float = 1.0f,
     val uiDensityScale: Float = 1.0f,
     val uiCornerRadius: Int = 12,
+    val performanceReducedMotion: Boolean = false,
+    val performanceReducedVisualEffects: Boolean = false,
+    val perfProfile: String = PerformanceDefaults.PROFILE,
+    val perfRenderQuality: String = PerformanceDefaults.RENDER_QUALITY,
+    val perfCoverCacheMb: Int = PerformanceDefaults.COVER_CACHE_MB,
+    val perfPageCacheCount: Int = PerformanceDefaults.PAGE_CACHE_COUNT,
+    val perfFtsSearchEnabled: Boolean = PerformanceDefaults.FTS_SEARCH,
+    val perfStartupPreloadEnabled: Boolean = PerformanceDefaults.STARTUP_PRELOAD,
+    val perfReducedAnimations: Boolean = PerformanceDefaults.REDUCED_ANIM,
     /** Custom per-element colors as ARGB Long; null = use theme default */
     val customPrimaryColor: Long? = null,
     val customSecondaryColor: Long? = null,
@@ -245,6 +259,7 @@ data class SettingsUiState(
     val libraryRecentStripPosition: String = "TOP",
     val libraryShowProgress: Boolean = true,
     val libraryShowCoverTitles: Boolean = true,
+    val libraryShowStatusChips: Boolean = true,
     val libraryCoverScale: String = DEFAULT_LIBRARY_COVER_SCALE,
     val libraryBackdropStrength: Float = DEFAULT_LIBRARY_BACKDROP_STRENGTH,
     val libraryBackgroundStyle: String = DEFAULT_LIBRARY_BACKGROUND_STYLE,
@@ -335,6 +350,14 @@ private data class StatusState(
 private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
 private const val SETTINGS_READER_DEFAULT_TOOLBAR_BLUR = 0f
 
+private fun normalizeLibraryViewMode(
+    stored: String?,
+    legacyGrid: Boolean
+): String = when (stored?.trim()?.uppercase()) {
+    "GRID", "LIST", "STRIPS" -> stored.trim().uppercase()
+    else -> if (legacyGrid) "GRID" else "LIST"
+}
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -418,14 +441,30 @@ class SettingsViewModel @Inject constructor(
     }
 
     // Extras 1: библиотека + базовые настройки ридера
-    private val extrasFlow1 = combine(
+    private val extrasFlow1a = combine(
         preferences.get(PreferencesKeys.LIBRARY_GRID_COLUMNS, 3).map { it.coerceIn(2, 4) },
-        preferences.get(PreferencesKeys.LIBRARY_VIEW_GRID, true),
+        preferences.get(PreferencesKeys.LIBRARY_VIEW_MODE, ""),
+        preferences.get(PreferencesKeys.LIBRARY_VIEW_GRID, true)
+    ) { columns, viewMode, viewGrid ->
+        listOf<Any>(
+            columns,
+            normalizeLibraryViewMode(viewMode, viewGrid)
+        )
+    }
+
+    private val extrasFlow1 = combine(
+        extrasFlow1a,
         preferences.get(PreferencesKeys.READER_PRELOAD_PAGES, 3).map { it.coerceIn(2, 8) },
         preferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false),
         preferences.get(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE")
-    ) { columns, viewGrid, preload, immersive, animation ->
-        listOf<Any>(columns, viewGrid, preload, immersive, animation)
+    ) { libraryLayout, preload, immersive, animation ->
+        listOf<Any>(
+            libraryLayout[0] as Int,
+            libraryLayout[1] as String,
+            preload,
+            immersive,
+            animation
+        )
     }
 
     private val extrasFlow1b = combine(
@@ -437,7 +476,7 @@ class SettingsViewModel @Inject constructor(
         listOf<Any>(autoHide, topOpacity, bottomOpacity, toolbarBlur)
     }
 
-    private val extrasFlow2 = combine(
+    private val extrasFlow2a = combine(
         preferences.get(PreferencesKeys.APP_LANGUAGE, "ru").map(::normalizeAppLanguageCode),
         preferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             .map { ReadingPreset.fromStored(it).name },
@@ -447,6 +486,15 @@ class SettingsViewModel @Inject constructor(
     ) { lang, readerPreset, fontScale, uiDensityScale, cornerRadius ->
         listOf<Any>(lang, readerPreset, fontScale, uiDensityScale, cornerRadius)
     }
+
+    private val extrasFlow2b = combine(
+        preferences.get(PreferencesKeys.UI_REDUCED_MOTION, false),
+        preferences.get(PreferencesKeys.UI_REDUCED_VISUAL_EFFECTS, false)
+    ) { reducedMotion, reducedEffects ->
+        listOf<Any>(reducedMotion, reducedEffects)
+    }
+
+    private val extrasFlow2 = combine(extrasFlow2a, extrasFlow2b) { left, right -> left + right }
 
     private val extrasFlow12 = combine(extrasFlow1, extrasFlow1b, extrasFlow2) { e1, e1b, e2 -> e1 + e1b + e2 }
 
@@ -713,6 +761,35 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    private val perfFlow = combine(
+        preferences.get(PerformancePreferencesKeys.PERF_PROFILE, PerformanceDefaults.PROFILE),
+        preferences.get(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerformanceDefaults.RENDER_QUALITY),
+        preferences.get(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, PerformanceDefaults.COVER_CACHE_MB),
+        preferences.get(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, PerformanceDefaults.PAGE_CACHE_COUNT),
+        preferences.get(PerformancePreferencesKeys.PERF_FTS_SEARCH_ENABLED, PerformanceDefaults.FTS_SEARCH),
+        preferences.get(PerformancePreferencesKeys.PERF_STARTUP_PRELOAD_ENABLED, PerformanceDefaults.STARTUP_PRELOAD),
+        preferences.get(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, PerformanceDefaults.REDUCED_ANIM)
+    ) { values ->
+        val profile = values[0] as String
+        val renderQuality = values[1] as String
+        val coverCacheMb = values[2] as Int
+        val pageCacheCount = values[3] as Int
+        val ftsEnabled = values[4] as Boolean
+        val startupPreload = values[5] as Boolean
+        val reducedAnim = values[6] as Boolean
+        { state: SettingsUiState ->
+            state.copy(
+                perfProfile = profile,
+                perfRenderQuality = renderQuality,
+                perfCoverCacheMb = coverCacheMb,
+                perfPageCacheCount = pageCacheCount,
+                perfFtsSearchEnabled = ftsEnabled,
+                perfStartupPreloadEnabled = startupPreload,
+                perfReducedAnimations = reducedAnim
+            )
+        }
+    }
+
     val uiState: StateFlow<SettingsUiState> = combine(
         baseUiState,
         extrasFlow12,
@@ -722,7 +799,8 @@ class SettingsViewModel @Inject constructor(
     ) { state, e12, e345, e7, status ->
         state.copy(
             libraryGridColumns   = e12[0] as Int,
-            libraryViewGrid      = e12[1] as Boolean,
+            libraryViewMode      = e12[1] as String,
+            libraryViewGrid      = (e12[1] as String) == "GRID",
             readerPreloadPages   = e12[2] as Int,
             readerImmersiveMode  = e12[3] as Boolean,
             readerPageAnimation  = e12[4] as String,
@@ -735,6 +813,8 @@ class SettingsViewModel @Inject constructor(
             uiFontScale          = e12[11] as Float,
             uiDensityScale       = e12[12] as Float,
             uiCornerRadius       = e12[13] as Int,
+            performanceReducedMotion = e12[14] as Boolean,
+            performanceReducedVisualEffects = e12[15] as Boolean,
             translationConfig    = e345[0] as TranslationServiceConfig,
             ocrDialoguesOnly     = e345[1] as Boolean,
             ocrIncludeSfx        = e345[2] as Boolean,
@@ -818,6 +898,8 @@ class SettingsViewModel @Inject constructor(
         )
     }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state, showCoverTitles ->
         state.copy(libraryShowCoverTitles = showCoverTitles)
+    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)) { state, showStatusChips ->
+        state.copy(libraryShowStatusChips = showStatusChips)
     }.combine(
         preferences.get(PreferencesKeys.APP_VIDEO_SPLASH_ENABLED, !context.isEInkDevice())
     ) { state, appVideoSplashEnabled ->
@@ -846,6 +928,8 @@ class SettingsViewModel @Inject constructor(
             rawAuthors        = comics.map { it.author },
             rawGenres         = comics.map { it.genre }
         )
+    }.combine(perfFlow) { state, applyPerf ->
+        applyPerf(state)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -1006,7 +1090,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setLibraryViewGrid(grid: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_VIEW_GRID, grid) }
+        setLibraryViewMode(if (grid) "GRID" else "LIST")
+    }
+
+    fun setLibraryViewMode(mode: String) {
+        val normalized = normalizeLibraryViewMode(mode, legacyGrid = true)
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.LIBRARY_VIEW_MODE, normalized)
+            preferences.set(PreferencesKeys.LIBRARY_VIEW_GRID, normalized == "GRID")
+        }
     }
 
     fun setReaderPreloadPages(count: Int) {
@@ -1196,6 +1288,95 @@ class SettingsViewModel @Inject constructor(
 
     fun setUiCornerRadius(radius: Int) {
         setSlider("cornerRadius") { preferences.set(PreferencesKeys.UI_CORNER_RADIUS, radius.coerceIn(0, 32)) }
+    }
+
+    fun setPerformanceReducedMotion(enabled: Boolean) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.UI_REDUCED_MOTION, enabled) }
+    }
+
+    fun setPerformanceReducedVisualEffects(enabled: Boolean) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.UI_REDUCED_VISUAL_EFFECTS, enabled) }
+    }
+
+    fun setPerfProfile(profile: String) {
+        viewModelScope.launch {
+            preferences.set(
+                PerformancePreferencesKeys.PERF_PROFILE,
+                PerfProfile.fromStored(profile).storedValue
+            )
+            when (PerfProfile.fromStored(profile)) {
+                PerfProfile.QUALITY -> {
+                    preferences.set(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerfRenderQuality.HIGH.storedValue)
+                    preferences.set(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, 8)
+                    preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, 512)
+                    preferences.set(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, false)
+                }
+                PerfProfile.BALANCED -> {
+                    preferences.set(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerfRenderQuality.AUTO.storedValue)
+                    preferences.set(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, 5)
+                    preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, 256)
+                    preferences.set(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, false)
+                }
+                PerfProfile.ECONOMY -> {
+                    preferences.set(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerfRenderQuality.LOW.storedValue)
+                    preferences.set(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, 3)
+                    preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, 64)
+                    preferences.set(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, true)
+                }
+                PerfProfile.AUTO -> Unit
+            }
+        }
+    }
+
+    fun setPerfRenderQuality(quality: String) {
+        viewModelScope.launch {
+            preferences.set(
+                PerformancePreferencesKeys.PERF_RENDER_QUALITY,
+                PerfRenderQuality.fromStored(quality).storedValue
+            )
+        }
+    }
+
+    fun setPerfCoverCacheMb(mb: Int) {
+        viewModelScope.launch {
+            preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, mb.coerceIn(64, 512))
+        }
+    }
+
+    fun setPerfPageCacheCount(count: Int) {
+        viewModelScope.launch {
+            preferences.set(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, count.coerceIn(3, 10))
+        }
+    }
+
+    fun setPerfFtsSearchEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferences.set(PerformancePreferencesKeys.PERF_FTS_SEARCH_ENABLED, enabled)
+        }
+    }
+
+    fun setPerfStartupPreloadEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferences.set(PerformancePreferencesKeys.PERF_STARTUP_PRELOAD_ENABLED, enabled)
+        }
+    }
+
+    fun setPerfReducedAnimations(reduced: Boolean) {
+        viewModelScope.launch {
+            preferences.set(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, reduced)
+        }
+    }
+
+    fun resetPerfSettings() {
+        viewModelScope.launch {
+            preferences.set(PerformancePreferencesKeys.PERF_PROFILE, PerformanceDefaults.PROFILE)
+            preferences.set(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerformanceDefaults.RENDER_QUALITY)
+            preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, PerformanceDefaults.COVER_CACHE_MB)
+            preferences.set(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, PerformanceDefaults.PAGE_CACHE_COUNT)
+            preferences.set(PerformancePreferencesKeys.PERF_FTS_SEARCH_ENABLED, PerformanceDefaults.FTS_SEARCH)
+            preferences.set(PerformancePreferencesKeys.PERF_STARTUP_PRELOAD_ENABLED, PerformanceDefaults.STARTUP_PRELOAD)
+            preferences.set(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, PerformanceDefaults.REDUCED_ANIM)
+        }
     }
 
     fun setTextFontSize(size: Int) {
@@ -1435,6 +1616,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setLibraryShowCoverTitles(enabled: Boolean) {
         viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, enabled) }
+    }
+
+    fun setLibraryShowStatusChips(enabled: Boolean) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, enabled) }
     }
 
     fun setLibraryCoverScale(scale: String) {

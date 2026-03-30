@@ -64,6 +64,10 @@ class VideoSplashActivity : ComponentActivity() {
     private fun navigateToMainWhenReady() {
         if (navigationJob != null) return
         val app = application as ComicApplication
+        if (!isStartupPreloadEnabled()) {
+            navigateToMain()
+            return
+        }
         // Kick off warmUp immediately — don't wait for the coroutine body to reach it.
         if (app.continueStartupWarmStore.state.value == ContinueWarmState.Idle) {
             lifecycleScope.launch(Dispatchers.IO) {

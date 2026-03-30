@@ -25,6 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.example.core.model.ReaderImageScaleMode
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.feature.reader.ui.ReaderUiState
 import com.example.feature.reader.ui.ReaderViewModel
@@ -43,6 +44,7 @@ fun WebtoonView(
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
+    imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
     modifier: Modifier = Modifier
 ) {
     val isEInk = LocalEInkMode.current
@@ -102,6 +104,7 @@ fun WebtoonView(
                                 else -> zoomedPageIndex
                             }
                         },
+                        imageScaleMode = imageScaleMode,
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
@@ -123,6 +126,7 @@ private fun ZoomableFillWidthImage(
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
+    imageScaleMode: String,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -131,9 +135,23 @@ private fun ZoomableFillWidthImage(
     ) {
         val density = LocalDensity.current
         val containerWidthPx = with(density) { maxWidth.toPx().coerceAtLeast(1f) }
-        val baseHeightPx = remember(bitmap, containerWidthPx) {
-            containerWidthPx * (bitmap.height.toFloat().coerceAtLeast(1f) / bitmap.width.toFloat().coerceAtLeast(1f))
+        val containerHeightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
+        val (baseWidthPx, baseHeightPx) = remember(bitmap, containerWidthPx, containerHeightPx, imageScaleMode) {
+            when (ReaderImageScaleMode.fromStored(imageScaleMode)) {
+                ReaderImageScaleMode.FIT_WIDTH -> {
+                    val h = containerWidthPx * (bitmap.height.toFloat().coerceAtLeast(1f) / bitmap.width.toFloat().coerceAtLeast(1f))
+                    containerWidthPx to h
+                }
+                ReaderImageScaleMode.FIT_HEIGHT -> {
+                    val w = containerHeightPx * (bitmap.width.toFloat().coerceAtLeast(1f) / bitmap.height.toFloat().coerceAtLeast(1f))
+                    w to containerHeightPx
+                }
+                ReaderImageScaleMode.REAL_SIZE -> {
+                    bitmap.width.toFloat() to bitmap.height.toFloat()
+                }
+            }
         }
+        val imageWidth  = with(density) { baseWidthPx.toDp() }
         val imageHeight = with(density) { baseHeightPx.toDp() }
         var scale by remember(bitmap, resetToken) { mutableFloatStateOf(1f) }
         var offset by remember(bitmap, resetToken) { mutableStateOf(Offset.Zero) }
@@ -144,7 +162,7 @@ private fun ZoomableFillWidthImage(
 
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .width(imageWidth)
                 .height(imageHeight)
                 .pointerInput(bitmap, resetToken, onLeftTap, onRightTap, onCenterTap) {
                     detectTapGestures(
@@ -172,7 +190,7 @@ private fun ZoomableFillWidthImage(
                                     scale = scale,
                                     containerWidth = containerWidthPx,
                                     containerHeight = baseHeightPx,
-                                    contentWidth = containerWidthPx,
+                                    contentWidth = baseWidthPx,
                                     contentHeight = baseHeightPx
                                 )
                             }
@@ -209,7 +227,7 @@ private fun ZoomableFillWidthImage(
                                         scale = newScale,
                                         containerWidth = containerWidthPx,
                                         containerHeight = baseHeightPx,
-                                        contentWidth = containerWidthPx,
+                                        contentWidth = baseWidthPx,
                                         contentHeight = baseHeightPx
                                     )
 
@@ -233,7 +251,7 @@ private fun ZoomableFillWidthImage(
                 contentScale = ContentScale.FillBounds,
                 filterQuality = FilterQuality.High,
                 modifier = Modifier
-                    .requiredWidth(this@BoxWithConstraints.maxWidth * scale)
+                    .requiredWidth(imageWidth * scale)
                     .requiredHeight(imageHeight * scale)
                     .graphicsLayer {
                         translationX = offset.x

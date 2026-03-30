@@ -74,12 +74,39 @@ internal fun hasCompressedDjvuTextLayer(documentBytes: ByteArray): Boolean {
 
 private fun parseTxTaPayload(payload: ByteArray): String? {
     if (payload.size < 4) return null
-    val textSize = ((payload[0].toInt() and 0xFF) shl 16) or
+    // Try standard 3-byte-length format first (offset 0)
+    val textSize0 = ((payload[0].toInt() and 0xFF) shl 16) or
         ((payload[1].toInt() and 0xFF) shl 8) or
         (payload[2].toInt() and 0xFF)
-    if (textSize < 0 || 3 + textSize > payload.size) return null
-    val textBytes = payload.copyOfRange(3, 3 + textSize)
-    return runCatching { textBytes.toString(Charsets.UTF_8) }.getOrNull()?.takeIf { it.isNotBlank() }
+    if (textSize0 in 1..(payload.size - 3)) {
+        val text = runCatching {
+            payload.copyOfRange(3, 3 + textSize0).toString(Charsets.UTF_8)
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+        if (text != null) return text
+    }
+    // Try with version-byte prefix (TXTz decompressed may start with version byte)
+    if (payload.size >= 5) {
+        val textSize1 = ((payload[1].toInt() and 0xFF) shl 16) or
+            ((payload[2].toInt() and 0xFF) shl 8) or
+            (payload[3].toInt() and 0xFF)
+        if (textSize1 in 1..(payload.size - 4)) {
+            val text = runCatching {
+                payload.copyOfRange(4, 4 + textSize1).toString(Charsets.UTF_8)
+            }.getOrNull()?.takeIf { it.isNotBlank() }
+            if (text != null) return text
+        }
+    }
+    // Last resort: try the entire payload as UTF-8 text (skip non-text header)
+    for (start in 0..minOf(8, payload.size - 1)) {
+        val text = runCatching {
+            payload.copyOfRange(start, payload.size).toString(Charsets.UTF_8)
+        }.getOrNull()
+            ?.replace(Regex("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]"), "")
+            ?.trim()
+            ?.takeIf { it.length > 10 && it.count { c -> c.isLetterOrDigit() } > it.length / 3 }
+        if (text != null) return text
+    }
+    return null
 }
 
 

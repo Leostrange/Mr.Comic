@@ -17,6 +17,7 @@ data class Comic(
     val title: String = "",
     val path: String = "",
     val format: ComicFormat = ComicFormat.UNKNOWN,
+    val libraryShelf: String = "",
     val coverPath: String? = null,
     val treeUri: String? = null,
     val documentId: String? = null,
@@ -41,6 +42,18 @@ data class Comic(
     val language: String = "en",
     val isCompleted: Boolean = false
 )
+
+enum class ComicLibraryShelf {
+    AUTO,
+    GRAPHIC,
+    BOOKS
+}
+
+fun Comic.libraryShelfCategory(): ComicLibraryShelf = when (libraryShelf.trim().uppercase()) {
+    "GRAPHIC" -> ComicLibraryShelf.GRAPHIC
+    "BOOKS" -> ComicLibraryShelf.BOOKS
+    else -> ComicLibraryShelf.AUTO
+}
 
 enum class ComicReadingStatus {
     NEW,

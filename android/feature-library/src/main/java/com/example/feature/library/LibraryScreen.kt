@@ -26,8 +26,11 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -52,6 +55,9 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Tune
@@ -106,7 +112,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.core.domain.analytics.DailyReadingCalendarDay
@@ -122,16 +131,21 @@ import com.example.core.domain.analytics.mrComicMascotMoodLabel
 import com.example.core.domain.analytics.resolveMascotStagePreview
 import com.example.core.domain.analytics.resolveMrComicMascotState
 import com.example.core.model.Comic
+import com.example.core.model.ComicLibraryShelf
 import com.example.core.model.ComicReadingStatus
 import com.example.core.model.SavedQuote
 import com.example.core.model.SortOrder
+import com.example.core.model.Audiobook
 import com.example.core.model.isReadCompleted
 import com.example.core.model.isReadingInProgress
+import com.example.core.model.libraryShelfCategory
 import com.example.core.model.readingStatus
 import com.example.core.ui.library.LibraryBackdropLayer
 import com.example.core.ui.library.RootChromePillShape
+import com.example.core.ui.library.RootChromeTone
 import com.example.core.ui.library.LibraryShelfBar
 import com.example.core.ui.library.libraryCardElevation
+import com.example.core.ui.library.rootChromePanelColor
 import com.example.core.ui.library.rootChromePillBorder
 import com.example.core.ui.library.rootChromePillContainerColor
 import com.example.core.ui.library.rootChromePillContentColor
@@ -175,7 +189,7 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.launch
 @Suppress("UNUSED_PARAMETER")
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun LibraryScreen(
     onComicClick: (String) -> Unit,
@@ -184,6 +198,7 @@ fun LibraryScreen(
     onAddFolderClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onProgressProfileClick: (() -> Unit)? = null,
+    onAudiobookClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -194,6 +209,7 @@ fun LibraryScreen(
     var selectedComicId by remember { mutableStateOf<String?>(null) }
     var comicToDelete by remember { mutableStateOf<String?>(null) }
     var folderToDelete by remember { mutableStateOf<LibraryFolderItem?>(null) }
+    var audiobookToDelete by remember { mutableStateOf<Audiobook?>(null) }
     var quoteToDelete by remember { mutableStateOf<SavedQuote?>(null) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var showControlsMenu by remember { mutableStateOf(false) }
@@ -445,17 +461,15 @@ fun LibraryScreen(
                 viewMode = uiState.viewMode,
                 onToggleControls = { showControlsMenu = !showControlsMenu },
                 onToggleView = {
-                    viewModel.setViewMode(
-                        if (uiState.viewMode == LibraryViewMode.GRID) LibraryViewMode.LIST
-                        else LibraryViewMode.GRID
-                    )
+                    viewModel.setViewMode(nextLibraryViewMode(uiState.viewMode))
                 },
                 onOpenFilters = { showFilterSheet = true },
                 onThumbnailModeChange = viewModel::setThumbnailMode,
                 onAddFileClick = onAddFileClick,
                 onAddFolderClick = onAddFolderClick,
                 canNavigateUp = canNavigateUpWithinLibrary,
-                onNavigateUp = navigateUpWithinLibrary
+                onNavigateUp = navigateUpWithinLibrary,
+                onSettingsClick = onSettingsClick
             )
         }
     ) { padding ->
@@ -475,11 +489,24 @@ fun LibraryScreen(
             val isQuoteSection = uiState.contentSection == LibraryContentSection.QUOTES
             val isBookmarkSection = uiState.contentSection == LibraryContentSection.BOOKMARKS
             val isAchievementSection = uiState.contentSection == LibraryContentSection.ACHIEVEMENTS
+            val visibleAudiobooks = filterAndSortAudiobooks(
+                audiobooks = uiState.audiobooks,
+                statusFilter = if (uiState.contentSection == LibraryContentSection.FILES) {
+                    uiState.statusFilter
+                } else {
+                    LibraryStatusFilter.ALL
+                },
+                sortOrder = uiState.sortOrder
+            )
+            val totalFilesCount = uiState.allComicsRawCount + uiState.audiobooks.size
+            val readingFilesCount = uiState.readingComicCount +
+                uiState.audiobooks.count { it.lastPositionMs > 0L || it.lastChapterIndex > 0 }
+            val completedFilesCount = uiState.completedComicCount
             val isEmptyCurrentSection = when {
                 isQuoteSection -> uiState.totalQuoteCount == 0
                 isBookmarkSection -> uiState.totalBookmarkedCount == 0
                 isAchievementSection -> false
-                else -> uiState.totalComicCount == 0
+                else -> uiState.totalComicCount == 0 && visibleAudiobooks.isEmpty()
             }
 
             when {
@@ -539,7 +566,8 @@ fun LibraryScreen(
                     } else {
                         when (uiState.viewMode) {
                             LibraryViewMode.GRID -> GridCells.Fixed(uiState.libraryGridColumns)
-                            LibraryViewMode.LIST -> GridCells.Fixed(1)
+                            LibraryViewMode.LIST,
+                            LibraryViewMode.STRIPS -> GridCells.Fixed(1)
                         }
                     }
                     val itemSpacing = when (uiState.cardStyle) {
@@ -549,7 +577,7 @@ fun LibraryScreen(
                     }
                     LazyVerticalGrid(
                         columns = columns,
-                        contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
                         horizontalArrangement = Arrangement.spacedBy(itemSpacing),
                         verticalArrangement = Arrangement.spacedBy(itemSpacing),
                         modifier = Modifier.fillMaxSize()
@@ -559,6 +587,18 @@ fun LibraryScreen(
                                 current = uiState.contentSection,
                                 onSectionChange = viewModel::setContentSection
                             )
+                        }
+
+                        if (uiState.contentSection == LibraryContentSection.FILES && uiState.showStatusChips) {
+                            item(key = "library_status_scope", span = { GridItemSpan(maxLineSpan) }) {
+                                LibraryStatusScopeRow(
+                                    current = uiState.statusFilter,
+                                    totalFiles = totalFilesCount,
+                                    readingFiles = readingFilesCount,
+                                    completedFiles = completedFilesCount,
+                                    onStatusChange = viewModel::setStatusFilter
+                                )
+                            }
                         }
 
                         item(key = "library_stats", span = { GridItemSpan(maxLineSpan) }) {
@@ -615,7 +655,10 @@ fun LibraryScreen(
                                     searchActive = uiState.searchQuery.isNotBlank(),
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                            } else {
+                            } else if (
+                                uiState.contentSection != LibraryContentSection.ACHIEVEMENTS &&
+                                uiState.contentSection != LibraryContentSection.FILES
+                            ) {
                                 val activeComics = if (isBookmarkSection) uiState.bookmarkedComics else uiState.comics
                                 LibraryStatsBar(
                                     totalItems = if (isBookmarkSection) uiState.totalBookmarkedCount else uiState.totalComicCount,
@@ -755,7 +798,7 @@ fun LibraryScreen(
                             }
                         } else if (!isAchievementSection) {
                             val activeDisplayItems = if (isBookmarkSection) uiState.bookmarkedDisplayItems else uiState.displayItems
-                            if (activeDisplayItems.isEmpty()) {
+                            if (activeDisplayItems.isEmpty() && (uiState.contentSection != LibraryContentSection.FILES || visibleAudiobooks.isEmpty())) {
                                 item(key = "empty_folder", span = { GridItemSpan(maxLineSpan) }) {
                                     if (isBookmarkSection) {
                                         EmptyBookmarksPlaceholder(showMascot = uiState.mascotUiEnabled)
@@ -765,6 +808,28 @@ fun LibraryScreen(
                                             showMascot = uiState.mascotUiEnabled
                                         )
                                     }
+                                }
+                            } else if (uiState.viewMode == LibraryViewMode.STRIPS) {
+                                val stripSections = buildLibraryStripSections(
+                                    items = activeDisplayItems,
+                                    appLanguage = uiState.appLanguage,
+                                    audiobooks = if (uiState.contentSection == LibraryContentSection.FILES) {
+                                        visibleAudiobooks
+                                    } else {
+                                        emptyList()
+                                    }
+                                )
+                                items(stripSections, key = { it.key }) { section ->
+                                    LibraryDisplayStripSection(
+                                        section = section,
+                                        uiState = uiState,
+                                        onComicClick = { onComicClick(it.id) },
+                                        onComicLongClick = { selectedComicId = it.id },
+                                        onFolderClick = { viewModel.openFolderSheet(it.path) },
+                                        onFolderLongClick = { folderToDelete = it },
+                                        onAudiobookClick = { onAudiobookClick(it.id) },
+                                        onAudiobookLongClick = { audiobookToDelete = it }
+                                    )
                                 }
                             } else {
                                 items(
@@ -827,10 +892,43 @@ fun LibraryScreen(
                                                     shelfStyle = uiState.shelfStyle,
                                                     shelfDepth = uiState.shelfDepth,
                                                     cardShadow = uiState.cardShadow,
-                                                    onClick = { viewModel.openFolder(item.path) },
+                                                    onClick = { viewModel.openFolderSheet(item.path) },
                                                     onLongClick = { folderToDelete = item }
                                                 )
                                             }
+                                        }
+                                    }
+                                }
+                                if (uiState.contentSection == LibraryContentSection.FILES && visibleAudiobooks.isNotEmpty()) {
+                                    item(key = "audiobook_divider", span = { GridItemSpan(maxLineSpan) }) {
+                                        LibrarySectionHeader(
+                                            title = libraryAudiobooksStripLabel(uiState.appLanguage),
+                                            icon = Icons.Default.Headphones
+                                        )
+                                    }
+                                    items(visibleAudiobooks, key = { "ab_${it.id}" }) { audiobook ->
+                                        LibraryGridCell(
+                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                            tileSizeDp = uiState.tileSizeDp
+                                        ) {
+                                            AudiobookGridItem(
+                                                audiobook = audiobook,
+                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                                cardStyle = uiState.cardStyle,
+                                                tileSizeDp = uiState.tileSizeDp,
+                                                thumbnailMode = uiState.thumbnailMode,
+                                                shelfStyle = uiState.shelfStyle,
+                                                shelfDepth = uiState.shelfDepth,
+                                                cardShadow = uiState.cardShadow,
+                                                titleScale = uiState.titleScale,
+                                                titleLines = uiState.titleLines,
+                                                cardStroke = uiState.cardStroke,
+                                                cardCornerRadius = uiState.cardCornerRadius,
+                                                titlePanelOpacity = uiState.titlePanelOpacity,
+                                                showCoverTitles = uiState.showCoverTitlesOnGrid,
+                                                onClick = { onAudiobookClick(audiobook.id) },
+                                                onLongClick = { audiobookToDelete = audiobook }
+                                            )
                                         }
                                     }
                                 }
@@ -903,7 +1001,7 @@ fun LibraryScreen(
                     selectedComicId = null
                 },
                 onDelete = { comicToDelete = id; selectedComicId = null },
-                onSaveMeta = { title, tags -> viewModel.updateComicMeta(id, title, tags) }
+                onSaveMeta = { title, tags, shelf -> viewModel.updateComicMeta(id, title, tags, shelf) }
             )
         }
     }
@@ -964,6 +1062,44 @@ fun LibraryScreen(
         )
     }
 
+    audiobookToDelete?.let { audiobook ->
+        AlertDialog(
+            onDismissRequest = { audiobookToDelete = null },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Убрать аудиокнигу из библиотеки?") },
+            text = {
+                Text(
+                    buildString {
+                        append(audiobook.title)
+                        append("\n\n")
+                        append(
+                            if (audiobook.sourceIsFolder) {
+                                "Будет удалена только запись из библиотеки. Файлы в папке останутся на месте."
+                            } else {
+                                "Будет удалена только запись из библиотеки. Исходный аудиофайл останется на месте."
+                            }
+                        )
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAudiobook(audiobook.id)
+                        audiobookToDelete = null
+                    }
+                ) {
+                    Text(strings.libraryDeleteAction, color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { audiobookToDelete = null }) {
+                    Text(strings.cancel)
+                }
+            }
+        )
+    }
+
     quoteToDelete?.let { quote ->
         AlertDialog(
             onDismissRequest = { quoteToDelete = null },
@@ -991,6 +1127,184 @@ fun LibraryScreen(
                 TextButton(onClick = { quoteToDelete = null }) { Text(strings.cancel) }
             }
         )
+    }
+
+    if (uiState.folderSheetPath != null) {
+        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+        Dialog(
+            onDismissRequest = { viewModel.dismissFolderSheet() },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            val sheetColumns = if (uiState.viewMode == LibraryViewMode.LIST) {
+                GridCells.Fixed(1)
+            } else {
+                GridCells.Fixed(uiState.libraryGridColumns)
+            }
+            val itemSpacing = when (uiState.cardStyle) {
+                "COMPACT" -> 6.dp
+                "SHOWCASE" -> 12.dp
+                else -> 8.dp
+            }
+            val folderTitle = uiState.folderSheetBreadcrumbs.lastOrNull()?.label ?: strings.actionFolder
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth(0.92f)
+                        .widthIn(max = 760.dp)
+                        .heightIn(max = screenHeight * 0.7f),
+                    shape = RoundedCornerShape(28.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
+                        alpha = MaterialTheme.colorScheme.surface.alpha.coerceAtLeast(0.9f)
+                    ),
+                    tonalElevation = 8.dp,
+                    shadowElevation = 18.dp
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = folderTitle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = folderDescription(
+                                        LibraryFolderItem(
+                                            path = uiState.folderSheetPath ?: "",
+                                            title = folderTitle,
+                                            coverPath = null,
+                                            fileCount = uiState.folderSheetItems.count { it is LibraryComicItem },
+                                            subfolderCount = uiState.folderSheetItems.count { it is LibraryFolderItem },
+                                            newestAdded = 0L,
+                                            lastReadDate = null,
+                                            totalSize = 0L,
+                                            progress = 0f
+                                        ),
+                                        strings
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (uiState.folderSheetBreadcrumbs.size > 1) {
+                                    FilledTonalButton(onClick = viewModel::navigateUpFromFolderSheet) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(strings.back)
+                                    }
+                                }
+                                IconButton(onClick = viewModel::dismissFolderSheet) {
+                                    Icon(Icons.Default.Close, contentDescription = strings.cancel)
+                                }
+                            }
+                        }
+                        if (uiState.folderSheetBreadcrumbs.size > 1) {
+                            BreadcrumbRow(
+                                breadcrumbs = uiState.folderSheetBreadcrumbs,
+                                canNavigateUp = uiState.folderSheetBreadcrumbs.size > 1,
+                                onNavigateUp = viewModel::navigateUpFromFolderSheet,
+                                onNavigateTo = { path ->
+                                    if (path == null) {
+                                        viewModel.dismissFolderSheet()
+                                    } else {
+                                        viewModel.openFolderSheet(path)
+                                    }
+                                }
+                            )
+                        }
+                        LazyVerticalGrid(
+                            columns = sheetColumns,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = screenHeight * 0.54f),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
+                            verticalArrangement = Arrangement.spacedBy(itemSpacing)
+                        ) {
+                            items(
+                                items = uiState.folderSheetItems,
+                                key = { it.key },
+                                span = { item ->
+                                    if (item is LibrarySectionDividerItem) {
+                                        GridItemSpan(maxLineSpan)
+                                    } else {
+                                        GridItemSpan(1)
+                                    }
+                                }
+                            ) { item ->
+                                when (item) {
+                                    is LibrarySectionDividerItem -> LibraryFileSectionDivider(section = item.section)
+                                    is LibraryComicItem -> {
+                                        LibraryGridCell(
+                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                            tileSizeDp = uiState.tileSizeDp
+                                        ) {
+                                            ComicGridItem(
+                                                comic = item.comic,
+                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                                cardStyle = uiState.cardStyle,
+                                                tileSizeDp = uiState.tileSizeDp,
+                                                coverScaleMode = uiState.coverScale,
+                                                thumbnailMode = uiState.thumbnailMode,
+                                                shelfStyle = uiState.shelfStyle,
+                                                shelfDepth = uiState.shelfDepth,
+                                                graphicCoverStyle = uiState.graphicCoverStyle,
+                                                cardShadow = uiState.cardShadow,
+                                                titleScale = uiState.titleScale,
+                                                titleLines = uiState.titleLines,
+                                                cardStroke = uiState.cardStroke,
+                                                cardCornerRadius = uiState.cardCornerRadius,
+                                                titlePanelOpacity = uiState.titlePanelOpacity,
+                                                showProgressIndicators = uiState.showProgressIndicators,
+                                                showCoverTitles = uiState.showCoverTitlesOnGrid,
+                                                onClick = { onComicClick(item.comic.id) },
+                                                onLongClick = { selectedComicId = item.comic.id }
+                                            )
+                                        }
+                                    }
+                                    is LibraryFolderItem -> {
+                                        LibraryGridCell(
+                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                            tileSizeDp = uiState.tileSizeDp
+                                        ) {
+                                            FolderCard(
+                                                folder = item,
+                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                                cardStyle = uiState.cardStyle,
+                                                tileSizeDp = uiState.tileSizeDp,
+                                                coverScale = uiState.coverScale,
+                                                thumbnailMode = uiState.thumbnailMode,
+                                                shelfStyle = uiState.shelfStyle,
+                                                shelfDepth = uiState.shelfDepth,
+                                                cardShadow = uiState.cardShadow,
+                                                onClick = { viewModel.openFolderSheet(item.path) },
+                                                onLongClick = { folderToDelete = item }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1026,6 +1340,7 @@ private fun QuickControlsPopup(
     viewMode: LibraryViewMode,
 ) {
     val strings = LocalStrings.current
+    val nextViewMode = nextLibraryViewMode(viewMode)
     var addMenuExpanded by remember { mutableStateOf(false) }
     var thumbnailMenuExpanded by remember { mutableStateOf(false) }
     val dismissInteraction = remember { MutableInteractionSource() }
@@ -1062,15 +1377,19 @@ private fun QuickControlsPopup(
             ) {
                 FilledTonalButton(onClick = onToggleView) {
                     Icon(
-                        if (viewMode == LibraryViewMode.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                        when (nextViewMode) {
+                            LibraryViewMode.GRID -> Icons.Default.GridView
+                            LibraryViewMode.LIST -> Icons.AutoMirrored.Filled.ViewList
+                            LibraryViewMode.STRIPS -> Icons.Default.Menu
+                        },
                         contentDescription = null
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        if (viewMode == LibraryViewMode.GRID) {
-                            strings.libraryViewAsList
-                        } else {
-                            strings.libraryViewAsGrid
+                        when (nextViewMode) {
+                            LibraryViewMode.GRID -> strings.libraryViewAsGrid
+                            LibraryViewMode.LIST -> strings.libraryViewAsList
+                            LibraryViewMode.STRIPS -> libraryViewAsStripsLabel(strings.languageCode)
                         }
                     )
                 }
@@ -1270,7 +1589,7 @@ private fun FolderCard(
             else -> 0.66f
         }
     }
-    val listBaseHeight = (tileSizeDp * 0.52f).coerceIn(56f, 120f).dp
+    val listBaseHeight = (tileSizeDp * 0.82f).coerceIn(92f, 176f).dp
     val styleFactor = when (cardStyle) {
         "COMPACT" -> 0.92f
         "SHOWCASE" -> 1.12f
@@ -1359,7 +1678,7 @@ private fun FolderCard(
                         )
                     }
                 }
-                ShelfLine(shelfStyle = shelfStyle, shelfDepth = shelfDepth, modifier = Modifier.padding(top = 8.dp))
+                Spacer(Modifier.height(2.dp))
             }
         }
     }
@@ -1790,12 +2109,20 @@ private fun ComicInfoSheet(
     onToggleBookmark: () -> Unit,
     onToggleCompleted: () -> Unit,
     onDelete: () -> Unit,
-    onSaveMeta: (title: String, tags: String) -> Unit
+    onSaveMeta: (title: String, tags: String, shelf: String) -> Unit
 ) {
     val strings = LocalStrings.current
     var titleEdit by remember(comic.id) { mutableStateOf(comic.title) }
     var tagsEdit by remember(comic.id) { mutableStateOf(comic.tags) }
+    var shelfEdit by remember(comic.id) { mutableStateOf(comic.libraryShelfCategory()) }
     var isEditing by remember(comic.id) { mutableStateOf(false) }
+    val shelfLabel = when (strings.languageCode) {
+        "en" -> "Shelf"
+        "ja" -> "棚"
+        "zh" -> "书架"
+        "ko" -> "서가"
+        else -> "Полка"
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1853,7 +2180,7 @@ private fun ComicInfoSheet(
                 }
                 IconButton(onClick = {
                     if (isEditing) {
-                        onSaveMeta(titleEdit, tagsEdit)
+                        onSaveMeta(titleEdit, tagsEdit, shelfEdit.name)
                         isEditing = false
                     } else {
                         isEditing = true
@@ -1877,6 +2204,26 @@ private fun ComicInfoSheet(
                     label = { Text(strings.libraryTagsComma) },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = shelfEdit == ComicLibraryShelf.AUTO,
+                        onClick = { shelfEdit = ComicLibraryShelf.AUTO },
+                        label = { Text("Авто") }
+                    )
+                    FilterChip(
+                        selected = shelfEdit == ComicLibraryShelf.GRAPHIC,
+                        onClick = { shelfEdit = ComicLibraryShelf.GRAPHIC },
+                        label = { Text("Комикс") }
+                    )
+                    FilterChip(
+                        selected = shelfEdit == ComicLibraryShelf.BOOKS,
+                        onClick = { shelfEdit = ComicLibraryShelf.BOOKS },
+                        label = { Text("Книга") }
+                    )
+                }
             }
 
             HorizontalDivider()
@@ -1910,6 +2257,16 @@ private fun ComicInfoSheet(
             comic.year?.let { InfoRow(strings.libraryYear, it.toString()) }
             if (comic.tags.isNotBlank() && !isEditing) {
                 InfoRow(strings.libraryTags, comic.tags)
+            }
+            if (!isEditing) {
+                InfoRow(
+                    shelfLabel,
+                    when (comic.libraryShelfCategory()) {
+                        ComicLibraryShelf.GRAPHIC -> "Комикс"
+                        ComicLibraryShelf.BOOKS -> "Книга"
+                        ComicLibraryShelf.AUTO -> "Авто"
+                    }
+                )
             }
             InfoRow(strings.libraryFormatLabel, comic.format.name)
             comic.folderId?.let { InfoRow(strings.actionFolder, it) }
@@ -4235,7 +4592,13 @@ private fun LibrarySectionSwitcher(
             onClick = { onSectionChange(LibraryContentSection.BOOKMARKS) }
         )
         LibrarySectionChip(
-            text = strings.libraryQuotes,
+            text = when (strings.languageCode) {
+                "en" -> "Quotes"
+                "ja" -> "引用"
+                "zh" -> "摘录"
+                "ko" -> "인용"
+                else -> "Цитаты"
+            },
             selected = current == LibraryContentSection.QUOTES,
             onClick = { onSectionChange(LibraryContentSection.QUOTES) }
         )
@@ -4268,6 +4631,417 @@ private fun LibrarySectionChip(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@Composable
+private fun LibraryAudiobookStatsBar(
+    audiobookCount: Int,
+    chapterCount: Int,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        FolderMetaChip(
+            text = "$audiobookCount аудиокниг",
+            accent = MaterialTheme.colorScheme.primary,
+            strong = true
+        )
+        FolderMetaChip(
+            text = "$chapterCount глав",
+            accent = MaterialTheme.colorScheme.secondary,
+            strong = false
+        )
+    }
+}
+
+private data class LibraryStripSectionData(
+    val key: String,
+    val title: String,
+    val folders: List<LibraryFolderItem> = emptyList(),
+    val comics: List<Comic> = emptyList(),
+    val audiobooks: List<Audiobook> = emptyList()
+)
+
+private fun nextLibraryViewMode(current: LibraryViewMode): LibraryViewMode = when (current) {
+    LibraryViewMode.GRID -> LibraryViewMode.LIST
+    LibraryViewMode.LIST -> LibraryViewMode.STRIPS
+    LibraryViewMode.STRIPS -> LibraryViewMode.GRID
+}
+
+private fun libraryFoldersStripLabel(language: String): String = when (language) {
+    "en" -> "Folders"
+    "ja" -> "フォルダ"
+    "zh" -> "文件夹"
+    "ko" -> "폴더"
+    else -> "Папки"
+}
+
+private fun libraryAudiobooksStripLabel(language: String): String = when (language) {
+    "en" -> "Audiobooks"
+    "ja" -> "オーディオブック"
+    "zh" -> "有声书"
+    "ko" -> "오디오북"
+    else -> "Аудиокниги"
+}
+
+private fun libraryGraphicStripLabel(language: String): String = when (language) {
+    "en" -> "Comics"
+    "ja" -> "コミック"
+    "zh" -> "漫画"
+    "ko" -> "코믹"
+    else -> "Комиксы"
+}
+
+private fun libraryBooksStripLabel(language: String): String = when (language) {
+    "en" -> "Books"
+    "ja" -> "本"
+    "zh" -> "图书"
+    "ko" -> "도서"
+    else -> "Книги"
+}
+
+private fun libraryViewAsStripsLabel(language: String): String = when (language) {
+    "en" -> "View: shelves"
+    "ja" -> "表示: 棚"
+    "zh" -> "视图：书架"
+    "ko" -> "보기: 선반"
+    else -> "Вид: ленты"
+}
+
+private fun filterAndSortAudiobooks(
+    audiobooks: List<Audiobook>,
+    statusFilter: LibraryStatusFilter,
+    sortOrder: SortOrder
+): List<Audiobook> {
+    val filtered = when (statusFilter) {
+        LibraryStatusFilter.ALL -> audiobooks
+        LibraryStatusFilter.BOOKMARKED -> audiobooks
+        LibraryStatusFilter.IN_PROGRESS -> audiobooks.filter {
+            it.lastPositionMs > 0L || it.lastChapterIndex > 0
+        }
+        LibraryStatusFilter.COMPLETED -> emptyList()
+    }
+    return when (sortOrder) {
+        SortOrder.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
+        SortOrder.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
+        SortOrder.DATE_ADDED_ASC -> filtered.sortedBy { it.addedAt }
+        SortOrder.DATE_ADDED_DESC -> filtered.sortedByDescending { it.addedAt }
+        SortOrder.DATE_READ_ASC -> filtered.sortedBy { it.lastPositionMs }
+        SortOrder.DATE_READ_DESC -> filtered.sortedByDescending { it.lastPositionMs }
+        SortOrder.PROGRESS_ASC -> filtered.sortedWith(
+            compareBy<Audiobook> { it.lastChapterIndex }.thenBy { it.lastPositionMs }
+        )
+        SortOrder.PROGRESS_DESC -> filtered.sortedWith(
+            compareByDescending<Audiobook> { it.lastChapterIndex }.thenByDescending { it.lastPositionMs }
+        )
+        else -> filtered
+    }
+}
+
+private fun buildLibraryStripSections(
+    items: List<LibraryDisplayItem>,
+    appLanguage: String,
+    audiobooks: List<Audiobook> = emptyList()
+): List<LibraryStripSectionData> {
+    val folders = items.filterIsInstance<LibraryFolderItem>()
+    val comics = items.filterIsInstance<LibraryComicItem>().map { it.comic }
+    val graphics = comics.filter { it.isGraphicVolumeFormat() }
+    val books = comics.filterNot { it.isGraphicVolumeFormat() }
+    return buildList {
+        if (folders.isNotEmpty()) {
+            add(
+                LibraryStripSectionData(
+                    key = "folders",
+                    title = libraryFoldersStripLabel(appLanguage),
+                    folders = folders
+                )
+            )
+        }
+        if (graphics.isNotEmpty()) {
+            add(
+                LibraryStripSectionData(
+                    key = "graphics",
+                    title = libraryGraphicStripLabel(appLanguage),
+                    comics = graphics
+                )
+            )
+        }
+        if (books.isNotEmpty()) {
+            add(
+                LibraryStripSectionData(
+                    key = "books",
+                    title = libraryBooksStripLabel(appLanguage),
+                    comics = books
+                )
+            )
+        }
+        if (audiobooks.isNotEmpty()) {
+            add(
+                LibraryStripSectionData(
+                    key = "audiobooks",
+                    title = libraryAudiobooksStripLabel(appLanguage),
+                    audiobooks = audiobooks
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun LibraryDisplayStripSection(
+    section: LibraryStripSectionData,
+    uiState: LibraryUiState,
+    onComicClick: (Comic) -> Unit,
+    onComicLongClick: (Comic) -> Unit,
+    onFolderClick: (LibraryFolderItem) -> Unit,
+    onFolderLongClick: (LibraryFolderItem) -> Unit,
+    onAudiobookClick: (Audiobook) -> Unit,
+    onAudiobookLongClick: (Audiobook) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (section.audiobooks.isNotEmpty()) {
+                Icon(
+                    Icons.Default.Headphones,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (section.folders.isNotEmpty()) {
+                items(section.folders, key = { it.path }) { folder ->
+                    Box(modifier = Modifier.width(uiState.tileSizeDp.dp)) {
+                        FolderCard(
+                            folder = folder,
+                            isGrid = true,
+                            cardStyle = uiState.cardStyle,
+                            tileSizeDp = uiState.tileSizeDp,
+                            coverScale = uiState.coverScale,
+                            thumbnailMode = uiState.thumbnailMode,
+                            shelfStyle = uiState.shelfStyle,
+                            shelfDepth = uiState.shelfDepth,
+                            cardShadow = uiState.cardShadow,
+                            onClick = { onFolderClick(folder) },
+                            onLongClick = { onFolderLongClick(folder) }
+                        )
+                    }
+                }
+            } else if (section.audiobooks.isNotEmpty()) {
+                items(section.audiobooks, key = { it.id }) { audiobook ->
+                    Box(modifier = Modifier.width(uiState.tileSizeDp.dp)) {
+                        AudiobookGridItem(
+                            audiobook = audiobook,
+                            isGrid = true,
+                            cardStyle = uiState.cardStyle,
+                            tileSizeDp = uiState.tileSizeDp,
+                            thumbnailMode = uiState.thumbnailMode,
+                            shelfStyle = uiState.shelfStyle,
+                            shelfDepth = uiState.shelfDepth,
+                            cardShadow = uiState.cardShadow,
+                            titleScale = uiState.titleScale,
+                            titleLines = uiState.titleLines,
+                            cardStroke = uiState.cardStroke,
+                            cardCornerRadius = uiState.cardCornerRadius,
+                            titlePanelOpacity = uiState.titlePanelOpacity,
+                            showCoverTitles = uiState.showCoverTitlesOnGrid,
+                            onClick = { onAudiobookClick(audiobook) },
+                            onLongClick = { onAudiobookLongClick(audiobook) }
+                        )
+                    }
+                }
+            } else {
+                items(section.comics, key = { it.id }) { comic ->
+                    Box(modifier = Modifier.width(uiState.tileSizeDp.dp)) {
+                        ComicGridItem(
+                            comic = comic,
+                            isGrid = true,
+                            cardStyle = uiState.cardStyle,
+                            tileSizeDp = uiState.tileSizeDp,
+                            coverScaleMode = uiState.coverScale,
+                            thumbnailMode = uiState.thumbnailMode,
+                            shelfStyle = uiState.shelfStyle,
+                            shelfDepth = uiState.shelfDepth,
+                            graphicCoverStyle = uiState.graphicCoverStyle,
+                            cardShadow = uiState.cardShadow,
+                            titleScale = uiState.titleScale,
+                            titleLines = uiState.titleLines,
+                            cardStroke = uiState.cardStroke,
+                            cardCornerRadius = uiState.cardCornerRadius,
+                            titlePanelOpacity = uiState.titlePanelOpacity,
+                            showProgressIndicators = uiState.showProgressIndicators,
+                            showCoverTitles = uiState.showCoverTitlesOnGrid,
+                            onClick = { onComicClick(comic) },
+                            onLongClick = { onComicLongClick(comic) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LibraryStatusScopeRow(
+    current: LibraryStatusFilter,
+    totalFiles: Int,
+    readingFiles: Int,
+    completedFiles: Int,
+    onStatusChange: (LibraryStatusFilter) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LibrarySectionChip(
+            text = "Файлы ($totalFiles)",
+            selected = current == LibraryStatusFilter.ALL,
+            onClick = { onStatusChange(LibraryStatusFilter.ALL) }
+        )
+        LibrarySectionChip(
+            text = "Читаю ($readingFiles)",
+            selected = current == LibraryStatusFilter.IN_PROGRESS,
+            onClick = { onStatusChange(LibraryStatusFilter.IN_PROGRESS) }
+        )
+        LibrarySectionChip(
+            text = "Прочитано ($completedFiles)",
+            selected = current == LibraryStatusFilter.COMPLETED,
+            onClick = { onStatusChange(LibraryStatusFilter.COMPLETED) }
+        )
+    }
+}
+
+@Composable
+private fun LibrarySectionHeader(
+    title: String,
+    icon: ImageVector? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        icon?.let {
+            Icon(
+                imageVector = it,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun AudiobookStripSection(
+    title: String,
+    audiobooks: List<Audiobook>,
+    tileSizeDp: Int,
+    thumbnailMode: String,
+    cardStyle: String,
+    shelfStyle: String,
+    shelfDepth: Float,
+    cardShadow: Float,
+    titleScale: Float,
+    titleLines: Int,
+    cardStroke: Float,
+    cardCornerRadius: Int,
+    titlePanelOpacity: Float,
+    showCoverTitles: Boolean,
+    onClick: (Audiobook) -> Unit,
+    onLongClick: (Audiobook) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Default.Headphones,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items(audiobooks, key = { it.id }) { audiobook ->
+                Box(modifier = Modifier.width(tileSizeDp.dp)) {
+                    AudiobookGridItem(
+                        audiobook = audiobook,
+                        isGrid = true,
+                        cardStyle = cardStyle,
+                        tileSizeDp = tileSizeDp,
+                        thumbnailMode = thumbnailMode,
+                        shelfStyle = shelfStyle,
+                        shelfDepth = shelfDepth,
+                        cardShadow = cardShadow,
+                        titleScale = titleScale,
+                        titleLines = titleLines,
+                        cardStroke = cardStroke,
+                        cardCornerRadius = cardCornerRadius,
+                        titlePanelOpacity = titlePanelOpacity,
+                        showCoverTitles = showCoverTitles,
+                        onClick = { onClick(audiobook) },
+                        onLongClick = { onLongClick(audiobook) }
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -5307,6 +6081,232 @@ private fun formatQuoteDate(timestamp: Long, language: String): String {
 // ─────────────────────────────────────────────────────────────────────────────
 // Строки для достижений берём из AppStrings (с фолбэком на русский)
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ── Audiobook grid item ───────────────────────────────────────────────────────
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun AudiobookGridItem(
+    audiobook: Audiobook,
+    isGrid: Boolean,
+    cardStyle: String,
+    tileSizeDp: Int,
+    thumbnailMode: String,
+    shelfStyle: String,
+    shelfDepth: Float,
+    cardShadow: Float,
+    titleScale: Float,
+    titleLines: Int,
+    cardStroke: Float,
+    cardCornerRadius: Int,
+    titlePanelOpacity: Float,
+    showCoverTitles: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val radiusBase = cardCornerRadius.coerceIn(6, 24).dp
+    val cardShape = when (cardStyle) {
+        "COMPACT" -> RoundedCornerShape(radiusBase * 0.82f)
+        "SHOWCASE" -> RoundedCornerShape(radiusBase * 1.18f)
+        else -> RoundedCornerShape(radiusBase)
+    }
+    val coverRatio = if (thumbnailMode == "SQUARE") {
+        1f
+    } else {
+        when (cardStyle) {
+            "COMPACT" -> 0.64f
+            "SHOWCASE" -> 0.69f
+            else -> 0.66f
+        }
+    }
+    val listBaseHeight = (tileSizeDp * 0.82f).coerceIn(92f, 176f).dp
+    val styleFactor = when (cardStyle) {
+        "COMPACT" -> 0.92f
+        "SHOWCASE" -> 1.12f
+        else -> 1.0f
+    }
+    val rectHeight = (listBaseHeight.value * styleFactor).coerceIn(52f, 132f).dp
+    val squareSize = (rectHeight.value * 0.82f).coerceIn(48f, 112f).dp
+    val thumbSize = if (thumbnailMode == "SQUARE") {
+        squareSize to squareSize
+    } else {
+        (rectHeight * 0.7f) to rectHeight
+    }
+    val containerColor = if (isGrid) {
+        lerp(
+            MaterialTheme.colorScheme.surfaceContainerLow,
+            MaterialTheme.colorScheme.secondaryContainer,
+            0.2f
+        ).copy(alpha = MaterialTheme.colorScheme.surface.alpha.coerceAtLeast(0.74f))
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
+    }
+    val cardBorder = androidx.compose.foundation.BorderStroke(
+        width = (0.65f + cardStroke.coerceIn(0f, 1f) * 0.9f).dp,
+        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f + cardStroke.coerceIn(0f, 1f) * 0.18f)
+    )
+    val metaText = buildString {
+        append("${audiobook.chapters.size} гл.")
+        append(if (audiobook.sourceIsFolder) " • папка" else " • файл")
+    }
+
+    if (!isGrid) {
+        Card(
+            modifier = Modifier
+                .height(rectHeight)
+                .fillMaxWidth()
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            shape = cardShape,
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            border = cardBorder,
+            elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(thumbSize.first, thumbSize.second)
+                        .clip(RoundedCornerShape((radiusBase * 0.52f).coerceAtLeast(4.dp)))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (audiobook.coverUri != null) {
+                        AsyncImage(
+                            model = audiobook.coverUri,
+                            contentDescription = audiobook.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.Headphones,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.56f)
+                        )
+                    }
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = audiobook.title,
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontSize = (14.sp * titleScale.coerceIn(0.85f, 1.3f))
+                        ),
+                        maxLines = titleLines.coerceIn(1, 3),
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.94f)
+                    )
+                    Text(
+                        text = metaText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Воспроизвести",
+                        modifier = Modifier.padding(8.dp).size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    } else {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            shape = cardShape,
+            colors = CardDefaults.cardColors(containerColor = containerColor),
+            border = cardBorder,
+            elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(coverRatio)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                if (audiobook.coverUri != null) {
+                    AsyncImage(
+                        model = audiobook.coverUri,
+                        contentDescription = audiobook.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Icon(
+                        Icons.Default.Headphones,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+                }
+                if (showCoverTitles) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(start = 6.dp, end = 10.dp, bottom = 10.dp)
+                            .widthIn(max = 160.dp),
+                        shape = RoundedCornerShape((radiusBase * 0.72f).coerceAtLeast(8.dp)),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(
+                            alpha = (0.9f + titlePanelOpacity.coerceIn(0.18f, 0.78f) * 0.06f)
+                                .coerceIn(0.92f, 0.98f)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            width = 0.6.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)
+                        )
+                    ) {
+                        Text(
+                            text = audiobook.title,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontSize = (12.sp * titleScale.coerceIn(0.85f, 1.3f))
+                            ),
+                            maxLines = titleLines.coerceIn(1, 3),
+                            overflow = TextOverflow.Ellipsis,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .size(32.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.92f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.PlayArrow,
+                        contentDescription = "Воспроизвести",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun rememberAchievementStrings(strings: AppStrings): AchievementStrings {

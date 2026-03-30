@@ -2,6 +2,7 @@ package com.example.engine.formats.epub
 
 import android.content.ContextWrapper
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -36,6 +37,55 @@ class EpubCorpusSmokeTest {
                 "Expected rendered EPUB markup to be normalized",
                 !joined.contains("<span><div", ignoreCase = true)
             )
+            assertTrue(
+                "Expected first Skott pages to keep readable Cyrillic text",
+                Regex("[А-Яа-яЁё]").containsMatchIn(joined)
+            )
+            assertTrue("Expected first Skott pages to avoid mojibake", !joined.contains("РџР"))
+            assertTrue(
+                "Expected cover page media to remain visible",
+                joined.contains("<img", ignoreCase = true) ||
+                    joined.contains("<svg", ignoreCase = true) ||
+                    joined.contains("cover-svg", ignoreCase = true)
+            )
+            val firstPage = firstPages.first()
+            assertTrue("Expected merged front matter to keep the cover", firstPage.contains("cover-svg", ignoreCase = true) || firstPage.contains("cover.jpg", ignoreCase = true))
+            assertTrue("Expected merged front matter to keep the title page", firstPage.contains("Джеймс Скотт"))
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun skottSampleResolvesMergedFrontMatterEntries() = runBlocking {
+        val sample = locateSample("S_Skott_Protiv_zerna_glubinnaya_istoriya_drevneyshih_gosudarstv.epub")
+        assertTrue("Expected EPUB sample to exist", sample.exists())
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            assertEquals(0, reader.resolveHrefToPage("cover.xhtml"))
+            assertEquals(0, reader.resolveHrefToPage("ch1.xhtml"))
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun sample6177KeepsUtf8CyrillicReadable() = runBlocking {
+        val sample = locateSample("6177.epub")
+        assertTrue("Expected EPUB sample to exist", sample.exists())
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val pageCount = reader.getPageCount()
+            assertTrue("Expected EPUB pages, got $pageCount", pageCount > 5)
+
+            val firstPages = (0 until minOf(pageCount, 4))
+                .mapNotNull { reader.getHtmlPage(it) }
+                .joinToString("\n")
+
+            assertTrue("Expected readable UTF-8 title text", firstPages.contains("Атлантида"))
+            assertTrue("Expected UTF-8 body text to stay readable", !firstPages.contains("РђС"))
         } finally {
             reader.close()
         }

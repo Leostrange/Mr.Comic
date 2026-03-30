@@ -61,7 +61,9 @@ import androidx.navigation.navArgument
 import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
+import com.example.feature.library.AudiobookPlayerScreen
 import com.example.feature.library.LibraryScreen
+import com.example.feature.library.MiniAudiobookPlayer
 import com.example.feature.library.MrComicProgressRoute
 import com.example.feature.library.LibraryViewModel
 import com.example.feature.library.components.AchievementStrings
@@ -97,6 +99,10 @@ sealed class Screen(val route: String) {
             }
             return if (params.isEmpty()) "translation" else "translation?${params.joinToString("&")}"
         }
+    }
+
+    data object AudiobookPlayer : Screen("audiobook_player/{audiobookId}") {
+        fun create(audiobookId: String) = "audiobook_player/$audiobookId"
     }
 
     data object Reader : Screen("reader?comicId={comicId}&uri={uri}&page={page}") {
@@ -171,19 +177,26 @@ fun AppNavHost(
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                AppBottomBar(
-                    currentRoute = currentRoute,
-                    menuItems = menuItems,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
+                Column {
+                    MiniAudiobookPlayer(
+                        onOpenPlayer = { audiobookId ->
+                            navController.navigate(Screen.AudiobookPlayer.create(audiobookId))
                         }
-                    }
-                )
+                    )
+                    AppBottomBar(
+                        currentRoute = currentRoute,
+                        menuItems = menuItems,
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -290,7 +303,12 @@ fun AppNavHost(
                                 android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
                             )
                         } catch (_: Exception) {}
-                        vm.addComicFromUri(uri)
+                        val mimeType = context.contentResolver.getType(uri)
+                        if (mimeType?.startsWith("audio/") == true) {
+                            vm.addAudiobookFromUri(uri)
+                        } else {
+                            vm.addComicFromUri(uri)
+                        }
                     }
 
                     val folderPicker = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -306,6 +324,7 @@ fun AppNavHost(
                             Log.w("AppNavHost", "Persistable SAF failed: ${e.message}")
                         }
                         vm.addComicsFromDirectory(treeUri)
+                        vm.addAudiobookFromFolder(treeUri)
                     }
 
                     LibraryScreen(
@@ -315,6 +334,9 @@ fun AppNavHost(
                                     navController.navigate(Screen.Reader.createForComic(comic.id))
                                 }
                             }
+                        },
+                        onAudiobookClick = { audiobookId ->
+                            navController.navigate(Screen.AudiobookPlayer.create(audiobookId))
                         },
                         onQuoteClick = { comicId, page ->
                             navController.navigate(Screen.Reader.createForComic(comicId, page))
@@ -345,6 +367,13 @@ fun AppNavHost(
                                     "application/xhtml+xml",
                                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                     "application/vnd.oasis.opendocument.text",
+                                    "audio/mpeg",
+                                    "audio/mp4",
+                                    "audio/ogg",
+                                    "audio/x-wav",
+                                    "audio/flac",
+                                    "audio/aac",
+                                    "audio/*",
                                     "*/*"
                                 )
                             )
@@ -416,6 +445,18 @@ fun AppNavHost(
                 }
 
                 composable(
+                    route = Screen.AudiobookPlayer.route,
+                    arguments = listOf(
+                        navArgument("audiobookId") { type = NavType.StringType }
+                    )
+                ) {
+                    AudiobookPlayerScreen(
+                        audiobookId = it.arguments?.getString("audiobookId") ?: "",
+                        onNavigateBack = { navController.navigateUp() }
+                    )
+                }
+
+                composable(
                     route = Screen.Reader.route,
                     arguments = listOf(
                         navArgument("comicId") {
@@ -434,8 +475,20 @@ fun AppNavHost(
                         }
                     )
                 ) {
+                    val readerContext = LocalContext.current
                     ReaderScreen(
-                        onNavigateBack = { navController.navigateUp() },
+                        onNavigateBack = {
+                            // Restore system bars BEFORE navigating back to prevent library chrome jump
+                            (readerContext as? android.app.Activity)?.window?.let { window ->
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                                    window.insetsController?.show(android.view.WindowInsets.Type.systemBars())
+                                } else {
+                                    @Suppress("DEPRECATION")
+                                    window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+                                }
+                            }
+                            navController.navigateUp()
+                        },
                         onNavigateToOcr = { request: OcrLaunchRequest ->
                             navController.navigate(
                                 Screen.Translation.create(

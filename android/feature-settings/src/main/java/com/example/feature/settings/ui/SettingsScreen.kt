@@ -106,6 +106,7 @@ private enum class SettingsSection {
     APPEARANCE,
     READER,
     LIBRARY,
+    PERFORMANCE,
     SYNC,
     READ_ALOUD,
     TRANSLATION,
@@ -2171,8 +2172,9 @@ private fun settingsSectionMeta(
         SettingsSection.APPEARANCE -> SettingsSectionMeta("Appearance", "Theme, interface chrome, covers, and library visuals.")
         SettingsSection.READER -> SettingsSectionMeta("Reading", "Text, paging, headers, and reading session behavior.")
         SettingsSection.LIBRARY -> SettingsSectionMeta("Library", "Sorting, grouping, sources, and library maintenance.")
+        SettingsSection.PERFORMANCE -> SettingsSectionMeta("Performance", "Startup, motion, and visual load tuning for calmer devices.")
         SettingsSection.SYNC -> SettingsSectionMeta("Sync", "Export, import, and automatic reading backups.")
-        SettingsSection.READ_ALOUD -> SettingsSectionMeta("Read Aloud", "Voice reading defaults, playback, and system TTS controls.")
+        SettingsSection.READ_ALOUD -> SettingsSectionMeta("Audio", "Voice reading, player behavior, page sounds, and system TTS controls.")
         SettingsSection.TRANSLATION -> SettingsSectionMeta("Translation", "Languages, OCR behavior, and overlay presentation.")
         SettingsSection.AI_SERVICES -> SettingsSectionMeta("AI Services", "Explain, transport, and provider-level AI controls.")
         SettingsSection.STORAGE -> SettingsSectionMeta("Storage", "Library access, cache cleanup, and local data care.")
@@ -2184,8 +2186,9 @@ private fun settingsSectionMeta(
         SettingsSection.APPEARANCE -> SettingsSectionMeta("Оформление", "Тема, интерфейс, обложки и визуал библиотеки.")
         SettingsSection.READER -> SettingsSectionMeta("Чтение", "Текст, листание, колонтитулы и поведение ридера.")
         SettingsSection.LIBRARY -> SettingsSectionMeta("Библиотека", "Сортировка, группировка, источники и логика библиотеки.")
+        SettingsSection.PERFORMANCE -> SettingsSectionMeta("Производительность", "Запуск, анимации и тяжёлые визуальные эффекты.")
         SettingsSection.SYNC -> SettingsSectionMeta("Синхронизация", "Экспорт, импорт и автоматическое сохранение прогресса.")
-        SettingsSection.READ_ALOUD -> SettingsSectionMeta("Озвучивание", "Голосовое чтение, воспроизведение и системные TTS-настройки.")
+        SettingsSection.READ_ALOUD -> SettingsSectionMeta("Аудио", "Голосовое чтение, аудиоплеер, звуки и системные TTS-настройки.")
         SettingsSection.TRANSLATION -> SettingsSectionMeta("Перевод", "Языки, OCR и способ показа перевода.")
         SettingsSection.AI_SERVICES -> SettingsSectionMeta("Искусственный интеллект", "Explain, транспорт и сервисные AI-настройки.")
         SettingsSection.STORAGE -> SettingsSectionMeta("Хранилище", "Доступ к библиотеке, очистка кэша и локальные данные.")
@@ -2205,7 +2208,7 @@ private fun settingsSectionItems(
             section = SettingsSection.APPEARANCE,
             title = settingsSectionMeta(SettingsSection.APPEARANCE, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.APPEARANCE, strings.languageCode, strings).description,
-            summary = "${appLanguageLabel(strings, uiState.appLanguage)} · ${themePresetLabel(strings, uiState.themePreset)} · ${if (uiState.libraryViewGrid) strings.libraryViewGrid else strings.libraryViewList}"
+            summary = "${appLanguageLabel(strings, uiState.appLanguage)} · ${themePresetLabel(strings, uiState.themePreset)} · ${settingsLibraryViewLabel(uiState.appLanguage, uiState.libraryViewMode)}"
         ),
         SettingsMainMenuSectionItem(
             section = SettingsSection.READER,
@@ -2218,6 +2221,15 @@ private fun settingsSectionItems(
             title = settingsSectionMeta(SettingsSection.LIBRARY, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.LIBRARY, strings.languageCode, strings).description,
             summary = "${librarySortOrderLabel(uiState.librarySortOrder, strings.languageCode)} · ${libraryGroupByLabel(uiState.libraryGroupBy, uiState.appLanguage)}"
+        ),
+        SettingsMainMenuSectionItem(
+            section = SettingsSection.PERFORMANCE,
+            title = settingsSectionMeta(SettingsSection.PERFORMANCE, strings.languageCode, strings).title,
+            description = settingsSectionMeta(SettingsSection.PERFORMANCE, strings.languageCode, strings).description,
+            summary = when (strings.languageCode) {
+                "en" -> "${uiState.perfProfile.lowercase().replaceFirstChar { it.uppercase() }} · Preload ${compactToggleLabel(strings.languageCode, uiState.perfStartupPreloadEnabled)}"
+                else -> "${perfProfileLabel(uiState.perfProfile, strings.languageCode)} · Предзагрузка ${compactToggleLabel(strings.languageCode, uiState.perfStartupPreloadEnabled)}"
+            }
         ),
         SettingsMainMenuSectionItem(
             section = SettingsSection.SYNC,
@@ -2257,11 +2269,11 @@ private fun settingsSectionItems(
             title = settingsSectionMeta(SettingsSection.ADVANCED, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.ADVANCED, strings.languageCode, strings).description,
             summary = when (strings.languageCode) {
-                "en" -> "App icon · Splash ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
-                "ja" -> "アプリアイコン・スプラッシュ ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
-                "zh" -> "应用图标 · 启动画面 ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
-                "ko" -> "앱 아이콘 · 스플래시 ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
-                else -> "Иконка приложения · Заставка ${compactToggleLabel(strings.languageCode, uiState.appVideoSplashEnabled)}"
+                "en" -> "App icon · Mascot ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
+                "ja" -> "アプリアイコン・マスコット ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
+                "zh" -> "应用图标 · 吉祥物 ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
+                "ko" -> "앱 아이콘 · 마스코트 ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
+                else -> "Иконка приложения · Маскот ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
             }
         ),
         SettingsMainMenuSectionItem(
@@ -2530,13 +2542,89 @@ private fun readAloudPreviewSample(language: String): String = when (language) {
     else -> "This is the Mr.Comic read-aloud test. Use it to check voice, speed, pitch, and volume before reading."
 }
 
+private fun settingsLibraryViewLabel(language: String, mode: String): String = when (mode) {
+    "LIST" -> when (language) {
+        "en" -> "List"
+        "ja" -> "リスト"
+        "zh" -> "列表"
+        "ko" -> "목록"
+        else -> "Список"
+    }
+    "STRIPS" -> when (language) {
+        "en" -> "Shelves"
+        "ja" -> "棚"
+        "zh" -> "书架"
+        "ko" -> "선반"
+        else -> "Ленты"
+    }
+    else -> when (language) {
+        "en" -> "Grid"
+        "ja" -> "グリッド"
+        "zh" -> "网格"
+        "ko" -> "그리드"
+        else -> "Сетка"
+    }
+}
+
+private data class PerformanceSettingsText(
+    val title: String,
+    val hint: String,
+    val reducedMotionTitle: String,
+    val reducedMotionSubtitle: String,
+    val reducedVisualEffectsTitle: String,
+    val reducedVisualEffectsSubtitle: String
+)
+
+private fun performanceSettingsText(language: String): PerformanceSettingsText = when (language) {
+    "en" -> PerformanceSettingsText(
+        title = "Performance",
+        hint = "Useful on E-Ink devices and weaker phones: calmer motion, lighter effects, and steadier library surfaces.",
+        reducedMotionTitle = "Reduce motion",
+        reducedMotionSubtitle = "Cuts decorative movement and keeps navigation calmer.",
+        reducedVisualEffectsTitle = "Reduce visual effects",
+        reducedVisualEffectsSubtitle = "Lowers blur and heavy backdrop effects where the app supports it."
+    )
+    "ja" -> PerformanceSettingsText(
+        title = "パフォーマンス",
+        hint = "E-Ink 端末や低速な端末向け。動きを穏やかにし、重い効果を抑えて、ライブラリ表示を安定させます。",
+        reducedMotionTitle = "動きを減らす",
+        reducedMotionSubtitle = "装飾的な動きを減らし、遷移を落ち着かせます。",
+        reducedVisualEffectsTitle = "視覚効果を減らす",
+        reducedVisualEffectsSubtitle = "対応している場所で blur や重い backdrop 効果を弱めます。"
+    )
+    "zh" -> PerformanceSettingsText(
+        title = "性能",
+        hint = "适合 E-Ink 设备和较弱的手机：减少动画、减轻视觉特效，让书库表面更稳定。",
+        reducedMotionTitle = "减少动画",
+        reducedMotionSubtitle = "减少装饰性运动，让过渡更安静。",
+        reducedVisualEffectsTitle = "减少视觉特效",
+        reducedVisualEffectsSubtitle = "在已接入的界面降低模糊和较重的背景特效。"
+    )
+    "ko" -> PerformanceSettingsText(
+        title = "성능",
+        hint = "E-Ink 기기나 약한 폰에서 유용합니다. 움직임을 줄이고 효과를 가볍게 해서 라이브러리를 더 안정적으로 보여줍니다.",
+        reducedMotionTitle = "모션 줄이기",
+        reducedMotionSubtitle = "장식용 움직임을 줄여 전환을 더 차분하게 만듭니다.",
+        reducedVisualEffectsTitle = "시각 효과 줄이기",
+        reducedVisualEffectsSubtitle = "지원되는 화면에서 blur 와 무거운 backdrop 효과를 줄입니다."
+    )
+    else -> PerformanceSettingsText(
+        title = "Производительность",
+        hint = "Полезно на E-Ink и слабых устройствах: меньше движения, легче эффекты и спокойнее поверхности библиотеки.",
+        reducedMotionTitle = "Сократить анимации",
+        reducedMotionSubtitle = "Убирает лишнее движение и делает переходы спокойнее.",
+        reducedVisualEffectsTitle = "Упростить визуальные эффекты",
+        reducedVisualEffectsSubtitle = "Уменьшает blur и тяжёлые backdrop-эффекты там, где приложение это поддерживает."
+    )
+}
+
 private fun appearanceSectionSummaryItems(
     uiState: SettingsUiState,
     strings: AppStrings
 ): List<Pair<String, String>> = listOf(
     strings.appLanguage to appLanguageLabel(strings, uiState.appLanguage),
     strings.themeCard to "${themePresetLabel(strings, uiState.themePreset)} · ${themeLabel(strings, uiState.themeMode)}",
-    appearanceLibraryVisualsTitle(strings.languageCode) to "${if (uiState.libraryViewGrid) strings.libraryViewGrid else strings.libraryViewList} · ${uiState.libraryTileSize} dp · ${compactToggleLabel(strings.languageCode, uiState.libraryShowCoverTitles)}",
+    appearanceLibraryVisualsTitle(strings.languageCode) to "${settingsLibraryViewLabel(uiState.appLanguage, uiState.libraryViewMode)} · ${uiState.libraryTileSize} dp · ${compactToggleLabel(strings.languageCode, uiState.libraryShowCoverTitles)}",
     appearanceScaleTitle(strings.languageCode) to "${fontScaleLabel(strings, uiState.uiFontScale)} · ${uiDensityLabel(uiState.appLanguage, uiState.uiDensityScale)}",
     appearanceColorsTitle(strings.languageCode) to "${compactToggleLabel(strings.languageCode, uiState.customPrimaryColor != null || uiState.customBackgroundColor != null)} · ${(uiState.surfaceOpacity * 100).toInt()}%"
 )
@@ -2604,19 +2692,6 @@ private fun appearancePageNavItems(
             else -> "Шрифт, плотность, скругления"
         },
         icon = Icons.Default.Tune
-    ),
-    AppearanceSettingsNavItem(
-        page = AppearanceSettingsPage.EXTRA,
-        title = appearanceExtrasTitle(language),
-        description = text.tabHints[AppearanceSettingsTab.EXTRA].orEmpty(),
-        summary = when (language) {
-            "en" -> "Sounds, mascot, service UI"
-            "ja" -> "サウンド、マスコット、補助UI"
-            "zh" -> "声音、吉祥物、服务界面"
-            "ko" -> "사운드, 마스코트, 보조 UI"
-            else -> "Звуки, маскот, служебный UI"
-        },
-        icon = Icons.Default.Widgets
     )
 )
 
@@ -2936,7 +3011,8 @@ fun SettingsScreen(
         .let {
             when (it) {
                 AppearanceSettingsPage.BASICS,
-                AppearanceSettingsPage.THEME_STUDIO -> AppearanceSettingsPage.OVERVIEW
+                AppearanceSettingsPage.THEME_STUDIO,
+                AppearanceSettingsPage.EXTRA -> AppearanceSettingsPage.OVERVIEW
                 else -> it
             }
         }
@@ -2999,6 +3075,7 @@ fun SettingsScreen(
             LibrarySettingsPage.CACHE -> libraryCacheTitle(strings.languageCode)
             LibrarySettingsPage.IMPORT_EXPORT -> libraryImportExportTitle(strings.languageCode)
         }
+        SettingsSection.PERFORMANCE  -> settingsSectionMeta(SettingsSection.PERFORMANCE, strings.languageCode, strings).title
         SettingsSection.SYNC         -> settingsSectionMeta(SettingsSection.SYNC, strings.languageCode, strings).title
         SettingsSection.TRANSLATION  -> when (currentTranslationPage) {
             TranslationSettingsPage.OVERVIEW -> settingsSectionMeta(SettingsSection.TRANSLATION, strings.languageCode, strings).title
@@ -3085,6 +3162,12 @@ fun SettingsScreen(
                     viewModel = viewModel,
                     currentPage = currentLibraryPage,
                     onPageChange = { currentLibraryPageName = it.name },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.PERFORMANCE -> PerformanceSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
                     modifier = Modifier.padding(padding)
                 )
                 SettingsSection.TRANSLATION -> TranslationSection(
@@ -3228,6 +3311,7 @@ private fun SettingsMainMenu(
                         SettingsSection.APPEARANCE -> Icons.Default.Palette
                         SettingsSection.READER -> Icons.Default.Book
                         SettingsSection.LIBRARY -> Icons.Default.GridView
+                        SettingsSection.PERFORMANCE -> Icons.Default.Bolt
                         SettingsSection.SYNC -> Icons.Default.Sync
                         SettingsSection.READ_ALOUD -> Icons.Default.RecordVoiceOver
                         SettingsSection.TRANSLATION -> Icons.Default.Translate
@@ -3587,8 +3671,7 @@ private fun AppearanceSection(
                     summaryItems = listOf(
                         appearanceThemeTitle(strings.languageCode) to "${themePresetLabel(strings, uiState.themePreset)} · ${themeLabel(strings, uiState.themeMode)}",
                         appearanceColorsTitle(strings.languageCode) to "${compactToggleLabel(strings.languageCode, uiState.customPrimaryColor != null || uiState.customBackgroundColor != null)} · ${(uiState.surfaceOpacity * 100).toInt()}%",
-                        appearanceScaleTitle(strings.languageCode) to "${fontScaleLabel(strings, uiState.uiFontScale)} · ${uiDensityLabel(uiState.appLanguage, uiState.uiDensityScale)}",
-                        appearanceExtrasTitle(strings.languageCode) to "${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)} · ${compactToggleLabel(strings.languageCode, uiState.questPromptsEnabled)}"
+                        appearanceScaleTitle(strings.languageCode) to "${fontScaleLabel(strings, uiState.uiFontScale)} · ${uiDensityLabel(uiState.appLanguage, uiState.uiDensityScale)}"
                     ),
                     sectionsTitle = sectionText.quickBlocksTitle,
                     sections = listOf(
@@ -3612,13 +3695,6 @@ private fun AppearanceSection(
                             description = sectionText.tabHints[AppearanceSettingsTab.SCALE].orEmpty(),
                             summary = "${fontScaleLabel(strings, uiState.uiFontScale)} · ${uiDensityLabel(uiState.appLanguage, uiState.uiDensityScale)}",
                             onClick = { onPageChange(AppearanceSettingsPage.SCALE) }
-                        ),
-                        SettingsStudioOverviewItem(
-                            icon = Icons.Default.Widgets,
-                            title = appearanceExtrasTitle(strings.languageCode),
-                            description = sectionText.tabHints[AppearanceSettingsTab.EXTRA].orEmpty(),
-                            summary = "${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)} · ${compactToggleLabel(strings.languageCode, uiState.questPromptsEnabled)}",
-                            onClick = { onPageChange(AppearanceSettingsPage.EXTRA) }
                         )
                     )
                 )
@@ -3908,42 +3984,6 @@ private fun AppearanceSection(
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text(sectionText.paletteResetLabel)
-                }
-            }
-        }
-        if (currentPage == AppearanceSettingsPage.EXTRA) item {
-            SettingsCard(title = strings.uiSoundsTitle) {
-                SwitchRow(
-                    title = strings.uiSoundsTitle,
-                    subtitle = strings.uiSoundsSubtitle,
-                    checked = uiState.uiSoundEnabled,
-                    onCheckedChange = viewModel::setUiSoundEnabled
-                )
-                if (uiState.uiSoundEnabled) {
-                    Spacer(Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.VolumeDown, contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Slider(
-                            value = uiState.uiSoundsVolume,
-                            onValueChange = viewModel::setUiSoundsVolume,
-                            valueRange = 0f..1f,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            "${(uiState.uiSoundsVolume * 100).toInt()}%",
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.width(34.dp)
-                        )
-                    }
                 }
             }
         }
@@ -6041,11 +6081,12 @@ private fun LibraryLayoutCard(
     title: String = libraryText.displayCard
 ) {
     SettingsCard(title = title) {
+        val currentViewMode = uiState.libraryViewMode
         LabelText(strings.libraryDefaultView)
         ChipRow {
             FilterChip(
-                selected = uiState.libraryViewGrid,
-                onClick = { viewModel.setLibraryViewGrid(true) },
+                selected = currentViewMode == "GRID",
+                onClick = { viewModel.setLibraryViewMode("GRID") },
                 label = { Text(strings.libraryViewGrid) },
                 leadingIcon = {
                     Icon(
@@ -6056,8 +6097,8 @@ private fun LibraryLayoutCard(
                 }
             )
             FilterChip(
-                selected = !uiState.libraryViewGrid,
-                onClick = { viewModel.setLibraryViewGrid(false) },
+                selected = currentViewMode == "LIST",
+                onClick = { viewModel.setLibraryViewMode("LIST") },
                 label = { Text(strings.libraryViewList) },
                 leadingIcon = {
                     Icon(
@@ -6067,8 +6108,20 @@ private fun LibraryLayoutCard(
                     )
                 }
             )
+            FilterChip(
+                selected = currentViewMode == "STRIPS",
+                onClick = { viewModel.setLibraryViewMode("STRIPS") },
+                label = { Text(settingsLibraryViewLabel(uiState.appLanguage, "STRIPS")) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            )
         }
-        if (uiState.libraryViewGrid) {
+        if (currentViewMode == "GRID") {
             Spacer(Modifier.height(4.dp))
             LabelText("${strings.libraryGridColumns}: ${uiState.libraryGridColumns}")
             ChipRow {
@@ -6081,6 +6134,25 @@ private fun LibraryLayoutCard(
                 }
             }
         }
+        Spacer(Modifier.height(6.dp))
+        SwitchRow(
+            title = when (uiState.appLanguage) {
+                "en" -> "Show Files / Reading / Completed"
+                "ja" -> "Files / Reading / Completed を表示"
+                "zh" -> "显示 文件 / 在读 / 已读"
+                "ko" -> "파일 / 읽는 중 / 읽음 표시"
+                else -> "Показывать островки Файлы / Читаю / Прочитано"
+            },
+            subtitle = when (uiState.appLanguage) {
+                "en" -> "Shows the library status row under the main section chips."
+                "ja" -> "メインのセクションチップの下に状態行を表示します。"
+                "zh" -> "在主分区标签下显示书库状态行。"
+                "ko" -> "메인 섹션 칩 아래에 라이브러리 상태 줄을 표시합니다."
+                else -> "Показывает строку состояния библиотеки под основными островками."
+            },
+            checked = uiState.libraryShowStatusChips,
+            onCheckedChange = viewModel::setLibraryShowStatusChips
+        )
         Spacer(Modifier.height(4.dp))
         LabelText(libraryText.recentStripPosition)
         ChipRow {
@@ -6252,6 +6324,36 @@ private fun LibraryCardsStyleCard(
             valueRange = 0.18f..0.78f,
             steps = 9,
             modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun PerformanceSettingsCard(
+    uiState: SettingsUiState,
+    viewModel: SettingsViewModel
+) {
+    val performanceText = remember(uiState.appLanguage) {
+        performanceSettingsText(uiState.appLanguage)
+    }
+    SettingsCard(title = performanceText.title) {
+        Text(
+            performanceText.hint,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        SwitchRow(
+            title = performanceText.reducedMotionTitle,
+            subtitle = performanceText.reducedMotionSubtitle,
+            checked = uiState.performanceReducedMotion,
+            onCheckedChange = viewModel::setPerformanceReducedMotion
+        )
+        SwitchRow(
+            title = performanceText.reducedVisualEffectsTitle,
+            subtitle = performanceText.reducedVisualEffectsSubtitle,
+            checked = uiState.performanceReducedVisualEffects,
+            onCheckedChange = viewModel::setPerformanceReducedVisualEffects
         )
     }
 }
@@ -8284,6 +8386,21 @@ private fun AiServiceProvidersOverviewCard(
 }
 
 @Composable
+private fun PerformanceSection(
+    uiState: SettingsUiState,
+    strings: AppStrings,
+    viewModel: SettingsViewModel,
+    modifier: Modifier = Modifier
+) {
+    DetailedPerformanceSection(
+        uiState = uiState,
+        viewModel = viewModel,
+        language = strings.languageCode,
+        modifier = modifier
+    )
+}
+
+@Composable
 private fun ReadAloudSection(
     uiState: SettingsUiState,
     viewModel: SettingsViewModel,
@@ -8435,6 +8552,80 @@ private fun ReadAloudSection(
                             label = { Text(readAloudSleepTimerLabel(mode.storedValue, strings.languageCode)) }
                         )
                     }
+                }
+            }
+        }
+        item {
+            SettingsCard(
+                title = when (strings.languageCode) {
+                    "en" -> "Playback and sounds"
+                    "ja" -> "再生とサウンド"
+                    "zh" -> "播放与声音"
+                    "ko" -> "재생과 사운드"
+                    else -> "Воспроизведение и звуки"
+                }
+            ) {
+                SwitchRow(
+                    title = when (strings.languageCode) {
+                        "en" -> "Page flip sound"
+                        "ja" -> "ページめくり音"
+                        "zh" -> "翻页音效"
+                        "ko" -> "페이지 넘김 소리"
+                        else -> "Звук перелистывания"
+                    },
+                    subtitle = when (strings.languageCode) {
+                        "en" -> "Keeps a light paper cue for reader paging."
+                        "ja" -> "ページ送りに軽い紙の合図を追加します。"
+                        "zh" -> "为翻页保留轻微的纸张提示音。"
+                        "ko" -> "페이지 넘김에 가벼운 종이 소리를 남깁니다."
+                        else -> "Оставляет лёгкую бумажную подсказку при листании."
+                    },
+                    checked = uiState.readerPageSound,
+                    onCheckedChange = viewModel::setReaderPageSound
+                )
+                if (uiState.readerPageSound) {
+                    Spacer(Modifier.height(10.dp))
+                    LabelText(
+                        when (strings.languageCode) {
+                            "en" -> "Page sound style"
+                            "ja" -> "ページ音スタイル"
+                            "zh" -> "翻页音风格"
+                            "ko" -> "페이지 소리 스타일"
+                            else -> "Стиль звука перелистывания"
+                        }
+                    )
+                    ChipRow {
+                        listOf("PAPER", "CRISP", "SOFT").forEach { style ->
+                            FilterChip(
+                                selected = uiState.readerPageSoundStyle == style,
+                                onClick = { viewModel.setReaderPageSoundStyle(style) },
+                                label = { Text(style) }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                SwitchRow(
+                    title = strings.uiSoundsTitle,
+                    subtitle = strings.uiSoundsSubtitle,
+                    checked = uiState.uiSoundEnabled,
+                    onCheckedChange = viewModel::setUiSoundEnabled
+                )
+                if (uiState.uiSoundEnabled) {
+                    Spacer(Modifier.height(10.dp))
+                    SettingsSliderTile(
+                        title = when (strings.languageCode) {
+                            "en" -> "UI sounds volume"
+                            "ja" -> "UI サウンド音量"
+                            "zh" -> "界面音量"
+                            "ko" -> "UI 사운드 볼륨"
+                            else -> "Громкость UI-звуков"
+                        },
+                        valueLabel = "${(uiState.uiSoundsVolume * 100).toInt()}%",
+                        value = uiState.uiSoundsVolume,
+                        onValueChange = viewModel::setUiSoundsVolume,
+                        valueRange = 0f..1f
+                    )
                 }
             }
         }
@@ -8873,25 +9064,6 @@ private fun AdvancedSection(
     ) {
         item {
             SettingsCard(title = appearanceText.serviceElementsTitle) {
-                SwitchRow(
-                    title = when (strings.languageCode) {
-                        "en" -> "Video splash"
-                        "ja" -> "ビデオスプラッシュ"
-                        "zh" -> "视频启动页"
-                        "ko" -> "비디오 스플래시"
-                        else -> "Видеозаставка"
-                    },
-                    subtitle = when (strings.languageCode) {
-                        "en" -> "Shows the animated startup video before the app opens. Disabled by default on e-ink devices."
-                        "ja" -> "アプリ起動前にアニメーション付きの開始動画を表示します。E-Ink 端末では既定でオフです。"
-                        "zh" -> "在应用打开前显示启动视频动画。E-Ink 设备默认关闭。"
-                        "ko" -> "앱이 열리기 전에 시작 비디오를 재생합니다. E-ink 기기에서는 기본적으로 꺼집니다."
-                        else -> "Показывает анимированную видеозаставку перед открытием приложения. На E-Ink устройствах по умолчанию выключена."
-                    },
-                    checked = uiState.appVideoSplashEnabled,
-                    onCheckedChange = viewModel::setAppVideoSplashEnabled
-                )
-                Spacer(Modifier.height(10.dp))
                 SwitchRow(
                     title = appearanceText.mascotRecapTitle,
                     subtitle = appearanceText.mascotRecapSubtitle,
@@ -9509,6 +9681,25 @@ private fun surfaceOpacityLabel(language: String): String = when (language) {
     "zh" -> "表层透明度"
     "ko" -> "표면 투명도"
     else -> "Прозрачность поверхностей"
+}
+
+private fun perfProfileLabel(profile: String, language: String): String = when (profile.uppercase()) {
+    "QUALITY" -> when (language) {
+        "en" -> "Quality"
+        else -> "Качество"
+    }
+    "BALANCED" -> when (language) {
+        "en" -> "Balanced"
+        else -> "Баланс"
+    }
+    "ECONOMY" -> when (language) {
+        "en" -> "Economy"
+        else -> "Экономия"
+    }
+    else -> when (language) {
+        "en" -> "Auto"
+        else -> "Авто"
+    }
 }
 
 private fun libraryCardStyleLabel(style: String, language: String): String = when (style) {

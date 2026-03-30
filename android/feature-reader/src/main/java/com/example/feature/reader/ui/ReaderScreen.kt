@@ -16,6 +16,8 @@ import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.*
@@ -127,17 +129,17 @@ private const val JS_TAP_HANDLER = """(function(){
   document.addEventListener('touchend',function(e){
     var now=Date.now();
     var elapsed=now-window.__readerTouchStartTs;
-    if(elapsed<=0||elapsed>500)return;
+    if(elapsed<=0||elapsed>260)return;
     var selected='';
     try{selected=(window.getSelection&&window.getSelection().toString())||'';selected=(selected||'').trim();}catch(err){}
     if(selected.length>0)return;
-    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<700);
+    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<1200);
     if(hasRecentSelection)return;
     var ch=e.changedTouches&&e.changedTouches[0];
     if(!ch)return;
     var dx=ch.clientX-window.__readerTouchStartX;
     var dy=ch.clientY-window.__readerTouchStartY;
-    if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.5){
+    if(Math.abs(dx)>54&&Math.abs(dy)<24&&Math.abs(dx)>Math.abs(dy)*1.8){
       if(typeof _NativeReader!='undefined')_NativeReader.onTap(dx>0?0.1:0.9);
     }
   },{passive:true});
@@ -148,8 +150,8 @@ private const val JS_TAP_HANDLER = """(function(){
       selected=(window.getSelection&&window.getSelection().toString())||'';
       selected=(selected||'').trim();
     }catch(err){}
-    var isLongPress=window.__readerTouchStartTs&&((now-window.__readerTouchStartTs)>280);
-    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<700);
+    var isLongPress=window.__readerTouchStartTs&&((now-window.__readerTouchStartTs)>380);
+    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<1200);
     if(selected.length>0||window.__readerTouchMoved||isLongPress||hasRecentSelection){
       return;
     }
@@ -158,19 +160,52 @@ private const val JS_TAP_HANDLER = """(function(){
       if(t.tagName==='A'){
         var href=t.getAttribute('href')||'';
         var title=t.getAttribute('title')||'';
-        e.preventDefault();
         if(href.indexOf('fbanchor://')===0){
+          e.preventDefault();
           var id=href.slice(11);
           if(id&&typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(id);
-        } else if(href.indexOf('http://')===0||href.indexOf('https://')===0){
+        } else if(href.charAt(0)==='#'){
+          if(title&&typeof _NativeReader!='undefined'){
+            e.preventDefault();
+            _NativeReader.onInlineFootnote(title);
+            return;
+          }
+          e.preventDefault();
+          var anchorId=href.substring(1);
+          var target=document.getElementById(anchorId)||document.querySelector('[name="'+anchorId+'"]');
+          if(target){target.scrollIntoView({behavior:'smooth',block:'start'});}
+          return;
+        } else if(/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)){
+          e.preventDefault();
           if(typeof _NativeReader!='undefined')_NativeReader.onExternalLink(href);
         } else if(href&&href.indexOf('://')<0){
+          var absHref='';
+          try{absHref=(t.href||'');}catch(err){}
+          var currentBase=(window.location.href||'').split('#')[0];
+          var targetBase=(absHref||'').split('#')[0];
+          if(href.indexOf('#')>=0&&targetBase&&targetBase===currentBase){
+            e.preventDefault();
+            var fragHref=href.split('#')[1]||'';
+            var fragTarget=document.getElementById(fragHref)||document.querySelector('[name="'+fragHref+'"]');
+            if(fragTarget){
+              fragTarget.scrollIntoView({behavior:'smooth',block:'start'});
+              return;
+            }
+            if(title&&typeof _NativeReader!='undefined'){
+              _NativeReader.onInlineFootnote(title);
+              return;
+            }
+            if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
+            return;
+          }
+          e.preventDefault();
           if(title&&typeof _NativeReader!='undefined'){
             _NativeReader.onInlineFootnote(title);
             return;
           }
           if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
         } else {
+          e.preventDefault();
           var x=e.clientX/window.innerWidth;
           if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
         }
@@ -468,9 +503,13 @@ private fun textSettingsJs(
     """.trimIndent()
     val fontStack = if (assetFile != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
     return """(function(){$fontFaceSnip $themeStyle if(document.body){""" +
+        """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover');""" +
         """document.documentElement.lang=document.documentElement.lang||'ru';""" +
-        """document.body.style.fontSize='${fontSize}px';""" +
         """document.body.style.color='$fg';""" +
+        """document.documentElement.style.background='$bg';""" +
+        """document.body.style.background='$bg';""" +
+        """if(!preservePublisherLayout){""" +
+        """document.body.style.fontSize='${fontSize}px';""" +
         """document.body.style.fontWeight='$fontWeight';""" +
         """document.body.style.fontFamily="$fontStack";""" +
         """document.body.style.lineHeight='$lineHeight';""" +
@@ -481,8 +520,19 @@ private fun textSettingsJs(
         """document.body.style.paddingRight='16px';""" +
         """document.body.style.paddingTop='${topPaddingPx}px';""" +
         """document.body.style.paddingBottom='24px';""" +
-        """document.documentElement.style.background='$bg';""" +
-        """document.body.style.background='$bg';}$colorNotesDom})();"""
+        """}else{""" +
+        """document.body.style.removeProperty('font-size');""" +
+        """document.body.style.removeProperty('font-weight');""" +
+        """document.body.style.removeProperty('font-family');""" +
+        """document.body.style.removeProperty('line-height');""" +
+        """document.body.style.removeProperty('text-align');""" +
+        """document.body.style.removeProperty('padding-left');""" +
+        """document.body.style.removeProperty('padding-right');""" +
+        """document.body.style.removeProperty('padding-top');""" +
+        """document.body.style.removeProperty('padding-bottom');""" +
+        """document.body.style.removeProperty('hyphens');""" +
+        """document.body.style.removeProperty('-webkit-hyphens');""" +
+        """}}$colorNotesDom})();"""
 }
 
 private fun buildThemedHtmlDocument(
@@ -496,7 +546,7 @@ private fun buildThemedHtmlDocument(
             background: $bg !important;
             color: $fg !important;
           }
-          body {
+          body:not([data-mrcomic-preserve-layout="true"]) {
             margin: 0 !important;
           }
           body [bgcolor],
@@ -844,7 +894,7 @@ private fun HtmlPageView(
     val currentBold      = rememberUpdatedState(bold)
 
     AndroidView(
-        modifier = Modifier.fillMaxSize().statusBarsPadding().displayCutoutPadding(),
+        modifier = Modifier.fillMaxSize(),
         factory = { ctx ->
             ReaderWebView(ctx).apply {
                 settings.javaScriptEnabled  = true   // required for tap bridge
@@ -855,7 +905,7 @@ private fun HtmlPageView(
                 // Fix: textZoom=100 prevents system accessibility font scale from
                 // affecting CSS px values, ensuring CHARS_PER_PAGE stays accurate.
                 settings.textZoom           = 100
-                settings.defaultFontSize    = 18
+                settings.defaultFontSize    = 16
                 // Required for proper viewport scaling on tablets / wide screens.
                 settings.useWideViewPort       = true
                 settings.loadWithOverviewMode  = true
@@ -932,21 +982,39 @@ private fun HtmlPageView(
                         view: WebView, request: WebResourceRequest
                     ): Boolean {
                         val uri = request.url
-                        when (uri.scheme) {
+                        val currentBaseUrl = view.url?.substringBefore('#')
+                        val requestedBaseUrl = uri.toString().substringBefore('#')
+                        if (
+                            request.isForMainFrame &&
+                            uri.fragment != null &&
+                            currentBaseUrl != null &&
+                            requestedBaseUrl == currentBaseUrl
+                        ) {
+                            return false
+                        }
+                        when (uri.scheme?.lowercase()) {
                             "fbanchor" -> {
                                 val id = uri.host ?: uri.path?.trimStart('/') ?: ""
                                 if (id.isNotEmpty()) post { onAnchor.value(id) }
+                                return true
                             }
-                            "http", "https" -> {
+                            "http", "https", "mailto", "tel" -> {
+                                val isReaderAssetUrl =
+                                    uri.scheme?.equals("https", ignoreCase = true) == true &&
+                                        uri.host?.equals("appassets.androidplatform.net", ignoreCase = true) == true
+                                if (isReaderAssetUrl) {
+                                    return false
+                                }
                                 try {
                                     val intent = android.content.Intent(
                                         android.content.Intent.ACTION_VIEW, uri
                                     )
                                     context.startActivity(intent)
                                 } catch (_: Exception) {}
+                                return true
                             }
                         }
-                        return true  // always block WebView from navigating away
+                        return false
                     }
 
                     // Inject the tap listener + restore text settings after every page load
@@ -1081,6 +1149,9 @@ fun ReaderScreen(
         ReadingPreset.fromStored(uiState.readerPreset)
     }
     var showBrightnessRow by remember { mutableStateOf(false) }
+    var openControlCenterAtServices by remember { mutableStateOf(false) }
+    var showReaderAudioSheet by remember { mutableStateOf(false) }
+    var showTextTranslationPageSheet by remember { mutableStateOf(false) }
     var eyeRestReminderMinutes by remember { mutableStateOf<Int?>(null) }
     val readerColorScheme = if (isEInk) {
         inheritedColorScheme
@@ -1440,6 +1511,7 @@ fun ReaderScreen(
                         WebtoonView(
                             viewModel = viewModel,
                             uiState = uiState,
+                            imageScaleMode = uiState.imageScaleMode,
                             onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
                             onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
@@ -1448,6 +1520,7 @@ fun ReaderScreen(
                         PageView(
                             viewModel = viewModel,
                             uiState = uiState,
+                            imageScaleMode = uiState.imageScaleMode,
                             onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
                             onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
@@ -1492,11 +1565,30 @@ fun ReaderScreen(
                 }
 
                 // Нижняя область: Информационные панели (заметки, сноски) и Тулбар
-                Column(
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .background(if (uiState.chromeState == ReaderChromeState.EXPANDED) chromeSurface else Color.Transparent)
+                ) {
+                    // Фоновый слой с размытием — не затрагивает контент (иконки/текст)
+                    if (uiState.chromeState == ReaderChromeState.EXPANDED) {
+                        Spacer(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .then(
+                                    if (effectiveToolbarBlur > 0.01f)
+                                        Modifier.blur(
+                                            radius = (effectiveToolbarBlur * 8f).dp,
+                                            edgeTreatment = BlurredEdgeTreatment.Unbounded
+                                        )
+                                    else Modifier
+                                )
+                                .background(chromeSurface)
+                        )
+                    }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
                         .then(
                             if (uiState.chromeState == ReaderChromeState.EXPANDED) {
                                 Modifier.navigationBarsPadding()
@@ -1562,35 +1654,69 @@ fun ReaderScreen(
                         }
                     }
                 }
+                } // Box (нижняя область)
 
                 // Верхние инструменты - скрываем, если открыты настройки или оглавление
                 if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
-                    Column(
+                    Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .fillMaxWidth()
-                            .background(chromeSurface)
-                            .statusBarsPadding()
-                            .displayCutoutPadding()
                     ) {
+                        // Фоновый слой с размытием — иконки и текст остаются чёткими
+                        Spacer(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .then(
+                                    if (effectiveToolbarBlur > 0.01f)
+                                        Modifier.blur(
+                                            radius = (effectiveToolbarBlur * 8f).dp,
+                                            edgeTreatment = BlurredEdgeTreatment.Unbounded
+                                        )
+                                    else Modifier
+                                )
+                                .background(chromeSurface)
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .displayCutoutPadding()
+                        ) {
                         when (uiState.chromeState) {
                             ReaderChromeState.EXPANDED -> {
                                 ReaderExpandedBar(
                                     title = uiState.comic?.title.orEmpty(),
                                     canShowToc = uiState.tableOfContents.isNotEmpty() || uiState.bookmarkedPages.isNotEmpty(),
                                     showTextSettings = true,
-                                    showOcrAction = !isTextReader,
+                                    showOcrAction = true,
                                     canSwapDirection = uiState.readingMode == ReadingMode.PAGE_LTR ||
                                         uiState.readingMode == ReadingMode.PAGE_RTL,
                                     directionShortcutActive = directionShortcutActive,
                                     showBrightnessRow = showBrightnessRow,
                                     useDirectActions = isTextReader,
+                                    chromeIconOrder = uiState.chromeIconOrder,
+                                    showTocIcon = uiState.chromeShowTocIcon,
+                                    showTextSettingsIcon = uiState.chromeShowStyleIcon,
+                                    showAudioIcon = uiState.chromeShowAudioIcon,
+                                    showDirectionIcon = uiState.chromeShowDirectionIcon,
+                                    showTranslateIcon = uiState.chromeShowTranslateIcon,
+                                    showBrightnessIcon = uiState.chromeShowBrightnessIcon,
                                     onNavigateBack = onNavigateBack,
                                     onToggleToc = viewModel::toggleTocSheet,
                                     onToggleTextSettings = viewModel::toggleTextSettings,
                                     onSwapDirection = viewModel::toggleTapZoneDirectionShortcut,
-                                    onRequestOcr = viewModel::requestOcr,
-                                    onToggleBrightness = { showBrightnessRow = !showBrightnessRow }
+                                    onRequestOcr = {
+                                        if (isTextReader) {
+                                            showTextTranslationPageSheet = true
+                                        } else {
+                                            viewModel.requestOcr()
+                                        }
+                                    },
+                                    onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
+                                    onToggleTtsControls = {
+                                        showReaderAudioSheet = true
+                                    }
                                 )
                                 if (showBrightnessRow) {
                                     ReaderBrightnessRow(
@@ -1601,6 +1727,7 @@ fun ReaderScreen(
                             }
 
                             else -> Unit
+                        }
                         }
                     }
                 }
@@ -1626,13 +1753,63 @@ fun ReaderScreen(
         )
     }
 
+    if (showTextTranslationPageSheet && isTextReader) {
+        TextPageTranslationSheet(
+            entries = uiState.tableOfContents,
+            currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages,
+            onDismiss = { showTextTranslationPageSheet = false },
+            onTranslatePage = { page ->
+                showTextTranslationPageSheet = false
+                viewModel.requestTextPageTranslation(page)
+            }
+        )
+    }
+
+    if (showReaderAudioSheet && isTextReader) {
+        ReaderAudioSheet(
+            title = uiState.comic?.title.orEmpty(),
+            chapterTitle = currentChapterTitle,
+            tocEntries = uiState.tableOfContents,
+            currentPage = uiState.currentPage,
+            runtimeState = ttsRuntimeState,
+            speed = uiState.ttsSpeed,
+            pitch = uiState.ttsPitch,
+            volume = uiState.ttsVolume,
+            sleepTimerMode = uiState.ttsSleepTimerMode,
+            onDismiss = { showReaderAudioSheet = false },
+            onTogglePlayback = ttsController::togglePlayback,
+            onPrevious = ttsController::previousChunk,
+            onNext = ttsController::nextChunk,
+            onStop = {
+                ttsController.stop()
+                showReaderAudioSheet = false
+            },
+            onNavigateToPage = { page ->
+                viewModel.navigateTo(page)
+            },
+            onVoiceNameChange = { value ->
+                viewModel.setTtsVoiceName(value)
+                ttsController.selectVoice(value)
+            },
+            onSpeedChange = viewModel::setTtsSpeed,
+            onPitchChange = viewModel::setTtsPitch,
+            onVolumeChange = viewModel::setTtsVolume,
+            onSleepTimerChange = viewModel::setTtsSleepTimerMode
+        )
+    }
+
     // ── Настройки текста (ModalBottomSheet) ────────────────────────────────────
     if (uiState.showTextSettings) {
         ReaderControlCenterSheet(
             uiState = uiState,
             isTextReader = isTextReader,
             ttsRuntimeState = ttsRuntimeState,
-            onDismiss = viewModel::toggleTextSettings,
+            openAtServicesTab = openControlCenterAtServices,
+            onDismiss = {
+                openControlCenterAtServices = false
+                viewModel.toggleTextSettings()
+            },
             onApplyReadingPreset = viewModel::applyReadingPreset,
             onFontSizeChange = viewModel::setTextFontSize,
             onColorSchemeChange = viewModel::setTextColorScheme,
@@ -1662,6 +1839,8 @@ fun ReaderScreen(
             onToolbarOpacityChange = viewModel::setToolbarOpacity,
             onToolbarBlurChange = viewModel::setToolbarBlur,
             onImageScaleModeChange = viewModel::setImageScaleMode,
+            onChromeIconVisibleChange = viewModel::setChromeIconVisible,
+            onMoveChromeIcon = viewModel::moveChromeIcon,
             onOpenToc = viewModel::toggleTocSheet,
             onToggleBookmark = viewModel::toggleBookmark,
             onRequestOcr = viewModel::requestOcr,
@@ -1685,7 +1864,8 @@ fun ReaderScreen(
             onDismiss = viewModel::dismissSelectedTextActions,
             onTranslate = viewModel::translateFromSelectedTextActions,
             onDictionary = viewModel::openDictionaryFromSelectedTextActions,
-            onExplain = viewModel::explainFromSelectedTextActions
+            onExplain = viewModel::explainFromSelectedTextActions,
+            onSaveQuote = viewModel::saveQuoteFromSelectedTextActions
         )
     }
     uiState.selectedTextTranslation?.let { translationState ->
@@ -1698,7 +1878,8 @@ fun ReaderScreen(
             onTransportChange = viewModel::translateSelectedTextWithTransport,
             onCopy = { text ->
                 clipboardManager.setText(AnnotatedString(text))
-            }
+            },
+            onSaveQuote = viewModel::saveQuoteFromSelectedTextResult
         )
     }
     eyeRestReminderMinutes?.let {
@@ -1733,7 +1914,8 @@ private fun SelectedTextActionSheet(
     onDismiss: () -> Unit,
     onTranslate: () -> Unit,
     onDictionary: () -> Unit,
-    onExplain: () -> Unit
+    onExplain: () -> Unit,
+    onSaveQuote: () -> Unit
 ) {
     val readerText = readerUiText(LocalStrings.current.languageCode)
     ModalBottomSheet(
@@ -1780,6 +1962,12 @@ private fun SelectedTextActionSheet(
                 ) {
                     Text(readerText.selectionExplainAction)
                 }
+                OutlinedButton(
+                    onClick = onSaveQuote,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(readerText.saveQuote)
+                }
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.End)
@@ -1800,7 +1988,8 @@ private fun SelectedTextTranslationSheet(
     onTranslateAsPhrase: () -> Unit,
     onExplain: () -> Unit,
     onTransportChange: (TranslationTransportPreference) -> Unit,
-    onCopy: (String) -> Unit
+    onCopy: (String) -> Unit,
+    onSaveQuote: () -> Unit
 ) {
     val readerText = readerUiText(LocalStrings.current.languageCode)
     val language = LocalStrings.current.languageCode
@@ -2036,6 +2225,12 @@ private fun SelectedTextTranslationSheet(
                     TextButton(onClick = onExplain) {
                         Text(readerText.openExplain)
                     }
+                }
+                TextButton(
+                    onClick = onSaveQuote,
+                    enabled = !state.isLoading && state.originalText.isNotBlank()
+                ) {
+                    Text(readerText.saveQuote)
                 }
                 TextButton(onClick = onDismiss) {
                     Text(readerText.close)
@@ -2367,6 +2562,134 @@ private fun TocBottomSheet(
                     }
                 }
                 else -> Unit
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TextPageTranslationSheet(
+    entries: List<TocEntry>,
+    currentPage: Int,
+    totalPages: Int,
+    onDismiss: () -> Unit,
+    onTranslatePage: (Int) -> Unit
+) {
+    val strings = LocalStrings.current
+    val readerText = readerUiText(strings.languageCode)
+    val title = when (strings.languageCode) {
+        "en" -> "Translate page"
+        "ja" -> "ページを翻訳"
+        "zh" -> "翻译页面"
+        "ko" -> "페이지 번역"
+        else -> "Перевести страницу"
+    }
+    val currentLabel = when (strings.languageCode) {
+        "en" -> "Current"
+        "ja" -> "現在"
+        "zh" -> "当前"
+        "ko" -> "현재"
+        else -> "Текущая"
+    }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 456.dp),
+                contentPadding = PaddingValues(top = 4.dp, bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                if (entries.isNotEmpty()) {
+                    itemsIndexed(entries) { index, entry ->
+                        val nextPageIndex = entries.getOrNull(index + 1)?.pageIndex ?: Int.MAX_VALUE
+                        val isCurrent = currentPage >= entry.pageIndex && currentPage < nextPageIndex
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isCurrent) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onTranslatePage(entry.pageIndex) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = normalizedTocTitle(entry.title),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = readerPageLabel(entry.pageIndex, strings.languageCode),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isCurrent) {
+                                    Text(
+                                        text = currentLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    items(totalPages.coerceAtLeast(1)) { index ->
+                        val isCurrent = index == currentPage
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isCurrent) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onTranslatePage(index) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = readerPageLabel(index, strings.languageCode),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                if (isCurrent) {
+                                    Text(
+                                        text = currentLabel,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -49,13 +49,15 @@ private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
     .addTags(
         "html", "head", "body", "main", "article", "section", "aside", "header", "footer",
         "figure", "figcaption", "hr", "table", "thead", "tbody", "tfoot", "tr", "th", "td",
-        "caption", "colgroup", "col", "sup", "sub"
+        "caption", "colgroup", "col", "sup", "sub", "center", "font", "big", "small"
     )
-    .addAttributes(":all", "id", "class", "title", "lang", "dir", "style")
-    .addAttributes("img", "src", "alt", "title", "width", "height", "loading")
+    .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align")
+    .addAttributes("img", "src", "alt", "title", "width", "height", "loading", "align")
     .addAttributes("a", "href", "name", "target")
+    .addAttributes("font", "size", "face", "color")
     .addAttributes("th", "colspan", "rowspan")
     .addAttributes("td", "colspan", "rowspan")
+    .addAttributes("table", "width", "border", "cellpadding", "cellspacing", "align")
     .addAttributes("col", "span")
     .addProtocols("a", "href", "http", "https", "mailto", "tel", "file", "content")
     .addProtocols("img", "src", "http", "https", "file", "content", "data")
@@ -101,9 +103,156 @@ private fun htmlEscapeText(text: String): String = text
     .replace("<", "&lt;")
     .replace(">", "&gt;")
 
-private fun buildReaderHtmlDocument(body: String, baseUrl: String? = null, extraCss: String = ""): String {
+private fun normalizeReaderHtmlFragment(html: String): String = runCatching {
+    val trimmed = html.trim()
+    if (trimmed.isBlank()) return@runCatching trimmed
+    if (!trimmed.contains("<body", ignoreCase = true) && !trimmed.contains("<html", ignoreCase = true)) {
+        return@runCatching trimmed
+    }
+    val document = Jsoup.parse(trimmed)
+    document.outputSettings(Document.OutputSettings().prettyPrint(false))
+    document.select("body body").forEach { it.unwrap() }
+    document.select("body html").forEach { it.unwrap() }
+    document.body().html().trim().ifBlank { trimmed }
+}.getOrElse { html }
+
+private const val DEFAULT_READER_HTML_CSS = """
+    body { margin: 0; padding: 0 0 24px; }
+    img { max-width: 100%; height: auto; display: block; margin: 0 auto 1rem; }
+    figure { margin: 1rem 0; }
+    figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
+    pre, code { white-space: pre-wrap; word-break: break-word; }
+    pre {
+      padding: 0.85rem 1rem;
+      border-radius: 14px;
+      background: rgba(120,120,120,0.10);
+      overflow-x: auto;
+    }
+    code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
+    ul, ol { padding-left: 1.5rem; }
+    li + li { margin-top: 0.25rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
+    th, td { border: 1px solid rgba(120,120,120,0.35); padding: 0.5rem 0.65rem; text-align: left; }
+    th { font-weight: 600; }
+    hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: 1rem 0; }
+    del { opacity: 0.75; }
+    a { text-decoration: underline; }
+    .footnotes { margin-top: 1.25rem; font-size: 0.94em; }
+    .footnotes ol { padding-left: 1.25rem; }
+    blockquote {
+      margin: 1rem 0;
+      padding-left: 1rem;
+      border-left: 3px solid rgba(120,120,120,0.35);
+    }
+"""
+
+private const val MOBI_READER_HTML_CSS = """
+    body {
+      margin: 0 auto;
+      padding: 22px 8px 28px;
+      max-width: 680px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: inherit;
+    }
+    p {
+      margin: 0.2em 0;
+      text-align: justify;
+      text-indent: 1.5em;
+    }
+    p:first-child,
+    h1 + p,
+    h2 + p,
+    h3 + p,
+    h4 + p,
+    h5 + p,
+    h6 + p,
+    center + p,
+    [align="center"] + p {
+      text-indent: 0;
+    }
+    h1, h2, h3, h4, h5, h6,
+    center,
+    [align="center"] {
+      text-align: center;
+      text-indent: 0;
+    }
+    p[align="center"],
+    center p,
+    .center,
+    .center p {
+      text-align: center;
+      text-indent: 0;
+    }
+    p[align="center"],
+    center,
+    center p,
+    .center,
+    .center p {
+      margin: 0.9em 0;
+    }
+    h1, h2, h3 {
+      line-height: 1.3;
+      margin: 1.6em 0 0.7em;
+      font-weight: 700;
+    }
+    h1 {
+      font-size: 1.7em;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    h2 {
+      font-size: 1.35em;
+      letter-spacing: 0.02em;
+    }
+    h3 {
+      font-size: 1.15em;
+    }
+    h4, h5, h6 {
+      font-size: 1em;
+      margin: 1.2em 0 0.5em;
+    }
+    .chapter,
+    .titlepage,
+    .title-page {
+      page-break-before: always;
+      break-before: page;
+    }
+    img { max-width: 100%; height: auto; display: block; margin: 0.8rem auto; }
+    hr { border: 0; border-top: 1px solid rgba(120,120,120,0.3); margin: 1.5em 3em; }
+    blockquote {
+      margin: 1em 1.5em;
+      padding-left: 1em;
+      border-left: 3px solid rgba(120,120,120,0.3);
+      font-style: italic;
+    }
+    a { color: inherit; text-decoration: underline; }
+"""
+
+private const val PRESERVE_LAYOUT_HTML_CSS = """
+    body {
+      margin: 0;
+      padding: 8px 0 24px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    img { max-width: 100%; height: auto; }
+    pre, code { white-space: pre-wrap; word-break: break-word; }
+    table { max-width: 100%; border-collapse: collapse; }
+"""
+
+private fun buildReaderHtmlDocument(
+    body: String,
+    baseUrl: String? = null,
+    extraCss: String = "",
+    baseCss: String = DEFAULT_READER_HTML_CSS,
+    preservePublisherLayout: Boolean = false
+): String {
     val baseTag = baseUrl?.let { """  <base href="${it.replace("\"", "%22")}">""" }.orEmpty()
     val extraStyleTag = if (extraCss.isNotBlank()) "<style>$extraCss</style>" else ""
+    val preserveLayoutAttr = if (preservePublisherLayout) """ data-mrcomic-preserve-layout="true"""" else ""
+    val normalizedBody = normalizeReaderHtmlFragment(body)
     return """
         <!DOCTYPE html>
         <html>
@@ -111,38 +260,12 @@ private fun buildReaderHtmlDocument(body: String, baseUrl: String? = null, extra
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width,initial-scale=1">
           $baseTag
-          $extraStyleTag
           <style>
-            body { margin: 0; padding: 0 0 24px; }
-            img { max-width: 100%; height: auto; display: block; margin: 0 auto 1rem; }
-            figure { margin: 1rem 0; }
-            figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
-            pre, code { white-space: pre-wrap; word-break: break-word; }
-            pre {
-              padding: 0.85rem 1rem;
-              border-radius: 14px;
-              background: rgba(120,120,120,0.10);
-              overflow-x: auto;
-            }
-            code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
-            ul, ol { padding-left: 1.5rem; }
-            li + li { margin-top: 0.25rem; }
-            table { width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
-            th, td { border: 1px solid rgba(120,120,120,0.35); padding: 0.5rem 0.65rem; text-align: left; }
-            th { font-weight: 600; }
-            hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: 1rem 0; }
-            del { opacity: 0.75; }
-            a { text-decoration: underline; }
-            .footnotes { margin-top: 1.25rem; font-size: 0.94em; }
-            .footnotes ol { padding-left: 1.25rem; }
-            blockquote {
-              margin: 1rem 0;
-              padding-left: 1rem;
-              border-left: 3px solid rgba(120,120,120,0.35);
-            }
+            $baseCss
           </style>
+          $extraStyleTag
         </head>
-        <body>$body</body>
+        <body$preserveLayoutAttr>$normalizedBody</body>
         </html>
     """.trimIndent()
 }
@@ -309,6 +432,7 @@ internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): S
         Jsoup.parseBodyFragment(raw, normalizedBaseUrl)
     }
     document.outputSettings(Document.OutputSettings().prettyPrint(false))
+    val extractedCss = document.select("style").joinToString("\n") { it.data() }
     document.select(
         "script, style, noscript, template, iframe, object, embed, canvas, form, input, button, select, textarea"
     ).remove()
@@ -323,18 +447,27 @@ internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): S
         Document.OutputSettings().prettyPrint(false)
     ).trim()
 
-    val titleBlock = title.takeIf { it.isNotBlank() && !cleanedBody.contains(title, ignoreCase = true) }
+    val titleBlock = title.takeIf {
+        it.isNotBlank() &&
+            !cleanedBody.contains(title, ignoreCase = true) &&
+            !document.body().hasAttr("data-mrcomic-preserve-layout")
+    }
         ?.let { "<h1>${htmlEscapeText(it)}</h1>" }
         .orEmpty()
 
     val content = when {
-        cleanedBody.isNotBlank() -> titleBlock + cleanedBody
+        cleanedBody.isNotBlank() -> titleBlock + normalizeReaderHtmlFragment(cleanedBody)
         body.text().isNotBlank() -> titleBlock + "<p>${htmlEscapeText(body.text())}</p>"
         title.isNotBlank() -> "<h1>${htmlEscapeText(title)}</h1>"
         else -> "<p></p>"
     }
 
-    return buildReaderHtmlDocument(content)
+    return buildReaderHtmlDocument(
+        body = content,
+        baseUrl = baseUrl,
+        extraCss = extractedCss,
+        preservePublisherLayout = true
+    )
 }
 
 class TextFormatReader @Inject constructor(
@@ -344,6 +477,7 @@ class TextFormatReader @Inject constructor(
 ) : FormatReader {
 
     private val htmlPages: List<String> by lazy { parsePages() }
+    private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex() }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
         htmlPages.size.coerceAtLeast(1)
@@ -358,7 +492,31 @@ class TextFormatReader @Inject constructor(
     override fun htmlBaseUrl(): String? {
         if (path.startsWith("content://")) return null
         val parent = File(path).parentFile ?: return null
-        return Uri.fromFile(parent).toString().trimEnd('/') + "/"
+        return parent.toURI().toString().trimEnd('/') + "/"
+    }
+
+    override fun resolveHrefToPage(href: String): Int? {
+        val normalizedHref = href.trim()
+        if (normalizedHref.isBlank()) return null
+
+        val hrefWithoutQuery = normalizedHref.substringBefore('?')
+        val filePart = hrefWithoutQuery.substringBefore('#').trim().trimStart('/')
+        val fragment = hrefWithoutQuery.substringAfter('#', "").trim()
+
+        if (fragment.isNotBlank()) {
+            anchorPageIndex[fragment]?.let { return it }
+        }
+
+        if (filePart.isBlank() || path.startsWith("content://")) return null
+
+        val currentFile = File(path)
+        val requestedName = filePart.substringAfterLast('/')
+        val requestedStem = requestedName.substringBeforeLast('.', requestedName)
+        return when {
+            requestedName.equals(currentFile.name, ignoreCase = true) -> 0
+            requestedStem.equals(currentFile.nameWithoutExtension, ignoreCase = true) -> 0
+            else -> null
+        }
     }
 
     override fun close() = Unit
@@ -370,7 +528,17 @@ class TextFormatReader @Inject constructor(
                 val bytes = readSourceBytes() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
                 when (val extracted = MobiTextSupport.extract(bytes)) {
                     is MobiExtractionResult.Success -> {
-                        if (extracted.isMarkup) markupPages(extracted.content)
+                        if (extracted.isMarkup) {
+                            collapseRedundantMobiFrontMatterPages(
+                                markupPages(
+                                raw = preprocessMobiMarkup(extracted.content),
+                                baseUrl = htmlBaseUrl(),
+                                preservePublisherLayout = true,
+                                baseCss = MOBI_READER_HTML_CSS,
+                                keepWholeDocument = true
+                                )
+                            )
+                        }
                         else paginateBlocks(textBlocks(extracted.content))
                     }
                     is MobiExtractionResult.Unsupported -> {
@@ -389,7 +557,13 @@ class TextFormatReader @Inject constructor(
             else -> {
                 val raw = readSourceText() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
                 when (format) {
-                    ComicFormat.HTML -> paginateHtmlDocument(raw, htmlBaseUrl())
+                    ComicFormat.HTML -> paginateHtmlDocument(
+                        raw = raw,
+                        baseUrl = htmlBaseUrl(),
+                        preservePublisherLayout = true,
+                        baseCss = PRESERVE_LAYOUT_HTML_CSS,
+                        keepWholeDocument = true
+                    )
                     ComicFormat.MARKDOWN -> paginateBlocks(markdownBlocks(raw))
                     ComicFormat.RTF -> paginateBlocks(textBlocks(rtfToPlainText(raw)))
                     else -> paginateBlocks(textBlocks(raw))
@@ -620,6 +794,7 @@ class TextFormatReader @Inject constructor(
     ): String? {
         val headingLevel = docxHeadingLevel(paragraph)
         val alignment = docxParagraphAlignment(paragraph)
+        val anchorId = docxParagraphAnchorId(paragraph)
         val content = renderDocxInlineChildren(paragraph, archive).ifBlank {
             xmlTextToPlain(paragraph.outerHtml()).takeIf { it.isNotBlank() }
                 ?.let { escapeHtml(it).replace("\n", "<br/>") }
@@ -631,10 +806,14 @@ class TextFormatReader @Inject constructor(
             ?.takeIf { it != "start" && it != "left" }
             ?.let { "text-align:$it;" }
             .orEmpty()
+        val idAttr = anchorId
+            ?.takeIf { it.isNotBlank() }
+            ?.let { " id=\"${escapeHtml(it)}\"" }
+            .orEmpty()
         return when (headingLevel) {
-            null -> if (style.isBlank()) "<p>$content</p>" else "<p style=\"$style\">$content</p>"
-            else -> if (style.isBlank()) "<h$headingLevel>$content</h$headingLevel>"
-                else "<h$headingLevel style=\"$style\">$content</h$headingLevel>"
+            null -> if (style.isBlank()) "<p$idAttr>$content</p>" else "<p$idAttr style=\"$style\">$content</p>"
+            else -> if (style.isBlank()) "<h$headingLevel$idAttr>$content</h$headingLevel>"
+                else "<h$headingLevel$idAttr style=\"$style\">$content</h$headingLevel>"
         }
     }
 
@@ -801,6 +980,17 @@ class TextFormatReader @Inject constructor(
             ?.getOrNull(1)
             ?.toIntOrNull()
             ?.coerceIn(1, 6)
+    }
+
+    private fun docxParagraphAnchorId(paragraph: Element): String? {
+        return paragraph.getElementsByTag("w:bookmarkStart")
+            .asSequence()
+            .mapNotNull { bookmark ->
+                bookmark.attr("w:name")
+                    .trim()
+                    .takeIf { it.isNotBlank() && !it.equals("_GoBack", ignoreCase = true) }
+            }
+            .firstOrNull()
     }
 
     private fun docxParagraphAlignment(paragraph: Element): String? {
@@ -1031,12 +1221,32 @@ class TextFormatReader @Inject constructor(
         }
     }
 
-    private fun markupPages(raw: String): List<String> {
+    private fun markupPages(
+        raw: String,
+        baseUrl: String?,
+        preservePublisherLayout: Boolean = false,
+        baseCss: String = DEFAULT_READER_HTML_CSS,
+        keepWholeDocument: Boolean = false
+    ): List<String> {
         val splitPages = splitMarkupPages(raw)
         if (splitPages.size > 1) {
-            return splitPages.map(::normalizeHtmlDocument)
+            return splitPages.flatMap {
+                paginateHtmlDocument(
+                    raw = it,
+                    baseUrl = baseUrl,
+                    preservePublisherLayout = preservePublisherLayout,
+                    baseCss = baseCss,
+                    keepWholeDocument = keepWholeDocument
+                )
+            }
         }
-        return paginateBlocks(htmlBlocks(raw))
+        return paginateHtmlDocument(
+            raw = raw,
+            baseUrl = baseUrl,
+            preservePublisherLayout = preservePublisherLayout,
+            baseCss = baseCss,
+            keepWholeDocument = keepWholeDocument
+        )
     }
 
     private fun splitMarkupPages(raw: String): List<String> {
@@ -1102,7 +1312,13 @@ class TextFormatReader @Inject constructor(
      * using the same CHARS_PER_PAGE budget as other text formats.
      * The base URL is injected into every page's <head> so relative image/link paths resolve.
      */
-    private fun paginateHtmlDocument(raw: String, baseUrl: String?): List<String> {
+    private fun paginateHtmlDocument(
+        raw: String,
+        baseUrl: String?,
+        preservePublisherLayout: Boolean = false,
+        baseCss: String = DEFAULT_READER_HTML_CSS,
+        keepWholeDocument: Boolean = false
+    ): List<String> {
         val normalizedBase = baseUrl.orEmpty()
         val document = if (raw.contains("<html", ignoreCase = true) ||
                            raw.contains("<body", ignoreCase = true) ||
@@ -1127,15 +1343,18 @@ class TextFormatReader @Inject constructor(
         // Extract block-level children as individual cleaned HTML snippets.
         val childBlocks = body.children()
             .map { el ->
-                Jsoup.clean(
-                    el.outerHtml(), normalizedBase, HTML_READER_SAFE_LIST,
-                    Document.OutputSettings().prettyPrint(false)
-                ).trim()
+                normalizeReaderHtmlFragment(
+                    Jsoup.clean(
+                        el.outerHtml(), normalizedBase, HTML_READER_SAFE_LIST,
+                        Document.OutputSettings().prettyPrint(false)
+                    ).trim()
+                )
             }
             .filter { it.isNotBlank() }
             .toMutableList()
 
-        if (title.isNotBlank() &&
+        if (!preservePublisherLayout &&
+            title.isNotBlank() &&
             childBlocks.none { it.contains(title, ignoreCase = true) }
         ) {
             childBlocks.add(0, "<h1>${htmlEscapeText(title)}</h1>")
@@ -1144,9 +1363,24 @@ class TextFormatReader @Inject constructor(
         if (childBlocks.isEmpty()) {
             val fallback = body.text().trim()
             return listOf(buildReaderHtmlDocument(
-                if (fallback.isNotBlank()) "<p>${htmlEscapeText(fallback)}</p>" else "<p></p>",
-                baseUrl, extractedCss
+                body = if (fallback.isNotBlank()) "<p>${htmlEscapeText(fallback)}</p>" else "<p></p>",
+                baseUrl = baseUrl,
+                extraCss = extractedCss,
+                baseCss = baseCss,
+                preservePublisherLayout = preservePublisherLayout
             ))
+        }
+
+        if (keepWholeDocument) {
+            return listOf(
+                buildReaderHtmlDocument(
+                    body = childBlocks.joinToString(separator = ""),
+                    baseUrl = baseUrl,
+                    extraCss = extractedCss,
+                    baseCss = baseCss,
+                    preservePublisherLayout = preservePublisherLayout
+                )
+            )
         }
 
         // Paginate using the shared budget, but produce pages with baseUrl injected.
@@ -1156,7 +1390,13 @@ class TextFormatReader @Inject constructor(
 
         fun flush() {
             if (buffer.isNotEmpty()) {
-                pages += buildReaderHtmlDocument(buffer.toString(), baseUrl, extractedCss)
+                pages += buildReaderHtmlDocument(
+                    body = buffer.toString(),
+                    baseUrl = baseUrl,
+                    extraCss = extractedCss,
+                    baseCss = baseCss,
+                    preservePublisherLayout = preservePublisherLayout
+                )
                 buffer.clear()
                 chars = 0
             }
@@ -1170,8 +1410,182 @@ class TextFormatReader @Inject constructor(
         }
         flush()
 
-        return pages.ifEmpty { listOf(buildReaderHtmlDocument("<p></p>", baseUrl)) }
+        return pages.ifEmpty {
+            listOf(
+                buildReaderHtmlDocument(
+                    body = "<p></p>",
+                    baseUrl = baseUrl,
+                    baseCss = baseCss,
+                    preservePublisherLayout = preservePublisherLayout
+                )
+            )
+        }
     }
+
+    private fun buildAnchorPageIndex(): Map<String, Int> {
+        val result = linkedMapOf<String, Int>()
+        htmlPages.forEachIndexed { index, html ->
+            runCatching {
+                val document = Jsoup.parse(html)
+                document.select("[id]").forEach { element ->
+                    val id = element.id().trim()
+                    if (id.isNotBlank()) {
+                        result.putIfAbsent(id, index)
+                    }
+                }
+                document.select("a[name]").forEach { element ->
+                    val name = element.attr("name").trim()
+                    if (name.isNotBlank()) {
+                        result.putIfAbsent(name, index)
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    /**
+     * Pre-process MOBI markup: convert <font size="N"><b>text</b></font> inside
+     * centered paragraphs into proper heading tags, and unwrap structural blockquotes.
+     */
+    private fun preprocessMobiMarkup(raw: String): String {
+        var html = raw
+        // Convert <p align="center"><font size="5"><b>text</b></font></p> → <h2>text</h2>
+        html = html.replace(
+            Regex(
+                """<p\b[^>]*align\s*=\s*["']center["'][^>]*>\s*<font\b[^>]*size\s*=\s*["']([4-7])["'][^>]*>\s*<b>(.*?)</b>\s*</font>\s*</p>""",
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+            )
+        ) { match ->
+            val size = match.groupValues[1].toIntOrNull() ?: 4
+            val content = match.groupValues[2].trim()
+            val tag = if (size >= 5) "h2" else "h3"
+            "<$tag>$content</$tag>"
+        }
+        // Convert <p align="center"><b><font size="N">text</font></b></p> → heading (alt order)
+        html = html.replace(
+            Regex(
+                """<p\b[^>]*align\s*=\s*["']center["'][^>]*>\s*<b>\s*<font\b[^>]*size\s*=\s*["']([4-7])["'][^>]*>(.*?)</font>\s*</b>\s*</p>""",
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+            )
+        ) { match ->
+            val size = match.groupValues[1].toIntOrNull() ?: 4
+            val content = match.groupValues[2].trim()
+            val tag = if (size >= 5) "h2" else "h3"
+            "<$tag>$content</$tag>"
+        }
+        // Convert remaining <font size="5+"><b>text</b></font> → <strong> with larger size
+        html = html.replace(
+            Regex(
+                """<font\b[^>]*size\s*=\s*["']([4-7])["'][^>]*>(.*?)</font>""",
+                setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+            )
+        ) { match ->
+            match.groupValues[2].trim()
+        }
+        return runCatching {
+            val document = if (html.contains("<html", ignoreCase = true) || html.contains("<body", ignoreCase = true)) {
+                Jsoup.parse(html)
+            } else {
+                Jsoup.parseBodyFragment(html)
+            }
+            document.outputSettings(Document.OutputSettings().prettyPrint(false))
+            document.select("body body").forEach { it.unwrap() }
+            document.select("html html").forEach { it.unwrap() }
+
+            // MOBI front matter often comes wrapped in nested blockquotes that are not semantic quotes,
+            // just a crude way to center title lines. Flatten them into book-like centered blocks.
+            var changed = true
+            while (changed) {
+                changed = false
+                document.select("blockquote").forEach { quote ->
+                    val child = quote.children().singleOrNull()
+                    if (child != null && child.normalName() == "blockquote" && quote.ownText().isBlank()) {
+                        quote.unwrap()
+                        changed = true
+                    }
+                }
+            }
+
+            document.select("blockquote").forEach { quote ->
+                val text = quote.text().replace('\u00A0', ' ').trim()
+                val align = quote.attr("align").lowercase()
+                val onlyBold = quote.children().all { it.normalName() == "b" || it.normalName() == "strong" }
+                val containsOnlyInline = quote.children().all { child ->
+                    child.normalName() in setOf("b", "strong", "i", "em", "font", "span", "br")
+                }
+                when {
+                    text.isBlank() -> quote.remove()
+                    align == "center" && text.length <= 80 -> {
+                        val replacementTag = if (text.length <= 26) "h2" else "h3"
+                        quote.tagName(replacementTag)
+                        quote.clearAttributes()
+                        quote.text(text)
+                    }
+                    align == "center" || (onlyBold && containsOnlyInline && text.length <= 120) -> {
+                        quote.tagName("p")
+                        quote.clearAttributes()
+                        quote.attr("align", "center")
+                        quote.html("<strong>${htmlEscapeText(text)}</strong>")
+                    }
+                    else -> {
+                        quote.tagName("p")
+                        quote.clearAttributes()
+                        quote.attr("align", "justify")
+                        quote.text(text)
+                    }
+                }
+            }
+
+            document.select("p").forEach { paragraph ->
+                val text = paragraph.text().replace('\u00A0', ' ').trim()
+                if (text.isBlank()) {
+                    paragraph.remove()
+                }
+            }
+
+            if (document.body().children().size == 1 && document.body().child(0).normalName() == "body") {
+                document.body().child(0).unwrap()
+            }
+            document.outerHtml()
+        }.getOrDefault(html)
+    }
+
+    private fun collapseRedundantMobiFrontMatterPages(pages: List<String>): List<String> {
+        if (pages.size < 3) return pages
+
+        val firstText = visibleReaderText(pages[0])
+        val secondText = visibleReaderText(pages[1])
+        val thirdText = visibleReaderText(pages[2])
+
+        val firstTokens = frontMatterTokens(firstText)
+        val secondTokens = frontMatterTokens(secondText)
+        val sharedTokens = firstTokens.intersect(secondTokens)
+        val looksLikeRepeatedTitleSpread =
+            firstText.length in 1..160 &&
+                secondText.length in 1..160 &&
+                thirdText.length > 160 &&
+                sharedTokens.size >= 2
+
+        return if (looksLikeRepeatedTitleSpread) {
+            listOf(pages.first()) + pages.drop(2)
+        } else {
+            pages
+        }
+    }
+
+    private fun visibleReaderText(html: String): String = html
+        .replace(Regex("(?is)<style\\b[^>]*>.*?</style>"), " ")
+        .replace(Regex("(?is)<script\\b[^>]*>.*?</script>"), " ")
+        .replace(Regex("<[^>]+>"), " ")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+
+    private fun frontMatterTokens(text: String): Set<String> = text
+        .lowercase()
+        .split(Regex("[^\\p{L}\\p{Nd}]+"))
+        .filter { token -> token.length >= 4 }
+        .toSet()
 
     private fun wrapHtml(body: String): String = buildReaderHtmlDocument(body)
     private fun escapeHtml(text: String): String = htmlEscapeText(text)

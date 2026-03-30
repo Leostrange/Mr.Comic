@@ -39,13 +39,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.core.model.Comic
+import com.example.core.model.ComicLibraryShelf
 import com.example.core.model.ComicFormat
 import com.example.core.model.isReadCompleted
 import com.example.core.model.isTextReadingFormat
+import com.example.core.model.libraryShelfCategory
 import com.example.core.ui.library.normalizeLibraryGraphicCoverStyle
 import java.io.File
 
-internal fun Comic.isTextBookFormat(): Boolean = format.isTextReadingFormat()
+internal fun Comic.isTextBookFormat(): Boolean = when (libraryShelfCategory()) {
+    ComicLibraryShelf.BOOKS -> true
+    ComicLibraryShelf.GRAPHIC -> false
+    ComicLibraryShelf.AUTO -> format.isTextReadingFormat()
+}
 
 internal fun Comic.isGraphicVolumeFormat(): Boolean = when (format) {
     ComicFormat.CBZ,
@@ -55,8 +61,8 @@ internal fun Comic.isGraphicVolumeFormat(): Boolean = when (format) {
     ComicFormat.SEVENZ,
     ComicFormat.TAR,
     ComicFormat.FOLDER,
-    ComicFormat.PDF -> true
-    else -> false
+    ComicFormat.PDF -> libraryShelfCategory() != ComicLibraryShelf.BOOKS
+    else -> libraryShelfCategory() == ComicLibraryShelf.GRAPHIC
 }
 
 internal fun Comic.formatLabel(): String? = when (format) {
@@ -79,25 +85,25 @@ internal fun FormatBadge(
     modifier: Modifier = Modifier
 ) {
     val container = if (isGraphic) {
-        Color.Black.copy(alpha = 0.35f)
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
     } else {
-        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     }
     val content = if (isGraphic) {
-        Color.White
+        MaterialTheme.colorScheme.onSurface
     } else {
-        MaterialTheme.colorScheme.onSecondaryContainer
+        MaterialTheme.colorScheme.onSurface
     }
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(6.dp),
         color = container,
         border = androidx.compose.foundation.BorderStroke(
-            width = 0.5.dp,
+            width = 0.6.dp,
             color = if (isGraphic) {
-                Color.White.copy(alpha = 0.15f)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
             } else {
-                MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.26f)
             }
         )
     ) {
@@ -138,17 +144,6 @@ internal fun BoxScope.ComicCoverTreatment(
                             width = 0.65.dp,
                             color = outlineColor.copy(alpha = 0.82f),
                             shape = shape
-                        )
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = 0.045f), Color.Transparent)
-                            )
                         )
                 )
                 if (comic.isReadCompleted()) {
@@ -436,15 +431,6 @@ internal fun BoxScope.ComicCoverTreatment(
                                 )
                             )
                     )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.22f)
-                            .height(if (hasCover) 5.dp else 7.dp)
-                            .align(Alignment.TopEnd)
-                            .padding(end = if (hasCover) 10.dp else 12.dp, top = 8.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(Color.White.copy(alpha = if (hasCover) 0.06f else 0.12f))
-                    )
                     if (!hasCover) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             val frameInset = size.width * 0.065f
@@ -553,9 +539,7 @@ internal fun BoxScope.FolderCoverTreatment(
     modifier: Modifier = Modifier
 ) {
     val frameShape = RoundedCornerShape(14.dp)
-    val accentTint = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = if (hasCover) 0.84f else 0.76f)
     val stackAccent = MaterialTheme.colorScheme.primary.copy(alpha = if (hasCover) 0.2f else 0.3f)
-    val collectionCount = (fileCount + subfolderCount).coerceAtLeast(fileCount).coerceAtLeast(1)
     val visibleVolumes = fileCount.coerceIn(2, 4)
     val visibleSets = subfolderCount.coerceIn(0, 2)
     Box(modifier = modifier.fillMaxSize())
@@ -606,34 +590,6 @@ internal fun BoxScope.FolderCoverTreatment(
                     )
             )
         }
-    }
-    
-    // Top tab
-    Box(
-        modifier = Modifier
-            .align(Alignment.TopStart)
-            .padding(start = 10.dp, top = 8.dp)
-            .width(44.dp)
-            .height(10.dp)
-            .clip(RoundedCornerShape(999.dp))
-            .background(accentTint.copy(alpha = 0.74f))
-    )
-    
-    // Counter badge
-    Surface(
-        modifier = Modifier
-            .align(Alignment.TopEnd)
-            .padding(top = 8.dp, end = 8.dp),
-        shape = RoundedCornerShape(999.dp),
-        color = Color.Black.copy(alpha = 0.3f), // Glassmorphism update here!
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f))
-    ) {
-        Text(
-            text = collectionCount.toString(),
-            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-            color = Color.White
-        )
     }
     
     // Top inner shadow
