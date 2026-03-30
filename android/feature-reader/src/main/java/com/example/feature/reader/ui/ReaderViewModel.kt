@@ -11,6 +11,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.core.text.HtmlCompat
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
@@ -205,7 +206,15 @@ data class ReaderUiState(
     /** Eye-rest reminder interval in minutes. */
     val eyeRestMinutes: Int = 20,
     /** Global mascot visibility for reader chrome and milestone feedback. */
-    val mascotUiEnabled: Boolean = true
+    val mascotUiEnabled: Boolean = true,
+    /** Reader top chrome icons visibility and manual order. */
+    val chromeIconOrder: String = ReaderChromeButton.defaultStoredOrder,
+    val chromeShowTocIcon: Boolean = true,
+    val chromeShowStyleIcon: Boolean = true,
+    val chromeShowAudioIcon: Boolean = true,
+    val chromeShowDirectionIcon: Boolean = true,
+    val chromeShowTranslateIcon: Boolean = true,
+    val chromeShowBrightnessIcon: Boolean = true
 )
 
 data class SelectedTextTranslationState(
@@ -726,6 +735,26 @@ class ReaderViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("ReaderViewModel", "Failed to save page for OCR", e)
             }
+        }
+    }
+
+    fun requestTextPageTranslation(page: Int = _uiState.value.currentPage) {
+        viewModelScope.launch {
+            val reader = formatReader ?: return@launch
+            val totalPages = _uiState.value.totalPages
+            val safePage = page.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+            val html = runCatching { reader.getHtmlPage(safePage) }.getOrNull() ?: return@launch
+            val plainText = HtmlCompat.fromHtml(html, HtmlCompat.FROM_HTML_MODE_LEGACY)
+                .toString()
+                .replace('\u00A0', ' ')
+                .replace(Regex("\\s+"), " ")
+                .trim()
+                .take(5000)
+            if (plainText.isBlank()) return@launch
+            translateSelectedText(
+                selectedText = plainText,
+                preferDictionary = false
+            )
         }
     }
 
@@ -1521,11 +1550,15 @@ class ReaderViewModel @Inject constructor(
         val filePart = if (hashIdx >= 0) cleanHref.substring(0, hashIdx) else cleanHref
         val fragPart = if (hashIdx >= 0) cleanHref.substring(hashIdx + 1) else cleanHref
 
-        // 1. Try cross-file page navigation when a filename is present
-        if (filePart.isNotBlank() && filePart.contains('.')) {
+        // 1. Try page navigation for cross-file links and internal document anchors.
+        // For bare "#fragment" links inside the current page we avoid reloading the same
+        // page so the WebView can keep its native in-page scroll behaviour.
+        if ((filePart.isNotBlank() && filePart.contains('.')) || cleanHref.startsWith("#")) {
             val pageIdx = formatReader?.resolveHrefToPage(cleanHref)
             if (pageIdx != null && pageIdx >= 0) {
-                navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
+                if (pageIdx != _uiState.value.currentPage) {
+                    navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
+                }
                 return
             }
         }
@@ -2153,6 +2186,45 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun setChromeIconVisible(icon: String, visible: Boolean) {
+        when (ReaderChromeButton.fromStored(icon) ?: return) {
+            ReaderChromeButton.TOC -> {
+                _uiState.update { it.copy(chromeShowTocIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_TOC, visible) }
+            }
+            ReaderChromeButton.STYLE -> {
+                _uiState.update { it.copy(chromeShowStyleIcon = true) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_STYLE, true) }
+            }
+            ReaderChromeButton.AUDIO -> {
+                _uiState.update { it.copy(chromeShowAudioIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_AUDIO, visible) }
+            }
+            ReaderChromeButton.DIRECTION -> {
+                _uiState.update { it.copy(chromeShowDirectionIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, visible) }
+            }
+            ReaderChromeButton.TRANSLATE -> {
+                _uiState.update { it.copy(chromeShowTranslateIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, visible) }
+            }
+            ReaderChromeButton.BRIGHTNESS -> {
+                _uiState.update { it.copy(chromeShowBrightnessIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, visible) }
+            }
+        }
+    }
+
+    fun moveChromeIcon(icon: String, delta: Int) {
+        if (delta == 0) return
+        if (ReaderChromeButton.fromStored(icon) == ReaderChromeButton.STYLE) return
+        val updatedOrder = ReaderChromeButton.move(_uiState.value.chromeIconOrder, icon, delta)
+        _uiState.update { it.copy(chromeIconOrder = updatedOrder) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_CHROME_ICON_ORDER, updatedOrder)
+        }
+    }
+
     private fun saveProgress(
         page: Int,
         progressSource: ReaderNavigationProgressSource
@@ -2633,6 +2705,18 @@ class ReaderViewModel @Inject constructor(
         val eyeRestEnabled = readerPreferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false).first()
         val eyeRestMinutes = readerPreferences.get(PreferencesKeys.READER_EYE_REST_MINUTES, 20).first().coerceIn(10, 60)
         val mascotUiEnabled = readerPreferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true).first()
+        val chromeIconOrder = ReaderChromeButton.normalizeStoredOrder(
+            readerPreferences.get(
+                PreferencesKeys.READER_CHROME_ICON_ORDER,
+                ReaderChromeButton.defaultStoredOrder
+            ).first()
+        )
+        val chromeShowTocIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_TOC, true).first()
+        val chromeShowStyleIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_STYLE, true).first()
+        val chromeShowAudioIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_AUDIO, true).first()
+        val chromeShowDirectionIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, true).first()
+        val chromeShowTranslateIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true).first()
+        val chromeShowBrightnessIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true).first()
         val readerPreset = ReadingPreset.fromStored(
             readerPreferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name).first()
         )
@@ -2690,7 +2774,14 @@ class ReaderViewModel @Inject constructor(
                 readerPreset     = readerPreset.name,
                 eyeRestEnabled   = eyeRestEnabled,
                 eyeRestMinutes   = eyeRestMinutes,
-                mascotUiEnabled  = mascotUiEnabled
+                mascotUiEnabled  = mascotUiEnabled,
+                chromeIconOrder = chromeIconOrder,
+                chromeShowTocIcon = chromeShowTocIcon,
+                chromeShowStyleIcon = chromeShowStyleIcon,
+                chromeShowAudioIcon = chromeShowAudioIcon,
+                chromeShowDirectionIcon = chromeShowDirectionIcon,
+                chromeShowTranslateIcon = chromeShowTranslateIcon,
+                chromeShowBrightnessIcon = chromeShowBrightnessIcon
             )
         }
         restartEyeRestTimer()

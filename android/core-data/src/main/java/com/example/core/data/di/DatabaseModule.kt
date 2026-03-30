@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.example.core.data.db.AppDatabase
 import com.example.core.data.db.AppDatabaseMigrations
+import com.example.core.data.db.AudiobookDao
 import com.example.core.data.db.QuoteDao
 import dagger.Module
 import dagger.Provides
@@ -20,11 +21,19 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "comics_db")
-            .addMigrations(AppDatabaseMigrations.MIGRATION_1_2)
+            .addMigrations(
+                AppDatabaseMigrations.MIGRATION_1_2,
+                AppDatabaseMigrations.MIGRATION_2_3,
+                AppDatabaseMigrations.MIGRATION_3_4
+            )
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
 
     @Provides
     @Singleton
     fun provideQuoteDao(appDatabase: AppDatabase): QuoteDao = appDatabase.quoteDao()
+
+    @Provides
+    @Singleton
+    fun provideAudiobookDao(db: AppDatabase): AudiobookDao = db.audiobookDao()
 }

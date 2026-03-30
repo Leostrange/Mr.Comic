@@ -2,10 +2,8 @@ package com.example.feature.reader.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
@@ -26,6 +24,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
@@ -44,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -141,15 +139,22 @@ fun ReaderExpandedBar(
     directionShortcutActive: Boolean,
     showBrightnessRow: Boolean,
     useDirectActions: Boolean = false,
+    chromeIconOrder: String,
+    showTocIcon: Boolean = true,
+    showTextSettingsIcon: Boolean = true,
+    showAudioIcon: Boolean = true,
+    showDirectionIcon: Boolean = true,
+    showTranslateIcon: Boolean = true,
+    showBrightnessIcon: Boolean = true,
     onNavigateBack: () -> Unit,
     onToggleToc: () -> Unit,
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
     onRequestOcr: () -> Unit,
-    onToggleBrightness: () -> Unit
+    onToggleBrightness: () -> Unit,
+    onToggleTtsControls: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
-    val actionScrollState = rememberScrollState()
     val chromeIconTint = MaterialTheme.colorScheme.onSurface
     Row(
         modifier = Modifier
@@ -174,9 +179,9 @@ fun ReaderExpandedBar(
             contentAlignment = Alignment.Center
         ) {
             Row(
-                modifier = Modifier.horizontalScroll(actionScrollState),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
             ) {
                 ReaderExpandedActionButtons(
                     canShowToc = canShowToc,
@@ -185,12 +190,21 @@ fun ReaderExpandedBar(
                     canSwapDirection = canSwapDirection,
                     directionShortcutActive = directionShortcutActive,
                     showBrightnessRow = showBrightnessRow,
+                    showTtsAction = useDirectActions,
+                    chromeIconOrder = chromeIconOrder,
+                    showTocIcon = showTocIcon,
+                    showTextSettingsIcon = showTextSettingsIcon,
+                    showAudioIcon = showAudioIcon,
+                    showDirectionIcon = showDirectionIcon,
+                    showTranslateIcon = showTranslateIcon,
+                    showBrightnessIcon = showBrightnessIcon,
                     chromeIconTint = chromeIconTint,
                     onToggleToc = onToggleToc,
                     onToggleTextSettings = onToggleTextSettings,
                     onSwapDirection = onSwapDirection,
                     onRequestOcr = onRequestOcr,
-                    onToggleBrightness = onToggleBrightness
+                    onToggleBrightness = onToggleBrightness,
+                    onToggleTtsControls = onToggleTtsControls
                 )
             }
         }
@@ -206,63 +220,146 @@ private fun ReaderExpandedActionButtons(
     canSwapDirection: Boolean,
     directionShortcutActive: Boolean,
     showBrightnessRow: Boolean,
+    showTtsAction: Boolean = false,
+    chromeIconOrder: String,
+    showTocIcon: Boolean,
+    showTextSettingsIcon: Boolean,
+    showAudioIcon: Boolean,
+    showDirectionIcon: Boolean,
+    showTranslateIcon: Boolean,
+    showBrightnessIcon: Boolean,
     chromeIconTint: Color,
     onToggleToc: () -> Unit,
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
     onRequestOcr: () -> Unit,
-    onToggleBrightness: () -> Unit
+    onToggleBrightness: () -> Unit,
+    onToggleTtsControls: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
-    if (canShowToc) {
-        ReaderChromeIconButton(onClick = onToggleToc) {
-            Icon(
-                Icons.AutoMirrored.Filled.FormatListBulleted,
-                contentDescription = strings.readerToc,
-                tint = chromeIconTint
+    val actions = buildList {
+        if (showTextSettings) {
+            add(
+                ReaderChromeActionSpec(
+                    key = ReaderChromeButton.STYLE.storedValue,
+                    content = {
+                        ReaderChromeIconButton(onClick = onToggleTextSettings) {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = strings.readerTextStyle,
+                                tint = chromeIconTint
+                            )
+                        }
+                    }
+                )
             )
         }
-    }
-    if (showTextSettings) {
-        ReaderChromeIconButton(onClick = onToggleTextSettings) {
-            Icon(
-                Icons.Default.Settings,
-                contentDescription = strings.readerTextStyle,
-                tint = chromeIconTint
-            )
+        addAll(
+            ReaderChromeButton.resolveOrder(chromeIconOrder)
+                .filterNot { it == ReaderChromeButton.STYLE }
+                .mapNotNull { action ->
+        when (action) {
+            ReaderChromeButton.TOC ->
+                if (canShowToc && showTocIcon) {
+                    ReaderChromeActionSpec(
+                        key = action.storedValue,
+                        content = {
+                            ReaderChromeIconButton(onClick = onToggleToc) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.FormatListBulleted,
+                                    contentDescription = strings.readerToc,
+                                    tint = chromeIconTint
+                                )
+                            }
+                        }
+                    )
+                } else null
+
+            ReaderChromeButton.STYLE ->
+                null
+
+            ReaderChromeButton.AUDIO ->
+                if (showTtsAction && showAudioIcon) {
+                    ReaderChromeActionSpec(
+                        key = action.storedValue,
+                        content = {
+                            ReaderChromeIconButton(onClick = onToggleTtsControls) {
+                                Icon(
+                                    Icons.Default.Headphones,
+                                    contentDescription = readerText.servicesTtsTitle,
+                                    tint = chromeIconTint
+                                )
+                            }
+                        }
+                    )
+                } else null
+
+            ReaderChromeButton.DIRECTION ->
+                if (canSwapDirection && showDirectionIcon) {
+                    ReaderChromeActionSpec(
+                        key = action.storedValue,
+                        content = {
+                            ReaderChromeIconButton(onClick = onSwapDirection) {
+                                Icon(
+                                    Icons.Default.SwapHoriz,
+                                    contentDescription = readerText.directionToggle,
+                                    tint = if (directionShortcutActive) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            }
+                        }
+                    )
+                } else null
+
+            ReaderChromeButton.TRANSLATE ->
+                if (showOcrAction && showTranslateIcon) {
+                    ReaderChromeActionSpec(
+                        key = action.storedValue,
+                        content = {
+                            ReaderChromeIconButton(onClick = onRequestOcr) {
+                                Icon(
+                                    Icons.Default.Translate,
+                                    contentDescription = readerText.ocrTranslation,
+                                    tint = chromeIconTint
+                                )
+                            }
+                        }
+                    )
+                } else null
+
+            ReaderChromeButton.BRIGHTNESS ->
+                if (showBrightnessIcon) {
+                    ReaderChromeActionSpec(
+                        key = action.storedValue,
+                        content = {
+                            ReaderChromeIconButton(onClick = onToggleBrightness) {
+                                Icon(
+                                    if (showBrightnessRow) Icons.Default.BrightnessHigh else Icons.Default.BrightnessLow,
+                                    contentDescription = strings.readerBrightness,
+                                    tint = if (showBrightnessRow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    )
+                } else null
         }
-    }
-    if (canSwapDirection) {
-        ReaderChromeIconButton(onClick = onSwapDirection) {
-            Icon(
-                Icons.Default.SwapHoriz,
-                contentDescription = readerText.directionToggle,
-                tint = if (directionShortcutActive) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.onSurface
                 }
-            )
-        }
-    }
-    if (showOcrAction) {
-        ReaderChromeIconButton(onClick = onRequestOcr) {
-            Icon(
-                Icons.Default.Translate,
-                contentDescription = readerText.ocrTranslation,
-                tint = chromeIconTint
-            )
-        }
-    }
-    ReaderChromeIconButton(onClick = onToggleBrightness) {
-        Icon(
-            if (showBrightnessRow) Icons.Default.BrightnessHigh else Icons.Default.BrightnessLow,
-            contentDescription = strings.readerBrightness,
-            tint = if (showBrightnessRow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }
+
+    actions.forEach { action ->
+        action.content()
+    }
 }
+
+private data class ReaderChromeActionSpec(
+    val key: String,
+    val content: @Composable () -> Unit
+)
 
 @Composable
 fun ReaderBrightnessRow(

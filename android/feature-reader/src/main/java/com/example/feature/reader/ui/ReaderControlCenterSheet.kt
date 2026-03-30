@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,12 +65,18 @@ private enum class ReaderControlTab {
     SERVICES
 }
 
+private enum class ReaderChromeEditorTab {
+    VISIBILITY,
+    ORDER
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReaderControlCenterSheet(
     uiState: ReaderUiState,
     isTextReader: Boolean,
     ttsRuntimeState: ReaderTtsRuntimeState,
+    openAtServicesTab: Boolean = false,
     onDismiss: () -> Unit,
     onApplyReadingPreset: (ReadingPreset) -> Unit,
     onFontSizeChange: (Int) -> Unit,
@@ -100,6 +107,8 @@ internal fun ReaderControlCenterSheet(
     onToolbarOpacityChange: (Float) -> Unit,
     onToolbarBlurChange: (Float) -> Unit,
     onImageScaleModeChange: (String) -> Unit,
+    onChromeIconVisibleChange: (String, Boolean) -> Unit,
+    onMoveChromeIcon: (String, Int) -> Unit,
     onOpenToc: () -> Unit,
     onToggleBookmark: () -> Unit,
     onRequestOcr: () -> Unit,
@@ -132,8 +141,14 @@ internal fun ReaderControlCenterSheet(
         emphasis = sheetChromeEmphasis,
         minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else 0.94f
     )
-    var selectedTab by remember(isTextReader) {
-        mutableStateOf(if (isTextReader) ReaderControlTab.STYLE else ReaderControlTab.READING)
+    var selectedTab by remember(isTextReader, openAtServicesTab) {
+        mutableStateOf(
+            when {
+                openAtServicesTab -> ReaderControlTab.SERVICES
+                isTextReader -> ReaderControlTab.STYLE
+                else -> ReaderControlTab.READING
+            }
+        )
     }
 
     ModalBottomSheet(
@@ -200,10 +215,7 @@ internal fun ReaderControlCenterSheet(
                             onHeaderFooterVerticalPaddingChange = onHeaderFooterVerticalPaddingChange,
                             onHeaderFooterLeftPaddingChange = onHeaderFooterLeftPaddingChange,
                             onHeaderFooterRightPaddingChange = onHeaderFooterRightPaddingChange,
-                            onChromeAutoHideChange = onChromeAutoHideChange,
-                            onToolbarOpacityChange = onToolbarOpacityChange,
-                            onToolbarBlurChange = onToolbarBlurChange,
-                            onImageScaleModeChange = onImageScaleModeChange
+                            onChromeAutoHideChange = onChromeAutoHideChange
                         )
 
                     ReaderControlTab.STYLE -> ReaderStyleTab(
@@ -216,7 +228,12 @@ internal fun ReaderControlCenterSheet(
                         onLineHeightChange = onLineHeightChange,
                         onTextAlignChange = onTextAlignChange,
                         onBoldChange = onBoldChange,
-                        onResetStyle = onResetStyle
+                        onResetStyle = onResetStyle,
+                        onToolbarOpacityChange = onToolbarOpacityChange,
+                        onToolbarBlurChange = onToolbarBlurChange,
+                        onImageScaleModeChange = onImageScaleModeChange,
+                        onChromeIconVisibleChange = onChromeIconVisibleChange,
+                        onMoveChromeIcon = onMoveChromeIcon
                     )
 
                     ReaderControlTab.SERVICES -> ReaderServicesTab(
@@ -265,17 +282,11 @@ private fun ReaderReadingTab(
     onHeaderFooterVerticalPaddingChange: (Int) -> Unit,
     onHeaderFooterLeftPaddingChange: (Int) -> Unit,
     onHeaderFooterRightPaddingChange: (Int) -> Unit,
-    onChromeAutoHideChange: (Boolean) -> Unit,
-    onToolbarOpacityChange: (Float) -> Unit,
-    onToolbarBlurChange: (Float) -> Unit,
-    onImageScaleModeChange: (String) -> Unit
+    onChromeAutoHideChange: (Boolean) -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val activeReaderPreset = ReadingPreset.fromStored(uiState.readerPreset)
-    val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
-    val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
-    val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
     val resolvedTapZoneLayout = remember(
         uiState.tapZoneMode,
         uiState.readingMode,
@@ -311,23 +322,6 @@ private fun ReaderReadingTab(
                             selected = uiState.readingMode == mode,
                             onClick = { onReadingModeChange(mode) },
                             label = { Text(label, style = MaterialTheme.typography.labelSmall) }
-                        )
-                    }
-                }
-            }
-        }
-        if (!isTextReader) {
-            item { ReaderSectionTitle(readerImageScaleTitle(strings.languageCode)) }
-            item {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ReaderImageScaleMode.entries.forEach { mode ->
-                        ReaderChoiceChip(
-                            selected = uiState.imageScaleMode == mode.storedValue,
-                            onClick = { onImageScaleModeChange(mode.storedValue) },
-                            label = { Text(readerImageScaleLabel(mode, strings.languageCode)) }
                         )
                     }
                 }
@@ -567,36 +561,6 @@ private fun ReaderReadingTab(
                 onValueChange = { onPreloadPagesChange(it.toInt()) }
             )
         }
-        item { HorizontalDivider() }
-        item {
-            ReaderSliderRow(
-                title = readerText.toolbarOpacityTitle,
-                valueText = "${(effectiveToolbarOpacity * 100).toInt()}%",
-                value = effectiveToolbarOpacity,
-                valueRange = READER_TOOLBAR_MIN_OPACITY..1f,
-                onValueChange = onToolbarOpacityChange,
-                enabled = activeReaderPreset != ReadingPreset.EINK
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerText.toolbarBlurTitle,
-                valueText = "${(effectiveToolbarBlur * 100).toInt()}%",
-                value = effectiveToolbarBlur,
-                valueRange = 0f..1f,
-                onValueChange = onToolbarBlurChange,
-                enabled = activeReaderPreset != ReadingPreset.EINK
-            )
-        }
-        if (activeReaderPreset == ReadingPreset.EINK) {
-            item {
-                Text(
-                    text = readerText.einkPanelModeHint,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
     }
 }
 
@@ -772,29 +736,23 @@ private fun ReaderStyleTab(
     onLineHeightChange: (Float) -> Unit,
     onTextAlignChange: (String) -> Unit,
     onBoldChange: (Boolean) -> Unit,
-    onResetStyle: () -> Unit
+    onResetStyle: () -> Unit,
+    onToolbarOpacityChange: (Float) -> Unit,
+    onToolbarBlurChange: (Float) -> Unit,
+    onImageScaleModeChange: (String) -> Unit = {},
+    onChromeIconVisibleChange: (String, Boolean) -> Unit,
+    onMoveChromeIcon: (String, Int) -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
-    if (!isTextReader) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = readerText.styleUnavailableTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = readerText.styleUnavailableBody,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        return
+    val activeReaderPreset = ReadingPreset.fromStored(uiState.readerPreset)
+    val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
+    val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
+    val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
+    var chromeEditorTab by remember { mutableStateOf(ReaderChromeEditorTab.VISIBILITY) }
+    val configurableChromeButtons = remember(uiState.chromeIconOrder) {
+        ReaderChromeButton.resolveOrder(uiState.chromeIconOrder)
+            .filterNot { it == ReaderChromeButton.STYLE }
     }
 
     LazyColumn(
@@ -802,6 +760,124 @@ private fun ReaderStyleTab(
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        // Настройки панели управления — доступны для всех режимов чтения
+        item { ReaderSectionTitle(readerText.panelSectionTitle) }
+        item {
+            ReaderSliderRow(
+                title = readerText.toolbarOpacityTitle,
+                valueText = "${(effectiveToolbarOpacity * 100).toInt()}%",
+                value = effectiveToolbarOpacity,
+                valueRange = READER_TOOLBAR_MIN_OPACITY..1f,
+                onValueChange = onToolbarOpacityChange,
+                enabled = activeReaderPreset != ReadingPreset.EINK
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerText.toolbarBlurTitle,
+                valueText = "${(effectiveToolbarBlur * 100).toInt()}%",
+                value = effectiveToolbarBlur,
+                valueRange = 0f..1f,
+                onValueChange = onToolbarBlurChange,
+                enabled = activeReaderPreset != ReadingPreset.EINK
+            )
+        }
+        if (activeReaderPreset == ReadingPreset.EINK) {
+            item {
+                Text(
+                    text = readerText.einkPanelModeHint,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        item { ReaderSectionTitle(readerChromeIconsTitle(strings.languageCode)) }
+        item {
+            TabRow(
+                selectedTabIndex = chromeEditorTab.ordinal,
+                containerColor = Color.Transparent
+            ) {
+                listOf(
+                    ReaderChromeEditorTab.VISIBILITY to readerChromeVisibilityTab(strings.languageCode),
+                    ReaderChromeEditorTab.ORDER to readerChromeOrderTab(strings.languageCode)
+                ).forEach { (tab, label) ->
+                    Tab(
+                        selected = chromeEditorTab == tab,
+                        onClick = { chromeEditorTab = tab },
+                        text = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+            }
+        }
+        when (chromeEditorTab) {
+            ReaderChromeEditorTab.VISIBILITY -> {
+                items(configurableChromeButtons, key = { "chrome_visibility_${it.storedValue}" }) { action ->
+                    ReaderSwitchRow(
+                        title = readerChromeButtonLabel(action, strings.languageCode, readerText),
+                        checked = readerChromeButtonVisible(action, uiState),
+                        onCheckedChange = { onChromeIconVisibleChange(action.storedValue, it) }
+                    )
+                }
+            }
+
+            ReaderChromeEditorTab.ORDER -> {
+                item {
+                    Text(
+                        text = readerChromeOrderHint(strings.languageCode),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                itemsIndexed(configurableChromeButtons, key = { _, action -> "chrome_order_${action.storedValue}" }) { index, action ->
+                    ReaderSettingsCard {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = readerChromeButtonLabel(action, strings.languageCode, readerText),
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                ReaderOutlinedActionButton(
+                                    onClick = { onMoveChromeIcon(action.storedValue, -1) },
+                                    enabled = index > 0
+                                ) {
+                                    Text(if (strings.languageCode == "ru") "Левее" else "Left")
+                                }
+                                ReaderOutlinedActionButton(
+                                    onClick = { onMoveChromeIcon(action.storedValue, 1) },
+                                    enabled = index < configurableChromeButtons.lastIndex
+                                ) {
+                                    Text(if (strings.languageCode == "ru") "Правее" else "Right")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item { HorizontalDivider() }
+
+        if (!isTextReader) {
+            item { ReaderSectionTitle(readerImageScaleTitle(strings.languageCode)) }
+            item {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ReaderImageScaleMode.entries.forEach { mode ->
+                        ReaderChoiceChip(
+                            selected = uiState.imageScaleMode == mode.storedValue,
+                            onClick = { onImageScaleModeChange(mode.storedValue) },
+                            label = { Text(readerImageScaleLabel(mode, strings.languageCode)) }
+                        )
+                    }
+                }
+            }
+        } else {
         item { ReaderSectionTitle(readerText.quickPresetsTitle) }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -900,6 +976,7 @@ private fun ReaderStyleTab(
                 Text(readerText.resetDefaults)
             }
         }
+        } // else (isTextReader)
     }
 }
 
@@ -945,34 +1022,14 @@ private fun ReaderServicesTab(
         item { ReaderSectionTitle(readerText.servicesQuickActionsTitle) }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                item("toc") {
+                item("ocr") {
                     ReaderFilledActionButton(
                         onClick = {
                             onDismiss()
-                            onOpenToc()
+                            onRequestOcr()
                         }
                     ) {
-                        Text(strings.readerToc, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                item("bookmark") {
-                    ReaderOutlinedActionButton(onClick = onToggleBookmark) {
-                        Text(
-                            if (isBookmarked) strings.readerBookmarked else strings.readerBookmark,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-                if (!isTextReader) {
-                    item("ocr") {
-                        ReaderOutlinedActionButton(
-                            onClick = {
-                                onDismiss()
-                                onRequestOcr()
-                            }
-                        ) {
-                            Text(readerText.ocrTranslation, style = MaterialTheme.typography.labelSmall)
-                        }
+                        Text(readerText.ocrTranslation, style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -984,154 +1041,6 @@ private fun ReaderServicesTab(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        item { HorizontalDivider() }
-        item { ReaderSectionTitle(readerText.servicesTtsTitle) }
-        item {
-            Text(
-                text = if (isTextReader) readerText.servicesTtsBody else readerText.servicesTtsUnavailableBody,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        if (isTextReader) {
-            item {
-                ReaderChoiceChip(
-                    selected = ttsRuntimeState.ready,
-                    onClick = {},
-                    enabled = false,
-                    label = {
-                        Text(if (ttsRuntimeState.ready) readerText.ttsReadyLabel else readerText.ttsUnavailableLabel)
-                    }
-                )
-            }
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    item("play") {
-                        ReaderFilledActionButton(
-                            onClick = onTtsTogglePlayback,
-                            enabled = ttsRuntimeState.ready
-                        ) {
-                            Text(
-                                if (ttsRuntimeState.isSpeaking) readerText.ttsPause else readerText.ttsPlay,
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
-                    }
-                    item("stop") {
-                        ReaderOutlinedActionButton(
-                            onClick = onTtsStop,
-                            enabled = ttsRuntimeState.ready
-                        ) {
-                            Text(readerText.ttsStop, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                    item("previous") {
-                        ReaderOutlinedActionButton(
-                            onClick = onTtsPrevious,
-                            enabled = ttsRuntimeState.ready
-                        ) {
-                            Text(readerText.ttsPrevious, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                    item("next") {
-                        ReaderOutlinedActionButton(
-                            onClick = onTtsNext,
-                            enabled = ttsRuntimeState.ready
-                        ) {
-                            Text(readerText.ttsNext, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-            }
-            item { ReaderSectionTitle(readerText.ttsVoiceTitle) }
-            item {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    ReaderOutlinedActionButton(
-                        onClick = { isVoiceMenuExpanded = true },
-                        enabled = ttsRuntimeState.availableVoices.isNotEmpty(),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(selectedVoiceLabel)
-                            Text(
-                                text = "v",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    DropdownMenu(
-                        expanded = isVoiceMenuExpanded,
-                        onDismissRequest = { isVoiceMenuExpanded = false },
-                        modifier = Modifier.heightIn(max = 320.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        containerColor = voiceMenuSurface,
-                        tonalElevation = 0.dp,
-                        shadowElevation = 8.dp
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(readerText.ttsVoiceDefault) },
-                            onClick = {
-                                onTtsVoiceNameChange(null)
-                                isVoiceMenuExpanded = false
-                            }
-                        )
-                        ttsRuntimeState.availableVoices.forEach { voice ->
-                            DropdownMenuItem(
-                                text = { Text(voice.label) },
-                                onClick = {
-                                    onTtsVoiceNameChange(voice.name)
-                                    isVoiceMenuExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-            item {
-                ReaderSliderRow(
-                    title = readerText.ttsSpeedTitle,
-                    valueText = String.format("%.1fx", uiState.ttsSpeed),
-                    value = uiState.ttsSpeed,
-                    valueRange = 0.5f..2.0f,
-                    onValueChange = onTtsSpeedChange
-                )
-            }
-            item {
-                ReaderSliderRow(
-                    title = readerText.ttsPitchTitle,
-                    valueText = String.format("%.1fx", uiState.ttsPitch),
-                    value = uiState.ttsPitch,
-                    valueRange = 0.5f..2.0f,
-                    onValueChange = onTtsPitchChange
-                )
-            }
-            item {
-                ReaderSliderRow(
-                    title = readerText.ttsVolumeTitle,
-                    valueText = "${(uiState.ttsVolume * 100).toInt()}%",
-                    value = uiState.ttsVolume,
-                    valueRange = 0f..1f,
-                    onValueChange = onTtsVolumeChange
-                )
-            }
-            item { ReaderSectionTitle(readerText.ttsSleepTimerTitle) }
-            item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(ReaderTtsSleepTimerMode.entries) { mode ->
-                        ReaderChoiceChip(
-                            selected = uiState.ttsSleepTimerMode == mode.storedValue,
-                            onClick = { onTtsSleepTimerChange(mode.storedValue) },
-                            label = { Text(readerTtsSleepTimerLabel(mode, strings.languageCode)) }
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -1579,6 +1488,69 @@ private fun readerTapZoneLayoutSummary(
     "zh" -> "左侧：${readerTapZoneActionLabel(left, language)} · 中间：${readerTapZoneActionLabel(center, language)} · 右侧：${readerTapZoneActionLabel(right, language)}"
     "ko" -> "왼쪽: ${readerTapZoneActionLabel(left, language)} · 가운데: ${readerTapZoneActionLabel(center, language)} · 오른쪽: ${readerTapZoneActionLabel(right, language)}"
     else -> "Left: ${readerTapZoneActionLabel(left, language)} · Center: ${readerTapZoneActionLabel(center, language)} · Right: ${readerTapZoneActionLabel(right, language)}"
+}
+
+private fun readerChromeIconsTitle(language: String): String = when (language) {
+    "ru" -> "Значки верхней панели"
+    "ja" -> "上部パネルのアイコン"
+    "zh" -> "顶部面板图标"
+    "ko" -> "상단 패널 아이콘"
+    else -> "Top bar icons"
+}
+
+private fun readerChromeVisibilityTab(language: String): String = when (language) {
+    "ru" -> "Видимость"
+    "ja" -> "表示"
+    "zh" -> "显示"
+    "ko" -> "표시"
+    else -> "Visibility"
+}
+
+private fun readerChromeOrderTab(language: String): String = when (language) {
+    "ru" -> "Порядок"
+    "ja" -> "順序"
+    "zh" -> "顺序"
+    "ko" -> "순서"
+    else -> "Order"
+}
+
+private fun readerChromeOrderHint(language: String): String = when (language) {
+    "ru" -> "Меняйте порядок значков так, как они должны идти слева направо."
+    "ja" -> "アイコンの並び順を左から右へ調整します。"
+    "zh" -> "调整图标从左到右的排列顺序。"
+    "ko" -> "아이콘 순서를 왼쪽에서 오른쪽 기준으로 조정합니다."
+    else -> "Adjust the icon order from left to right."
+}
+
+private fun readerChromeButtonLabel(
+    button: ReaderChromeButton,
+    language: String,
+    readerText: ReaderUiText
+): String = when (button) {
+    ReaderChromeButton.TOC -> readerText.chapters
+    ReaderChromeButton.STYLE -> readerText.controlTabStyle
+    ReaderChromeButton.AUDIO -> readerText.servicesTtsTitle
+    ReaderChromeButton.DIRECTION -> readerText.directionToggle
+    ReaderChromeButton.TRANSLATE -> readerText.ocrTranslation
+    ReaderChromeButton.BRIGHTNESS -> when (language) {
+        "ru" -> "Яркость"
+        "ja" -> "明るさ"
+        "zh" -> "亮度"
+        "ko" -> "밝기"
+        else -> "Brightness"
+    }
+}
+
+private fun readerChromeButtonVisible(
+    button: ReaderChromeButton,
+    uiState: ReaderUiState
+): Boolean = when (button) {
+    ReaderChromeButton.TOC -> uiState.chromeShowTocIcon
+    ReaderChromeButton.STYLE -> uiState.chromeShowStyleIcon
+    ReaderChromeButton.AUDIO -> uiState.chromeShowAudioIcon
+    ReaderChromeButton.DIRECTION -> uiState.chromeShowDirectionIcon
+    ReaderChromeButton.TRANSLATE -> uiState.chromeShowTranslateIcon
+    ReaderChromeButton.BRIGHTNESS -> uiState.chromeShowBrightnessIcon
 }
 
 private fun readerTtsSleepTimerLabel(mode: ReaderTtsSleepTimerMode, language: String): String = when (mode) {

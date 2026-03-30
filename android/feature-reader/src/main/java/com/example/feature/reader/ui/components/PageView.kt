@@ -36,6 +36,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import com.example.core.model.ReadingMode
+import com.example.core.model.ReaderImageScaleMode
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.feature.reader.ui.ReaderUiState
 import com.example.feature.reader.ui.ReaderViewModel
@@ -48,6 +49,7 @@ fun PageView(
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
+    imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
     modifier: Modifier = Modifier
 ) {
     val isEInk = LocalEInkMode.current
@@ -107,7 +109,7 @@ fun PageView(
                         bitmap = leftBitmap,
                         contentDescription = "Page ${page + 1}",
                         alignment = Alignment.CenterEnd,
-                        contentScale = ContentScale.Fit,
+                        contentScale = imageScaleModeToContentScale(imageScaleMode),
                         modifier = Modifier.weight(1f)
                     )
                     if (rightPage != null) {
@@ -115,7 +117,7 @@ fun PageView(
                             bitmap = rightBitmap,
                             contentDescription = "Page ${rightPage + 1}",
                             alignment = Alignment.CenterStart,
-                            contentScale = ContentScale.Fit,
+                            contentScale = imageScaleModeToContentScale(imageScaleMode),
                             modifier = Modifier.weight(1f)
                         )
                     } else {
@@ -126,6 +128,7 @@ fun PageView(
                 PagePane(
                     bitmap = leftBitmap,
                     contentDescription = "Page ${page + 1}",
+                    contentScale = imageScaleModeToContentScale(imageScaleMode),
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -301,4 +304,10 @@ private fun boundedOffset(
         x = current.x.coerceIn(-maxX, maxX),
         y = current.y.coerceIn(-maxY, maxY)
     )
+}
+
+private fun imageScaleModeToContentScale(mode: String): ContentScale = when (ReaderImageScaleMode.fromStored(mode)) {
+    ReaderImageScaleMode.FIT_WIDTH  -> ContentScale.FillWidth
+    ReaderImageScaleMode.FIT_HEIGHT -> ContentScale.FillHeight
+    ReaderImageScaleMode.REAL_SIZE  -> ContentScale.None
 }

@@ -32,5 +32,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.media3.session)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.documentfile)
     testImplementation(libs.test.junit)
 }

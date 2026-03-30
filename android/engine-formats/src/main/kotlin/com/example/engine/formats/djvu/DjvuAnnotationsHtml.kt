@@ -6,25 +6,18 @@ internal fun buildDjvuAnnotationsHtml(
     totalPages: Int,
     annotations: DjvuAnnotations
 ): String {
-    val pageLabel = if (totalPages > 1) "Страница ${pageIndex + 1} из $totalPages" else "Одностраничный annotation-layer"
-    val compressedNote = if (annotations.hasCompressedChunks) {
-        "<p><strong>Примечание:</strong> рядом также есть <code>ANTz</code>, но BZZ-декодер для compressed annotations пока не подключён.</p>"
-    } else {
-        ""
-    }
+    val pageLabel = if (totalPages > 1) "Страница ${pageIndex + 1} из $totalPages" else ""
     val annotationText = annotations.text.takeIf { it.isNotBlank() }
         ?.let(::escapeDjvuAnnotationsHtml)
         ?.replace("\n", "<br>")
-        ?: "В этой странице есть только compressed annotations."
+        ?: "У страницы есть annotation-layer."
     val body = """
         <div class="wrap">
-          <div class="badge">DjVu annotations</div>
-          <h1>${escapeDjvuAnnotationsHtml(fileName)}</h1>
-          <p><strong>${escapeDjvuAnnotationsHtml(pageLabel)}</strong></p>
-          <p>Изображение страницы пока не отрисовывается, но встроенный annotation-layer уже извлечён и показан отдельно.</p>
-          $compressedNote
+          ${if (pageLabel.isBlank()) "" else """<div class="page-label">${escapeDjvuAnnotationsHtml(pageLabel)}</div>"""}
+          <h1>${escapeDjvuAnnotationsHtml(fileName.substringBeforeLast('.').replace('_', ' '))}</h1>
+          <p>У этой страницы извлечены встроенные примечания документа.</p>
           <section class="annotation-sheet">
-            <strong>Annotations</strong>
+            <strong>Примечания страницы</strong>
             <div>$annotationText</div>
           </section>
         </div>
@@ -40,7 +33,7 @@ internal fun buildDjvuAnnotationsHtml(
             :root { color-scheme: dark light; }
             body {
               margin: 0;
-              padding: 24px 18px 36px;
+              padding: 20px 18px 36px;
               font-family: Georgia, serif;
               background: transparent;
               color: inherit;
@@ -50,20 +43,18 @@ internal fun buildDjvuAnnotationsHtml(
               margin: 0 auto;
               line-height: 1.7;
             }
-            .badge {
-              display: inline-block;
-              padding: 6px 10px;
-              border-radius: 999px;
-              font-size: 12px;
-              letter-spacing: 0.08em;
-              text-transform: uppercase;
-              background: rgba(128,128,128,0.16);
-              margin-bottom: 14px;
+            .page-label {
+              margin-bottom: 12px;
+              font-size: 13px;
+              opacity: 0.62;
+              text-align: center;
             }
             h1 {
-              margin: 0 0 12px;
-              font-size: 26px;
-              line-height: 1.2;
+              margin: 0 0 0.85em;
+              font-size: 1.4rem;
+              line-height: 1.25;
+              font-weight: 700;
+              text-align: center;
             }
             p {
               font-size: 17px;
@@ -73,7 +64,7 @@ internal fun buildDjvuAnnotationsHtml(
               padding: 16px 18px;
               border-radius: 20px;
               background: rgba(128,128,128,0.06);
-              font-family: "Courier New", monospace;
+              font-family: Georgia, serif;
               font-size: 14px;
               line-height: 1.6;
               white-space: pre-wrap;

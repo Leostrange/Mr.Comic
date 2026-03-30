@@ -264,11 +264,14 @@ class ComicRepository @Inject constructor(
         comicDao.updateComic(comic.copy(isBookmarked = !comic.isBookmarked))
     }
 
-    suspend fun updateComicMeta(comicId: String, title: String, tags: String) {
+    suspend fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String) {
         val comic = comicDao.getComicById(comicId) ?: return
         val updated = comic.copy(
             title = title.trim().ifBlank { comic.title },
-            tags  = tags.trim()
+            tags = tags.trim(),
+            libraryShelf = libraryShelf.trim().uppercase().takeIf {
+                it == "GRAPHIC" || it == "BOOKS"
+            }.orEmpty()
         )
         comicDao.updateComic(updated)
         refreshQuoteSnapshotsForComic(updated)

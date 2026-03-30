@@ -2,6 +2,10 @@ package com.example.mrcomic
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import com.example.core.data.preferences.PerformanceDefaults
+import com.example.core.data.preferences.PerformancePreferencesKeys
+import com.example.core.data.preferences.UserPreferences
+import com.example.core.data.preferences.dataStore
 import com.example.core.ui.sound.UIFeedback
 import com.example.engine.rendering.preload.PagePreloader
 import com.example.mrcomic.crash.CrashLogger
@@ -13,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -40,7 +45,17 @@ class ComicApplication : Application() {
         CrashLogger.install(this)
         UIFeedback.init(this)
         applicationScope.launch {
-            try { continueStartupWarmStore.warmUp() } catch (_: Exception) {}
+            val preloadEnabled = runCatching {
+                UserPreferences(dataStore)
+                    .get(
+                        PerformancePreferencesKeys.PERF_STARTUP_PRELOAD_ENABLED,
+                        PerformanceDefaults.STARTUP_PRELOAD
+                    )
+                    .first()
+            }.getOrDefault(true)
+            if (preloadEnabled) {
+                try { continueStartupWarmStore.warmUp() } catch (_: Exception) {}
+            }
         }
         applicationScope.launch {
             try { appIconManager.ensureIconConsistency() } catch (_: Exception) {}

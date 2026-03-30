@@ -8,8 +8,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
+import androidx.documentfile.provider.DocumentFile
+import com.example.core.data.repository.AudiobookRepository
 import com.example.core.data.repository.ComicRepository
 import com.example.core.data.repository.QuoteRepository
+import com.example.core.model.AudioChapter
+import com.example.core.model.Audiobook
 import com.example.core.domain.analytics.ReaderCheckpointStore
 import com.example.core.domain.analytics.DailyReadingGoalState
 import com.example.core.domain.analytics.DailyReadingGoalStore
@@ -19,12 +23,14 @@ import com.example.core.domain.analytics.ReadingAnalyticsEvent
 import com.example.core.domain.analytics.ReadingAnalyticsTracker
 import com.example.core.domain.analytics.calculateMascotProgress
 import com.example.core.model.Comic
+import com.example.core.model.ComicLibraryShelf
 import com.example.core.model.ComicFormat
 import com.example.core.model.SavedQuote
 import com.example.core.model.SortOrder
 import com.example.core.model.isReadCompleted
 import com.example.core.model.isReadingInProgress
 import com.example.core.model.isTextReadingFormat
+import com.example.core.model.libraryShelfCategory
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
@@ -65,7 +71,7 @@ import javax.inject.Inject
 enum class LibraryStatusFilter { ALL, BOOKMARKED, IN_PROGRESS, COMPLETED }
 enum class LibraryFormatFilter { ALL, IMAGE, PDF, TEXT }
 enum class GroupByMode { NONE, SERIES, FOLDER }
-enum class LibraryContentSection { FILES, BOOKMARKS, QUOTES, ACHIEVEMENTS }
+enum class LibraryContentSection { FILES, AUDIOBOOKS, BOOKMARKS, QUOTES, ACHIEVEMENTS }
 
 data class LibraryBreadcrumb(
     val label: String,
@@ -139,12 +145,14 @@ data class LibraryUiState(
     val cardStroke: Float = DEFAULT_LIBRARY_CARD_STROKE,
     val cardCornerRadius: Int = DEFAULT_LIBRARY_CARD_CORNER_RADIUS,
     val titlePanelOpacity: Float = DEFAULT_LIBRARY_TITLE_PANEL_OPACITY,
+    val showStatusChips: Boolean = true,
     val contentSection: LibraryContentSection = LibraryContentSection.FILES,
     val currentFolderPath: String? = null,
     val breadcrumbs: List<LibraryBreadcrumb> = emptyList(),
     val quotes: List<SavedQuote> = emptyList(),
     val availableQuoteComicIds: Set<String> = emptySet(),
     val totalComicCount: Int = 0,
+    val readingComicCount: Int = 0,
     val totalBookmarkedCount: Int = 0,
     val totalQuoteCount: Int = 0,
     val quoteSourceCount: Int = 0,
@@ -163,16 +171,30 @@ data class LibraryUiState(
     val acknowledgedMascotStageName: String = MascotStage.CHILD.name,
     val rememberedMascotQuestAchievementId: String? = null,
     val rememberedMascotQuestAction: String? = null,
-    val secretCatUnlocked: Boolean = false
+    val secretCatUnlocked: Boolean = false,
+    val audiobooks: List<Audiobook> = emptyList(),
+    val folderSheetPath: String? = null,
+    val folderSheetItems: List<LibraryDisplayItem> = emptyList(),
+    val folderSheetBreadcrumbs: List<LibraryBreadcrumb> = emptyList()
 )
 
-enum class LibraryViewMode { GRID, LIST }
+enum class LibraryViewMode { GRID, LIST, STRIPS }
+
+private fun normalizeLibraryViewMode(
+    storedMode: String?,
+    legacyGrid: Boolean = true
+): LibraryViewMode = runCatching {
+    LibraryViewMode.valueOf(storedMode?.trim().orEmpty().uppercase())
+}.getOrElse {
+    if (legacyGrid) LibraryViewMode.GRID else LibraryViewMode.LIST
+}
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val comicRepository: ComicRepository,
     private val quoteRepository: QuoteRepository,
+    private val audiobookRepository: AudiobookRepository,
     private val readerCheckpointStore: ReaderCheckpointStore,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
     private val analyticsTracker: ReadingAnalyticsTracker,
@@ -208,6 +230,27 @@ class LibraryViewModel @Inject constructor(
         observeSecretCat()
         observeLibraryAvailability()
         observeSearch()
+        observeAudiobooks()
+        restoreContentSection()
+    }
+
+    private fun restoreContentSection() {
+        viewModelScope.launch {
+            preferences.get(PreferencesKeys.LIBRARY_CONTENT_SECTION, LibraryContentSection.FILES.name)
+                .collect { name ->
+                    val section = runCatching { LibraryContentSection.valueOf(name) }
+                        .getOrDefault(LibraryContentSection.FILES)
+                    _uiState.update {
+                        it.copy(
+                            contentSection = if (section == LibraryContentSection.AUDIOBOOKS) {
+                                LibraryContentSection.FILES
+                            } else {
+                                section
+                            }
+                        )
+                    }
+                }
+        }
     }
 
     private fun repairStoredCovers() {
@@ -232,18 +275,24 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeLayoutPreferences() {
         viewModelScope.launch {
-            combine(
+            val layoutFlowA = combine(
+                preferences.get(PreferencesKeys.LIBRARY_VIEW_MODE, ""),
                 preferences.get(PreferencesKeys.LIBRARY_VIEW_GRID, true),
                 preferences.get(PreferencesKeys.LIBRARY_GRID_COLUMNS, 3).map { it.coerceIn(2, 4) },
                 preferences.get(PreferencesKeys.LIBRARY_TILE_SIZE_DP, 150).map { it.coerceIn(80, 200) },
-                preferences.get(PreferencesKeys.LIBRARY_CARD_STYLE, DEFAULT_LIBRARY_CARD_STYLE),
+                preferences.get(PreferencesKeys.LIBRARY_CARD_STYLE, DEFAULT_LIBRARY_CARD_STYLE)
+            ) { storedMode, isGrid, columns, tileSize, cardStyle ->
+                listOf<Any>(storedMode, isGrid, columns, tileSize, cardStyle)
+            }
+            combine(
+                layoutFlowA,
                 preferences.get(PreferencesKeys.LIBRARY_RECENT_STRIP_POSITION, "TOP")
-            ) { isGrid, columns, tileSize, cardStyle, recentStripPosition ->
+            ) { layout, recentStripPosition ->
                 LibraryUiState(
-                    viewMode = if (isGrid) LibraryViewMode.GRID else LibraryViewMode.LIST,
-                    libraryGridColumns = columns,
-                    tileSizeDp = tileSize,
-                    cardStyle = cardStyle,
+                    viewMode = normalizeLibraryViewMode(layout[0] as String, layout[1] as Boolean),
+                    libraryGridColumns = layout[2] as Int,
+                    tileSizeDp = layout[3] as Int,
+                    cardStyle = layout[4] as String,
                     recentStripPosition = recentStripPosition
                 )
             }.collect { partial ->
@@ -292,8 +341,18 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeCoverTitlePreference() {
         viewModelScope.launch {
-            preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true).collect { enabled ->
-                _uiState.update { it.copy(showCoverTitlesOnGrid = enabled) }
+            combine(
+                preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true),
+                preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)
+            ) { showTitles, showStatusChips ->
+                showTitles to showStatusChips
+            }.collect { (showTitles, showStatusChips) ->
+                _uiState.update {
+                    it.copy(
+                        showCoverTitlesOnGrid = showTitles,
+                        showStatusChips = showStatusChips
+                    )
+                }
             }
         }
     }
@@ -496,10 +555,20 @@ class LibraryViewModel @Inject constructor(
         } else {
             null
         }
+        val effectiveFolderSheetPath = if (state.groupByMode == GroupByMode.FOLDER) {
+            normalizeFolderPath(state.folderSheetPath, filtered)
+        } else {
+            null
+        }
 
         val displayItems = when (state.groupByMode) {
             GroupByMode.FOLDER -> buildFolderDisplayItems(filtered, effectiveFolderPath, state.sortOrder)
             else -> buildSeparatedComicDisplayItems(sorted)
+        }
+        val folderSheetItems = if (effectiveFolderSheetPath != null) {
+            buildFolderDisplayItems(filtered, effectiveFolderSheetPath, state.sortOrder)
+        } else {
+            emptyList()
         }
 
         val sections = when (state.groupByMode) {
@@ -544,6 +613,7 @@ class LibraryViewModel @Inject constructor(
                 quotes = sortedQuotes,
                 availableQuoteComicIds = allLibraryComics.map { comic -> comic.id }.toSet(),
                 totalComicCount = filtered.size,
+                readingComicCount = rawComics.count { c -> c.isReadingInProgress() },
                 totalBookmarkedCount = bookmarkedSorted.size,
                 totalQuoteCount = sortedQuotes.size,
                 quoteSourceCount = sortedQuotes.map { it.comicId }.distinct().size,
@@ -555,7 +625,10 @@ class LibraryViewModel @Inject constructor(
                 bookmarkedComicCount = rawComics.count { c -> c.isBookmarked },
                 rawAuthors = rawComics.map { c -> c.author },
                 rawGenres = rawComics.map { c -> c.genre },
-                mascotProgress = mascotProgress
+                mascotProgress = mascotProgress,
+                folderSheetPath = effectiveFolderSheetPath,
+                folderSheetItems = folderSheetItems,
+                folderSheetBreadcrumbs = buildBreadcrumbs(effectiveFolderSheetPath, state.appLanguage)
             )
         }
         if (shouldTrackMascotStageUp(lastTrackedMascotStage, mascotProgress.stage)) {
@@ -577,7 +650,22 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun setContentSection(section: LibraryContentSection) {
-        _uiState.update { it.copy(contentSection = section) }
+        val normalizedSection = if (section == LibraryContentSection.AUDIOBOOKS) {
+            LibraryContentSection.FILES
+        } else {
+            section
+        }
+        _uiState.update {
+            it.copy(
+                contentSection = normalizedSection,
+                folderSheetPath = null,
+                folderSheetItems = emptyList(),
+                folderSheetBreadcrumbs = emptyList()
+            )
+        }
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.LIBRARY_CONTENT_SECTION, normalizedSection.name)
+        }
     }
 
     fun reportAchievementUnlocked(achievementId: String, unlockedCount: Int, totalCount: Int) {
@@ -662,6 +750,30 @@ class LibraryViewModel @Inject constructor(
         applyFiltersAndSort()
     }
 
+    fun openFolderSheet(path: String) {
+        _uiState.update { it.copy(folderSheetPath = path) }
+        applyFiltersAndSort()
+    }
+
+    fun dismissFolderSheet() {
+        _uiState.update {
+            it.copy(
+                folderSheetPath = null,
+                folderSheetItems = emptyList(),
+                folderSheetBreadcrumbs = emptyList()
+            )
+        }
+    }
+
+    fun navigateUpFromFolderSheet() {
+        val parentPath = _uiState.value.folderSheetPath.parentFolderPath()
+        if (parentPath == null) {
+            dismissFolderSheet()
+        } else {
+            openFolderSheet(parentPath)
+        }
+    }
+
     fun deleteQuote(id: String) {
         viewModelScope.launch {
             runCatching { quoteRepository.deleteQuote(id) }
@@ -692,6 +804,7 @@ class LibraryViewModel @Inject constructor(
     fun setViewMode(mode: LibraryViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
         viewModelScope.launch {
+            preferences.set(PreferencesKeys.LIBRARY_VIEW_MODE, mode.name)
             preferences.set(PreferencesKeys.LIBRARY_VIEW_GRID, mode == LibraryViewMode.GRID)
         }
     }
@@ -843,10 +956,10 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun updateComicMeta(comicId: String, title: String, tags: String) {
+    fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String) {
         viewModelScope.launch {
             try {
-                comicRepository.updateComicMeta(comicId, title, tags)
+                comicRepository.updateComicMeta(comicId, title, tags, libraryShelf)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -890,6 +1003,106 @@ class LibraryViewModel @Inject constructor(
     suspend fun getComicById(id: String): Comic? = comicRepository.getComicById(id)
 
     fun clearError() = _uiState.update { it.copy(error = null) }
+
+    // ── Audiobook CRUD ────────────────────────────────────────────────────────
+
+    private fun observeAudiobooks() {
+        viewModelScope.launch {
+            audiobookRepository.getAllFlow().collect { list ->
+                _uiState.update { it.copy(audiobooks = list) }
+            }
+        }
+    }
+
+    /** Add a single audio file as a 1-chapter audiobook. */
+    fun addAudiobookFromUri(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val title = DocumentFile.fromSingleUri(context, uri)?.name
+                    ?.substringBeforeLast('.')
+                    ?: uri.lastPathSegment ?: "Аудиокнига"
+                val chapter = AudioChapter(index = 0, title = title, uri = uri.toString())
+                val audiobook = Audiobook(
+                    title = title,
+                    sourcePath = uri.toString(),
+                    sourceIsFolder = false,
+                    chapters = listOf(chapter)
+                )
+                val coverUri = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
+                audiobookRepository.upsert(audiobook.copy(coverUri = coverUri ?: audiobook.coverUri))
+                Log.i("LibraryViewModel", "Audiobook added: $title")
+            } catch (e: Exception) {
+                Log.e("LibraryViewModel", "Failed to add audiobook from URI: $uri", e)
+                _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
+            }
+        }
+    }
+
+    /** Scan the top-level of a folder tree for audio files and add them as chapters. */
+    fun addAudiobookFromFolder(treeUri: Uri) {
+        viewModelScope.launch {
+            try {
+                val root = DocumentFile.fromTreeUri(context, treeUri) ?: run {
+                    Log.w("LibraryViewModel", "Could not resolve tree URI: $treeUri")
+                    _uiState.update { it.copy(error = "Не удалось открыть папку") }
+                    return@launch
+                }
+                val title = root.name ?: treeUri.lastPathSegment ?: "Аудиокнига"
+                val allFiles = root.listFiles() ?: emptyArray()
+                val audioFiles = allFiles
+                    .filter { it.isFile && (it.type?.startsWith("audio/") == true || it.name.orEmpty().let { n ->
+                        n.endsWith(".mp3", true) || n.endsWith(".m4a", true) ||
+                        n.endsWith(".m4b", true) || n.endsWith(".ogg", true) ||
+                        n.endsWith(".flac", true) || n.endsWith(".wav", true) ||
+                        n.endsWith(".aac", true) || n.endsWith(".opus", true) ||
+                        n.endsWith(".wma", true)
+                    }) }
+                    .sortedBy { it.name.orEmpty() }
+                if (audioFiles.isEmpty()) {
+                    Log.w("LibraryViewModel", "No audio files in folder: $treeUri (total: ${allFiles.size})")
+                    _uiState.update { it.copy(error = "В папке нет аудиофайлов (файлов: ${allFiles.size})") }
+                    return@launch
+                }
+                val chapters = audioFiles.mapIndexed { i, file ->
+                    AudioChapter(
+                        index = i,
+                        title = file.name?.substringBeforeLast('.') ?: "Глава ${i + 1}",
+                        uri = file.uri.toString()
+                    )
+                }
+                val coverUri = allFiles.firstOrNull { file ->
+                    file.isFile && (
+                        file.type?.startsWith("image/") == true ||
+                            file.name.orEmpty().let { name ->
+                                name.endsWith(".jpg", true) ||
+                                    name.endsWith(".jpeg", true) ||
+                                    name.endsWith(".png", true) ||
+                                    name.endsWith(".webp", true)
+                            }
+                        )
+                }?.uri?.toString()
+                val audiobook = Audiobook(
+                    title = title,
+                    coverUri = coverUri,
+                    sourcePath = treeUri.toString(),
+                    sourceIsFolder = true,
+                    chapters = chapters
+                )
+                val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
+                audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover ?: audiobook.coverUri))
+                Log.i("LibraryViewModel", "Audiobook added from folder: $title (${chapters.size} chapters)")
+            } catch (e: Exception) {
+                Log.e("LibraryViewModel", "Failed to add audiobook from folder: $treeUri", e)
+                _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
+            }
+        }
+    }
+
+    fun deleteAudiobook(audiobookId: String) {
+        viewModelScope.launch {
+            audiobookRepository.delete(audiobookId)
+        }
+    }
 
     private fun filterComics(
         comics: List<Comic>,
@@ -969,8 +1182,8 @@ class LibraryViewModel @Inject constructor(
     ): List<LibraryDisplayItem> {
         if (comics.isEmpty()) return emptyList()
 
-        val books = comics.filter { it.format.isTextReadingFormat() }
-        val graphics = comics.filterNot { it.format.isTextReadingFormat() }
+        val graphics = comics.filter { it.libraryContentSection() == LibraryFileSection.GRAPHIC }
+        val books = comics.filter { it.libraryContentSection() == LibraryFileSection.BOOKS }
         val shouldShowHeaders = forceHeaders || (graphics.isNotEmpty() && books.isNotEmpty())
 
         if (!shouldShowHeaders) {
@@ -986,6 +1199,16 @@ class LibraryViewModel @Inject constructor(
                 add(LibrarySectionDividerItem(LibraryFileSection.BOOKS))
                 addAll(books.map(::LibraryComicItem))
             }
+        }
+    }
+
+    private fun Comic.libraryContentSection(): LibraryFileSection = when (libraryShelfCategory()) {
+        ComicLibraryShelf.GRAPHIC -> LibraryFileSection.GRAPHIC
+        ComicLibraryShelf.BOOKS -> LibraryFileSection.BOOKS
+        ComicLibraryShelf.AUTO -> if (format.isTextReadingFormat()) {
+            LibraryFileSection.BOOKS
+        } else {
+            LibraryFileSection.GRAPHIC
         }
     }
 

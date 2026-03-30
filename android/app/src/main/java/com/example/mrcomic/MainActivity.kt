@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.core.data.preferences.PreferencesKeys
+import com.example.core.data.preferences.PerformanceDefaults
+import com.example.core.data.preferences.PerformancePreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
 import com.example.core.ui.sound.UIFeedback
@@ -121,12 +123,6 @@ fun MrComicApp(
     val context = LocalContext.current
     val isEInk = remember { context.isEInkDevice() }
     val renderProfile = remember { context.resolveRenderDeviceProfile() }
-    val performanceHints = remember(renderProfile, isEInk) {
-        PerformanceUiHints(
-            reducedMotion = isEInk || renderProfile.tier == RenderDeviceTier.LOW_END,
-            reducedVisualEffects = isEInk || renderProfile.tier == RenderDeviceTier.LOW_END
-        )
-    }
     val userPreferences = remember { UserPreferences(context.dataStore) }
     val fontScale by userPreferences.get(PreferencesKeys.UI_FONT_SCALE, 1.0f)
         .collectAsState(initial = 1.0f)
@@ -134,6 +130,26 @@ fun MrComicApp(
         .collectAsState(initial = 1.0f)
     val cornerRadius by userPreferences.get(PreferencesKeys.UI_CORNER_RADIUS, 12)
         .collectAsState(initial = 12)
+    val reducedMotionPref by userPreferences.get(PreferencesKeys.UI_REDUCED_MOTION, false)
+        .collectAsState(initial = false)
+    val reducedVisualEffectsPref by userPreferences.get(PreferencesKeys.UI_REDUCED_VISUAL_EFFECTS, false)
+        .collectAsState(initial = false)
+    val perfReducedAnimationsPref by userPreferences.get(
+        PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS,
+        PerformanceDefaults.REDUCED_ANIM
+    ).collectAsState(initial = PerformanceDefaults.REDUCED_ANIM)
+    val performanceHints = remember(
+        renderProfile,
+        isEInk,
+        reducedMotionPref,
+        reducedVisualEffectsPref,
+        perfReducedAnimationsPref
+    ) {
+        PerformanceUiHints(
+            reducedMotion = reducedMotionPref || perfReducedAnimationsPref || isEInk || renderProfile.tier == RenderDeviceTier.LOW_END,
+            reducedVisualEffects = reducedVisualEffectsPref || isEInk || renderProfile.tier == RenderDeviceTier.LOW_END
+        )
+    }
     val appLanguage by userPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
         .collectAsState(initial = "ru")
     val normalizedAppLanguage = remember(appLanguage) { normalizeAppLanguageCode(appLanguage) }

@@ -3,7 +3,6 @@ package com.example.engine.formats.djvu
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.io.File
 
@@ -43,6 +42,26 @@ class DjvuCorpusSmokeTest {
             "Expected annotations to be absent or secondary on the first page",
             annotations == null || annotations.text.length < textLayer.text.length
         )
+    }
+
+    @Test
+    fun sampleDjvuTextHtmlAvoidsDiagnosticChrome() {
+        val html = buildDjvuTextLayerHtml(
+            fileName = "novaya_teoriya_razvitiya_obshchestva_bez_oshibok_marksa_i_le.djvu",
+            pageIndex = 0,
+            totalPages = 1,
+            textLayer = DjvuTextLayer(
+                text = "Новая теория развития общества\n\nПервая глава",
+                sourceChunkId = "TXTz",
+                isCompressed = true
+            ),
+            hasCompressedFallback = false,
+            annotations = null
+        )
+
+        assertTrue(html.contains("Новая теория развития общества"))
+        assertFalse(html.contains("Страница 1 из", ignoreCase = true))
+        assertFalse(html.contains("novaya_teoriya", ignoreCase = true))
     }
 
     private fun locateSample(name: String): File {
