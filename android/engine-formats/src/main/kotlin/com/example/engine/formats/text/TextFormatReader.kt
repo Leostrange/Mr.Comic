@@ -548,7 +548,17 @@ class TextFormatReader @Inject constructor(
             }
             ComicFormat.DOCX -> {
                 val bytes = readSourceBytes() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
-                paginateBlocks(extractDocxBlocks(bytes))
+                val entries = readZipEntries(bytes)
+                val relationships = parseDocxRelationships(
+                    entries["word/_rels/document.xml.rels"]?.toString(Charsets.UTF_8)
+                )
+                val archive = buildDocxArchive(entries, relationships)
+                val blocks = extractDocxBlocks(bytes)
+                paginateBlocks(
+                    blocks = blocks,
+                    extraCss = archive.styleContext.embeddedFontCss,
+                    preservePublisherLayout = true
+                )
             }
             ComicFormat.ODT -> {
                 val bytes = readSourceBytes() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
@@ -751,7 +761,8 @@ class TextFormatReader @Inject constructor(
 
     private data class DocxArchive(
         val entries: Map<String, ByteArray>,
-        val relationships: Map<String, String>
+        val relationships: Map<String, String>,
+        val styleContext: DocxStyleContext
     )
 
     private data class DocxRunStyle(
@@ -762,7 +773,31 @@ class TextFormatReader @Inject constructor(
         val superscript: Boolean = false,
         val subscript: Boolean = false,
         val colorHex: String? = null,
-        val highlight: String? = null
+        val highlight: String? = null,
+        val fontFamily: String? = null
+    )
+
+    private data class DocxStyleContext(
+        val embeddedFontCss: String = "",
+        val defaultFontFamily: String? = null,
+        val paragraphStyleFonts: Map<String, String> = emptyMap(),
+        val runStyleFonts: Map<String, String> = emptyMap()
+    )
+
+    private data class DocxStyleDefinition(
+        val styleId: String,
+        val type: String,
+        val basedOn: String? = null,
+        val linkedStyleId: String? = null,
+        val isDefault: Boolean = false,
+        val directFontFamily: String? = null
+    )
+
+    private data class DocxFontFace(
+        val cssFontFamily: String,
+        val fontWeight: String,
+        val fontStyle: String,
+        val dataUri: String
     )
 
     internal fun extractDocxBlocks(bytes: ByteArray): List<String> {
@@ -772,7 +807,7 @@ class TextFormatReader @Inject constructor(
         val relationships = parseDocxRelationships(
             entries["word/_rels/document.xml.rels"]?.toString(Charsets.UTF_8)
         )
-        val archive = DocxArchive(entries = entries, relationships = relationships)
+        val archive = buildDocxArchive(entries, relationships)
         val document = Jsoup.parse(xml, "", JsoupXmlParser.xmlParser())
         document.outputSettings(Document.OutputSettings().prettyPrint(false))
         val body = document.getElementsByTag("w:body").firstOrNull()
@@ -788,6 +823,28 @@ class TextFormatReader @Inject constructor(
         return blocks.ifEmpty { textBlocks(xmlTextToPlain(xml)) }
     }
 
+    private fun buildDocxArchive(
+        entries: Map<String, ByteArray>,
+        relationships: Map<String, String>
+    ): DocxArchive {
+        val stylesXml = entries["word/styles.xml"]?.toString(Charsets.UTF_8)
+        val fontTableXml = entries["word/fontTable.xml"]?.toString(Charsets.UTF_8)
+        val fontRelationships = parseDocxRelationships(
+            entries["word/_rels/fontTable.xml.rels"]?.toString(Charsets.UTF_8)
+        )
+        val embeddedFaces = parseDocxEmbeddedFonts(
+            fontTableXml = fontTableXml,
+            fontRelationships = fontRelationships,
+            entries = entries
+        )
+        val styleContext = parseDocxStyleContext(stylesXml, embeddedFaces)
+        return DocxArchive(
+            entries = entries,
+            relationships = relationships,
+            styleContext = styleContext
+        )
+    }
+
     private fun renderDocxParagraph(
         paragraph: Element,
         archive: DocxArchive
@@ -795,6 +852,7 @@ class TextFormatReader @Inject constructor(
         val headingLevel = docxHeadingLevel(paragraph)
         val alignment = docxParagraphAlignment(paragraph)
         val anchorId = docxParagraphAnchorId(paragraph)
+        val fontFamily = docxParagraphFontFamily(paragraph, archive)
         val content = renderDocxInlineChildren(paragraph, archive).ifBlank {
             xmlTextToPlain(paragraph.outerHtml()).takeIf { it.isNotBlank() }
                 ?.let { escapeHtml(it).replace("\n", "<br/>") }
@@ -806,6 +864,13 @@ class TextFormatReader @Inject constructor(
             ?.takeIf { it != "start" && it != "left" }
             ?.let { "text-align:$it;" }
             .orEmpty()
+            .let { existing ->
+                val fontStyle = fontFamily
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { "font-family:${cssFontFamilyValue(it)};" }
+                    .orEmpty()
+                existing + fontStyle
+            }
         val idAttr = anchorId
             ?.takeIf { it.isNotBlank() }
             ?.let { " id=\"${escapeHtml(it)}\"" }
@@ -870,7 +935,7 @@ class TextFormatReader @Inject constructor(
     }
 
     private fun renderDocxRun(run: Element, archive: DocxArchive): String {
-        val style = docxRunStyle(run)
+        val style = docxRunStyle(run, archive)
         val fragments = mutableListOf<String>()
         run.children().forEach { child ->
             when (child.tagName()) {
@@ -930,11 +995,19 @@ class TextFormatReader @Inject constructor(
         return "<figure><img src=\"$src\" alt=\"${escapeHtml(altText)}\" style=\"$widthStyle max-width:100%;height:auto;\"/></figure>"
     }
 
-    private fun docxRunStyle(run: Element): DocxRunStyle {
+    private fun docxRunStyle(run: Element, archive: DocxArchive): DocxRunStyle {
         val properties = run.getElementsByTag("w:rPr").firstOrNull()
         val underlineValue = properties?.getElementsByTag("w:u")?.firstOrNull()?.attr("w:val")
         val strikeValue = properties?.getElementsByTag("w:strike")?.firstOrNull()?.attr("w:val")
         val vertAlign = properties?.getElementsByTag("w:vertAlign")?.firstOrNull()?.attr("w:val")
+        val runStyleId = properties?.getElementsByTag("w:rStyle")?.firstOrNull()
+            ?.attr("w:val")
+            ?.trim()
+            .orEmpty()
+        val fontFamily = resolveDocxFontFamily(
+            rFonts = properties?.getElementsByTag("w:rFonts")?.firstOrNull(),
+            fallbackFamily = archive.styleContext.runStyleFonts[runStyleId]
+        )
         return DocxRunStyle(
             bold = properties?.getElementsByTag("w:b")?.firstOrNull()?.attr("w:val")
                 ?.equals("false", ignoreCase = true) != true && properties?.getElementsByTag("w:b")?.isNotEmpty() == true,
@@ -949,7 +1022,8 @@ class TextFormatReader @Inject constructor(
                 ?.takeIf { it.matches(Regex("[0-9A-Fa-f]{6}")) },
             highlight = properties?.getElementsByTag("w:highlight")?.firstOrNull()
                 ?.attr("w:val")
-                ?.takeIf { it.isNotBlank() }
+                ?.takeIf { it.isNotBlank() },
+            fontFamily = fontFamily
         )
     }
 
@@ -965,6 +1039,7 @@ class TextFormatReader @Inject constructor(
         val inlineStyle = buildString {
             style.colorHex?.let { append("color:#$it;") }
             style.highlight?.let { append("background-color:${docxHighlightColor(it)};") }
+            style.fontFamily?.let { append("font-family:${cssFontFamilyValue(it)};") }
         }
         return if (inlineStyle.isBlank()) html else "<span style=\"$inlineStyle\">$html</span>"
     }
@@ -1003,6 +1078,26 @@ class TextFormatReader @Inject constructor(
                     else -> null
                 }
             }
+    }
+
+    private fun docxParagraphFontFamily(paragraph: Element, archive: DocxArchive): String? {
+        val styleId = paragraph.getElementsByTag("w:pStyle").firstOrNull()
+            ?.attr("w:val")
+            ?.trim()
+            .orEmpty()
+        return resolveDocxFontFamily(
+            rFonts = docxFindNestedChild(paragraph, "w:pPr", "w:rPr", "w:rFonts"),
+            fallbackFamily = archive.styleContext.paragraphStyleFonts[styleId]
+                ?: archive.styleContext.defaultFontFamily
+        )
+    }
+
+    private fun docxFindNestedChild(element: Element?, vararg tagPath: String): Element? {
+        var current = element ?: return null
+        for (tagName in tagPath) {
+            current = current.children().firstOrNull { it.tagName() == tagName } ?: return null
+        }
+        return current
     }
 
     private fun docxHighlightColor(value: String): String = when (value.lowercase()) {
@@ -1058,6 +1153,227 @@ class TextFormatReader @Inject constructor(
         }
         return result
     }
+
+    private fun parseDocxStyleContext(
+        stylesXml: String?,
+        embeddedFaces: Map<String, List<DocxFontFace>>
+    ): DocxStyleContext {
+        if (stylesXml.isNullOrBlank()) {
+            return DocxStyleContext(
+                embeddedFontCss = buildDocxEmbeddedFontCss(embeddedFaces)
+            )
+        }
+        val document = Jsoup.parse(stylesXml, "", JsoupXmlParser.xmlParser())
+        document.outputSettings(Document.OutputSettings().prettyPrint(false))
+
+        val styleDefinitions = document.getElementsByTag("w:style")
+            .mapNotNull { style ->
+                val styleId = style.attr("w:styleId").trim()
+                val styleType = style.attr("w:type").trim().lowercase()
+                if (styleId.isBlank() || styleType.isBlank()) return@mapNotNull null
+                DocxStyleDefinition(
+                    styleId = styleId,
+                    type = styleType,
+                    basedOn = docxStyleReference(style, "w:basedOn"),
+                    linkedStyleId = docxStyleReference(style, "w:link"),
+                    isDefault = style.attr("w:default").equals("1", ignoreCase = true) ||
+                        style.attr("w:default").equals("true", ignoreCase = true),
+                    directFontFamily = resolveDocxFontFamily(
+                        docxFindNestedChild(style, "w:rPr", "w:rFonts")
+                    )
+                )
+            }
+            .associateBy { it.styleId }
+
+        val defaultParagraphStyleId = styleDefinitions.values
+            .firstOrNull { it.type == "paragraph" && it.isDefault }
+            ?.styleId
+            ?: styleDefinitions.values
+                .firstOrNull { it.type == "paragraph" && it.styleId.equals("Normal", ignoreCase = true) }
+                ?.styleId
+
+        val fallbackDefaultFont = resolveDocxFontFamily(
+            docxFindNestedChild(
+                document.getElementsByTag("w:docDefaults").firstOrNull(),
+                "w:rPrDefault",
+                "w:rPr",
+                "w:rFonts"
+            )
+        )
+
+        val resolvedFonts = mutableMapOf<String, String?>()
+        fun resolveStyleFont(styleId: String?, visited: Set<String> = emptySet()): String? {
+            val normalizedId = styleId?.takeIf { it.isNotBlank() } ?: return null
+            resolvedFonts[normalizedId]?.let { return it }
+            if (normalizedId in visited) return null
+            val definition = styleDefinitions[normalizedId] ?: return null
+            val nextVisited = visited + normalizedId
+            val resolved = definition.directFontFamily
+                ?: resolveStyleFont(definition.linkedStyleId, nextVisited)
+                ?: resolveStyleFont(definition.basedOn, nextVisited)
+            resolvedFonts[normalizedId] = resolved
+            return resolved
+        }
+
+        val defaultFontFamily = fallbackDefaultFont
+            ?: resolveStyleFont(defaultParagraphStyleId)
+
+        val paragraphFonts = linkedMapOf<String, String>()
+        val runFonts = linkedMapOf<String, String>()
+        styleDefinitions.values.forEach { definition ->
+            val fontFamily = resolveStyleFont(definition.styleId)
+                ?: if (definition.type == "paragraph") defaultFontFamily else null
+            if (fontFamily.isNullOrBlank()) return@forEach
+            when (definition.type) {
+                "paragraph" -> paragraphFonts[definition.styleId] = fontFamily
+                "character" -> runFonts[definition.styleId] = fontFamily
+            }
+        }
+        return DocxStyleContext(
+            embeddedFontCss = buildDocxEmbeddedFontCss(embeddedFaces),
+            defaultFontFamily = defaultFontFamily,
+            paragraphStyleFonts = paragraphFonts,
+            runStyleFonts = runFonts
+        )
+    }
+
+    private fun docxStyleReference(style: Element, tagName: String): String? =
+        style.getElementsByTag(tagName)
+            .firstOrNull()
+            ?.attr("w:val")
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+
+    private fun parseDocxEmbeddedFonts(
+        fontTableXml: String?,
+        fontRelationships: Map<String, String>,
+        entries: Map<String, ByteArray>
+    ): Map<String, List<DocxFontFace>> {
+        if (fontTableXml.isNullOrBlank()) return emptyMap()
+        val document = Jsoup.parse(fontTableXml, "", JsoupXmlParser.xmlParser())
+        document.outputSettings(Document.OutputSettings().prettyPrint(false))
+        val result = linkedMapOf<String, MutableList<DocxFontFace>>()
+
+        data class FontVariant(val tagName: String, val fontWeight: String, val fontStyle: String)
+        val variants = listOf(
+            FontVariant("w:embedRegular", "400", "normal"),
+            FontVariant("w:embedBold", "700", "normal"),
+            FontVariant("w:embedItalic", "400", "italic"),
+            FontVariant("w:embedBoldItalic", "700", "italic")
+        )
+
+        document.getElementsByTag("w:font").forEach { font ->
+            val family = font.attr("w:name").trim()
+            if (family.isBlank()) return@forEach
+            variants.forEach { variant ->
+                val embedding = font.getElementsByTag(variant.tagName).firstOrNull() ?: return@forEach
+                val relationshipId = embedding.attr("r:id").trim()
+                if (relationshipId.isBlank()) return@forEach
+                val target = fontRelationships[relationshipId] ?: return@forEach
+                val normalizedTarget = normalizeDocxEntryTarget(target)
+                val rawBytes = entries[normalizedTarget] ?: return@forEach
+                val fontKey = embedding.attr("w:fontKey").trim()
+                val fontBytes = deobfuscateDocxEmbeddedFont(rawBytes, fontKey)
+                val mimeType = detectEmbeddedFontMimeType(fontBytes)
+                val dataUri = "data:$mimeType;base64,${Base64.getEncoder().encodeToString(fontBytes)}"
+                result.getOrPut(family) { mutableListOf() } += DocxFontFace(
+                    cssFontFamily = family,
+                    fontWeight = variant.fontWeight,
+                    fontStyle = variant.fontStyle,
+                    dataUri = dataUri
+                )
+            }
+        }
+        return result
+    }
+
+    private fun buildDocxEmbeddedFontCss(
+        embeddedFaces: Map<String, List<DocxFontFace>>
+    ): String {
+        if (embeddedFaces.isEmpty()) return ""
+        return embeddedFaces
+            .values
+            .flatten()
+            .joinToString(separator = "\n") { face ->
+                """
+                @font-face {
+                  font-family: ${cssFontFamilyValue(face.cssFontFamily)};
+                  src: url('${face.dataUri}') format('${docxFontFormatHint(face.dataUri)}');
+                  font-weight: ${face.fontWeight};
+                  font-style: ${face.fontStyle};
+                }
+                """.trimIndent()
+            }
+    }
+
+    private fun resolveDocxFontFamily(
+        rFonts: Element?,
+        fallbackFamily: String? = null
+    ): String? {
+        val attrs = listOf("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia")
+        attrs.forEach { attr ->
+            rFonts?.attr(attr)
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { return it }
+        }
+        return fallbackFamily?.takeIf { it.isNotBlank() }
+    }
+
+    private fun normalizeDocxEntryTarget(target: String): String = when {
+        target.startsWith("word/") -> target
+        target.startsWith("../") -> target.removePrefix("../")
+        else -> "word/$target"
+    }
+
+    private fun deobfuscateDocxEmbeddedFont(rawBytes: ByteArray, fontKey: String): ByteArray {
+        val keyBytes = docxFontKeyBytes(fontKey) ?: return rawBytes
+        if (rawBytes.isEmpty()) return rawBytes
+        val decoded = rawBytes.copyOf()
+        val limit = minOf(32, decoded.size)
+        for (index in 0 until limit) {
+            decoded[index] = (decoded[index].toInt() xor keyBytes[index % keyBytes.size].toInt()).toByte()
+        }
+        return decoded
+    }
+
+    private fun docxFontKeyBytes(fontKey: String): ByteArray? {
+        val hex = fontKey
+            .trim()
+            .removePrefix("{")
+            .removeSuffix("}")
+            .replace("-", "")
+        if (hex.length != 32 || !hex.matches(Regex("[0-9A-Fa-f]{32}"))) return null
+        val bytes = ByteArray(16) { index ->
+            hex.substring(index * 2, index * 2 + 2).toInt(16).toByte()
+        }
+        return byteArrayOf(
+            bytes[15], bytes[14], bytes[13], bytes[12],
+            bytes[11], bytes[10], bytes[9], bytes[8],
+            bytes[6], bytes[7], bytes[4], bytes[5],
+            bytes[0], bytes[1], bytes[2], bytes[3]
+        )
+    }
+
+    private fun detectEmbeddedFontMimeType(bytes: ByteArray): String {
+        if (bytes.size >= 4) {
+            val header = bytes.copyOfRange(0, 4).decodeToString()
+            if (header == "OTTO") return "font/otf"
+            if (header == "wOFF") return "font/woff"
+            if (header == "wOF2") return "font/woff2"
+        }
+        return "font/ttf"
+    }
+
+    private fun docxFontFormatHint(dataUri: String): String = when {
+        dataUri.startsWith("data:font/otf") -> "opentype"
+        dataUri.startsWith("data:font/woff2") -> "woff2"
+        dataUri.startsWith("data:font/woff") -> "woff"
+        else -> "truetype"
+    }
+
+    private fun cssFontFamilyValue(fontFamily: String): String =
+        "\"${fontFamily.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
     private fun readZipEntries(bytes: ByteArray): Map<String, ByteArray> {
         val result = linkedMapOf<String, ByteArray>()
@@ -1188,15 +1504,25 @@ class TextFormatReader @Inject constructor(
             .replace("&apos;", "'")
     }
 
-    private fun paginateBlocks(blocks: List<String>): List<String> {
-        if (blocks.isEmpty()) return listOf(wrapHtml("<p></p>"))
+    private fun paginateBlocks(
+        blocks: List<String>,
+        extraCss: String = "",
+        baseCss: String = DEFAULT_READER_HTML_CSS,
+        preservePublisherLayout: Boolean = false
+    ): List<String> {
+        if (blocks.isEmpty()) return listOf(wrapHtml("<p></p>", extraCss, baseCss, preservePublisherLayout))
         val pages = mutableListOf<String>()
         val buffer = StringBuilder()
         var chars = 0
 
         fun flush() {
             if (buffer.isNotEmpty()) {
-                pages += wrapHtml(buffer.toString())
+                pages += wrapHtml(
+                    body = buffer.toString(),
+                    extraCss = extraCss,
+                    baseCss = baseCss,
+                    preservePublisherLayout = preservePublisherLayout
+                )
                 buffer.clear()
                 chars = 0
             }
@@ -1209,7 +1535,7 @@ class TextFormatReader @Inject constructor(
             chars += visibleChars
         }
         flush()
-        return pages.ifEmpty { listOf(wrapHtml("<p></p>")) }
+        return pages.ifEmpty { listOf(wrapHtml("<p></p>", extraCss, baseCss, preservePublisherLayout)) }
     }
 
     private fun normalizeHtmlDocument(raw: String): String {
@@ -1587,6 +1913,16 @@ class TextFormatReader @Inject constructor(
         .filter { token -> token.length >= 4 }
         .toSet()
 
-    private fun wrapHtml(body: String): String = buildReaderHtmlDocument(body)
+    private fun wrapHtml(
+        body: String,
+        extraCss: String = "",
+        baseCss: String = DEFAULT_READER_HTML_CSS,
+        preservePublisherLayout: Boolean = false
+    ): String = buildReaderHtmlDocument(
+        body = body,
+        extraCss = extraCss,
+        baseCss = baseCss,
+        preservePublisherLayout = preservePublisherLayout
+    )
     private fun escapeHtml(text: String): String = htmlEscapeText(text)
 }

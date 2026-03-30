@@ -75,6 +75,7 @@ import com.example.core.ui.library.LibraryThemePresetSnapshot
 import com.example.core.ui.library.RootChromePanelShape
 import com.example.core.ui.library.RootChromePillShape
 import com.example.core.ui.library.RootChromeTone
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.library.libraryCardElevation
 import com.example.core.ui.library.parseLibraryThemePreset
 import com.example.core.ui.library.rootChromeBackdropStrength
@@ -83,6 +84,7 @@ import com.example.core.ui.library.rootChromeIconContainerColor
 import com.example.core.ui.library.rootChromePanelColor
 import com.example.core.ui.library.rootChromePillContainerColor
 import com.example.core.ui.library.rootChromePillContentColor
+import com.example.core.ui.library.rootChromeStableTopBarInsets
 import com.example.core.ui.library.rootChromeTextFieldColors
 import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.core.ui.locale.AppStrings
@@ -3094,21 +3096,25 @@ fun SettingsScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text(sectionTitle) },
-                colors = rootChromeTopBarColors(),
-                navigationIcon = {
-                    if (currentSection != null || onBackClick != null) {
-                        IconButton(onClick = {
-                            navigateUp()
-                        }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+            RootChromeTopBarHost {
+                TopAppBar(
+                    title = { Text(sectionTitle) },
+                    colors = rootChromeTopBarColors(),
+                    windowInsets = rootChromeStableTopBarInsets(),
+                    navigationIcon = {
+                        if (currentSection != null || onBackClick != null) {
+                            IconButton(onClick = {
+                                navigateUp()
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -3610,14 +3616,12 @@ private fun AppearanceSection(
             currentPage == AppearanceSettingsPage.COLORS
         ) {
             stickyHeader(key = "appearance_preview") {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
-                        SettingsCard(title = strings.preview) {
-                            ThemePreviewCard(
-                                uiState = uiState,
-                                strings = strings
-                            )
-                        }
+                Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                    SettingsCard(title = strings.preview) {
+                        ThemePreviewCard(
+                            uiState = uiState,
+                            strings = strings
+                        )
                     }
                 }
             }
@@ -4064,9 +4068,13 @@ private fun ThemePreviewCard(
         ThemeMode.DARK -> strings.themeDark
         ThemeMode.DYNAMIC -> strings.themeDynamic
     }
+    val previewCardShape = RoundedCornerShape(20.dp)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(previewCardShape),
+        shape = previewCardShape,
         colors = CardDefaults.cardColors(containerColor = previewBackground),
         border = CardDefaults.outlinedCardBorder()
     ) {
@@ -4384,10 +4392,8 @@ private fun ReaderSection(
             }
             ReaderSettingsPage.HEADERS -> {
                 stickyHeader(key = "reader_headers_preview") {
-                    Surface(color = MaterialTheme.colorScheme.background) {
-                        Box(modifier = Modifier.padding(bottom = 10.dp)) {
-                            ReaderHeaderFooterPreviewCard(uiState = uiState, language = uiState.appLanguage)
-                        }
+                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                        ReaderHeaderFooterPreviewCard(uiState = uiState, language = uiState.appLanguage)
                     }
                 }
                 item {
@@ -4530,9 +4536,12 @@ private fun ReaderPageLayoutPreviewCard(
             else -> "Предпросмотр макета"
         }
     ) {
+        val previewShape = MaterialTheme.shapes.large
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(previewShape),
+            shape = previewShape,
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
             Column(
@@ -6881,7 +6890,9 @@ private fun AppThemePresetCard(
     val backgroundColor = snapshot?.customBackgroundColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.background
 
     Card(
-        modifier = modifier.width(160.dp),
+        modifier = modifier
+            .width(160.dp)
+            .clip(cardShape),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -9300,9 +9311,11 @@ private fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val shape = RootChromePanelShape
     OutlinedCard(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RootChromePanelShape,
+        modifier = Modifier
+            .fillMaxWidth(),
+        shape = shape,
         border = BorderStroke(
             width = 1.dp,
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
@@ -9350,10 +9363,13 @@ private fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true
 ) {
+    val shape = RoundedCornerShape(20.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(20.dp)
+        shape = shape
     ) {
         Row(
             modifier = Modifier
@@ -9404,6 +9420,7 @@ private fun SettingsPickerTile(
     subtitle: String? = null,
     compact: Boolean = false
 ) {
+    val shape = RoundedCornerShape(20.dp)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -9412,7 +9429,7 @@ private fun SettingsPickerTile(
                 onClick()
             },
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(20.dp)
+        shape = shape
     ) {
         Row(
             modifier = Modifier
@@ -9467,10 +9484,13 @@ private fun SettingsSliderTile(
     steps: Int = 0,
     subtitle: String? = null
 ) {
+    val shape = RoundedCornerShape(20.dp)
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape),
         color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(20.dp)
+        shape = shape
     ) {
         Column(
             modifier = Modifier

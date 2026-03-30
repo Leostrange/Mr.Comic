@@ -12,7 +12,7 @@ class TextRealFileSmokeTest {
 
     @Test
     fun docxSamplePreservesRichContent() = runBlocking {
-        val sample = locateSample("docx_sample.docx")
+        val sample = locateSample("docx_sample.zip")
         assertTrue("Expected DOCX sample to exist", sample.exists())
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.DOCX)
@@ -27,6 +27,8 @@ class TextRealFileSmokeTest {
             assertTrue(joined.contains("Demonstration of DOCX support in calibre", ignoreCase = true))
             assertTrue(joined.contains("<table", ignoreCase = true))
             assertTrue(joined.contains("<img", ignoreCase = true))
+            assertTrue(joined.contains("@font-face"))
+            assertTrue(joined.contains("font-family"))
         } finally {
             reader.close()
         }

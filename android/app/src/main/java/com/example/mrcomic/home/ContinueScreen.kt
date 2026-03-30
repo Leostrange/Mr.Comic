@@ -6,15 +6,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -40,7 +44,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -85,6 +88,7 @@ import com.example.core.ui.library.LibraryBackdropLayer
 import com.example.core.ui.library.RootChromePanelShape
 import com.example.core.ui.library.RootChromePillShape
 import com.example.core.ui.library.RootChromeTone
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.mascot.MrComicMiniAvatar
 import com.example.core.ui.mascot.MrComicStagePreviewLead
@@ -98,6 +102,7 @@ import com.example.core.ui.library.rootChromeIconContainerColor
 import com.example.core.ui.library.rootChromePanelColor
 import com.example.core.ui.library.rootChromePillContainerColor
 import com.example.core.ui.library.rootChromePillContentColor
+import com.example.core.ui.library.rootChromeStableTopBarInsets
 import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.mrcomic.ui.ContinueScreenText
 import com.example.mrcomic.ui.continueScreenText
@@ -511,6 +516,7 @@ internal fun resolveContinueCompanionPresentation(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ContinueScreen(
     onComicClick: (String, Int?) -> Unit,
@@ -576,6 +582,7 @@ fun ContinueScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ContinueTopBar(
                 title = text.title,
@@ -737,30 +744,33 @@ fun ContinueScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ContinueTopBar(
     title: String,
     onOpenProgressProfile: () -> Unit
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                text = title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        colors = rootChromeTopBarColors(),
-        actions = {
-            FilledTonalIconButton(onClick = onOpenProgressProfile) {
-                Icon(
-                    imageVector = Icons.Default.TaskAlt,
-                    contentDescription = null
+    RootChromeTopBarHost {
+        TopAppBar(
+            title = {
+                Text(
+                    text = title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+            },
+            colors = rootChromeTopBarColors(),
+            windowInsets = rootChromeStableTopBarInsets(),
+            actions = {
+                FilledTonalIconButton(onClick = onOpenProgressProfile) {
+                    Icon(
+                        imageVector = Icons.Default.TaskAlt,
+                        contentDescription = null
+                    )
+                }
             }
-        }
-    )
+        )
+    }
 }
 
 @Composable

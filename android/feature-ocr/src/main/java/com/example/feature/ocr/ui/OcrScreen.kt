@@ -34,6 +34,7 @@ import com.example.core.ui.library.RootChromeDensePillShape
 import com.example.core.ui.library.RootChromePanelShape
 import com.example.core.ui.library.RootChromePillShape
 import com.example.core.ui.library.RootChromeTone
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.locale.TranslationLanguageOption
 import com.example.core.ui.locale.ocrSourceLanguageOptions
@@ -45,6 +46,7 @@ import com.example.core.ui.library.rootChromePanelColor
 import com.example.core.ui.library.rootChromePillBorder
 import com.example.core.ui.library.rootChromePillContainerColor
 import com.example.core.ui.library.rootChromePillContentColor
+import com.example.core.ui.library.rootChromeStableTopBarInsets
 import com.example.core.ui.library.rootChromeTextFieldColors
 import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.feature.ocr.data.shouldAllowOcrDictionaryLookup
@@ -273,18 +275,22 @@ fun OcrScreen(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = { Text(text.screenTitle) },
-                colors = rootChromeTopBarColors(),
-                navigationIcon = {
-                    if (showBackButton) {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
+            RootChromeTopBarHost {
+                TopAppBar(
+                    title = { Text(text.screenTitle) },
+                    colors = rootChromeTopBarColors(),
+                    windowInsets = rootChromeStableTopBarInsets(),
+                    navigationIcon = {
+                        if (showBackButton) {
+                            IconButton(onClick = onNavigateBack) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {

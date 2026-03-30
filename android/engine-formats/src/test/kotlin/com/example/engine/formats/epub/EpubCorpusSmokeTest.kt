@@ -72,7 +72,7 @@ class EpubCorpusSmokeTest {
 
     @Test
     fun sample6177KeepsUtf8CyrillicReadable() = runBlocking {
-        val sample = locateSample("6177.epub")
+        val sample = locateSample("6177.zip")
         assertTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
@@ -86,6 +86,54 @@ class EpubCorpusSmokeTest {
 
             assertTrue("Expected readable UTF-8 title text", firstPages.contains("Атлантида"))
             assertTrue("Expected UTF-8 body text to stay readable", !firstPages.contains("РђС"))
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun sample6177InlinesAllLinkedStylesheets() = runBlocking {
+        val sample = locateSample("6177.zip")
+        assertTrue("Expected EPUB sample to exist", sample.exists())
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val firstPages = (0 until minOf(reader.getPageCount(), 3))
+                .mapNotNull { reader.getHtmlPage(it) }
+                .joinToString("\n")
+
+            assertTrue("Expected main stylesheet rules to be inlined", firstPages.contains(".calibre"))
+            assertTrue(
+                "Expected secondary page stylesheet to be inlined",
+                firstPages.contains("margin-bottom: 5pt")
+            )
+            assertTrue(
+                "Expected stylesheet link tags to be removed after inlining",
+                !firstPages.contains("<link", ignoreCase = true)
+            )
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun sample6177BuildsUsableTocEntries() = runBlocking {
+        val sample = locateSample("6177.zip")
+        assertTrue("Expected EPUB sample to exist", sample.exists())
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val toc = reader.getTableOfContents()
+
+            assertTrue("Expected EPUB TOC to be populated", toc.size > 10)
+            assertTrue(
+                "Expected TOC to resolve chapter entries into page indices",
+                toc.any { it.title.contains("ПРЕДИСЛОВИЕ", ignoreCase = true) && it.pageIndex >= 0 }
+            )
+            assertTrue(
+                "Expected TOC to keep note entries as real targets",
+                toc.any { it.title == "1" && it.pageIndex >= 0 }
+            )
         } finally {
             reader.close()
         }
