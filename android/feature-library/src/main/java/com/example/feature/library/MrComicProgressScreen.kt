@@ -9,11 +9,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -67,11 +71,14 @@ import com.example.core.domain.analytics.resolveMascotStageArchive
 import com.example.core.domain.analytics.resolveMascotStageTimeline
 import com.example.core.domain.analytics.resolveMrComicMascotState
 import com.example.core.model.Comic
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.mascot.MrComicStageArchivePortrait
 import com.example.core.ui.mascot.MrComicMiniAvatar
 import com.example.core.ui.mascot.MrComicMascotSurfaceMode
 import com.example.core.ui.mascot.resolveMrComicMascotSurfaceMode
+import com.example.core.ui.library.rootChromeStableTopBarInsets
+import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.feature.library.components.AchievementStrings
 import com.example.feature.library.components.LibraryAchievement
 import com.example.feature.library.components.LibraryAchievementsRow
@@ -167,7 +174,7 @@ internal enum class MrComicProgressRecentEmptyState {
     GENERIC
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MrComicProgressRoute(
     onBackClick: () -> Unit,
@@ -233,18 +240,23 @@ fun MrComicProgressRoute(
         )
     }
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            TopAppBar(
-                title = { Text(text.title) },
-                navigationIcon = {
-                    FilledTonalButton(onClick = onBackClick, modifier = Modifier.padding(start = 8.dp)) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = strings.back
-                        )
+            RootChromeTopBarHost {
+                TopAppBar(
+                    title = { Text(text.title) },
+                    colors = rootChromeTopBarColors(),
+                    windowInsets = rootChromeStableTopBarInsets(),
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = strings.back
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { innerPadding ->
         MrComicProgressScreen(

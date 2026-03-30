@@ -448,6 +448,8 @@ fun LibraryScreen(
     }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { androidx.compose.material3.SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             LibraryTopBar(
@@ -474,9 +476,7 @@ fun LibraryScreen(
         }
     ) { padding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+            modifier = Modifier.fillMaxSize()
         ) {
             LibraryBackground(
                 backgroundStyle = uiState.backgroundStyle,
@@ -486,7 +486,12 @@ fun LibraryScreen(
                 backgroundVeil = (uiState.backgroundVeil * 1.2f).coerceIn(0f, 1f)
             )
 
-            val isQuoteSection = uiState.contentSection == LibraryContentSection.QUOTES
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            ) {
+                val isQuoteSection = uiState.contentSection == LibraryContentSection.QUOTES
             val isBookmarkSection = uiState.contentSection == LibraryContentSection.BOOKMARKS
             val isAchievementSection = uiState.contentSection == LibraryContentSection.ACHIEVEMENTS
             val visibleAudiobooks = filterAndSortAudiobooks(
@@ -949,8 +954,9 @@ fun LibraryScreen(
                     Text(message)
                 }
             }
-        }
-            }
+            } // Закрытие внутреннего Box с padding
+        } // Закрытие внешнего Box
+    } // Закрытие тела Scaffold
 
             if (showFilterSheet && uiState.contentSection == LibraryContentSection.FILES) {
                 ModalBottomSheet(

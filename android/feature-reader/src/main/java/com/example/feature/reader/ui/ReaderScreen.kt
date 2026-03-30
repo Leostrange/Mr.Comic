@@ -1139,7 +1139,7 @@ fun ReaderScreen(
     val context = LocalContext.current
     val readerHardwareKeyHost = remember(context) { findReaderHardwareKeyHost(context) }
     val clipboardManager = LocalClipboardManager.current
-    val ttsController = remember { ReaderTextToSpeechController(context) }
+    val ttsController = remember { ReaderTextToSpeechControllerStore.get(context) }
     val ttsRuntimeState by ttsController.state.collectAsState()
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTextReader = uiState.currentHtmlContent != null ||
@@ -1152,6 +1152,7 @@ fun ReaderScreen(
     var openControlCenterAtServices by remember { mutableStateOf(false) }
     var showReaderAudioSheet by remember { mutableStateOf(false) }
     var showTextTranslationPageSheet by remember { mutableStateOf(false) }
+    var pendingTtsRestartTargetPage by remember { mutableStateOf<Int?>(null) }
     var eyeRestReminderMinutes by remember { mutableStateOf<Int?>(null) }
     val readerColorScheme = if (isEInk) {
         inheritedColorScheme
@@ -1321,10 +1322,6 @@ fun ReaderScreen(
         }
     }
 
-    DisposableEffect(ttsController) {
-        onDispose { ttsController.release() }
-    }
-
     val latestVolumeKeysPagingEnabled by rememberUpdatedState(uiState.volumeKeysPagingEnabled)
     val latestHandleHardwarePageTurn by rememberUpdatedState<(Int) -> Unit> { step ->
         when {
@@ -1351,6 +1348,7 @@ fun ReaderScreen(
     }
 
     LaunchedEffect(
+        uiState.currentPage,
         uiState.currentHtmlContent,
         uiState.ttsVoiceName,
         uiState.ttsSpeed,
@@ -1364,8 +1362,17 @@ fun ReaderScreen(
             speed = uiState.ttsSpeed,
             pitch = uiState.ttsPitch,
             volume = uiState.ttsVolume,
-            sleepTimerMode = ReaderTtsSleepTimerMode.fromStored(uiState.ttsSleepTimerMode)
+            sleepTimerMode = ReaderTtsSleepTimerMode.fromStored(uiState.ttsSleepTimerMode),
+            title = uiState.comic?.title,
+            chapterTitle = currentChapterTitle
         )
+        if (
+            pendingTtsRestartTargetPage == uiState.currentPage &&
+            !uiState.currentHtmlContent.isNullOrBlank()
+        ) {
+            pendingTtsRestartTargetPage = null
+            ttsController.restartFromBeginning()
+        }
     }
 
     // Применяем яркость экрана через WindowManager
@@ -1786,7 +1793,13 @@ fun ReaderScreen(
                 showReaderAudioSheet = false
             },
             onNavigateToPage = { page ->
-                viewModel.navigateTo(page)
+                if (page == uiState.currentPage) {
+                    ttsController.restartFromBeginning()
+                } else {
+                    pendingTtsRestartTargetPage = page
+                    ttsController.stop()
+                    viewModel.navigateTo(page)
+                }
             },
             onVoiceNameChange = { value ->
                 viewModel.setTtsVoiceName(value)

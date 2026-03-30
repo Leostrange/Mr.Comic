@@ -23,13 +23,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
+import com.example.core.ui.library.rootChromeStableTopBarInsets
+import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.mrcomic.ui.appIconDescription
 import com.example.mrcomic.ui.appIconName
 import com.example.mrcomic.ui.appIconScreenText
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun AppIconSettingsScreen(
     onBackClick: () -> Unit = {},
@@ -52,16 +55,21 @@ fun AppIconSettingsScreen(
     }
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text(text.title) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
+            RootChromeTopBarHost {
+                TopAppBar(
+                    title = { Text(text.title) },
+                    colors = rootChromeTopBarColors(),
+                    windowInsets = rootChromeStableTopBarInsets(),
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = text.back)
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { padding ->
         Column(

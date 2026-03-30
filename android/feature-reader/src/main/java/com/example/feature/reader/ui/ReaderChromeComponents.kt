@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -52,7 +53,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.model.ReadingMode
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
+import com.example.core.ui.library.rootChromeStableTopBarInsets
 import com.example.core.ui.theme.ReadingPreset
 import com.example.feature.reader.ui.components.ReaderBottomBar
 
@@ -64,32 +67,35 @@ fun ReaderMinimalBar(
     onExpand: () -> Unit
 ) {
     val strings = LocalStrings.current
-    TopAppBar(
-        title = {
-            Text(
-                text = title,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleMedium
+    RootChromeTopBarHost {
+        TopAppBar(
+            title = {
+                Text(
+                    text = title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
+            navigationIcon = {
+                ReaderChromeIconButton(onClick = onNavigateBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+                }
+            },
+            actions = {
+                ReaderChromeIconButton(onClick = onExpand) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = strings.controlsShow)
+                }
+            },
+            windowInsets = rootChromeStableTopBarInsets(),
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                actionIconContentColor = MaterialTheme.colorScheme.onSurface
             )
-        },
-        navigationIcon = {
-            ReaderChromeIconButton(onClick = onNavigateBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
-            }
-        },
-        actions = {
-            ReaderChromeIconButton(onClick = onExpand) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = strings.controlsShow)
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.Transparent,
-            titleContentColor = MaterialTheme.colorScheme.onSurface,
-            navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-            actionIconContentColor = MaterialTheme.colorScheme.onSurface
         )
-    )
+    }
 }
 
 @Composable

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,7 +43,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.core.model.SortOrder
 import com.example.core.ui.library.RootChromeTone
+import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.library.rootChromePanelColor
+import com.example.core.ui.library.rootChromeStableTopBarInsets
 import com.example.core.ui.library.rootChromeTopBarColors
 import com.example.core.ui.locale.LocalStrings
 import com.example.feature.library.GroupByMode
@@ -90,138 +93,140 @@ fun LibraryTopBar(
     val scrollState = rememberScrollState()
     val menuContainerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.NEUTRAL)
 
-    TopAppBar(
-        title = {
-            Text(
-                text = when (contentSection) {
-                    LibraryContentSection.QUOTES -> strings.libraryQuotes
-                    LibraryContentSection.BOOKMARKS -> strings.libraryBookmarks
-                    LibraryContentSection.ACHIEVEMENTS -> "Mr.Comic"
-                    else -> strings.navLibrary
-                },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        windowInsets = WindowInsets.statusBarsIgnoringVisibility,
-        colors = rootChromeTopBarColors(),
-        navigationIcon = {
-            if (canNavigateUp) {
-                IconButton(onClick = onNavigateUp) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = strings.back
-                    )
+    RootChromeTopBarHost {
+        TopAppBar(
+            title = {
+                Text(
+                    text = when (contentSection) {
+                        LibraryContentSection.QUOTES -> strings.libraryQuotes
+                        LibraryContentSection.BOOKMARKS -> strings.libraryBookmarks
+                        LibraryContentSection.ACHIEVEMENTS -> "Mr.Comic"
+                        else -> strings.navLibrary
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            windowInsets = rootChromeStableTopBarInsets(),
+            colors = rootChromeTopBarColors(),
+            navigationIcon = {
+                if (canNavigateUp) {
+                    IconButton(onClick = onNavigateUp) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = strings.back
+                        )
+                    }
                 }
-            }
-        },
-        actions = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                if (controlsRelevant && isControlsExpanded) {
-                    Row(
-                        modifier = Modifier.horizontalScroll(scrollState),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        FilledTonalIconButton(onClick = onToggleView) {
-                            Icon(
-                                when (nextViewMode) {
-                                    LibraryViewMode.GRID -> Icons.Default.GridView
-                                    LibraryViewMode.LIST -> Icons.AutoMirrored.Filled.ViewList
-                                    LibraryViewMode.STRIPS -> Icons.Default.Menu
-                                },
-                                contentDescription = when (nextViewMode) {
-                                    LibraryViewMode.GRID -> strings.libraryViewGrid
-                                    LibraryViewMode.LIST -> strings.libraryViewList
-                                    LibraryViewMode.STRIPS -> "Горизонтальная лента"
-                                }
-                            )
-                        }
-                        FilledTonalIconButton(onClick = onOpenFilters) {
-                            Icon(Icons.Default.Tune, contentDescription = strings.actionSort)
-                        }
-                        Box {
-                            FilledTonalIconButton(onClick = { thumbnailMenuExpanded = true }) {
+            },
+            actions = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    if (controlsRelevant && isControlsExpanded) {
+                        Row(
+                            modifier = Modifier.horizontalScroll(scrollState),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            FilledTonalIconButton(onClick = onToggleView) {
                                 Icon(
-                                    if (thumbnailMode == "SQUARE") Icons.Default.CropSquare else Icons.Default.Crop169,
-                                    contentDescription = if (thumbnailMode == "SQUARE") {
-                                        strings.actionSquare
-                                    } else {
-                                        strings.actionRectangle
-                                    }
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = thumbnailMenuExpanded,
-                                onDismissRequest = { thumbnailMenuExpanded = false },
-                                shape = RoundedCornerShape(18.dp),
-                                containerColor = menuContainerColor
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionRectangle) },
-                                    onClick = {
-                                        thumbnailMenuExpanded = false
-                                        onThumbnailModeChange("RECTANGLE")
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionSquare) },
-                                    onClick = {
-                                        thumbnailMenuExpanded = false
-                                        onThumbnailModeChange("SQUARE")
-                                    }
-                                )
-                            }
-                        }
-                        Box {
-                            FilledTonalIconButton(onClick = { addMenuExpanded = true }) {
-                                Icon(Icons.Default.FolderOpen, contentDescription = strings.actionFolder)
-                            }
-                            DropdownMenu(
-                                expanded = addMenuExpanded,
-                                onDismissRequest = { addMenuExpanded = false },
-                                shape = RoundedCornerShape(18.dp),
-                                containerColor = menuContainerColor
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionFile) },
-                                    leadingIcon = {
-                                        Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
+                                    when (nextViewMode) {
+                                        LibraryViewMode.GRID -> Icons.Default.GridView
+                                        LibraryViewMode.LIST -> Icons.AutoMirrored.Filled.ViewList
+                                        LibraryViewMode.STRIPS -> Icons.Default.Menu
                                     },
-                                    onClick = {
-                                        addMenuExpanded = false
-                                        onAddFileClick()
+                                    contentDescription = when (nextViewMode) {
+                                        LibraryViewMode.GRID -> strings.libraryViewGrid
+                                        LibraryViewMode.LIST -> strings.libraryViewList
+                                        LibraryViewMode.STRIPS -> "Горизонтальная лента"
                                     }
                                 )
-                                DropdownMenuItem(
-                                    text = { Text(strings.actionFolder) },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.FolderOpen, contentDescription = null)
-                                    },
-                                    onClick = {
-                                        addMenuExpanded = false
-                                        onAddFolderClick()
-                                    }
-                                )
+                            }
+                            FilledTonalIconButton(onClick = onOpenFilters) {
+                                Icon(Icons.Default.Tune, contentDescription = strings.actionSort)
+                            }
+                            Box {
+                                FilledTonalIconButton(onClick = { thumbnailMenuExpanded = true }) {
+                                    Icon(
+                                        if (thumbnailMode == "SQUARE") Icons.Default.CropSquare else Icons.Default.Crop169,
+                                        contentDescription = if (thumbnailMode == "SQUARE") {
+                                            strings.actionSquare
+                                        } else {
+                                            strings.actionRectangle
+                                        }
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = thumbnailMenuExpanded,
+                                    onDismissRequest = { thumbnailMenuExpanded = false },
+                                    shape = RoundedCornerShape(18.dp),
+                                    containerColor = menuContainerColor
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionRectangle) },
+                                        onClick = {
+                                            thumbnailMenuExpanded = false
+                                            onThumbnailModeChange("RECTANGLE")
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionSquare) },
+                                        onClick = {
+                                            thumbnailMenuExpanded = false
+                                            onThumbnailModeChange("SQUARE")
+                                        }
+                                    )
+                                }
+                            }
+                            Box {
+                                FilledTonalIconButton(onClick = { addMenuExpanded = true }) {
+                                    Icon(Icons.Default.FolderOpen, contentDescription = strings.actionFolder)
+                                }
+                                DropdownMenu(
+                                    expanded = addMenuExpanded,
+                                    onDismissRequest = { addMenuExpanded = false },
+                                    shape = RoundedCornerShape(18.dp),
+                                    containerColor = menuContainerColor
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionFile) },
+                                        leadingIcon = {
+                                            Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            addMenuExpanded = false
+                                            onAddFileClick()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(strings.actionFolder) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.FolderOpen, contentDescription = null)
+                                        },
+                                        onClick = {
+                                            addMenuExpanded = false
+                                            onAddFolderClick()
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                IconButton(onClick = onToggleControls) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        contentDescription = strings.navSettings,
-                        tint = if (isControlsExpanded || filtersActive) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurface
-                        }
-                    )
+                    IconButton(onClick = onToggleControls) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = strings.navSettings,
+                            tint = if (isControlsExpanded || filtersActive) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurface
+                            }
+                        )
+                    }
                 }
             }
-        }
-    )
+        )
+    }
 }

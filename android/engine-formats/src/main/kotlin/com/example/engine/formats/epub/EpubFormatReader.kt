@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
-import android.util.Xml
 import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.TocEntry
 import kotlinx.coroutines.Dispatchers
@@ -15,7 +14,6 @@ import net.lingala.zip4j.model.FileHeader
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.parser.Parser as JsoupXmlParser
-import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
 import java.net.URLDecoder
@@ -246,7 +244,10 @@ class EpubFormatReader(
         private val XHTML_EXTENSIONS = setOf("xhtml", "html", "htm")
         private val IMG_SRC_RE    = Regex("""(<img\b[^>]*?\bsrc\s*=\s*["'])([^"']+)(["'][^>]*?>)""", RegexOption.IGNORE_CASE)
         private val XLINK_HREF_RE = Regex("""(<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["'])([^"']+)(["'][^>]*?/?>)""", RegexOption.IGNORE_CASE)
-        private val CSS_LINK_RE   = Regex("""<link\b[^>]+\bhref\s*=\s*["']([^"']+\.css)["'][^>]*?/?>""", RegexOption.IGNORE_CASE)
+        private val CSS_LINK_RE   = Regex(
+            """<link\b(?=[^>]*\brel\s*=\s*["'][^"']*stylesheet[^"']*["'])[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*?/?>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
         /**
          * Viewport meta + minimal reader CSS injected at the end of <head>.
          * Low-specificity selectors ensure publisher CSS wins for custom elements;
@@ -334,7 +335,8 @@ class EpubFormatReader(
             val entry: String,
             val html: String,
             val chunkIndex: Int = 0,
-            val totalChunks: Int = 1
+            val totalChunks: Int = 1,
+            val sourceEntries: List<String> = emptyList()
         ) : EpubPage()
     }
 
@@ -585,11 +587,7 @@ class EpubFormatReader(
                     }
                     // Skip structurally-empty pages: no text AND no images.
                     // Image-only wrapper pages (charCount=0, imgCount>0) are kept as a single page.
-                    if (charCount == 0 && imgCount == 0) {
-                        // Still add tiny stub pages (< 300 bytes) in case they are anchor targets,
-                        // but skip larger markup-only pages (navigation, empty chapter breaks).
-                        if (header.uncompressedSize > 300L) continue@spineLoop
-                    }
+                    if (charCount == 0 && imgCount == 0) continue@spineLoop
                     val chunks = estimate.chunkCount
                     repeat(chunks) { i -> rawResult.add(EpubPage.Html(entry, opfDir, i, chunks)) }
                 }
@@ -933,8 +931,8 @@ class EpubFormatReader(
 
         return try {
             val ext = ncxEntry.substringAfterLast('.', "").lowercase()
-            if (ext == "ncx") parseNcx(zip, header, ncxEntry, pages)
-            else parseNavXhtml(zip, header, ncxEntry, pages)
+            if (ext == "ncx") parseNcx(zip, header, ncxEntry, opfDir, pages)
+            else parseNavXhtml(zip, header, ncxEntry, opfDir, pages)
         } catch (e: Exception) {
             safeLogW(TAG, "TOC parse failed for $ncxEntry", e)
             emptyList()
@@ -946,67 +944,35 @@ class EpubFormatReader(
         zip: ZipFile,
         header: FileHeader,
         ncxEntry: String,
+        opfDir: String,
         pages: List<EpubPage>
     ): List<TocEntry> {
         data class RawNav(val title: String, val src: String, val order: Int)
 
-        val result = mutableListOf<RawNav>()
-        val parser = Xml.newPullParser().apply {
-            setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
-            setInput(zip.getInputStream(header), null)
+        val raw = zip.getInputStream(header).use { stream ->
+            val bytes = stream.readBytes()
+            bytes.toString(detectCharset(bytes))
         }
+        val document = Jsoup.parse(raw, "", JsoupXmlParser.xmlParser())
+        document.outputSettings(Document.OutputSettings().prettyPrint(false))
 
-        // Use a stack to handle nested navPoints — we want all levels.
-        data class NavState(
-            var title: StringBuilder = StringBuilder(),
-            var src: String = "",
-            var order: Int = 0,
-            var inLabel: Boolean = false,
-            var inLabelText: Boolean = false
-        )
-        val stack = ArrayDeque<NavState>()
-
-        var ev = parser.eventType
-        while (ev != XmlPullParser.END_DOCUMENT) {
-            when (ev) {
-                XmlPullParser.START_TAG -> when (parser.name.lowercase()) {
-                    "navpoint" -> {
-                        val order = parser.getAttributeValue(null, "playOrder")?.toIntOrNull() ?: 0
-                        stack.addLast(NavState(order = order))
-                    }
-                    "navlabel" -> stack.lastOrNull()?.let { it.inLabel = true }
-                    "text"     -> stack.lastOrNull()?.let {
-                        if (it.inLabel) { it.inLabelText = true; it.title.clear() }
-                    }
-                    "content"  -> {
-                        val src = parser.getAttributeValue(null, "src") ?: ""
-                        stack.lastOrNull()?.src = src
-                    }
-                }
-                XmlPullParser.END_TAG -> when (parser.name.lowercase()) {
-                    "navpoint" -> {
-                        val state = stack.removeLastOrNull()
-                        if (state != null) {
-                            val t = state.title.toString().trim()
-                            if (t.isNotEmpty() && state.src.isNotEmpty()) {
-                                result.add(RawNav(t, state.src, state.order))
-                            }
-                        }
-                    }
-                    "navlabel" -> stack.lastOrNull()?.let { it.inLabel = false; it.inLabelText = false }
-                    "text"     -> stack.lastOrNull()?.let { it.inLabelText = false }
-                }
-                XmlPullParser.TEXT -> stack.lastOrNull()?.let {
-                    if (it.inLabelText) it.title.append(parser.text ?: "")
-                }
+        val result = document.getElementsByTag("navPoint")
+            .mapNotNull { navPoint ->
+                val title = navPoint.getElementsByTag("text").firstOrNull()
+                    ?.text()
+                    ?.trim()
+                    .orEmpty()
+                val src = navPoint.getElementsByTag("content").firstOrNull()
+                    ?.attr("src")
+                    ?.trim()
+                    .orEmpty()
+                val order = navPoint.attr("playOrder").toIntOrNull() ?: 0
+                if (title.isBlank() || src.isBlank()) null else RawNav(title, src, order)
             }
-            ev = parser.next()
-        }
-
         val ncxDir = ncxEntry.substringBeforeLast('/', "")
         return result.sortedBy { it.order }.mapNotNull { nav ->
             val href = try { URLDecoder.decode(nav.src, "UTF-8") } catch (_: Exception) { nav.src }
-            srcToPageIndex(href, ncxDir, pages)?.let { TocEntry(nav.title, it) }
+            srcToPageIndex(href, ncxDir, pages, fallbackBaseDir = opfDir)?.let { TocEntry(nav.title, it) }
         }
     }
 
@@ -1015,6 +981,7 @@ class EpubFormatReader(
         zip: ZipFile,
         header: FileHeader,
         navEntry: String,
+        opfDir: String,
         pages: List<EpubPage>
     ): List<TocEntry> {
         val raw = zip.getInputStream(header).use { it.readBytes().toString(Charsets.UTF_8) }
@@ -1028,7 +995,7 @@ class EpubFormatReader(
             val href  = try { URLDecoder.decode(match.groupValues[1], "UTF-8") } catch (_: Exception) { match.groupValues[1] }
             val title = HTML_TAG_RE.replace(match.groupValues[2], "").trim()
             if (title.isEmpty()) continue
-            val pageIdx = srcToPageIndex(href, navDir, pages) ?: continue
+            val pageIdx = srcToPageIndex(href, navDir, pages, fallbackBaseDir = opfDir) ?: continue
             result.add(TocEntry(title, pageIdx))
         }
         return result
@@ -1038,19 +1005,18 @@ class EpubFormatReader(
      * Resolves an href (relative to [baseDir]) to the 0-based reader page index
      * of the first chunk of the matching spine item, or null if not found.
      */
-    private fun srcToPageIndex(href: String, baseDir: String, pages: List<EpubPage>): Int? {
-        val filePart = href.substringBefore('#')
-        val entry = normalizePath(if (baseDir.isEmpty()) filePart else "$baseDir/$filePart")
-        val idx = pages.indexOfFirst { page ->
-            when (page) {
-                is EpubPage.Html ->
-                    page.chunkIndex == 0 && pageContainsEntry(page, entry)
-                is EpubPage.SyntheticHtml ->
-                    page.entry.equals(entry, ignoreCase = true) && page.chunkIndex == 0
-                else -> false
-            }
-        }
-        return if (idx >= 0) idx else null
+    private fun srcToPageIndex(
+        href: String,
+        baseDir: String,
+        pages: List<EpubPage>,
+        fallbackBaseDir: String? = null
+    ): Int? {
+        val filePart = href.substringBefore('#').trim().trimStart('/')
+        if (filePart.isBlank()) return null
+        return findPageIndexByEntryCandidates(
+            pages = pages,
+            candidates = buildEntryCandidates(filePart, baseDir, fallbackBaseDir)
+        )
     }
 
     private fun pageContainsEntry(
@@ -1073,10 +1039,67 @@ class EpubFormatReader(
     }
 
     private fun resolveFileNameToPageIndex(filePart: String, pages: List<EpubPage>): Int? {
-        val exactIdx = pages.indexOfFirst { pageContainsEntry(it, filePart) }
-        if (exactIdx >= 0) return exactIdx
-        return pages.indexOfFirst { pageContainsEntry(it, "/$filePart", suffixMatch = true) }
-            .takeIf { it >= 0 }
+        return findPageIndexByEntryCandidates(
+            pages = pages,
+            candidates = buildEntryCandidates(filePart)
+        )
+    }
+
+    private fun buildEntryCandidates(
+        filePart: String,
+        vararg baseDirs: String?
+    ): List<String> {
+        val normalizedFilePart = normalizePath(filePart.trimStart('/'))
+        val fileNameOnly = normalizedFilePart.substringAfterLast('/')
+        return buildSet {
+            add(normalizedFilePart)
+            if (fileNameOnly.isNotBlank()) add(fileNameOnly)
+            baseDirs.forEach { rawBaseDir ->
+                val trimmedBaseDir = rawBaseDir
+                    ?.trim()
+                    ?.trim('/')
+                    .orEmpty()
+                if (trimmedBaseDir.isNotBlank()) {
+                    add(normalizePath("$trimmedBaseDir/$normalizedFilePart"))
+                    if (fileNameOnly.isNotBlank()) {
+                        add(normalizePath("$trimmedBaseDir/$fileNameOnly"))
+                    }
+                }
+            }
+        }.toList()
+    }
+
+    private fun findPageIndexByEntryCandidates(
+        pages: List<EpubPage>,
+        candidates: List<String>
+    ): Int? {
+        candidates.forEach { candidate ->
+            val exactIdx = pages.indexOfFirst { page ->
+                when (page) {
+                    is EpubPage.Html -> page.chunkIndex == 0 && pageContainsEntry(page, candidate)
+                    is EpubPage.SyntheticHtml -> page.chunkIndex == 0 && (
+                        page.entry.equals(candidate, ignoreCase = true) ||
+                            page.sourceEntries.any { it.equals(candidate, ignoreCase = true) }
+                        )
+                    else -> false
+                }
+            }
+            if (exactIdx >= 0) return exactIdx
+        }
+        candidates.forEach { candidate ->
+            val suffixIdx = pages.indexOfFirst { page ->
+                when (page) {
+                    is EpubPage.Html -> page.chunkIndex == 0 && pageContainsEntry(page, candidate, suffixMatch = true)
+                    is EpubPage.SyntheticHtml -> page.chunkIndex == 0 && (
+                        page.entry.endsWith(candidate, ignoreCase = true) ||
+                            page.sourceEntries.any { it.endsWith(candidate, ignoreCase = true) }
+                        )
+                    else -> false
+                }
+            }
+            if (suffixIdx >= 0) return suffixIdx
+        }
+        return null
     }
 
     private val NAV_FILE_RE = Regex("""(?:toc|nav|navigation|ncx)""", RegexOption.IGNORE_CASE)
@@ -1144,32 +1167,39 @@ class EpubFormatReader(
     }
 
     private fun buildSyntheticNotePages(titleEntry: String, noteEntries: List<String>, zip: ZipFile): List<EpubPage> {
-        val noteItems = noteEntries.flatMap { extractFootnoteItems(zip, it) }
+        val noteItems = noteEntries.flatMap { sourceEntry ->
+            extractFootnoteItems(zip, sourceEntry).map { item -> sourceEntry to item }
+        }
         if (noteItems.isEmpty()) {
             return listOf(
                 EpubPage.SyntheticHtml(
                     entry = titleEntry,
                     html = buildSyntheticHtml("", includeTitle = true),
                     chunkIndex = 0,
-                    totalChunks = 1
+                    totalChunks = 1,
+                    sourceEntries = noteEntries
                 )
             )
         }
 
         val bodyChunks = mutableListOf<String>()
+        val chunkSourceEntries = mutableListOf<List<String>>()
         val current = StringBuilder()
+        val currentSourceEntries = linkedSetOf<String>()
         var currentChars = 0
         var firstChunk = true
 
         fun flush() {
             if (current.isEmpty()) return
             bodyChunks += buildSyntheticHtml(current.toString(), includeTitle = firstChunk)
+            chunkSourceEntries += currentSourceEntries.toList()
             current.clear()
+            currentSourceEntries.clear()
             currentChars = 0
             firstChunk = false
         }
 
-        for (item in noteItems) {
+        for ((sourceEntry, item) in noteItems) {
             val escapedId = escapeHtml(item.anchorId)
             val escapedNum = escapeHtml(item.number)
             val escapedText = escapeHtml(item.text)
@@ -1177,12 +1207,14 @@ class EpubFormatReader(
             val chars = item.number.length + item.text.length
             if (currentChars + chars > CHARS_PER_PAGE && currentChars > 0) flush()
             current.append(html)
+            currentSourceEntries += sourceEntry
             currentChars += chars
         }
         flush()
 
         if (bodyChunks.isEmpty()) {
             bodyChunks += buildSyntheticHtml("", includeTitle = true)
+            chunkSourceEntries += noteEntries
         }
 
         return bodyChunks.mapIndexed { index, html ->
@@ -1190,7 +1222,8 @@ class EpubFormatReader(
                 entry = titleEntry,
                 html = html,
                 chunkIndex = index,
-                totalChunks = bodyChunks.size
+                totalChunks = bodyChunks.size,
+                sourceEntries = chunkSourceEntries.getOrElse(index) { noteEntries }
             )
         }
     }

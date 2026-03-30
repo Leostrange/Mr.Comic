@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import javax.inject.Inject
 
 data class AudiobookPlayerUiState(
@@ -58,11 +59,18 @@ class AudiobookPlayerViewModel @Inject constructor(
     private var positionPollingJob: Job? = null
     private var sleepTimerJob: Job? = null
     private var sleepTimerEndAtMs: Long? = null
+    private var lastPersistedChapterIndex: Int? = null
+    private var lastPersistedPositionMs: Long = -1L
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _uiState.value = _uiState.value.copy(isPlaying = isPlaying)
-            if (isPlaying) startPositionPolling() else stopPositionPolling()
+            if (isPlaying) {
+                startPositionPolling()
+            } else {
+                stopPositionPolling()
+                persistProgress(force = true)
+            }
         }
 
         override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
@@ -109,6 +117,8 @@ class AudiobookPlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val audiobook = audiobookRepository.getById(audiobookId) ?: return@launch
             val displayAudiobook = resolveAudiobookCover(audiobook)
+            lastPersistedChapterIndex = null
+            lastPersistedPositionMs = -1L
             _uiState.value = _uiState.value.copy(audiobook = displayAudiobook)
             loadBookmark(displayAudiobook.id)
             // Wait for controller if not yet connected
@@ -130,6 +140,8 @@ class AudiobookPlayerViewModel @Inject constructor(
         viewModelScope.launch {
             val audiobook = audiobookRepository.getById(audiobookId) ?: return@launch
             val displayAudiobook = resolveAudiobookCover(audiobook)
+            lastPersistedChapterIndex = null
+            lastPersistedPositionMs = -1L
             _uiState.value = _uiState.value.copy(audiobook = displayAudiobook)
             loadBookmark(displayAudiobook.id)
         }
@@ -141,6 +153,7 @@ class AudiobookPlayerViewModel @Inject constructor(
     fun seekTo(positionMs: Long) {
         controller?.seekTo(positionMs)
         _uiState.value = _uiState.value.copy(positionMs = positionMs)
+        persistProgress(force = true)
     }
 
     fun seekBy(deltaMs: Long) {
@@ -151,11 +164,13 @@ class AudiobookPlayerViewModel @Inject constructor(
         }
         ctrl.seekTo(target)
         _uiState.value = _uiState.value.copy(positionMs = target, durationMs = duration)
+        persistProgress(force = true)
     }
 
     fun seekToChapter(index: Int) {
         controller?.seekTo(index, 0L)
         _uiState.value = _uiState.value.copy(currentChapterIndex = index, positionMs = 0L)
+        persistProgress(force = true)
     }
 
     fun skipPreviousChapter() {
@@ -241,6 +256,7 @@ class AudiobookPlayerViewModel @Inject constructor(
                 val pos = ctrl.currentPosition.coerceAtLeast(0L)
                 val dur = ctrl.duration.coerceAtLeast(0L)
                 _uiState.value = _uiState.value.copy(positionMs = pos, durationMs = dur)
+                persistProgress()
                 delay(500)
             }
         }
@@ -252,7 +268,7 @@ class AudiobookPlayerViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        saveProgress()
+        persistProgress(force = true)
         stopPositionPolling()
         sleepTimerJob?.cancel()
         controller?.removeListener(playerListener)
@@ -282,6 +298,19 @@ class AudiobookPlayerViewModel @Inject constructor(
         val updated = audiobook.copy(coverUri = resolvedCover)
         audiobookRepository.upsert(updated)
         return updated
+    }
+
+    private fun persistProgress(force: Boolean = false) {
+        val state = _uiState.value
+        val id = state.audiobook?.id ?: return
+        val sameChapter = lastPersistedChapterIndex == state.currentChapterIndex
+        val movedEnough = abs(state.positionMs - lastPersistedPositionMs) >= 5_000L
+        if (!force && sameChapter && !movedEnough) return
+        lastPersistedChapterIndex = state.currentChapterIndex
+        lastPersistedPositionMs = state.positionMs
+        viewModelScope.launch {
+            audiobookRepository.saveProgress(id, state.currentChapterIndex, state.positionMs)
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

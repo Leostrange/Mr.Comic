@@ -1,5 +1,10 @@
 package com.example.core.ui.library
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -10,6 +15,7 @@ import androidx.compose.material3.TextFieldColors
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
@@ -71,6 +77,20 @@ fun rootChromePillBorder(
 fun rootChromeBackdropStrength(value: Float): Float = (value * 1.2f).coerceIn(0f, 1f)
 
 fun rootChromeBackdropVeil(value: Float): Float = (value * 1.2f).coerceIn(0f, 1f)
+
+@OptIn(ExperimentalLayoutApi::class)
+fun rootChromeStableTopBarInsets(): WindowInsets = WindowInsets(0, 0, 0, 0)
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RootChromeTopBarHost(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(modifier = modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)) {
+        content()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
