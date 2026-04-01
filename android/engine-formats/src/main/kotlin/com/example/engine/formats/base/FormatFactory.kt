@@ -1,7 +1,9 @@
 package com.example.engine.formats.base
 
 import android.content.Context
+import com.example.core.data.db.EpubManifestCacheDao
 import com.example.core.model.ComicFormat
+import com.example.core.data.db.EpubStructureCacheDao
 import com.example.engine.formats.djvu.DjvuFormatReader
 import com.example.engine.formats.djvu.DjvuBackend
 import com.example.engine.formats.epub.EpubFormatReader
@@ -21,7 +23,9 @@ import javax.inject.Singleton
 class FormatFactory @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bitmapAllocator: BitmapAllocator,
-    private val djvuBackend: DjvuBackend
+    private val djvuBackend: DjvuBackend,
+    private val epubStructureCacheDao: EpubStructureCacheDao,
+    private val epubManifestCacheDao: EpubManifestCacheDao
 ) {
     private val deviceProfile by lazy { context.resolveRenderDeviceProfile() }
 
@@ -30,7 +34,7 @@ class FormatFactory @Inject constructor(
             ComicFormat.CBZ, ComicFormat.ZIP -> ZipFormatReader(context, path, deviceProfile, bitmapAllocator)
             ComicFormat.CBR, ComicFormat.RAR -> RarFormatReader(context, path, deviceProfile, bitmapAllocator)
             ComicFormat.PDF                  -> PdfFormatReader(context, path, deviceProfile, bitmapAllocator)
-            ComicFormat.EPUB                 -> EpubFormatReader(context, path)
+            ComicFormat.EPUB                 -> EpubFormatReader(context, path, epubStructureCacheDao, epubManifestCacheDao)
             ComicFormat.SEVENZ               -> SevenZFormatReader(context, path, deviceProfile, bitmapAllocator)
             ComicFormat.TAR                  -> TarFormatReader(context, path, deviceProfile, bitmapAllocator)
             ComicFormat.FB2                  -> Fb2FormatReader(context, path)

@@ -34,6 +34,7 @@ import com.example.core.domain.analytics.ReadingAnalyticsTracker
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderInfoSlot
+import com.example.core.model.ReaderImageScaleMode
 import com.example.core.model.ReaderScreenTimeoutMode
 import com.example.core.model.ReaderTapZoneAction
 import com.example.core.model.ReaderTapZoneMode
@@ -79,6 +80,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -92,6 +94,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.URLDecoder
+import java.util.Locale
 import javax.inject.Inject
 
 private fun normalizeTapZoneActionName(value: String?): String {
@@ -112,6 +115,103 @@ data class AppThemePresetSlot(
     val index: Int,
     val serialized: String? = null
 )
+
+data class ReaderStylePresetSlot(
+    val index: Int,
+    val serialized: String? = null
+)
+
+data class ReaderStylePresetEntry(
+    val id: String,
+    val snapshot: ReaderStylePresetSnapshot
+)
+
+private data class ImportedReaderTypographyPreset(
+    val displayName: String,
+    val readerPreset: ReadingPreset,
+    val textFontSize: Int,
+    val textColorScheme: String,
+    val textFontFamily: String,
+    val textLineHeight: Float,
+    val textLetterSpacing: Float,
+    val textWordSpacing: Float,
+    val textParagraphSpacing: Float,
+    val textAlignment: String,
+    val textBold: Boolean,
+    val textCustomTextColor: Long?,
+    val textCustomBackgroundColor: Long?,
+    val textCustomAccentColor: Long?,
+    val brightness: Float,
+    val immersiveMode: Boolean,
+    val pageAnimation: String
+)
+
+data class ReaderStylePresetSnapshot(
+    val displayName: String? = null,
+    val readerPreset: String,
+    val textFontSize: Int,
+    val textColorScheme: String,
+    val textFontFamily: String,
+    val textLineHeight: Float,
+    val textLetterSpacing: Float,
+    val textWordSpacing: Float,
+    val textParagraphSpacing: Float,
+    val textAlignment: String,
+    val textBold: Boolean,
+    val textCustomTextColor: Long? = null,
+    val textCustomBackgroundColor: Long? = null,
+    val textCustomAccentColor: Long? = null,
+    val brightness: Float,
+    val immersiveMode: Boolean,
+    val pageAnimation: String
+) {
+    fun serialize(): String = JSONObject().apply {
+        displayName?.takeIf { it.isNotBlank() }?.let { put("displayName", it) }
+        put("readerPreset", readerPreset)
+        put("textFontSize", textFontSize)
+        put("textColorScheme", textColorScheme)
+        put("textFontFamily", textFontFamily)
+        put("textLineHeight", textLineHeight.toDouble())
+        put("textLetterSpacing", textLetterSpacing.toDouble())
+        put("textWordSpacing", textWordSpacing.toDouble())
+        put("textParagraphSpacing", textParagraphSpacing.toDouble())
+        put("textAlignment", textAlignment)
+        put("textBold", textBold)
+        textCustomTextColor?.let { put("textCustomTextColor", String.format(Locale.US, "#%08X", it)) }
+        textCustomBackgroundColor?.let { put("textCustomBackgroundColor", String.format(Locale.US, "#%08X", it)) }
+        textCustomAccentColor?.let { put("textCustomAccentColor", String.format(Locale.US, "#%08X", it)) }
+        put("brightness", brightness.toDouble())
+        put("immersiveMode", immersiveMode)
+        put("pageAnimation", pageAnimation)
+    }.toString()
+}
+
+private fun JSONObject.optReaderStyleDisplayName(): String? = listOf(
+    "displayName",
+    "name",
+    "title",
+    "presetName"
+).firstNotNullOfOrNull { key ->
+    optString(key).trim().takeIf { it.isNotEmpty() && it != "null" }
+}
+
+private fun JSONObject.optReaderColorLong(vararg keys: String): Long? = keys.firstNotNullOfOrNull { key ->
+    if (!has(key)) return@firstNotNullOfOrNull null
+    when (val raw = opt(key)) {
+        is Number -> raw.toLong()
+        is String -> raw.trim()
+            .takeIf { it.isNotEmpty() && it != "null" }
+            ?.let { value ->
+                when {
+                    value.startsWith("#") -> value.removePrefix("#").toLongOrNull(16)?.let { hex ->
+                        if (value.length == 7) 0xFF000000L or hex else hex
+                    }
+                    else -> value.toLongOrNull()
+                }
+            }
+        else -> null
+    }
+}
 
 data class AppThemePresetSnapshot(
     val themePreset: String,
@@ -165,11 +265,119 @@ fun parseAppThemePreset(serialized: String?): AppThemePresetSnapshot? = serializ
         }.getOrNull()
     }
 
+fun parseReaderStylePreset(serialized: String?): ReaderStylePresetSnapshot? = serialized
+    ?.takeIf { it.isNotBlank() }
+    ?.let { raw ->
+        runCatching {
+            val json = JSONObject(raw)
+            ReaderStylePresetSnapshot(
+                displayName = json.optReaderStyleDisplayName(),
+                readerPreset = ReadingPreset.fromStored(
+                    json.optString("readerPreset", ReadingPreset.CUSTOM.name)
+                ).name,
+                textFontSize = json.optInt("textFontSize", 18).coerceIn(12, 32),
+                textColorScheme = when (json.optString("textColorScheme", "DAY").uppercase()) {
+                    "SEPIA", "NIGHT", "DAY" -> json.optString("textColorScheme", "DAY").uppercase()
+                    else -> "DAY"
+                },
+                textFontFamily = json.optString("textFontFamily", "Georgia").ifBlank { "Georgia" },
+                textLineHeight = json.optDouble("textLineHeight", 1.8).toFloat().coerceIn(1.0f, 3.0f),
+                textLetterSpacing = json.optDouble("textLetterSpacing", 0.0).toFloat().coerceIn(0f, 0.2f),
+                textWordSpacing = json.optDouble("textWordSpacing", 0.0).toFloat().coerceIn(0f, 0.6f),
+                textParagraphSpacing = json.optDouble("textParagraphSpacing", 0.2).toFloat().coerceIn(0.1f, 1.2f),
+                textAlignment = when (json.optString("textAlignment", "justify").lowercase()) {
+                    "justify", "left", "right", "center" -> json.optString("textAlignment", "justify").lowercase()
+                    else -> "justify"
+                },
+                textBold = json.optBoolean("textBold", false),
+                textCustomTextColor = json.optReaderColorLong(
+                    "textCustomTextColor",
+                    "customTextColor",
+                    "overrideTextColor"
+                ),
+                textCustomBackgroundColor = json.optReaderColorLong(
+                    "textCustomBackgroundColor",
+                    "customBackgroundColor",
+                    "overrideBackgroundColor"
+                ),
+                textCustomAccentColor = json.optReaderColorLong(
+                    "textCustomAccentColor",
+                    "customAccentColor",
+                    "overrideAccentColor"
+                ),
+                brightness = json.optDouble("brightness", -1.0).toFloat().let {
+                    if (it <= 0.01f) -1f else it.coerceIn(0.05f, 1f)
+                },
+                immersiveMode = json.optBoolean("immersiveMode", false),
+                pageAnimation = when (json.optString("pageAnimation", "SLIDE").uppercase()) {
+                    "NONE", "FADE", "SLIDE" -> json.optString("pageAnimation", "SLIDE").uppercase()
+                    else -> "SLIDE"
+                }
+            )
+        }.getOrNull()
+    }
+
+fun ReaderStylePresetSnapshot.matchesUiState(uiState: SettingsUiState): Boolean {
+    return readerPreset == uiState.readerPreset &&
+        textFontSize == uiState.textFontSize &&
+        textColorScheme == uiState.textColorScheme &&
+        textFontFamily == uiState.textFontFamily &&
+        textLineHeight == uiState.textLineHeight &&
+        textLetterSpacing == uiState.textLetterSpacing &&
+        textWordSpacing == uiState.textWordSpacing &&
+        textParagraphSpacing == uiState.textParagraphSpacing &&
+        textAlignment == uiState.textAlignment &&
+        textBold == uiState.textBold &&
+        textCustomTextColor == uiState.textCustomTextColor &&
+        textCustomBackgroundColor == uiState.textCustomBackgroundColor &&
+        textCustomAccentColor == uiState.textCustomAccentColor &&
+        brightness == uiState.brightness &&
+        immersiveMode == uiState.readerImmersiveMode &&
+        pageAnimation == uiState.readerPageAnimation
+}
+
+private fun parseReaderStylePresetEntries(serialized: String?): List<ReaderStylePresetEntry> = serialized
+    ?.takeIf { it.isNotBlank() }
+    ?.let { raw ->
+        runCatching {
+            val jsonArray = JSONArray(raw)
+            buildList {
+                for (index in 0 until jsonArray.length()) {
+                    val item = jsonArray.optJSONObject(index) ?: continue
+                    val snapshot = parseReaderStylePreset(item.toString()) ?: continue
+                    val id = item.optString("id").trim().ifBlank { "preset_${index + 1}" }
+                    add(ReaderStylePresetEntry(id = id, snapshot = snapshot))
+                }
+            }
+        }.getOrDefault(emptyList())
+    }
+    ?: emptyList()
+
+private fun serializeReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>): String = JSONArray().apply {
+    entries.forEach { entry ->
+        put(JSONObject(entry.snapshot.serialize()).apply { put("id", entry.id) })
+    }
+}.toString()
+
+private fun migrateLegacyReaderStyleSlotsToEntries(
+    slots: List<ReaderStylePresetSlot>
+): List<ReaderStylePresetEntry> = slots.mapNotNull { slot ->
+    parseReaderStylePreset(slot.serialized)?.let { snapshot ->
+        ReaderStylePresetEntry(
+            id = "legacy_slot_${slot.index}",
+            snapshot = snapshot
+        )
+    }
+}
+
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
     val useDynamicColor: Boolean = true,
     val useAmoledDark: Boolean = false,
     val readingMode: ReadingMode = ReadingMode.PAGE_LTR,
+    val readerImageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
+    val readerImageMarginCropHorizontal: Float = 0f,
+    val readerImageMarginCropVertical: Float = 0f,
     val brightness: Float = -1f,
     val keepScreenOnInReader: Boolean = false,
     val readerScreenTimeoutMode: String = ReaderScreenTimeoutMode.SYSTEM.storedValue,
@@ -196,8 +404,14 @@ data class SettingsUiState(
     val appVideoSplashEnabled: Boolean = true,
     val textFontSize: Int = 18,
     val textColorScheme: String = "DAY",
+    val textCustomTextColor: Long? = null,
+    val textCustomBackgroundColor: Long? = null,
+    val textCustomAccentColor: Long? = null,
     val textFontFamily: String = "Georgia",
     val textLineHeight: Float = 1.8f,
+    val textLetterSpacing: Float = 0f,
+    val textWordSpacing: Float = 0f,
+    val textParagraphSpacing: Float = 0.2f,
     val textAlignment: String = "justify",
     val textBold: Boolean = false,
     val readerTapZoneMode: String = ReaderTapZoneMode.SIMPLE.name,
@@ -242,6 +456,7 @@ data class SettingsUiState(
     val uiCornerRadius: Int = 12,
     val performanceReducedMotion: Boolean = false,
     val performanceReducedVisualEffects: Boolean = false,
+    val appNavTransitionStyle: String = "FADE",
     val perfProfile: String = PerformanceDefaults.PROFILE,
     val perfRenderQuality: String = PerformanceDefaults.RENDER_QUALITY,
     val perfCoverCacheMb: Int = PerformanceDefaults.COVER_CACHE_MB,
@@ -280,6 +495,8 @@ data class SettingsUiState(
     val libraryGroupBy: String = "FOLDER",
     val appThemePresetSlots: List<AppThemePresetSlot> = emptyList(),
     val libraryThemePresetSlots: List<LibraryThemePresetSlot> = emptyList(),
+    val readerStylePresetSlots: List<ReaderStylePresetSlot> = emptyList(),
+    val readerStylePresetEntries: List<ReaderStylePresetEntry> = emptyList(),
     // Перевод
     val translationConfig: TranslationServiceConfig = TranslationServiceConfig(),
     val ocrLanguage: String = "JA",
@@ -624,6 +841,27 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    private val readerStylePresetSlotsFlow = combine(
+        preferences.get(PreferencesKeys.READER_STYLE_PRESET_1, ""),
+        preferences.get(PreferencesKeys.READER_STYLE_PRESET_2, ""),
+        preferences.get(PreferencesKeys.READER_STYLE_PRESET_3, "")
+    ) { preset1, preset2, preset3 ->
+        listOf(
+            ReaderStylePresetSlot(index = 1, serialized = preset1.ifBlank { null }),
+            ReaderStylePresetSlot(index = 2, serialized = preset2.ifBlank { null }),
+            ReaderStylePresetSlot(index = 3, serialized = preset3.ifBlank { null })
+        )
+    }
+
+    private val readerStylePresetEntriesFlow = combine(
+        preferences.get(PreferencesKeys.READER_STYLE_PRESET_LIST, ""),
+        readerStylePresetSlotsFlow
+    ) { serializedList, slots ->
+        parseReaderStylePresetEntries(serializedList).ifEmpty {
+            migrateLegacyReaderStyleSlotsToEntries(slots)
+        }
+    }
+
     private val extrasFlow345 = combine(extrasFlow3, extrasFlow4, extrasFlow5) { e3, e4, e5 -> e3 + e4 + e5 }
     private val extrasFlow6 = combine(extrasFlow6a, extrasFlow6b, extrasFlow6c, extrasFlow6e) { left, middle, right, style ->
         left + middle + right + style
@@ -645,7 +883,7 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    private val extrasFlow7b1 = combine(
+    private val extrasFlow7b1a = combine(
         preferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).map { it.coerceIn(12, 32) },
         preferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY"),
         preferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia")
@@ -657,19 +895,48 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    private val extrasFlow7b2 = combine(
+    private val extrasFlow7b1b = combine(
+        preferences.get(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE),
+        preferences.get(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE),
+        preferences.get(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE)
+    ) { textCustomTextColor: Long, textCustomBackgroundColor: Long, textCustomAccentColor: Long ->
+        listOf<Any?>(
+            textCustomTextColor.takeUnless { it == Long.MIN_VALUE },
+            textCustomBackgroundColor.takeUnless { it == Long.MIN_VALUE },
+            textCustomAccentColor.takeUnless { it == Long.MIN_VALUE }
+        )
+    }
+
+    private val extrasFlow7b1 = combine(extrasFlow7b1a, extrasFlow7b1b) { left: List<Any>, right: List<Any?> ->
+        left + right
+    }
+
+    private val extrasFlow7b2a = combine(
         preferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).map { it.coerceIn(1.0f, 3.0f) },
-        preferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify"),
-        preferences.get(PreferencesKeys.TEXT_BOLD, false)
-    ) { textLineHeight, textAlignment, textBold ->
+        preferences.get(PreferencesKeys.TEXT_LETTER_SPACING, 0f).map { it.coerceIn(0f, 0.2f) },
+        preferences.get(PreferencesKeys.TEXT_WORD_SPACING, 0f).map { it.coerceIn(0f, 0.6f) }
+    ) { textLineHeight, textLetterSpacing, textWordSpacing ->
         listOf<Any>(
             textLineHeight,
+            textLetterSpacing,
+            textWordSpacing
+        )
+    }
+
+    private val extrasFlow7b2b = combine(
+        preferences.get(PreferencesKeys.TEXT_PARAGRAPH_SPACING, 0.2f).map { it.coerceIn(0.1f, 1.2f) },
+        preferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify"),
+        preferences.get(PreferencesKeys.TEXT_BOLD, false)
+    ) { textParagraphSpacing, textAlignment, textBold ->
+        listOf<Any>(
+            textParagraphSpacing,
             textAlignment,
             textBold
         )
     }
 
-    private val extrasFlow7b = combine(extrasFlow7b1, extrasFlow7b2) { left, right -> left + right }
+    private val extrasFlow7b2 = combine(extrasFlow7b2a, extrasFlow7b2b) { left, right -> left + right }
+    private val extrasFlow7b = combine(extrasFlow7b1, extrasFlow7b2) { left: List<Any?>, right: List<Any> -> left + right }
     private val extrasFlow7c1a = combine(
         preferences.get(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name)
             .map { ReaderTapZoneMode.fromStored(it).name },
@@ -726,7 +993,9 @@ class SettingsViewModel @Inject constructor(
     private val extrasFlow7c = combine(extrasFlow7c1, extrasFlow7c2, extrasFlow7c3) { left, middle, right ->
         left + middle + right
     }
-    private val extrasFlow7 = combine(extrasFlow7a, extrasFlow7b, extrasFlow7c) { left, middle, right -> left + middle + right }
+    private val extrasFlow7 = combine(extrasFlow7a, extrasFlow7b, extrasFlow7c) { left: List<Any>, middle: List<Any?>, right: List<Any> ->
+        left + middle + right
+    }
 
     private val readerTtsFlowA = combine(
         preferences.get(
@@ -790,13 +1059,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    val uiState: StateFlow<SettingsUiState> = combine(
+    private val combinedSettingsUiState: Flow<SettingsUiState> = combine(
         baseUiState,
         extrasFlow12,
         extrasFlow3456,
         extrasFlow7,
         statusState,
-    ) { state, e12, e345, e7, status ->
+    ) { state: SettingsUiState, e12: List<Any>, e345: List<Any>, e7: List<Any?>, status: StatusState ->
         state.copy(
             libraryGridColumns   = e12[0] as Int,
             libraryViewMode      = e12[1] as String,
@@ -872,39 +1141,45 @@ class SettingsViewModel @Inject constructor(
             textFontSize = e7[4] as Int,
             textColorScheme = e7[5] as String,
             textFontFamily = e7[6] as String,
-            textLineHeight = e7[7] as Float,
-            textAlignment = e7[8] as String,
-            textBold = e7[9] as Boolean,
-            readerTapZoneMode = e7[10] as String,
-            readerTapZoneSwap = e7[11] as Boolean,
-            readerVolumeKeysPaging = e7[12] as Boolean,
-            readerTapZoneLeftAction = e7[13] as String,
-            readerTapZoneCenterAction = e7[14] as String,
-            readerTapZoneRightAction = e7[15] as String,
-            readerHeaderLeftSlot = e7[16] as String,
-            readerHeaderCenterSlot = e7[17] as String,
-            readerHeaderRightSlot = e7[18] as String,
-            readerFooterLeftSlot = e7[19] as String,
-            readerFooterCenterSlot = e7[20] as String,
-            readerFooterRightSlot = e7[21] as String,
-            readerHeaderFooterFontSize = e7[22] as Int,
-            readerHeaderFooterVerticalPadding = e7[23] as Int,
-            readerHeaderFooterLeftPadding = e7[24] as Int,
-            readerHeaderFooterRightPadding = e7[25] as Int
+            textCustomTextColor = e7[7] as Long?,
+            textCustomBackgroundColor = e7[8] as Long?,
+            textCustomAccentColor = e7[9] as Long?,
+            textLineHeight = e7[10] as Float,
+            textLetterSpacing = e7[11] as Float,
+            textWordSpacing = e7[12] as Float,
+            textParagraphSpacing = e7[13] as Float,
+            textAlignment = e7[14] as String,
+            textBold = e7[15] as Boolean,
+            readerTapZoneMode = e7[16] as String,
+            readerTapZoneSwap = e7[17] as Boolean,
+            readerVolumeKeysPaging = e7[18] as Boolean,
+            readerTapZoneLeftAction = e7[19] as String,
+            readerTapZoneCenterAction = e7[20] as String,
+            readerTapZoneRightAction = e7[21] as String,
+            readerHeaderLeftSlot = e7[22] as String,
+            readerHeaderCenterSlot = e7[23] as String,
+            readerHeaderRightSlot = e7[24] as String,
+            readerFooterLeftSlot = e7[25] as String,
+            readerFooterCenterSlot = e7[26] as String,
+            readerFooterRightSlot = e7[27] as String,
+            readerHeaderFooterFontSize = e7[28] as Int,
+            readerHeaderFooterVerticalPadding = e7[29] as Int,
+            readerHeaderFooterLeftPadding = e7[30] as Int,
+            readerHeaderFooterRightPadding = e7[31] as Int
         )
-    }.combine(readerTtsFlow) { state, tts ->
+    }.combine(readerTtsFlow) { state: SettingsUiState, tts: ReaderTtsConfig ->
         state.copy(
             readerTtsConfig = tts
         )
-    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state, showCoverTitles ->
+    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state: SettingsUiState, showCoverTitles: Boolean ->
         state.copy(libraryShowCoverTitles = showCoverTitles)
-    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)) { state, showStatusChips ->
+    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)) { state: SettingsUiState, showStatusChips: Boolean ->
         state.copy(libraryShowStatusChips = showStatusChips)
     }.combine(
         preferences.get(PreferencesKeys.APP_VIDEO_SPLASH_ENABLED, !context.isEInkDevice())
-    ) { state, appVideoSplashEnabled ->
+    ) { state: SettingsUiState, appVideoSplashEnabled: Boolean ->
         state.copy(appVideoSplashEnabled = appVideoSplashEnabled)
-    }.combine(dailyReadingGoalStore.goalState) { state, goalState ->
+    }.combine(dailyReadingGoalStore.goalState) { state: SettingsUiState, goalState ->
         state.copy(
             dailyReadingGoalEnabled = goalState.enabled,
             dailyReadingGoalTargetPages = goalState.targetPages,
@@ -920,7 +1195,7 @@ class SettingsViewModel @Inject constructor(
             dailyReadingBestStreak = goalState.bestStreak,
             dailyReadingGraceDaysRemainingThisWeek = goalState.graceDaysRemainingThisWeek
         )
-    }.combine(comicRepository.getAllComics()) { state, comics ->
+    }.combine(comicRepository.getAllComics()) { state: SettingsUiState, comics: List<Comic> ->
         state.copy(
             totalComics       = comics.size,
             completedComics   = comics.count { it.isCompleted },
@@ -928,13 +1203,68 @@ class SettingsViewModel @Inject constructor(
             rawAuthors        = comics.map { it.author },
             rawGenres         = comics.map { it.genre }
         )
-    }.combine(perfFlow) { state, applyPerf ->
+    }.combine(perfFlow) { state: SettingsUiState, applyPerf: (SettingsUiState) -> SettingsUiState ->
         applyPerf(state)
-    }.stateIn(
+    }.combine(
+        preferences.get(
+            PreferencesKeys.READER_IMAGE_SCALE_MODE,
+            ReaderImageScaleMode.FIT_WIDTH.storedValue
+        ).map { ReaderImageScaleMode.fromStored(it).storedValue }
+    ) { state: SettingsUiState, imageScaleMode: String ->
+        state.copy(readerImageScaleMode = imageScaleMode)
+    }.combine(
+        preferences.get(
+            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
+            0f
+        ).map { it.coerceIn(0f, 0.22f) }
+    ) { state: SettingsUiState, horizontalCrop: Float ->
+        state.copy(readerImageMarginCropHorizontal = horizontalCrop)
+    }.combine(
+        preferences.get(
+            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
+            0f
+        ).map { it.coerceIn(0f, 0.22f) }
+    ) { state: SettingsUiState, verticalCrop: Float ->
+        state.copy(readerImageMarginCropVertical = verticalCrop)
+    }.combine(
+        preferences.get(PreferencesKeys.APP_NAV_TRANSITION_STYLE, "FADE")
+    ) { state: SettingsUiState, appNavTransitionStyle: String ->
+        state.copy(appNavTransitionStyle = appNavTransitionStyle)
+    }.combine(readerStylePresetEntriesFlow) { state: SettingsUiState, readerStylePresetEntries: List<ReaderStylePresetEntry> ->
+        state.copy(
+            readerStylePresetEntries = readerStylePresetEntries,
+            readerStylePresetSlots = (1..3).map { index ->
+                ReaderStylePresetSlot(
+                    index = index,
+                    serialized = readerStylePresetEntries.getOrNull(index - 1)?.snapshot?.serialize()
+                )
+            }
+        )
+    }
+
+    val uiState: StateFlow<SettingsUiState> = combinedSettingsUiState.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = SettingsUiState()
     )
+
+    init {
+        viewModelScope.launch {
+            val existingEntries = parseReaderStylePresetEntries(
+                preferences.get(PreferencesKeys.READER_STYLE_PRESET_LIST, "").first()
+            )
+            if (existingEntries.isNotEmpty()) return@launch
+            val legacySlots = listOf(
+                ReaderStylePresetSlot(1, preferences.get(PreferencesKeys.READER_STYLE_PRESET_1, "").first().ifBlank { null }),
+                ReaderStylePresetSlot(2, preferences.get(PreferencesKeys.READER_STYLE_PRESET_2, "").first().ifBlank { null }),
+                ReaderStylePresetSlot(3, preferences.get(PreferencesKeys.READER_STYLE_PRESET_3, "").first().ifBlank { null })
+            )
+            val migrated = migrateLegacyReaderStyleSlotsToEntries(legacySlots)
+            if (migrated.isNotEmpty()) {
+                persistReaderStylePresetEntries(migrated)
+            }
+        }
+    }
 
     fun setAppLanguage(code: String) {
         viewModelScope.launch { preferences.set(PreferencesKeys.APP_LANGUAGE, normalizeAppLanguageCode(code)) }
@@ -976,9 +1306,16 @@ class SettingsViewModel @Inject constructor(
             preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
             preferences.set(PreferencesKeys.READER_PAGE_SOUND, false)
             preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)
             preferences.set(PreferencesKeys.TEXT_FONT_FAMILY, style.fontFamily)
             preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, style.lineHeight)
-            preferences.set(PreferencesKeys.TEXT_BOLD, false)
+            preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, style.letterSpacing)
+            preferences.set(PreferencesKeys.TEXT_WORD_SPACING, style.wordSpacing)
+            preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, style.paragraphSpacing)
+            preferences.set(PreferencesKeys.TEXT_ALIGNMENT, style.textAlignment)
+            preferences.set(PreferencesKeys.TEXT_BOLD, style.textBold)
         }
     }
 
@@ -1105,6 +1442,34 @@ class SettingsViewModel @Inject constructor(
         setSlider("preloadPages") { preferences.set(PreferencesKeys.READER_PRELOAD_PAGES, count.coerceIn(2, 8)) }
     }
 
+    fun setReaderImageScaleMode(mode: String) {
+        val resolved = ReaderImageScaleMode.fromStored(mode)
+        markReaderPresetCustom()
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_IMAGE_SCALE_MODE, resolved.storedValue)
+        }
+    }
+
+    fun setReaderImageMarginCropHorizontal(value: Float) {
+        markReaderPresetCustom()
+        setSlider("readerImageMarginCropHorizontal") {
+            preferences.set(
+                PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
+                value.coerceIn(0f, 0.22f)
+            )
+        }
+    }
+
+    fun setReaderImageMarginCropVertical(value: Float) {
+        markReaderPresetCustom()
+        setSlider("readerImageMarginCropVertical") {
+            preferences.set(
+                PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
+                value.coerceIn(0f, 0.22f)
+            )
+        }
+    }
+
     fun setReaderImmersiveMode(enabled: Boolean) {
         markReaderPresetCustom()
         viewModelScope.launch { preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, enabled) }
@@ -1143,6 +1508,18 @@ class SettingsViewModel @Inject constructor(
     fun setReaderPageAnimation(animation: String) {
         markReaderPresetCustom()
         viewModelScope.launch { preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, animation) }
+    }
+
+    fun setAppNavTransitionStyle(style: String) {
+        viewModelScope.launch {
+            preferences.set(
+                PreferencesKeys.APP_NAV_TRANSITION_STYLE,
+                when (style.uppercase()) {
+                    "NONE", "FADE", "SLIDE", "LIFT" -> style.uppercase()
+                    else -> "FADE"
+                }
+            )
+        }
     }
 
     fun setReaderPageSound(enabled: Boolean) {
@@ -1393,6 +1770,27 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun setTextCustomTextColor(color: Long?) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, color)
+        }
+    }
+
+    fun setTextCustomBackgroundColor(color: Long?) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, color)
+        }
+    }
+
+    fun setTextCustomAccentColor(color: Long?) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, color)
+        }
+    }
+
     fun setTextFontFamily(family: String) {
         viewModelScope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -1404,6 +1802,27 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, height.coerceIn(1.0f, 3.0f))
+        }
+    }
+
+    fun setTextLetterSpacing(spacing: Float) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, spacing.coerceIn(0f, 0.2f))
+        }
+    }
+
+    fun setTextWordSpacing(spacing: Float) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            preferences.set(PreferencesKeys.TEXT_WORD_SPACING, spacing.coerceIn(0f, 0.6f))
+        }
+    }
+
+    fun setTextParagraphSpacing(spacing: Float) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, spacing.coerceIn(0.1f, 1.2f))
         }
     }
 
@@ -1426,11 +1845,38 @@ class SettingsViewModel @Inject constructor(
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_FONT_SIZE, 18)
             preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY")
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
+            persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)
             preferences.set(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia")
             preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f)
+            preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, 0f)
+            preferences.set(PreferencesKeys.TEXT_WORD_SPACING, 0f)
+            preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, 0.2f)
             preferences.set(PreferencesKeys.TEXT_ALIGNMENT, "justify")
             preferences.set(PreferencesKeys.TEXT_BOLD, false)
         }
+    }
+
+    suspend fun importReaderTypographyFromJson(rawJson: String): String? = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        val imported = parseImportedReaderTypography(JSONObject(rawJson)) ?: return@withContext null
+        preferences.set(PreferencesKeys.READER_PRESET, imported.readerPreset.name)
+        preferences.set(PreferencesKeys.TEXT_FONT_SIZE, imported.textFontSize)
+        preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, imported.textColorScheme)
+        persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, imported.textCustomTextColor)
+        persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, imported.textCustomBackgroundColor)
+        persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, imported.textCustomAccentColor)
+        preferences.set(PreferencesKeys.TEXT_FONT_FAMILY, imported.textFontFamily)
+        preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, imported.textLineHeight)
+        preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, imported.textLetterSpacing)
+        preferences.set(PreferencesKeys.TEXT_WORD_SPACING, imported.textWordSpacing)
+        preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, imported.textParagraphSpacing)
+        preferences.set(PreferencesKeys.TEXT_ALIGNMENT, imported.textAlignment)
+        preferences.set(PreferencesKeys.TEXT_BOLD, imported.textBold)
+        preferences.set(PreferencesKeys.READING_BRIGHTNESS, imported.brightness)
+        preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, imported.immersiveMode)
+        preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, imported.pageAnimation)
+        imported.displayName
     }
 
     fun setReaderTapZoneMode(mode: String) {
@@ -1686,6 +2132,96 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             preferences.set(appThemePresetKey(slot), "")
         }
+    }
+
+    fun saveReaderStylePreset(slot: Int) {
+        val normalizedSlot = slot.coerceIn(1, 3)
+        val existingEntry = uiState.value.readerStylePresetEntries.getOrNull(normalizedSlot - 1)
+        if (existingEntry != null) {
+            overwriteReaderStylePreset(existingEntry.id)
+        } else {
+            saveCurrentReaderStylePreset(displayName = settingsReaderStyleFallbackName(normalizedSlot))
+        }
+    }
+
+    fun applyReaderStylePreset(slot: Int) {
+        uiState.value.readerStylePresetEntries.getOrNull(slot.coerceIn(1, 3) - 1)?.let {
+            applyReaderStylePreset(it.id)
+        }
+    }
+
+    fun clearReaderStylePreset(slot: Int) {
+        uiState.value.readerStylePresetEntries.getOrNull(slot.coerceIn(1, 3) - 1)?.let {
+            deleteReaderStylePreset(it.id)
+        }
+    }
+
+    fun renameReaderStylePreset(slot: Int, displayName: String) {
+        uiState.value.readerStylePresetEntries.getOrNull(slot.coerceIn(1, 3) - 1)?.let {
+            renameReaderStylePreset(it.id, displayName)
+        }
+    }
+
+    fun saveCurrentReaderStylePreset(displayName: String? = null) {
+        val snapshot = uiState.value.toReaderStylePresetSnapshot(
+            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: settingsReaderStyleFallbackName(uiState.value.readerStylePresetEntries.size + 1)
+        )
+        val updatedEntries = listOf(
+            ReaderStylePresetEntry(
+                id = "preset_${System.currentTimeMillis()}",
+                snapshot = snapshot
+            )
+        ) + uiState.value.readerStylePresetEntries
+        viewModelScope.launch { persistReaderStylePresetEntries(updatedEntries) }
+    }
+
+    fun overwriteReaderStylePreset(id: String) {
+        val existing = uiState.value.readerStylePresetEntries.firstOrNull { it.id == id } ?: return
+        val updatedEntries = uiState.value.readerStylePresetEntries.map { entry ->
+            if (entry.id == id) {
+                entry.copy(
+                    snapshot = uiState.value.toReaderStylePresetSnapshot(
+                        displayName = existing.snapshot.displayName
+                    )
+                )
+            } else {
+                entry
+            }
+        }
+        viewModelScope.launch { persistReaderStylePresetEntries(updatedEntries) }
+    }
+
+    fun applyReaderStylePreset(id: String) {
+        val snapshot = uiState.value.readerStylePresetEntries
+            .firstOrNull { it.id == id }
+            ?.snapshot
+            ?: return
+        viewModelScope.launch { applyReaderStylePresetSnapshot(snapshot) }
+    }
+
+    fun deleteReaderStylePreset(id: String) {
+        viewModelScope.launch {
+            persistReaderStylePresetEntries(
+                uiState.value.readerStylePresetEntries.filterNot { it.id == id }
+            )
+        }
+    }
+
+    fun renameReaderStylePreset(id: String, displayName: String) {
+        val trimmed = displayName.trim()
+        val updatedEntries = uiState.value.readerStylePresetEntries.map { entry ->
+            if (entry.id == id) {
+                entry.copy(
+                    snapshot = entry.snapshot.copy(
+                        displayName = trimmed.takeIf { it.isNotEmpty() }
+                    )
+                )
+            } else {
+                entry
+            }
+        }
+        viewModelScope.launch { persistReaderStylePresetEntries(updatedEntries) }
     }
 
     fun applyLibraryZonePreset(style: String) {
@@ -2432,6 +2968,155 @@ class SettingsViewModel @Inject constructor(
         return true
     }
 
+    private suspend fun parseImportedReaderTypography(json: JSONObject): ImportedReaderTypographyPreset? {
+        val hasKnownKeys = listOf(
+            "readerPreset", "preset", "basePreset",
+            "name", "title", "presetName",
+            "fontSize", "textFontSize",
+            "textColorScheme", "colorScheme", "scheme",
+            "textFontFamily", "fontFamily", "font",
+            "textLineHeight", "lineHeight",
+            "textLetterSpacing", "letterSpacing",
+            "textWordSpacing", "wordSpacing",
+            "textParagraphSpacing", "paragraphSpacing",
+            "textAlignment", "alignment",
+            "textBold", "bold",
+            "textCustomTextColor", "customTextColor", "overrideTextColor",
+            "textCustomBackgroundColor", "customBackgroundColor", "overrideBackgroundColor",
+            "textCustomAccentColor", "customAccentColor", "overrideAccentColor",
+            "brightness", "readerBrightness",
+            "immersiveMode", "readerImmersiveMode",
+            "pageAnimation", "readerPageAnimation"
+        ).any(json::has)
+        if (!hasKnownKeys) return null
+
+        val presetToken = json.firstString("readerPreset", "preset", "basePreset")
+        val basePreset = presetToken?.let { ReadingPreset.fromStored(it) } ?: ReadingPreset.CUSTOM
+        val baseStyle = if (basePreset == ReadingPreset.CUSTOM) ReadingPreset.CUSTOM.style() else basePreset.style()
+        val currentFontSize = preferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).first().coerceIn(12, 32)
+        val currentColorScheme = preferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY").first()
+        val currentFontFamily = preferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia").first()
+        val currentLineHeight = preferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).first().coerceIn(1.0f, 3.0f)
+        val currentLetterSpacing = preferences.get(PreferencesKeys.TEXT_LETTER_SPACING, 0f).first().coerceIn(0f, 0.2f)
+        val currentWordSpacing = preferences.get(PreferencesKeys.TEXT_WORD_SPACING, 0f).first().coerceIn(0f, 0.6f)
+        val currentParagraphSpacing = preferences.get(PreferencesKeys.TEXT_PARAGRAPH_SPACING, 0.2f).first().coerceIn(0.1f, 1.2f)
+        val currentAlignment = preferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify").first()
+        val currentBold = preferences.get(PreferencesKeys.TEXT_BOLD, false).first()
+        val currentBrightness = preferences.get(PreferencesKeys.READING_BRIGHTNESS, -1f).first()
+        val currentImmersive = preferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false).first()
+        val currentPageAnimation = preferences.get(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE").first()
+
+        return ImportedReaderTypographyPreset(
+            displayName = json.firstString("displayName", "name", "title", "presetName")
+                ?: if (basePreset == ReadingPreset.CUSTOM) "Imported style" else basePreset.name,
+            readerPreset = basePreset,
+            textFontSize = json.firstInt("fontSize", "textFontSize")
+                ?.coerceIn(12, 32)
+                ?: currentFontSize,
+            textColorScheme = normalizeImportedTextColorScheme(
+                json.firstString("textColorScheme", "colorScheme", "scheme")
+            ) ?: if (basePreset == ReadingPreset.CUSTOM) currentColorScheme else baseStyle.textColorScheme,
+            textFontFamily = json.firstString("textFontFamily", "fontFamily", "font")
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentFontFamily else baseStyle.fontFamily,
+            textLineHeight = json.firstFloat("textLineHeight", "lineHeight")
+                ?.coerceIn(1.0f, 3.0f)
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentLineHeight else baseStyle.lineHeight,
+            textLetterSpacing = json.firstFloat("textLetterSpacing", "letterSpacing")
+                ?.coerceIn(0f, 0.2f)
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentLetterSpacing else baseStyle.letterSpacing,
+            textWordSpacing = json.firstFloat("textWordSpacing", "wordSpacing")
+                ?.coerceIn(0f, 0.6f)
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentWordSpacing else baseStyle.wordSpacing,
+            textParagraphSpacing = json.firstFloat("textParagraphSpacing", "paragraphSpacing")
+                ?.coerceIn(0.1f, 1.2f)
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentParagraphSpacing else baseStyle.paragraphSpacing,
+            textAlignment = normalizeImportedTextAlignment(json.firstString("textAlignment", "alignment"))
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentAlignment else baseStyle.textAlignment,
+            textBold = json.firstBoolean("textBold", "bold")
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentBold else baseStyle.textBold,
+            textCustomTextColor = json.optReaderColorLong(
+                "textCustomTextColor",
+                "customTextColor",
+                "overrideTextColor"
+            ),
+            textCustomBackgroundColor = json.optReaderColorLong(
+                "textCustomBackgroundColor",
+                "customBackgroundColor",
+                "overrideBackgroundColor"
+            ),
+            textCustomAccentColor = json.optReaderColorLong(
+                "textCustomAccentColor",
+                "customAccentColor",
+                "overrideAccentColor"
+            ),
+            brightness = json.firstFloat("brightness", "readerBrightness")
+                ?.let { if (it <= 0.01f) -1f else it.coerceIn(0.05f, 1.0f) }
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentBrightness else baseStyle.brightness,
+            immersiveMode = json.firstBoolean("immersiveMode", "readerImmersiveMode")
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentImmersive else baseStyle.immersiveMode,
+            pageAnimation = normalizeImportedPageAnimation(json.firstString("pageAnimation", "readerPageAnimation"))
+                ?: if (basePreset == ReadingPreset.CUSTOM) currentPageAnimation else baseStyle.pageAnimation
+        )
+    }
+
+    private fun JSONObject.firstString(vararg keys: String): String? = keys.firstNotNullOfOrNull { key ->
+        if (!has(key)) return@firstNotNullOfOrNull null
+        optString(key).trim().takeIf { it.isNotEmpty() && it != "null" }
+    }
+
+    private fun JSONObject.firstInt(vararg keys: String): Int? = keys.firstNotNullOfOrNull { key ->
+        optFlexibleFloat(key)?.toInt()
+    }
+
+    private fun JSONObject.firstFloat(vararg keys: String): Float? = keys.firstNotNullOfOrNull { key ->
+        optFlexibleFloat(key)
+    }
+
+    private fun JSONObject.firstBoolean(vararg keys: String): Boolean? = keys.firstNotNullOfOrNull { key ->
+        if (!has(key)) return@firstNotNullOfOrNull null
+        when (val raw = opt(key)) {
+            is Boolean -> raw
+            is Number -> raw.toInt() != 0
+            is String -> when (raw.trim().lowercase()) {
+                "true", "1", "yes", "on" -> true
+                "false", "0", "no", "off" -> false
+                else -> null
+            }
+            else -> null
+        }
+    }
+
+    private fun JSONObject.optFlexibleFloat(key: String): Float? {
+        if (!has(key)) return null
+        return when (val raw = opt(key)) {
+            is Number -> raw.toFloat()
+            is String -> raw.trim().replace(',', '.').toFloatOrNull()
+            else -> null
+        }
+    }
+
+    private fun normalizeImportedTextColorScheme(raw: String?): String? = when (raw?.trim()?.uppercase()) {
+        "DAY", "LIGHT", "PAPER", "DEFAULT" -> "DAY"
+        "SEPIA", "WARM" -> "SEPIA"
+        "NIGHT", "DARK", "OLED", "AMOLED", "BLACK" -> "NIGHT"
+        else -> null
+    }
+
+    private fun normalizeImportedTextAlignment(raw: String?): String? = when (raw?.trim()?.lowercase()) {
+        "justify", "justified" -> "justify"
+        "left", "start" -> "left"
+        "right", "end" -> "right"
+        "center", "centre", "middle" -> "center"
+        else -> null
+    }
+
+    private fun normalizeImportedPageAnimation(raw: String?): String? = when (raw?.trim()?.uppercase()) {
+        "NONE", "OFF" -> "NONE"
+        "SLIDE", "PAGE", "SWIPE" -> "SLIDE"
+        "FADE", "DISSOLVE" -> "FADE"
+        else -> null
+    }
+
     private suspend fun exportAppIconJson(): JSONObject {
         val iconId = context.appIconDataStore.data
             .map { it[APP_ICON_PREFERENCE_KEY] ?: DEFAULT_APP_ICON_ID }
@@ -2666,6 +3351,40 @@ class SettingsViewModel @Inject constructor(
         else -> PreferencesKeys.APP_THEME_PRESET_3
     }
 
+    private fun readerStylePresetKey(slot: Int) = when (slot.coerceIn(1, 3)) {
+        1 -> PreferencesKeys.READER_STYLE_PRESET_1
+        2 -> PreferencesKeys.READER_STYLE_PRESET_2
+        else -> PreferencesKeys.READER_STYLE_PRESET_3
+    }
+
+    private fun settingsReaderStyleFallbackName(index: Int): String = "Style $index"
+
+    private fun List<ReaderStylePresetEntry>.toLegacyReaderStyleSlots(): List<ReaderStylePresetSlot> =
+        (1..3).map { index ->
+            ReaderStylePresetSlot(
+                index = index,
+                serialized = getOrNull(index - 1)?.snapshot?.serialize()
+            )
+        }
+
+    private suspend fun persistNullableReaderColor(key: Preferences.Key<Long>, value: Long?) {
+        context.dataStore.edit { prefs ->
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+    }
+
+    private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
+        val normalizedEntries = entries.distinctBy { it.id }
+        val legacySlots = normalizedEntries.toLegacyReaderStyleSlots()
+        preferences.set(
+            PreferencesKeys.READER_STYLE_PRESET_LIST,
+            serializeReaderStylePresetEntries(normalizedEntries)
+        )
+        preferences.set(PreferencesKeys.READER_STYLE_PRESET_1, legacySlots[0].serialized.orEmpty())
+        preferences.set(PreferencesKeys.READER_STYLE_PRESET_2, legacySlots[1].serialized.orEmpty())
+        preferences.set(PreferencesKeys.READER_STYLE_PRESET_3, legacySlots[2].serialized.orEmpty())
+    }
+
     private suspend fun applyLibraryPresetSnapshot(
         snapshot: LibraryThemePresetSnapshot,
         useAmoledDark: Boolean? = null
@@ -2715,6 +3434,27 @@ class SettingsViewModel @Inject constructor(
         preferences.set(PreferencesKeys.UI_CORNER_RADIUS, snapshot.uiCornerRadius)
     }
 
+    private suspend fun applyReaderStylePresetSnapshot(
+        snapshot: ReaderStylePresetSnapshot
+    ) {
+        preferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
+        preferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
+        preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
+        persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, snapshot.textCustomTextColor)
+        persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, snapshot.textCustomBackgroundColor)
+        persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, snapshot.textCustomAccentColor)
+        preferences.set(PreferencesKeys.TEXT_FONT_FAMILY, snapshot.textFontFamily)
+        preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, snapshot.textLineHeight)
+        preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, snapshot.textLetterSpacing)
+        preferences.set(PreferencesKeys.TEXT_WORD_SPACING, snapshot.textWordSpacing)
+        preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, snapshot.textParagraphSpacing)
+        preferences.set(PreferencesKeys.TEXT_ALIGNMENT, snapshot.textAlignment)
+        preferences.set(PreferencesKeys.TEXT_BOLD, snapshot.textBold)
+        preferences.set(PreferencesKeys.READING_BRIGHTNESS, snapshot.brightness)
+        preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, snapshot.immersiveMode)
+        preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, snapshot.pageAnimation)
+    }
+
     private fun SettingsUiState.toLibraryThemePresetSnapshot(): LibraryThemePresetSnapshot =
         LibraryThemePresetSnapshot(
             backgroundStyle = libraryBackgroundStyle,
@@ -2751,5 +3491,28 @@ class SettingsViewModel @Inject constructor(
             uiFontScale = uiFontScale,
             uiDensityScale = uiDensityScale,
             uiCornerRadius = uiCornerRadius
+        )
+
+    private fun SettingsUiState.toReaderStylePresetSnapshot(
+        displayName: String? = null
+    ): ReaderStylePresetSnapshot =
+        ReaderStylePresetSnapshot(
+            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() },
+            readerPreset = ReadingPreset.fromStored(readerPreset).name,
+            textFontSize = textFontSize,
+            textColorScheme = textColorScheme,
+            textFontFamily = textFontFamily,
+            textLineHeight = textLineHeight,
+            textLetterSpacing = textLetterSpacing,
+            textWordSpacing = textWordSpacing,
+            textParagraphSpacing = textParagraphSpacing,
+            textAlignment = textAlignment,
+            textBold = textBold,
+            textCustomTextColor = textCustomTextColor,
+            textCustomBackgroundColor = textCustomBackgroundColor,
+            textCustomAccentColor = textCustomAccentColor,
+            brightness = brightness,
+            immersiveMode = readerImmersiveMode,
+            pageAnimation = readerPageAnimation
         )
 }

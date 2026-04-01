@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +43,7 @@ import com.example.core.ui.eink.LocalEInkMode
 import com.example.feature.reader.ui.ReaderUiState
 import com.example.feature.reader.ui.ReaderViewModel
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 @Composable
 fun PageView(
@@ -50,11 +53,19 @@ fun PageView(
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
     imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
+    marginCropHorizontal: Float = 0f,
+    marginCropVertical: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     val isEInk = LocalEInkMode.current
     val isDualPage = uiState.readingMode == ReadingMode.DUAL_PAGE
     val leftPage = uiState.currentPage
+    val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
+        ReaderImageCrop(
+            horizontalFraction = marginCropHorizontal,
+            verticalFraction = marginCropVertical
+        )
+    }
 
     AnimatedContent(
         targetState = Pair(leftPage, isDualPage),
@@ -109,7 +120,8 @@ fun PageView(
                         bitmap = leftBitmap,
                         contentDescription = "Page ${page + 1}",
                         alignment = Alignment.CenterEnd,
-                        contentScale = imageScaleModeToContentScale(imageScaleMode),
+                        imageScaleMode = imageScaleMode,
+                        crop = imageCrop,
                         modifier = Modifier.weight(1f)
                     )
                     if (rightPage != null) {
@@ -117,7 +129,8 @@ fun PageView(
                             bitmap = rightBitmap,
                             contentDescription = "Page ${rightPage + 1}",
                             alignment = Alignment.CenterStart,
-                            contentScale = imageScaleModeToContentScale(imageScaleMode),
+                            imageScaleMode = imageScaleMode,
+                            crop = imageCrop,
                             modifier = Modifier.weight(1f)
                         )
                     } else {
@@ -128,7 +141,8 @@ fun PageView(
                 PagePane(
                     bitmap = leftBitmap,
                     contentDescription = "Page ${page + 1}",
-                    contentScale = imageScaleModeToContentScale(imageScaleMode),
+                    imageScaleMode = imageScaleMode,
+                    crop = imageCrop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -142,21 +156,58 @@ private fun PagePane(
     contentDescription: String,
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
-    contentScale: ContentScale = ContentScale.Fit
+    imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
+    crop: ReaderImageCrop = ReaderImageCrop()
 ) {
-    Box(modifier = modifier.clipToBounds(), contentAlignment = alignment) {
+    BoxWithConstraints(modifier = modifier.clipToBounds(), contentAlignment = alignment) {
         if (bitmap == null) {
             CircularProgressIndicator(color = Color.White)
-            return
+            return@BoxWithConstraints
         }
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = contentDescription,
-            contentScale = contentScale,
-            alignment = alignment,
-            filterQuality = FilterQuality.High,
-            modifier = Modifier.fillMaxSize()
-        )
+        val density = LocalDensity.current
+        val containerWidthPx = with(density) { maxWidth.toPx().coerceAtLeast(1f) }
+        val containerHeightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
+        val (sourceWidthPx, sourceHeightPx) = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
+            croppedSourceDimensions(bitmap, crop)
+        }
+        val (baseWidthPx, baseHeightPx) = remember(
+            bitmap,
+            containerWidthPx,
+            containerHeightPx,
+            imageScaleMode,
+            sourceWidthPx,
+            sourceHeightPx
+        ) {
+            when (ReaderImageScaleMode.fromStored(imageScaleMode)) {
+                ReaderImageScaleMode.FIT_WIDTH -> {
+                    val h = containerWidthPx * (sourceHeightPx / sourceWidthPx.coerceAtLeast(1f))
+                    containerWidthPx to h
+                }
+                ReaderImageScaleMode.FIT_HEIGHT -> {
+                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
+                    w to containerHeightPx
+                }
+                ReaderImageScaleMode.REAL_SIZE -> {
+                    sourceWidthPx to sourceHeightPx
+                }
+            }
+        }
+        val imageWidth = with(density) { baseWidthPx.toDp() }
+        val imageHeight = with(density) { baseHeightPx.toDp() }
+        Box(
+            modifier = Modifier
+                .width(imageWidth)
+                .height(imageHeight)
+        ) {
+            CroppedBitmapImage(
+                bitmap = bitmap,
+                contentDescription = contentDescription,
+                crop = crop,
+                alignment = alignment,
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 
@@ -267,9 +318,10 @@ private fun ReaderPageGestureSurface(
         ) {
             Box(
                 modifier = Modifier
-                    .requiredWidth(this@BoxWithConstraints.maxWidth * scale)
-                    .requiredHeight(this@BoxWithConstraints.maxHeight * scale)
+                    .fillMaxSize()
                     .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
                         translationX = offset.x
                         translationY = offset.y
                     },
@@ -306,8 +358,3 @@ private fun boundedOffset(
     )
 }
 
-private fun imageScaleModeToContentScale(mode: String): ContentScale = when (ReaderImageScaleMode.fromStored(mode)) {
-    ReaderImageScaleMode.FIT_WIDTH  -> ContentScale.FillWidth
-    ReaderImageScaleMode.FIT_HEIGHT -> ContentScale.FillHeight
-    ReaderImageScaleMode.REAL_SIZE  -> ContentScale.None
-}

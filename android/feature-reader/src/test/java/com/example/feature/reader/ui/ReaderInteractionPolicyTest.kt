@@ -40,46 +40,4 @@ class ReaderInteractionPolicyTest {
         assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN))
         assertNull(readerVolumePagingStep(KeyEvent.KEYCODE_MENU))
     }
-
-    @Test
-    fun hardwareKeyDecisionConsumesVolumeButtonsOnlyWhenEnabled() {
-        val disabled = resolveReaderHardwareKeyDecision(
-            event = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN),
-            volumePagingEnabled = false
-        )
-
-        assertFalse(disabled.consume)
-        assertNull(disabled.pageStep)
-
-        val enabled = resolveReaderHardwareKeyDecision(
-            event = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN),
-            volumePagingEnabled = true
-        )
-
-        assertTrue(enabled.consume)
-        assertEquals(1, enabled.pageStep)
-    }
-
-    @Test
-    fun hardwareKeyDecisionConsumesKeyUpWithoutTurningPageAgain() {
-        val decision = resolveReaderHardwareKeyDecision(
-            event = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_VOLUME_UP),
-            volumePagingEnabled = true
-        )
-
-        assertTrue(decision.consume)
-        assertNull(decision.pageStep)
-    }
-
-    @Test
-    fun hardwareKeyDecisionSkipsRepeatedPageTurnOnLongPress() {
-        val repeated = KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOLUME_DOWN, 3)
-        val decision = resolveReaderHardwareKeyDecision(
-            event = repeated,
-            volumePagingEnabled = true
-        )
-
-        assertTrue(decision.consume)
-        assertNull(decision.pageStep)
-    }
 }

@@ -1,122 +1,71 @@
 package com.example.feature.reader.ui
 
+import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioManager
-import android.media.AudioTrack
-import kotlin.math.PI
-import kotlin.math.sin
-import kotlin.random.Random
+import android.media.SoundPool
+import com.example.core.ui.R
 
-enum class PageSoundStyle { PAPER, CRISP, SOFT }
+enum class PageSoundStyle {
+    PAPER,
+    CRISP,
+    SOFT;
+
+    companion object {
+        fun fromStored(value: String?): PageSoundStyle = entries.firstOrNull { it.name == value } ?: PAPER
+    }
+}
 
 /**
- * Plays a brief algorithmically-generated page-flip sound effect.
- * Three styles: PAPER (classic rustle), CRISP (sharp snap), SOFT (gentle whisper).
- * Samples are pre-computed lazily and reused for every page flip.
+ * Plays short bundled page-flip sounds.
+ * Three styles: PAPER, CRISP, SOFT.
  */
 object PageSoundPlayer {
+    private const val VOLUME_PAPER = 0.92f
+    private const val VOLUME_CRISP = 1.00f
+    private const val VOLUME_SOFT = 1.00f
 
-    private const val SAMPLE_RATE = 22050
+    private var soundPool: SoundPool? = null
+    private var paperSoundId: Int = 0
+    private var crispSoundId: Int = 0
+    private var softSoundId: Int = 0
 
-    private val paperSamples: ShortArray by lazy { buildPaperSamples() }
-    private val crispSamples: ShortArray by lazy { buildCrispSamples() }
-    private val softSamples:  ShortArray by lazy { buildSoftSamples()  }
-
-    fun play(style: PageSoundStyle = PageSoundStyle.PAPER) {
-        val buf = when (style) {
-            PageSoundStyle.PAPER -> paperSamples
-            PageSoundStyle.CRISP -> crispSamples
-            PageSoundStyle.SOFT  -> softSamples
-        }
-        playBuffer(buf)
+    @Synchronized
+    fun init(context: Context) {
+        if (soundPool != null) return
+        val pool = SoundPool.Builder()
+            .setMaxStreams(2)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            .build()
+        paperSoundId = pool.load(context, R.raw.page_flip_paper, 1)
+        crispSoundId = pool.load(context, R.raw.page_flip_crisp, 1)
+        softSoundId = pool.load(context, R.raw.page_flip_soft, 1)
+        soundPool = pool
     }
 
-    private fun playBuffer(samples: ShortArray) {
-        Thread {
-            try {
-                val bufferSize = maxOf(
-                    samples.size * 2,
-                    AudioTrack.getMinBufferSize(
-                        SAMPLE_RATE,
-                        AudioFormat.CHANNEL_OUT_MONO,
-                        AudioFormat.ENCODING_PCM_16BIT
-                    )
-                )
-                val track = AudioTrack(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_GAME)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build(),
-                    AudioFormat.Builder()
-                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                        .setSampleRate(SAMPLE_RATE)
-                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                        .build(),
-                    bufferSize,
-                    AudioTrack.MODE_STATIC,
-                    AudioManager.AUDIO_SESSION_ID_GENERATE
-                )
-                track.write(samples, 0, samples.size)
-                track.play()
-                val durationMs = samples.size * 1000L / SAMPLE_RATE
-                Thread.sleep(durationMs + 40)
-                track.stop()
-                track.release()
-            } catch (_: Exception) {
-                // Audio is non-critical; silently ignore all errors
-            }
-        }.apply { isDaemon = true; name = "PageSoundThread" }.start()
+    fun play(context: Context, style: PageSoundStyle = PageSoundStyle.PAPER) {
+        init(context.applicationContext)
+        val (soundId, volume) = when (style) {
+            PageSoundStyle.PAPER -> paperSoundId to VOLUME_PAPER
+            PageSoundStyle.CRISP -> crispSoundId to VOLUME_CRISP
+            PageSoundStyle.SOFT -> softSoundId to VOLUME_SOFT
+        }
+        if (soundId == 0) return
+        runCatching {
+            soundPool?.play(soundId, volume, volume, 1, 0, 1f)
+        }
     }
 
-    /** PAPER: 110ms white noise with fast attack + quadratic decay — classic page rustle */
-    private fun buildPaperSamples(): ShortArray {
-        val n = SAMPLE_RATE * 110 / 1000
-        val buf = ShortArray(n)
-        val rng = Random(0x1337)
-        for (i in 0 until n) {
-            val t = i.toFloat() / n
-            val env = if (t < 0.10f) (t / 0.10f) else (1f - t).let { it * it }
-            val noise = (rng.nextFloat() * 2f - 1f) * env * 0.22f
-            buf[i] = (noise * Short.MAX_VALUE).toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-        return buf
-    }
-
-    /** CRISP: 60ms noise burst + high-frequency tone — sharp, snappy flip */
-    private fun buildCrispSamples(): ShortArray {
-        val n = SAMPLE_RATE * 60 / 1000
-        val buf = ShortArray(n)
-        val rng = Random(0xC21C)
-        for (i in 0 until n) {
-            val t = i.toFloat() / n
-            val env = (1f - t).let { it * it * it }
-            val noise = (rng.nextFloat() * 2f - 1f) * 0.5f
-            val tone = sin(2.0 * PI * 1500.0 * i / SAMPLE_RATE).toFloat() * 0.5f
-            val sample = (noise + tone) * env * 0.18f
-            buf[i] = (sample * Short.MAX_VALUE).toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-        return buf
-    }
-
-    /** SOFT: 150ms low-pass filtered noise with slow attack + slow decay — gentle whisper */
-    private fun buildSoftSamples(): ShortArray {
-        val n = SAMPLE_RATE * 150 / 1000
-        val buf = ShortArray(n)
-        val rng = Random(0xA4B2)
-        var prev = 0f
-        for (i in 0 until n) {
-            val t = i.toFloat() / n
-            val env = if (t < 0.20f) (t / 0.20f) else (1f - t)
-            val rawNoise = (rng.nextFloat() * 2f - 1f)
-            // One-pole low-pass (alpha ≈ 0.15 → heavily smoothed)
-            prev = prev + 0.15f * (rawNoise - prev)
-            val sample = prev * env * 0.20f
-            buf[i] = (sample * Short.MAX_VALUE).toInt()
-                .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-        return buf
+    @Synchronized
+    fun release() {
+        soundPool?.release()
+        soundPool = null
+        paperSoundId = 0
+        crispSoundId = 0
+        softSoundId = 0
     }
 }

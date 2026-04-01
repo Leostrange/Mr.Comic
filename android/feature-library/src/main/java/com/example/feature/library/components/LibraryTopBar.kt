@@ -107,7 +107,7 @@ fun LibraryTopBar(
                     overflow = TextOverflow.Ellipsis
                 )
             },
-            windowInsets = rootChromeStableTopBarInsets(),
+            windowInsets = WindowInsets(0, 0, 0, 0),
             colors = rootChromeTopBarColors(),
             navigationIcon = {
                 if (canNavigateUp) {

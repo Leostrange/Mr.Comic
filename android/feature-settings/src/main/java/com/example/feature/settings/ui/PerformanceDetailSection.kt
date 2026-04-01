@@ -227,6 +227,19 @@ internal fun DetailedPerformanceSection(
                         checked = uiState.appVideoSplashEnabled,
                         onCheckedChange = viewModel::setAppVideoSplashEnabled
                     )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 4.dp))
+                    PerfSegmentedRow(
+                        title = t.navTransitionsTitle,
+                        subtitle = t.navTransitionsDesc,
+                        options = listOf(
+                            t.navAnimNone to "NONE",
+                            t.navAnimFade to "FADE",
+                            t.navAnimSlide to "SLIDE",
+                            t.navAnimLift to "LIFT"
+                        ),
+                        selected = uiState.appNavTransitionStyle,
+                        onSelect = viewModel::setAppNavTransitionStyle
+                    )
                 }
             }
         }
@@ -300,6 +313,12 @@ private data class PerfSettingsText(
     val startupPreloadDesc: String,
     val reducedAnimTitle: String,
     val reducedAnimDesc: String,
+    val navTransitionsTitle: String,
+    val navTransitionsDesc: String,
+    val navAnimNone: String,
+    val navAnimFade: String,
+    val navAnimSlide: String,
+    val navAnimLift: String,
     val resetTitle: String,
     val resetDesc: String,
     val resetButton: String,
@@ -348,6 +367,12 @@ private fun perfText(language: String): PerfSettingsText = when (language) {
         startupPreloadDesc = "Warm up Continue screen data in background",
         reducedAnimTitle = "Reduce animations",
         reducedAnimDesc = "Calmer transitions for weaker devices",
+        navTransitionsTitle = "Screen transitions",
+        navTransitionsDesc = "How the app moves between the library, reader, and players.",
+        navAnimNone = "None",
+        navAnimFade = "Fade",
+        navAnimSlide = "Slide",
+        navAnimLift = "Lift",
         resetTitle = "Reset",
         resetDesc = "Restore performance settings to defaults",
         resetButton = "Reset to defaults",
@@ -394,6 +419,12 @@ private fun perfText(language: String): PerfSettingsText = when (language) {
         startupPreloadDesc = "Прогревать данные экрана «Продолжить» в фоне",
         reducedAnimTitle = "Уменьшить анимации",
         reducedAnimDesc = "Более спокойные переходы для слабых устройств",
+        navTransitionsTitle = "Переходы между экранами",
+        navTransitionsDesc = "Как приложение переходит между библиотекой, ридером и плеерами.",
+        navAnimNone = "Без анимации",
+        navAnimFade = "Растворение",
+        navAnimSlide = "Сдвиг",
+        navAnimLift = "Подъём",
         resetTitle = "Сброс",
         resetDesc = "Вернуть настройки производительности к значениям по умолчанию",
         resetButton = "Сбросить к дефолтам",

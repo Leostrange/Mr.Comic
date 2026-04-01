@@ -47,6 +47,10 @@ class OnboardingViewModel @Inject constructor(
         prefs.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
         prefs.set(PreferencesKeys.TEXT_FONT_FAMILY, style.fontFamily)
         prefs.set(PreferencesKeys.TEXT_LINE_HEIGHT, style.lineHeight)
-        prefs.set(PreferencesKeys.TEXT_BOLD, false)
+        prefs.set(PreferencesKeys.TEXT_LETTER_SPACING, style.letterSpacing)
+        prefs.set(PreferencesKeys.TEXT_WORD_SPACING, style.wordSpacing)
+        prefs.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, style.paragraphSpacing)
+        prefs.set(PreferencesKeys.TEXT_ALIGNMENT, style.textAlignment)
+        prefs.set(PreferencesKeys.TEXT_BOLD, style.textBold)
     }
 }

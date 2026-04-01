@@ -87,7 +87,7 @@ fun ReaderMinimalBar(
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = strings.controlsShow)
                 }
             },
-            windowInsets = rootChromeStableTopBarInsets(),
+            windowInsets = WindowInsets(0, 0, 0, 0),
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = Color.Transparent,
                 titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -493,17 +493,19 @@ fun ReaderExpandedBottomPanel(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK).forEach { preset ->
-                    ReaderPanelChip(
-                        selected = uiState.readerPreset == preset.name,
-                        onClick = { onApplyPreset(preset) },
-                        label = {
-                                Text(
-                                    readerPresetLabel(preset, strings.languageCode)
-                                )
-                            }
-                        )
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    com.example.core.ui.theme.readingPresetQuickChoices().forEach { preset ->
+                        item {
+                            ReaderPanelChip(
+                                selected = uiState.readerPreset == preset.name,
+                                onClick = { onApplyPreset(preset) },
+                                label = {
+                                    Text(
+                                        readerPresetLabel(preset, strings.languageCode)
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
             }

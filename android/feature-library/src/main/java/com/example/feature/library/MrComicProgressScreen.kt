@@ -246,7 +246,7 @@ fun MrComicProgressRoute(
                 TopAppBar(
                     title = { Text(text.title) },
                     colors = rootChromeTopBarColors(),
-                    windowInsets = rootChromeStableTopBarInsets(),
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
                             Icon(

@@ -5,6 +5,12 @@ import android.graphics.Bitmap
 import android.net.Uri
 import com.example.core.model.ComicFormat
 import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.base.FormatReaderWebResource
+import com.example.engine.formats.base.READER_BASE_DOCUMENT_CSS
+import com.example.engine.formats.base.READER_MOBI_DOCUMENT_CSS
+import com.example.engine.formats.base.READER_PRESERVE_LAYOUT_DOCUMENT_CSS
+import com.example.engine.formats.base.TocEntry
+import com.example.engine.formats.base.buildUnifiedReaderHtmlDocument
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,6 +31,7 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import java.nio.charset.Charset
+import java.net.URLDecoder
 import java.util.Base64
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
@@ -69,6 +76,21 @@ private val SINGLE_BYTE_TEXT_CHARSETS = listOf(
     Charset.forName("IBM866"),
     Charsets.ISO_8859_1
 )
+private val TXT_CHAPTER_PATTERNS = listOf(
+    Regex("""(?iu)^(глава|часть|книга|том)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),
+    Regex("""(?iu)^(chapter|part|book|volume)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),
+    Regex("""(?iu)^(пролог|эпилог|предисловие|введение|заключение|послесловие|prologue|epilogue|preface|introduction|afterword|foreword)$""")
+)
+
+private data class TxtChapterAnchor(
+    val id: String,
+    val title: String
+)
+
+private data class TextDocumentData(
+    val pages: List<String>,
+    val chapterAnchors: List<TxtChapterAnchor> = emptyList()
+)
 
 // ── DOCX run-level formatting ─────────────────────────────────────────────────
 private val DOCX_PARAGRAPH_RE = Regex("""<w:p\b[^>]*>.*?</w:p>""", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
@@ -98,10 +120,99 @@ private val RTF_SKIP_DESTINATIONS = setOf(
     "mmathPr", "fldinst"
 )
 
+private fun isGutenbergHtml(raw: String): Boolean {
+    val lowerRaw = raw.lowercase()
+    // Check for Gutenberg-specific indicators
+    return (
+        // XHTML 1.0 Strict DOCTYPE (common in Gutenberg)
+        lowerRaw.contains("<!doctype html public \"-//w3c//dtd xhtml 1.0 strict//en\"") ||
+        // Direct mention of Gutenberg project
+        lowerRaw.contains("gutenberg") ||
+        // Cover page link (common in Gutenberg)
+        lowerRaw.contains("rel=\"coverpage\"") ||
+        // Typical Gutenberg structure with centered headings and internal anchors
+        (lowerRaw.contains("<h1") && lowerRaw.contains("href=\"#") && 
+         (lowerRaw.contains("text-align:center") || lowerRaw.contains("align=\"center\"")))
+    )
+}
+
 private fun htmlEscapeText(text: String): String = text
     .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")
+
+private fun preserveGutenbergHtmlDocument(raw: String, baseUrl: String?): String {
+    // For Gutenberg HTML, preserve the complete document structure including head and original styles
+    val normalizedBase = baseUrl.orEmpty()
+    
+    // Parse the document while preserving all elements
+    val document = Jsoup.parse(raw, normalizedBase)
+    document.outputSettings(Document.OutputSettings().prettyPrint(false))
+    
+    // Clean only dangerous elements, preserve everything else including styles and links
+    document.select(
+        "script, noscript, template, iframe, object, embed, canvas, form, " +
+        "input, button, select, textarea"
+    ).remove()
+    
+    // Rebuild the <base> tag from the reader pipeline so file:// and stale external bases
+    // do not override the asset-backed document URL.
+    document.select("head base").remove()
+    if (normalizedBase.isNotEmpty()) {
+        document.head().prependElement("base").attr("href", normalizedBase)
+    }
+    
+    // Add minimal reader CSS for mobile optimization without overriding publisher styles
+    val readerCss = """
+        <style>
+        @media screen {
+            body { 
+                margin: 0; 
+                padding: 16px 16px 44px; 
+                width: min(720px, calc(100vw - 32px));
+                max-width: 720px; 
+                box-sizing: border-box;
+                margin-left: auto; 
+                margin-right: auto;
+                overflow-wrap: break-word;
+            }
+            img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
+            a:link, a:visited, a:hover, a:active {
+                color: #1a6f9a;
+                text-decoration: underline;
+                text-underline-offset: 0.14em;
+                text-decoration-thickness: 0.08em;
+            }
+        }
+        </style>
+    """.trimIndent()
+    
+    // Insert reader CSS after existing head content
+    document.head().append(readerCss)
+    
+    return document.outerHtml()
+}
+
+internal fun shouldPreserveHtmlPublisherLayout(raw: String): Boolean {
+    if (isGutenbergHtml(raw)) return true
+    val lowerRaw = raw.lowercase()
+    if (Regex("""<(table|thead|tbody|tfoot|tr|td|th|frameset|frame|svg|canvas)\b""", RegexOption.IGNORE_CASE)
+            .containsMatchIn(raw)
+    ) {
+        return true
+    }
+    if (Regex(
+            """style\s*=\s*["'][^"']*(?:position\s*:|left\s*:|top\s*:|right\s*:|bottom\s*:|float\s*:|display\s*:\s*(?:grid|flex|inline-block|table)|width\s*:\s*\d|height\s*:\s*\d)""",
+            RegexOption.IGNORE_CASE
+        ).containsMatchIn(raw)
+    ) {
+        return true
+    }
+    if ("<body" in lowerRaw && "data-mrcomic-preserve-layout" in lowerRaw) {
+        return true
+    }
+    return false
+}
 
 private fun normalizeReaderHtmlFragment(html: String): String = runCatching {
     val trimmed = html.trim()
@@ -116,158 +227,48 @@ private fun normalizeReaderHtmlFragment(html: String): String = runCatching {
     document.body().html().trim().ifBlank { trimmed }
 }.getOrElse { html }
 
-private const val DEFAULT_READER_HTML_CSS = """
-    body { margin: 0; padding: 0 0 24px; }
-    img { max-width: 100%; height: auto; display: block; margin: 0 auto 1rem; }
-    figure { margin: 1rem 0; }
-    figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
-    pre, code { white-space: pre-wrap; word-break: break-word; }
-    pre {
-      padding: 0.85rem 1rem;
-      border-radius: 14px;
-      background: rgba(120,120,120,0.10);
-      overflow-x: auto;
-    }
-    code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
-    ul, ol { padding-left: 1.5rem; }
-    li + li { margin-top: 0.25rem; }
-    table { width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
-    th, td { border: 1px solid rgba(120,120,120,0.35); padding: 0.5rem 0.65rem; text-align: left; }
-    th { font-weight: 600; }
-    hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: 1rem 0; }
-    del { opacity: 0.75; }
-    a { text-decoration: underline; }
-    .footnotes { margin-top: 1.25rem; font-size: 0.94em; }
-    .footnotes ol { padding-left: 1.25rem; }
-    blockquote {
-      margin: 1rem 0;
-      padding-left: 1rem;
-      border-left: 3px solid rgba(120,120,120,0.35);
-    }
-"""
-
-private const val MOBI_READER_HTML_CSS = """
-    body {
-      margin: 0 auto;
-      padding: 22px 8px 28px;
-      max-width: 680px;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: 1.05rem;
-      line-height: 1.7;
-      color: inherit;
-    }
-    p {
-      margin: 0.2em 0;
-      text-align: justify;
-      text-indent: 1.5em;
-    }
-    p:first-child,
-    h1 + p,
-    h2 + p,
-    h3 + p,
-    h4 + p,
-    h5 + p,
-    h6 + p,
-    center + p,
-    [align="center"] + p {
-      text-indent: 0;
-    }
-    h1, h2, h3, h4, h5, h6,
-    center,
-    [align="center"] {
-      text-align: center;
-      text-indent: 0;
-    }
-    p[align="center"],
-    center p,
-    .center,
-    .center p {
-      text-align: center;
-      text-indent: 0;
-    }
-    p[align="center"],
-    center,
-    center p,
-    .center,
-    .center p {
-      margin: 0.9em 0;
-    }
-    h1, h2, h3 {
-      line-height: 1.3;
-      margin: 1.6em 0 0.7em;
-      font-weight: 700;
-    }
-    h1 {
-      font-size: 1.7em;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    h2 {
-      font-size: 1.35em;
-      letter-spacing: 0.02em;
-    }
-    h3 {
-      font-size: 1.15em;
-    }
-    h4, h5, h6 {
-      font-size: 1em;
-      margin: 1.2em 0 0.5em;
-    }
-    .chapter,
-    .titlepage,
-    .title-page {
-      page-break-before: always;
-      break-before: page;
-    }
-    img { max-width: 100%; height: auto; display: block; margin: 0.8rem auto; }
-    hr { border: 0; border-top: 1px solid rgba(120,120,120,0.3); margin: 1.5em 3em; }
-    blockquote {
-      margin: 1em 1.5em;
-      padding-left: 1em;
-      border-left: 3px solid rgba(120,120,120,0.3);
-      font-style: italic;
-    }
-    a { color: inherit; text-decoration: underline; }
-"""
-
-private const val PRESERVE_LAYOUT_HTML_CSS = """
-    body {
-      margin: 0;
-      padding: 8px 0 24px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    img { max-width: 100%; height: auto; }
-    pre, code { white-space: pre-wrap; word-break: break-word; }
-    table { max-width: 100%; border-collapse: collapse; }
-"""
+private const val DEFAULT_READER_HTML_CSS = READER_BASE_DOCUMENT_CSS
+private const val MOBI_READER_HTML_CSS = READER_MOBI_DOCUMENT_CSS
+private const val PRESERVE_LAYOUT_HTML_CSS = READER_PRESERVE_LAYOUT_DOCUMENT_CSS
 
 private fun buildReaderHtmlDocument(
     body: String,
     baseUrl: String? = null,
     extraCss: String = "",
+    extraHeadHtml: String = "",
     baseCss: String = DEFAULT_READER_HTML_CSS,
     preservePublisherLayout: Boolean = false
 ): String {
-    val baseTag = baseUrl?.let { """  <base href="${it.replace("\"", "%22")}">""" }.orEmpty()
-    val extraStyleTag = if (extraCss.isNotBlank()) "<style>$extraCss</style>" else ""
-    val preserveLayoutAttr = if (preservePublisherLayout) """ data-mrcomic-preserve-layout="true"""" else ""
     val normalizedBody = normalizeReaderHtmlFragment(body)
-    return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width,initial-scale=1">
-          $baseTag
-          <style>
-            $baseCss
-          </style>
-          $extraStyleTag
-        </head>
-        <body$preserveLayoutAttr>$normalizedBody</body>
-        </html>
-    """.trimIndent()
+    return buildUnifiedReaderHtmlDocument(
+        body = normalizedBody,
+        baseUrl = baseUrl,
+        extraCss = extraCss,
+        extraHeadHtml = extraHeadHtml,
+        baseCss = baseCss,
+        preservePublisherLayout = preservePublisherLayout
+    )
+}
+
+private fun textReaderMimeTypeFor(extension: String): String = when (extension.lowercase()) {
+    "html", "htm" -> "text/html"
+    "css" -> "text/css"
+    "js" -> "application/javascript"
+    "txt" -> "text/plain"
+    "xml" -> "application/xml"
+    "svg" -> "image/svg+xml"
+    "jpg", "jpeg" -> "image/jpeg"
+    "png" -> "image/png"
+    "gif" -> "image/gif"
+    "webp" -> "image/webp"
+    "avif" -> "image/avif"
+    "bmp" -> "image/bmp"
+    "ico" -> "image/x-icon"
+    "ttf" -> "font/ttf"
+    "otf" -> "font/otf"
+    "woff" -> "font/woff"
+    "woff2" -> "font/woff2"
+    else -> "application/octet-stream"
 }
 
 internal fun decodeTextBytes(bytes: ByteArray): String {
@@ -421,6 +422,8 @@ internal fun renderMarkdownToHtmlBlocks(raw: String): List<String> {
 }
 
 internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): String {
+    val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
+    val baseCss = if (preservePublisherLayout) PRESERVE_LAYOUT_HTML_CSS else DEFAULT_READER_HTML_CSS
     val normalizedBaseUrl = baseUrl.orEmpty()
     val document = if (raw.contains("<html", ignoreCase = true) ||
         raw.contains("<body", ignoreCase = true) ||
@@ -433,6 +436,8 @@ internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): S
     }
     document.outputSettings(Document.OutputSettings().prettyPrint(false))
     val extractedCss = document.select("style").joinToString("\n") { it.data() }
+    val linkedStylesheets = document.select("link[rel~=(?i)stylesheet][href], link[href$=.css i][href]")
+        .joinToString("\n") { it.outerHtml() }
     document.select(
         "script, style, noscript, template, iframe, object, embed, canvas, form, input, button, select, textarea"
     ).remove()
@@ -466,7 +471,9 @@ internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): S
         body = content,
         baseUrl = baseUrl,
         extraCss = extractedCss,
-        preservePublisherLayout = true
+        extraHeadHtml = linkedStylesheets,
+        baseCss = baseCss,
+        preservePublisherLayout = preservePublisherLayout
     )
 }
 
@@ -476,8 +483,10 @@ class TextFormatReader @Inject constructor(
     private val format: ComicFormat
 ) : FormatReader {
 
-    private val htmlPages: List<String> by lazy { parsePages() }
+    private val documentData: TextDocumentData by lazy { parseDocument() }
+    private val htmlPages: List<String> get() = documentData.pages
     private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex() }
+    private val tocEntries: List<TocEntry> by lazy { buildTableOfContents() }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
         htmlPages.size.coerceAtLeast(1)
@@ -489,10 +498,50 @@ class TextFormatReader @Inject constructor(
         htmlPages.getOrNull(index.coerceIn(0, (htmlPages.size - 1).coerceAtLeast(0)))
     }
 
+    override fun getTableOfContents(): List<TocEntry> = tocEntries
+
     override fun htmlBaseUrl(): String? {
         if (path.startsWith("content://")) return null
         val parent = File(path).parentFile ?: return null
         return parent.toURI().toString().trimEnd('/') + "/"
+    }
+
+    override fun htmlAssetBasePath(index: Int): String? {
+        if (!supportsHtmlAssetLoading()) return null
+        if (index !in htmlPages.indices) return null
+        return File(path).name
+    }
+
+    override fun openHtmlAsset(path: String): FormatReaderWebResource? {
+        if (!supportsHtmlAssetLoading()) return null
+        val rootDir = File(this.path).parentFile ?: return null
+        val requestedPath = URLDecoder.decode(path, Charsets.UTF_8.name())
+            .substringBefore('#')
+            .substringBefore('?')
+            .trim()
+            .trimStart('/')
+            .orEmpty()
+            .ifBlank { File(this.path).name }
+        val target = runCatching {
+            File(rootDir, requestedPath).canonicalFile
+        }.getOrNull() ?: return null
+        val canonicalRoot = runCatching { rootDir.canonicalFile }.getOrNull() ?: return null
+        if (!target.path.startsWith(canonicalRoot.path, ignoreCase = true) || !target.isFile) {
+            return null
+        }
+
+        val extension = target.extension.lowercase()
+        val textualResource = extension in setOf("html", "htm", "css", "js", "txt", "xml", "svg")
+        val bytes = if (textualResource) {
+            decodeTextBytes(target.readBytes()).toByteArray(Charsets.UTF_8)
+        } else {
+            target.readBytes()
+        }
+        return FormatReaderWebResource(
+            mimeType = textReaderMimeTypeFor(extension),
+            bytes = bytes,
+            encoding = if (textualResource) "utf-8" else null
+        )
     }
 
     override fun resolveHrefToPage(href: String): Int? {
@@ -521,62 +570,103 @@ class TextFormatReader @Inject constructor(
 
     override fun close() = Unit
 
-    private fun parsePages(): List<String> {
+    private fun parseDocument(): TextDocumentData {
         return when (format) {
             ComicFormat.MOBI,
             ComicFormat.AZW3 -> {
-                val bytes = readSourceBytes() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
+                val bytes = readSourceBytes() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
                 when (val extracted = MobiTextSupport.extract(bytes)) {
                     is MobiExtractionResult.Success -> {
+                        val pages =
                         if (extracted.isMarkup) {
-                            collapseRedundantMobiFrontMatterPages(
-                                markupPages(
-                                raw = preprocessMobiMarkup(extracted.content),
+                            val processedContent = preprocessMobiMarkup(extracted.content)
+                            val bookStyleMobi = isBookStyleMobi(processedContent)
+                            val markupPages = markupPages(
+                                raw = processedContent,
                                 baseUrl = htmlBaseUrl(),
-                                preservePublisherLayout = true,
+                                preservePublisherLayout = !bookStyleMobi,
                                 baseCss = MOBI_READER_HTML_CSS,
                                 keepWholeDocument = true
-                                )
                             )
+                            // For book-style MOBI (especially literature), preserve all front matter pages
+                            // Do not collapse redundant pages as it breaks the expected book structure
+                            if (bookStyleMobi) {
+                                markupPages // Return pages as-is without collapsing
+                            } else {
+                                collapseRedundantMobiFrontMatterPages(markupPages)
+                            }
                         }
                         else paginateBlocks(textBlocks(extracted.content))
+                        TextDocumentData(pages)
                     }
                     is MobiExtractionResult.Unsupported -> {
-                        listOf(wrapHtml("<p>${escapeHtml(extracted.message)}</p>"))
+                        TextDocumentData(listOf(wrapHtml("<p>${escapeHtml(extracted.message)}</p>")))
                     }
                 }
             }
             ComicFormat.DOCX -> {
-                val bytes = readSourceBytes() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
+                val bytes = readSourceBytes() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
                 val entries = readZipEntries(bytes)
                 val relationships = parseDocxRelationships(
                     entries["word/_rels/document.xml.rels"]?.toString(Charsets.UTF_8)
                 )
                 val archive = buildDocxArchive(entries, relationships)
                 val blocks = extractDocxBlocks(bytes)
-                paginateBlocks(
-                    blocks = blocks,
-                    extraCss = archive.styleContext.embeddedFontCss,
-                    preservePublisherLayout = true
+                
+                // For DOCX, render as a single continuous document without pagination
+                // to preserve the complete flow of text, styles, media, and embedded resources
+                val fullBody = blocks.joinToString(separator = "")
+                TextDocumentData(
+                    listOf(
+                    buildReaderHtmlDocument(
+                        body = fullBody,
+                        baseUrl = htmlBaseUrl(),
+                        extraCss = archive.styleContext.embeddedFontCss,
+                        preservePublisherLayout = true
+                    )
+                )
                 )
             }
             ComicFormat.ODT -> {
-                val bytes = readSourceBytes() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
-                paginateBlocks(odtBlocks(bytes))
+                val bytes = readSourceBytes() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
+                TextDocumentData(paginateBlocks(odtBlocks(bytes)))
             }
             else -> {
-                val raw = readSourceText() ?: return listOf(wrapHtml("<p>Unable to read file.</p>"))
+                val raw = readSourceText() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
                 when (format) {
-                    ComicFormat.HTML -> paginateHtmlDocument(
-                        raw = raw,
-                        baseUrl = htmlBaseUrl(),
-                        preservePublisherLayout = true,
-                        baseCss = PRESERVE_LAYOUT_HTML_CSS,
-                        keepWholeDocument = true
-                    )
-                    ComicFormat.MARKDOWN -> paginateBlocks(markdownBlocks(raw))
-                    ComicFormat.RTF -> paginateBlocks(textBlocks(rtfToPlainText(raw)))
-                    else -> paginateBlocks(textBlocks(raw))
+                    ComicFormat.HTML -> {
+                        val readerBaseUrl = if (supportsHtmlAssetLoading()) null else htmlBaseUrl()
+                        if (isGutenbergHtml(raw)) {
+                            // For Gutenberg HTML, preserve complete document structure with working internal links
+                            TextDocumentData(listOf(preserveGutenbergHtmlDocument(raw, readerBaseUrl)))
+                        } else {
+                            val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
+                            TextDocumentData(paginateHtmlDocument(
+                                raw = raw,
+                                baseUrl = readerBaseUrl,
+                                preservePublisherLayout = preservePublisherLayout,
+                                baseCss = if (preservePublisherLayout) {
+                                    PRESERVE_LAYOUT_HTML_CSS
+                                } else {
+                                    DEFAULT_READER_HTML_CSS
+                                },
+                                keepWholeDocument = true
+                            ))
+                        }
+                    }
+                    ComicFormat.MARKDOWN -> {
+                        if (isTechnicalMarkdown(raw)) {
+                            // For technical Markdown documents (specs, documentation), 
+                            // process YAML front matter and ensure proper technical rendering
+                            TextDocumentData(paginateBlocks(processTechnicalMarkdown(raw)))
+                        } else {
+                            // For regular Markdown, use standard processing
+                            TextDocumentData(paginateBlocks(markdownBlocks(raw)))
+                        }
+                    }
+                    ComicFormat.RTF -> TextDocumentData(paginateBlocks(textBlocks(rtfToPlainText(raw))))
+                    ComicFormat.TXT -> paginateTxtDocument(raw)
+                    else -> TextDocumentData(paginateBlocks(textBlocks(raw)))
                 }
             }
         }
@@ -610,6 +700,54 @@ class TextFormatReader @Inject constructor(
                 else "<p>${escapeHtml(trimmed).replace("\n", "<br/>")}</p>"
             }
             .ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
+    }
+
+    private fun paginateTxtDocument(raw: String): TextDocumentData {
+        val (blocks, chapterAnchors) = textBlocksWithChapterAnchors(raw)
+        return TextDocumentData(
+            pages = paginateBlocks(blocks),
+            chapterAnchors = chapterAnchors
+        )
+    }
+
+    private fun textBlocksWithChapterAnchors(raw: String): Pair<List<String>, List<TxtChapterAnchor>> {
+        val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
+        val paragraphs = normalized.split(Regex("\n\\s*\n"))
+        val blocks = mutableListOf<String>()
+        val chapterAnchors = mutableListOf<TxtChapterAnchor>()
+
+        paragraphs.forEach { paragraph ->
+            val trimmed = paragraph.trim()
+            if (trimmed.isBlank()) return@forEach
+            val chapterTitle = detectTxtChapterHeading(trimmed)
+            if (chapterTitle != null) {
+                val anchor = TxtChapterAnchor(
+                    id = "txt-chapter-${chapterAnchors.size + 1}",
+                    title = chapterTitle
+                )
+                chapterAnchors += anchor
+                blocks += """<h2 id="${anchor.id}" class="chapter">${escapeHtml(anchor.title)}</h2>"""
+            } else {
+                blocks += "<p>${escapeHtml(trimmed).replace("\n", "<br/>")}</p>"
+            }
+        }
+
+        val safeBlocks = blocks.ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
+        return safeBlocks to chapterAnchors
+    }
+
+    private fun detectTxtChapterHeading(text: String): String? {
+        val singleLine = text.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(" ")
+            .takeIf { it.isNotBlank() }
+            ?: return null
+        if (singleLine.length > 120) return null
+        if (singleLine.count { it == ' ' } > 8) return null
+        return singleLine.takeIf { candidate ->
+            TXT_CHAPTER_PATTERNS.any { pattern -> pattern.matches(candidate) }
+        }
     }
 
     private fun markdownBlocks(raw: String): List<String> {
@@ -779,7 +917,6 @@ class TextFormatReader @Inject constructor(
 
     private data class DocxStyleContext(
         val embeddedFontCss: String = "",
-        val defaultFontFamily: String? = null,
         val paragraphStyleFonts: Map<String, String> = emptyMap(),
         val runStyleFonts: Map<String, String> = emptyMap()
     )
@@ -1088,7 +1225,6 @@ class TextFormatReader @Inject constructor(
         return resolveDocxFontFamily(
             rFonts = docxFindNestedChild(paragraph, "w:pPr", "w:rPr", "w:rFonts"),
             fallbackFamily = archive.styleContext.paragraphStyleFonts[styleId]
-                ?: archive.styleContext.defaultFontFamily
         )
     }
 
@@ -1191,38 +1327,33 @@ class TextFormatReader @Inject constructor(
             ?: styleDefinitions.values
                 .firstOrNull { it.type == "paragraph" && it.styleId.equals("Normal", ignoreCase = true) }
                 ?.styleId
+        val defaultCharacterStyleId = styleDefinitions.values
+            .firstOrNull { it.type == "character" && it.isDefault }
+            ?.styleId
+            ?: styleDefinitions.values
+                .firstOrNull { it.type == "character" && it.styleId.equals("DefaultParagraphFont", ignoreCase = true) }
+                ?.styleId
 
-        val fallbackDefaultFont = resolveDocxFontFamily(
-            docxFindNestedChild(
-                document.getElementsByTag("w:docDefaults").firstOrNull(),
-                "w:rPrDefault",
-                "w:rPr",
-                "w:rFonts"
-            )
-        )
-
-        val resolvedFonts = mutableMapOf<String, String?>()
-        fun resolveStyleFont(styleId: String?, visited: Set<String> = emptySet()): String? {
+        fun resolveExplicitStyleFont(styleId: String?, visited: Set<String> = emptySet()): String? {
             val normalizedId = styleId?.takeIf { it.isNotBlank() } ?: return null
-            resolvedFonts[normalizedId]?.let { return it }
             if (normalizedId in visited) return null
             val definition = styleDefinitions[normalizedId] ?: return null
             val nextVisited = visited + normalizedId
-            val resolved = definition.directFontFamily
-                ?: resolveStyleFont(definition.linkedStyleId, nextVisited)
-                ?: resolveStyleFont(definition.basedOn, nextVisited)
-            resolvedFonts[normalizedId] = resolved
-            return resolved
+            val isImplicitDefault = when (definition.type) {
+                "paragraph" -> definition.isDefault || normalizedId.equals(defaultParagraphStyleId, ignoreCase = true)
+                "character" -> definition.isDefault || normalizedId.equals(defaultCharacterStyleId, ignoreCase = true)
+                else -> definition.isDefault
+            }
+            val directFont = definition.directFontFamily?.takeIf { !isImplicitDefault }
+            return directFont
+                ?: resolveExplicitStyleFont(definition.linkedStyleId, nextVisited)
+                ?: resolveExplicitStyleFont(definition.basedOn, nextVisited)
         }
-
-        val defaultFontFamily = fallbackDefaultFont
-            ?: resolveStyleFont(defaultParagraphStyleId)
 
         val paragraphFonts = linkedMapOf<String, String>()
         val runFonts = linkedMapOf<String, String>()
         styleDefinitions.values.forEach { definition ->
-            val fontFamily = resolveStyleFont(definition.styleId)
-                ?: if (definition.type == "paragraph") defaultFontFamily else null
+            val fontFamily = resolveExplicitStyleFont(definition.styleId)
             if (fontFamily.isNullOrBlank()) return@forEach
             when (definition.type) {
                 "paragraph" -> paragraphFonts[definition.styleId] = fontFamily
@@ -1231,7 +1362,6 @@ class TextFormatReader @Inject constructor(
         }
         return DocxStyleContext(
             embeddedFontCss = buildDocxEmbeddedFontCss(embeddedFaces),
-            defaultFontFamily = defaultFontFamily,
             paragraphStyleFonts = paragraphFonts,
             runStyleFonts = runFonts
         )
@@ -1373,7 +1503,7 @@ class TextFormatReader @Inject constructor(
     }
 
     private fun cssFontFamilyValue(fontFamily: String): String =
-        "\"${fontFamily.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+        "'${fontFamily.replace("\\", "\\\\").replace("'", "\\'")}'"
 
     private fun readZipEntries(bytes: ByteArray): Map<String, ByteArray> {
         val result = linkedMapOf<String, ByteArray>()
@@ -1657,6 +1787,8 @@ class TextFormatReader @Inject constructor(
         document.outputSettings(Document.OutputSettings().prettyPrint(false))
         // Extract <style> content before removing elements so it can be forwarded to each page.
         val extractedCss = document.select("style").joinToString("\n") { it.data() }
+        val linkedStylesheets = document.select("link[rel~=(?i)stylesheet][href], link[href$=.css i][href]")
+            .joinToString("\n") { it.outerHtml() }
         document.select(
             "script, style, noscript, template, iframe, object, embed, canvas, form, " +
             "input, button, select, textarea"
@@ -1692,6 +1824,7 @@ class TextFormatReader @Inject constructor(
                 body = if (fallback.isNotBlank()) "<p>${htmlEscapeText(fallback)}</p>" else "<p></p>",
                 baseUrl = baseUrl,
                 extraCss = extractedCss,
+                extraHeadHtml = linkedStylesheets,
                 baseCss = baseCss,
                 preservePublisherLayout = preservePublisherLayout
             ))
@@ -1703,6 +1836,7 @@ class TextFormatReader @Inject constructor(
                     body = childBlocks.joinToString(separator = ""),
                     baseUrl = baseUrl,
                     extraCss = extractedCss,
+                    extraHeadHtml = linkedStylesheets,
                     baseCss = baseCss,
                     preservePublisherLayout = preservePublisherLayout
                 )
@@ -1720,6 +1854,7 @@ class TextFormatReader @Inject constructor(
                     body = buffer.toString(),
                     baseUrl = baseUrl,
                     extraCss = extractedCss,
+                    extraHeadHtml = linkedStylesheets,
                     baseCss = baseCss,
                     preservePublisherLayout = preservePublisherLayout
                 )
@@ -1741,12 +1876,16 @@ class TextFormatReader @Inject constructor(
                 buildReaderHtmlDocument(
                     body = "<p></p>",
                     baseUrl = baseUrl,
+                    extraHeadHtml = linkedStylesheets,
                     baseCss = baseCss,
                     preservePublisherLayout = preservePublisherLayout
                 )
             )
         }
     }
+
+    private fun supportsHtmlAssetLoading(): Boolean =
+        format == ComicFormat.HTML && !path.startsWith("content://")
 
     private fun buildAnchorPageIndex(): Map<String, Int> {
         val result = linkedMapOf<String, Int>()
@@ -1770,10 +1909,115 @@ class TextFormatReader @Inject constructor(
         return result
     }
 
+    private fun buildTableOfContents(): List<TocEntry> {
+        return documentData.chapterAnchors.mapNotNull { anchor ->
+            anchorPageIndex[anchor.id]?.let { pageIndex ->
+                TocEntry(title = anchor.title, pageIndex = pageIndex)
+            }
+        }
+    }
+
     /**
      * Pre-process MOBI markup: convert <font size="N"><b>text</b></font> inside
      * centered paragraphs into proper heading tags, and unwrap structural blockquotes.
      */
+        
+    private fun isTechnicalMarkdown(raw: String): Boolean {
+        val lines = raw.lines()
+        return lines.size >= 3 && lines[0].trim() == "---"
+    }
+        
+    private fun extractYamlFrontMatter(raw: String): Pair<Map<String, String>, String> {
+        val lines = raw.lines()
+        if (lines.size < 3 || lines[0].trim() != "---") {
+            return emptyMap<String, String>() to raw
+        }
+            
+        val metadata = mutableMapOf<String, String>()
+        var contentStart = -1
+        var inFrontMatter = true
+            
+        for (i in 1 until lines.size) {
+            val line = lines[i].trim()
+            if (line == "---" && inFrontMatter) {
+                contentStart = i + 1
+                break
+            }
+                
+            if (inFrontMatter) {
+                val colonIndex = line.indexOf(':')
+                if (colonIndex > 0) {
+                    val key = line.substring(0, colonIndex).trim()
+                    val value = line.substring(colonIndex + 1).trim().removeSurrounding("\"", "\"").removeSurrounding("'", "'")
+                    if (key.isNotEmpty()) {
+                        metadata[key] = value
+                    }
+                }
+            }
+        }
+            
+        if (contentStart <= 0 || contentStart >= lines.size) {
+            return emptyMap<String, String>() to raw
+        }
+            
+        val content = lines.drop(contentStart).joinToString("\n")
+        return metadata to content
+    }
+        
+    private fun htmlEscapeText(text: String): String {
+        return text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#39;")
+    }
+        
+    private fun processTechnicalMarkdown(raw: String): List<String> {
+        // Extract YAML front matter if present
+        val (metadata, content) = extractYamlFrontMatter(raw)
+            
+        // Process the main content with CommonMark
+        val contentBlocks = renderMarkdownToHtmlBlocks(content)
+            
+        // Create front matter header if metadata exists
+        val frontMatterBlocks = mutableListOf<String>()
+        if (metadata.isNotEmpty()) {
+            val title = metadata["title"] ?: metadata.getOrDefault("Title", "")
+            val author = metadata["author"] ?: metadata.getOrDefault("Author", "")
+            val version = metadata["version"] ?: metadata.getOrDefault("Version", "")
+            val date = metadata["date"] ?: metadata.getOrDefault("Date", "")
+            val license = metadata["license"] ?: metadata.getOrDefault("License", "")
+                
+            val headerHtml = buildString {
+                if (title.isNotBlank()) {
+                    append("<h1>${htmlEscapeText(title)}</h1>")
+                }
+                if (author.isNotBlank()) {
+                    append("<p><strong>Author:</strong> ${htmlEscapeText(author)}</p>")
+                }
+                if (version.isNotBlank()) {
+                    append("<p><strong>Version:</strong> ${htmlEscapeText(version)}</p>")
+                }
+                if (date.isNotBlank()) {
+                    append("<p><strong>Date:</strong> ${htmlEscapeText(date)}</p>")
+                }
+                if (license.isNotBlank()) {
+                    append("<p><strong>License:</strong> ${htmlEscapeText(license)}</p>")
+                }
+                if (title.isNotBlank() || author.isNotBlank() || version.isNotBlank() || date.isNotBlank() || license.isNotBlank()) {
+                    append("<hr/>")
+                }
+            }
+                
+            if (headerHtml.isNotBlank()) {
+                frontMatterBlocks.add(headerHtml)
+            }
+        }
+            
+        return frontMatterBlocks + contentBlocks
+    }
+        
     private fun preprocessMobiMarkup(raw: String): String {
         var html = raw
         // Convert <p align="center"><font size="5"><b>text</b></font></p> → <h2>text</h2>
@@ -1912,6 +2156,22 @@ class TextFormatReader @Inject constructor(
         .split(Regex("[^\\p{L}\\p{Nd}]+"))
         .filter { token -> token.length >= 4 }
         .toSet()
+
+    private fun isBookStyleMobi(content: String): Boolean {
+        val lowerContent = content.lowercase()
+        
+        // Check for indicators of book-style MOBI (especially Russian/Cyrillic books)
+        return (
+            // Contains Cyrillic characters (common in Russian literature)
+            content.any { it in '\u0400'..'\u04FF' } ||
+            // Contains typical book structure indicators
+            (lowerContent.contains("глава") || lowerContent.contains("chapter") || 
+             lowerContent.contains("part") || lowerContent.contains("том")) ||
+            // Has title-like structure followed by narrative text
+            (lowerContent.contains("<h1") && lowerContent.contains("<p") && 
+             !lowerContent.contains("table") && !lowerContent.contains("code"))
+        )
+    }
 
     private fun wrapHtml(
         body: String,

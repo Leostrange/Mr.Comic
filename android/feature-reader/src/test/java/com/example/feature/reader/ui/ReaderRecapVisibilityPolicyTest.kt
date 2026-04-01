@@ -7,23 +7,25 @@ import org.junit.Test
 class ReaderRecapVisibilityPolicyTest {
 
     @Test
-    fun shouldAutoDismissReaderMilestoneRecap_onlyWhenVisibleAndUnblocked() {
+    fun shouldRecordReaderSessionMinutes_tracksOnlyRealReadingSignals() {
         assertTrue(
-            shouldAutoDismissReaderMilestoneRecap(
-                recapVisible = true,
-                hasBlockingOverlay = false
+            shouldRecordReaderSessionMinutes(
+                ReaderClosedSessionMetrics(
+                    endPage = 24,
+                    completed = false,
+                    manualPageTurns = 3,
+                    chapterTransitions = 0
+                )
             )
         )
         assertFalse(
-            shouldAutoDismissReaderMilestoneRecap(
-                recapVisible = true,
-                hasBlockingOverlay = true
-            )
-        )
-        assertFalse(
-            shouldAutoDismissReaderMilestoneRecap(
-                recapVisible = false,
-                hasBlockingOverlay = false
+            shouldRecordReaderSessionMinutes(
+                ReaderClosedSessionMetrics(
+                    endPage = 24,
+                    completed = false,
+                    manualPageTurns = 0,
+                    chapterTransitions = 0
+                )
             )
         )
     }

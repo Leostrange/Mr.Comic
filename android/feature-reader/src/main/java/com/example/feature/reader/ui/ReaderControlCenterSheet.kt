@@ -1,5 +1,6 @@
 package com.example.feature.reader.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -46,9 +48,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderTapZoneAction
 import com.example.core.model.ReaderInfoSlot
 import com.example.core.model.ReaderTapZoneMode
@@ -76,6 +81,7 @@ internal fun ReaderControlCenterSheet(
     uiState: ReaderUiState,
     isTextReader: Boolean,
     ttsRuntimeState: ReaderTtsRuntimeState,
+    fontCatalogVersion: Int = 0,
     openAtServicesTab: Boolean = false,
     onDismiss: () -> Unit,
     onApplyReadingPreset: (ReadingPreset) -> Unit,
@@ -83,6 +89,9 @@ internal fun ReaderControlCenterSheet(
     onColorSchemeChange: (String) -> Unit,
     onFontFamilyChange: (String) -> Unit,
     onLineHeightChange: (Float) -> Unit,
+    onLetterSpacingChange: (Float) -> Unit,
+    onWordSpacingChange: (Float) -> Unit,
+    onParagraphSpacingChange: (Float) -> Unit,
     onTextAlignChange: (String) -> Unit,
     onBoldChange: (Boolean) -> Unit,
     onResetStyle: () -> Unit,
@@ -107,8 +116,18 @@ internal fun ReaderControlCenterSheet(
     onToolbarOpacityChange: (Float) -> Unit,
     onToolbarBlurChange: (Float) -> Unit,
     onImageScaleModeChange: (String) -> Unit,
+    onImageMarginCropHorizontalChange: (Float) -> Unit,
+    onImageMarginCropVerticalChange: (Float) -> Unit,
     onChromeIconVisibleChange: (String, Boolean) -> Unit,
     onMoveChromeIcon: (String, Int) -> Unit,
+    onImportCustomFont: () -> Unit,
+    onDeleteCustomFont: (String) -> Unit,
+    onImportReaderStyle: () -> Unit,
+    onExportReaderStyle: () -> Unit,
+    onSaveCurrentReaderStylePreset: () -> Unit,
+    onOverwriteReaderStylePreset: (String) -> Unit,
+    onApplyReaderStylePreset: (String) -> Unit,
+    onDeleteReaderStylePreset: (String) -> Unit,
     onOpenToc: () -> Unit,
     onToggleBookmark: () -> Unit,
     onRequestOcr: () -> Unit,
@@ -132,7 +151,10 @@ internal fun ReaderControlCenterSheet(
     val sheetChromeEmphasis = when (activeReaderPreset) {
         ReadingPreset.EINK -> 1f
         ReadingPreset.PAPER -> 0.98f
+        ReadingPreset.SEPIA_BOOK -> 0.985f
+        ReadingPreset.NEWSPAPER -> 0.99f
         ReadingPreset.NIGHT_INK -> 0.96f
+        ReadingPreset.OLED_BLACK -> 0.94f
         else -> 0.97f
     }
     val sheetVisualBlur = if (activeReaderPreset == ReadingPreset.EINK) 0f else 0.14f
@@ -226,14 +248,28 @@ internal fun ReaderControlCenterSheet(
                         onColorSchemeChange = onColorSchemeChange,
                         onFontFamilyChange = onFontFamilyChange,
                         onLineHeightChange = onLineHeightChange,
+                        onLetterSpacingChange = onLetterSpacingChange,
+                        onWordSpacingChange = onWordSpacingChange,
+                        onParagraphSpacingChange = onParagraphSpacingChange,
                         onTextAlignChange = onTextAlignChange,
                         onBoldChange = onBoldChange,
                         onResetStyle = onResetStyle,
                         onToolbarOpacityChange = onToolbarOpacityChange,
                         onToolbarBlurChange = onToolbarBlurChange,
                         onImageScaleModeChange = onImageScaleModeChange,
+                        onImageMarginCropHorizontalChange = onImageMarginCropHorizontalChange,
+                        onImageMarginCropVerticalChange = onImageMarginCropVerticalChange,
                         onChromeIconVisibleChange = onChromeIconVisibleChange,
-                        onMoveChromeIcon = onMoveChromeIcon
+                        onMoveChromeIcon = onMoveChromeIcon,
+                        fontCatalogVersion = fontCatalogVersion,
+                        onImportCustomFont = onImportCustomFont,
+                        onDeleteCustomFont = onDeleteCustomFont,
+                        onImportReaderStyle = onImportReaderStyle,
+                        onExportReaderStyle = onExportReaderStyle,
+                        onSaveCurrentReaderStylePreset = onSaveCurrentReaderStylePreset,
+                        onOverwriteReaderStylePreset = onOverwriteReaderStylePreset,
+                        onApplyReaderStylePreset = onApplyReaderStylePreset,
+                        onDeleteReaderStylePreset = onDeleteReaderStylePreset
                     )
 
                     ReaderControlTab.SERVICES -> ReaderServicesTab(
@@ -629,10 +665,17 @@ private fun ReaderHeaderFooterPreview(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        val previewOverlaySurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+        val previewOverlayStyle = remember(previewOverlaySurface) {
+            readerHeaderFooterOverlayStyle(
+                surfaceColor = previewOverlaySurface,
+                eink = false
+            )
+        }
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+            color = previewOverlaySurface
         ) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (headerLine.hasVisibleContent) {
@@ -641,7 +684,9 @@ private fun ReaderHeaderFooterPreview(
                         fontSizeSp = uiState.headerFooterFontSize,
                         leftPaddingDp = uiState.headerFooterLeftPadding,
                         rightPaddingDp = uiState.headerFooterRightPadding,
-                        verticalPaddingDp = uiState.headerFooterVerticalPadding
+                        verticalPaddingDp = uiState.headerFooterVerticalPadding,
+                        textColor = previewOverlayStyle.textColor,
+                        textShadow = previewOverlayStyle.textShadow
                     )
                 }
                 if (headerLine.hasVisibleContent && footerLine.hasVisibleContent) {
@@ -653,7 +698,9 @@ private fun ReaderHeaderFooterPreview(
                         fontSizeSp = uiState.headerFooterFontSize,
                         leftPaddingDp = uiState.headerFooterLeftPadding,
                         rightPaddingDp = uiState.headerFooterRightPadding,
-                        verticalPaddingDp = uiState.headerFooterVerticalPadding
+                        verticalPaddingDp = uiState.headerFooterVerticalPadding,
+                        textColor = previewOverlayStyle.textColor,
+                        textShadow = previewOverlayStyle.textShadow
                     )
                 }
             }
@@ -734,15 +781,30 @@ private fun ReaderStyleTab(
     onColorSchemeChange: (String) -> Unit,
     onFontFamilyChange: (String) -> Unit,
     onLineHeightChange: (Float) -> Unit,
+    onLetterSpacingChange: (Float) -> Unit,
+    onWordSpacingChange: (Float) -> Unit,
+    onParagraphSpacingChange: (Float) -> Unit,
     onTextAlignChange: (String) -> Unit,
     onBoldChange: (Boolean) -> Unit,
     onResetStyle: () -> Unit,
     onToolbarOpacityChange: (Float) -> Unit,
     onToolbarBlurChange: (Float) -> Unit,
     onImageScaleModeChange: (String) -> Unit = {},
+    onImageMarginCropHorizontalChange: (Float) -> Unit = {},
+    onImageMarginCropVerticalChange: (Float) -> Unit = {},
     onChromeIconVisibleChange: (String, Boolean) -> Unit,
-    onMoveChromeIcon: (String, Int) -> Unit
+    onMoveChromeIcon: (String, Int) -> Unit,
+    fontCatalogVersion: Int = 0,
+    onImportCustomFont: () -> Unit,
+    onDeleteCustomFont: (String) -> Unit,
+    onImportReaderStyle: () -> Unit,
+    onExportReaderStyle: () -> Unit,
+    onSaveCurrentReaderStylePreset: () -> Unit,
+    onOverwriteReaderStylePreset: (String) -> Unit,
+    onApplyReaderStylePreset: (String) -> Unit,
+    onDeleteReaderStylePreset: (String) -> Unit
 ) {
+    val context = LocalContext.current
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val activeReaderPreset = ReadingPreset.fromStored(uiState.readerPreset)
@@ -753,6 +815,15 @@ private fun ReaderStyleTab(
     val configurableChromeButtons = remember(uiState.chromeIconOrder) {
         ReaderChromeButton.resolveOrder(uiState.chromeIconOrder)
             .filterNot { it == ReaderChromeButton.STYLE }
+    }
+    val supportsMarginCrop = remember(uiState.comic?.format, isTextReader) {
+        !isTextReader && (uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU)
+    }
+    val availableFonts = remember(context, fontCatalogVersion) {
+        ReaderTextFontCatalog.availableFontFamilies(context)
+    }
+    val importedFonts = remember(context, fontCatalogVersion) {
+        ReaderTextFontCatalog.customFontFamilies(context)
     }
 
     LazyColumn(
@@ -877,18 +948,111 @@ private fun ReaderStyleTab(
                     }
                 }
             }
-        } else {
-        item { ReaderSectionTitle(readerText.quickPresetsTitle) }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK)) { preset ->
-                    ReaderChoiceChip(
-                        selected = uiState.readerPreset == preset.name,
-                        onClick = { onApplyReadingPreset(preset) },
-                        label = { Text(readerPresetLabel(preset, strings.languageCode), style = MaterialTheme.typography.labelSmall) }
+            if (supportsMarginCrop) {
+                item {
+                    Text(
+                        text = readerMarginCropHint(strings.languageCode),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                item {
+                    ReaderSliderRow(
+                        title = readerMarginCropHorizontalLabel(uiState.imageMarginCropHorizontal, strings.languageCode),
+                        valueText = "${(uiState.imageMarginCropHorizontal * 100f).toInt()}%",
+                        value = uiState.imageMarginCropHorizontal,
+                        valueRange = 0f..0.18f,
+                        steps = 17,
+                        onValueChange = onImageMarginCropHorizontalChange
+                    )
+                }
+                item {
+                    ReaderSliderRow(
+                        title = readerMarginCropVerticalLabel(uiState.imageMarginCropVertical, strings.languageCode),
+                        valueText = "${(uiState.imageMarginCropVertical * 100f).toInt()}%",
+                        value = uiState.imageMarginCropVertical,
+                        valueRange = 0f..0.18f,
+                        steps = 17,
+                        onValueChange = onImageMarginCropVerticalChange
                     )
                 }
             }
+        } else {
+            item { ReaderSectionTitle(readerText.quickPresetsTitle) }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    com.example.core.ui.theme.readingPresetQuickChoices().forEach { preset ->
+                        item {
+                            ReaderChoiceChip(
+                                selected = uiState.readerPreset == preset.name,
+                                onClick = { onApplyReadingPreset(preset) },
+                                label = { Text(readerPresetLabel(preset, strings.languageCode), style = MaterialTheme.typography.labelSmall) }
+                            )
+                        }
+                    }
+                }
+            }
+            item {
+                ReaderStyleSummaryStrip(
+                    activeStyle = uiState.readerStylePresetEntries
+                        .map { it.snapshot }
+                        .firstOrNull { it.matchesUiState(uiState) },
+                    currentFont = uiState.textFontFamily,
+                    fontSize = uiState.textFontSize,
+                    lineHeight = uiState.textLineHeight,
+                    importedFontCount = importedFonts.size,
+                    language = strings.languageCode
+                )
+            }
+            val savedReaderStyleCount = uiState.readerStylePresetEntries.size
+            item { ReaderSectionTitle("${readerSavedStylesTitle(strings.languageCode)} ($savedReaderStyleCount)") }
+            item {
+                Text(
+                    text = readerSavedStylesListHint(strings.languageCode),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            item {
+                ReaderOutlinedActionButton(
+                    onClick = onSaveCurrentReaderStylePreset,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(readerSavedStyleSaveCurrentAsNew(strings.languageCode))
+                }
+            }
+        }
+        item {
+            Text(
+                text = readerSavedStylesHint(strings.languageCode),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        items(
+            uiState.readerStylePresetEntries.sortedWith(
+                compareByDescending<ReaderStylePresetEntry> { entry ->
+                    entry.snapshot.matchesUiState(uiState)
+                }.thenByDescending { entry ->
+                    entry.snapshot.displayName?.isNotBlank() == true
+                }.thenBy { entry ->
+                    entry.snapshot.displayName ?: entry.id
+                }
+            ),
+            key = { "reader_style_${it.id}" }
+        ) { entry ->
+            val active = entry.snapshot.matchesUiState(uiState)
+            ReaderStylePresetListItem(
+                slot = ReaderStylePresetSlot(
+                    index = uiState.readerStylePresetEntries.indexOfFirst { it.id == entry.id } + 1,
+                    serialized = entry.snapshot.serialize()
+                ),
+                language = strings.languageCode,
+                isActive = active,
+                onSave = { onOverwriteReaderStylePreset(entry.id) },
+                onApply = { onApplyReaderStylePreset(entry.id) },
+                onClear = { onDeleteReaderStylePreset(entry.id) }
+            )
         }
         item { ReaderSectionTitle(readerText.colorSchemeTitle) }
         item {
@@ -908,14 +1072,94 @@ private fun ReaderStyleTab(
         }
         item { ReaderSectionTitle(readerText.fontTitle) }
         item {
-            val fonts = listOf("Georgia", "Merriweather", "Open Sans", "Roboto Slab", "PT Serif", "Literata")
+            ReaderOutlinedActionButton(
+                onClick = onImportCustomFont,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(readerText.importFontAction)
+            }
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ReaderOutlinedActionButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onImportReaderStyle
+                ) {
+                    Text(readerImportStyleAction(strings.languageCode))
+                }
+                ReaderOutlinedActionButton(
+                    modifier = Modifier.weight(1f),
+                    onClick = onExportReaderStyle
+                ) {
+                    Text(readerExportStyleAction(strings.languageCode))
+                }
+            }
+        }
+        item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(fonts) { font ->
+                items(
+                    availableFonts.sortedWith(
+                        compareByDescending<String> { font -> uiState.textFontFamily == font }
+                            .thenBy { font -> font.lowercase(java.util.Locale.getDefault()) }
+                    )
+                ) { font ->
                     ReaderChoiceChip(
-                        selected = uiState.textFontFamily == font,
+                        selected = (uiState.textFontFamily == font) || (uiState.textFontFamily !in availableFonts && font == "Georgia"),
                         onClick = { onFontFamilyChange(font) },
                         label = { Text(font) }
                     )
+                }
+            }
+        }
+        item { ReaderSectionTitle("${readerImportedFontsTitle(strings.languageCode)} (${importedFonts.size})") }
+        if (importedFonts.isEmpty()) {
+            item {
+                Text(
+                    text = readerImportedFontsEmpty(strings.languageCode),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else {
+            items(
+                importedFonts.sortedWith(
+                    compareByDescending<String> { font -> uiState.textFontFamily == font }
+                        .thenBy { font -> font.lowercase(java.util.Locale.getDefault()) }
+                ),
+                key = { it }
+            ) { font ->
+                ReaderSettingsCard(selected = uiState.textFontFamily == font) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = font,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = if (uiState.textFontFamily == font) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                            if (uiState.textFontFamily == font) {
+                                Text(
+                                    text = readerImportedFontsActive(strings.languageCode),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        ReaderOutlinedActionButton(
+                            onClick = { onDeleteCustomFont(font) }
+                        ) {
+                            Text(readerDeleteFontAction(strings.languageCode))
+                        }
+                    }
                 }
             }
         }
@@ -944,6 +1188,36 @@ private fun ReaderStyleTab(
                 valueRange = 1.0f..3.0f,
                 steps = 19,
                 onValueChange = onLineHeightChange
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerLetterSpacingLabel(uiState.textLetterSpacing, strings.languageCode),
+                valueText = "${"%.2f".format(java.util.Locale.US, uiState.textLetterSpacing)}em",
+                value = uiState.textLetterSpacing,
+                valueRange = 0f..0.2f,
+                steps = 19,
+                onValueChange = onLetterSpacingChange
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerWordSpacingLabel(uiState.textWordSpacing, strings.languageCode),
+                valueText = "${"%.2f".format(java.util.Locale.US, uiState.textWordSpacing)}em",
+                value = uiState.textWordSpacing,
+                valueRange = 0f..0.6f,
+                steps = 23,
+                onValueChange = onWordSpacingChange
+            )
+        }
+        item {
+            ReaderSliderRow(
+                title = readerParagraphSpacingLabel(uiState.textParagraphSpacing, strings.languageCode),
+                valueText = "${"%.2f".format(java.util.Locale.US, uiState.textParagraphSpacing)}em",
+                value = uiState.textParagraphSpacing,
+                valueRange = 0.1f..1.2f,
+                steps = 21,
+                onValueChange = onParagraphSpacingChange
             )
         }
         item { ReaderSectionTitle(readerText.textAlignTitle) }
@@ -976,8 +1250,268 @@ private fun ReaderStyleTab(
                 Text(readerText.resetDefaults)
             }
         }
-        } // else (isTextReader)
     }
+}
+
+@Composable
+private fun ReaderStylePresetListItem(
+    slot: ReaderStylePresetSlot,
+    language: String,
+    isActive: Boolean,
+    onSave: () -> Unit,
+    onApply: () -> Unit,
+    onClear: () -> Unit
+) {
+    val snapshot = remember(slot.serialized) { parseReaderStylePreset(slot.serialized) }
+    val slotLabel = "${readerSavedStyleSlotPrefix(language)} ${slot.index}"
+    val titleLabel = snapshot?.displayName?.takeIf { it.isNotBlank() } ?: slotLabel
+    val presetSummary = snapshot?.let {
+        "${readerPresetLabel(ReadingPreset.fromStored(it.readerPreset), language)} · ${it.textFontFamily} · ${it.textFontSize}sp"
+    } ?: readerSavedStyleEmpty(language)
+    ReaderSettingsCard(
+        modifier = Modifier.fillMaxWidth(),
+        selected = isActive
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = titleLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (isActive) {
+                    Text(
+                        text = readerSavedStyleCurrentLabel(language),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                if (titleLabel != slotLabel) {
+                    Text(
+                        text = slotLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = presetSummary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            ReaderOutlinedActionButton(
+                modifier = Modifier.weight(1f),
+                onClick = onSave
+            ) {
+                Text(readerSavedStyleSave(language))
+            }
+            ReaderFilledActionButton(
+                modifier = Modifier.weight(1f),
+                onClick = onApply,
+                enabled = snapshot != null
+            ) {
+                Text(readerSavedStyleApply(language))
+            }
+            ReaderOutlinedActionButton(
+                modifier = Modifier.weight(1f),
+                onClick = onClear,
+                enabled = snapshot != null
+            ) {
+                Text(readerSavedStyleClear(language))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReaderManualColorRow(
+    title: String,
+    selectedColor: Color?,
+    language: String,
+    onColorSelected: (Color?) -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val options = listOf(
+        null to readerManualColorAuto(language),
+        colorScheme.onSurface to readerManualColorInk(language),
+        colorScheme.surface to readerManualColorPaper(language),
+        colorScheme.onSurfaceVariant to readerManualColorMuted(language),
+        colorScheme.primary to readerManualColorAccent(language),
+        colorScheme.tertiary to readerManualColorWarm(language)
+    )
+    ReaderSettingsCard {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(options) { (color, label) ->
+                    ReaderChoiceChip(
+                        selected = selectedColor == color,
+                        onClick = { onColorSelected(color) },
+                        label = {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(999.dp),
+                                    color = color ?: MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.32f)
+                                    )
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(3.dp)
+                                            .width(10.dp)
+                                            .height(10.dp)
+                                    )
+                                }
+                                Text(label, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReaderStyleSummaryStrip(
+    activeStyle: ReaderStylePresetSnapshot?,
+    currentFont: String,
+    fontSize: Int,
+    lineHeight: Float,
+    importedFontCount: Int,
+    language: String
+) {
+    val title = when (language) {
+        "en" -> "Current setup"
+        "ja" -> "現在の設定"
+        "zh" -> "当前设置"
+        "ko" -> "현재 설정"
+        else -> "Текущая настройка"
+    }
+    val activeStyleLabel = activeStyle?.displayName?.takeIf { it.isNotBlank() }
+        ?: activeStyle?.let { readerPresetLabel(ReadingPreset.fromStored(it.readerPreset), language) }
+        ?: when (language) {
+            "en" -> "No active saved style"
+            "ja" -> "有効な保存スタイルなし"
+            "zh" -> "没有启用的保存样式"
+            "ko" -> "활성 저장 스타일 없음"
+            else -> "Активный сохранённый стиль не выбран"
+        }
+    val styleBadge = when (language) {
+        "en" -> "Style"
+        "ja" -> "スタイル"
+        "zh" -> "样式"
+        "ko" -> "스타일"
+        else -> "Стиль"
+    }
+    val fontBadge = when (language) {
+        "en" -> "Font"
+        "ja" -> "フォント"
+        "zh" -> "字体"
+        "ko" -> "글꼴"
+        else -> "Шрифт"
+    }
+    val details = listOf(
+        "${readerImportedFontsTitle(language)}: $importedFontCount",
+        "${readerFontSizeLabel(fontSize, language)} · ${readerLineHeightLabel((lineHeight * 100).toInt(), language)}",
+        currentFont
+    )
+
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = styleBadge,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(999.dp),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.12f)
+                    ) {
+                        Text(
+                            text = fontBadge,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+            Text(
+                text = activeStyleLabel,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                details.forEach { detail ->
+                    Text(
+                        text = detail,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun readerSavedStyleCurrentLabel(language: String): String = when (language) {
+    "en" -> "Current"
+    "ja" -> "現在"
+    "zh" -> "当前"
+    "ko" -> "현재"
+    else -> "Сейчас"
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -1059,12 +1593,25 @@ private fun ReaderSectionTitle(title: String) {
 private fun ReaderSettingsCard(
     modifier: Modifier = Modifier,
     fillMaxWidth: Boolean = true,
+    selected: Boolean = false,
     content: @Composable () -> Unit
 ) {
     Surface(
         modifier = if (fillMaxWidth) modifier.fillMaxWidth() else modifier,
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+        color = if (selected) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.84f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+        },
+        border = if (selected) {
+            BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
+            )
+        } else {
+            null
+        }
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -1180,9 +1727,10 @@ private fun ReaderSwitchRow(
                     checkedTrackColor = MaterialTheme.colorScheme.primary,
                     uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     uncheckedTrackColor = MaterialTheme.colorScheme.surface
-                )
-            )
-        }
+        )
+    )
+}
+
     }
 }
 
@@ -1288,6 +1836,62 @@ private fun readerImageScaleLabel(mode: ReaderImageScaleMode, language: String):
         "ko" -> "실제 크기"
         else -> "Real size"
     }
+}
+
+private fun readerMarginCropHint(language: String): String = when (language) {
+    "ru" -> "Симметрично обрезает внешние поля PDF и DjVu, чтобы текст занимал больше места на экране."
+    "ja" -> "PDF と DjVu の外側余白を左右上下から対称に切り取り、本文を広く表示します。"
+    "zh" -> "对 PDF 和 DjVu 的外部留白进行对称裁切，让正文占据更多屏幕空间。"
+    "ko" -> "PDF와 DjVu의 바깥 여백을 좌우·상하 대칭으로 잘라 본문이 화면을 더 넓게 쓰도록 합니다."
+    else -> "Symmetrically trims outer PDF and DjVu margins so the page content uses more screen space."
+}
+
+private fun readerMarginCropHorizontalLabel(value: Float, language: String): String = when (language) {
+    "ru" -> "Обрезка слева и справа: ${(value * 100f).toInt()}%"
+    "ja" -> "左右トリム: ${(value * 100f).toInt()}%"
+    "zh" -> "左右裁切：${(value * 100f).toInt()}%"
+    "ko" -> "좌우 자르기: ${(value * 100f).toInt()}%"
+    else -> "Left/right crop: ${(value * 100f).toInt()}%"
+}
+
+private fun readerMarginCropVerticalLabel(value: Float, language: String): String = when (language) {
+    "ru" -> "Обрезка сверху и снизу: ${(value * 100f).toInt()}%"
+    "ja" -> "上下トリム: ${(value * 100f).toInt()}%"
+    "zh" -> "上下裁切：${(value * 100f).toInt()}%"
+    "ko" -> "상하 자르기: ${(value * 100f).toInt()}%"
+    else -> "Top/bottom crop: ${(value * 100f).toInt()}%"
+}
+
+private fun readerImportedFontsTitle(language: String): String = when (language) {
+    "ru" -> "Импортированные шрифты"
+    "ja" -> "追加したフォント"
+    "zh" -> "已导入字体"
+    "ko" -> "가져온 글꼴"
+    else -> "Imported fonts"
+}
+
+private fun readerImportedFontsEmpty(language: String): String = when (language) {
+    "ru" -> "Пока здесь только встроенные шрифты."
+    "ja" -> "まだ追加したフォントはありません。"
+    "zh" -> "这里还没有导入字体。"
+    "ko" -> "아직 가져온 글꼴이 없습니다."
+    else -> "Only built-in fonts are available yet."
+}
+
+private fun readerImportedFontsActive(language: String): String = when (language) {
+    "ru" -> "Используется сейчас"
+    "ja" -> "現在使用中"
+    "zh" -> "当前正在使用"
+    "ko" -> "현재 사용 중"
+    else -> "Currently active"
+}
+
+private fun readerDeleteFontAction(language: String): String = when (language) {
+    "ru" -> "Удалить"
+    "ja" -> "削除"
+    "zh" -> "删除"
+    "ko" -> "삭제"
+    else -> "Delete"
 }
 
 private fun readerScreenTimeoutLabel(mode: ReaderScreenTimeoutMode, language: String): String = when (mode) {

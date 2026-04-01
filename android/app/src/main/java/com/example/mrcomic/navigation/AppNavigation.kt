@@ -6,9 +6,15 @@ import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.RowScope
@@ -17,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -36,11 +43,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -58,6 +69,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
+import com.example.core.data.preferences.PerformanceDefaults
+import com.example.core.data.preferences.PerformancePreferencesKeys
+import com.example.core.data.preferences.PreferencesKeys
+import com.example.core.data.preferences.UserPreferences
+import com.example.core.data.preferences.dataStore
 import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
@@ -79,6 +95,7 @@ import com.example.feature.settings.ui.SettingsViewModel
 import com.example.mrcomic.home.ContinueLibraryChrome
 import com.example.mrcomic.home.ContinueScreen
 import com.example.mrcomic.icons.AppIconSettingsScreen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -141,6 +158,17 @@ fun AppNavHost(
 ) {
     val isEInk = LocalEInkMode.current
     val strings = LocalStrings.current
+    val context = LocalContext.current
+    val userPreferences = remember(context) { UserPreferences(context.dataStore) }
+    val navTransitionStylePref by userPreferences
+        .get(PreferencesKeys.APP_NAV_TRANSITION_STYLE, "FADE")
+        .collectAsStateWithLifecycle(initialValue = "FADE")
+    val reducedMotionPref by userPreferences
+        .get(PreferencesKeys.UI_REDUCED_MOTION, false)
+        .collectAsStateWithLifecycle(initialValue = false)
+    val reducedAnimationsPref by userPreferences
+        .get(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, PerformanceDefaults.REDUCED_ANIM)
+        .collectAsStateWithLifecycle(initialValue = PerformanceDefaults.REDUCED_ANIM)
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route?.substringBefore('?')
     val menuItems = remember(strings) {
@@ -173,14 +201,66 @@ fun AppNavHost(
     }
     val showBottomBar = menuItems.any { it.route == currentRoute }
     val rootRoutes = remember(menuItems) { menuItems.map { it.route }.toSet() }
+    val readerRouteBase = remember { Screen.Reader.route.substringBefore('?') }
+    val effectiveTransitionStyle = remember(
+        isEInk,
+        reducedMotionPref,
+        reducedAnimationsPref,
+        navTransitionStylePref
+    ) {
+        if (isEInk || reducedMotionPref || reducedAnimationsPref) {
+            "NONE"
+        } else {
+            normalizeAppNavTransitionStyle(navTransitionStylePref)
+        }
+    }
+    var rootChromeVisible by remember { mutableStateOf(showBottomBar) }
+    var previousRoute by remember { mutableStateOf(currentRoute) }
+    val bottomChromeAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (rootChromeVisible) 1f else 0f,
+        animationSpec = tween(appNavTransitionDurationMillis(effectiveTransitionStyle)),
+        label = "rootBottomChromeAlpha"
+    )
+    val bottomChromeOffset by androidx.compose.animation.core.animateDpAsState(
+        targetValue = if (rootChromeVisible) 0.dp else rootChromeOffsetDp(effectiveTransitionStyle),
+        animationSpec = tween(appNavTransitionDurationMillis(effectiveTransitionStyle)),
+        label = "rootBottomChromeOffset"
+    )
+    val keepBottomBarSlot = showBottomBar || bottomChromeAlpha > 0.01f
+
+    LaunchedEffect(currentRoute, effectiveTransitionStyle) {
+        val route = currentRoute
+        val lastRoute = previousRoute
+        previousRoute = route
+        when {
+            route !in rootRoutes -> rootChromeVisible = false
+            lastRoute == null || lastRoute in rootRoutes || effectiveTransitionStyle == "NONE" -> {
+                rootChromeVisible = true
+            }
+            else -> {
+                rootChromeVisible = false
+                delay(appRootChromeRevealDelayMillis(effectiveTransitionStyle))
+                rootChromeVisible = true
+            }
+        }
+    }
+
+    fun navigateToFullscreen(route: String) {
+        rootChromeVisible = false
+        navController.navigate(route)
+    }
 
     Scaffold(
         bottomBar = {
-            if (showBottomBar) {
-                Column {
+            if (keepBottomBarSlot) {
+                Column(
+                    modifier = Modifier
+                        .graphicsLayer { alpha = bottomChromeAlpha }
+                        .offset(y = bottomChromeOffset)
+                ) {
                     MiniAudiobookPlayer(
                         onOpenPlayer = { audiobookId ->
-                            navController.navigate(Screen.AudiobookPlayer.create(audiobookId))
+                            navigateToFullscreen(Screen.AudiobookPlayer.create(audiobookId))
                         }
                     )
                     AppBottomBar(
@@ -198,50 +278,64 @@ fun AppNavHost(
                     )
                 }
             }
-        }
-    ) { innerPadding ->
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(if (showBottomBar) innerPadding else androidx.compose.foundation.layout.PaddingValues())
+                .padding(if (keepBottomBarSlot) paddingValues else androidx.compose.foundation.layout.PaddingValues())
         ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
+                modifier = Modifier.consumeWindowInsets(paddingValues),
                 enterTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
-                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                    if (
+                        isEInk ||
+                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                    ) {
                         EnterTransition.None
                     } else {
-                        fadeIn(tween(300))
+                        appNavEnterTransition(effectiveTransitionStyle)
                     }
                 },
                 exitTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
-                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                    if (
+                        isEInk ||
+                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                    ) {
                         ExitTransition.None
                     } else {
-                        fadeOut(tween(300))
+                        appNavExitTransition(effectiveTransitionStyle)
                     }
                 },
                 popEnterTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
-                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                    if (
+                        isEInk ||
+                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                    ) {
                         EnterTransition.None
                     } else {
-                        fadeIn(tween(300))
+                        appNavEnterTransition(effectiveTransitionStyle)
                     }
                 },
                 popExitTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
-                    if (isEInk || (fromRoute in rootRoutes && toRoute in rootRoutes)) {
+                    if (
+                        isEInk ||
+                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                    ) {
                         ExitTransition.None
                     } else {
-                        fadeOut(tween(300))
+                        appNavExitTransition(effectiveTransitionStyle)
                     }
                 }
             ) {
@@ -263,7 +357,7 @@ fun AppNavHost(
                         onComicClick = { comicId, page ->
                             scope.launch {
                                 vm.getComicById(comicId)?.let { comic ->
-                                    navController.navigate(Screen.Reader.createForComic(comic.id, page))
+                                    navigateToFullscreen(Screen.Reader.createForComic(comic.id, page))
                                 }
                             }
                         },
@@ -331,15 +425,15 @@ fun AppNavHost(
                         onComicClick = { comicId ->
                             scope.launch {
                                 vm.getComicById(comicId)?.let { comic ->
-                                    navController.navigate(Screen.Reader.createForComic(comic.id))
+                                    navigateToFullscreen(Screen.Reader.createForComic(comic.id))
                                 }
                             }
                         },
                         onAudiobookClick = { audiobookId ->
-                            navController.navigate(Screen.AudiobookPlayer.create(audiobookId))
+                            navigateToFullscreen(Screen.AudiobookPlayer.create(audiobookId))
                         },
                         onQuoteClick = { comicId, page ->
-                            navController.navigate(Screen.Reader.createForComic(comicId, page))
+                            navigateToFullscreen(Screen.Reader.createForComic(comicId, page))
                         },
                         onAddFileClick = {
                             filePicker.launch(
@@ -503,6 +597,57 @@ fun AppNavHost(
             }
         }
     }
+}
+
+private fun normalizeAppNavTransitionStyle(value: String?): String = when (value?.uppercase()) {
+    "NONE", "FADE", "SLIDE", "LIFT" -> value.uppercase()
+    else -> "FADE"
+}
+
+private fun appNavTransitionDurationMillis(style: String): Int = when (style) {
+    "NONE" -> 0
+    "SLIDE" -> 280
+    "LIFT" -> 240
+    else -> 220
+}
+
+private fun appRootChromeRevealDelayMillis(style: String): Long = when (style) {
+    "NONE" -> 0L
+    "SLIDE" -> 180L
+    "LIFT" -> 150L
+    else -> 120L
+}
+
+private fun rootChromeOffsetDp(style: String) = when (style) {
+    "SLIDE" -> 18.dp
+    "LIFT" -> 12.dp
+    else -> 8.dp
+}
+
+private fun appNavEnterTransition(style: String): EnterTransition = when (style) {
+    "NONE" -> EnterTransition.None
+    "SLIDE" -> fadeIn(tween(220)) + slideInVertically(
+        animationSpec = tween(280),
+        initialOffsetY = { it / 14 }
+    )
+    "LIFT" -> fadeIn(tween(220)) + scaleIn(
+        animationSpec = tween(240),
+        initialScale = 0.985f
+    )
+    else -> fadeIn(tween(220))
+}
+
+private fun appNavExitTransition(style: String): ExitTransition = when (style) {
+    "NONE" -> ExitTransition.None
+    "SLIDE" -> fadeOut(tween(180)) + slideOutVertically(
+        animationSpec = tween(260),
+        targetOffsetY = { it / 16 }
+    )
+    "LIFT" -> fadeOut(tween(180)) + scaleOut(
+        animationSpec = tween(220),
+        targetScale = 0.99f
+    )
+    else -> fadeOut(tween(180))
 }
 
 @Composable

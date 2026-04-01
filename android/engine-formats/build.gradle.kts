@@ -13,6 +13,7 @@ android {
 }
 dependencies {
     implementation(project(":core-model"))
+    implementation(project(":core-data"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.documentfile)
     implementation(libs.zip4j)
@@ -24,6 +25,7 @@ dependencies {
     implementation(libs.commonmark.ext.gfm.tables)
     implementation(libs.commonmark.ext.footnotes)
     implementation(libs.jsoup)
+    implementation(libs.google.gson)
     // PDF: используем встроенный android.graphics.pdf.PdfRenderer — внешние lib не нужны
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)

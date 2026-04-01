@@ -281,7 +281,7 @@ fun OcrScreen(
                 TopAppBar(
                     title = { Text(text.screenTitle) },
                     colors = rootChromeTopBarColors(),
-                    windowInsets = rootChromeStableTopBarInsets(),
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     navigationIcon = {
                         if (showBackButton) {
                             IconButton(onClick = onNavigateBack) {

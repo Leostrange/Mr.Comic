@@ -25,6 +25,9 @@ object PreferencesKeys {
     val READER_BOTTOM_TOOLBAR_OPACITY = floatPreferencesKey("reader_bottom_toolbar_opacity")
     val READER_TOOLBAR_BLUR       = floatPreferencesKey("reader_toolbar_blur")
     val READER_IMAGE_SCALE_MODE   = stringPreferencesKey("reader_image_scale_mode")
+    val READER_PAGE_MARGIN_CROP_HORIZONTAL = floatPreferencesKey("reader_page_margin_crop_horizontal")
+    val READER_PAGE_MARGIN_CROP_VERTICAL = floatPreferencesKey("reader_page_margin_crop_vertical")
+    val APP_NAV_TRANSITION_STYLE  = stringPreferencesKey("app_nav_transition_style") // NONE/FADE/SLIDE/LIFT
     val READER_PAGE_ANIMATION     = stringPreferencesKey("reader_page_animation") // NONE/SLIDE/FADE
     val READER_PAGE_SOUND         = booleanPreferencesKey("reader_page_sound")    // page-flip sound
     val READER_EYE_REST_ENABLED   = booleanPreferencesKey("reader_eye_rest_enabled")
@@ -142,13 +145,23 @@ object PreferencesKeys {
     val TEXT_COLOR_SCHEME         = stringPreferencesKey("text_color_scheme") // DAY/SEPIA/NIGHT
     val TEXT_FONT_FAMILY          = stringPreferencesKey("text_font_family")  // Georgia/Merriweather/…
     val TEXT_LINE_HEIGHT          = floatPreferencesKey("text_line_height")   // 1.0..3.0, default 1.8
+    val TEXT_LETTER_SPACING       = floatPreferencesKey("text_letter_spacing") // 0.0..0.2 em
+    val TEXT_WORD_SPACING         = floatPreferencesKey("text_word_spacing")   // 0.0..0.6 em
+    val TEXT_PARAGRAPH_SPACING    = floatPreferencesKey("text_paragraph_spacing") // 0.1..1.2 em
     val TEXT_ALIGNMENT            = stringPreferencesKey("text_alignment")    // justify/left/right/center
     val TEXT_BOLD                 = booleanPreferencesKey("text_bold")        // false by default
+    val TEXT_CUSTOM_TEXT_COLOR    = longPreferencesKey("text_custom_text_color")
+    val TEXT_CUSTOM_BACKGROUND_COLOR = longPreferencesKey("text_custom_background_color")
+    val TEXT_CUSTOM_ACCENT_COLOR  = longPreferencesKey("text_custom_accent_color")
 
     // Язык интерфейса: ru / en / ja / zh / ko
     val APP_LANGUAGE              = stringPreferencesKey("app_language")
     // Пресет ридера: CUSTOM / NOVEL / MANGA / NIGHT / STUDY
     val READER_PRESET             = stringPreferencesKey("reader_preset")
+    val READER_STYLE_PRESET_LIST  = stringPreferencesKey("reader_style_preset_list")
+    val READER_STYLE_PRESET_1     = stringPreferencesKey("reader_style_preset_1")
+    val READER_STYLE_PRESET_2     = stringPreferencesKey("reader_style_preset_2")
+    val READER_STYLE_PRESET_3     = stringPreferencesKey("reader_style_preset_3")
     val READER_CHROME_ICON_ORDER  = stringPreferencesKey("reader_chrome_icon_order")
     val READER_CHROME_SHOW_TOC    = booleanPreferencesKey("reader_chrome_show_toc")
     val READER_CHROME_SHOW_STYLE  = booleanPreferencesKey("reader_chrome_show_style")

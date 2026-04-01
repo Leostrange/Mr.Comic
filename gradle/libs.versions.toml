@@ -12,6 +12,7 @@ buildTools = "35.0.0"
 jvmTarget = "17"
 
 androidx-core-ktx = "1.15.0"
+androidx-webkit = "1.12.1"
 androidx-collection = "1.4.5"
 documentfile = "1.0.1"
 appcompat = "1.7.0"
@@ -56,6 +57,7 @@ mockk = "1.13.12"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "androidx-core-ktx" }
+androidx-webkit = { group = "androidx.webkit", name = "webkit", version.ref = "androidx-webkit" }
 androidx-collection-ktx = { group = "androidx.collection", name = "collection-ktx", version.ref = "androidx-collection" }
 documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }

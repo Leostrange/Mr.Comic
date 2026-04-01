@@ -22,6 +22,7 @@ internal data class ReaderUiText(
     val quickPresetsTitle: String,
     val colorSchemeTitle: String,
     val fontTitle: String,
+    val importFontAction: String,
     val boldFont: String,
     val textAlignTitle: String,
     val resetDefaults: String,
@@ -135,6 +136,7 @@ internal fun readerUiText(language: String): ReaderUiText = when (language) {
         quickPresetsTitle = "Quick presets",
         colorSchemeTitle = "Color scheme",
         fontTitle = "Font",
+        importFontAction = "Import font",
         boldFont = "Bold font",
         textAlignTitle = "Align text to",
         resetDefaults = "Reset to default",
@@ -246,6 +248,7 @@ internal fun readerUiText(language: String): ReaderUiText = when (language) {
         quickPresetsTitle = "クイックプリセット",
         colorSchemeTitle = "配色",
         fontTitle = "フォント",
+        importFontAction = "フォントを追加",
         boldFont = "太字",
         textAlignTitle = "テキストの配置",
         resetDefaults = "デフォルトに戻す",
@@ -357,6 +360,7 @@ internal fun readerUiText(language: String): ReaderUiText = when (language) {
         quickPresetsTitle = "快捷预设",
         colorSchemeTitle = "配色方案",
         fontTitle = "字体",
+        importFontAction = "导入字体",
         boldFont = "粗体",
         textAlignTitle = "文本对齐",
         resetDefaults = "恢复默认",
@@ -468,6 +472,7 @@ internal fun readerUiText(language: String): ReaderUiText = when (language) {
         quickPresetsTitle = "빠른 프리셋",
         colorSchemeTitle = "색상 구성",
         fontTitle = "글꼴",
+        importFontAction = "글꼴 가져오기",
         boldFont = "굵은 글꼴",
         textAlignTitle = "텍스트 정렬",
         resetDefaults = "기본값으로 재설정",
@@ -579,6 +584,7 @@ internal fun readerUiText(language: String): ReaderUiText = when (language) {
         quickPresetsTitle = "Быстрые пресеты",
         colorSchemeTitle = "Цветовая схема",
         fontTitle = "Шрифт",
+        importFontAction = "Импортировать шрифт",
         boldFont = "Жирный шрифт",
         textAlignTitle = "Выравнивать текст по",
         resetDefaults = "Сбросить по умолчанию",
@@ -681,12 +687,33 @@ internal fun readerPresetLabel(preset: ReadingPreset, language: String): String 
         "ru" -> "Бумага"
         else -> "Paper"
     }
+    ReadingPreset.SEPIA_BOOK -> when (language) {
+        "ja" -> "セピア"
+        "zh" -> "棕褐"
+        "ko" -> "세피아"
+        "ru" -> "Сепия"
+        else -> "Sepia"
+    }
+    ReadingPreset.NEWSPAPER -> when (language) {
+        "ja" -> "新聞"
+        "zh" -> "报刊"
+        "ko" -> "신문"
+        "ru" -> "Газета"
+        else -> "Newspaper"
+    }
     ReadingPreset.NIGHT_INK -> when (language) {
         "ja" -> "ナイトインク"
         "zh" -> "夜墨"
         "ko" -> "나이트 잉크"
         "ru" -> "Ночная тушь"
         else -> "Night Ink"
+    }
+    ReadingPreset.OLED_BLACK -> when (language) {
+        "ja" -> "OLED ブラック"
+        "zh" -> "OLED 纯黑"
+        "ko" -> "OLED 블랙"
+        "ru" -> "OLED Black"
+        else -> "OLED Black"
     }
     ReadingPreset.EINK -> when (language) {
         "ja" -> "E-Ink"
@@ -731,6 +758,30 @@ internal fun readerLineHeightLabel(percent: Int, language: String): String = whe
     "zh" -> "行距: ${percent}%"
     "ko" -> "줄 간격: ${percent}%"
     else -> "Межстрочный интервал: ${percent}%"
+}
+
+internal fun readerLetterSpacingLabel(value: Float, language: String): String = when (language) {
+    "en" -> "Letter spacing: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "ja" -> "文字間隔: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "zh" -> "字距: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "ko" -> "자간: ${"%.2f".format(java.util.Locale.US, value)}em"
+    else -> "Межбуквенный интервал: ${"%.2f".format(java.util.Locale.US, value)}em"
+}
+
+internal fun readerWordSpacingLabel(value: Float, language: String): String = when (language) {
+    "en" -> "Word spacing: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "ja" -> "単語間隔: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "zh" -> "词间距: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "ko" -> "단어 간격: ${"%.2f".format(java.util.Locale.US, value)}em"
+    else -> "Межсловный интервал: ${"%.2f".format(java.util.Locale.US, value)}em"
+}
+
+internal fun readerParagraphSpacingLabel(value: Float, language: String): String = when (language) {
+    "en" -> "Paragraph spacing: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "ja" -> "段落間隔: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "zh" -> "段间距: ${"%.2f".format(java.util.Locale.US, value)}em"
+    "ko" -> "문단 간격: ${"%.2f".format(java.util.Locale.US, value)}em"
+    else -> "Интервал между абзацами: ${"%.2f".format(java.util.Locale.US, value)}em"
 }
 
 internal fun readerComicNotFoundMessage(language: String): String = when (language) {

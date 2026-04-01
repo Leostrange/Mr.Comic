@@ -16,6 +16,8 @@
 - `active/TRANSLATION_MODULE_TZ.md`
 - `active/THIRD_PARTY_DICTIONARIES.md`
 - `active/DJVU_RENDERER_RESEARCH.md`
+- `active/LIBRARY_BACKGROUND_GENERATION_TZ.md`
+- `active/LIBRARY_BACKGROUND_PROMPT_PACK.md`
 
 ## Reference Docs
 

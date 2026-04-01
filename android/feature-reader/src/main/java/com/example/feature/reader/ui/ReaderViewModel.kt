@@ -8,6 +8,8 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.util.Log
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -82,12 +84,24 @@ enum class ReaderChromeState { HIDDEN, EXPANDED }
 
 enum class FootnotePresentation { PEEK, EXPANDED }
 
+private data class PreparedReaderOpen(
+    val resolvedPath: String,
+    val detectedFormat: ComicFormat,
+    val reader: FormatReader?,
+    val pages: Int
+)
+
 private const val DEFAULT_TEXT_FONT_SIZE = 18
 private const val DEFAULT_TEXT_COLOR_SCHEME = "DAY"
 private const val DEFAULT_TEXT_FONT_FAMILY = "Georgia"
 private const val DEFAULT_TEXT_LINE_HEIGHT = 1.6f
+private const val DEFAULT_TEXT_LETTER_SPACING = 0f
+private const val DEFAULT_TEXT_WORD_SPACING = 0f
+private const val DEFAULT_TEXT_PARAGRAPH_SPACING = 0.2f
 private const val DEFAULT_TEXT_ALIGNMENT = "justify"
 private const val DEFAULT_TEXT_BOLD = false
+private const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
+private const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
 
 private fun normalizeTapZoneActionName(value: String?): String {
     val action = ReaderTapZoneAction.fromStored(value)
@@ -130,6 +144,10 @@ data class ReaderUiState(
     val toolbarBlur: Float = READER_TOOLBAR_DEFAULT_BLUR,
     /** How graphic pages should be fitted on the reader canvas. */
     val imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
+    /** Symmetric left/right crop for document page margins. */
+    val imageMarginCropHorizontal: Float = DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL,
+    /** Symmetric top/bottom crop for document page margins. */
+    val imageMarginCropVertical: Float = DEFAULT_IMAGE_MARGIN_CROP_VERTICAL,
     /** Number of pages to preload ahead of the current page */
     val preloadPages: Int = 3,
     /**
@@ -139,6 +157,14 @@ data class ReaderUiState(
     val currentHtmlContent: String? = null,
     /** Base URL for resolving relative resources inside [currentHtmlContent]. */
     val htmlBaseUrl: String? = null,
+    /** Asset-backed document path for WebViewAssetLoader resources of the current HTML page. */
+    val htmlAssetBasePath: String? = null,
+    /** Pre-render candidate for the previous text page. */
+    val previousHtmlContent: String? = null,
+    val previousHtmlAssetBasePath: String? = null,
+    /** Pre-render candidate for the next text page. */
+    val nextHtmlContent: String? = null,
+    val nextHtmlAssetBasePath: String? = null,
     /** Table of contents entries (chapters). Empty for image-based formats. */
     val tableOfContents: List<TocEntry> = emptyList(),
     /** Whether the TOC bottom sheet is open. */
@@ -151,14 +177,34 @@ data class ReaderUiState(
     val textFontSize: Int = 18,
     /** Color scheme for text books: "DAY" | "SEPIA" | "NIGHT" */
     val textColorScheme: String = "DAY",
+    /** Optional manual text color override for text books. */
+    val textCustomTextColor: Long? = null,
+    /** Optional manual background color override for text books. */
+    val textCustomBackgroundColor: Long? = null,
+    /** Optional manual accent color override for text books. */
+    val textCustomAccentColor: Long? = null,
     /** Font family for text books: "Georgia" | "Merriweather" | "Open Sans" | "Roboto Slab" | "PT Serif" | "Literata" */
     val textFontFamily: String = "Georgia",
     /** Line height multiplier for text books (e.g. 1.5 = 150%). */
     val textLineHeight: Float = 1.6f,
+    /** Letter spacing in em units for text books. */
+    val textLetterSpacing: Float = 0f,
+    /** Word spacing in em units for text books. */
+    val textWordSpacing: Float = 0f,
+    /** Paragraph spacing in em units for text books. */
+    val textParagraphSpacing: Float = 0.2f,
     /** Text alignment for text books: "justify" | "left" | "right" | "center" */
     val textAlignment: String = "justify",
     /** Bold text for text books. */
     val textBold: Boolean = false,
+    /** Three saved typography slots shared with settings. */
+    val readerStylePresetSlots: List<ReaderStylePresetSlot> = listOf(
+        ReaderStylePresetSlot(1),
+        ReaderStylePresetSlot(2),
+        ReaderStylePresetSlot(3)
+    ),
+    /** Full user-managed saved reading styles. */
+    val readerStylePresetEntries: List<ReaderStylePresetEntry> = emptyList(),
     /** Tap zone mode for image and text readers. */
     val tapZoneMode: String = ReaderTapZoneMode.SIMPLE.name,
     /** Whether the simple three-zone layout should swap left/right actions. */
@@ -343,8 +389,11 @@ class ReaderViewModel @Inject constructor(
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
     private var loadComicJob: Job? = null
+    private var tocLoadJob: Job? = null
+    private var deferredTocWarmupJob: Job? = null
     private var eyeRestJob: Job? = null
     private var highQualityWarmupJob: Job? = null
+    private var htmlPrewarmJob: Job? = null
     private var progressSaveJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
     private var pendingProgressSave: PendingProgressSave? = null
@@ -358,6 +407,13 @@ class ReaderViewModel @Inject constructor(
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
     private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
+    private data class CachedHtmlPage(
+        val html: String,
+        val assetBasePath: String?
+    )
+    private val htmlPageCache = object : LinkedHashMap<Int, CachedHtmlPage>(12, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 10
+    }
 
     /**
      * The reading mode to restore when rotating back to portrait.
@@ -413,12 +469,18 @@ class ReaderViewModel @Inject constructor(
         try {
             flushPendingProgressSave()
             progressSaveJob?.cancel()
+            tocLoadJob?.cancel()
+            deferredTocWarmupJob?.cancel()
             if (!isOpenRequestCurrent(requestToken)) return
             _uiState.update {
                 it.copy(
                     isLoading = true,
                     error = null,
                     currentHtmlContent = null,
+                    previousHtmlContent = null,
+                    previousHtmlAssetBasePath = null,
+                    nextHtmlContent = null,
+                    nextHtmlAssetBasePath = null,
                     tableOfContents = emptyList(),
                     bookmarkedPages = emptySet(),
                     pageTranslationNote = null,
@@ -432,28 +494,45 @@ class ReaderViewModel @Inject constructor(
             }
             eyeRestJob?.cancel()
             highQualityWarmupJob?.cancel()
+            htmlPrewarmJob?.cancel()
             if (!isOpenRequestCurrent(requestToken)) return
             lastRetainedHighQualityPages = emptySet()
             pagePreloader.clearPages()
+            clearHtmlPageCache()
             formatReader?.close()
 
             if (!isOpenRequestCurrent(requestToken)) return
-            val resolvedPath = resolveReadablePath(comic, sourcePath)
-            if (!isOpenRequestCurrent(requestToken)) return
-            // Re-detect by extension when stored format might be wrong (e.g. EPUB stored as CBZ
-            // because magic bytes of EPUB == ZIP). Extension is always more reliable than magic.
-            val detectedFormat = when (comic.format) {
-                ComicFormat.UNKNOWN, ComicFormat.CBZ, ComicFormat.ZIP -> {
-                    val byPath = detectFormatForPath(resolvedPath)
-                    if (byPath != ComicFormat.UNKNOWN) byPath else comic.format
+            val prepared = withContext(Dispatchers.IO) {
+                val resolvedPath = resolveReadablePath(comic, sourcePath)
+                // Re-detect by extension when stored format might be wrong (e.g. EPUB stored as CBZ
+                // because magic bytes of EPUB == ZIP). Extension is always more reliable than magic.
+                val detectedFormat = when (comic.format) {
+                    ComicFormat.UNKNOWN, ComicFormat.CBZ, ComicFormat.ZIP -> {
+                        val byPath = detectFormatForPath(resolvedPath)
+                        if (byPath != ComicFormat.UNKNOWN) byPath else comic.format
+                    }
+                    else -> comic.format
                 }
-                else -> comic.format
+                val newReader = formatFactory.createReader(resolvedPath, detectedFormat)
+                val pages = try {
+                    newReader?.getPageCount() ?: 0
+                } catch (t: Throwable) {
+                    newReader?.close()
+                    throw t
+                }
+                PreparedReaderOpen(
+                    resolvedPath = resolvedPath,
+                    detectedFormat = detectedFormat,
+                    reader = newReader,
+                    pages = pages
+                )
             }
-            val newReader = formatFactory.createReader(resolvedPath, detectedFormat)
             if (!isOpenRequestCurrent(requestToken)) {
-                newReader?.close()
+                prepared.reader?.close()
                 return
             }
+            val detectedFormat = prepared.detectedFormat
+            val newReader = prepared.reader
             formatReader = newReader
 
             if (formatReader == null) {
@@ -464,8 +543,6 @@ class ReaderViewModel @Inject constructor(
                 return
             }
 
-            if (!isOpenRequestCurrent(requestToken)) return
-            val pages = formatReader?.getPageCount() ?: 0
             if (!isOpenRequestCurrent(requestToken)) {
                 formatReader?.takeIf { it === newReader }?.close()
                 if (formatReader === newReader) {
@@ -473,6 +550,7 @@ class ReaderViewModel @Inject constructor(
                 }
                 return
             }
+            val pages = prepared.pages
             if (pages <= 0) {
                 val errorMessage = localizedReaderError(::readerNoReadablePagesMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
@@ -510,6 +588,11 @@ class ReaderViewModel @Inject constructor(
                     currentPage = startPage,
                     isLoading = false,
                     htmlBaseUrl = formatReader?.htmlBaseUrl(),
+                    htmlAssetBasePath = null,
+                    previousHtmlContent = null,
+                    previousHtmlAssetBasePath = null,
+                    nextHtmlContent = null,
+                    nextHtmlAssetBasePath = null,
                     selectedTextActionSheet = null,
                     selectedTextTranslation = null
                 )
@@ -546,8 +629,11 @@ class ReaderViewModel @Inject constructor(
             visiblePages.forEach { visiblePage ->
                 loadPage(visiblePage)
             }
+            if (detectedFormat.isTextReadingFormat()) {
+                prewarmHtmlPagesAround(startPage, delayMillis = 180L)
+            }
             scheduleHighQualityWarmup(startPage)
-            loadToc()
+            scheduleDeferredTocWarmup()
             loadBookmarks(comic.id, pages)
             loadPageTranslationNote(comic.id, startPage)
             restartEyeRestTimer()
@@ -597,17 +683,32 @@ class ReaderViewModel @Inject constructor(
             // Try HTML page first (text-based EPUB / FB2 novel).
             // Always dispatch to IO so heavy work (ZIP reads, BZZ/ZP decoding, etc.)
             // never blocks the main thread regardless of the FormatReader implementation.
-            val html = withContext(Dispatchers.IO) { reader.getHtmlPage(index) }
-            if (html != null) {
+            val cachedHtmlPage = getOrLoadHtmlPage(reader, index)
+            if (cachedHtmlPage != null) {
                 if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
-                    _uiState.update { it.copy(currentHtmlContent = html) }
+                    _uiState.update {
+                        it.copy(
+                            currentHtmlContent = cachedHtmlPage.html,
+                            htmlAssetBasePath = cachedHtmlPage.assetBasePath
+                        )
+                    }
+                    refreshAdjacentHtmlPages(index)
                 }
                 return@launch
             }
             // Bitmap page (image-based formats)
             if (renderQuality == 1) {
                 if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
-                    _uiState.update { it.copy(currentHtmlContent = null) }
+                    _uiState.update {
+                        it.copy(
+                            currentHtmlContent = null,
+                            htmlAssetBasePath = null,
+                            previousHtmlContent = null,
+                            previousHtmlAssetBasePath = null,
+                            nextHtmlContent = null,
+                            nextHtmlAssetBasePath = null
+                        )
+                    }
                 }
             }
             if (pagePreloader.getPage(index, renderQuality) == null) {
@@ -647,12 +748,10 @@ class ReaderViewModel @Inject constructor(
             )
         }
         if (_uiState.value.pageSoundEnabled) {
-            // Prefer real-audio UIFeedback; fall back to PCM when UIFeedback is off
-            if (com.example.core.ui.sound.UIFeedback.enabled) {
-                com.example.core.ui.sound.UIFeedback.playPageFlip()
-            } else {
-                PageSoundPlayer.play(PageSoundStyle.valueOf(_uiState.value.pageSoundStyle))
-            }
+            PageSoundPlayer.play(
+                context = context,
+                style = PageSoundStyle.fromStored(_uiState.value.pageSoundStyle)
+            )
         }
         syncReaderPosition(
             page = clamped,
@@ -1528,11 +1627,17 @@ class ReaderViewModel @Inject constructor(
     fun showExpandedChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.EXPANDED) }
 
     /** Opens/closes the table-of-contents bottom sheet. */
-    fun toggleTocSheet() = _uiState.update {
-        it.copy(
-            showTocSheet = !it.showTocSheet,
-            chromeState = ReaderChromeState.EXPANDED
-        )
+    fun toggleTocSheet() {
+        val shouldOpen = !_uiState.value.showTocSheet
+        _uiState.update {
+            it.copy(
+                showTocSheet = !it.showTocSheet,
+                chromeState = ReaderChromeState.EXPANDED
+            )
+        }
+        if (shouldOpen && _uiState.value.tableOfContents.isEmpty()) {
+            loadToc(force = true)
+        }
     }
 
     /**
@@ -1600,6 +1705,8 @@ class ReaderViewModel @Inject constructor(
         it.copy(footnotePopup = null, footnotePresentation = FootnotePresentation.PEEK)
     }
 
+    fun openHtmlAsset(path: String) = formatReader?.openHtmlAsset(path)
+
     fun expandFootnote() = _uiState.update {
         it.copy(
             footnotePresentation = FootnotePresentation.EXPANDED,
@@ -1632,8 +1739,16 @@ class ReaderViewModel @Inject constructor(
             it.copy(
                 readerPreset = preset.name,
                 textColorScheme = style.textColorScheme,
+                textCustomTextColor = null,
+                textCustomBackgroundColor = null,
+                textCustomAccentColor = null,
                 textFontFamily = style.fontFamily,
                 textLineHeight = style.lineHeight,
+                textLetterSpacing = style.letterSpacing,
+                textWordSpacing = style.wordSpacing,
+                textParagraphSpacing = style.paragraphSpacing,
+                textAlignment = style.textAlignment,
+                textBold = style.textBold,
                 immersiveMode = style.immersiveMode,
                 readerPageAnimation = style.pageAnimation,
                 chromeState = ReaderChromeState.EXPANDED
@@ -1646,6 +1761,14 @@ class ReaderViewModel @Inject constructor(
             readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
             readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, style.fontFamily)
             readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, style.lineHeight)
+            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, style.letterSpacing)
+            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, style.wordSpacing)
+            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, style.paragraphSpacing)
+            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, style.textAlignment)
+            readerPreferences.set(PreferencesKeys.TEXT_BOLD, style.textBold)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)
         }
     }
 
@@ -1663,6 +1786,24 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme) }
     }
 
+    fun setTextCustomTextColor(color: Long?) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(textCustomTextColor = color) }
+        viewModelScope.launch { persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, color) }
+    }
+
+    fun setTextCustomBackgroundColor(color: Long?) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(textCustomBackgroundColor = color) }
+        viewModelScope.launch { persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, color) }
+    }
+
+    fun setTextCustomAccentColor(color: Long?) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(textCustomAccentColor = color) }
+        viewModelScope.launch { persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, color) }
+    }
+
     /** Updates font family for text books. */
     fun setTextFontFamily(family: String) {
         markReaderPresetCustom()
@@ -1675,6 +1816,27 @@ class ReaderViewModel @Inject constructor(
         markReaderPresetCustom()
         _uiState.update { it.copy(textLineHeight = height) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, height) }
+    }
+
+    /** Updates letter spacing for text books in em units. */
+    fun setTextLetterSpacing(spacing: Float) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(textLetterSpacing = spacing) }
+        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, spacing) }
+    }
+
+    /** Updates word spacing for text books in em units. */
+    fun setTextWordSpacing(spacing: Float) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(textWordSpacing = spacing) }
+        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, spacing) }
+    }
+
+    /** Updates paragraph spacing for text books in em units. */
+    fun setTextParagraphSpacing(spacing: Float) {
+        markReaderPresetCustom()
+        _uiState.update { it.copy(textParagraphSpacing = spacing) }
+        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, spacing) }
     }
 
     /** Updates text alignment for text books: "justify" | "left" | "right" | "center". */
@@ -1691,14 +1853,113 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_BOLD, bold) }
     }
 
+    fun saveReaderStylePreset(slot: Int) {
+        val normalizedSlot = slot.coerceIn(1, 3)
+        val existingEntry = _uiState.value.readerStylePresetEntries.getOrNull(normalizedSlot - 1)
+        if (existingEntry != null) {
+            overwriteReaderStylePreset(existingEntry.id)
+        } else {
+            val fallbackName = localizedReaderStyleFallbackName(normalizedSlot)
+            saveCurrentReaderStylePreset(displayName = fallbackName)
+        }
+    }
+
+    fun saveCurrentReaderStylePreset(displayName: String? = null) {
+        val snapshot = _uiState.value.toReaderStylePresetSnapshot(
+            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
+                ?: localizedReaderStyleFallbackName(_uiState.value.readerStylePresetEntries.size + 1)
+        )
+        val updatedEntries = listOf(
+            ReaderStylePresetEntry(
+                id = "preset_${System.currentTimeMillis()}",
+                snapshot = snapshot
+            )
+        ) + _uiState.value.readerStylePresetEntries
+        updateReaderStylePresetEntries(updatedEntries)
+    }
+
+    fun overwriteReaderStylePreset(id: String) {
+        val currentEntries = _uiState.value.readerStylePresetEntries
+        val existing = currentEntries.firstOrNull { it.id == id } ?: return
+        val updatedEntries = currentEntries.map { entry ->
+            if (entry.id == id) {
+                entry.copy(
+                    snapshot = _uiState.value.toReaderStylePresetSnapshot(
+                        displayName = existing.snapshot.displayName
+                    )
+                )
+            } else {
+                entry
+            }
+        }
+        updateReaderStylePresetEntries(updatedEntries)
+    }
+
+    fun applyReaderStylePreset(slot: Int) {
+        val normalizedSlot = slot.coerceIn(1, 3)
+        _uiState.value.readerStylePresetEntries
+            .getOrNull(normalizedSlot - 1)
+            ?.let { applyReaderStylePreset(it.id) }
+    }
+
+    fun applyReaderStylePreset(id: String) {
+        val snapshot = _uiState.value.readerStylePresetEntries
+            .firstOrNull { it.id == id }
+            ?.snapshot
+            ?: return
+        applyReaderStylePresetSnapshot(snapshot)
+    }
+
+    fun clearReaderStylePreset(slot: Int) {
+        val normalizedSlot = slot.coerceIn(1, 3)
+        _uiState.value.readerStylePresetEntries
+            .getOrNull(normalizedSlot - 1)
+            ?.let { deleteReaderStylePreset(it.id) }
+    }
+
+    fun deleteReaderStylePreset(id: String) {
+        updateReaderStylePresetEntries(
+            _uiState.value.readerStylePresetEntries.filterNot { it.id == id }
+        )
+    }
+
+    fun renameReaderStylePreset(id: String, displayName: String) {
+        val trimmed = displayName.trim()
+        val updatedEntries = _uiState.value.readerStylePresetEntries.map { entry ->
+            if (entry.id == id) {
+                entry.copy(
+                    snapshot = entry.snapshot.copy(
+                        displayName = trimmed.takeIf { it.isNotEmpty() }
+                    )
+                )
+            } else {
+                entry
+            }
+        }
+        updateReaderStylePresetEntries(updatedEntries)
+    }
+
+    fun importReaderStyleFromJson(rawJson: String): String? {
+        val snapshot = parseReaderStylePreset(rawJson) ?: return null
+        applyReaderStylePresetSnapshot(snapshot)
+        return snapshot.displayName?.takeIf { it.isNotBlank() }
+            ?: ReadingPreset.fromStored(snapshot.readerPreset).name
+    }
+
     fun resetTextSettings() {
         markReaderPresetCustom()
         _uiState.update {
             it.copy(
                 textFontSize = DEFAULT_TEXT_FONT_SIZE,
                 textColorScheme = DEFAULT_TEXT_COLOR_SCHEME,
+                textCustomTextColor = null,
+                textCustomBackgroundColor = null,
+                textCustomAccentColor = null,
                 textFontFamily = DEFAULT_TEXT_FONT_FAMILY,
                 textLineHeight = DEFAULT_TEXT_LINE_HEIGHT,
+                textLetterSpacing = DEFAULT_TEXT_LETTER_SPACING,
+                textWordSpacing = DEFAULT_TEXT_WORD_SPACING,
+                textParagraphSpacing = DEFAULT_TEXT_PARAGRAPH_SPACING,
                 textAlignment = DEFAULT_TEXT_ALIGNMENT,
                 textBold = DEFAULT_TEXT_BOLD
             )
@@ -1708,8 +1969,119 @@ class ReaderViewModel @Inject constructor(
             readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
             readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY)
             readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT)
+            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING)
+            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING)
+            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING)
             readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT)
             readerPreferences.set(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)
+        }
+    }
+
+    private fun localizedReaderStyleFallbackName(index: Int): String = "Style $index"
+
+    private fun List<ReaderStylePresetEntry>.toLegacyReaderStyleSlots(): List<ReaderStylePresetSlot> =
+        (1..3).map { index ->
+            ReaderStylePresetSlot(
+                index = index,
+                serialized = getOrNull(index - 1)?.snapshot?.serialize()
+            )
+        }
+
+    private fun updateReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
+        val normalizedEntries = entries.distinctBy { it.id }
+        _uiState.update { state ->
+            state.copy(
+                readerStylePresetEntries = normalizedEntries,
+                readerStylePresetSlots = normalizedEntries.toLegacyReaderStyleSlots()
+            )
+        }
+        viewModelScope.launch {
+            persistReaderStylePresetEntries(normalizedEntries)
+        }
+    }
+
+    private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
+        val legacySlots = entries.toLegacyReaderStyleSlots()
+        readerPreferences.set(
+            PreferencesKeys.READER_STYLE_PRESET_LIST,
+            serializeReaderStylePresetEntries(entries)
+        )
+        readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_1, legacySlots[0].serialized.orEmpty())
+        readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_2, legacySlots[1].serialized.orEmpty())
+        readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_3, legacySlots[2].serialized.orEmpty())
+    }
+
+    private suspend fun persistNullablePreference(key: Preferences.Key<Long>, value: Long?) {
+        context.dataStore.edit { prefs ->
+            if (value == null) prefs.remove(key) else prefs[key] = value
+        }
+    }
+
+    private fun ReaderUiState.toReaderStylePresetSnapshot(
+        displayName: String? = null
+    ): ReaderStylePresetSnapshot =
+        ReaderStylePresetSnapshot(
+            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() },
+            readerPreset = ReadingPreset.fromStored(readerPreset).name,
+            textFontSize = textFontSize,
+            textColorScheme = textColorScheme,
+            textFontFamily = textFontFamily,
+            textLineHeight = textLineHeight,
+            textLetterSpacing = textLetterSpacing,
+            textWordSpacing = textWordSpacing,
+            textParagraphSpacing = textParagraphSpacing,
+            textAlignment = textAlignment,
+            textBold = textBold,
+            textCustomTextColor = textCustomTextColor,
+            textCustomBackgroundColor = textCustomBackgroundColor,
+            textCustomAccentColor = textCustomAccentColor,
+            brightness = brightness,
+            immersiveMode = immersiveMode,
+            pageAnimation = readerPageAnimation
+        )
+
+    private fun applyReaderStylePresetSnapshot(snapshot: ReaderStylePresetSnapshot) {
+        _uiState.update {
+            it.copy(
+                readerPreset = snapshot.readerPreset,
+                textFontSize = snapshot.textFontSize,
+                textColorScheme = snapshot.textColorScheme,
+                textCustomTextColor = snapshot.textCustomTextColor,
+                textCustomBackgroundColor = snapshot.textCustomBackgroundColor,
+                textCustomAccentColor = snapshot.textCustomAccentColor,
+                textFontFamily = snapshot.textFontFamily,
+                textLineHeight = snapshot.textLineHeight,
+                textLetterSpacing = snapshot.textLetterSpacing,
+                textWordSpacing = snapshot.textWordSpacing,
+                textParagraphSpacing = snapshot.textParagraphSpacing,
+                textAlignment = snapshot.textAlignment,
+                textBold = snapshot.textBold,
+                brightness = snapshot.brightness,
+                immersiveMode = snapshot.immersiveMode,
+                readerPageAnimation = snapshot.pageAnimation,
+                chromeState = ReaderChromeState.EXPANDED
+            )
+        }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
+            readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
+            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
+            readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, snapshot.textFontFamily)
+            readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, snapshot.textLineHeight)
+            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, snapshot.textLetterSpacing)
+            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, snapshot.textWordSpacing)
+            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, snapshot.textParagraphSpacing)
+            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, snapshot.textAlignment)
+            readerPreferences.set(PreferencesKeys.TEXT_BOLD, snapshot.textBold)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, snapshot.textCustomTextColor)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, snapshot.textCustomBackgroundColor)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, snapshot.textCustomAccentColor)
+            readerPreferences.set(PreferencesKeys.READING_BRIGHTNESS, snapshot.brightness)
+            readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, snapshot.immersiveMode)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, snapshot.pageAnimation)
         }
     }
 
@@ -1788,13 +2160,26 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    private fun scheduleDeferredTocWarmup(delayMillis: Long = 450L) {
+        val reader = formatReader ?: return
+        deferredTocWarmupJob?.cancel()
+        deferredTocWarmupJob = viewModelScope.launch {
+            delay(delayMillis)
+            if (formatReader !== reader) return@launch
+            if (_uiState.value.tableOfContents.isNotEmpty()) return@launch
+            loadToc(force = false)
+        }
+    }
+
     /** Loads the TOC from the current format reader (IO-bound, runs on Dispatchers.IO). */
-    private fun loadToc() {
+    private fun loadToc(force: Boolean = false) {
         val reader = formatReader ?: run {
             _uiState.update { it.copy(tableOfContents = emptyList()) }
             return
         }
-        viewModelScope.launch(Dispatchers.IO) {
+        if (!force && _uiState.value.tableOfContents.isNotEmpty()) return
+        tocLoadJob?.cancel()
+        tocLoadJob = viewModelScope.launch(Dispatchers.IO) {
             val toc = reader.getTableOfContents()
             if (formatReader !== reader) return@launch
             _uiState.update { it.copy(tableOfContents = toc) }
@@ -1926,6 +2311,9 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(preloadPages = safe) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRELOAD_PAGES, safe)
+        }
+        if (!activeComicSupportsBitmapPreload()) {
+            prewarmHtmlPagesAround(_uiState.value.currentPage)
         }
     }
 
@@ -2136,6 +2524,22 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(imageScaleMode = resolved.storedValue) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_IMAGE_SCALE_MODE, resolved.storedValue)
+        }
+    }
+
+    fun setImageMarginCropHorizontal(value: Float) {
+        val safe = value.coerceIn(0f, 0.22f)
+        _uiState.update { it.copy(imageMarginCropHorizontal = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, safe)
+        }
+    }
+
+    fun setImageMarginCropVertical(value: Float) {
+        val safe = value.coerceIn(0f, 0.22f)
+        _uiState.update { it.copy(imageMarginCropVertical = safe) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, safe)
         }
     }
 
@@ -2370,6 +2774,7 @@ class ReaderViewModel @Inject constructor(
             scheduleHighQualityWarmup(page)
         } else {
             applyHighQualityRetention(emptySet())
+            prewarmHtmlPagesAround(page)
         }
         loadPageTranslationNote(page = page)
         if (persistProgress) {
@@ -2451,6 +2856,87 @@ class ReaderViewModel @Inject constructor(
 
     private fun activeComicSupportsBitmapPreload(): Boolean =
         !(_uiState.value.comic?.format?.isTextReadingFormat() ?: false)
+
+    private fun clearHtmlPageCache() {
+        synchronized(htmlPageCache) {
+            htmlPageCache.clear()
+        }
+    }
+
+    private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
+        val previous = getCachedHtmlPage(centerPage - 1)
+        val next = getCachedHtmlPage(centerPage + 1)
+        _uiState.update { state ->
+            if (state.currentHtmlContent == null && state.currentPage != centerPage) {
+                state
+            } else {
+                state.copy(
+                    previousHtmlContent = previous?.html,
+                    previousHtmlAssetBasePath = previous?.assetBasePath,
+                    nextHtmlContent = next?.html,
+                    nextHtmlAssetBasePath = next?.assetBasePath
+                )
+            }
+        }
+    }
+
+    private fun getCachedHtmlPage(index: Int): CachedHtmlPage? =
+        synchronized(htmlPageCache) { htmlPageCache[index] }
+
+    private fun storeCachedHtmlPage(index: Int, page: CachedHtmlPage) {
+        synchronized(htmlPageCache) {
+            htmlPageCache[index] = page
+        }
+    }
+
+    private suspend fun getOrLoadHtmlPage(reader: FormatReader, index: Int): CachedHtmlPage? {
+        getCachedHtmlPage(index)?.let { return it }
+        val html = withContext(Dispatchers.IO) { reader.getHtmlPage(index) } ?: return null
+        val cached = CachedHtmlPage(
+            html = html,
+            assetBasePath = reader.htmlAssetBasePath(index)
+        )
+        storeCachedHtmlPage(index, cached)
+        return cached
+    }
+
+    private fun prewarmHtmlPagesAround(centerPage: Int, delayMillis: Long = 0L) {
+        val reader = formatReader ?: return
+        val comicId = _uiState.value.comic?.id ?: return
+        val totalPages = _uiState.value.totalPages
+        if (totalPages <= 0) return
+        val preloadDistance = _uiState.value.preloadPages.coerceIn(1, 8)
+        val visiblePages = visiblePagesFor(centerPage, _uiState.value.readingMode)
+        val minVisible = visiblePages.minOrNull() ?: centerPage
+        val maxVisible = visiblePages.maxOrNull() ?: centerPage
+        val pagesToPrewarm = buildList {
+            for (offset in 1..preloadDistance) {
+                val left = minVisible - offset
+                if (left >= 0) add(left)
+                val right = maxVisible + offset
+                if (right < totalPages) add(right)
+            }
+        }.distinct()
+        if (pagesToPrewarm.isEmpty()) return
+
+        htmlPrewarmJob?.cancel()
+        htmlPrewarmJob = viewModelScope.launch {
+            if (delayMillis > 0L) delay(delayMillis)
+            for (pageIndex in pagesToPrewarm) {
+                if (formatReader !== reader || _uiState.value.comic?.id != comicId) return@launch
+                if (getCachedHtmlPage(pageIndex) != null) continue
+                runCatching {
+                    getOrLoadHtmlPage(reader, pageIndex)
+                }.onFailure { error ->
+                    Log.w("ReaderViewModel", "Failed to prewarm HTML page $pageIndex", error)
+                }.onSuccess {
+                    if (formatReader === reader && _uiState.value.comic?.id == comicId) {
+                        refreshAdjacentHtmlPages()
+                    }
+                }
+            }
+        }
+    }
 
     private fun activeComicSupportsHighResZoom(): Boolean =
         _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
@@ -2559,13 +3045,17 @@ class ReaderViewModel @Inject constructor(
         emitReaderClosed()
         super.onCleared()
         loadComicJob?.cancel()
+        tocLoadJob?.cancel()
+        deferredTocWarmupJob?.cancel()
         eyeRestJob?.cancel()
         highQualityWarmupJob?.cancel()
+        htmlPrewarmJob?.cancel()
         progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
         formatReader?.close()
         pagePreloader.cancelPreload()
         pagePreloader.clearPages()
+        clearHtmlPageCache()
     }
 
     private fun emitReaderClosed() {
@@ -2637,6 +3127,14 @@ class ReaderViewModel @Inject constructor(
                 ReaderImageScaleMode.FIT_WIDTH.storedValue
             ).first()
         )
+        val imageMarginCropHorizontal = readerPreferences.get(
+            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
+            DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL
+        ).first().coerceIn(0f, 0.22f)
+        val imageMarginCropVertical = readerPreferences.get(
+            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
+            DEFAULT_IMAGE_MARGIN_CROP_VERTICAL
+        ).first().coerceIn(0f, 0.22f)
         val preload      = readerPreferences.get(
             PreferencesKeys.READER_PRELOAD_PAGES,
             renderProfile.defaultPreloadPages
@@ -2644,12 +3142,21 @@ class ReaderViewModel @Inject constructor(
             .coerceIn(2, 8)
             .coerceAtMost(renderProfile.maxPreloadPages)
         // Text reader settings
-        val fontSize     = readerPreferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).first().coerceIn(12, 32)
-        val colorScheme  = readerPreferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY").first()
-        val fontFamily   = readerPreferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia").first()
-        val lineHeight   = readerPreferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).first().coerceIn(1.0f, 3.0f)
-        val alignment    = readerPreferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify").first()
-        val bold         = readerPreferences.get(PreferencesKeys.TEXT_BOLD, false).first()
+        val fontSize     = readerPreferences.get(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE).first().coerceIn(12, 32)
+        val colorScheme  = readerPreferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME).first()
+        val customTextColor = readerPreferences.get(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE).first()
+            .takeUnless { it == Long.MIN_VALUE }
+        val customBackgroundColor = readerPreferences.get(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE).first()
+            .takeUnless { it == Long.MIN_VALUE }
+        val customAccentColor = readerPreferences.get(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE).first()
+            .takeUnless { it == Long.MIN_VALUE }
+        val fontFamily   = readerPreferences.get(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY).first()
+        val lineHeight   = readerPreferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT).first().coerceIn(1.0f, 3.0f)
+        val letterSpacing = readerPreferences.get(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING).first().coerceIn(0f, 0.2f)
+        val wordSpacing  = readerPreferences.get(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING).first().coerceIn(0f, 0.6f)
+        val paragraphSpacing = readerPreferences.get(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING).first().coerceIn(0.1f, 1.2f)
+        val alignment    = readerPreferences.get(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT).first()
+        val bold         = readerPreferences.get(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD).first()
         val tapZoneMode = ReaderTapZoneMode.fromStored(
             readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name).first()
         )
@@ -2717,6 +3224,22 @@ class ReaderViewModel @Inject constructor(
         val chromeShowDirectionIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, true).first()
         val chromeShowTranslateIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true).first()
         val chromeShowBrightnessIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true).first()
+        val legacyReaderStylePresetSlots = listOf(
+            ReaderStylePresetSlot(1, readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_1, "").first().ifBlank { null }),
+            ReaderStylePresetSlot(2, readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_2, "").first().ifBlank { null }),
+            ReaderStylePresetSlot(3, readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_3, "").first().ifBlank { null })
+        )
+        val savedReaderStylePresetEntries = parseReaderStylePresetEntries(
+            readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_LIST, "").first()
+        )
+        val readerStylePresetEntries = savedReaderStylePresetEntries.ifEmpty {
+            migrateLegacyReaderStyleSlotsToEntries(legacyReaderStylePresetSlots)
+        }
+        val readerStylePresetSlots = if (readerStylePresetEntries.isNotEmpty()) {
+            readerStylePresetEntries.toLegacyReaderStyleSlots()
+        } else {
+            legacyReaderStylePresetSlots
+        }
         val readerPreset = ReadingPreset.fromStored(
             readerPreferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name).first()
         )
@@ -2742,13 +3265,23 @@ class ReaderViewModel @Inject constructor(
                 bottomToolbarOpacity = bottomToolbarOpacity,
                 toolbarBlur = toolbarBlur,
                 imageScaleMode = imageScaleMode.storedValue,
+                imageMarginCropHorizontal = imageMarginCropHorizontal,
+                imageMarginCropVertical = imageMarginCropVertical,
                 preloadPages     = preload,
                 textFontSize     = fontSize,
                 textColorScheme  = colorScheme,
+                textCustomTextColor = customTextColor,
+                textCustomBackgroundColor = customBackgroundColor,
+                textCustomAccentColor = customAccentColor,
                 textFontFamily   = fontFamily,
                 textLineHeight   = lineHeight,
+                textLetterSpacing = letterSpacing,
+                textWordSpacing  = wordSpacing,
+                textParagraphSpacing = paragraphSpacing,
                 textAlignment    = alignment,
                 textBold         = bold,
+                readerStylePresetEntries = readerStylePresetEntries,
+                readerStylePresetSlots = readerStylePresetSlots,
                 tapZoneMode      = tapZoneMode.name,
                 tapZoneSwap      = tapZoneSwap,
                 volumeKeysPagingEnabled = volumeKeysPagingEnabled,
@@ -2783,6 +3316,9 @@ class ReaderViewModel @Inject constructor(
                 chromeShowTranslateIcon = chromeShowTranslateIcon,
                 chromeShowBrightnessIcon = chromeShowBrightnessIcon
             )
+        }
+        if (savedReaderStylePresetEntries.isEmpty() && readerStylePresetEntries.isNotEmpty()) {
+            persistReaderStylePresetEntries(readerStylePresetEntries)
         }
         restartEyeRestTimer()
     }

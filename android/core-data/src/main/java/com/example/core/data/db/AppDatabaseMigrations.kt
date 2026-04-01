@@ -4,6 +4,44 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 object AppDatabaseMigrations {
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS epub_manifest_cache (
+                    filePath TEXT NOT NULL PRIMARY KEY,
+                    fileSize INTEGER NOT NULL,
+                    lastModified INTEGER NOT NULL,
+                    payloadJson TEXT NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_epub_manifest_cache_updatedAt ON epub_manifest_cache(updatedAt)"
+            )
+        }
+    }
+
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE IF NOT EXISTS epub_structure_cache (
+                    filePath TEXT NOT NULL PRIMARY KEY,
+                    fileSize INTEGER NOT NULL,
+                    lastModified INTEGER NOT NULL,
+                    payloadJson TEXT NOT NULL,
+                    updatedAt INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS index_epub_structure_cache_updatedAt ON epub_structure_cache(updatedAt)"
+            )
+        }
+    }
+
     val MIGRATION_3_4 = object : Migration(3, 4) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE comics ADD COLUMN libraryShelf TEXT NOT NULL DEFAULT ''")
