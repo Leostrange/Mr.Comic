@@ -6,7 +6,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
@@ -32,7 +33,7 @@ val RootChromePanelShape = RoundedCornerShape(24.dp)
 val RootChromeCompactPanelShape = RoundedCornerShape(20.dp)
 val RootChromePillShape = RoundedCornerShape(16.dp)
 val RootChromeDensePillShape = RoundedCornerShape(14.dp)
-private val RootChromeTopBarLift = (-16).dp
+private val RootChromeTopBarLift = 0.dp
 
 private fun isLightChrome(colorScheme: ColorScheme): Boolean = colorScheme.background.luminance() > 0.45f
 
@@ -83,7 +84,8 @@ fun rootChromeBackdropVeil(value: Float): Float = (value * 1.2f).coerceIn(0f, 1f
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun rootChromeStableTopBarInsets(): WindowInsets = WindowInsets.safeDrawing.only(WindowInsetsSides.Top)
+fun rootChromeStableTopBarInsets(): WindowInsets =
+    WindowInsets.statusBarsIgnoringVisibility.only(WindowInsetsSides.Top)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -91,7 +93,11 @@ fun RootChromeTopBarHost(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    Box(modifier = modifier.offset(y = RootChromeTopBarLift)) {
+    Box(
+        modifier = modifier
+            .windowInsetsPadding(rootChromeStableTopBarInsets())
+            .offset(y = RootChromeTopBarLift)
+    ) {
         content()
     }
 }

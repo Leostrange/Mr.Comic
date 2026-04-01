@@ -17,6 +17,7 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -61,11 +63,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.webkit.WebViewAssetLoader
 import org.json.JSONTokener
 import com.example.core.model.isTextReadingFormat
 import com.example.core.model.ReadingMode
+import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderInfoSlot
 import com.example.core.model.ReaderTapZoneAction
 import com.example.core.model.ReaderTapZoneMode
@@ -84,9 +95,11 @@ import com.example.feature.reader.ui.components.WebtoonView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * JS snippet injected via evaluateJavascript after each page load.
@@ -220,6 +233,7 @@ private const val JS_TAP_HANDLER = """(function(){
 
 private const val HTML_READER_TAG = "ReaderHtmlView"
 private const val HTML_READER_BASE_URL = "https://appassets.androidplatform.net/reader/"
+private const val HTML_READER_ASSET_PATH = "/reader/content/"
 private const val HTML_READER_BLANK_CHECK_JS = """(function(){
   try{
     var body=document.body;
@@ -253,10 +267,107 @@ private sealed interface ReaderHtmlPageSource {
     }
 }
 
+private fun readerAssetDocumentBaseUrl(documentPath: String): String =
+    "${HTML_READER_BASE_URL}content/${documentPath.trimStart('/')}"
+
+private class ReaderFormatAssetPathHandler(
+    private val resolver: (String) -> com.example.engine.formats.base.FormatReaderWebResource?
+) : WebViewAssetLoader.PathHandler {
+    override fun handle(path: String): WebResourceResponse? {
+        val cleanPath = path.substringBefore('#').substringBefore('?').trimStart('/')
+        val resource = resolver(cleanPath) ?: return null
+        return WebResourceResponse(
+            resource.mimeType,
+            resource.encoding,
+            ByteArrayInputStream(resource.bytes)
+        ).apply {
+            responseHeaders = mapOf(
+                "Cache-Control" to "public, max-age=300",
+                "Access-Control-Allow-Origin" to "*"
+            )
+        }
+    }
+}
+
+private class ReaderUserFontAssetPathHandler(
+    private val context: Context
+) : WebViewAssetLoader.PathHandler {
+    override fun handle(path: String): WebResourceResponse? {
+        val resource = ReaderTextFontCatalog.openCustomFontAsset(context, path) ?: return null
+        return WebResourceResponse(
+            resource.mimeType,
+            resource.encoding,
+            ByteArrayInputStream(resource.bytes)
+        ).apply {
+            responseHeaders = mapOf(
+                "Cache-Control" to "public, max-age=300",
+                "Access-Control-Allow-Origin" to "*"
+            )
+        }
+    }
+}
+
 private fun readerHtmlCacheFile(context: Context, themedHtml: String): File {
     val cacheDir = File(context.cacheDir, "reader_html_pages").apply { mkdirs() }
     val fileName = "page_${Integer.toHexString(themedHtml.hashCode())}.html"
     return File(cacheDir, fileName)
+}
+
+private suspend fun buildReaderHtmlPageSource(
+    context: Context,
+    html: String,
+    bg: String,
+    fg: String,
+    resolvedBaseUrl: String
+): ReaderHtmlPageSource {
+    val themedHtml = withContext(Dispatchers.Default) { buildThemedHtmlDocument(html, bg, fg) }
+    return withContext(Dispatchers.IO) {
+        if (themedHtml.length <= MAX_INLINE_HTML_SOURCE_LENGTH) {
+            ReaderHtmlPageSource.Inline(
+                baseUrl = resolvedBaseUrl,
+                html = themedHtml
+            )
+        } else {
+            runCatching {
+                val tmpFile = readerHtmlCacheFile(context, themedHtml)
+                tmpFile.writeText(themedHtml, Charsets.UTF_8)
+                ReaderHtmlPageSource.FileUrl(
+                    url = "file://${tmpFile.absolutePath}",
+                    fallbackBaseUrl = resolvedBaseUrl,
+                    fallbackHtml = themedHtml
+                )
+            }.getOrElse { error ->
+                Log.w(HTML_READER_TAG, "Failed to cache reader HTML page, falling back to inline load", error)
+                ReaderHtmlPageSource.Inline(
+                    baseUrl = resolvedBaseUrl,
+                    html = themedHtml
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberReaderHtmlPageSource(
+    html: String,
+    bg: String,
+    fg: String,
+    resolvedBaseUrl: String
+): ReaderHtmlPageSource? {
+    val context = LocalContext.current
+    var pageSource by remember(html, bg, fg, resolvedBaseUrl, context.cacheDir.absolutePath) {
+        mutableStateOf<ReaderHtmlPageSource?>(null)
+    }
+    LaunchedEffect(html, bg, fg, resolvedBaseUrl, context.cacheDir.absolutePath) {
+        pageSource = buildReaderHtmlPageSource(
+            context = context,
+            html = html,
+            bg = bg,
+            fg = fg,
+            resolvedBaseUrl = resolvedBaseUrl
+        )
+    }
+    return pageSource
 }
 
 private const val JS_SELECTED_TEXT_HANDLER = """(function(){
@@ -289,10 +400,29 @@ private fun colorSchemePaletteForPreset(
     scheme: String,
     readerPreset: ReadingPreset
 ): Pair<String, String> = when {
+    scheme == "SEPIA" && readerPreset == ReadingPreset.SEPIA_BOOK -> "#f4ecd8" to "#352618"
+    scheme == "DAY" && readerPreset == ReadingPreset.NEWSPAPER -> "#f1eee7" to "#202020"
+    scheme == "NIGHT" && readerPreset == ReadingPreset.OLED_BLACK -> "#000000" to "#f2f5f7"
     scheme == "DAY" && readerPreset == ReadingPreset.PAPER -> "#f6f1e7" to "#2b2118"
     scheme == "DAY" && readerPreset == ReadingPreset.EINK -> "#f0efe9" to "#121212"
     else -> colorSchemePalette(scheme)
 }
+
+private val MANUAL_READER_COLOR_REGEX = Regex("^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+
+private fun normalizeReaderOverrideColor(value: String?): String? {
+    val normalized = value?.trim().orEmpty()
+    return normalized.takeIf { it.isNotEmpty() && MANUAL_READER_COLOR_REGEX.matches(it) }
+}
+
+private fun defaultReaderAccentColor(backgroundColor: String): String = when {
+    backgroundColor.equals("#1a1a1a", ignoreCase = true) -> "#5ab4dc"
+    backgroundColor.equals("#000000", ignoreCase = true) -> "#5ab4dc"
+    else -> "#1a6f9a"
+}
+
+private fun readerColorOverrideHex(value: Long?): String? =
+    value?.let { String.format(Locale.US, "#%08X", it) }
 
 private fun readerMaterialColorScheme(
     isTextReader: Boolean,
@@ -324,6 +454,60 @@ private fun readerMaterialColorScheme(
         )
     } else {
         when {
+            readerPreset == ReadingPreset.OLED_BLACK -> darkColorScheme(
+                primary = Color(0xFFB8D3FF),
+                onPrimary = Color(0xFF091019),
+                primaryContainer = Color(0xFF152231),
+                onPrimaryContainer = Color(0xFFE2ECFA),
+                secondary = Color(0xFF98A2B1),
+                onSecondary = Color(0xFF0F141B),
+                secondaryContainer = Color(0xFF1A222C),
+                onSecondaryContainer = Color(0xFFE4E7EB),
+                background = Color(0xFF000000),
+                onBackground = Color(0xFFF2F5F7),
+                surface = Color(0xFF050505),
+                onSurface = Color(0xFFF2F5F7),
+                surfaceVariant = Color(0xFF121212),
+                onSurfaceVariant = Color(0xFFBAC0C7),
+                outline = Color(0xFF525860),
+                outlineVariant = Color(0xFF22262B)
+            )
+            readerPreset == ReadingPreset.SEPIA_BOOK -> lightColorScheme(
+                primary = Color(0xFF835D2F),
+                onPrimary = Color(0xFFFFF7EA),
+                primaryContainer = Color(0xFFF0DEC2),
+                onPrimaryContainer = Color(0xFF43280A),
+                secondary = Color(0xFF966B3A),
+                onSecondary = Color(0xFFFFF7EA),
+                secondaryContainer = Color(0xFFF5E3C7),
+                onSecondaryContainer = Color(0xFF45270C),
+                background = Color(0xFFF4ECD8),
+                onBackground = Color(0xFF352618),
+                surface = Color(0xFFEEE2C8),
+                onSurface = Color(0xFF352618),
+                surfaceVariant = Color(0xFFE5D4B1),
+                onSurfaceVariant = Color(0xFF6C5337),
+                outline = Color(0xFF9A7B58),
+                outlineVariant = Color(0xFFD2BC95)
+            )
+            readerPreset == ReadingPreset.NEWSPAPER -> lightColorScheme(
+                primary = Color(0xFF31404F),
+                onPrimary = Color(0xFFF7F7F5),
+                primaryContainer = Color(0xFFDCE1E6),
+                onPrimaryContainer = Color(0xFF19232D),
+                secondary = Color(0xFF5E6975),
+                onSecondary = Color(0xFFF7F7F5),
+                secondaryContainer = Color(0xFFE2E6EA),
+                onSecondaryContainer = Color(0xFF242C34),
+                background = Color(0xFFF1EEE7),
+                onBackground = Color(0xFF202020),
+                surface = Color(0xFFE9E5DD),
+                onSurface = Color(0xFF202020),
+                surfaceVariant = Color(0xFFDED8D0),
+                onSurfaceVariant = Color(0xFF55504A),
+                outline = Color(0xFF80776E),
+                outlineVariant = Color(0xFFC3BBB1)
+            )
             textColorScheme == "NIGHT" -> darkColorScheme(
                 primary = Color(0xFF7DB7E8),
                 onPrimary = Color(0xFF0F1C29),
@@ -435,45 +619,43 @@ private tailrec fun findReaderHardwareKeyHost(context: Context): ReaderHardwareK
     else -> null
 }
 
-/** Map of display font name → asset file name. */
-private val CUSTOM_FONTS = mapOf(
-    "Merriweather" to "Merriweather-Regular.ttf",
-    "Open Sans"    to "OpenSans-Regular.ttf",
-    "Roboto Slab"  to "RobotoSlab-Regular.ttf",
-    "PT Serif"     to "PTSerif-Regular.ttf",
-    "Literata"     to "Literata-Regular.ttf"
-)
-
 private fun textSettingsJs(
     fontSize: Int,
     bg: String,
     fg: String,
+    overrideTextColor: String? = null,
+    overrideBackgroundColor: String? = null,
+    overrideAccentColor: String? = null,
     fontFamily: String = "Georgia",
+    fontSourceUrl: String? = null,
     lineHeight: Float  = 1.8f,
+    letterSpacing: Float = 0f,
+    wordSpacing: Float = 0f,
+    paragraphSpacing: Float = 0.2f,
     align: String      = "justify",
     bold: Boolean      = false,
     topPaddingPx: Int  = 16
 ): String {
+    val resolvedTextColor = normalizeReaderOverrideColor(overrideTextColor) ?: fg
+    val resolvedBackgroundColor = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
+    val resolvedAccentColor = normalizeReaderOverrideColor(overrideAccentColor)
+        ?: defaultReaderAccentColor(resolvedBackgroundColor)
     val fontWeight   = if (bold) "bold" else "normal"
-    val assetFile    = CUSTOM_FONTS[fontFamily]
-    val isNightTheme = bg.equals("#1a1a1a", ignoreCase = true)
-    val noteColor    = if (isNightTheme) "#5ab4dc" else "#1a6f9a"
-    val headingBg    = when {
-        isNightTheme -> "#262626"
-        bg.equals("#f4ecd8", ignoreCase = true) -> "#eadfc2"
-        else -> "#e7e7e7"
-    }
+    val isNightTheme = resolvedBackgroundColor.equals("#1a1a1a", ignoreCase = true) ||
+        resolvedBackgroundColor.equals("#000000", ignoreCase = true)
+    val noteColor    = resolvedAccentColor
+    val headingBg    = "transparent"
     val headingBorder = when {
         isNightTheme -> "#5a5a5a"
-        bg.equals("#f4ecd8", ignoreCase = true) -> "#b79f78"
+        resolvedBackgroundColor.equals("#f4ecd8", ignoreCase = true) -> "#b79f78"
         else -> "#808080"
     }
     val quoteColor = if (isNightTheme) "#c9c9c9" else "#555555"
     // Inject @font-face for custom fonts once (guard by style id)
-    val fontFaceSnip = if (assetFile != null) {
-        val id = "__cf_${fontFamily.replace(" ", "_")}"
+    val fontFaceSnip = if (fontSourceUrl != null) {
+        val id = "__cf_${fontFamily.replace(Regex("[^\\p{L}\\p{N}]+"), "_")}"
         """if(!document.getElementById('$id')){var s=document.createElement('style');s.id='$id';""" +
-        """s.textContent="@font-face{font-family:'$fontFamily';src:url('file:///android_asset/fonts/$assetFile');}";""" +
+        """s.textContent="@font-face{font-family:'$fontFamily';src:url('$fontSourceUrl');font-display:swap;}";""" +
         """document.head.appendChild(s);}"""
     } else ""
     val themeStyle = """
@@ -483,7 +665,15 @@ private fun textSettingsJs(
           document.head.appendChild(themeStyle);
         }
         document.getElementById('__reader_theme_overrides').textContent=
-          "h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{color:$fg !important;background-color:$headingBg !important;border-color:$headingBorder !important;}"+
+          ":root{--mrcomic-reader-text-color:$resolvedTextColor;--mrcomic-reader-background-color:$resolvedBackgroundColor;--mrcomic-reader-accent-color:$resolvedAccentColor;}"+
+          "html,body{background-color:$resolvedBackgroundColor !important;}"+
+          "body{color:$resolvedTextColor !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']){color:$resolvedTextColor !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li,body:not([data-mrcomic-preserve-layout='true']) td,body:not([data-mrcomic-preserve-layout='true']) th,body:not([data-mrcomic-preserve-layout='true']) strong,body:not([data-mrcomic-preserve-layout='true']) em,body:not([data-mrcomic-preserve-layout='true']) i,body:not([data-mrcomic-preserve-layout='true']) b,body:not([data-mrcomic-preserve-layout='true']) small,body:not([data-mrcomic-preserve-layout='true']) big,body:not([data-mrcomic-preserve-layout='true']) sup,body:not([data-mrcomic-preserve-layout='true']) sub{color:$resolvedTextColor !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) a[href],body:not([data-mrcomic-preserve-layout='true']) a[href]:link,body:not([data-mrcomic-preserve-layout='true']) a[href]:visited,body:not([data-mrcomic-preserve-layout='true']) a[href]:hover,body:not([data-mrcomic-preserve-layout='true']) a[href]:active{color:$resolvedAccentColor !important;text-decoration:underline !important;text-underline-offset:0.14em !important;text-decoration-thickness:0.08em !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) a[href] *{color:inherit !important;}"+
+          "body [bgcolor],body [style*='background-color:#fff'],body [style*='background-color: #fff'],body [style*='background-color:#ffffff'],body [style*='background-color: #ffffff'],body [style*='background:#fff'],body [style*='background: #fff'],body [style*='background:#ffffff'],body [style*='background: #ffffff'],body [style*='background-color:white'],body [style*='background-color: white'],body [style*='background:white'],body [style*='background: white'],body [style*='background-color:rgb(255'],body [style*='background-color: rgb(255'],body [style*='background:rgb(255'],body [style*='background: rgb(255']{background-color:transparent !important;background-image:none !important;box-shadow:none !important;}"+
+          "h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{color:$resolvedTextColor !important;background-color:$headingBg !important;border-color:$headingBorder !important;}"+
           "blockquote,cite,.epigraph{color:$quoteColor !important;border-left-color:$headingBorder !important;}"+
           "a.fn,a[epub\\\\:type~='noteref'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
           "a.fn *,a[epub\\\\:type~='noteref'] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[title][href*='#'] *{color:$noteColor !important;}"+
@@ -501,13 +691,27 @@ private fun textSettingsJs(
           });}catch(e){}
         })();
     """.trimIndent()
-    val fontStack = if (assetFile != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
-    return """(function(){$fontFaceSnip $themeStyle if(document.body){""" +
+    val spacingStyle = """
+        if(!document.getElementById('__reader_spacing_overrides')){
+          var spacingStyle=document.createElement('style');
+          spacingStyle.id='__reader_spacing_overrides';
+          document.head.appendChild(spacingStyle);
+        }
+        document.getElementById('__reader_spacing_overrides').textContent=
+          "body:not([data-mrcomic-preserve-layout='true']){letter-spacing:${letterSpacing}em !important;word-spacing:${wordSpacing}em !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) p,"+
+          "body:not([data-mrcomic-preserve-layout='true']) div.paragraph,"+
+          "body:not([data-mrcomic-preserve-layout='true']) .paragraph{margin-top:0 !important;margin-bottom:${paragraphSpacing}em !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) li{margin-bottom:${(paragraphSpacing * 0.8f).coerceAtLeast(0.1f)}em !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) blockquote{margin-bottom:${(paragraphSpacing + 0.4f).coerceAtLeast(0.4f)}em !important;}";
+    """.trimIndent()
+    val fontStack = if (fontSourceUrl != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
+    return """(function(){$fontFaceSnip $themeStyle $spacingStyle if(document.body){""" +
         """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover');""" +
         """document.documentElement.lang=document.documentElement.lang||'ru';""" +
-        """document.body.style.color='$fg';""" +
-        """document.documentElement.style.background='$bg';""" +
-        """document.body.style.background='$bg';""" +
+        """document.body.style.color='$resolvedTextColor';""" +
+        """document.documentElement.style.background='$resolvedBackgroundColor';""" +
+        """document.body.style.background='$resolvedBackgroundColor';""" +
         """if(!preservePublisherLayout){""" +
         """document.body.style.fontSize='${fontSize}px';""" +
         """document.body.style.fontWeight='$fontWeight';""" +
@@ -548,6 +752,13 @@ private fun buildThemedHtmlDocument(
           }
           body:not([data-mrcomic-preserve-layout="true"]) {
             margin: 0 !important;
+            color: $fg !important;
+          }
+          body:not([data-mrcomic-preserve-layout="true"]) a[href] {
+            color: var(--mrcomic-reader-accent-color, #1a6f9a) !important;
+            text-decoration: underline !important;
+            text-underline-offset: 0.14em !important;
+            text-decoration-thickness: 0.08em !important;
           }
           body [bgcolor],
           body [style*="background-color:#fff"],
@@ -815,6 +1026,8 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
 private fun HtmlPageView(
     html: String,
     baseUrl: String?,
+    assetDocumentPath: String?,
+    assetLoader: WebViewAssetLoader?,
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
@@ -827,54 +1040,37 @@ private fun HtmlPageView(
     colorScheme: String = "DAY",
     readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
     fontFamily: String  = "Georgia",
+    fontSourceUrl: String? = null,
     lineHeight: Float   = 1.8f,
+    letterSpacing: Float = 0f,
+    wordSpacing: Float = 0f,
+    paragraphSpacing: Float = 0.2f,
     textAlign: String   = "justify",
     bold: Boolean       = false,
+    overrideTextColor: String? = null,
+    overrideBackgroundColor: String? = null,
+    overrideAccentColor: String? = null,
     translateActionLabel: String,
     dictionaryActionLabel: String,
     explainActionLabel: String
 ) {
     val context = LocalContext.current
-    // Small constant breathing room at the top. statusBarsPadding() on the modifier already
-    // pushes the WebView content below the status bar / camera notch, so we only need a
-    // small gap here regardless of whether the top bar is visible (it overlays as an overlay).
     val topPaddingPx = 8
     val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
-    val bgColor = remember(bg) { android.graphics.Color.parseColor(bg) }
-    // pageSource resets to null whenever the source html / colours / url change,
-    // then LaunchedEffect rebuilds it off the main thread (Default for theming, IO for file write).
-    var pageSource by remember(html, bg, fg, baseUrl, context.cacheDir.absolutePath) {
-        mutableStateOf<ReaderHtmlPageSource?>(null)
+    val resolvedBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
+    val resolvedFg = normalizeReaderOverrideColor(overrideTextColor) ?: fg
+    val resolvedAccent = normalizeReaderOverrideColor(overrideAccentColor)
+        ?: defaultReaderAccentColor(resolvedBg)
+    val bgColor = remember(resolvedBg) { android.graphics.Color.parseColor(resolvedBg) }
+    val resolvedBaseUrl = remember(baseUrl, assetDocumentPath) {
+        assetDocumentPath?.let(::readerAssetDocumentBaseUrl) ?: baseUrl ?: HTML_READER_BASE_URL
     }
-
-    LaunchedEffect(html, bg, fg, baseUrl, context.cacheDir.absolutePath) {
-        // Build the themed HTML on the Default dispatcher to avoid blocking composition.
-        val themedHtml = withContext(Dispatchers.Default) { buildThemedHtmlDocument(html, bg, fg) }
-        pageSource = withContext(Dispatchers.IO) {
-            if (themedHtml.length <= MAX_INLINE_HTML_SOURCE_LENGTH) {
-                ReaderHtmlPageSource.Inline(
-                    baseUrl = baseUrl ?: HTML_READER_BASE_URL,
-                    html = themedHtml
-                )
-            } else {
-                runCatching {
-                    val tmpFile = readerHtmlCacheFile(context, themedHtml)
-                    tmpFile.writeText(themedHtml, Charsets.UTF_8)
-                    ReaderHtmlPageSource.FileUrl(
-                        url = "file://${tmpFile.absolutePath}",
-                        fallbackBaseUrl = baseUrl ?: HTML_READER_BASE_URL,
-                        fallbackHtml = themedHtml
-                    )
-                }.getOrElse { error ->
-                    Log.w(HTML_READER_TAG, "Failed to cache reader HTML page, falling back to inline load", error)
-                    ReaderHtmlPageSource.Inline(
-                        baseUrl = baseUrl ?: HTML_READER_BASE_URL,
-                        html = themedHtml
-                    )
-                }
-            }
-        }
-    }
+    val pageSource = rememberReaderHtmlPageSource(
+        html = html,
+        bg = resolvedBg,
+        fg = resolvedFg,
+        resolvedBaseUrl = resolvedBaseUrl
+    )
 
     // rememberUpdatedState keeps the lambdas current without recreating the WebView
     val onLeft           = rememberUpdatedState(onLeftTap)
@@ -889,12 +1085,19 @@ private fun HtmlPageView(
     val currentScheme    = rememberUpdatedState(colorScheme)
     val currentPreset    = rememberUpdatedState(readerPreset)
     val currentFamily    = rememberUpdatedState(fontFamily)
+    val currentFontSourceUrl = rememberUpdatedState(fontSourceUrl)
     val currentLH        = rememberUpdatedState(lineHeight)
+    val currentLetterSpacing = rememberUpdatedState(letterSpacing)
+    val currentWordSpacing = rememberUpdatedState(wordSpacing)
+    val currentParagraphSpacing = rememberUpdatedState(paragraphSpacing)
     val currentAlign     = rememberUpdatedState(textAlign)
     val currentBold      = rememberUpdatedState(bold)
 
     AndroidView(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .displayCutoutPadding(),
         factory = { ctx ->
             ReaderWebView(ctx).apply {
                 settings.javaScriptEnabled  = true   // required for tap bridge
@@ -968,6 +1171,14 @@ private fun HtmlPageView(
                 }
 
                 webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): WebResourceResponse? {
+                        assetLoader?.shouldInterceptRequest(request.url)?.let { return it }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+
                     override fun onPageStarted(view: WebView, url: String?, favicon: android.graphics.Bitmap?) {
                         Log.d(HTML_READER_TAG, "WebView page started: ${url ?: "about:blank"}")
                         view.setBackgroundColor(
@@ -1021,12 +1232,27 @@ private fun HtmlPageView(
                     override fun onPageFinished(view: WebView, url: String) {
                         Log.d(HTML_READER_TAG, "WebView page finished: $url")
                         view.evaluateJavascript(JS_TAP_HANDLER, null)
-                        val (bg, fg) = colorSchemePaletteForPreset(currentScheme.value, currentPreset.value)
+                        val (themeBg, themeFg) = colorSchemePaletteForPreset(currentScheme.value, currentPreset.value)
+                        val runtimeBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: themeBg
+                        val runtimeFg = normalizeReaderOverrideColor(overrideTextColor) ?: themeFg
+                        val runtimeAccent = normalizeReaderOverrideColor(overrideAccentColor)
+                            ?: defaultReaderAccentColor(runtimeBg)
                         view.evaluateJavascript(
                             textSettingsJs(
-                                currentFs.value, bg, fg,
-                                currentFamily.value, currentLH.value,
-                                currentAlign.value, currentBold.value,
+                                currentFs.value,
+                                runtimeBg,
+                                runtimeFg,
+                                overrideTextColor = runtimeFg,
+                                overrideBackgroundColor = runtimeBg,
+                                overrideAccentColor = runtimeAccent,
+                                fontFamily = currentFamily.value,
+                                fontSourceUrl = currentFontSourceUrl.value,
+                                lineHeight = currentLH.value,
+                                letterSpacing = currentLetterSpacing.value,
+                                wordSpacing = currentWordSpacing.value,
+                                paragraphSpacing = currentParagraphSpacing.value,
+                                align = currentAlign.value,
+                                bold = currentBold.value,
                                 topPaddingPx = topPaddingPx
                             ), null
                         )
@@ -1080,8 +1306,23 @@ private fun HtmlPageView(
             // Also update the WebView's own background so the color is correct before JS fires.
             webView.setBackgroundColor(bgColor)
             webView.evaluateJavascript(
-                textSettingsJs(fontSize, bg, fg, fontFamily, lineHeight, textAlign, bold,
-                    topPaddingPx = topPaddingPx), null
+                textSettingsJs(
+                    fontSize = fontSize,
+                    bg = resolvedBg,
+                    fg = resolvedFg,
+                    overrideTextColor = resolvedFg,
+                    overrideBackgroundColor = resolvedBg,
+                    overrideAccentColor = resolvedAccent,
+                    fontFamily = fontFamily,
+                    fontSourceUrl = fontSourceUrl,
+                    lineHeight = lineHeight,
+                    letterSpacing = letterSpacing,
+                    wordSpacing = wordSpacing,
+                    paragraphSpacing = paragraphSpacing,
+                    align = textAlign,
+                    bold = bold,
+                    topPaddingPx = topPaddingPx
+                ), null
             )
             val currentSource = pageSource ?: return@AndroidView
             // Only reload when content actually changes — prevents scroll position
@@ -1123,6 +1364,166 @@ private fun HtmlPageView(
     )
 }
 
+@Composable
+private fun HtmlPagePrewarmView(
+    html: String,
+    baseUrl: String?,
+    assetDocumentPath: String?,
+    assetLoader: WebViewAssetLoader?,
+    fontSize: Int,
+    colorScheme: String,
+    readerPreset: ReadingPreset,
+    fontFamily: String,
+    fontSourceUrl: String?,
+    lineHeight: Float,
+    letterSpacing: Float,
+    wordSpacing: Float,
+    paragraphSpacing: Float,
+    textAlign: String,
+    bold: Boolean,
+    overrideTextColor: String? = null,
+    overrideBackgroundColor: String? = null,
+    overrideAccentColor: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val resolvedBaseUrl = remember(baseUrl, assetDocumentPath) {
+        assetDocumentPath?.let(::readerAssetDocumentBaseUrl) ?: baseUrl ?: HTML_READER_BASE_URL
+    }
+    val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
+    val resolvedBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
+    val resolvedFg = normalizeReaderOverrideColor(overrideTextColor) ?: fg
+    val resolvedAccent = normalizeReaderOverrideColor(overrideAccentColor)
+        ?: defaultReaderAccentColor(resolvedBg)
+    val bgColor = remember(resolvedBg) { android.graphics.Color.parseColor(resolvedBg) }
+    val pageSource = rememberReaderHtmlPageSource(
+        html = html,
+        bg = resolvedBg,
+        fg = resolvedFg,
+        resolvedBaseUrl = resolvedBaseUrl
+    )
+    val currentFs = rememberUpdatedState(fontSize)
+    val currentScheme = rememberUpdatedState(colorScheme)
+    val currentPreset = rememberUpdatedState(readerPreset)
+    val currentFamily = rememberUpdatedState(fontFamily)
+    val currentFontSourceUrl = rememberUpdatedState(fontSourceUrl)
+    val currentLH = rememberUpdatedState(lineHeight)
+    val currentLetterSpacing = rememberUpdatedState(letterSpacing)
+    val currentWordSpacing = rememberUpdatedState(wordSpacing)
+    val currentParagraphSpacing = rememberUpdatedState(paragraphSpacing)
+    val currentAlign = rememberUpdatedState(textAlign)
+    val currentBold = rememberUpdatedState(bold)
+
+    AndroidView(
+        modifier = modifier
+            .fillMaxSize()
+            .alpha(0f),
+        factory = { ctx ->
+            ReaderWebView(ctx).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.loadsImagesAutomatically = true
+                settings.allowFileAccess = true
+                settings.allowContentAccess = true
+                settings.textZoom = 100
+                settings.defaultFontSize = 16
+                settings.useWideViewPort = true
+                settings.loadWithOverviewMode = true
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    settings.offscreenPreRaster = true
+                }
+                setBackgroundColor(bgColor)
+                overScrollMode = android.view.View.OVER_SCROLL_NEVER
+                webViewClient = object : WebViewClient() {
+                    override fun shouldInterceptRequest(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): WebResourceResponse? {
+                        assetLoader?.shouldInterceptRequest(request.url)?.let { return it }
+                        return super.shouldInterceptRequest(view, request)
+                    }
+
+                    override fun onPageFinished(view: WebView, url: String) {
+                        val (themeBg, themeFg) = colorSchemePaletteForPreset(currentScheme.value, currentPreset.value)
+                        val runtimeBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: themeBg
+                        val runtimeFg = normalizeReaderOverrideColor(overrideTextColor) ?: themeFg
+                        val runtimeAccent = normalizeReaderOverrideColor(overrideAccentColor)
+                            ?: defaultReaderAccentColor(runtimeBg)
+                        view.evaluateJavascript(
+                            textSettingsJs(
+                                currentFs.value,
+                                runtimeBg,
+                                runtimeFg,
+                                overrideTextColor = runtimeFg,
+                                overrideBackgroundColor = runtimeBg,
+                                overrideAccentColor = runtimeAccent,
+                                fontFamily = currentFamily.value,
+                                fontSourceUrl = currentFontSourceUrl.value,
+                                lineHeight = currentLH.value,
+                                letterSpacing = currentLetterSpacing.value,
+                                wordSpacing = currentWordSpacing.value,
+                                paragraphSpacing = currentParagraphSpacing.value,
+                                align = currentAlign.value,
+                                bold = currentBold.value,
+                                topPaddingPx = 8
+                            ),
+                            null
+                        )
+                    }
+
+                    override fun onPageCommitVisible(view: WebView, url: String?) {
+                        (view as? ReaderWebView)?.markLoadCommitted()
+                    }
+
+                    override fun onReceivedError(
+                        view: WebView,
+                        request: WebResourceRequest,
+                        error: WebResourceError
+                    ) {
+                        if (request.isForMainFrame) {
+                            (view as? ReaderWebView)?.loadInlineFallbackNow()
+                        }
+                        super.onReceivedError(view, request, error)
+                    }
+                }
+            }
+        },
+        update = { webView ->
+            webView.setBackgroundColor(bgColor)
+            val currentSource = pageSource ?: return@AndroidView
+            val cached = webView.tag as? String
+            if (cached != currentSource.loadToken) {
+                webView.markLoadRequested(currentSource.loadToken)
+                when (currentSource) {
+                    is ReaderHtmlPageSource.FileUrl -> {
+                        webView.loadUrl(currentSource.url)
+                        webView.scheduleInlineFallback(
+                            loadToken = currentSource.loadToken,
+                            baseUrl = currentSource.fallbackBaseUrl,
+                            html = currentSource.fallbackHtml
+                        )
+                    }
+
+                    is ReaderHtmlPageSource.Inline -> {
+                        webView.loadDataWithBaseURL(
+                            currentSource.baseUrl,
+                            currentSource.html,
+                            "text/html",
+                            "UTF-8",
+                            null
+                        )
+                        webView.scheduleInlineFallback(
+                            loadToken = currentSource.loadToken,
+                            baseUrl = currentSource.baseUrl,
+                            html = currentSource.html,
+                            delayMillis = 900L
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
@@ -1133,10 +1534,22 @@ fun ReaderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
+    val context = LocalContext.current
+    val readerAssetLoader = remember(viewModel, context) {
+        WebViewAssetLoader.Builder()
+            .addPathHandler(
+                HTML_READER_ASSET_PATH,
+                ReaderFormatAssetPathHandler { path -> viewModel.openHtmlAsset(path) }
+            )
+            .addPathHandler(
+                READER_USER_FONT_ASSET_PATH,
+                ReaderUserFontAssetPathHandler(context)
+            )
+            .build()
+    }
     val inheritedColorScheme = MaterialTheme.colorScheme
     val isEInk = LocalEInkMode.current
     val configuration = LocalConfiguration.current
-    val context = LocalContext.current
     val readerHardwareKeyHost = remember(context) { findReaderHardwareKeyHost(context) }
     val clipboardManager = LocalClipboardManager.current
     val ttsController = remember { ReaderTextToSpeechControllerStore.get(context) }
@@ -1144,9 +1557,15 @@ fun ReaderScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTextReader = uiState.currentHtmlContent != null ||
         (uiState.comic?.format?.isTextReadingFormat() == true)
+    val supportsDocumentMarginCrop = uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU
+    val effectiveMarginCropHorizontal = if (supportsDocumentMarginCrop) uiState.imageMarginCropHorizontal else 0f
+    val effectiveMarginCropVertical = if (supportsDocumentMarginCrop) uiState.imageMarginCropVertical else 0f
     val supportsLandscapeSpread = !isTextReader && isLandscape && configuration.screenWidthDp >= 600
     val activeReaderPreset = remember(uiState.readerPreset) {
         ReadingPreset.fromStored(uiState.readerPreset)
+    }
+    val resolvedTextFont = remember(uiState.textFontFamily, context) {
+        ReaderTextFontCatalog.resolve(context, uiState.textFontFamily)
     }
     var showBrightnessRow by remember { mutableStateOf(false) }
     var openControlCenterAtServices by remember { mutableStateOf(false) }
@@ -1154,6 +1573,86 @@ fun ReaderScreen(
     var showTextTranslationPageSheet by remember { mutableStateOf(false) }
     var pendingTtsRestartTargetPage by remember { mutableStateOf<Int?>(null) }
     var eyeRestReminderMinutes by remember { mutableStateOf<Int?>(null) }
+    var fontCatalogVersion by remember { mutableIntStateOf(0) }
+    var pendingCustomFontDeletion by rememberSaveable { mutableStateOf<String?>(null) }
+    val fontImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val importedFont = runCatching { ReaderTextFontCatalog.importFont(context, uri) }.getOrNull()
+        if (importedFont != null) {
+            fontCatalogVersion += 1
+            viewModel.setTextFontFamily(importedFont)
+            Toast.makeText(context, importedFont, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(
+                context,
+                if (strings.languageCode == "ru") "Не удалось импортировать шрифт" else "Couldn't import font",
+                Toast.LENGTH_SHORT
+                ).show()
+        }
+    }
+    val deleteCustomFont = { fontName: String ->
+        val deleted = runCatching { ReaderTextFontCatalog.deleteCustomFont(context, fontName) }.getOrDefault(false)
+        if (deleted) {
+            fontCatalogVersion += 1
+            if (uiState.textFontFamily == fontName) {
+                viewModel.setTextFontFamily("Georgia")
+            }
+            Toast.makeText(
+                context,
+                if (strings.languageCode == "ru") "Шрифт удалён" else "Font deleted",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                context,
+                if (strings.languageCode == "ru") "Не удалось удалить шрифт" else "Couldn't delete font",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    val latestUiState by rememberUpdatedState(uiState)
+    val readerStyleImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val importedStyle = runCatching {
+            context.contentResolver.openInputStream(uri)
+                ?.bufferedReader()
+                ?.use { it.readText() }
+                ?.let { viewModel.importReaderStyleFromJson(it) }
+        }.getOrNull()
+        Toast.makeText(
+            context,
+            if (importedStyle != null) {
+                if (strings.languageCode == "ru") "Импортирован стиль: $importedStyle" else "Imported style: $importedStyle"
+            } else {
+                if (strings.languageCode == "ru") "Не удалось импортировать стиль" else "Couldn't import style"
+            },
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+    val readerStyleExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val exported = runCatching {
+            val payload = buildReaderTypographyExportJson(latestUiState)
+            context.contentResolver.openOutputStream(uri)?.use { out ->
+                out.write(payload.toByteArray(Charsets.UTF_8))
+            } ?: error("No output stream")
+        }.isSuccess
+        Toast.makeText(
+            context,
+            if (exported) {
+                if (strings.languageCode == "ru") "Стиль экспортирован" else "Style exported"
+            } else {
+                if (strings.languageCode == "ru") "Не удалось экспортировать стиль" else "Couldn't export style"
+            },
+            Toast.LENGTH_SHORT
+        ).show()
+    }
     val readerColorScheme = if (isEInk) {
         inheritedColorScheme
     } else {
@@ -1479,12 +1978,52 @@ fun ReaderScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     val htmlContent = uiState.currentHtmlContent
                     if (htmlContent != null) {
+                        uiState.previousHtmlContent?.let { previousHtml ->
+                            HtmlPagePrewarmView(
+                                html = previousHtml,
+                                baseUrl = uiState.htmlBaseUrl,
+                                assetDocumentPath = uiState.previousHtmlAssetBasePath,
+                                assetLoader = readerAssetLoader,
+                                fontSize = uiState.textFontSize,
+                                colorScheme = uiState.textColorScheme,
+                                readerPreset = activeReaderPreset,
+                                fontFamily = resolvedTextFont.familyName,
+                                fontSourceUrl = resolvedTextFont.sourceUrl,
+                                lineHeight = uiState.textLineHeight,
+                                letterSpacing = uiState.textLetterSpacing,
+                                wordSpacing = uiState.textWordSpacing,
+                                paragraphSpacing = uiState.textParagraphSpacing,
+                                textAlign = uiState.textAlignment,
+                                bold = uiState.textBold
+                            )
+                        }
+                        uiState.nextHtmlContent?.let { nextHtml ->
+                            HtmlPagePrewarmView(
+                                html = nextHtml,
+                                baseUrl = uiState.htmlBaseUrl,
+                                assetDocumentPath = uiState.nextHtmlAssetBasePath,
+                                assetLoader = readerAssetLoader,
+                                fontSize = uiState.textFontSize,
+                                colorScheme = uiState.textColorScheme,
+                                readerPreset = activeReaderPreset,
+                                fontFamily = resolvedTextFont.familyName,
+                                fontSourceUrl = resolvedTextFont.sourceUrl,
+                                lineHeight = uiState.textLineHeight,
+                                letterSpacing = uiState.textLetterSpacing,
+                                wordSpacing = uiState.textWordSpacing,
+                                paragraphSpacing = uiState.textParagraphSpacing,
+                                textAlign = uiState.textAlignment,
+                                bold = uiState.textBold
+                            )
+                        }
                         // Text-based format (EPUB novel / FB2 text): render via WebView.
                         // Tap callbacks are passed here because WebView intercepts all
                         // touch events, making the outer pointerInput unreachable.
                         HtmlPageView(
                             html = htmlContent,
                             baseUrl = uiState.htmlBaseUrl,
+                            assetDocumentPath = uiState.htmlAssetBasePath,
+                            assetLoader = readerAssetLoader,
                             onLeftTap   = { handleTapZoneAction(tapZoneLayout.left) },
                             onRightTap  = { handleTapZoneAction(tapZoneLayout.right) },
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
@@ -1506,8 +2045,12 @@ fun ReaderScreen(
                             fontSize     = uiState.textFontSize,
                             colorScheme  = uiState.textColorScheme,
                             readerPreset = activeReaderPreset,
-                            fontFamily   = uiState.textFontFamily,
+                            fontFamily   = resolvedTextFont.familyName,
+                            fontSourceUrl = resolvedTextFont.sourceUrl,
                             lineHeight   = uiState.textLineHeight,
+                            letterSpacing = uiState.textLetterSpacing,
+                            wordSpacing = uiState.textWordSpacing,
+                            paragraphSpacing = uiState.textParagraphSpacing,
                             textAlign    = uiState.textAlignment,
                             bold         = uiState.textBold,
                             translateActionLabel = readerText.selectionTranslateAction,
@@ -1519,6 +2062,8 @@ fun ReaderScreen(
                             viewModel = viewModel,
                             uiState = uiState,
                             imageScaleMode = uiState.imageScaleMode,
+                            marginCropHorizontal = effectiveMarginCropHorizontal,
+                            marginCropVertical = effectiveMarginCropVertical,
                             onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
                             onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
@@ -1528,6 +2073,8 @@ fun ReaderScreen(
                             viewModel = viewModel,
                             uiState = uiState,
                             imageScaleMode = uiState.imageScaleMode,
+                            marginCropHorizontal = effectiveMarginCropHorizontal,
+                            marginCropVertical = effectiveMarginCropVertical,
                             onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
                             onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
@@ -1549,6 +2096,12 @@ fun ReaderScreen(
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.03f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
                     minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else READER_TOOLBAR_MIN_OPACITY
                 )
+                val overlayTextStyle = remember(overlaySurface, activeReaderPreset) {
+                    readerHeaderFooterOverlayStyle(
+                        surfaceColor = overlaySurface,
+                        eink = activeReaderPreset == ReadingPreset.EINK
+                    )
+                }
 
                 if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
                     Surface(
@@ -1564,6 +2117,8 @@ fun ReaderScreen(
                             leftPaddingDp = uiState.headerFooterLeftPadding,
                             rightPaddingDp = uiState.headerFooterRightPadding,
                             verticalPaddingDp = uiState.headerFooterVerticalPadding,
+                            textColor = overlayTextStyle.textColor,
+                            textShadow = overlayTextStyle.textShadow,
                             modifier = Modifier
                                 .statusBarsPadding()
                                 .displayCutoutPadding()
@@ -1653,6 +2208,8 @@ fun ReaderScreen(
                                     leftPaddingDp = uiState.headerFooterLeftPadding,
                                     rightPaddingDp = uiState.headerFooterRightPadding,
                                     verticalPaddingDp = uiState.headerFooterVerticalPadding,
+                                    textColor = overlayTextStyle.textColor,
+                                    textShadow = overlayTextStyle.textShadow,
                                     modifier = Modifier.navigationBarsPadding()
                                 )
                             }
@@ -1818,6 +2375,7 @@ fun ReaderScreen(
             uiState = uiState,
             isTextReader = isTextReader,
             ttsRuntimeState = ttsRuntimeState,
+            fontCatalogVersion = fontCatalogVersion,
             openAtServicesTab = openControlCenterAtServices,
             onDismiss = {
                 openControlCenterAtServices = false
@@ -1828,6 +2386,9 @@ fun ReaderScreen(
             onColorSchemeChange = viewModel::setTextColorScheme,
             onFontFamilyChange = viewModel::setTextFontFamily,
             onLineHeightChange = viewModel::setTextLineHeight,
+            onLetterSpacingChange = viewModel::setTextLetterSpacing,
+            onWordSpacingChange = viewModel::setTextWordSpacing,
+            onParagraphSpacingChange = viewModel::setTextParagraphSpacing,
             onTextAlignChange = viewModel::setTextAlignment,
             onBoldChange = viewModel::setTextBold,
             onResetStyle = viewModel::resetTextSettings,
@@ -1852,8 +2413,18 @@ fun ReaderScreen(
             onToolbarOpacityChange = viewModel::setToolbarOpacity,
             onToolbarBlurChange = viewModel::setToolbarBlur,
             onImageScaleModeChange = viewModel::setImageScaleMode,
+            onImageMarginCropHorizontalChange = viewModel::setImageMarginCropHorizontal,
+            onImageMarginCropVerticalChange = viewModel::setImageMarginCropVertical,
             onChromeIconVisibleChange = viewModel::setChromeIconVisible,
             onMoveChromeIcon = viewModel::moveChromeIcon,
+            onImportCustomFont = { fontImportLauncher.launch(arrayOf("*/*")) },
+            onDeleteCustomFont = { pendingCustomFontDeletion = it },
+            onImportReaderStyle = { readerStyleImportLauncher.launch(arrayOf("application/json", "*/*")) },
+            onExportReaderStyle = { readerStyleExportLauncher.launch(readerTypographyExportFileName(uiState)) },
+            onSaveCurrentReaderStylePreset = viewModel::saveCurrentReaderStylePreset,
+            onOverwriteReaderStylePreset = viewModel::overwriteReaderStylePreset,
+            onApplyReaderStylePreset = viewModel::applyReaderStylePreset,
+            onDeleteReaderStylePreset = viewModel::deleteReaderStylePreset,
             onOpenToc = viewModel::toggleTocSheet,
             onToggleBookmark = viewModel::toggleBookmark,
             onRequestOcr = viewModel::requestOcr,
@@ -1869,6 +2440,36 @@ fun ReaderScreen(
             onTtsPitchChange = viewModel::setTtsPitch,
             onTtsVolumeChange = viewModel::setTtsVolume,
             onTtsSleepTimerChange = viewModel::setTtsSleepTimerMode
+        )
+    }
+    pendingCustomFontDeletion?.let { fontName ->
+        AlertDialog(
+            onDismissRequest = { pendingCustomFontDeletion = null },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingCustomFontDeletion = null
+                    deleteCustomFont(fontName)
+                }) {
+                    Text(if (strings.languageCode == "ru") "Удалить" else "Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCustomFontDeletion = null }) {
+                    Text(if (strings.languageCode == "ru") "Отмена" else "Cancel")
+                }
+            },
+            title = {
+                Text(if (strings.languageCode == "ru") "Удалить шрифт?" else "Delete font?")
+            },
+            text = {
+                Text(
+                    if (strings.languageCode == "ru") {
+                        "Шрифт \"$fontName\" будет удалён из приложения. Если он выбран сейчас, чтение вернётся на Georgia."
+                    } else {
+                        "Font \"$fontName\" will be removed from the app. If it is currently selected, reading will fall back to Georgia."
+                    }
+                )
+            }
         )
     }
     uiState.selectedTextActionSheet?.let { actionState ->
@@ -2762,15 +3363,17 @@ private fun TextSettingsSheet(
                     )
                 }
                 item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(ReadingPreset.PAPER, ReadingPreset.NIGHT_INK, ReadingPreset.EINK).forEach { preset ->
-                            FilterChip(
-                                selected = currentPreset == preset.name,
-                                onClick = { onApplyReadingPreset(preset) },
-                                label = {
-                                    Text(readerPresetLabel(preset, strings.languageCode))
-                                }
-                            )
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        com.example.core.ui.theme.readingPresetQuickChoices().forEach { preset ->
+                            item {
+                                FilterChip(
+                                    selected = currentPreset == preset.name,
+                                    onClick = { onApplyReadingPreset(preset) },
+                                    label = {
+                                        Text(readerPresetLabel(preset, strings.languageCode))
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -2804,11 +3407,14 @@ private fun TextSettingsSheet(
                     )
                 }
                 item {
-                    val fonts = listOf("Georgia", "Merriweather", "Open Sans", "Roboto Slab", "PT Serif", "Literata")
+                    val fontPickerContext = LocalContext.current
+                    val fonts = remember(fontPickerContext) {
+                        ReaderTextFontCatalog.availableFontFamilies(fontPickerContext)
+                    }
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(fonts) { f ->
                             FilterChip(
-                                selected = fontFamily == f,
+                                selected = (fontFamily == f) || (fontFamily !in fonts && f == "Georgia"),
                                 onClick = { onFontFamilyChange(f) },
                                 label = { Text(f, style = MaterialTheme.typography.bodySmall) }
                             )

@@ -104,7 +104,7 @@ fun AudiobookPlayerScreen(
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background
                     ),
-                    windowInsets = rootChromeStableTopBarInsets(),
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     title = {
                         Text(
                             text = audiobook?.title ?: "",

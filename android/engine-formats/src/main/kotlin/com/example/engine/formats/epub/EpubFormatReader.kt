@@ -4,10 +4,20 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
+import com.example.core.data.db.EpubManifestCacheDao
+import com.example.core.data.db.EpubManifestCacheEntity
+import com.example.core.data.db.EpubStructureCacheDao
+import com.example.core.data.db.EpubStructureCacheEntity
+import com.google.gson.Gson
 import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.base.FormatReaderWebResource
 import com.example.engine.formats.base.TocEntry
+import com.example.engine.formats.base.EPUB_READER_DOCUMENT_CSS
+import com.example.engine.formats.base.buildReaderDocumentHead
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.FileHeader
@@ -28,8 +38,27 @@ private fun safeLogE(tag: String, message: String, throwable: Throwable? = null)
 }
 
 internal fun sanitizeInlineEpubCss(css: String): String {
-    val fontFaceRegex = Regex("""(?is)@font-face\s*\{.*?}""")
-    var result = fontFaceRegex.replace(css, "").trim()
+    return sanitizeEpubCss(css, stripFontFace = true)
+}
+
+internal fun sanitizeAssetBackedEpubCss(
+    css: String,
+    cssEntryPath: String? = null,
+    assetExists: (String) -> Boolean = { true }
+): String {
+    val sanitized = sanitizeEpubCss(css, stripFontFace = false)
+    return sanitizeAssetBackedFontFaces(sanitized, cssEntryPath, assetExists)
+}
+
+private fun sanitizeEpubCss(css: String, stripFontFace: Boolean): String {
+    var result = css.trim()
+    if (stripFontFace) {
+        val fontFaceRegex = Regex(
+            """@font-face\s*[{][\s\S]*?[}]""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
+        result = fontFaceRegex.replace(result, "").trim()
+    }
 
     // Strip dominant #id scope prefix (e.g. O'Reilly "#sbo-rt-content").
     // When CSS scopes all rules under a single wrapper ID that we remove during chunking,
@@ -53,10 +82,79 @@ internal fun sanitizeInlineEpubCss(css: String): String {
     return result
 }
 
+private val CSS_URL_REGEX = Regex("""url\(\s*(['"]?)([^'")]+)\1\s*\)""", RegexOption.IGNORE_CASE)
+private val FONT_FACE_BLOCK_REGEX = Regex(
+    """@font-face\s*[{][\s\S]*?[}]""",
+    setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+)
+
+private fun normalizeEpubAssetPath(path: String): String {
+    val stack = ArrayDeque<String>()
+    for (part in path.split('/')) when (part) {
+        ".." -> if (stack.isNotEmpty()) stack.removeLast()
+        ".", "" -> {}
+        else -> stack.addLast(part)
+    }
+    return stack.joinToString("/")
+}
+
+private fun sanitizeAssetBackedFontFaces(
+    css: String,
+    cssEntryPath: String?,
+    assetExists: (String) -> Boolean
+): String {
+    return FONT_FACE_BLOCK_REGEX.replace(css) { match ->
+        val block = match.value
+        var keptUrls = 0
+        val cleanedBlock = CSS_URL_REGEX.replace(block) { urlMatch ->
+            val rawUrl = urlMatch.groupValues[2].trim()
+            if (isSafeAssetBackedCssUrl(rawUrl, cssEntryPath, assetExists)) {
+                keptUrls += 1
+                urlMatch.value
+            } else {
+                "/* mrcomic-stripped-font-url */"
+            }
+        }
+            .replace(Regex("""\s*,\s*/\* mrcomic-stripped-font-url \*/"""), "")
+            .replace(Regex("""/\* mrcomic-stripped-font-url \*/\s*,\s*"""), "")
+            .replace("/* mrcomic-stripped-font-url */", "")
+        if (keptUrls <= 0) "" else cleanedBlock
+    }
+}
+
+private fun isSafeAssetBackedCssUrl(
+    rawUrl: String,
+    cssEntryPath: String?,
+    assetExists: (String) -> Boolean
+): Boolean {
+    if (rawUrl.isBlank()) return false
+    val decoded = try { URLDecoder.decode(rawUrl, "UTF-8") } catch (_: Exception) { rawUrl }
+    val lower = decoded.lowercase()
+    if (lower.startsWith("javascript:")) return false
+    if (lower.startsWith("file:")) return false
+    if (lower.startsWith("content:")) return false
+    if (lower.startsWith("android_asset:")) return false
+    if (lower.startsWith("res:")) return false
+    if (lower.startsWith("data:")) return true
+    if (lower.startsWith("http://") || lower.startsWith("https://")) return true
+    val baseDir = cssEntryPath
+        ?.substringBeforeLast('/', "")
+        .orEmpty()
+    val normalized = normalizeEpubAssetPath(
+        if (decoded.startsWith("/")) decoded.trimStart('/')
+        else if (baseDir.isEmpty()) decoded else "$baseDir/$decoded"
+    )
+    return assetExists(normalized)
+}
+
 internal fun simplifySingleImageSvgContent(html: String): String {
-    val svgBlockRegex = Regex("""(?is)<svg\b[^>]*>.*?</svg>""")
+    val svgBlockRegex = Regex(
+        """<svg\b[^>]*>.*?</svg>""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
     val imageHrefRegex = Regex(
-        """(?is)<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["']([^"']+)["'][^>]*(?:/?>|>.*?</image>)"""
+        """<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["']([^"']+)["'][^>]*(?:/?>|>.*?</image>)""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
     )
     return svgBlockRegex.replace(html) { match ->
         val svgBlock = match.value
@@ -110,7 +208,7 @@ internal fun rebuildNormalizedInlinedEpubDocument(html: String, readerCss: Strin
     headElement.append(readerCss)
     source.head().children().forEach { child ->
         val tag = child.normalName()
-        if (tag == "style" || tag == "title" || tag == "meta") {
+        if (tag == "style" || tag == "title" || tag == "meta" || tag == "link") {
             headElement.appendChild(child.clone())
         }
     }
@@ -132,6 +230,38 @@ internal fun rebuildNormalizedInlinedEpubDocument(html: String, readerCss: Strin
             html.replaceFirst(Regex("<body[^>]*>", RegexOption.IGNORE_CASE), "$0$readerCss")
         else -> "<html><head>$readerCss</head><body>$html</body></html>"
     }
+)
+
+internal fun prepareAssetBackedEpubDocument(
+    html: String,
+    readerCss: String,
+    xhtmlEntryPath: String? = null,
+    assetExists: (String) -> Boolean = { true }
+): String = runCatching {
+    val strippedHtml = html
+        .replaceFirst(Regex("""^\s*<\?xml[^>]*\?>\s*""", RegexOption.IGNORE_CASE), "")
+        .replace(
+            Regex(
+                """<nav\b[^>]*\bepub:type\s*=\s*["']page-list["'][^>]*>.*?</nav>""",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            ),
+            ""
+        )
+    val normalized = normalizeInlinedEpubMarkup(simplifySingleImageSvgContent(strippedHtml))
+    val document = Jsoup.parse(normalized)
+    document.outputSettings(Document.OutputSettings().prettyPrint(false))
+    document.select("style").forEach { styleElement ->
+        styleElement.html(
+            sanitizeAssetBackedEpubCss(
+                css = styleElement.data(),
+                cssEntryPath = xhtmlEntryPath,
+                assetExists = assetExists
+            )
+        )
+    }
+    rebuildNormalizedInlinedEpubDocument(document.outerHtml(), readerCss)
+}.getOrDefault(
+    rebuildNormalizedInlinedEpubDocument(html, readerCss)
 )
 
 internal data class EpubContentEstimate(
@@ -196,9 +326,13 @@ internal fun shouldKeepWholeEpubHtmlBody(bodyHtml: String): Boolean {
     // first 6 AND last 6 regex blocks (previous .take(12) missed long chapters).
     val htmlTagRegex = Regex("<[^>]+>")
     val htmlBlockRegex = Regex(
-        """(?is)(.+?</(?:p|div|h1|h2|h3|h4|h5|h6|blockquote|li|tr|section|article|aside|ul|ol)>|.+$)"""
+        """(.+?</(?:p|div|h1|h2|h3|h4|h5|h6|blockquote|li|tr|section|article|aside|ul|ol)>|.+$)""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
     )
-    val closingWrapperRegex = Regex("""(?is)^</(?:span|font)\b""")
+    val closingWrapperRegex = Regex(
+        """^</(?:span|font)\b""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
     val allBlocks = htmlBlockRegex.findAll(bodyHtml)
         .map { it.value.trim() }
         .filter { it.isNotEmpty() }
@@ -224,11 +358,21 @@ internal fun shouldKeepWholeEpubHtmlBody(bodyHtml: String): Boolean {
  */
 class EpubFormatReader(
     private val context: Context,
-    private val path: String
+    private val path: String,
+    private val structureCacheDao: EpubStructureCacheDao? = null,
+    private val manifestCacheDao: EpubManifestCacheDao? = null
 ) : FormatReader {
 
     companion object {
         private const val TAG = "EpubFormatReader"
+        private const val EPUB_STRUCTURE_CACHE_VERSION = 4
+        private const val EPUB_MANIFEST_CACHE_VERSION = 2
+        private const val EPUB_STRUCTURE_CACHE_MAX_AGE_MS = 30L * 24L * 60L * 60L * 1000L
+        private const val EPUB_FLAVOR_STANDARD = "standard"
+        private const val EPUB_FLAVOR_FB2 = "fb2"
+        private const val EPUB_FLAVOR_CALIBRE = "calibre"
+        private const val EPUB_FLAVOR_PUBLISHER = "publisher"
+        private val CACHE_GSON = Gson()
         /**
          * Target non-whitespace character count per reader page.
          * ~2000 chars ≈ roughly one screenful at 18px/1.8lh on a typical phone.
@@ -238,7 +382,8 @@ class EpubFormatReader(
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
         private val HTML_BLOCK_RE = Regex(
-            """(?is)(.+?</(?:p|div|h1|h2|h3|h4|h5|h6|blockquote|li|tr|section|article|aside|ul|ol)>|.+$)"""
+            """(.+?</(?:p|div|h1|h2|h3|h4|h5|h6|blockquote|li|tr|section|article|aside|ul|ol)>|.+$)""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
         )
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
         private val XHTML_EXTENSIONS = setOf("xhtml", "html", "htm")
@@ -253,51 +398,9 @@ class EpubFormatReader(
          * Low-specificity selectors ensure publisher CSS wins for custom elements;
          * we only provide mobile-friendly defaults with dark mode support.
          */
-        private val CSS_INJECT = """
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-            body{font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.6;
-                 padding:16px 16px 24px;color:#1a1a1a;background:#fafafa;
-                 max-width:720px;margin:0 auto;overflow-wrap:break-word;word-break:normal;
-                 hyphens:auto;-webkit-hyphens:auto;text-align:justify}
-            p,div.paragraph{margin:0.2em 0;text-indent:1.5em}
-            p:first-child,div.paragraph:first-child,
-            h1+p,h2+p,h3+p,h4+p,h5+p,h6+p,
-            h1+div.paragraph,h2+div.paragraph,h3+div.paragraph,h4+div.paragraph,h5+div.paragraph,h6+div.paragraph{text-indent:0}
-            h1,h2,h3,h4,h5,h6{text-align:center;text-indent:0;margin:1.2em 0 0.5em;
-                               font-weight:bold;hyphens:none;-webkit-hyphens:none}
-            img{max-width:100%;height:auto;display:block;margin:8px auto}
-            a{color:inherit}
-            blockquote,cite{margin:0.8em 1.5em;padding-left:1em;
-                            border-left:3px solid #bbb;font-style:italic;color:#555;
-                            hyphens:none;-webkit-hyphens:none}
-            cite{display:block;margin-top:0.3em}
-            table{width:100%;border-collapse:collapse}
-            td,th{padding:4px 8px;border:1px solid #ccc}
-            /* Alignment utility classes used by publishers */
-            .center,.align-center,[align="center"]{text-align:center !important;text-indent:0}
-            .right,.align-right,[align="right"]{text-align:right !important;text-indent:0}
-            .left,.align-left,[align="left"]{text-align:left !important}
-            /* Footnote inline link (superscript) */
-            a.fn,a[epub\\:type~="noteref"],a[href*="FbAutId_"],a[href*="#FbAutId_"],a[href^="fbanchor://"],a[title][href*="#"]{
-              font-size:0.75em;vertical-align:super;line-height:1;color:#1a6f9a;font-weight:bold;text-decoration:none}
-            a.fn *,a[epub\\:type~="noteref"] *,a[href*="FbAutId_"] *,a[href*="#FbAutId_"] *,a[href^="fbanchor://"] *,a[title][href*="#"] *{
-              color:#1a6f9a}
-            /* Footnote entry on notes page — Readera style: bold blue number + hanging text */
-            p.note-item,aside[epub\\:type~="footnote"],section[epub\\:type~="footnote"]>p:first-child
-              {margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left}
-            .note-num,.footnote-label{color:#1a6f9a;font-weight:bold;
-              display:inline-block;min-width:2.8em;text-indent:0}
-            @media (prefers-color-scheme: dark) {
-              body{color:#e8e8e8;background:#1a1a1a}
-              h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{color:#e8e8e8;background:#262626;border-color:#555}
-              blockquote,cite{border-left-color:#555;color:#aaa}
-              td,th{border-color:#444}
-              a.fn,a[epub\\:type~="noteref"],a[href*="FbAutId_"],a[href*="#FbAutId_"],a[href^="fbanchor://"],a[title][href*="#"],.note-num,.footnote-label{color:#5ab4dc}
-              a.fn *,a[epub\\:type~="noteref"] *,a[href*="FbAutId_"] *,a[href*="#FbAutId_"] *,a[href^="fbanchor://"] *,a[title][href*="#"] *{color:#5ab4dc}
-            }
-            </style>
-        """.trimIndent()
+        private val CSS_INJECT = buildReaderDocumentHead(
+            baseCss = EPUB_READER_DOCUMENT_CSS
+        )
     }
 
     // ── ZipFile lifecycle ─────────────────────────────────────────────────────
@@ -313,6 +416,9 @@ class EpubFormatReader(
      */
     private val htmlCache = object : LinkedHashMap<String, String>(12, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 8
+    }
+    private val pageHtmlCache = object : LinkedHashMap<Int, String>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?) = size > 12
     }
 
     private sealed class EpubPage {
@@ -342,84 +448,155 @@ class EpubFormatReader(
 
     /** Holds both the page list and the extracted TOC from one OPF pass. */
     private data class ParsedEpub(
-        val pages: List<EpubPage>,
-        val tocEntries: List<TocEntry>,
-        val footnoteMap: Map<String, String>
+        val pages: List<EpubPage>
     )
 
-    private val parsed: ParsedEpub by lazy {
+    private data class ManifestBlueprint(
+        val manifest: Map<String, String>,
+        val spine: List<String>,
+        val ncxId: String?,
+        val opfDir: String,
+        val flavor: String,
+        val repairFrontMatter: Boolean
+    )
+
+    private data class EpubCacheKey(
+        val filePath: String,
+        val fileSize: Long,
+        val lastModified: Long
+    )
+
+    private data class CachedParsedEpubPayload(
+        val version: Int,
+        val pages: List<CachedPage>
+    )
+
+    private data class CachedPage(
+        val type: String,
+        val entry: String,
+        val opfDir: String? = null,
+        val chunkIndex: Int = 0,
+        val totalChunks: Int = 1,
+        val extraEntries: List<String> = emptyList(),
+        val html: String? = null,
+        val sourceEntries: List<String> = emptyList()
+    )
+
+    private data class CachedManifestPayload(
+        val version: Int,
+        val manifest: Map<String, String>,
+        val spine: List<String>,
+        val ncxId: String?,
+        val opfDir: String,
+        val flavor: String,
+        val repairFrontMatter: Boolean
+    )
+
+    private val manifestBlueprint: ManifestBlueprint? by lazy {
         try {
-            val zip = ensureZip() ?: return@lazy ParsedEpub(emptyList(), emptyList(), emptyMap())
-            val fallbackPages = fallbackContentPages(zip)
+            val cacheKey = currentCacheKey()
+            loadManifestFromCache(cacheKey)?.let { return@lazy it }
+            val zip = ensureZip() ?: return@lazy null
             val opfEntry = findOpfEntry(zip)
             if (opfEntry != null) {
                 val opfDir = opfEntry.substringBeforeLast('/', "")
                 val header = zip.getFileHeader(opfEntry)
-                    ?: return@lazy ParsedEpub(fallbackPages, emptyList(), emptyMap())
+                    ?: return@lazy null
                 val opfBytes = zip.getInputStream(header).use { it.readBytes() }
                 val opfText = opfBytes.toString(Charsets.UTF_8)
                 val isFb2Epub = opfText.contains("FB2EPUB.", ignoreCase = true) ||
                     opfText.contains("FB2EPUB.version", ignoreCase = true)
+                val isCalibreEpub = opfText.contains("calibre ", ignoreCase = true) ||
+                    opfText.contains("<meta name=\"calibre:", ignoreCase = true) ||
+                    opfText.contains("calibre-ebook.com", ignoreCase = true)
                 val (manifest, spine, ncxId) = runCatching {
                     parseOpfRegexFallback(opfText)
                 }.recoverCatching {
                     parseOpf(opfBytes.inputStream())
                 }.getOrElse { error ->
-                    safeLogW(TAG, "Failed to parse OPF, using fallback listing", error)
-                    return@lazy ParsedEpub(fallbackPages, emptyList(), emptyMap())
+                    safeLogW(TAG, "Failed to parse OPF for manifest cache", error)
+                    return@lazy null
                 }
                 if (manifest.isEmpty() || spine.isEmpty()) {
-                    return@lazy ParsedEpub(fallbackPages, emptyList(), emptyMap())
+                    return@lazy null
                 }
-                val pages = runCatching {
-                    val builtPages = if (isFb2Epub) {
-                        buildFb2EpubPagesFromSpine(manifest, spine, opfDir, zip)
-                    } else {
-                        buildPagesFromOpf(manifest, spine, opfDir, zip, forceWholeHtmlEntries = false)
-                    }
-                    if (shouldRepairFrontMatter(opfText, builtPages)) {
-                        val (strictManifest, strictSpine, _) = parseOpfRegexFallback(opfText, ncxId)
-                        buildStrictFb2EpubPagesFromSpine(strictManifest, strictSpine, opfDir, zip)
-                            .ifEmpty { builtPages }
-                    } else {
-                        builtPages
-                    }
-                }.getOrElse { error ->
-                    safeLogW(TAG, "Failed to build pages from OPF, using fallback listing", error)
-                    fallbackPages
-                }
-                val tocEntries = runCatching {
-                    if (ncxId != null) {
-                        val ncxHref = manifest[ncxId]
-                        if (ncxHref != null) parseToc(zip, opfDir, ncxHref, pages)
-                        else emptyList()
-                    } else emptyList()
-                }.getOrElse { error ->
-                    safeLogW(TAG, "Failed to parse EPUB TOC", error)
-                    emptyList()
-                }
-                val footnoteMap = runCatching {
-                    buildFootnoteMap(manifest, spine, opfDir, zip)
-                }.getOrElse { error ->
-                    safeLogW(TAG, "Failed to parse EPUB footnotes", error)
-                    emptyMap()
-                }
-                ParsedEpub(pages, tocEntries, footnoteMap)
+                val isPublisherEpub = detectPublisherEpub(opfText, manifest, spine)
+                val repairFrontMatter = shouldRepairFrontMatter(opfText, manifest, spine)
+                val blueprint = ManifestBlueprint(
+                    manifest = manifest,
+                    spine = spine,
+                    ncxId = ncxId,
+                    opfDir = opfDir,
+                    flavor = when {
+                        isFb2Epub -> EPUB_FLAVOR_FB2
+                        isCalibreEpub -> EPUB_FLAVOR_CALIBRE
+                        isPublisherEpub -> EPUB_FLAVOR_PUBLISHER
+                        else -> EPUB_FLAVOR_STANDARD
+                    },
+                    repairFrontMatter = repairFrontMatter
+                )
+                storeManifestInCache(cacheKey, blueprint)
+                blueprint
             } else {
-                ParsedEpub(fallbackPages, emptyList(), emptyMap())
+                null
             }
+        } catch (e: Exception) {
+            safeLogE(TAG, "Failed to build EPUB manifest cache blueprint", e)
+            null
+        }
+    }
+
+    private val parsed: ParsedEpub by lazy {
+        try {
+            val cacheKey = currentCacheKey()
+            loadParsedFromCache(cacheKey)?.let { return@lazy it }
+            val zip = ensureZip() ?: return@lazy ParsedEpub(emptyList())
+            val fallbackPages = fallbackContentPages(zip)
+            val blueprint = manifestBlueprint
+            if (blueprint == null) {
+                return@lazy ParsedEpub(fallbackPages)
+            }
+            val pages = runCatching {
+                buildPagesFromBlueprint(blueprint, zip).ifEmpty { fallbackPages }
+            }.getOrElse { error ->
+                safeLogW(TAG, "Failed to build EPUB pages from manifest cache", error)
+                fallbackPages
+            }
+            val parsed = ParsedEpub(pages = pages)
+            storeParsedInCache(cacheKey, parsed)
+            parsed
         } catch (e: Exception) {
             safeLogE(TAG, "Failed to build EPUB page list", e)
             val zip = runCatching { ensureZip() }.getOrNull()
             if (zip != null) {
-                ParsedEpub(fallbackContentPages(zip), emptyList(), emptyMap())
+                ParsedEpub(fallbackContentPages(zip))
             } else {
-                ParsedEpub(emptyList(), emptyList(), emptyMap())
+                ParsedEpub(emptyList())
             }
         }
     }
 
     private val pages: List<EpubPage> get() = parsed.pages
+    private val lazyTocEntries: List<TocEntry> by lazy {
+        val blueprint = manifestBlueprint ?: return@lazy emptyList()
+        runCatching {
+            val zip = ensureZip() ?: return@runCatching emptyList()
+            buildTocFromBlueprint(blueprint, pages, zip)
+        }.getOrElse { error ->
+            safeLogW(TAG, "Failed to build EPUB TOC from manifest cache", error)
+            emptyList()
+        }
+    }
+    private val footnoteMap: Map<String, String> by lazy {
+        val blueprint = manifestBlueprint ?: return@lazy emptyMap()
+        runCatching {
+            val zip = ensureZip() ?: return@runCatching emptyMap()
+            buildFootnoteMap(blueprint.manifest, blueprint.spine, blueprint.opfDir, zip)
+        }.getOrElse { error ->
+            safeLogW(TAG, "Failed to parse EPUB footnotes", error)
+            emptyMap()
+        }
+    }
 
     // ── FormatReader ──────────────────────────────────────────────────────────
 
@@ -441,8 +618,12 @@ class EpubFormatReader(
     }
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
+        synchronized(pageHtmlCache) { pageHtmlCache[index] }?.let { return@withContext it }
         when (val page = pages.getOrNull(index)) {
-            is EpubPage.SyntheticHtml -> return@withContext page.html
+            is EpubPage.SyntheticHtml -> {
+                synchronized(pageHtmlCache) { pageHtmlCache[index] = page.html }
+                return@withContext page.html
+            }
             !is EpubPage.Html -> return@withContext null
             else -> Unit
         }
@@ -458,7 +639,12 @@ class EpubFormatReader(
                     val bytes = stream.readBytes()
                     detectCharset(bytes).let { bytes.toString(it) }
                 }
-                val html = inlineImages(raw, header.fileName, page.opfDir, zip)
+                val html = prepareAssetBackedEpubDocument(
+                    html = raw,
+                    readerCss = CSS_INJECT,
+                    xhtmlEntryPath = entry,
+                    assetExists = { candidate -> findHeader(zip, candidate) != null }
+                )
                 synchronized(htmlCache) { htmlCache[entry] = html }
                 return html
             }
@@ -467,17 +653,66 @@ class EpubFormatReader(
 
             if (page.extraEntries.isEmpty()) {
                 // Normal path: single entry, optionally chunked.
-                return@withContext if (page.totalChunks == 1) firstHtml
-                                   else extractChunk(firstHtml, page.chunkIndex, page.totalChunks)
+                val pageHtml = if (page.totalChunks == 1) firstHtml
+                               else extractChunk(firstHtml, page.chunkIndex, page.totalChunks)
+                synchronized(pageHtmlCache) { pageHtmlCache[index] = pageHtml }
+                return@withContext pageHtml
             }
 
             // Merged path: append body content from extra entries before </body>.
             val extraBodies = page.extraEntries.mapNotNull { entry ->
                 buildHtml(entry)?.let { extractWrappedBodyContent(it) }
             }.filter { it.isNotBlank() }   // skip empty bodies
-            firstHtml.replace("</body>", extraBodies.joinToString("") + "</body>", ignoreCase = true)
+            val pageHtml = firstHtml.replace("</body>", extraBodies.joinToString("") + "</body>", ignoreCase = true)
+            synchronized(pageHtmlCache) { pageHtmlCache[index] = pageHtml }
+            pageHtml
         } catch (e: Exception) {
             safeLogW(TAG, "HTML read failed for ${page.entry}", e); null
+        }
+    }
+
+    override fun htmlAssetBasePath(index: Int): String? {
+        return when (val page = pages.getOrNull(index)) {
+            is EpubPage.Html -> page.entry
+            else -> null
+        }
+    }
+
+    override fun openHtmlAsset(path: String): FormatReaderWebResource? {
+        return try {
+            val zip = ensureZip() ?: return null
+            val normalizedPath = normalizePath(
+                try {
+                    URLDecoder.decode(path.substringBefore('#').substringBefore('?'), "UTF-8")
+                } catch (_: Exception) {
+                    path.substringBefore('#').substringBefore('?')
+                }
+            )
+            val header = findHeader(zip, normalizedPath) ?: return null
+            val bytes = zip.getInputStream(header).use(InputStream::readBytes)
+            val extension = header.fileName.substringAfterLast('.', "").lowercase()
+            when (extension) {
+                "css" -> {
+                    val sanitizedCss = sanitizeAssetBackedEpubCss(
+                        css = bytes.toString(detectCharset(bytes)),
+                        cssEntryPath = header.fileName,
+                        assetExists = { candidate -> findHeader(zip, candidate) != null }
+                    )
+                    FormatReaderWebResource(
+                        mimeType = "text/css",
+                        bytes = sanitizedCss.toByteArray(Charsets.UTF_8),
+                        encoding = "UTF-8"
+                    )
+                }
+                else -> FormatReaderWebResource(
+                    mimeType = epubMimeTypeFor(extension),
+                    bytes = bytes,
+                    encoding = epubTextEncodingFor(extension)
+                )
+            }
+        } catch (e: Exception) {
+            safeLogW(TAG, "Failed to open EPUB asset: $path", e)
+            null
         }
     }
 
@@ -507,9 +742,9 @@ class EpubFormatReader(
         }
     }.getOrElse { extractBodyContent(html) }
 
-    override fun getTableOfContents(): List<TocEntry> = parsed.tocEntries
+    override fun getTableOfContents(): List<TocEntry> = lazyTocEntries
 
-    override fun getFootnoteText(anchorId: String): String? = parsed.footnoteMap[anchorId]
+    override fun getFootnoteText(anchorId: String): String? = footnoteMap[anchorId]
 
     /**
      * Resolves a relative EPUB href like `chapter2.xhtml` or `chapter2.xhtml#anchor`
@@ -526,9 +761,249 @@ class EpubFormatReader(
             try { zipFile?.close() } catch (_: Exception) {}
             zipFile = null
             synchronized(htmlCache) { htmlCache.clear() }
+            synchronized(pageHtmlCache) { pageHtmlCache.clear() }
             tempFile?.let { runCatching { it.delete() } }
             tempFile = null
         }
+    }
+
+    private fun buildPagesFromBlueprint(blueprint: ManifestBlueprint, zip: ZipFile): List<EpubPage> {
+        val builtPages = when (blueprint.flavor) {
+            EPUB_FLAVOR_FB2 -> buildFb2EpubPagesFromSpine(
+                blueprint.manifest,
+                blueprint.spine,
+                blueprint.opfDir,
+                zip
+            )
+            EPUB_FLAVOR_CALIBRE -> buildCalibreEpubPagesFromSpine(
+                blueprint.manifest,
+                blueprint.spine,
+                blueprint.opfDir,
+                zip
+            )
+            EPUB_FLAVOR_PUBLISHER -> buildPublisherEpubPagesFromSpine(
+                blueprint.manifest,
+                blueprint.spine,
+                blueprint.opfDir,
+                zip
+            )
+            else -> buildPagesFromOpf(
+                blueprint.manifest,
+                blueprint.spine,
+                blueprint.opfDir,
+                zip,
+                forceWholeHtmlEntries = false
+            )
+        }
+        return if (blueprint.repairFrontMatter) {
+            buildStrictFb2EpubPagesFromSpine(
+                blueprint.manifest,
+                blueprint.spine,
+                blueprint.opfDir,
+                zip
+            ).ifEmpty { builtPages }
+        } else {
+            builtPages
+        }
+    }
+
+    private fun buildTocFromBlueprint(
+        blueprint: ManifestBlueprint,
+        pages: List<EpubPage>,
+        zip: ZipFile
+    ): List<TocEntry> {
+        val ncxId = blueprint.ncxId ?: return emptyList()
+        val ncxHref = blueprint.manifest[ncxId] ?: return emptyList()
+        return parseToc(zip, blueprint.opfDir, ncxHref, pages)
+    }
+
+    private fun currentCacheKey(): EpubCacheKey? {
+        if (path.startsWith("content://")) return null
+        val file = runCatching { File(path).canonicalFile }.getOrElse { File(path).absoluteFile }
+        if (!file.isFile) return null
+        return EpubCacheKey(
+            filePath = file.path,
+            fileSize = file.length(),
+            lastModified = file.lastModified()
+        )
+    }
+
+    private fun loadManifestFromCache(cacheKey: EpubCacheKey?): ManifestBlueprint? {
+        if (cacheKey == null) return null
+        val cacheDao = manifestCacheDao ?: return null
+        val cachedEntry = runCatching {
+            runBlocking { cacheDao.getByPath(cacheKey.filePath) }
+        }.getOrElse { error ->
+            safeLogW(TAG, "Failed to load EPUB manifest cache", error)
+            null
+        } ?: return null
+        if (cachedEntry.fileSize != cacheKey.fileSize || cachedEntry.lastModified != cacheKey.lastModified) {
+            return null
+        }
+        return deserializeManifestBlueprint(cachedEntry.payloadJson)
+    }
+
+    private fun storeManifestInCache(cacheKey: EpubCacheKey?, blueprint: ManifestBlueprint) {
+        if (cacheKey == null || blueprint.manifest.isEmpty() || blueprint.spine.isEmpty()) return
+        val cacheDao = manifestCacheDao ?: return
+        val payloadJson = runCatching { serializeManifestBlueprint(blueprint) }.getOrElse { error ->
+            safeLogW(TAG, "Failed to serialize EPUB manifest cache", error)
+            return
+        }
+        runCatching {
+            runBlocking {
+                cacheDao.upsert(
+                    EpubManifestCacheEntity(
+                        filePath = cacheKey.filePath,
+                        fileSize = cacheKey.fileSize,
+                        lastModified = cacheKey.lastModified,
+                        payloadJson = payloadJson,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+                cacheDao.deleteOlderThan(System.currentTimeMillis() - EPUB_STRUCTURE_CACHE_MAX_AGE_MS)
+            }
+        }.onFailure { error ->
+            safeLogW(TAG, "Failed to persist EPUB manifest cache", error)
+        }
+    }
+
+    private fun loadParsedFromCache(cacheKey: EpubCacheKey?): ParsedEpub? {
+        if (cacheKey == null) return null
+        val cacheDao = structureCacheDao ?: return null
+        val cachedEntry = runCatching {
+            runBlocking { cacheDao.getByPath(cacheKey.filePath) }
+        }.getOrElse { error ->
+            safeLogW(TAG, "Failed to load EPUB structure cache", error)
+            null
+        } ?: return null
+        if (cachedEntry.fileSize != cacheKey.fileSize || cachedEntry.lastModified != cacheKey.lastModified) {
+            return null
+        }
+        return deserializeParsedEpub(cachedEntry.payloadJson)
+    }
+
+    private fun storeParsedInCache(cacheKey: EpubCacheKey?, parsed: ParsedEpub) {
+        if (cacheKey == null || parsed.pages.isEmpty()) return
+        val cacheDao = structureCacheDao ?: return
+        val payloadJson = runCatching { serializeParsedEpub(parsed) }.getOrElse { error ->
+            safeLogW(TAG, "Failed to serialize EPUB structure cache", error)
+            return
+        }
+        runCatching {
+            runBlocking {
+                cacheDao.upsert(
+                    EpubStructureCacheEntity(
+                        filePath = cacheKey.filePath,
+                        fileSize = cacheKey.fileSize,
+                        lastModified = cacheKey.lastModified,
+                        payloadJson = payloadJson,
+                        updatedAt = System.currentTimeMillis()
+                    )
+                )
+                cacheDao.deleteOlderThan(System.currentTimeMillis() - EPUB_STRUCTURE_CACHE_MAX_AGE_MS)
+            }
+        }.onFailure { error ->
+            safeLogW(TAG, "Failed to persist EPUB structure cache", error)
+        }
+    }
+
+    private fun serializeManifestBlueprint(blueprint: ManifestBlueprint): String = CACHE_GSON.toJson(
+        CachedManifestPayload(
+            version = EPUB_MANIFEST_CACHE_VERSION,
+            manifest = blueprint.manifest,
+            spine = blueprint.spine,
+            ncxId = blueprint.ncxId,
+            opfDir = blueprint.opfDir,
+            flavor = blueprint.flavor,
+            repairFrontMatter = blueprint.repairFrontMatter
+        )
+    )
+
+    private fun deserializeManifestBlueprint(payloadJson: String): ManifestBlueprint? = runCatching {
+        val payload = CACHE_GSON.fromJson(payloadJson, CachedManifestPayload::class.java)
+        if (payload.version != EPUB_MANIFEST_CACHE_VERSION) return@runCatching null
+        if (payload.manifest.isEmpty() || payload.spine.isEmpty()) return@runCatching null
+        ManifestBlueprint(
+            manifest = payload.manifest,
+            spine = payload.spine,
+            ncxId = payload.ncxId,
+            opfDir = payload.opfDir,
+            flavor = payload.flavor.ifBlank { EPUB_FLAVOR_STANDARD },
+            repairFrontMatter = payload.repairFrontMatter
+        )
+    }.getOrElse { error ->
+        safeLogW(TAG, "Failed to deserialize EPUB manifest cache", error)
+        null
+    }
+
+    private fun serializeParsedEpub(parsed: ParsedEpub): String = CACHE_GSON.toJson(
+        CachedParsedEpubPayload(
+            version = EPUB_STRUCTURE_CACHE_VERSION,
+            pages = parsed.pages.map { it.toCachedPage() }
+        )
+    )
+
+    private fun deserializeParsedEpub(payloadJson: String): ParsedEpub? = runCatching {
+        val payload = CACHE_GSON.fromJson(payloadJson, CachedParsedEpubPayload::class.java)
+        if (payload.version != EPUB_STRUCTURE_CACHE_VERSION) return@runCatching null
+        val pages = payload.pages.mapNotNull { it.toEpubPage() }
+        if (pages.isEmpty()) return@runCatching null
+
+        ParsedEpub(pages = pages)
+    }.getOrElse { error ->
+        safeLogW(TAG, "Failed to deserialize EPUB structure cache", error)
+        null
+    }
+
+    private fun EpubPage.toCachedPage(): CachedPage = when (this) {
+        is EpubPage.Image -> CachedPage(
+            type = "image",
+            entry = entry
+        )
+        is EpubPage.Html -> CachedPage(
+            type = "html",
+            entry = entry,
+            opfDir = opfDir,
+            chunkIndex = chunkIndex,
+            totalChunks = totalChunks,
+            extraEntries = extraEntries
+        )
+        is EpubPage.SyntheticHtml -> CachedPage(
+            type = "synthetic",
+            entry = entry,
+            html = html,
+            chunkIndex = chunkIndex,
+            totalChunks = totalChunks,
+            sourceEntries = sourceEntries
+        )
+    }
+
+    private fun CachedPage.toEpubPage(): EpubPage? = when (type) {
+        "image" -> entry.trim().takeIf { it.isNotBlank() }?.let(EpubPage::Image)
+        "html" -> entry.trim().takeIf { it.isNotBlank() }?.let {
+            EpubPage.Html(
+                entry = it,
+                opfDir = opfDir.orEmpty(),
+                chunkIndex = chunkIndex,
+                totalChunks = totalChunks.coerceAtLeast(1),
+                extraEntries = extraEntries
+            )
+        }
+        "synthetic" -> {
+            val normalizedEntry = entry.trim()
+            val normalizedHtml = html.orEmpty()
+            if (normalizedEntry.isBlank() || normalizedHtml.isBlank()) null else {
+                EpubPage.SyntheticHtml(
+                    entry = normalizedEntry,
+                    html = normalizedHtml,
+                    chunkIndex = chunkIndex,
+                    totalChunks = totalChunks.coerceAtLeast(1),
+                    sourceEntries = sourceEntries
+                )
+            }
+        }
+        else -> null
     }
 
     // ── Page list construction ────────────────────────────────────────────────
@@ -682,67 +1157,88 @@ class EpubFormatReader(
         opfDir: String,
         zip: ZipFile
     ): List<EpubPage> {
-        data class EntryMetrics(
-            val visibleChars: Int,
-            val imageOnly: Boolean
-        )
-
-        val orderedPages = mutableListOf<EpubPage.Html>()
-        val metricsByEntry = mutableMapOf<String, EntryMetrics>()
-
+        // For FB2EPUB, preserve each spine item as a separate page without merging
+        // This ensures proper front matter structure: cover -> title page -> preliminaries -> chapters
+        val result = mutableListOf<EpubPage>()
+        
         for (idRef in spine) {
             val rawHref = manifest[idRef] ?: continue
             val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
             val href = hrefDecoded.substringBefore('#')
             val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
             val ext = entry.substringAfterLast('.', "").lowercase()
-            if (ext !in XHTML_EXTENSIONS) continue
-            val estimate = estimateContent(zip, entry)
-            val imageOnly = estimate.textCharCount == 0 && estimate.imageTagCount > 0
-            val visibleChars = estimate.textCharCount.coerceAtLeast(if (imageOnly) 1 else 0)
-            metricsByEntry[entry] = EntryMetrics(
-                visibleChars = visibleChars,
-                imageOnly = imageOnly
-            )
-            orderedPages += EpubPage.Html(entry = entry, opfDir = opfDir)
-        }
-
-        if (orderedPages.isEmpty()) return fallbackContentPages(zip)
-
-        val merged = mutableListOf<EpubPage>()
-        var index = 0
-        while (index < orderedPages.size) {
-            val page = orderedPages[index]
-            val metrics = metricsByEntry[page.entry] ?: EntryMetrics(visibleChars = 1, imageOnly = false)
-            val isCoverLike = page.entry.endsWith("cover.xhtml", ignoreCase = true) || metrics.imageOnly
-
-            // Only merge cover pages with adjacent tiny pages; keep everything else separate
-            if (!isCoverLike) {
-                merged += page
-                index++
-                continue
+            
+            when {
+                ext in IMAGE_EXTENSIONS -> {
+                    result.add(EpubPage.Image(entry))
+                }
+                ext in XHTML_EXTENSIONS -> {
+                    val header = findHeader(zip, entry) ?: continue
+                    if (header.uncompressedSize == 0L) continue
+                    
+                    val estimate = estimateContent(zip, entry)
+                    val charCount = estimate.textCharCount
+                    val imgCount = estimate.imageTagCount
+                    
+                    // Include pages that have either text or images
+                    if (charCount > 0 || imgCount > 0) {
+                        val chunks = estimate.chunkCount
+                        repeat(chunks) { i -> 
+                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
+                        }
+                    }
+                }
             }
-
-            val extras = mutableListOf<String>()
-            var combinedVisibleChars = metrics.visibleChars.coerceAtLeast(1)
-            var cursor = index + 1
-            while (cursor < orderedPages.size) {
-                val nextPage = orderedPages[cursor]
-                val nextMetrics = metricsByEntry[nextPage.entry] ?: EntryMetrics(visibleChars = 1, imageOnly = false)
-                val nextIsTiny = nextMetrics.visibleChars in 1..80
-                val nextIsCoverLike = nextMetrics.imageOnly
-                if (!nextIsTiny && !nextIsCoverLike) break
-                if (combinedVisibleChars + nextMetrics.visibleChars > 150) break
-                extras += nextPage.entry
-                combinedVisibleChars += nextMetrics.visibleChars.coerceAtLeast(1)
-                cursor++
-            }
-
-            merged += page.copy(extraEntries = extras)
-            index = cursor
         }
+        
+        return if (result.isNotEmpty()) result else fallbackContentPages(zip)
+    }
 
-        return merged
+    private fun buildCalibreEpubPagesFromSpine(
+        manifest: Map<String, String>,
+        spine: List<String>,
+        opfDir: String,
+        zip: ZipFile
+    ): List<EpubPage> {
+        // For Calibre-generated EPUBs, preserve the exact spine order without merging
+        // Calibre EPUBs often have TOC as the first page, followed by notes index, then content
+        val result = mutableListOf<EpubPage>()
+        
+        for (idRef in spine) {
+            val rawHref = manifest[idRef] ?: continue
+            val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
+            val href = hrefDecoded.substringBefore('#')
+            val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
+            val ext = entry.substringAfterLast('.', "").lowercase()
+            
+            when {
+                ext in IMAGE_EXTENSIONS -> {
+                    result.add(EpubPage.Image(entry))
+                }
+                ext in XHTML_EXTENSIONS -> {
+                    // For Calibre EPUBs, always include XHTML pages even if they appear short
+                    // This ensures TOC and notes pages are preserved
+                    val header = findHeader(zip, entry) ?: continue
+                    if (header.uncompressedSize == 0L) continue
+                    
+                    // Estimate content but don't skip based on char count
+                    val estimate = estimateContent(zip, entry)
+                    val charCount = estimate.textCharCount
+                    val imgCount = estimate.imageTagCount
+                    
+                    // Always include pages that have either text or images
+                    if (charCount > 0 || imgCount > 0) {
+                        val chunks = estimate.chunkCount
+                        repeat(chunks) { i -> 
+                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If no pages were found, fall back to content listing
+        return if (result.isNotEmpty()) result else fallbackContentPages(zip)
     }
 
     private fun buildStrictFb2EpubPagesFromSpine(
@@ -751,47 +1247,125 @@ class EpubFormatReader(
         opfDir: String,
         zip: ZipFile
     ): List<EpubPage> {
-        val orderedEntries = spine.mapNotNull { idRef ->
-            val rawHref = manifest[idRef] ?: return@mapNotNull null
+        // Strict FB2EPUB processing: preserve exact spine order without any merging
+        val result = mutableListOf<EpubPage>()
+        
+        for (idRef in spine) {
+            val rawHref = manifest[idRef] ?: continue
             val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
             val href = hrefDecoded.substringBefore('#')
             val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
             val ext = entry.substringAfterLast('.', "").lowercase()
-            if (ext !in XHTML_EXTENSIONS) return@mapNotNull null
-            if (findHeader(zip, entry) == null) return@mapNotNull null
-            entry
+            
+            when {
+                ext in IMAGE_EXTENSIONS -> {
+                    result.add(EpubPage.Image(entry))
+                }
+                ext in XHTML_EXTENSIONS -> {
+                    val header = findHeader(zip, entry) ?: continue
+                    if (header.uncompressedSize == 0L) continue
+                    
+                    val estimate = estimateContent(zip, entry)
+                    val charCount = estimate.textCharCount
+                    val imgCount = estimate.imageTagCount
+                    
+                    if (charCount > 0 || imgCount > 0) {
+                        val chunks = estimate.chunkCount
+                        repeat(chunks) { i -> 
+                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
+                        }
+                    }
+                }
+            }
         }
-        if (orderedEntries.isEmpty()) return emptyList()
+        
+        return result
+    }
 
-        val repaired = mutableListOf<EpubPage>()
-        var cursor = 0
-        if (orderedEntries.size >= 2 && orderedEntries.first().endsWith("cover.xhtml", ignoreCase = true)) {
-            repaired += EpubPage.Html(
-                entry = orderedEntries.first(),
-                opfDir = opfDir,
-                extraEntries = listOf(orderedEntries[1])
-            )
-            cursor = 2
+    private fun buildPublisherEpubPagesFromSpine(
+        manifest: Map<String, String>,
+        spine: List<String>,
+        opfDir: String,
+        zip: ZipFile
+    ): List<EpubPage> {
+        // For publisher-style EPUBs (O'Reilly, etc.), preserve exact spine order without merging
+        // This ensures proper front matter chain: cover -> title page -> copyright -> preface -> body
+        val result = mutableListOf<EpubPage>()
+        
+        for (idRef in spine) {
+            val rawHref = manifest[idRef] ?: continue
+            val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
+            val href = hrefDecoded.substringBefore('#')
+            val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
+            val ext = entry.substringAfterLast('.', "").lowercase()
+            
+            when {
+                ext in IMAGE_EXTENSIONS -> {
+                    result.add(EpubPage.Image(entry))
+                }
+                ext in XHTML_EXTENSIONS -> {
+                    val header = findHeader(zip, entry) ?: continue
+                    if (header.uncompressedSize == 0L) continue
+                    
+                    val estimate = estimateContent(zip, entry)
+                    val charCount = estimate.textCharCount
+                    val imgCount = estimate.imageTagCount
+                    
+                    if (charCount > 0 || imgCount > 0) {
+                        val chunks = estimate.chunkCount
+                        repeat(chunks) { i -> 
+                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
+                        }
+                    }
+                }
+            }
         }
-
-        while (cursor < orderedEntries.size) {
-            repaired += EpubPage.Html(entry = orderedEntries[cursor], opfDir = opfDir)
-            cursor++
-        }
-
-        return repaired
+        
+        return if (result.isNotEmpty()) result else fallbackContentPages(zip)
     }
 
     private fun hasExpectedFb2FrontMatter(pages: List<EpubPage>): Boolean {
         val coverIndex = resolveFileNameToPageIndex("cover.xhtml", pages)
         val titleIndex = resolveFileNameToPageIndex("ch1.xhtml", pages)
-        return coverIndex == 0 && titleIndex == 0
+        return coverIndex == 0 && titleIndex == 1
     }
 
-    private fun shouldRepairFrontMatter(opfText: String, pages: List<EpubPage>): Boolean {
+    private fun shouldRepairFrontMatter(
+        opfText: String,
+        manifest: Map<String, String>,
+        spine: List<String>
+    ): Boolean {
         if (!opfText.contains("cover.xhtml", ignoreCase = true)) return false
         if (!opfText.contains("ch1.xhtml", ignoreCase = true)) return false
-        return !hasExpectedFb2FrontMatter(pages)
+        val normalizedEntries = spine.mapNotNull { idRef ->
+            manifest[idRef]
+                ?.substringBefore('#')
+                ?.let { rawHref ->
+                    val decoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
+                    normalizePath(decoded)
+                }
+        }
+        val coverIndex = normalizedEntries.indexOfFirst { it.endsWith("cover.xhtml", ignoreCase = true) }
+        val titleIndex = normalizedEntries.indexOfFirst { it.endsWith("ch1.xhtml", ignoreCase = true) }
+        if (coverIndex < 0 || titleIndex < 0) return false
+        return coverIndex != 0 || titleIndex != 1
+    }
+
+    private fun detectPublisherEpub(
+        opfText: String,
+        manifest: Map<String, String>,
+        spine: List<String>
+    ): Boolean {
+        val lowerOpf = opfText.lowercase()
+        if ("oreilly" in lowerOpf || "early release" in lowerOpf) return true
+        if (manifest.values.any { href ->
+                href.contains("titlepage", ignoreCase = true) ||
+                    href.contains("copyright-page", ignoreCase = true) ||
+                    href.contains("toc01.html", ignoreCase = true)
+            }) {
+            return true
+        }
+        return spine.size >= 4 && manifest.values.any { it.contains("cover.xhtml", ignoreCase = true) }
     }
 
     private fun findOpfEntry(zip: ZipFile): String? {
@@ -825,6 +1399,7 @@ class EpubFormatReader(
     }
 
     private fun parseOpfFallback(rawOpf: String): Triple<Map<String, String>, List<String>, String?> {
+
         val manifest = linkedMapOf<String, String>()
         val spine = mutableListOf<String>()
         val document = Jsoup.parse(rawOpf, "", JsoupXmlParser.xmlParser())
@@ -1102,7 +1677,7 @@ class EpubFormatReader(
         return null
     }
 
-    private val NAV_FILE_RE = Regex("""(?:toc|nav|navigation|ncx)""", RegexOption.IGNORE_CASE)
+    private val NAV_FILE_RE = Regex("""(?:toc|nav|navigation|ncx|contents?)""", RegexOption.IGNORE_CASE)
 
     private fun fallbackContentPages(zip: ZipFile): List<EpubPage> =
         zip.fileHeaders
@@ -1114,11 +1689,32 @@ class EpubFormatReader(
                 val base = name.substringBeforeLast('.')
                 when {
                     ext in IMAGE_EXTENSIONS -> EpubPage.Image(header.fileName)
-                    ext in XHTML_EXTENSIONS && !NAV_FILE_RE.matches(base) ->
+                    ext in XHTML_EXTENSIONS &&
+                        !NAV_FILE_RE.containsMatchIn(base) &&
+                        shouldIncludeFallbackHtml(zip, header) ->
                         EpubPage.Html(header.fileName, header.fileName.substringBeforeLast('/', ""))
                     else -> null
                 }
             }
+
+    private fun shouldIncludeFallbackHtml(zip: ZipFile, header: FileHeader): Boolean {
+        if (header.isDirectory) return false
+        val raw = readTextEntry(zip, header.fileName) ?: return false
+        val document = Jsoup.parse(raw)
+        document.outputSettings(Document.OutputSettings().prettyPrint(false))
+        val body = document.body()
+        val visibleText = body.text()
+            .replace('\u00A0', ' ')
+            .trim()
+        val hasMedia = body.select("img,svg,image,object[type^=image],figure img").isNotEmpty() ||
+            raw.contains("<svg", ignoreCase = true)
+        val hasContent = visibleText.isNotBlank() || hasMedia
+        if (!hasContent) return false
+        if (header.uncompressedSize in 1..500L && visibleText.isBlank() && !hasMedia) {
+            return false
+        }
+        return true
+    }
 
     private fun readTextEntry(zip: ZipFile, entry: String): String? {
         val header = findHeader(zip, entry) ?: return null
@@ -1562,19 +2158,35 @@ class EpubFormatReader(
         return zip.fileHeaders.find { it.fileName.substringAfterLast('/').lowercase() == name }
     }
 
+    private fun epubMimeTypeFor(extension: String): String = when (extension) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "gif" -> "image/gif"
+        "webp" -> "image/webp"
+        "svg" -> "image/svg+xml"
+        "css" -> "text/css"
+        "htm", "html", "xhtml" -> "text/html"
+        "ttf" -> "font/ttf"
+        "otf" -> "font/otf"
+        "woff" -> "font/woff"
+        "woff2" -> "font/woff2"
+        "js" -> "application/javascript"
+        "xml", "ncx" -> "application/xml"
+        else -> "application/octet-stream"
+    }
+
+    private fun epubTextEncodingFor(extension: String): String? = when (extension) {
+        "css", "htm", "html", "xhtml", "xml", "ncx", "js" -> "UTF-8"
+        else -> null
+    }
+
     private fun ensureZip(): ZipFile? {
         synchronized(lock) {
             zipFile?.let { return it }
             return try {
                 val filePath = if (path.startsWith("content://")) {
                     val uri = Uri.parse(path)
-                    val dir = File(context.cacheDir, "epub_cache").apply { mkdirs() }
-                    val tmp = File(dir, "epub_${uri.hashCode()}.epub")
-                    if (!tmp.exists() || tmp.length() == 0L) {
-                        context.contentResolver.openInputStream(uri)?.use { input ->
-                            tmp.outputStream().use { output -> input.copyTo(output) }
-                        } ?: return null
-                    }
+                    val tmp = ensureCachedContentUriFile(uri) ?: return null
                     tempFile = tmp
                     tmp.absolutePath
                 } else {
@@ -1593,6 +2205,55 @@ class EpubFormatReader(
                 null
             }
         }
+    }
+
+    private fun ensureCachedContentUriFile(uri: Uri): File? {
+        val dir = File(context.cacheDir, "epub_cache").apply { mkdirs() }
+        val expectedSize = runCatching {
+            context.contentResolver.openAssetFileDescriptor(uri, "r")
+                ?.use { descriptor -> descriptor.length.takeIf { it > 0L } }
+        }.getOrNull()
+        val displayName = runCatching {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+                ?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                    } else {
+                        null
+                    }
+                }
+        }.getOrNull()
+        val extension = displayName
+            ?.substringAfterLast('.', "epub")
+            ?.lowercase()
+            ?.takeIf { it.isNotBlank() }
+            ?: "epub"
+        val cacheFile = File(dir, "epub_${uri.hashCode()}_${expectedSize ?: 0L}.$extension")
+        if (cacheFile.exists() &&
+            cacheFile.length() > 0L &&
+            (expectedSize == null || cacheFile.length() == expectedSize)
+        ) {
+            return cacheFile
+        }
+        val tempCopy = File(dir, "${cacheFile.name}.part")
+        runCatching { if (tempCopy.exists()) tempCopy.delete() }
+        val copied = context.contentResolver.openInputStream(uri)?.use { input ->
+            tempCopy.outputStream().use { output -> input.copyTo(output) }
+            true
+        } ?: false
+        if (!copied || tempCopy.length() == 0L || (expectedSize != null && tempCopy.length() != expectedSize)) {
+            runCatching { tempCopy.delete() }
+            return null
+        }
+        if (cacheFile.exists()) {
+            runCatching { cacheFile.delete() }
+        }
+        val finalized = tempCopy.renameTo(cacheFile)
+        if (!finalized) {
+            runCatching { tempCopy.copyTo(cacheFile, overwrite = true) }.getOrNull() ?: return null
+            runCatching { tempCopy.delete() }
+        }
+        return cacheFile
     }
 
     private fun normalizePath(p: String): String {

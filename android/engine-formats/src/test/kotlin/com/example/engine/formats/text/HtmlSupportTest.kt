@@ -46,6 +46,36 @@ class HtmlSupportTest {
         assertTrue(html.contains("alt=\"Pic\""))
     }
 
+    @Test
+    fun simpleHtmlUsesUnifiedBookTypography() {
+        val raw = """
+            <html><head><title>Story</title></head><body>
+            <h1>Story</h1>
+            <p>First paragraph.</p>
+            <p>Second paragraph.</p>
+            </body></html>
+        """.trimIndent()
+
+        val html = renderHtmlToReaderDocument(raw)
+
+        assertTrue(html.contains("font-family: Georgia, \"Times New Roman\", serif;"))
+        assertTrue(html.contains("text-indent: 1.5em;"))
+        assertTrue(!html.contains("data-mrcomic-preserve-layout", ignoreCase = true))
+    }
+
+    @Test
+    fun complexHtmlKeepsPreserveLayoutMode() {
+        val raw = """
+            <html><body>
+            <table><tr><td>Grid</td><td>Layout</td></tr></table>
+            </body></html>
+        """.trimIndent()
+
+        val html = renderHtmlToReaderDocument(raw)
+
+        assertTrue(html.contains("data-mrcomic-preserve-layout=\"true\"", ignoreCase = true))
+    }
+
     private fun locateCorpusFile(name: String): java.io.File {
         val userDir = System.getProperty("user.dir") ?: "."
         var current = java.io.File(userDir).absoluteFile

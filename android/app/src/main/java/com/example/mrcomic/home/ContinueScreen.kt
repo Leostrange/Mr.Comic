@@ -760,7 +760,7 @@ private fun ContinueTopBar(
                 )
             },
             colors = rootChromeTopBarColors(),
-            windowInsets = rootChromeStableTopBarInsets(),
+            windowInsets = WindowInsets(0, 0, 0, 0),
             actions = {
                 FilledTonalIconButton(onClick = onOpenProgressProfile) {
                     Icon(

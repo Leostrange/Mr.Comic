@@ -67,6 +67,21 @@ class MarkdownSupportTest {
         assertTrue(blocks.joinToString("\n").contains("<h1>"))
     }
 
+    @Test
+    fun realCorpusKeepsOrderedListsAndBlockquotes() {
+        val samplePath = locateCorpusFile("markdown_commonmark_spec.md")
+        assertTrue("Expected real markdown corpus sample to exist", samplePath.exists())
+
+        val raw = samplePath.readText(Charsets.UTF_8)
+        val html = renderMarkdownToHtmlBlocks(raw).joinToString("\n")
+
+        assertTrue(raw.contains("How much indentation is needed for a sublist?"))
+        assertTrue(raw.contains("The overriding design goal for Markdown's formatting syntax"))
+        assertTrue(html.contains("<blockquote>"))
+        assertTrue(html.contains("<li>"))
+        assertTrue(html.contains("Introduction"))
+    }
+
     private fun locateCorpusFile(name: String): java.io.File {
         val userDir = System.getProperty("user.dir") ?: "."
         var current = java.io.File(userDir).absoluteFile

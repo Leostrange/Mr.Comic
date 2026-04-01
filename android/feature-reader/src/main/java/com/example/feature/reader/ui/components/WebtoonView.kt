@@ -1,6 +1,5 @@
 package com.example.feature.reader.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.ScrollableDefaults
@@ -18,8 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -45,11 +42,19 @@ fun WebtoonView(
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
     imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
+    marginCropHorizontal: Float = 0f,
+    marginCropVertical: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     val isEInk = LocalEInkMode.current
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = uiState.currentPage)
     var zoomedPageIndex by remember { mutableStateOf<Int?>(null) }
+    val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
+        ReaderImageCrop(
+            horizontalFraction = marginCropHorizontal,
+            verticalFraction = marginCropVertical
+        )
+    }
 
     // User scrolled the list → update the ViewModel's current page.
     // snapshotFlow + distinctUntilChanged prevents re-entrancy: the emission
@@ -105,6 +110,7 @@ fun WebtoonView(
                             }
                         },
                         imageScaleMode = imageScaleMode,
+                        crop = imageCrop,
                         modifier = Modifier.fillMaxWidth()
                     )
                 } else {
@@ -127,6 +133,7 @@ private fun ZoomableFillWidthImage(
     onCenterTap: () -> Unit,
     onZoomChanged: (Boolean) -> Unit,
     imageScaleMode: String,
+    crop: ReaderImageCrop,
     modifier: Modifier = Modifier
 ) {
     BoxWithConstraints(
@@ -136,18 +143,28 @@ private fun ZoomableFillWidthImage(
         val density = LocalDensity.current
         val containerWidthPx = with(density) { maxWidth.toPx().coerceAtLeast(1f) }
         val containerHeightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
-        val (baseWidthPx, baseHeightPx) = remember(bitmap, containerWidthPx, containerHeightPx, imageScaleMode) {
+        val (sourceWidthPx, sourceHeightPx) = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
+            croppedSourceDimensions(bitmap, crop)
+        }
+        val (baseWidthPx, baseHeightPx) = remember(
+            bitmap,
+            containerWidthPx,
+            containerHeightPx,
+            imageScaleMode,
+            sourceWidthPx,
+            sourceHeightPx
+        ) {
             when (ReaderImageScaleMode.fromStored(imageScaleMode)) {
                 ReaderImageScaleMode.FIT_WIDTH -> {
-                    val h = containerWidthPx * (bitmap.height.toFloat().coerceAtLeast(1f) / bitmap.width.toFloat().coerceAtLeast(1f))
+                    val h = containerWidthPx * (sourceHeightPx / sourceWidthPx.coerceAtLeast(1f))
                     containerWidthPx to h
                 }
                 ReaderImageScaleMode.FIT_HEIGHT -> {
-                    val w = containerHeightPx * (bitmap.width.toFloat().coerceAtLeast(1f) / bitmap.height.toFloat().coerceAtLeast(1f))
+                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
                     w to containerHeightPx
                 }
                 ReaderImageScaleMode.REAL_SIZE -> {
-                    bitmap.width.toFloat() to bitmap.height.toFloat()
+                    sourceWidthPx to sourceHeightPx
                 }
             }
         }
@@ -245,11 +262,11 @@ private fun ZoomableFillWidthImage(
                     }
                 }
         ) {
-            Image(
-                bitmap = bitmap.asImageBitmap(),
+            CroppedBitmapImage(
+                bitmap = bitmap,
                 contentDescription = contentDescription,
+                crop = crop,
                 contentScale = ContentScale.FillBounds,
-                filterQuality = FilterQuality.High,
                 modifier = Modifier
                     .requiredWidth(imageWidth * scale)
                     .requiredHeight(imageHeight * scale)

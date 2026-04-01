@@ -5,6 +5,13 @@ import android.graphics.Bitmap
 /** One entry in the book's table of contents. */
 data class TocEntry(val title: String, val pageIndex: Int)
 
+/** Binary web resource used by HTML-based readers through WebViewAssetLoader. */
+data class FormatReaderWebResource(
+    val mimeType: String,
+    val bytes: ByteArray,
+    val encoding: String? = null
+)
+
 interface FormatReader {
     /** Return total page count */
     suspend fun getPageCount(): Int
@@ -29,6 +36,18 @@ interface FormatReader {
      * paths resolve correctly. Typically a `file://` URL of the extraction directory.
      */
     fun htmlBaseUrl(): String? = null
+
+    /**
+     * Optional current document path for WebViewAssetLoader-backed HTML content.
+     * When non-null, the reader can resolve relative CSS/image/font resources lazily.
+     */
+    fun htmlAssetBasePath(index: Int): String? = null
+
+    /**
+     * Resolves a lazily-served HTML resource (CSS, image, font, etc.) for WebViewAssetLoader.
+     * [path] is a normalized relative path inside the document container.
+     */
+    fun openHtmlAsset(path: String): FormatReaderWebResource? = null
 
     /** Metadata: title, series, etc. (optional) */
     suspend fun getMetadata(): Map<String, String> = emptyMap()

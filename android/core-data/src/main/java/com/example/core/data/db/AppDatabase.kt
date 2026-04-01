@@ -3,14 +3,19 @@ package com.example.core.data.db
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.example.core.data.db.AudiobookEntity
 import com.example.core.model.Comic
 import com.example.core.model.Converters
 import com.example.core.model.SavedQuote
 
 @Database(
-    entities = [Comic::class, SavedQuote::class, AudiobookEntity::class],
-    version = 4,
+    entities = [
+        Comic::class,
+        SavedQuote::class,
+        AudiobookEntity::class,
+        EpubStructureCacheEntity::class,
+        EpubManifestCacheEntity::class
+    ],
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -18,4 +23,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun comicDao(): ComicDao
     abstract fun quoteDao(): QuoteDao
     abstract fun audiobookDao(): AudiobookDao
+    abstract fun epubStructureCacheDao(): EpubStructureCacheDao
+    abstract fun epubManifestCacheDao(): EpubManifestCacheDao
 }

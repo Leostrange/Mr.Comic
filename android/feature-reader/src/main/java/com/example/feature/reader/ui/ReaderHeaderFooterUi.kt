@@ -11,7 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,6 +33,45 @@ internal data class ReaderInfoOverlayLine(
 ) {
     val hasVisibleContent: Boolean
         get() = start.isNotBlank() || center.isNotBlank() || end.isNotBlank()
+}
+
+internal data class ReaderHeaderFooterOverlayStyle(
+    val textColor: Color,
+    val textShadow: Shadow?
+)
+
+internal fun readerHeaderFooterOverlayStyle(
+    surfaceColor: Color,
+    eink: Boolean = false
+): ReaderHeaderFooterOverlayStyle {
+    if (eink) {
+        return ReaderHeaderFooterOverlayStyle(
+            textColor = Color(0xFF111111),
+            textShadow = null
+        )
+    }
+    val perceivedLuminance =
+        0.299f * surfaceColor.red + 0.587f * surfaceColor.green + 0.114f * surfaceColor.blue
+    val isLightSurface = perceivedLuminance >= 0.55f
+    return if (isLightSurface) {
+        ReaderHeaderFooterOverlayStyle(
+            textColor = Color(0xFF241B14),
+            textShadow = Shadow(
+                color = Color.White.copy(alpha = 0.24f),
+                offset = Offset(0f, 0.75f),
+                blurRadius = 2.5f
+            )
+        )
+    } else {
+        ReaderHeaderFooterOverlayStyle(
+            textColor = Color(0xFFF4EEE4),
+            textShadow = Shadow(
+                color = Color.Black.copy(alpha = 0.34f),
+                offset = Offset(0f, 1.25f),
+                blurRadius = 4.5f
+            )
+        )
+    }
 }
 
 @Composable
@@ -149,8 +190,17 @@ internal fun ReaderHeaderFooterTextRow(
     rightPaddingDp: Int,
     verticalPaddingDp: Int,
     modifier: Modifier = Modifier,
-    textColor: Color = MaterialTheme.colorScheme.onSurface
+    textColor: Color = MaterialTheme.colorScheme.onSurface,
+    textShadow: Shadow? = null
 ) {
+    val rowTextStyle = MaterialTheme.typography.labelSmall.copy(
+        fontSize = fontSizeSp.coerceIn(10, 20).sp,
+        shadow = textShadow ?: Shadow(
+            color = Color.Transparent,
+            offset = Offset.Zero,
+            blurRadius = 0f
+        )
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -165,7 +215,7 @@ internal fun ReaderHeaderFooterTextRow(
         Text(
             text = line.start,
             modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = fontSizeSp.coerceIn(10, 20).sp),
+            style = rowTextStyle,
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -174,7 +224,7 @@ internal fun ReaderHeaderFooterTextRow(
             text = line.center,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = fontSizeSp.coerceIn(10, 20).sp),
+            style = rowTextStyle,
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -183,7 +233,7 @@ internal fun ReaderHeaderFooterTextRow(
             text = line.end,
             modifier = Modifier.weight(1f),
             textAlign = TextAlign.End,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = fontSizeSp.coerceIn(10, 20).sp),
+            style = rowTextStyle,
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

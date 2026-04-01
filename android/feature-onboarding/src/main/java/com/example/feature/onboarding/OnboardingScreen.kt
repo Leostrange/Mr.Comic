@@ -63,8 +63,12 @@ private data class OnboardingText(
     val ocrDescription: String,
     val paperTitle: String,
     val paperDescription: String,
+    val sepiaTitle: String,
+    val sepiaDescription: String,
     val nightInkTitle: String,
     val nightInkDescription: String,
+    val oledTitle: String,
+    val oledDescription: String,
     val einkTitle: String,
     val einkDescription: String
 )
@@ -84,8 +88,12 @@ private fun onboardingText(language: String): OnboardingText = when (language) {
         ocrDescription = "Translation starts from the reader only when you need it, instead of taking over the whole interface.",
         paperTitle = "Paper",
         paperDescription = "Bright page and soft contrast for long reading sessions.",
+        sepiaTitle = "Sepia",
+        sepiaDescription = "Warmer paper tone and softer rhythm for evening book reading.",
         nightInkTitle = "Night Ink",
         nightInkDescription = "Dark reader and lower brightness for evening reading.",
+        oledTitle = "OLED Black",
+        oledDescription = "Pure black background and quiet chrome for night reading in the dark.",
         einkTitle = "E-Ink",
         einkDescription = "High contrast and minimal chrome for e-ink and calm reading."
     )
@@ -103,8 +111,12 @@ private fun onboardingText(language: String): OnboardingText = when (language) {
         ocrDescription = "翻訳は必要になった瞬間にリーダーから呼び出し、常に画面を占有しません。",
         paperTitle = "Paper",
         paperDescription = "明るい紙面とやわらかいコントラストで、長時間の読書に向きます。",
+        sepiaTitle = "Sepia",
+        sepiaDescription = "少し暖かい紙色と落ち着いたリズムで、本をゆっくり読むのに向きます。",
         nightInkTitle = "Night Ink",
         nightInkDescription = "夜の読書向けに、暗いリーダーと落ち着いた明るさを使います。",
+        oledTitle = "OLED Black",
+        oledDescription = "真っ黒な背景と静かなクロームで、暗い場所の読書に向きます。",
         einkTitle = "E-Ink",
         einkDescription = "高コントラストで余計な要素を減らし、e-ink と静かな読書に合わせます。"
     )
@@ -122,8 +134,12 @@ private fun onboardingText(language: String): OnboardingText = when (language) {
         ocrDescription = "翻译只在你需要时从阅读器里启动，不会长期占据主界面。",
         paperTitle = "Paper",
         paperDescription = "明亮纸面和柔和对比，适合长时间阅读。",
+        sepiaTitle = "Sepia",
+        sepiaDescription = "更温暖的纸色与更柔和的节奏，适合慢慢读书。",
         nightInkTitle = "Night Ink",
         nightInkDescription = "深色阅读器与更低亮度，适合夜间阅读。",
+        oledTitle = "OLED Black",
+        oledDescription = "纯黑背景与安静界面，更适合黑暗环境下阅读。",
         einkTitle = "E-Ink",
         einkDescription = "高对比与极简界面，更适合电子墨水屏和安静阅读。"
     )
@@ -141,8 +157,12 @@ private fun onboardingText(language: String): OnboardingText = when (language) {
         ocrDescription = "번역은 필요할 때 리더 안에서만 시작되고, 메인 화면을 계속 차지하지 않습니다.",
         paperTitle = "Paper",
         paperDescription = "밝은 페이지와 부드러운 대비로 긴 읽기에 잘 맞습니다.",
+        sepiaTitle = "Sepia",
+        sepiaDescription = "더 따뜻한 종이 톤과 차분한 리듬으로 천천히 읽기에 좋습니다.",
         nightInkTitle = "Night Ink",
         nightInkDescription = "밤 시간대에 맞춘 어두운 리더와 낮은 밝기입니다.",
+        oledTitle = "OLED Black",
+        oledDescription = "완전한 검정 배경과 조용한 크롬으로 어두운 곳 reading에 맞춥니다.",
         einkTitle = "E-Ink",
         einkDescription = "높은 대비와 최소한의 요소로 e-ink 와 차분한 읽기에 맞춥니다."
     )
@@ -160,8 +180,12 @@ private fun onboardingText(language: String): OnboardingText = when (language) {
         ocrDescription = "Перевод запускается из ридера, когда нужен, а не занимает главное место в интерфейсе.",
         paperTitle = "Paper",
         paperDescription = "Светлый лист и мягкий контраст для длинного чтения.",
+        sepiaTitle = "Сепия",
+        sepiaDescription = "Тёплый бумажный тон и более мягкий ритм для спокойного книжного чтения.",
         nightInkTitle = "Night Ink",
         nightInkDescription = "Тёмный ридер и приглушённая яркость для вечерних сессий.",
+        oledTitle = "OLED Black",
+        oledDescription = "Чистый чёрный фон и тихий chrome для чтения в темноте.",
         einkTitle = "E-Ink",
         einkDescription = "Высокий контраст и минимум лишнего для e-ink и спокойного чтения."
     )
@@ -342,11 +366,25 @@ private fun PresetChoiceList(
             onClick = { onPresetSelected(ReadingPreset.PAPER) }
         )
         PresetChoiceCard(
+            preset = ReadingPreset.SEPIA_BOOK,
+            title = text.sepiaTitle,
+            description = text.sepiaDescription,
+            isSelected = selectedPreset == ReadingPreset.SEPIA_BOOK,
+            onClick = { onPresetSelected(ReadingPreset.SEPIA_BOOK) }
+        )
+        PresetChoiceCard(
             preset = ReadingPreset.NIGHT_INK,
             title = text.nightInkTitle,
             description = text.nightInkDescription,
             isSelected = selectedPreset == ReadingPreset.NIGHT_INK,
             onClick = { onPresetSelected(ReadingPreset.NIGHT_INK) }
+        )
+        PresetChoiceCard(
+            preset = ReadingPreset.OLED_BLACK,
+            title = text.oledTitle,
+            description = text.oledDescription,
+            isSelected = selectedPreset == ReadingPreset.OLED_BLACK,
+            onClick = { onPresetSelected(ReadingPreset.OLED_BLACK) }
         )
         PresetChoiceCard(
             preset = ReadingPreset.EINK,

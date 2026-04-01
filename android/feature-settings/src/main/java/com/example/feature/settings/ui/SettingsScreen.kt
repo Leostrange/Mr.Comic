@@ -7,6 +7,7 @@ package com.example.feature.settings.ui
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -59,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.core.model.ReadingMode
 import com.example.core.model.ReaderInfoSlot
+import com.example.core.model.ReaderImageScaleMode
 import com.example.core.model.ReaderScreenTimeoutMode
 import com.example.core.model.ReaderTapZoneAction
 import com.example.core.model.ReaderTapZoneMode
@@ -98,7 +100,10 @@ import com.example.core.ui.theme.ThemeMode
 import com.example.core.ui.theme.ThemePreset
 import com.example.core.ui.theme.previewColors
 import com.example.core.ui.theme.style
+import com.example.feature.reader.ui.ReaderTextFontCatalog
 import java.util.Locale
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 // ──────────── Navigation model ────────────
 
@@ -274,9 +279,28 @@ private data class ReaderStyleSettingsText(
     val cardHint: String,
     val quickPresetsTitle: String,
     val colorSchemeTitle: String,
+    val importPresetLabel: String,
+    val exportPresetLabel: String,
+    val savedStylesTitle: String,
+    val savedStylesHint: String,
+    val savedStyleSlotPrefix: String,
+    val savedStyleSave: String,
+    val savedStyleApply: String,
+    val savedStyleClear: String,
+    val savedStyleRename: String,
+    val savedStyleRenameTitle: String,
+    val savedStyleNameLabel: String,
+    val savedStyleRenameHint: String,
+    val savedStyleRenameConfirm: String,
+    val savedStyleRenameCancel: String,
+    val savedStyleEmpty: String,
     val fontTitle: String,
+    val importFontLabel: String,
     val fontSizeTitle: String,
     val lineHeightTitle: String,
+    val letterSpacingTitle: String,
+    val wordSpacingTitle: String,
+    val paragraphSpacingTitle: String,
     val alignmentTitle: String,
     val boldTitle: String,
     val resetLabel: String,
@@ -446,9 +470,28 @@ private fun readerStyleSettingsText(language: String): ReaderStyleSettingsText =
         cardHint = "These controls change the default typography for EPUB and FB2 reading.",
         quickPresetsTitle = "Quick text presets",
         colorSchemeTitle = "Color scheme",
+        importPresetLabel = "Import style JSON",
+        exportPresetLabel = "Export current style",
+        savedStylesTitle = "Saved reading styles",
+        savedStylesHint = "Save your custom text styles here and switch between them quickly.",
+        savedStyleSlotPrefix = "Style",
+        savedStyleSave = "Save current style",
+        savedStyleApply = "Apply style",
+        savedStyleClear = "Delete style",
+        savedStyleRename = "Rename",
+        savedStyleRenameTitle = "Rename saved style",
+        savedStyleNameLabel = "Style name",
+        savedStyleRenameHint = "Leave it empty to use the automatic style name.",
+        savedStyleRenameConfirm = "Save",
+        savedStyleRenameCancel = "Cancel",
+        savedStyleEmpty = "Empty style",
         fontTitle = "Font family",
+        importFontLabel = "Import font",
         fontSizeTitle = "Font size",
         lineHeightTitle = "Line height",
+        letterSpacingTitle = "Letter spacing",
+        wordSpacingTitle = "Word spacing",
+        paragraphSpacingTitle = "Paragraph spacing",
         alignmentTitle = "Text alignment",
         boldTitle = "Bold text",
         resetLabel = "Reset text style",
@@ -465,9 +508,28 @@ private fun readerStyleSettingsText(language: String): ReaderStyleSettingsText =
         cardHint = "ここで EPUB と FB2 の既定タイポグラフィを調整します。",
         quickPresetsTitle = "テキストプリセット",
         colorSchemeTitle = "配色",
+        importPresetLabel = "スタイル JSON を読み込む",
+        exportPresetLabel = "現在のスタイルを書き出す",
+        savedStylesTitle = "保存した読書スタイル",
+        savedStylesHint = "カスタムの文字スタイルを保存して、すばやく切り替えられます。",
+        savedStyleSlotPrefix = "スタイル",
+        savedStyleSave = "現在のスタイルを保存",
+        savedStyleApply = "適用",
+        savedStyleClear = "削除",
+        savedStyleRename = "名前",
+        savedStyleRenameTitle = "保存スタイルの名前",
+        savedStyleNameLabel = "スタイル名",
+        savedStyleRenameHint = "空欄にすると自動名を使います。",
+        savedStyleRenameConfirm = "保存",
+        savedStyleRenameCancel = "キャンセル",
+        savedStyleEmpty = "空のスタイル",
         fontTitle = "フォント",
+        importFontLabel = "フォントを追加",
         fontSizeTitle = "文字サイズ",
         lineHeightTitle = "行間",
+        letterSpacingTitle = "字間",
+        wordSpacingTitle = "単語間隔",
+        paragraphSpacingTitle = "段落間隔",
         alignmentTitle = "配置",
         boldTitle = "太字",
         resetLabel = "テキスト設定を初期化",
@@ -484,9 +546,28 @@ private fun readerStyleSettingsText(language: String): ReaderStyleSettingsText =
         cardHint = "这里会修改 EPUB 和 FB2 的默认排版。",
         quickPresetsTitle = "文本预设",
         colorSchemeTitle = "配色方案",
+        importPresetLabel = "导入样式 JSON",
+        exportPresetLabel = "导出当前样式",
+        savedStylesTitle = "已保存的阅读样式",
+        savedStylesHint = "保存你自己的文本样式并快速切换。",
+        savedStyleSlotPrefix = "样式",
+        savedStyleSave = "保存当前样式",
+        savedStyleApply = "应用样式",
+        savedStyleClear = "删除样式",
+        savedStyleRename = "重命名",
+        savedStyleRenameTitle = "重命名已保存样式",
+        savedStyleNameLabel = "样式名称",
+        savedStyleRenameHint = "留空会使用自动名称。",
+        savedStyleRenameConfirm = "保存",
+        savedStyleRenameCancel = "取消",
+        savedStyleEmpty = "空样式",
         fontTitle = "字体",
+        importFontLabel = "导入字体",
         fontSizeTitle = "字号",
         lineHeightTitle = "行距",
+        letterSpacingTitle = "字距",
+        wordSpacingTitle = "词距",
+        paragraphSpacingTitle = "段距",
         alignmentTitle = "对齐方式",
         boldTitle = "粗体",
         resetLabel = "重置文本样式",
@@ -503,9 +584,28 @@ private fun readerStyleSettingsText(language: String): ReaderStyleSettingsText =
         cardHint = "여기서 EPUB와 FB2의 기본 타이포그래피를 조정합니다.",
         quickPresetsTitle = "텍스트 프리셋",
         colorSchemeTitle = "색상",
+        importPresetLabel = "스타일 JSON 가져오기",
+        exportPresetLabel = "현재 스타일 내보내기",
+        savedStylesTitle = "저장된 읽기 스타일",
+        savedStylesHint = "사용자 텍스트 스타일을 저장하고 빠르게 전환할 수 있습니다.",
+        savedStyleSlotPrefix = "스타일",
+        savedStyleSave = "현재 스타일 저장",
+        savedStyleApply = "적용",
+        savedStyleClear = "삭제",
+        savedStyleRename = "이름",
+        savedStyleRenameTitle = "저장된 스타일 이름",
+        savedStyleNameLabel = "스타일 이름",
+        savedStyleRenameHint = "비워 두면 자동 이름을 사용합니다.",
+        savedStyleRenameConfirm = "저장",
+        savedStyleRenameCancel = "취소",
+        savedStyleEmpty = "빈 스타일",
         fontTitle = "글꼴",
+        importFontLabel = "글꼴 가져오기",
         fontSizeTitle = "글자 크기",
         lineHeightTitle = "줄 간격",
+        letterSpacingTitle = "자간",
+        wordSpacingTitle = "단어 간격",
+        paragraphSpacingTitle = "문단 간격",
         alignmentTitle = "정렬",
         boldTitle = "굵은 글자",
         resetLabel = "텍스트 스타일 초기화",
@@ -522,9 +622,28 @@ private fun readerStyleSettingsText(language: String): ReaderStyleSettingsText =
         cardHint = "Здесь меняется типографика по умолчанию для EPUB и FB2.",
         quickPresetsTitle = "Быстрые текстовые пресеты",
         colorSchemeTitle = "Цветовая схема",
+        importPresetLabel = "Импортировать стиль JSON",
+        exportPresetLabel = "Экспортировать текущий стиль",
+        savedStylesTitle = "Сохранённые стили чтения",
+        savedStylesHint = "Сохраняйте свои текстовые стили и быстро переключайтесь между ними.",
+        savedStyleSlotPrefix = "Стиль",
+        savedStyleSave = "Сохранить текущий стиль",
+        savedStyleApply = "Применить стиль",
+        savedStyleClear = "Удалить стиль",
+        savedStyleRename = "Переименовать",
+        savedStyleRenameTitle = "Имя сохранённого стиля",
+        savedStyleNameLabel = "Название стиля",
+        savedStyleRenameHint = "Оставь пустым, чтобы использовать автоматическое имя.",
+        savedStyleRenameConfirm = "Сохранить",
+        savedStyleRenameCancel = "Отмена",
+        savedStyleEmpty = "Пустой стиль",
         fontTitle = "Шрифт",
+        importFontLabel = "Импортировать шрифт",
         fontSizeTitle = "Размер шрифта",
         lineHeightTitle = "Межстрочный интервал",
+        letterSpacingTitle = "Межбуквенный интервал",
+        wordSpacingTitle = "Межсловный интервал",
+        paragraphSpacingTitle = "Интервал между абзацами",
         alignmentTitle = "Выравнивание текста",
         boldTitle = "Полужирный текст",
         resetLabel = "Сбросить стиль текста",
@@ -536,6 +655,86 @@ private fun readerStyleSettingsText(language: String): ReaderStyleSettingsText =
         right = "Вправо",
         center = "По центру"
     )
+}
+
+private fun readerImportedFontsTitle(language: String): String = when (language) {
+    "en" -> "Imported fonts"
+    "ja" -> "追加したフォント"
+    "zh" -> "已导入字体"
+    "ko" -> "가져온 글꼴"
+    else -> "Импортированные шрифты"
+}
+
+private fun readerImportedFontsHint(language: String): String = when (language) {
+    "en" -> "Tap a font to apply it. Use the trash icon to remove it from the device."
+    "ja" -> "フォントをタップすると適用されます。ゴミ箱アイコンで端末から削除できます。"
+    "zh" -> "点按字体即可应用。使用垃圾桶图标可将其从设备中删除。"
+    "ko" -> "글꼴을 탭하면 적용됩니다. 휴지통 아이콘으로 기기에서 삭제할 수 있습니다."
+    else -> "Нажми на шрифт, чтобы применить его. Значок корзины удалит его с устройства."
+}
+
+private fun readerImportedFontsEmpty(language: String): String = when (language) {
+    "en" -> "No imported fonts yet."
+    "ja" -> "まだ追加したフォントはありません。"
+    "zh" -> "尚未导入字体。"
+    "ko" -> "아직 가져온 글꼴이 없습니다."
+    else -> "Пока нет импортированных шрифтов."
+}
+
+private fun readerImportedFontsActive(language: String): String = when (language) {
+    "en" -> "Currently active"
+    "ja" -> "現在使用中"
+    "zh" -> "当前正在使用"
+    "ko" -> "현재 사용 중"
+    else -> "Используется сейчас"
+}
+
+private fun readerDeleteCustomFontAction(language: String): String = when (language) {
+    "en" -> "Delete font"
+    "ja" -> "フォントを削除"
+    "zh" -> "删除字体"
+    "ko" -> "글꼴 삭제"
+    else -> "Удалить шрифт"
+}
+
+private fun readerDeleteCustomFontDialogTitle(language: String): String = when (language) {
+    "en" -> "Delete imported font?"
+    "ja" -> "追加したフォントを削除しますか?"
+    "zh" -> "删除已导入字体?"
+    "ko" -> "가져온 글꼴을 삭제할까요?"
+    else -> "Удалить импортированный шрифт?"
+}
+
+private fun readerDeleteCustomFontDialogMessage(language: String, fontName: String): String = when (language) {
+    "en" -> "Font \"$fontName\" will be removed from the device. If it is active now, the reader will switch to Georgia."
+    "ja" -> "フォント「$fontName」を端末から削除します。現在使用中なら Georgia に切り替わります。"
+    "zh" -> "字体“$fontName”将从设备中删除。如果当前正在使用它，阅读器会切换到 Georgia。"
+    "ko" -> "\"$fontName\" 글꼴이 기기에서 삭제됩니다. 현재 사용 중이면 읽기 화면은 Georgia로 전환됩니다."
+    else -> "Шрифт «$fontName» будет удалён с устройства. Если он выбран сейчас, ридер переключится на Georgia."
+}
+
+private fun readerDeleteCustomFontConfirm(language: String): String = when (language) {
+    "en" -> "Delete"
+    "ja" -> "削除"
+    "zh" -> "删除"
+    "ko" -> "삭제"
+    else -> "Удалить"
+}
+
+private fun readerSavedStyleActive(language: String): String = when (language) {
+    "en" -> "Current"
+    "ja" -> "現在"
+    "zh" -> "当前"
+    "ko" -> "현재"
+    else -> "Сейчас"
+}
+
+private fun readerDeleteCustomFontCancel(language: String): String = when (language) {
+    "en" -> "Cancel"
+    "ja" -> "Cancel"
+    "zh" -> "取消"
+    "ko" -> "취소"
+    else -> "Отмена"
 }
 
 private fun translationSettingsMapText(language: String): TranslationSettingsMapText = when (language) {
@@ -2807,6 +3006,7 @@ private data class AppThemePresetText(
     val title: String,
     val hint: String,
     val slotPrefix: String,
+    val current: String,
     val save: String,
     val apply: String,
     val clear: String,
@@ -2818,6 +3018,7 @@ private fun appThemePresetText(language: String): AppThemePresetText = when (lan
         title = "Saved app themes",
         hint = "Save up to three full app looks: palette, surfaces, scale, and shape.",
         slotPrefix = "Slot",
+        current = "Current",
         save = "Save theme",
         apply = "Apply theme",
         clear = "Clear slot",
@@ -2827,6 +3028,7 @@ private fun appThemePresetText(language: String): AppThemePresetText = when (lan
         title = "保存したアプリテーマ",
         hint = "パレット、サーフェス、スケール、形を含むアプリ全体の見た目を3つまで保存できます。",
         slotPrefix = "スロット",
+        current = "現在",
         save = "保存",
         apply = "適用",
         clear = "消去",
@@ -2836,6 +3038,7 @@ private fun appThemePresetText(language: String): AppThemePresetText = when (lan
         title = "已保存的应用主题",
         hint = "最多保存三个完整的应用外观：配色、表面、缩放和圆角。",
         slotPrefix = "槽位",
+        current = "当前",
         save = "保存主题",
         apply = "应用主题",
         clear = "清空槽位",
@@ -2845,6 +3048,7 @@ private fun appThemePresetText(language: String): AppThemePresetText = when (lan
         title = "저장된 앱 테마",
         hint = "팔레트, 표면, 스케일, 형태를 포함한 앱 전체 룩을 최대 세 개 저장합니다.",
         slotPrefix = "슬롯",
+        current = "현재",
         save = "저장",
         apply = "적용",
         clear = "비우기",
@@ -2854,6 +3058,7 @@ private fun appThemePresetText(language: String): AppThemePresetText = when (lan
         title = "Сохранённые темы приложения",
         hint = "Сохраняйте до трёх полных вариантов оформления приложения: палитру, поверхности, масштаб и форму.",
         slotPrefix = "Слот",
+        current = "Сейчас",
         save = "Сохранить тему",
         apply = "Применить тему",
         clear = "Очистить слот",
@@ -3000,8 +3205,13 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val latestUiState by rememberUpdatedState(uiState)
     val strings = LocalStrings.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var fontCatalogVersion by remember { mutableIntStateOf(0) }
+    var pendingCustomFontDeletion by rememberSaveable { mutableStateOf<String?>(null) }
     var currentSectionName by rememberSaveable { mutableStateOf<String?>(null) }
     var currentAppearancePageName by rememberSaveable { mutableStateOf(AppearanceSettingsPage.OVERVIEW.name) }
     var currentReaderPageName by rememberSaveable { mutableStateOf(ReaderSettingsPage.OVERVIEW.name) }
@@ -3028,6 +3238,94 @@ fun SettingsScreen(
     val translationMapText = remember(strings.languageCode) { translationSettingsMapText(strings.languageCode) }
     val aiSectionText = remember(strings.languageCode) { aiServicesSectionText(strings.languageCode) }
     val readAloudText = remember(strings.languageCode) { readAloudSectionText(strings.languageCode) }
+    val fontImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val importedFont = runCatching { ReaderTextFontCatalog.importFont(context, uri) }.getOrNull()
+        if (importedFont != null) {
+            fontCatalogVersion += 1
+            viewModel.setTextFontFamily(importedFont)
+            Toast.makeText(context, importedFont, Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(
+                context,
+                if (strings.languageCode == "ru") "Не удалось импортировать шрифт" else "Couldn't import font",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    fun deleteImportedFont(fontName: String) {
+        val deleted = runCatching { ReaderTextFontCatalog.deleteCustomFont(context, fontName) }
+            .getOrDefault(false)
+        pendingCustomFontDeletion = null
+        if (deleted) {
+            fontCatalogVersion += 1
+            if (latestUiState.textFontFamily == fontName) {
+                viewModel.setTextFontFamily("Georgia")
+            }
+            Toast.makeText(
+                context,
+                if (strings.languageCode == "ru") "Шрифт удалён" else "Font deleted",
+                Toast.LENGTH_SHORT
+            ).show()
+        } else {
+            Toast.makeText(
+                context,
+                if (strings.languageCode == "ru") "Не удалось удалить шрифт" else "Couldn't delete font",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+    val readerStyleImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            val importedStyle = runCatching {
+                context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()
+                    ?.use { it.readText() }
+                    ?.let { viewModel.importReaderTypographyFromJson(it) }
+            }.getOrNull()
+            if (importedStyle != null) {
+                Toast.makeText(
+                    context,
+                    if (strings.languageCode == "ru") "Импортирован стиль: $importedStyle" else "Imported style: $importedStyle",
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(
+                    context,
+                    if (strings.languageCode == "ru") "Не удалось импортировать стиль" else "Couldn't import style",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+    val readerStyleExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        scope.launch {
+            val exported = runCatching {
+                val payload = buildReaderTypographyExportJson(latestUiState)
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(payload.toByteArray(Charsets.UTF_8))
+                } ?: error("No output stream")
+            }.isSuccess
+            Toast.makeText(
+                context,
+                when {
+                    exported && strings.languageCode == "ru" -> "Стиль экспортирован"
+                    exported -> "Style exported"
+                    strings.languageCode == "ru" -> "Не удалось экспортировать стиль"
+                    else -> "Couldn't export style"
+                },
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 
     fun navigateUp() {
         when {
@@ -3050,6 +3348,29 @@ fun SettingsScreen(
         val message = uiState.cacheMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(message)
         viewModel.consumeCacheMessage()
+    }
+
+    pendingCustomFontDeletion?.let { fontName ->
+        AlertDialog(
+            onDismissRequest = { pendingCustomFontDeletion = null },
+            title = { Text(readerDeleteCustomFontDialogTitle(strings.languageCode)) },
+            text = {
+                Text(
+                    readerDeleteCustomFontDialogMessage(strings.languageCode, fontName),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { deleteImportedFont(fontName) }) {
+                    Text(readerDeleteCustomFontConfirm(strings.languageCode))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingCustomFontDeletion = null }) {
+                    Text(readerDeleteCustomFontCancel(strings.languageCode))
+                }
+            }
+        )
     }
 
     val sectionTitle = when (currentSection) {
@@ -3103,7 +3424,7 @@ fun SettingsScreen(
                 TopAppBar(
                     title = { Text(sectionTitle) },
                     colors = rootChromeTopBarColors(),
-                    windowInsets = rootChromeStableTopBarInsets(),
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     navigationIcon = {
                         if (currentSection != null || onBackClick != null) {
                             IconButton(onClick = {
@@ -3156,6 +3477,19 @@ fun SettingsScreen(
                     viewModel = viewModel,
                     currentPage = currentReaderPage,
                     onPageChange = { currentReaderPageName = it.name },
+                    fontCatalogVersion = fontCatalogVersion,
+                    onImportCustomFont = { fontImportLauncher.launch(arrayOf("*/*")) },
+                    onImportReaderStyle = {
+                        readerStyleImportLauncher.launch(
+                            arrayOf("application/json", "text/*", "application/octet-stream")
+                        )
+                    },
+                    onExportReaderStyle = {
+                        readerStyleExportLauncher.launch(readerTypographyExportFileName(uiState))
+                    },
+                    onDeleteCustomFont = { fontName ->
+                        pendingCustomFontDeletion = fontName
+                    },
                     onOpenTranslationSettings = {
                         currentSectionName = SettingsSection.TRANSLATION.name
                         currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
@@ -3702,28 +4036,63 @@ private fun AppearanceSection(
                         )
                     )
                 )
+        }
+        item {
+            val savedAppThemeCount = remember(uiState.appThemePresetSlots) {
+                uiState.appThemePresetSlots.count { !it.serialized.isNullOrBlank() }
             }
-            item {
-                SettingsCard(title = appThemePresetText.title) {
-                    LabelText(appThemePresetText.hint)
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        uiState.appThemePresetSlots.forEach { slot ->
-                            AppThemePresetCard(
-                                slot = slot,
-                                strings = strings,
-                                text = appThemePresetText,
-                                onSave = { viewModel.saveAppThemePreset(slot.index) },
-                                onApply = { viewModel.applyAppThemePreset(slot.index) },
-                                onClear = { viewModel.clearAppThemePreset(slot.index) }
-                            )
+            SettingsCard(title = "${appThemePresetText.title} ($savedAppThemeCount/${uiState.appThemePresetSlots.size})") {
+                LabelText(appThemePresetText.hint)
+                val orderedAppThemeSlots = remember(uiState.appThemePresetSlots, uiState.themePreset, uiState.themeMode) {
+                    uiState.appThemePresetSlots.sortedWith(
+                        compareByDescending<AppThemePresetSlot> { slot ->
+                            parseAppThemePreset(slot.serialized)?.matchesAppThemeUiState(uiState) == true
+                        }.thenByDescending { slot ->
+                            !slot.serialized.isNullOrBlank()
+                        }.thenBy { slot ->
+                            slot.index
                         }
+                    )
+                }
+                val activeAppThemeSnapshot = orderedAppThemeSlots
+                    .mapNotNull { parseAppThemePreset(it.serialized) }
+                    .firstOrNull { it.matchesAppThemeUiState(uiState) }
+                if (activeAppThemeSnapshot != null) {
+                    Spacer(Modifier.height(6.dp))
+                    SettingsPreviewBanner(
+                        title = "${appThemePresetText.current}: ${themePresetLabel(strings, activeAppThemeSnapshot.themePreset)}",
+                        subtitle = themeLabel(
+                            strings,
+                            runCatching { ThemeMode.valueOf(activeAppThemeSnapshot.themeMode) }.getOrDefault(ThemeMode.SYSTEM)
+                        ),
+                        details = listOfNotNull(
+                            if (activeAppThemeSnapshot.customPrimaryColor != null) strings.colorPrimary else null,
+                            if (activeAppThemeSnapshot.customSecondaryColor != null) strings.colorSecondary else null,
+                            if (activeAppThemeSnapshot.customBackgroundColor != null) strings.colorBackground else null,
+                            if (activeAppThemeSnapshot.customSurfaceColor != null) "surface" else null
+                        ).joinToString(" · ").ifBlank { strings.themePresetCustom }
+                    )
+                }
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    orderedAppThemeSlots.forEach { slot ->
+                        val active = parseAppThemePreset(slot.serialized)?.matchesAppThemeUiState(uiState) == true
+                        AppThemePresetCard(
+                            slot = slot,
+                            strings = strings,
+                            text = appThemePresetText,
+                            isActive = active,
+                            onSave = { viewModel.saveAppThemePreset(slot.index) },
+                            onApply = { viewModel.applyAppThemePreset(slot.index) },
+                            onClear = { viewModel.clearAppThemePreset(slot.index) }
+                        )
                     }
                 }
             }
+        }
         }
         if (currentPage == AppearanceSettingsPage.LIBRARY) item {
             LibraryLayoutCard(
@@ -4313,6 +4682,11 @@ private fun ReaderSection(
     viewModel: SettingsViewModel,
     currentPage: ReaderSettingsPage,
     onPageChange: (ReaderSettingsPage) -> Unit,
+    fontCatalogVersion: Int = 0,
+    onImportCustomFont: () -> Unit = {},
+    onImportReaderStyle: () -> Unit = {},
+    onExportReaderStyle: () -> Unit = {},
+    onDeleteCustomFont: (String) -> Unit = {},
     onOpenTranslationSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -4360,7 +4734,7 @@ private fun ReaderSection(
                     }
                 }
             }
-            ReaderSettingsPage.TEXT_APPEARANCE -> {
+                ReaderSettingsPage.TEXT_APPEARANCE -> {
                 item {
                     ReaderTextAppearancePreviewCard(
                         uiState = uiState,
@@ -4372,7 +4746,12 @@ private fun ReaderSection(
                         uiState = uiState,
                         strings = strings,
                         styleText = readerStyleSettingsText(uiState.appLanguage),
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        fontCatalogVersion = fontCatalogVersion,
+                        onImportCustomFont = onImportCustomFont,
+                        onImportReaderStyle = onImportReaderStyle,
+                        onExportReaderStyle = onExportReaderStyle,
+                        onDeleteCustomFont = onDeleteCustomFont
                     )
                 }
             }
@@ -4382,6 +4761,9 @@ private fun ReaderSection(
                 }
                 item {
                     ReaderModeCard(uiState = uiState, strings = strings, viewModel = viewModel)
+                }
+                item {
+                    ReaderImageLayoutCard(uiState = uiState, language = uiState.appLanguage, viewModel = viewModel)
                 }
                 item {
                     ReaderLandscapeSpreadCard(uiState = uiState, language = uiState.appLanguage, viewModel = viewModel)
@@ -5329,10 +5711,9 @@ private fun ReaderPresetsCard(
         val activePreset = ReadingPreset.fromStored(uiState.readerPreset)
         val presets = listOf(
             ReadingPreset.CUSTOM to strings.readerPresetCustom,
-            ReadingPreset.PAPER to readingPresetQuickLabel(strings, ReadingPreset.PAPER),
-            ReadingPreset.NIGHT_INK to readingPresetQuickLabel(strings, ReadingPreset.NIGHT_INK),
-            ReadingPreset.EINK to readingPresetQuickLabel(strings, ReadingPreset.EINK)
-        )
+        ) + com.example.core.ui.theme.readingPresetQuickChoices().map { preset ->
+            preset to readingPresetQuickLabel(strings, preset)
+        }
         ChipRow {
             presets.forEach { (preset, label) ->
                 FilterChip(
@@ -5384,6 +5765,117 @@ private fun ReaderModeCard(
         }
     }
 }
+
+@Composable
+private fun ReaderImageLayoutCard(
+    uiState: SettingsUiState,
+    language: String,
+    viewModel: SettingsViewModel
+) {
+    SettingsCard(title = readerImageLayoutCardTitle(language)) {
+        Text(
+            readerImageLayoutCardHint(language),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        LabelText(readerImageScaleModeTitle(language))
+        ChipRow {
+            ReaderImageScaleMode.entries.forEach { mode ->
+                FilterChip(
+                    selected = uiState.readerImageScaleMode == mode.storedValue,
+                    onClick = { viewModel.setReaderImageScaleMode(mode.storedValue) },
+                    label = { Text(readerImageScaleModeLabel(mode, language)) }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        SettingsSliderTile(
+            title = readerMarginCropHorizontalTitle(language),
+            valueLabel = readerMarginCropPercentLabel(uiState.readerImageMarginCropHorizontal),
+            value = uiState.readerImageMarginCropHorizontal,
+            onValueChange = viewModel::setReaderImageMarginCropHorizontal,
+            valueRange = 0f..0.22f,
+            steps = 10
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsSliderTile(
+            title = readerMarginCropVerticalTitle(language),
+            valueLabel = readerMarginCropPercentLabel(uiState.readerImageMarginCropVertical),
+            value = uiState.readerImageMarginCropVertical,
+            onValueChange = viewModel::setReaderImageMarginCropVertical,
+            valueRange = 0f..0.22f,
+            steps = 10
+        )
+    }
+}
+
+private fun readerImageLayoutCardTitle(language: String): String = when (language) {
+    "en" -> "Image layout"
+    "ja" -> "画像レイアウト"
+    "zh" -> "图像布局"
+    "ko" -> "이미지 레이아웃"
+    else -> "Макет изображения"
+}
+
+private fun readerImageLayoutCardHint(language: String): String = when (language) {
+    "en" -> "Controls how PDF and DjVu pages fit the screen and how aggressively outer margins are cropped."
+    "ja" -> "PDF と DjVu のページを画面にどう合わせるか、外側の余白をどこまで切り詰めるかを調整します。"
+    "zh" -> "控制 PDF 和 DjVu 页面如何贴合屏幕，以及裁掉多少外边距。"
+    "ko" -> "PDF와 DjVu 페이지를 화면에 맞추는 방식과 바깥 여백을 얼마나 자를지 조절합니다."
+    else -> "Управляет тем, как страницы PDF и DjVu вписываются в экран и насколько сильно обрезаются внешние поля."
+}
+
+private fun readerImageScaleModeTitle(language: String): String = when (language) {
+    "en" -> "Scale mode"
+    "ja" -> "拡大モード"
+    "zh" -> "缩放模式"
+    "ko" -> "확대 모드"
+    else -> "Режим масштаба"
+}
+
+private fun readerImageScaleModeLabel(mode: ReaderImageScaleMode, language: String): String = when (mode) {
+    ReaderImageScaleMode.FIT_WIDTH -> when (language) {
+        "en" -> "Fit width"
+        "ja" -> "幅に合わせる"
+        "zh" -> "适合宽度"
+        "ko" -> "너비 맞춤"
+        else -> "По ширине"
+    }
+    ReaderImageScaleMode.FIT_HEIGHT -> when (language) {
+        "en" -> "Fit height"
+        "ja" -> "高さに合わせる"
+        "zh" -> "适合高度"
+        "ko" -> "높이 맞춤"
+        else -> "По высоте"
+    }
+    ReaderImageScaleMode.REAL_SIZE -> when (language) {
+        "en" -> "Real size"
+        "ja" -> "実寸"
+        "zh" -> "实际大小"
+        "ko" -> "실제 크기"
+        else -> "Реальный размер"
+    }
+}
+
+private fun readerMarginCropHorizontalTitle(language: String): String = when (language) {
+    "en" -> "Horizontal crop"
+    "ja" -> "左右のトリミング"
+    "zh" -> "水平裁边"
+    "ko" -> "가로 여백 자르기"
+    else -> "Обрезка по горизонтали"
+}
+
+private fun readerMarginCropVerticalTitle(language: String): String = when (language) {
+    "en" -> "Vertical crop"
+    "ja" -> "上下のトリミング"
+    "zh" -> "垂直裁边"
+    "ko" -> "세로 여백 자르기"
+    else -> "Обрезка по вертикали"
+}
+
+private fun readerMarginCropPercentLabel(value: Float): String =
+    "${(value.coerceIn(0f, 0.22f) * 100f).roundToInt()}%"
 
 @Composable
 private fun ReaderScreenCard(
@@ -5859,9 +6351,20 @@ private fun ReaderTextStyleCard(
     uiState: SettingsUiState,
     strings: AppStrings,
     styleText: ReaderStyleSettingsText,
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
+    fontCatalogVersion: Int = 0,
+    onImportCustomFont: () -> Unit = {},
+    onImportReaderStyle: () -> Unit = {},
+    onExportReaderStyle: () -> Unit = {},
+    onDeleteCustomFont: (String) -> Unit = {}
 ) {
-    val fonts = listOf("Georgia", "Merriweather", "Open Sans", "Roboto Slab", "PT Serif", "Literata")
+    val context = LocalContext.current
+    val fonts = remember(context, fontCatalogVersion) {
+        ReaderTextFontCatalog.availableFontFamilies(context)
+    }
+    val customFonts = remember(context, fontCatalogVersion) {
+        ReaderTextFontCatalog.customFontFamilies(context)
+    }
     SettingsCard(title = styleText.cardTitle) {
         Text(
             styleText.cardHint,
@@ -5871,11 +6374,9 @@ private fun ReaderTextStyleCard(
         Spacer(Modifier.height(8.dp))
         LabelText(styleText.quickPresetsTitle)
         ChipRow {
-            listOf(
-                ReadingPreset.PAPER to readingPresetQuickLabel(strings, ReadingPreset.PAPER),
-                ReadingPreset.NIGHT_INK to readingPresetQuickLabel(strings, ReadingPreset.NIGHT_INK),
-                ReadingPreset.EINK to readingPresetQuickLabel(strings, ReadingPreset.EINK)
-            ).forEach { (preset, label) ->
+            com.example.core.ui.theme.readingPresetQuickChoices().map { preset ->
+                preset to readingPresetQuickLabel(strings, preset)
+            }.forEach { (preset, label) ->
                 FilterChip(
                     selected = ReadingPreset.fromStored(uiState.readerPreset) == preset,
                     onClick = { viewModel.setReaderPreset(preset.name) },
@@ -5899,19 +6400,227 @@ private fun ReaderTextStyleCard(
             }
         }
         Spacer(Modifier.height(4.dp))
-        LabelText(styleText.fontTitle)
+        OutlinedButton(
+            onClick = onImportReaderStyle,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(styleText.importPresetLabel)
+        }
+        Spacer(Modifier.height(4.dp))
+        OutlinedButton(
+            onClick = onExportReaderStyle,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(styleText.exportPresetLabel)
+        }
+        Spacer(Modifier.height(4.dp))
+        val savedReaderStyleCount = remember(uiState.readerStylePresetEntries) {
+            uiState.readerStylePresetEntries.size
+        }
+        val sortedReaderStyleEntries = remember(
+            uiState.readerStylePresetEntries,
+            uiState.readerPreset,
+            uiState.textFontFamily,
+            uiState.textFontSize,
+            uiState.textLineHeight,
+            uiState.textAlignment,
+            uiState.textColorScheme,
+            uiState.textBold,
+            uiState.textLetterSpacing,
+            uiState.textWordSpacing,
+            uiState.textParagraphSpacing,
+            uiState.textCustomTextColor,
+            uiState.textCustomBackgroundColor,
+            uiState.textCustomAccentColor
+        ) {
+            uiState.readerStylePresetEntries.sortedWith(
+                compareByDescending<ReaderStylePresetEntry> { entry ->
+                    entry.snapshot.matchesSettingsUiState(uiState)
+                }.thenByDescending { entry ->
+                    entry.snapshot.displayName?.isNotBlank() == true
+                }.thenBy { entry ->
+                    entry.snapshot.displayName ?: entry.id
+                }
+            )
+        }
+        val activeReaderStyleSnapshot = remember(sortedReaderStyleEntries, uiState) {
+            sortedReaderStyleEntries
+                .map { it.snapshot }
+                .firstOrNull { it.matchesSettingsUiState(uiState) }
+        }
+        LabelText("${styleText.savedStylesTitle} ($savedReaderStyleCount)")
+        Text(
+            text = styleText.savedStylesHint,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (activeReaderStyleSnapshot != null) {
+            Spacer(Modifier.height(8.dp))
+            SettingsPreviewBanner(
+                title = activeReaderStyleSnapshot.displayName?.takeIf { it.isNotBlank() }
+                    ?: readingPresetQuickLabel(strings, ReadingPreset.fromStored(activeReaderStyleSnapshot.readerPreset)),
+                subtitle = listOf(
+                    readingPresetQuickLabel(strings, ReadingPreset.fromStored(activeReaderStyleSnapshot.readerPreset)),
+                    readerTextSchemeLabel(strings.languageCode, activeReaderStyleSnapshot.textColorScheme),
+                    activeReaderStyleSnapshot.textFontFamily
+                ).joinToString(" · "),
+                details = listOf(
+                    readerTextFontSizeLabel(activeReaderStyleSnapshot.textFontSize, strings.languageCode),
+                    readerTextLineHeightLabel((activeReaderStyleSnapshot.textLineHeight * 100).toInt(), strings.languageCode)
+                ).joinToString(" · ")
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(
+            onClick = { viewModel.saveCurrentReaderStylePreset() },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(if (strings.languageCode == "ru") "Сохранить текущий стиль как новый" else "Save current style as new")
+        }
+        Spacer(Modifier.height(8.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            sortedReaderStyleEntries.forEachIndexed { index, entry ->
+                val active = entry.snapshot.matchesSettingsUiState(uiState)
+                ReaderStylePresetCard(
+                    slot = ReaderStylePresetSlot(
+                        index = index + 1,
+                        serialized = entry.snapshot.serialize()
+                    ),
+                    strings = strings,
+                    text = styleText,
+                    isActive = active,
+                    onSave = { viewModel.overwriteReaderStylePreset(entry.id) },
+                    onApply = { viewModel.applyReaderStylePreset(entry.id) },
+                    onClear = { viewModel.deleteReaderStylePreset(entry.id) },
+                    onRename = { viewModel.renameReaderStylePreset(entry.id, it) }
+                )
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        LabelText("${styleText.fontTitle} (${fonts.size})")
+        OutlinedButton(
+            onClick = onImportCustomFont,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(styleText.importFontLabel)
+        }
+        Spacer(Modifier.height(8.dp))
+        SettingsPreviewBanner(
+            title = uiState.textFontFamily,
+            subtitle = readerImportedFontsActive(strings.languageCode),
+            details = listOf(
+                readerTextFontSizeLabel(uiState.textFontSize, uiState.appLanguage),
+                readerTextLineHeightLabel((uiState.textLineHeight * 100).toInt(), uiState.appLanguage),
+                "${customFonts.size} ${readerImportedFontsTitle(strings.languageCode).lowercase(Locale.getDefault())}"
+            ).joinToString(" · ")
+        )
+        Spacer(Modifier.height(8.dp))
+        val orderedFonts = remember(fonts, uiState.textFontFamily) {
+            fonts.sortedWith(
+                compareByDescending<String> { it == uiState.textFontFamily }
+                    .thenBy { it.lowercase(Locale.getDefault()) }
+            )
+        }
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            fonts.forEach { family ->
+            orderedFonts.forEach { family ->
                 FilterChip(
                     selected = uiState.textFontFamily == family,
                     onClick = { viewModel.setTextFontFamily(family) },
                     label = { Text(family, style = MaterialTheme.typography.bodySmall) }
                 )
             }
+        }
+        Spacer(Modifier.height(4.dp))
+        LabelText("${readerImportedFontsTitle(strings.languageCode)} (${customFonts.size})")
+        Text(
+            text = readerImportedFontsHint(strings.languageCode),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        if (customFonts.isNotEmpty()) {
+            val orderedCustomFonts = remember(customFonts, uiState.textFontFamily) {
+                customFonts.sortedWith(
+                    compareByDescending<String> { it == uiState.textFontFamily }
+                        .thenBy { it.lowercase(Locale.getDefault()) }
+                )
+            }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                orderedCustomFonts.forEach { family ->
+                    val selected = uiState.textFontFamily == family
+                    Surface(
+                        modifier = Modifier
+                            .widthIn(min = 152.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .clickable(onClick = { viewModel.setTextFontFamily(family) }),
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                        },
+                        border = BorderStroke(
+                            width = if (selected) 1.1.dp else 0.8.dp,
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
+                            } else {
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f)
+                            }
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 12.dp, top = 10.dp, end = 6.dp, bottom = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = family,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (selected) {
+                                    Text(
+                                        text = readerImportedFontsActive(strings.languageCode),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { onDeleteCustomFont(family) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = readerDeleteCustomFontAction(strings.languageCode)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Text(
+                text = readerImportedFontsEmpty(strings.languageCode),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
         Spacer(Modifier.height(4.dp))
         LabelText("${styleText.fontSizeTitle}: ${readerTextFontSizeLabel(uiState.textFontSize, uiState.appLanguage)}")
@@ -5929,6 +6638,33 @@ private fun ReaderTextStyleCard(
             onValueChange = viewModel::setTextLineHeight,
             valueRange = 1.0f..3.0f,
             steps = 19,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(4.dp))
+        LabelText("${styleText.letterSpacingTitle}: ${"%.2f".format(Locale.US, uiState.textLetterSpacing)}em")
+        Slider(
+            value = uiState.textLetterSpacing,
+            onValueChange = viewModel::setTextLetterSpacing,
+            valueRange = 0f..0.2f,
+            steps = 19,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(4.dp))
+        LabelText("${styleText.wordSpacingTitle}: ${"%.2f".format(Locale.US, uiState.textWordSpacing)}em")
+        Slider(
+            value = uiState.textWordSpacing,
+            onValueChange = viewModel::setTextWordSpacing,
+            valueRange = 0f..0.6f,
+            steps = 23,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(4.dp))
+        LabelText("${styleText.paragraphSpacingTitle}: ${"%.2f".format(Locale.US, uiState.textParagraphSpacing)}em")
+        Slider(
+            value = uiState.textParagraphSpacing,
+            onValueChange = viewModel::setTextParagraphSpacing,
+            valueRange = 0.1f..1.2f,
+            steps = 21,
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(4.dp))
@@ -6335,6 +7071,37 @@ private fun LibraryCardsStyleCard(
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+private fun ReaderStylePresetSnapshot.matchesSettingsUiState(uiState: SettingsUiState): Boolean {
+    return readerPreset == uiState.readerPreset &&
+        textFontSize == uiState.textFontSize &&
+        textColorScheme == uiState.textColorScheme &&
+        textFontFamily == uiState.textFontFamily &&
+        textLineHeight == uiState.textLineHeight &&
+        textLetterSpacing == uiState.textLetterSpacing &&
+        textWordSpacing == uiState.textWordSpacing &&
+        textParagraphSpacing == uiState.textParagraphSpacing &&
+        textAlignment == uiState.textAlignment &&
+        textBold == uiState.textBold &&
+        brightness == uiState.brightness &&
+        immersiveMode == uiState.readerImmersiveMode &&
+        pageAnimation == uiState.readerPageAnimation
+}
+
+private fun AppThemePresetSnapshot.matchesAppThemeUiState(uiState: SettingsUiState): Boolean {
+    return themePreset == uiState.themePreset &&
+        themeMode == uiState.themeMode.name &&
+        useDynamicColor == uiState.useDynamicColor &&
+        useAmoledDark == uiState.useAmoledDark &&
+        customPrimaryColor == uiState.customPrimaryColor &&
+        customSecondaryColor == uiState.customSecondaryColor &&
+        customBackgroundColor == uiState.customBackgroundColor &&
+        customSurfaceColor == uiState.customSurfaceColor &&
+        surfaceOpacity == uiState.surfaceOpacity &&
+        uiFontScale == uiState.uiFontScale &&
+        uiDensityScale == uiState.uiDensityScale &&
+        uiCornerRadius == uiState.uiCornerRadius
 }
 
 @Composable
@@ -6865,10 +7632,65 @@ private fun libraryGroupByLabel(groupBy: String, language: String): String = whe
 }
 
 @Composable
+private fun SettingsPreviewBanner(
+    title: String,
+    subtitle: String,
+    details: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun AppThemePresetCard(
     slot: AppThemePresetSlot,
     strings: AppStrings,
     text: AppThemePresetText,
+    isActive: Boolean,
     onSave: () -> Unit,
     onApply: () -> Unit,
     onClear: () -> Unit,
@@ -6894,8 +7716,19 @@ private fun AppThemePresetCard(
             .width(160.dp)
             .clip(cardShape),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.86f)
+            } else {
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+            }
+        ),
+        border = if (isActive) {
+            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.42f))
+        } else {
+            BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.16f))
+        },
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 5.dp else 4.dp)
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -6974,6 +7807,13 @@ private fun AppThemePresetCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                if (isActive) {
+                    Text(
+                        text = text.current,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Text(
                     text = if (modeLabel.isBlank()) themePresetLabelText else "$themePresetLabelText · $modeLabel",
                     style = MaterialTheme.typography.bodySmall,
@@ -7006,6 +7846,232 @@ private fun AppThemePresetCard(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.DeleteOutline, contentDescription = text.clear)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReaderStylePresetCard(
+    slot: ReaderStylePresetSlot,
+    strings: AppStrings,
+    text: ReaderStyleSettingsText,
+    isActive: Boolean,
+    onSave: () -> Unit,
+    onApply: () -> Unit,
+    onClear: () -> Unit,
+    onRename: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val snapshot = remember(slot.serialized) { parseReaderStylePreset(slot.serialized) }
+    var renameDialogOpen by rememberSaveable(slot.index) { mutableStateOf(false) }
+    var renameDraft by rememberSaveable(slot.index) { mutableStateOf("") }
+    LaunchedEffect(slot.serialized) {
+        renameDraft = snapshot?.displayName.orEmpty()
+    }
+    val (backgroundColor, lineColor) = remember(
+        snapshot?.textColorScheme,
+        snapshot?.textCustomBackgroundColor,
+        snapshot?.textCustomTextColor
+    ) {
+        val base = when (snapshot?.textColorScheme) {
+            "SEPIA" -> Color(0xFFF4ECD8) to Color(0xFF7B5C34)
+            "NIGHT" -> Color(0xFF000000) to Color(0xFFF2F5F7)
+            else -> Color(0xFFF6F1E7) to Color(0xFF2B2118)
+        }
+        (snapshot?.textCustomBackgroundColor?.let(::Color) ?: base.first) to
+            (snapshot?.textCustomTextColor?.let(::Color) ?: base.second)
+    }
+    val slotLabel = "${text.savedStyleSlotPrefix} ${slot.index}"
+    val titleLabel = snapshot?.displayName?.takeIf { it.isNotBlank() } ?: slotLabel
+    val presetLabel = snapshot?.let { readingPresetQuickLabel(strings, ReadingPreset.fromStored(it.readerPreset)) } ?: text.savedStyleEmpty
+    val schemeLabel = snapshot?.let { readerTextSchemeLabel(strings.languageCode, it.textColorScheme) }.orEmpty()
+    val detailLabel = snapshot?.let {
+        "${it.textFontFamily} · ${readerTextFontSizeLabel(it.textFontSize, strings.languageCode)} · ${readerTextLineHeightLabel((it.textLineHeight * 100).toInt(), strings.languageCode)}"
+    } ?: text.savedStyleEmpty
+    val shape = RoundedCornerShape(18.dp)
+
+    if (renameDialogOpen) {
+        AlertDialog(
+            onDismissRequest = { renameDialogOpen = false },
+            title = { Text(text.savedStyleRenameTitle) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = renameDraft,
+                        onValueChange = { renameDraft = it.take(40) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text(text.savedStyleNameLabel) },
+                        placeholder = { Text(slotLabel) }
+                    )
+                    Text(
+                        text = text.savedStyleRenameHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRename(renameDraft)
+                        renameDialogOpen = false
+                    }
+                ) {
+                    Text(text.savedStyleRenameConfirm)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameDialogOpen = false }) {
+                    Text(text.savedStyleRenameCancel)
+                }
+            }
+        )
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape),
+        shape = shape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isActive) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.84f)
+            } else {
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+            }
+        ),
+        border = BorderStroke(
+            width = if (isActive) 1.2.dp else 0.dp,
+            color = MaterialTheme.colorScheme.primary.copy(alpha = if (isActive) 0.48f else 0f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 5.dp else 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(92.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(backgroundColor)
+                    .border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.72f)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(lineColor.copy(alpha = 0.88f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(lineColor.copy(alpha = 0.28f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth((0.55f + (((snapshot?.textParagraphSpacing ?: 0.2f) * 0.2f))).coerceIn(0.55f, 0.9f))
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(lineColor.copy(alpha = 0.18f))
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = titleLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (isActive) {
+                        Text(
+                            text = readerSavedStyleActive(strings.languageCode),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (titleLabel != slotLabel) {
+                        Text(
+                            text = slotLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = if (schemeLabel.isBlank()) presetLabel else "$presetLabel · $schemeLabel",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        minLines = 1,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = detailLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                        minLines = 1,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                if (snapshot != null) {
+                    IconButton(
+                        onClick = { renameDialogOpen = true },
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = text.savedStyleRename)
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilledTonalIconButton(
+                    onClick = onSave,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Save, contentDescription = text.savedStyleSave)
+                }
+                FilledIconButton(
+                    onClick = onApply,
+                    enabled = snapshot != null,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = text.savedStyleApply)
+                }
+                OutlinedIconButton(
+                    onClick = onClear,
+                    enabled = snapshot != null,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.DeleteOutline, contentDescription = text.savedStyleClear)
                 }
             }
         }
@@ -9670,12 +10736,27 @@ private fun readerTextSchemeLabel(language: String, scheme: String): String = wh
 
 private fun readingPresetQuickLabel(strings: AppStrings, preset: ReadingPreset): String = when (preset) {
     ReadingPreset.PAPER -> strings.themePresetPaper
+    ReadingPreset.SEPIA_BOOK -> strings.themePresetSepia
+    ReadingPreset.NEWSPAPER -> when (strings.languageCode) {
+        "en" -> "Newspaper"
+        "ja" -> "新聞"
+        "zh" -> "报刊"
+        "ko" -> "신문"
+        else -> "Газета"
+    }
     ReadingPreset.NIGHT_INK -> when (strings.languageCode) {
         "en" -> "Night Ink"
         "ja" -> "ナイトインク"
         "zh" -> "夜墨"
         "ko" -> "나이트 잉크"
         else -> "Ночная тушь"
+    }
+    ReadingPreset.OLED_BLACK -> when (strings.languageCode) {
+        "en" -> "OLED Black"
+        "ja" -> "OLED ブラック"
+        "zh" -> "OLED 纯黑"
+        "ko" -> "OLED 블랙"
+        else -> "OLED Black"
     }
     ReadingPreset.EINK -> when (strings.languageCode) {
         "en" -> "E-Ink"
@@ -9789,3 +10870,37 @@ private fun uiDensityLabel(language: String, scale: Float): String = when {
     }
 }
 
+private fun buildReaderTypographyExportJson(uiState: SettingsUiState): String = JSONObject().apply {
+    val styleName = "Reader style ${uiState.readerPreset.lowercase(Locale.US)}"
+    put("format", "mrcomic.readerTypography")
+    put("version", 1)
+    put("exportedAt", System.currentTimeMillis())
+    put("name", styleName)
+    put("displayName", styleName)
+    put("readerPreset", uiState.readerPreset)
+    put("textFontSize", uiState.textFontSize)
+    put("textColorScheme", uiState.textColorScheme)
+    put("textFontFamily", uiState.textFontFamily)
+    put("textLineHeight", uiState.textLineHeight.toDouble())
+    put("textLetterSpacing", uiState.textLetterSpacing.toDouble())
+    put("textWordSpacing", uiState.textWordSpacing.toDouble())
+    put("textParagraphSpacing", uiState.textParagraphSpacing.toDouble())
+    put("textAlignment", uiState.textAlignment)
+    put("textBold", uiState.textBold)
+    uiState.textCustomTextColor?.let { put("textCustomTextColor", String.format(Locale.US, "#%08X", it)) }
+    uiState.textCustomBackgroundColor?.let { put("textCustomBackgroundColor", String.format(Locale.US, "#%08X", it)) }
+    uiState.textCustomAccentColor?.let { put("textCustomAccentColor", String.format(Locale.US, "#%08X", it)) }
+    put("brightness", uiState.brightness.toDouble())
+    put("immersiveMode", uiState.readerImmersiveMode)
+    put("pageAnimation", uiState.readerPageAnimation)
+}.toString(2)
+
+private fun readerTypographyExportFileName(uiState: SettingsUiState): String {
+    val base = uiState.readerPreset
+        .ifBlank { "custom" }
+        .lowercase(Locale.US)
+        .replace(Regex("[^a-z0-9_-]+"), "_")
+        .trim('_')
+        .ifBlank { "style" }
+    return "mr_comic_reader_style_${base}_${System.currentTimeMillis()}.json"
+}

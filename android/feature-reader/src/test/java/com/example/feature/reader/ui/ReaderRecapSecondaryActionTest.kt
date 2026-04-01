@@ -7,35 +7,9 @@ import org.junit.Test
 class ReaderRecapSecondaryActionTest {
 
     @Test
-    fun readerMilestoneRecapSecondaryAction_prefersChaptersWhenAvailable() {
-        val action = readerMilestoneRecapSecondaryAction(
-            type = ReaderProgressRecapType.CHAPTER,
-            hasChapters = true,
-            hasBookmarks = true
-        )
-
-        assertEquals(ReaderMilestoneRecapSecondaryAction.CHAPTERS, action)
-    }
-
-    @Test
-    fun readerMilestoneRecapSecondaryAction_fallsBackToBookmarksWithoutToc() {
-        val action = readerMilestoneRecapSecondaryAction(
-            type = ReaderProgressRecapType.CHAPTER,
-            hasChapters = false,
-            hasBookmarks = true
-        )
-
-        assertEquals(ReaderMilestoneRecapSecondaryAction.BOOKMARKS, action)
-    }
-
-    @Test
-    fun readerMilestoneRecapSecondaryAction_doesNotExposeSheetActionForTitleComplete() {
-        val action = readerMilestoneRecapSecondaryAction(
-            type = ReaderProgressRecapType.TITLE_COMPLETE,
-            hasChapters = true,
-            hasBookmarks = true
-        )
-
-        assertNull(action)
+    fun shouldEmitChapterProgressRecap_skipsFinalPageAndKeepsMidBookRecaps() {
+        assertEquals(true, shouldEmitChapterProgressRecap(page = 0, totalPages = 0))
+        assertEquals(true, shouldEmitChapterProgressRecap(page = 4, totalPages = 10))
+        assertEquals(false, shouldEmitChapterProgressRecap(page = 9, totalPages = 10))
     }
 }
