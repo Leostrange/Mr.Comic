@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
+import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.view.ActionMode
@@ -13,9 +14,13 @@ import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.view.WindowInsetsController
+import android.view.ViewGroup
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import android.view.WindowManager
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -37,6 +42,7 @@ import androidx.compose.material.icons.filled.BrightnessLow
 import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -52,10 +58,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -64,17 +74,24 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.fragment.app.FragmentActivity
+import androidx.fragment.app.FragmentContainerView
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.webkit.WebViewAssetLoader
+import org.json.JSONObject
 import org.json.JSONTokener
+import com.example.core.model.BookSearchHit
 import com.example.core.model.isTextReadingFormat
+import com.example.core.model.ReaderLocator
+import com.example.core.model.ReaderRendererKey
 import com.example.core.model.ReadingMode
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderInfoSlot
@@ -83,23 +100,41 @@ import com.example.core.model.ReaderTapZoneMode
 import com.example.core.model.ReaderTtsSleepTimerMode
 import com.example.core.model.TranslationMode
 import com.example.core.model.TranslationTransportPreference
+import com.example.core.model.readerFormatCapabilities
 import com.example.core.model.resolveReaderSimpleTapZoneLayout
 import com.example.core.model.resolveReaderTapZoneLayout
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.theme.ReadingPreset
+import com.example.engine.epub.readium.ReadiumPublicationSessionAccess
+import com.example.engine.epub.readium.toReaderLocator
+import com.example.engine.epub.readium.toReadiumEpubPreferences
 import com.example.engine.formats.base.TocEntry
 import com.example.feature.reader.ui.components.PageView
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import org.readium.r2.navigator.HyperlinkNavigator
+import org.readium.r2.navigator.Navigator
+import org.readium.r2.navigator.Decoration
+import org.readium.r2.navigator.epub.EpubNavigatorFactory
+import org.readium.r2.navigator.epub.EpubNavigatorFragment
+import org.readium.r2.navigator.input.DragEvent
+import org.readium.r2.navigator.input.InputListener
+import org.readium.r2.navigator.input.KeyEvent as ReadiumKeyEvent
+import org.readium.r2.navigator.input.TapEvent
+import org.readium.r2.shared.publication.Locator
+import org.readium.r2.shared.util.AbsoluteUrl
+import org.readium.r2.shared.util.Url
+import org.readium.r2.shared.util.data.ReadError
 
 /**
  * JS snippet injected via evaluateJavascript after each page load.
@@ -233,7 +268,7 @@ private const val JS_TAP_HANDLER = """(function(){
 
 private const val HTML_READER_TAG = "ReaderHtmlView"
 private const val HTML_READER_BASE_URL = "https://appassets.androidplatform.net/reader/"
-private const val HTML_READER_ASSET_PATH = "/reader/content/"
+private const val HTML_READER_ASSET_PATH = "/reader/"
 private const val HTML_READER_BLANK_CHECK_JS = """(function(){
   try{
     var body=document.body;
@@ -263,26 +298,73 @@ private sealed interface ReaderHtmlPageSource {
     }
 
     data class Inline(val baseUrl: String, val html: String) : ReaderHtmlPageSource {
-        override val loadToken: String = "inline:${html.hashCode()}"
+        override val loadToken: String = "inline:${baseUrl.hashCode()}:${html.hashCode()}"
     }
 }
 
 private fun readerAssetDocumentBaseUrl(documentPath: String): String =
     "${HTML_READER_BASE_URL}content/${documentPath.trimStart('/')}"
 
+internal fun readerPreserveLayoutMarkerScript(): String = """
+    if(preservePublisherLayout){
+      document.body.setAttribute('data-mrcomic-preserve-layout','true');
+    }else{
+      document.body.removeAttribute('data-mrcomic-preserve-layout');
+    }
+""".trimIndent()
+
 private class ReaderFormatAssetPathHandler(
     private val resolver: (String) -> com.example.engine.formats.base.FormatReaderWebResource?
 ) : WebViewAssetLoader.PathHandler {
+
+    @Volatile
+    private var servedPage: Pair<String, ByteArray>? = null
+
+    fun servePage(documentPath: String, themedHtml: String) {
+        val key = documentPath.trimStart('/')
+        Log.d(HTML_READER_TAG, "servePage: key=$key htmlLen=${themedHtml.length}")
+        servedPage = key to themedHtml.toByteArray(Charsets.UTF_8)
+    }
+
+    fun clearServedPage() {
+        servedPage = null
+    }
+
     override fun handle(path: String): WebResourceResponse? {
-        val cleanPath = path.substringBefore('#').substringBefore('?').trimStart('/')
-        val resource = resolver(cleanPath) ?: return null
+        val rawPath = path.substringBefore('#').substringBefore('?').trimStart('/')
+        val cleanPath = if (rawPath.startsWith("content/")) rawPath.removePrefix("content/") else rawPath
+        val served = servedPage
+        if (served != null && (cleanPath == served.first || rawPath == "content/${served.first}")) {
+            Log.d(HTML_READER_TAG, "handle: serving page for $rawPath")
+            return WebResourceResponse(
+                "text/html",
+                "UTF-8",
+                ByteArrayInputStream(served.second)
+            ).apply {
+                responseHeaders = mapOf(
+                    "Cache-Control" to "no-store, no-cache, must-revalidate, max-age=0",
+                    "Pragma" to "no-cache",
+                    "Expires" to "0",
+                    "Access-Control-Allow-Origin" to "*"
+                )
+            }
+        }
+        val resource = resolver(cleanPath)
+        if (resource != null) {
+            Log.d(HTML_READER_TAG, "handle: resolved asset $cleanPath (${resource.mimeType}, ${resource.bytes.size} bytes)")
+        } else {
+            Log.w(HTML_READER_TAG, "handle: FAILED to resolve asset $cleanPath (rawPath=$rawPath)")
+        }
+        if (resource == null) return null
         return WebResourceResponse(
             resource.mimeType,
             resource.encoding,
             ByteArrayInputStream(resource.bytes)
         ).apply {
             responseHeaders = mapOf(
-                "Cache-Control" to "public, max-age=300",
+                "Cache-Control" to "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma" to "no-cache",
+                "Expires" to "0",
                 "Access-Control-Allow-Origin" to "*"
             )
         }
@@ -300,7 +382,9 @@ private class ReaderUserFontAssetPathHandler(
             ByteArrayInputStream(resource.bytes)
         ).apply {
             responseHeaders = mapOf(
-                "Cache-Control" to "public, max-age=300",
+                "Cache-Control" to "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma" to "no-cache",
+                "Expires" to "0",
                 "Access-Control-Allow-Origin" to "*"
             )
         }
@@ -322,7 +406,10 @@ private suspend fun buildReaderHtmlPageSource(
 ): ReaderHtmlPageSource {
     val themedHtml = withContext(Dispatchers.Default) { buildThemedHtmlDocument(html, bg, fg) }
     return withContext(Dispatchers.IO) {
-        if (themedHtml.length <= MAX_INLINE_HTML_SOURCE_LENGTH) {
+        // Asset-backed EPUB/HTML pages rely on relative appassets paths for images, CSS, and fonts.
+        // Loading them through a temporary file:// URL breaks that resolution and makes covers vanish.
+        val mustStayInline = resolvedBaseUrl.startsWith(HTML_READER_BASE_URL, ignoreCase = true)
+        if (mustStayInline || themedHtml.length <= MAX_INLINE_HTML_SOURCE_LENGTH) {
             ReaderHtmlPageSource.Inline(
                 baseUrl = resolvedBaseUrl,
                 html = themedHtml
@@ -368,6 +455,262 @@ private fun rememberReaderHtmlPageSource(
         )
     }
     return pageSource
+}
+
+private const val READIUM_EPUB_FRAGMENT_TAG_PREFIX = "reader_readium_epub_"
+
+private fun findFragmentActivity(context: Context): FragmentActivity? {
+    var current: Context? = context
+    while (current is ContextWrapper) {
+        if (current is FragmentActivity) return current
+        current = current.baseContext
+    }
+    return current as? FragmentActivity
+}
+
+private fun normalizedReadiumHref(href: String?): String? =
+    href
+        ?.substringBefore('#')
+        ?.trim()
+        ?.trimStart('/')
+        ?.takeIf { it.isNotEmpty() }
+
+private const val READIUM_HIGHLIGHT_GROUP = "reader_saved_highlights"
+
+private fun parseReadiumLocatorJson(raw: String): Locator? =
+    runCatching {
+        Locator.fromJSON(JSONObject(raw), null)
+    }.getOrNull()
+
+private fun ReaderHighlightEntry.toReadiumDecoration(): Decoration? {
+    val locator = parseReadiumLocatorJson(locatorJson) ?: return null
+    return Decoration(
+        id = id,
+        locator = locator,
+        style = Decoration.Style.Highlight(colorArgb, false),
+        extras = emptyMap()
+    )
+}
+
+@Composable
+private fun ReadiumEpubView(
+    sessionAccess: ReadiumPublicationSessionAccess,
+    sessionId: String,
+    targetLocator: ReaderLocator?,
+    preferences: com.example.core.model.ReaderPreferenceSnapshot,
+    savedHighlights: List<ReaderHighlightEntry>,
+    onLocatorChanged: (ReaderLocator) -> Unit,
+    onSelectionDetected: (String, String) -> Unit,
+    onLeftTap: () -> Unit,
+    onRightTap: () -> Unit,
+    onCenterTap: () -> Unit
+) {
+    val context = LocalContext.current
+    val activity = remember(context) { findFragmentActivity(context) }
+    val fragmentTag = remember(sessionId) { "$READIUM_EPUB_FRAGMENT_TAG_PREFIX$sessionId" }
+    val containerId = rememberSaveable(sessionId) { View.generateViewId() }
+    val updatedLocatorChanged by rememberUpdatedState(onLocatorChanged)
+    val updatedSelectionDetected by rememberUpdatedState(onSelectionDetected)
+    val updatedLeftTap by rememberUpdatedState(onLeftTap)
+    val updatedRightTap by rememberUpdatedState(onRightTap)
+    val updatedCenterTap by rememberUpdatedState(onCenterTap)
+    val readiumPreferences = remember(preferences) { preferences.toReadiumEpubPreferences() }
+    val publication = sessionAccess.publication ?: return
+    val initialLocator = remember(sessionAccess, targetLocator?.href, targetLocator?.fragment) {
+        sessionAccess.resolveReadiumLocator(targetLocator)
+    }
+
+    AndroidView(
+        modifier = Modifier.fillMaxSize(),
+        factory = { androidContext ->
+            FragmentContainerView(androidContext).apply {
+                id = containerId
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        }
+    )
+
+    DisposableEffect(activity, publication, sessionId, containerId) {
+        val fragmentManager = activity?.supportFragmentManager
+        if (fragmentManager == null) {
+            onDispose { }
+        } else {
+            val navigatorListener = object : EpubNavigatorFragment.Listener {
+                override fun onExternalLinkActivated(url: AbsoluteUrl) {
+                    runCatching {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url.toString())).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    }.onFailure { error ->
+                        Log.w(HTML_READER_TAG, "Failed to open external Readium link: $url", error)
+                    }
+                }
+
+                override fun onResourceLoadFailed(url: Url, error: ReadError) {
+                    Log.w(HTML_READER_TAG, "Readium resource load failed for $url: $error")
+                }
+
+                override fun onJumpToLocator(locator: org.readium.r2.shared.publication.Locator) {
+                    updatedLocatorChanged(locator.toReaderLocator())
+                }
+            }
+
+            val paginationListener = object : EpubNavigatorFragment.PaginationListener {
+                override fun onPageChanged(
+                    pageIndex: Int,
+                    totalPages: Int,
+                    locator: org.readium.r2.shared.publication.Locator
+                ) {
+                    updatedLocatorChanged(locator.toReaderLocator())
+                }
+
+                override fun onPageLoaded() = Unit
+            }
+
+            val navigatorFactory = EpubNavigatorFactory(publication)
+            val fragmentFactory = navigatorFactory.createFragmentFactory(
+                initialLocator,
+                publication.readingOrder,
+                readiumPreferences,
+                navigatorListener,
+                paginationListener
+            )
+
+            val existing = fragmentManager.findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
+            val fragment = existing ?: run {
+                val previousFactory = fragmentManager.fragmentFactory
+                try {
+                    fragmentManager.fragmentFactory = fragmentFactory
+                    val created = fragmentFactory.instantiate(
+                        context.classLoader,
+                        EpubNavigatorFragment::class.java.name
+                    )
+                    fragmentManager.beginTransaction()
+                        .setReorderingAllowed(true)
+                        .replace(containerId, created, fragmentTag)
+                        .commitNow()
+                    fragmentManager.findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
+                } finally {
+                    fragmentManager.fragmentFactory = previousFactory
+                }
+            }
+
+            val inputListener = object : InputListener {
+                override fun onTap(event: TapEvent): Boolean {
+                    val publicationView = fragment?.publicationView ?: return false
+                    val width = publicationView.width.toFloat().takeIf { it > 0f } ?: return false
+                    val xPercent = event.point.x / width
+                    when {
+                        xPercent <= 0.33f -> updatedLeftTap()
+                        xPercent >= 0.67f -> updatedRightTap()
+                        else -> updatedCenterTap()
+                    }
+                    return true
+                }
+
+                override fun onDrag(event: DragEvent): Boolean = false
+
+                override fun onKey(event: ReadiumKeyEvent): Boolean = false
+            }
+
+            fragment?.addInputListener(inputListener)
+            fragment?.submitPreferences(readiumPreferences)
+
+            onDispose {
+                runCatching { fragment?.removeInputListener(inputListener) }
+                if (!fragmentManager.isDestroyed) {
+                    runCatching {
+                        fragmentManager.findFragmentByTag(fragmentTag)?.let { attached ->
+                            fragmentManager.beginTransaction()
+                                .setReorderingAllowed(true)
+                                .remove(attached)
+                                .commitNowAllowingStateLoss()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(
+        activity,
+        fragmentTag,
+        publication,
+        readiumPreferences,
+        targetLocator?.href,
+        targetLocator?.fragment,
+        targetLocator?.progression,
+        targetLocator?.position
+    ) {
+        val fragmentManager = activity?.supportFragmentManager ?: return@LaunchedEffect
+        val fragment = fragmentManager.findFragmentByTag(fragmentTag) as? EpubNavigatorFragment ?: return@LaunchedEffect
+        runCatching { fragment.submitPreferences(readiumPreferences) }
+        val resolvedTarget = initialLocator ?: return@LaunchedEffect
+        val currentLocator = fragment.currentLocator.value.toReaderLocator()
+        val currentHref = normalizedReadiumHref(currentLocator.href)
+        val targetHref = normalizedReadiumHref(targetLocator?.href)
+        val currentFragment = currentLocator.fragment
+        val targetFragment = targetLocator?.fragment
+            ?: targetLocator?.href?.substringAfter('#', "")?.takeIf { it.isNotBlank() }
+        if (
+            currentHref != null &&
+            targetHref != null &&
+            currentHref.equals(targetHref, ignoreCase = true) &&
+            currentFragment == targetFragment
+        ) {
+            return@LaunchedEffect
+        }
+        runCatching { fragment.go(resolvedTarget, false) }
+            .onFailure { error ->
+                Log.w(HTML_READER_TAG, "Failed to sync Readium locator to ${targetLocator?.href}", error)
+            }
+    }
+
+    LaunchedEffect(activity, fragmentTag, sessionId) {
+        var lastSelectionSignature: String? = null
+        while (isActive) {
+            val fragmentManager = activity?.supportFragmentManager
+            val fragment = fragmentManager?.findFragmentByTag(fragmentTag) as? EpubNavigatorFragment
+            if (fragment != null) {
+                val selection = runCatching { fragment.currentSelection() }.getOrNull()
+                val locator = selection?.locator
+                val selectionText = locator
+                    ?.text
+                    ?.highlight
+                    ?.trim()
+                    ?.replace(Regex("\\s+"), " ")
+                    .orEmpty()
+                val locatorJson = runCatching { locator?.toJSON()?.toString().orEmpty() }
+                    .getOrDefault("")
+                if (selectionText.isBlank()) {
+                    lastSelectionSignature = null
+                } else {
+                    val selectionSignature = "$selectionText|$locatorJson"
+                    if (selectionSignature != lastSelectionSignature) {
+                        lastSelectionSignature = selectionSignature
+                        runCatching { fragment.clearSelection() }
+                        updatedSelectionDetected(selectionText, locatorJson)
+                    }
+                }
+            }
+            delay(350)
+        }
+    }
+
+    LaunchedEffect(activity, fragmentTag, savedHighlights) {
+        val fragmentManager = activity?.supportFragmentManager ?: return@LaunchedEffect
+        val fragment = fragmentManager.findFragmentByTag(fragmentTag) as? EpubNavigatorFragment ?: return@LaunchedEffect
+        val decorations = savedHighlights.mapNotNull { it.toReadiumDecoration() }
+        runCatching {
+            fragment.applyDecorations(decorations, READIUM_HIGHLIGHT_GROUP)
+        }.onFailure { error ->
+            Log.w(HTML_READER_TAG, "Failed to apply Readium highlights", error)
+        }
+    }
 }
 
 private const val JS_SELECTED_TEXT_HANDLER = """(function(){
@@ -672,7 +1015,7 @@ private fun textSettingsJs(
           "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li,body:not([data-mrcomic-preserve-layout='true']) td,body:not([data-mrcomic-preserve-layout='true']) th,body:not([data-mrcomic-preserve-layout='true']) strong,body:not([data-mrcomic-preserve-layout='true']) em,body:not([data-mrcomic-preserve-layout='true']) i,body:not([data-mrcomic-preserve-layout='true']) b,body:not([data-mrcomic-preserve-layout='true']) small,body:not([data-mrcomic-preserve-layout='true']) big,body:not([data-mrcomic-preserve-layout='true']) sup,body:not([data-mrcomic-preserve-layout='true']) sub{color:$resolvedTextColor !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) a[href],body:not([data-mrcomic-preserve-layout='true']) a[href]:link,body:not([data-mrcomic-preserve-layout='true']) a[href]:visited,body:not([data-mrcomic-preserve-layout='true']) a[href]:hover,body:not([data-mrcomic-preserve-layout='true']) a[href]:active{color:$resolvedAccentColor !important;text-decoration:underline !important;text-underline-offset:0.14em !important;text-decoration-thickness:0.08em !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) a[href] *{color:inherit !important;}"+
-          "body [bgcolor],body [style*='background-color:#fff'],body [style*='background-color: #fff'],body [style*='background-color:#ffffff'],body [style*='background-color: #ffffff'],body [style*='background:#fff'],body [style*='background: #fff'],body [style*='background:#ffffff'],body [style*='background: #ffffff'],body [style*='background-color:white'],body [style*='background-color: white'],body [style*='background:white'],body [style*='background: white'],body [style*='background-color:rgb(255'],body [style*='background-color: rgb(255'],body [style*='background:rgb(255'],body [style*='background: rgb(255']{background-color:transparent !important;background-image:none !important;box-shadow:none !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) [bgcolor],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:#fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: #fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:#ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: #ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: rgb(255']{background-color:transparent !important;background-image:none !important;box-shadow:none !important;}"+
           "h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{color:$resolvedTextColor !important;background-color:$headingBg !important;border-color:$headingBorder !important;}"+
           "blockquote,cite,.epigraph{color:$quoteColor !important;border-left-color:$headingBorder !important;}"+
           "a.fn,a[epub\\\\:type~='noteref'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
@@ -707,11 +1050,12 @@ private fun textSettingsJs(
     """.trimIndent()
     val fontStack = if (fontSourceUrl != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
     return """(function(){$fontFaceSnip $themeStyle $spacingStyle if(document.body){""" +
-        """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover');""" +
+        """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover')||document.body.classList.contains('mrcomic-epub-cover-only')||document.body.classList.contains('mrcomic-epub-cover-title')||document.body.classList.contains('mrcomic-epub-titlepage');""" +
+        """${readerPreserveLayoutMarkerScript()}""" +
         """document.documentElement.lang=document.documentElement.lang||'ru';""" +
         """document.body.style.color='$resolvedTextColor';""" +
-        """document.documentElement.style.background='$resolvedBackgroundColor';""" +
-        """document.body.style.background='$resolvedBackgroundColor';""" +
+        """document.documentElement.style.backgroundColor='$resolvedBackgroundColor';""" +
+        """document.body.style.backgroundColor='$resolvedBackgroundColor';""" +
         """if(!preservePublisherLayout){""" +
         """document.body.style.fontSize='${fontSize}px';""" +
         """document.body.style.fontWeight='$fontWeight';""" +
@@ -747,12 +1091,21 @@ private fun buildThemedHtmlDocument(
     val bootstrapStyle = """
         <style id="__reader_bootstrap_theme">
           html, body {
-            background: $bg !important;
+            background-color: $bg !important;
             color: $fg !important;
           }
           body:not([data-mrcomic-preserve-layout="true"]) {
             margin: 0 !important;
             color: $fg !important;
+          }
+          body[data-mrcomic-preserve-layout="true"] {
+            color: $fg !important;
+          }
+          body[data-mrcomic-preserve-layout="true"] * {
+            color: inherit !important;
+          }
+          body[data-mrcomic-preserve-layout="true"] a[href] {
+            color: var(--mrcomic-reader-accent-color, #1a6f9a) !important;
           }
           body:not([data-mrcomic-preserve-layout="true"]) a[href] {
             color: var(--mrcomic-reader-accent-color, #1a6f9a) !important;
@@ -760,23 +1113,23 @@ private fun buildThemedHtmlDocument(
             text-underline-offset: 0.14em !important;
             text-decoration-thickness: 0.08em !important;
           }
-          body [bgcolor],
-          body [style*="background-color:#fff"],
-          body [style*="background-color: #fff"],
-          body [style*="background-color:#ffffff"],
-          body [style*="background-color: #ffffff"],
-          body [style*="background:#fff"],
-          body [style*="background: #fff"],
-          body [style*="background:#ffffff"],
-          body [style*="background: #ffffff"],
-          body [style*="background-color:white"],
-          body [style*="background-color: white"],
-          body [style*="background:white"],
-          body [style*="background: white"],
-          body [style*="background-color:rgb(255"],
-          body [style*="background-color: rgb(255"],
-          body [style*="background:rgb(255"],
-          body [style*="background: rgb(255"] {
+          body:not([data-mrcomic-preserve-layout="true"]) [bgcolor],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color:#fff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color: #fff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color:#ffffff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color: #ffffff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background:#fff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background: #fff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background:#ffffff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background: #ffffff"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color:white"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color: white"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background:white"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background: white"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color:rgb(255"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background-color: rgb(255"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background:rgb(255"],
+          body:not([data-mrcomic-preserve-layout="true"]) [style*="background: rgb(255"] {
             background-color: transparent !important;
             background-image: none !important;
           }
@@ -1028,6 +1381,7 @@ private fun HtmlPageView(
     baseUrl: String?,
     assetDocumentPath: String?,
     assetLoader: WebViewAssetLoader?,
+    formatHandler: ReaderFormatAssetPathHandler? = null,
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
@@ -1105,6 +1459,7 @@ private fun HtmlPageView(
                 settings.loadsImagesAutomatically = true
                 settings.allowFileAccess    = true
                 settings.allowContentAccess = true
+                settings.cacheMode          = WebSettings.LOAD_NO_CACHE
                 // Fix: textZoom=100 prevents system accessibility font scale from
                 // affecting CSS px values, ensuring CHARS_PER_PAGE stays accurate.
                 settings.textZoom           = 100
@@ -1340,13 +1695,23 @@ private fun HtmlPageView(
                         )
                     }
                     is ReaderHtmlPageSource.Inline -> {
-                        webView.loadDataWithBaseURL(
-                            currentSource.baseUrl,
-                            currentSource.html,
-                            "text/html",
-                            "UTF-8",
-                            null
-                        )
+                        val docPath = assetDocumentPath
+                        if (docPath != null && formatHandler != null &&
+                            currentSource.baseUrl.startsWith(HTML_READER_BASE_URL, ignoreCase = true)
+                        ) {
+                            Log.d(HTML_READER_TAG, "loadUrl mode: docPath=$docPath baseUrl=${currentSource.baseUrl}")
+                            formatHandler.servePage(docPath, currentSource.html)
+                            webView.loadUrl(currentSource.baseUrl)
+                        } else {
+                            Log.d(HTML_READER_TAG, "loadDataWithBaseURL mode: docPath=$docPath baseUrl=${currentSource.baseUrl}")
+                            webView.loadDataWithBaseURL(
+                                currentSource.baseUrl,
+                                currentSource.html,
+                                "text/html",
+                                "UTF-8",
+                                null
+                            )
+                        }
                         webView.scheduleInlineFallback(
                             loadToken = currentSource.loadToken,
                             baseUrl = currentSource.baseUrl,
@@ -1424,6 +1789,7 @@ private fun HtmlPagePrewarmView(
                 settings.loadsImagesAutomatically = true
                 settings.allowFileAccess = true
                 settings.allowContentAccess = true
+                settings.cacheMode = WebSettings.LOAD_NO_CACHE
                 settings.textZoom = 100
                 settings.defaultFontSize = 16
                 settings.useWideViewPort = true
@@ -1492,6 +1858,7 @@ private fun HtmlPagePrewarmView(
             val currentSource = pageSource ?: return@AndroidView
             val cached = webView.tag as? String
             if (cached != currentSource.loadToken) {
+                webView.clearCache(true)
                 webView.markLoadRequested(currentSource.loadToken)
                 when (currentSource) {
                     is ReaderHtmlPageSource.FileUrl -> {
@@ -1535,15 +1902,18 @@ fun ReaderScreen(
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val context = LocalContext.current
+    val readerFormatHandler = remember(viewModel) {
+        ReaderFormatAssetPathHandler { path -> viewModel.openHtmlAsset(path) }
+    }
     val readerAssetLoader = remember(viewModel, context) {
         WebViewAssetLoader.Builder()
             .addPathHandler(
-                HTML_READER_ASSET_PATH,
-                ReaderFormatAssetPathHandler { path -> viewModel.openHtmlAsset(path) }
-            )
-            .addPathHandler(
                 READER_USER_FONT_ASSET_PATH,
                 ReaderUserFontAssetPathHandler(context)
+            )
+            .addPathHandler(
+                HTML_READER_ASSET_PATH,
+                readerFormatHandler
             )
             .build()
     }
@@ -1554,10 +1924,43 @@ fun ReaderScreen(
     val clipboardManager = LocalClipboardManager.current
     val ttsController = remember { ReaderTextToSpeechControllerStore.get(context) }
     val ttsRuntimeState by ttsController.state.collectAsState()
+    val isTextReader = shouldUseTextReaderChrome(
+        rendererKey = uiState.readerRendererKey,
+        hasCurrentHtmlContent = uiState.currentHtmlContent != null,
+        isFormatTextReading = uiState.comic?.format?.isTextReadingFormat() == true
+    )
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val isTextReader = uiState.currentHtmlContent != null ||
-        (uiState.comic?.format?.isTextReadingFormat() == true)
-    val supportsDocumentMarginCrop = uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU
+    val readiumSessionAccess = remember(uiState.comic?.id, uiState.readerRendererKey) {
+        viewModel.activeReadiumSessionAccess()
+    }
+    val readiumSessionId = remember(uiState.comic?.id, uiState.readerRendererKey) {
+        viewModel.activeReadiumSessionId()
+    }
+    val readiumPreferenceSnapshot = remember(
+        uiState.textFontSize,
+        uiState.textFontFamily,
+        uiState.textLineHeight,
+        uiState.textLetterSpacing,
+        uiState.textWordSpacing,
+        uiState.textParagraphSpacing,
+        uiState.textAlignment,
+        uiState.textColorScheme,
+        uiState.readingMode
+    ) {
+        viewModel.buildCurrentReaderPreferenceSnapshot()
+    }
+    val readiumTargetLocator = remember(
+        uiState.readerRendererKey,
+        uiState.sessionLocator,
+        uiState.currentPage
+    ) {
+        resolveReadiumShellTargetLocator(
+            rendererKey = uiState.readerRendererKey,
+            sessionLocator = uiState.sessionLocator,
+            currentPage = uiState.currentPage
+        )
+    }
+    val supportsDocumentMarginCrop = uiState.comic?.format?.readerFormatCapabilities()?.supportsDocumentMarginCrop == true
     val effectiveMarginCropHorizontal = if (supportsDocumentMarginCrop) uiState.imageMarginCropHorizontal else 0f
     val effectiveMarginCropVertical = if (supportsDocumentMarginCrop) uiState.imageMarginCropVertical else 0f
     val supportsLandscapeSpread = !isTextReader && isLandscape && configuration.screenWidthDp >= 600
@@ -1905,42 +2308,26 @@ fun ReaderScreen(
         }
     }
 
-    // Immersive / fullscreen mode — hides system bars while reading
+    // Immersive / fullscreen mode — hides system bars while reading.
+    // Uses WindowInsetsControllerCompat so that show() animates bars in smoothly,
+    // preventing a layout jump in the bottom navigation when returning to library.
     DisposableEffect(uiState.immersiveMode, context) {
-        val window = (context as? Activity)?.window
+        val activity = context as? Activity
+        val window = activity?.window
+        val controller = window?.let {
+            WindowInsetsControllerCompat(it, it.decorView)
+        }
         if (uiState.immersiveMode) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.apply {
-                    hide(android.view.WindowInsets.Type.systemBars())
-                    systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                )
+            controller?.apply {
+                hide(WindowInsetsCompat.Type.systemBars())
+                systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.show(android.view.WindowInsets.Type.systemBars())
-            } else {
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            }
+            controller?.show(WindowInsetsCompat.Type.systemBars())
         }
         onDispose {
-            // Restore system bars when leaving the reader
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.show(android.view.WindowInsets.Type.systemBars())
-            } else {
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            }
+            // Restore system bars when leaving the reader — animated via compat API
+            controller?.show(WindowInsetsCompat.Type.systemBars())
         }
     }
 
@@ -1977,7 +2364,26 @@ fun ReaderScreen(
                 // Область чтения
                 Box(modifier = Modifier.fillMaxSize()) {
                     val htmlContent = uiState.currentHtmlContent
-                    if (htmlContent != null) {
+                    val activeReadiumSessionAccess = readiumSessionAccess
+                    if (
+                        shouldRenderReadiumEpubContent(
+                            rendererKey = uiState.readerRendererKey,
+                            hasSessionAccess = activeReadiumSessionAccess != null
+                        )
+                    ) {
+                        ReadiumEpubView(
+                            sessionAccess = checkNotNull(activeReadiumSessionAccess),
+                            sessionId = readiumSessionId ?: "readium_epub",
+                            targetLocator = readiumTargetLocator,
+                            preferences = readiumPreferenceSnapshot,
+                            savedHighlights = uiState.savedHighlights,
+                            onLocatorChanged = viewModel::onReadiumLocatorChanged,
+                            onSelectionDetected = viewModel::showReadiumSelectedTextActions,
+                            onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
+                            onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
+                            onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
+                        )
+                    } else if (htmlContent != null) {
                         uiState.previousHtmlContent?.let { previousHtml ->
                             HtmlPagePrewarmView(
                                 html = previousHtml,
@@ -2024,6 +2430,7 @@ fun ReaderScreen(
                             baseUrl = uiState.htmlBaseUrl,
                             assetDocumentPath = uiState.htmlAssetBasePath,
                             assetLoader = readerAssetLoader,
+                            formatHandler = readerFormatHandler,
                             onLeftTap   = { handleTapZoneAction(tapZoneLayout.left) },
                             onRightTap  = { handleTapZoneAction(tapZoneLayout.right) },
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
@@ -2182,7 +2589,7 @@ fun ReaderScreen(
                     }
 
                     // Нижняя панель прогресса/управления - скрываем, если открыты настройки или оглавление
-                    if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
+                    if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet && !uiState.showSearchSheet) {
                         when (uiState.chromeState) {
                             ReaderChromeState.EXPANDED -> ReaderExpandedBottomPanel(
                                 uiState = uiState,
@@ -2221,7 +2628,7 @@ fun ReaderScreen(
                 } // Box (нижняя область)
 
                 // Верхние инструменты - скрываем, если открыты настройки или оглавление
-                if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
+                if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet && !uiState.showSearchSheet) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
@@ -2251,7 +2658,10 @@ fun ReaderScreen(
                             ReaderChromeState.EXPANDED -> {
                                 ReaderExpandedBar(
                                     title = uiState.comic?.title.orEmpty(),
-                                    canShowToc = uiState.tableOfContents.isNotEmpty() || uiState.bookmarkedPages.isNotEmpty(),
+                                    canShowToc = uiState.tableOfContents.isNotEmpty() ||
+                                        uiState.bookmarkedPages.isNotEmpty() ||
+                                        uiState.savedHighlights.isNotEmpty(),
+                                    canSearch = shouldEnableReadiumSearch(uiState.readerRendererKey),
                                     showTextSettings = true,
                                     showOcrAction = true,
                                     canSwapDirection = uiState.readingMode == ReadingMode.PAGE_LTR ||
@@ -2268,6 +2678,7 @@ fun ReaderScreen(
                                     showBrightnessIcon = uiState.chromeShowBrightnessIcon,
                                     onNavigateBack = onNavigateBack,
                                     onToggleToc = viewModel::toggleTocSheet,
+                                    onToggleSearch = viewModel::toggleSearchSheet,
                                     onToggleTextSettings = viewModel::toggleTextSettings,
                                     onSwapDirection = viewModel::toggleTapZoneDirectionShortcut,
                                     onRequestOcr = {
@@ -2305,15 +2716,33 @@ fun ReaderScreen(
             entries = uiState.tableOfContents,
             currentPage = uiState.currentPage,
             bookmarkedPages = uiState.bookmarkedPages,
+            bookmarkedLocators = uiState.bookmarkedLocators,
+            savedHighlights = uiState.savedHighlights,
             readerPreset = activeReaderPreset,
             toolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f),
             toolbarBlur = uiState.toolbarBlur,
-            onNavigate = { page ->
-                viewModel.navigateTo(page)
+            onNavigate = { entry ->
+                viewModel.navigateToTocEntry(entry)
                 viewModel.toggleTocSheet()
             },
             onRemoveBookmark = viewModel::removeBookmark,
+            onRemoveHighlight = viewModel::removeHighlight,
+            onUpdateHighlightNote = viewModel::updateHighlightNote,
             onDismiss = viewModel::toggleTocSheet
+        )
+    }
+
+    if (uiState.showSearchSheet) {
+        ReaderSearchBottomSheet(
+            query = uiState.searchQuery,
+            results = uiState.searchResults,
+            isLoading = uiState.isSearchLoading,
+            error = uiState.searchError,
+            currentPage = uiState.currentPage,
+            onQueryChange = viewModel::updateSearchQuery,
+            onSearch = viewModel::submitSearch,
+            onSelect = viewModel::navigateToSearchHit,
+            onDismiss = viewModel::toggleSearchSheet
         )
     }
 
@@ -2330,7 +2759,7 @@ fun ReaderScreen(
         )
     }
 
-    if (showReaderAudioSheet && isTextReader) {
+    if (showReaderAudioSheet) {
         ReaderAudioSheet(
             title = uiState.comic?.title.orEmpty(),
             chapterTitle = currentChapterTitle,
@@ -2479,6 +2908,7 @@ fun ReaderScreen(
             onTranslate = viewModel::translateFromSelectedTextActions,
             onDictionary = viewModel::openDictionaryFromSelectedTextActions,
             onExplain = viewModel::explainFromSelectedTextActions,
+            onHighlight = viewModel::saveHighlightFromSelectedTextActions,
             onSaveQuote = viewModel::saveQuoteFromSelectedTextActions
         )
     }
@@ -2529,6 +2959,7 @@ private fun SelectedTextActionSheet(
     onTranslate: () -> Unit,
     onDictionary: () -> Unit,
     onExplain: () -> Unit,
+    onHighlight: () -> Unit,
     onSaveQuote: () -> Unit
 ) {
     val readerText = readerUiText(LocalStrings.current.languageCode)
@@ -2575,6 +3006,14 @@ private fun SelectedTextActionSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(readerText.selectionExplainAction)
+                }
+                if (state.canHighlight) {
+                    OutlinedButton(
+                        onClick = onHighlight,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(readerText.selectionHighlightAction)
+                    }
                 }
                 OutlinedButton(
                     onClick = onSaveQuote,
@@ -2928,11 +3367,15 @@ private fun TocBottomSheet(
     entries: List<TocEntry>,
     currentPage: Int,
     bookmarkedPages: Set<Int>,
+    bookmarkedLocators: Map<Int, ReaderLocator>,
+    savedHighlights: List<ReaderHighlightEntry>,
     readerPreset: ReadingPreset,
     toolbarOpacity: Float,
     toolbarBlur: Float,
-    onNavigate: (Int) -> Unit,
+    onNavigate: (TocEntry) -> Unit,
     onRemoveBookmark: (Int) -> Unit,
+    onRemoveHighlight: (String) -> Unit,
+    onUpdateHighlightNote: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
@@ -2952,22 +3395,38 @@ private fun TocBottomSheet(
     val itemSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.98f)
     val activeItemSurface = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.92f)
     val secondaryPillSurface = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
-    var selectedTab by remember(entries, bookmarkedPages) {
-        mutableStateOf(if (entries.isEmpty() && bookmarkedPages.isNotEmpty()) "bookmarks" else "chapters")
+    var editingHighlightId by remember { mutableStateOf<String?>(null) }
+    var editingHighlightNote by remember { mutableStateOf("") }
+    var selectedTab by remember(entries, bookmarkedPages, savedHighlights) {
+        mutableStateOf(
+            when {
+                entries.isEmpty() && bookmarkedPages.isNotEmpty() -> "bookmarks"
+                entries.isEmpty() && savedHighlights.isNotEmpty() -> "highlights"
+                else -> "chapters"
+            }
+        )
     }
     val showChaptersTab = entries.isNotEmpty()
     val hasBookmarks = bookmarkedPages.isNotEmpty()
+    val hasHighlights = savedHighlights.isNotEmpty()
     val showBookmarksTab = hasBookmarks || (!showChaptersTab && selectedTab == "bookmarks")
+    val showHighlightsTab = hasHighlights || (!showChaptersTab && !showBookmarksTab && selectedTab == "highlights")
 
-    LaunchedEffect(showChaptersTab, hasBookmarks) {
+    LaunchedEffect(showChaptersTab, hasBookmarks, hasHighlights) {
         when {
             selectedTab == "bookmarks" && !hasBookmarks && showChaptersTab -> selectedTab = "chapters"
+            selectedTab == "bookmarks" && !hasBookmarks && !showChaptersTab && hasHighlights -> selectedTab = "highlights"
+            selectedTab == "highlights" && !hasHighlights && showBookmarksTab -> selectedTab = "bookmarks"
+            selectedTab == "highlights" && !hasHighlights && showChaptersTab -> selectedTab = "chapters"
             selectedTab == "chapters" && !showChaptersTab && hasBookmarks -> selectedTab = "bookmarks"
-            !showChaptersTab && !showBookmarksTab -> selectedTab = "chapters"
+            selectedTab == "chapters" && !showChaptersTab && !hasBookmarks && hasHighlights -> selectedTab = "highlights"
+            !showChaptersTab && !showBookmarksTab && !showHighlightsTab -> selectedTab = "chapters"
         }
     }
 
     val selectedTabIndex = when {
+        selectedTab == "highlights" && showChaptersTab && showBookmarksTab -> 2
+        selectedTab == "highlights" && (showChaptersTab || showBookmarksTab) -> 1
         selectedTab == "bookmarks" && showChaptersTab -> 1
         else -> 0
     }
@@ -3022,6 +3481,20 @@ private fun TocBottomSheet(
                         }
                     )
                 }
+                if (showHighlightsTab) {
+                    Tab(
+                        modifier = Modifier.heightIn(min = 42.dp),
+                        selected = selectedTab == "highlights",
+                        onClick = { selectedTab = "highlights" },
+                        text = {
+                            val count = savedHighlights.size
+                            Text(
+                                readerHighlightsTabLabel(count, strings.languageCode),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                    )
+                }
             }
 
             when (selectedTab) {
@@ -3045,7 +3518,7 @@ private fun TocBottomSheet(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { onNavigate(entry.pageIndex) }
+                                        .clickable { onNavigate(entry) }
                                         .padding(horizontal = 14.dp, vertical = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
@@ -3136,7 +3609,15 @@ private fun TocBottomSheet(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { onNavigate(page) }
+                                            .clickable {
+                                                onNavigate(
+                                                    TocEntry(
+                                                        title = readerPageLabel(page, strings.languageCode),
+                                                        pageIndex = page,
+                                                        locator = bookmarkedLocators[page]
+                                                    )
+                                                )
+                                            }
                                             .padding(start = 14.dp, end = 6.dp, top = 9.dp, bottom = 9.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
@@ -3175,10 +3656,503 @@ private fun TocBottomSheet(
                         }
                     }
                 }
+                "highlights" -> {
+                    if (!showHighlightsTab) return@Column
+                    val sortedHighlights = remember(savedHighlights) {
+                        savedHighlights.sortedWith(compareBy<ReaderHighlightEntry> { it.pageIndex }.thenBy { it.createdAt })
+                    }
+                    if (sortedHighlights.isEmpty()) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                                .height(176.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            color = itemSurface
+                        ) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.BookmarkBorder,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                    )
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(
+                                        readerText.noHighlights,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 456.dp),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            items(sortedHighlights, key = { it.id }) { highlight ->
+                                val isCurrent = highlight.pageIndex == currentPage
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isCurrent) activeItemSurface else itemSurface
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                val resolvedLocator = parseReadiumLocatorJson(highlight.locatorJson)
+                                                    ?.toReaderLocator()
+                                                    ?.copy(
+                                                        pageIndex = highlight.pageIndex,
+                                                        position = highlight.pageIndex
+                                                    )
+                                                onNavigate(
+                                                    TocEntry(
+                                                        title = highlight.text.take(120),
+                                                        pageIndex = highlight.pageIndex,
+                                                        locator = resolvedLocator
+                                                    )
+                                                )
+                                            }
+                                            .padding(start = 14.dp, end = 6.dp, top = 10.dp, bottom = 10.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = highlight.text.replace(Regex("\\s+"), " ").trim(),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
+                                                color = if (isCurrent)
+                                                    MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.onSurface,
+                                                maxLines = 3,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(999.dp),
+                                                color = if (isCurrent) {
+                                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
+                                                } else {
+                                                    secondaryPillSurface
+                                                }
+                                            ) {
+                                                Text(
+                                                    text = readerPageLabel(highlight.pageIndex, strings.languageCode),
+                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (isCurrent)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal
+                                                )
+                                            }
+                                            highlight.note?.takeIf { it.isNotBlank() }?.let { note ->
+                                                Text(
+                                                    text = note,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    maxLines = 3,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                        Spacer(Modifier.width(12.dp))
+                                        IconButton(
+                                            onClick = {
+                                                editingHighlightId = highlight.id
+                                                editingHighlightNote = highlight.note.orEmpty()
+                                            },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = readerText.editHighlightNote,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { onRemoveHighlight(highlight.id) },
+                                            modifier = Modifier.size(32.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = readerText.deleteHighlight,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            item { Spacer(Modifier.navigationBarsPadding()) }
+                        }
+                    }
+                }
                 else -> Unit
             }
         }
     }
+
+    if (editingHighlightId != null) {
+        AlertDialog(
+            onDismissRequest = {
+                editingHighlightId = null
+                editingHighlightNote = ""
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        editingHighlightId?.let { id ->
+                            onUpdateHighlightNote(id, editingHighlightNote)
+                        }
+                        editingHighlightId = null
+                        editingHighlightNote = ""
+                    }
+                ) {
+                    Text(readerText.save)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        editingHighlightId = null
+                        editingHighlightNote = ""
+                    }
+                ) {
+                    Text(strings.cancel)
+                }
+            },
+            title = {
+                Text(readerText.editHighlightNote)
+            },
+            text = {
+                OutlinedTextField(
+                    value = editingHighlightNote,
+                    onValueChange = { editingHighlightNote = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    maxLines = 6,
+                    placeholder = { Text(readerText.highlightNotePlaceholder) }
+                )
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReaderSearchBottomSheet(
+    query: String,
+    results: List<BookSearchHit>,
+    isLoading: Boolean,
+    error: String?,
+    currentPage: Int,
+    onQueryChange: (String) -> Unit,
+    onSearch: (String) -> Unit,
+    onSelect: (BookSearchHit) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val strings = LocalStrings.current
+    val searchText = readerSearchUiText(strings.languageCode)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+        ) {
+            Text(
+                text = searchText.title,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    placeholder = { Text(searchText.placeholder) },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch(query) })
+                )
+                FilledTonalButton(
+                    onClick = { onSearch(query) },
+                    enabled = query.trim().isNotEmpty() && !isLoading
+                ) {
+                    Text(searchText.action)
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            when {
+                isLoading && results.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                error != null -> {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
+                    ) {
+                        Text(
+                            text = error,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+
+                query.trim().isBlank() -> {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = searchText.hint,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                results.isEmpty() -> {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = searchText.empty,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 456.dp),
+                        contentPadding = PaddingValues(top = 4.dp, bottom = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(results) { hit ->
+                            ReaderSearchHitRow(
+                                hit = hit,
+                                currentPage = currentPage,
+                                languageCode = strings.languageCode,
+                                onSelect = { onSelect(hit) }
+                            )
+                        }
+                        item { Spacer(Modifier.navigationBarsPadding()) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReaderSearchHitRow(
+    hit: BookSearchHit,
+    currentPage: Int,
+    languageCode: String,
+    onSelect: () -> Unit
+) {
+    val title = remember(hit, currentPage, languageCode) {
+        readerSearchHitTitle(hit, currentPage, languageCode)
+    }
+    val subtitle = remember(hit) { readerSearchHitSubtitle(hit) }
+    val excerpt = buildAnnotatedString {
+        val before = hit.before.trimStart()
+        val match = hit.match.trim()
+        val after = hit.after.trimEnd()
+        if (before.isNotEmpty()) append(before)
+        if (match.isNotEmpty()) {
+            if (length > 0) append(" ")
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            ) {
+                append(match)
+            }
+        }
+        if (after.isNotEmpty()) {
+            if (length > 0) append(" ")
+            append(after)
+        }
+    }
+    val displayExcerpt = if (excerpt.text.isBlank()) {
+        buildAnnotatedString {
+            withStyle(
+                SpanStyle(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            ) {
+                append(hit.match)
+            }
+        }
+    } else {
+        excerpt
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onSelect)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Text(
+                text = displayExcerpt,
+                style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.Auto),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private fun readerSearchHitTitle(
+    hit: BookSearchHit,
+    currentPage: Int,
+    languageCode: String
+): String {
+    return hit.locator.title
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+        ?: readerPageLabel(
+            hit.locator.pageIndex ?: hit.locator.position ?: currentPage,
+            languageCode
+        )
+}
+
+private fun readerSearchHitSubtitle(hit: BookSearchHit): String? {
+    val href = hit.locator.href
+        ?.substringBefore('#')
+        ?.substringAfterLast('/')
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() }
+    val fragment = hit.locator.fragment?.trim()?.takeIf { it.isNotEmpty() }
+        ?: hit.locator.href
+            ?.substringAfter('#', "")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+    return listOfNotNull(href, fragment?.let { "#$it" }).takeIf { it.isNotEmpty() }?.joinToString(" ")
+}
+
+private data class ReaderSearchUiText(
+    val title: String,
+    val placeholder: String,
+    val action: String,
+    val hint: String,
+    val empty: String
+)
+
+private fun readerSearchUiText(language: String): ReaderSearchUiText = when (language.lowercase()) {
+    "ru" -> ReaderSearchUiText(
+        title = "Поиск по книге",
+        placeholder = "Найти фразу или слово",
+        action = "Найти",
+        hint = "Введите запрос, чтобы искать по текущей книге.",
+        empty = "Ничего не найдено."
+    )
+    "ja" -> ReaderSearchUiText(
+        title = "本文検索",
+        placeholder = "単語またはフレーズを検索",
+        action = "検索",
+        hint = "この本の中から探したい語句を入力してください。",
+        empty = "結果が見つかりませんでした。"
+    )
+    "zh", "zh-cn", "zh-tw" -> ReaderSearchUiText(
+        title = "书内搜索",
+        placeholder = "搜索单词或短语",
+        action = "搜索",
+        hint = "输入要在当前书籍中查找的内容。",
+        empty = "没有找到结果。"
+    )
+    "ko" -> ReaderSearchUiText(
+        title = "책 내 검색",
+        placeholder = "단어 또는 문구 검색",
+        action = "검색",
+        hint = "현재 책에서 찾을 내용을 입력하세요.",
+        empty = "검색 결과가 없습니다."
+    )
+    else -> ReaderSearchUiText(
+        title = "Search in book",
+        placeholder = "Find a word or phrase",
+        action = "Search",
+        hint = "Type a query to search within the current book.",
+        empty = "No results found."
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

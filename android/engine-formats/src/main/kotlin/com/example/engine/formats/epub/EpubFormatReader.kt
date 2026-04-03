@@ -23,6 +23,7 @@ import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.FileHeader
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser as JsoupXmlParser
 import java.io.File
 import java.io.InputStream
@@ -259,10 +260,83 @@ internal fun prepareAssetBackedEpubDocument(
             )
         )
     }
+    applyEpubFrontMatterClass(document)
     rebuildNormalizedInlinedEpubDocument(document.outerHtml(), readerCss)
 }.getOrDefault(
     rebuildNormalizedInlinedEpubDocument(html, readerCss)
 )
+
+private fun applyEpubFrontMatterClass(document: Document) {
+    val body = document.body()
+    if (body == null) return
+
+    val visibleText = body.text()
+        .replace('\u00A0', ' ')
+        .replace(Regex("\\s+"), " ")
+        .trim()
+    val hasCoverMedia = body.select(
+        "img, svg.cover-svg, .epub-inline-cover, figure[data-type=cover], image, [style*=background-image], [style*=background:]"
+    ).isNotEmpty() ||
+        Regex("""background(?:-image)?\s*:\s*[^;]*url\s*\(""", RegexOption.IGNORE_CASE)
+            .containsMatchIn(body.html())
+    val tocLike = isEpubFrontMatterTocLike(body, visibleText)
+    val titleSignals = body.classNames().any { name ->
+        name.contains("title", ignoreCase = true) ||
+            name.contains("cover", ignoreCase = true)
+    } ||
+        body.selectFirst("[data-type=titlepage], [epub\\:type~=titlepage], .titlepage, .title-page, div.title") != null
+
+    when {
+        hasCoverMedia && visibleText.isBlank() -> {
+            body.addClass("mrcomic-epub-cover-only")
+            body.attr("data-mrcomic-preserve-layout", "true")
+        }
+        hasCoverMedia && !tocLike && visibleText.length <= 220 -> {
+            body.addClass("mrcomic-epub-cover-title")
+            body.attr("data-mrcomic-preserve-layout", "true")
+        }
+        !tocLike && (titleSignals || looksLikeEpubTitlePage(body, visibleText)) -> {
+            body.addClass("mrcomic-epub-titlepage")
+            body.attr("data-mrcomic-preserve-layout", "true")
+        }
+    }
+}
+
+private fun isEpubFrontMatterTocLike(body: Element, visibleText: String): Boolean {
+    val lowerText = visibleText.lowercase()
+    if (body.select("nav").isNotEmpty()) return true
+    if (
+        lowerText.contains("contents") ||
+        lowerText.contains("table of contents") ||
+        lowerText.contains("brief table of contents") ||
+        lowerText.contains("оглавление") ||
+        lowerText.contains("содержание")
+    ) {
+        return true
+    }
+    return body.select("a[href]").size >= 6 &&
+        body.select("p, li, div").count { it.text().trim().length in 1..120 } >= 4
+}
+
+private fun looksLikeEpubTitlePage(body: Element, visibleText: String): Boolean {
+    if (visibleText.isBlank() || visibleText.length > 320) return false
+    val leadingBlocks = body.children()
+        .filter { it.text().replace('\u00A0', ' ').trim().isNotEmpty() }
+        .take(8)
+    if (leadingBlocks.isEmpty()) return false
+
+    val shortBlocks = leadingBlocks.count { it.text().replace('\u00A0', ' ').trim().length <= 120 }
+    val centeredSignals = leadingBlocks.count { block ->
+        val tag = block.normalName()
+        tag in setOf("h1", "h2", "h3", "center") ||
+            block.attr("align").equals("center", ignoreCase = true) ||
+            block.classNames().any { name ->
+                name.contains("title", ignoreCase = true) ||
+                    name.contains("center", ignoreCase = true)
+            }
+    }
+    return shortBlocks >= minOf(2, leadingBlocks.size) && centeredSignals >= 1
+}
 
 internal data class EpubContentEstimate(
     val textCharCount: Int,
@@ -401,7 +475,80 @@ class EpubFormatReader(
         private val CSS_INJECT = buildReaderDocumentHead(
             baseCss = EPUB_READER_DOCUMENT_CSS
         )
+
+        // ── EPUB source type detection ───────────────────────────────────────
+
+        internal enum class EpubSourceType {
+            PUBLISHER,    // O'Reilly, Springer, traditional publishers
+            CALIBRE,      // Calibre-converted EPUBs
+            FB2EPUB,      // FB2 → EPUB conversions
+            GENERIC       // Unknown source
+        }
+
+        private val DC_PUBLISHER_RE = Regex(
+            """<dc:publisher[^>]*>([^<]+)</dc:publisher>""",
+            RegexOption.IGNORE_CASE
+        )
+
+        private val KNOWN_PUBLISHERS = listOf(
+            "o'reilly", "oreilly", "springer", "wiley", "penguin",
+            "harpercollins", "hachette", "macmillan", "simon & schuster",
+            "random house", "pearson", "oxford university press",
+            "cambridge university press", "elsevier", "mcgraw-hill"
+        )
+
+        internal fun detectEpubSourceType(
+            metadata: Map<String, String>,
+            opfXml: String
+        ): EpubSourceType {
+            val lowerOpf = opfXml.lowercase()
+
+            // Rule 1 – Calibre
+            if (metadata.any { (k, v) ->
+                    k.contains("calibre", ignoreCase = true) ||
+                        v.contains("calibre", ignoreCase = true)
+                } || "calibre" in lowerOpf
+            ) {
+                return EpubSourceType.CALIBRE
+            }
+
+            // Rule 2 – FB2EPUB
+            if (metadata.any { (k, v) ->
+                    k.contains("fb2epub", ignoreCase = true) ||
+                        v.contains("fb2epub", ignoreCase = true) ||
+                        ((k.equals("creator", ignoreCase = true) ||
+                            k.equals("contributor", ignoreCase = true)) &&
+                            v.contains("fb2", ignoreCase = true))
+                } || "fb2epub" in lowerOpf
+            ) {
+                return EpubSourceType.FB2EPUB
+            }
+
+            // Rule 3 – Publisher
+            val publisherValue = metadata["publisher"]?.trim()
+            if (!publisherValue.isNullOrBlank() &&
+                !publisherValue.contains("calibre", ignoreCase = true)
+            ) {
+                if (KNOWN_PUBLISHERS.any { publisherValue.contains(it, ignoreCase = true) }) {
+                    return EpubSourceType.PUBLISHER
+                }
+            }
+            DC_PUBLISHER_RE.find(opfXml)?.groupValues?.getOrNull(1)?.trim()?.let { pub ->
+                if (pub.isNotBlank() && !pub.contains("calibre", ignoreCase = true)) {
+                    return EpubSourceType.PUBLISHER
+                }
+            }
+
+            // Rule 4 – Generic
+            return EpubSourceType.GENERIC
+        }
     }
+
+    // ── EPUB source type ───────────────────────────────────────────────────────
+
+    /** Detected after the OPF is first parsed inside [manifestBlueprint]. */
+    internal var detectedSourceType: EpubSourceType = EpubSourceType.GENERIC
+        private set
 
     // ── ZipFile lifecycle ─────────────────────────────────────────────────────
 
@@ -495,7 +642,15 @@ class EpubFormatReader(
     private val manifestBlueprint: ManifestBlueprint? by lazy {
         try {
             val cacheKey = currentCacheKey()
-            loadManifestFromCache(cacheKey)?.let { return@lazy it }
+            loadManifestFromCache(cacheKey)?.let { cached ->
+                detectedSourceType = when (cached.flavor) {
+                    EPUB_FLAVOR_CALIBRE -> EpubSourceType.CALIBRE
+                    EPUB_FLAVOR_FB2 -> EpubSourceType.FB2EPUB
+                    EPUB_FLAVOR_PUBLISHER -> EpubSourceType.PUBLISHER
+                    else -> EpubSourceType.GENERIC
+                }
+                return@lazy cached
+            }
             val zip = ensureZip() ?: return@lazy null
             val opfEntry = findOpfEntry(zip)
             if (opfEntry != null) {
@@ -522,6 +677,19 @@ class EpubFormatReader(
                 }
                 val isPublisherEpub = detectPublisherEpub(opfText, manifest, spine)
                 val repairFrontMatter = shouldRepairFrontMatter(opfText, manifest, spine)
+                // Extract lightweight metadata map for source-type detection.
+                val metadataForDetection = buildMap<String, String> {
+                    Regex("""<dc:(\w+)[^>]*>([^<]+)</dc:\w+>""", RegexOption.IGNORE_CASE)
+                        .findAll(opfText).forEach { m ->
+                            put(m.groupValues[1].lowercase(), m.groupValues[2].trim())
+                        }
+                    Regex("""<meta\s+name=["']([^"']+)["']\s+content=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                        .findAll(opfText).forEach { m ->
+                            put(m.groupValues[1], m.groupValues[2].trim())
+                        }
+                }
+                detectedSourceType = detectEpubSourceType(metadataForDetection, opfText)
+
                 val blueprint = ManifestBlueprint(
                     manifest = manifest,
                     spine = spine,
@@ -1110,6 +1278,18 @@ class EpubFormatReader(
         i = 0
         while (i < normalized.size) {
             val pg = normalized[i]
+            // Never merge front matter pages (first 4 spine items)
+            if (i < 4) {
+                merged.add(pg)
+                i++
+                continue
+            }
+            // Never merge image-only pages
+            if (pg is EpubPage.Html && pg.entry in imageOnlyHtmlEntries) {
+                merged.add(pg)
+                i++
+                continue
+            }
             if (pg is EpubPage.Html && isMergeSafePage(pg)) {
                 val startWeight = mergeWeight(pg)
                 val startIsImageOnly = pg.entry in imageOnlyHtmlEntries
@@ -1944,6 +2124,10 @@ class EpubFormatReader(
             val imgCount = Regex("""<\s*(?:img|image)\b""", RegexOption.IGNORE_CASE)
                 .findAll(body)
                 .count()
+            val backgroundImageCount = Regex(
+                """background(?:-image)?\s*:\s*[^;]*url\s*\(""",
+                RegexOption.IGNORE_CASE
+            ).findAll(body).count()
             // Files ≤ 8 KB have at most ~2 000 visible chars at 25 % text density — always 1 chunk.
             // Skip the expensive extractChunkBlocks pass for these small spine items.
             val chunkCount = if (keepWholeBody || header.uncompressedSize <= 8_000L) 1
@@ -1953,7 +2137,7 @@ class EpubFormatReader(
             )
             EpubContentEstimate(
                 textCharCount = textCount,
-                imageTagCount = imgCount,
+                imageTagCount = imgCount + backgroundImageCount,
                 chunkCount = chunkCount,
                 keepWholeBody = keepWholeBody
             )
@@ -1991,7 +2175,7 @@ class EpubFormatReader(
         if (shouldKeepWholeEpubHtmlBody(bodyHtml)) {
             val visibleCharCount = HTML_TAG_RE.replace(bodyHtml, "").count { !it.isWhitespace() }
             val hasRenderableMedia = Regex(
-                """<\s*(?:img|image|svg)\b""",
+                """<\s*(?:img|image|svg)\b|background(?:-image)?\s*:\s*[^;]*url\s*\(""",
                 RegexOption.IGNORE_CASE
             ).containsMatchIn(bodyHtml)
             return when {
@@ -2022,7 +2206,7 @@ class EpubFormatReader(
         for (block in rawBlocks) {
             val visibleCharCount = HTML_TAG_RE.replace(block, "").count { !it.isWhitespace() }
             val hasRenderableMedia = Regex(
-                """<\s*(?:img|image|svg)\b""",
+                """<\s*(?:img|image|svg)\b|background(?:-image)?\s*:\s*[^;]*url\s*\(""",
                 RegexOption.IGNORE_CASE
             ).containsMatchIn(block)
             when {

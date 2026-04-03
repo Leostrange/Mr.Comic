@@ -1,6 +1,5 @@
 package com.example.feature.reader.ui
 
-import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,7 +8,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -84,6 +82,8 @@ internal class ReaderTextToSpeechController(
     private var currentTitle: String? = null
     private var currentChapterTitle: String? = null
     private var hasAudioFocus: Boolean = false
+    @Volatile
+    private var serviceStarted: Boolean = false
     private val notificationManager = appContext.getSystemService(NotificationManager::class.java)
     private val audioFocusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
         when (focusChange) {
@@ -328,6 +328,7 @@ internal class ReaderTextToSpeechController(
         tts = null
         abandonAudioFocus()
         cancelMediaNotification()
+        stopPlaybackService()
         unregisterNotificationReceiver()
         mediaSession.isActive = false
         mediaSession.release()
@@ -476,7 +477,12 @@ internal class ReaderTextToSpeechController(
         updateMediaNotification()
         if (state == PlaybackState.STATE_PLAYING) {
             mainHandler.postDelayed(
-                { if (_state.value.isSpeaking) updateMediaNotification() },
+                {
+                    if (_state.value.isSpeaking) {
+                        val n = currentNotificationOrNull()
+                        if (n != null) notificationManager.notify(TTS_NOTIFICATION_ID, n)
+                    }
+                },
                 350L
             )
         }
@@ -485,12 +491,16 @@ internal class ReaderTextToSpeechController(
     private fun updateMediaNotification() {
         val notification = currentNotificationOrNull()
         if (notification == null) {
-            cancelMediaNotification()
-            stopPlaybackService()
+            if (serviceStarted) {
+                cancelMediaNotification()
+                stopPlaybackService()
+            }
             return
         }
         runCatching {
-            startOrUpdatePlaybackService()
+            if (!serviceStarted) {
+                startPlaybackService()
+            }
             notificationManager.notify(TTS_NOTIFICATION_ID, notification)
         }
     }
@@ -499,7 +509,6 @@ internal class ReaderTextToSpeechController(
         val snapshot = _state.value
         val shouldShow = currentChunks.isNotEmpty() && (snapshot.isSpeaking || snapshot.isPaused)
         if (!shouldShow) return null
-        if (!canPostNotifications()) return null
         return buildMediaNotification(snapshot)
     }
 
@@ -619,11 +628,6 @@ internal class ReaderTextToSpeechController(
         notificationManager.cancel(TTS_NOTIFICATION_ID)
     }
 
-    private fun canPostNotifications(): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            appContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-    }
-
     private fun requestAudioFocus(): Boolean {
         if (hasAudioFocus) return true
         val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -651,20 +655,30 @@ internal class ReaderTextToSpeechController(
         hasAudioFocus = false
     }
 
-    private fun startOrUpdatePlaybackService() {
+    private fun startPlaybackService() {
+        if (serviceStarted) return
         val intent = Intent(appContext, ReaderTtsPlaybackService::class.java)
             .setAction(ReaderTtsPlaybackService.ACTION_START_OR_UPDATE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            appContext.startForegroundService(intent)
-        } else {
-            appContext.startService(intent)
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                appContext.startForegroundService(intent)
+            } else {
+                appContext.startService(intent)
+            }
+            serviceStarted = true
         }
     }
 
     private fun stopPlaybackService() {
-        val intent = Intent(appContext, ReaderTtsPlaybackService::class.java)
-            .setAction(ReaderTtsPlaybackService.ACTION_STOP)
-        appContext.startService(intent)
+        if (!serviceStarted) return
+        runCatching {
+            appContext.stopService(Intent(appContext, ReaderTtsPlaybackService::class.java))
+        }
+        serviceStarted = false
+    }
+
+    internal fun onServiceDestroyed() {
+        serviceStarted = false
     }
 
     companion object {

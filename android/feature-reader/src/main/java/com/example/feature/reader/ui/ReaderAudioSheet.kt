@@ -10,8 +10,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -155,10 +158,11 @@ internal fun ReaderAudioSheet(
                 ) {
                     Surface(
                         modifier = Modifier
-                            .padding(horizontal = 48.dp, vertical = 16.dp)
+                            .padding(horizontal = 64.dp, vertical = 6.dp)
                             .fillMaxWidth()
-                            .height(260.dp),
-                        shape = RoundedCornerShape(20.dp),
+                            .aspectRatio(1f)
+                            .heightIn(max = 180.dp),
+                        shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surface
                     ) {
                         Column(
@@ -169,7 +173,7 @@ internal fun ReaderAudioSheet(
                             Icon(
                                 imageVector = Icons.Default.Headphones,
                                 contentDescription = null,
-                                modifier = Modifier.size(84.dp),
+                                modifier = Modifier.size(56.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -177,23 +181,23 @@ internal fun ReaderAudioSheet(
 
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         text = chapterTitle ?: readerText.chapters,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier
@@ -219,7 +223,7 @@ internal fun ReaderAudioSheet(
                         )
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
@@ -231,36 +235,34 @@ internal fun ReaderAudioSheet(
                                 if (showSettings) showChapters = false
                             }
                         ) {
-                            Icon(Icons.Default.Tune, contentDescription = "Аудионастройки", modifier = Modifier.size(28.dp))
+                            Icon(Icons.Default.Tune, contentDescription = "Аудионастройки", modifier = Modifier.size(24.dp))
                         }
-                        Spacer(Modifier.width(4.dp))
                         IconButton(onClick = onPrevious, enabled = runtimeState.totalChunks > 0) {
-                            Icon(Icons.Default.SkipPrevious, contentDescription = "Назад", modifier = Modifier.size(36.dp))
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "Назад", modifier = Modifier.size(32.dp))
                         }
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(8.dp))
                         FilledIconButton(
                             onClick = onTogglePlayback,
-                            modifier = Modifier.size(64.dp),
+                            modifier = Modifier.size(56.dp),
                             shape = CircleShape
                         ) {
                             Icon(
                                 imageVector = if (runtimeState.isSpeaking) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (runtimeState.isSpeaking) "Пауза" else "Воспроизвести",
-                                modifier = Modifier.size(36.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
-                        Spacer(Modifier.width(16.dp))
+                        Spacer(Modifier.width(8.dp))
                         IconButton(onClick = onNext, enabled = runtimeState.totalChunks > 0) {
-                            Icon(Icons.Default.SkipNext, contentDescription = "Вперёд", modifier = Modifier.size(36.dp))
+                            Icon(Icons.Default.SkipNext, contentDescription = "Вперёд", modifier = Modifier.size(32.dp))
                         }
-                        Spacer(Modifier.width(4.dp))
                         IconButton(
                             onClick = {
                                 showChapters = !showChapters
                                 if (showChapters) showSettings = false
                             }
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = readerText.chapters, modifier = Modifier.size(28.dp))
+                            Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = readerText.chapters, modifier = Modifier.size(24.dp))
                         }
                     }
 
@@ -358,21 +360,25 @@ internal fun ReaderAudioSheet(
                                 ) {
                                     LazyColumn(
                                         modifier = Modifier.fillMaxSize(),
-                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         item {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
                                                 Text(
-                                                    text = "Таймер сна",
-                                                    style = MaterialTheme.typography.titleSmall
+                                                    text = "Сон",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
-                                                Row(
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.fillMaxWidth()
+                                                LazyRow(
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    modifier = Modifier.weight(1f)
                                                 ) {
-                                                    ReaderTtsSleepTimerMode.entries.forEach { mode ->
+                                                    items(ReaderTtsSleepTimerMode.entries.toList()) { mode ->
                                                         FilterChip(
                                                             selected = sleepTimerMode == mode.storedValue,
                                                             onClick = { onSleepTimerChange(mode.storedValue) },
@@ -381,7 +387,8 @@ internal fun ReaderAudioSheet(
                                                                     readerAudioSleepTimerLabel(
                                                                         mode.storedValue,
                                                                         LocalStrings.current.languageCode
-                                                                    )
+                                                                    ),
+                                                                    style = MaterialTheme.typography.labelSmall
                                                                 )
                                                             }
                                                         )

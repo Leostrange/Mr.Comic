@@ -93,21 +93,18 @@ object DjvuProbe {
                 val nestedFormType = input.readAscii(4) ?: break
                 topLevelChunkIds += "FORM:$nestedFormType"
                 cursorOffset += 4
+                val innerPayload = chunkSize - 4
                 if (nestedFormType == FORM_DJVU) {
-                    val chunks = collectDirectChunks(input, chunkSize - 4)
                     pages += DjvuPlaceholderPage(
                         index = pages.size,
                         formType = nestedFormType,
-                        chunkIds = chunks.chunkIds,
-                        info = chunks.pageInfo,
                         fileOffset = chunkStartOffset,
                         byteLength = 8L + chunkSize + if (chunkSize % 2L == 1L) 1L else 0L
                     )
-                } else {
-                    if (!input.skipFully(chunkSize - 4)) break
                 }
+                if (!input.skipFully(innerPayload)) break
                 remaining -= chunkSize
-                cursorOffset += chunkSize - 4
+                cursorOffset += innerPayload
             } else {
                 topLevelChunkIds += chunkId
                 if (!input.skipFully(chunkSize)) break
