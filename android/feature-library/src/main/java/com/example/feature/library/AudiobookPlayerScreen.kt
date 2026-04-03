@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -130,10 +132,11 @@ fun AudiobookPlayerScreen(
         ) {
             Box(
                 modifier = Modifier
-                    .padding(horizontal = 48.dp, vertical = 16.dp)
+                    .padding(horizontal = 64.dp, vertical = 6.dp)
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .clip(RoundedCornerShape(18.dp))
+                    .heightIn(max = 180.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
@@ -148,7 +151,7 @@ fun AudiobookPlayerScreen(
                     Icon(
                         imageVector = Icons.Default.Headphones,
                         contentDescription = null,
-                        modifier = Modifier.size(84.dp),
+                        modifier = Modifier.size(56.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -156,18 +159,18 @@ fun AudiobookPlayerScreen(
 
             Text(
                 text = audiobook?.title ?: "",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             if (audiobook != null && audiobook.chapters.isNotEmpty()) {
                 val chapter = audiobook.chapters.getOrNull(uiState.currentChapterIndex)
                 Text(
                     text = chapter?.title ?: "Глава ${uiState.currentChapterIndex + 1}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -175,7 +178,7 @@ fun AudiobookPlayerScreen(
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(6.dp))
             if (uiState.durationMs > 0) {
                 val progress = (uiState.positionMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
                 Slider(
@@ -206,7 +209,7 @@ fun AudiobookPlayerScreen(
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
@@ -218,29 +221,27 @@ fun AudiobookPlayerScreen(
                         if (showSettings) showChapters = false
                     }
                 ) {
-                    Icon(Icons.Default.Tune, contentDescription = "Аудионастройки", modifier = Modifier.size(28.dp))
+                    Icon(Icons.Default.Tune, contentDescription = "Аудионастройки", modifier = Modifier.size(24.dp))
                 }
-                Spacer(Modifier.width(4.dp))
                 IconButton(onClick = viewModel::skipPreviousChapter) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "Предыдущая глава", modifier = Modifier.size(36.dp))
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Предыдущая глава", modifier = Modifier.size(32.dp))
                 }
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(8.dp))
                 FilledIconButton(
                     onClick = { if (uiState.isPlaying) viewModel.pause() else viewModel.play() },
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(56.dp),
                     shape = CircleShape
                 ) {
                     Icon(
                         imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (uiState.isPlaying) "Пауза" else "Воспроизведение",
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(8.dp))
                 IconButton(onClick = viewModel::skipNextChapter) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "Следующая глава", modifier = Modifier.size(36.dp))
+                    Icon(Icons.Default.SkipNext, contentDescription = "Следующая глава", modifier = Modifier.size(32.dp))
                 }
-                Spacer(Modifier.width(4.dp))
                 IconButton(
                     onClick = {
                         showChapters = !showChapters
@@ -248,7 +249,7 @@ fun AudiobookPlayerScreen(
                     },
                     enabled = audiobook?.chapters?.isNotEmpty() == true
                 ) {
-                    Icon(Icons.Default.MenuBook, contentDescription = "Оглавление", modifier = Modifier.size(28.dp))
+                    Icon(Icons.Default.MenuBook, contentDescription = "Оглавление", modifier = Modifier.size(24.dp))
                 }
             }
 
@@ -330,25 +331,31 @@ fun AudiobookPlayerScreen(
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    shape = RoundedCornerShape(24.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilledTonalButton(onClick = { viewModel.seekBy(-15_000L) }) {
-                                Text("-15с")
+                            FilledTonalButton(
+                                onClick = { viewModel.seekBy(-15_000L) },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                            ) {
+                                Text("-15с", style = MaterialTheme.typography.labelMedium)
                             }
-                            FilledTonalButton(onClick = { viewModel.seekBy(30_000L) }) {
-                                Text("+30с")
+                            FilledTonalButton(
+                                onClick = { viewModel.seekBy(30_000L) },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                            ) {
+                                Text("+30с", style = MaterialTheme.typography.labelMedium)
                             }
                             Surface(
                                 shape = RoundedCornerShape(999.dp),
@@ -356,7 +363,7 @@ fun AudiobookPlayerScreen(
                             ) {
                                 Text(
                                     text = if (audiobook?.sourceIsFolder == true) "Папка" else "Файл",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -371,6 +378,7 @@ fun AudiobookPlayerScreen(
                                 val selected = uiState.speed == speed
                                 TextButton(
                                     onClick = { viewModel.setSpeed(speed) },
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(
@@ -388,36 +396,42 @@ fun AudiobookPlayerScreen(
                             }
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
-                                text = "Таймер сна",
-                                style = MaterialTheme.typography.titleSmall
+                                text = "Сон",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.weight(1f)
                             ) {
-                                listOf(
-                                    "Выкл" to null,
-                                    "15м" to 15 * 60 * 1000L,
-                                    "30м" to 30 * 60 * 1000L,
-                                    "60м" to 60 * 60 * 1000L
-                                ).forEach { (label, durationMs) ->
+                                items(
+                                    listOf(
+                                        "Выкл" to null,
+                                        "15м" to 15 * 60 * 1000L,
+                                        "30м" to 30 * 60 * 1000L,
+                                        "60м" to 60 * 60 * 1000L
+                                    )
+                                ) { (label, durationMs) ->
                                     FilterChip(
                                         selected = (durationMs == null && uiState.sleepTimerRemainingMs == null) ||
                                             (durationMs != null && uiState.sleepTimerRemainingMs != null &&
                                                 uiState.sleepTimerRemainingMs!! <= durationMs),
                                         onClick = { viewModel.setSleepTimer(durationMs) },
-                                        label = { Text(label) }
+                                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
                                     )
                                 }
                             }
                             uiState.sleepTimerRemainingMs?.let { remaining ->
                                 Text(
-                                    text = "До паузы: ${remaining.toTimeString()}",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = remaining.toTimeString(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -426,12 +440,16 @@ fun AudiobookPlayerScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilledTonalButton(onClick = viewModel::saveBookmark, enabled = audiobook != null) {
-                                Text("Закладка")
+                            FilledTonalButton(
+                                onClick = viewModel::saveBookmark,
+                                enabled = audiobook != null,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                            ) {
+                                Text("Закладка", style = MaterialTheme.typography.labelMedium)
                             }
                             if (uiState.bookmarkChapterIndex != null) {
                                 TextButton(onClick = viewModel::seekToBookmark) {
-                                    Text("К закладке")
+                                    Text("К закладке", style = MaterialTheme.typography.labelMedium)
                                 }
                             }
                         }

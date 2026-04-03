@@ -12,6 +12,7 @@ android {
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
 }
 dependencies {
+    implementation(project(":engine-api"))
     implementation(project(":core-model"))
     implementation(project(":core-data"))
     implementation(libs.androidx.core.ktx)
@@ -31,4 +32,6 @@ dependencies {
     ksp(libs.google.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.test.junit)
+    testImplementation(libs.test.mockk)
+    testImplementation(libs.test.kotlinx.coroutines)
 }

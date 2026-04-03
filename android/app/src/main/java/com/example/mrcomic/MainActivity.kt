@@ -1,16 +1,24 @@
 package com.example.mrcomic
 
+import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Build
 import android.os.Parcelable
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.view.KeyEvent
 import android.webkit.MimeTypeMap
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.WindowCompat
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,6 +30,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import androidx.core.content.ContextCompat
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.PerformanceDefaults
 import com.example.core.data.preferences.PerformancePreferencesKeys
@@ -56,7 +65,7 @@ import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity(), ReaderHardwareKeyHost {
+class MainActivity : AppCompatActivity(), ReaderHardwareKeyHost {
 
     @Inject lateinit var appIconManager: AppIconManager
     private var readerHardwareKeyHandler: ((KeyEvent) -> Boolean)? = null
@@ -66,7 +75,10 @@ class MainActivity : ComponentActivity(), ReaderHardwareKeyHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        actionBar?.hide()
+        // Ensure the app always draws behind system bars; edge-to-edge layout
+        // prevents the bottom nav jump when system bars reappear after leaving the reader.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        supportActionBar?.hide()
         // Restore correct launcher icon alias if PM state was reset (e.g., after app update)
         lifecycleScope.launch { appIconManager.ensureIconConsistency() }
         setContent {
@@ -191,6 +203,8 @@ fun MrComicApp(
                     }
                     else -> {
                         val navController = rememberNavController()
+                        LegacyFileAccessPermissionRequester()
+                        NotificationPermissionRequester()
 
                         LaunchedEffect(pendingOpenUri) {
                             pendingOpenUri?.let { raw ->
@@ -220,6 +234,200 @@ fun MrComicApp(
             }
         }
     } // CompositionLocalProvider
+}
+
+@Composable
+private fun LegacyFileAccessPermissionRequester() {
+    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.S_V2) return
+
+    val context = LocalContext.current
+    val activity = context as? ComponentActivity ?: return
+    val strings = LocalStrings.current
+    val permission = Manifest.permission.READ_EXTERNAL_STORAGE
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var requestedOnce by rememberSaveable { mutableStateOf(false) }
+    var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted || ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+        requestedOnce = true
+        showPermissionDialog = !hasPermission
+    }
+
+    LaunchedEffect(hasPermission) {
+        if (!hasPermission && !requestedOnce) {
+            permissionLauncher.launch(permission)
+        }
+    }
+
+    if (!hasPermission && showPermissionDialog) {
+        val shouldShowRationale = activity.shouldShowRequestPermissionRationale(permission)
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = {
+                Text(
+                    when (strings.languageCode) {
+                        "en" -> "File access"
+                        else -> "Доступ к файлам"
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (strings.languageCode) {
+                        "en" -> "On Android 12L and below, Mr.Comic needs storage access to open local books, comics, DjVu files and audiobooks from device memory."
+                        else -> "На Android 12L и ниже Mr.Comic нужен доступ к памяти, чтобы открывать локальные книги, комиксы, DjVu-файлы и аудиокниги из памяти устройства."
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPermissionDialog = false
+                        permissionLauncher.launch(permission)
+                    }
+                ) {
+                    Text(
+                        when (strings.languageCode) {
+                            "en" -> "Allow"
+                            else -> "Разрешить"
+                        }
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPermissionDialog = false
+                        if (shouldShowRationale) return@TextButton
+                        val intent = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null)
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                        }
+                    }
+                ) {
+                    Text(
+                        when {
+                            shouldShowRationale && strings.languageCode == "en" -> "Later"
+                            shouldShowRationale -> "Позже"
+                            strings.languageCode == "en" -> "Settings"
+                            else -> "Настройки"
+                        }
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun NotificationPermissionRequester() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+
+    val context = LocalContext.current
+    val activity = context as? ComponentActivity ?: return
+    val strings = LocalStrings.current
+    val permission = Manifest.permission.POST_NOTIFICATIONS
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var requestedOnce by rememberSaveable { mutableStateOf(false) }
+    var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted || ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+        requestedOnce = true
+        showPermissionDialog = !hasPermission
+    }
+
+    LaunchedEffect(hasPermission) {
+        if (!hasPermission && !requestedOnce) {
+            permissionLauncher.launch(permission)
+        }
+    }
+
+    if (!hasPermission && showPermissionDialog) {
+        val shouldShowRationale = activity.shouldShowRequestPermissionRationale(permission)
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = {
+                Text(
+                    when (strings.languageCode) {
+                        "en" -> "Notifications"
+                        else -> "Уведомления"
+                    }
+                )
+            },
+            text = {
+                Text(
+                    when (strings.languageCode) {
+                        "en" -> "Mr.Comic needs notification permission so Android can show the mini-player, lockscreen controls and background playback status for audiobooks and text-to-speech."
+                        else -> "Mr.Comic нужен доступ к уведомлениям, чтобы Android показывал мини-плеер, элементы управления на экране блокировки и фоновое воспроизведение для аудиокниг и озвучивания текста."
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showPermissionDialog = false
+                        permissionLauncher.launch(permission)
+                    }
+                ) {
+                    Text(
+                        when (strings.languageCode) {
+                            "en" -> "Allow"
+                            else -> "Разрешить"
+                        }
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showPermissionDialog = false
+                        if (shouldShowRationale) return@TextButton
+                        val intent = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", context.packageName, null)
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: ActivityNotFoundException) {
+                        }
+                    }
+                ) {
+                    Text(
+                        when {
+                            shouldShowRationale && strings.languageCode == "en" -> "Later"
+                            shouldShowRationale -> "Позже"
+                            strings.languageCode == "en" -> "Settings"
+                            else -> "Настройки"
+                        }
+                    )
+                }
+            }
+        )
+    }
 }
 
 private fun extractIncomingOpenUri(intent: Intent?): Uri? {

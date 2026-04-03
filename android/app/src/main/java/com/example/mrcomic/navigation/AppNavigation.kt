@@ -8,24 +8,30 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmarks
@@ -34,13 +40,11 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,9 +78,12 @@ import com.example.core.data.preferences.PerformancePreferencesKeys
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
+import com.example.core.model.ReaderLocator
+import com.example.core.model.storedReaderLocator
 import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
+import com.example.core.ui.library.RootChromeTone
 import com.example.feature.library.AudiobookPlayerScreen
 import com.example.feature.library.LibraryScreen
 import com.example.feature.library.MiniAudiobookPlayer
@@ -95,6 +102,7 @@ import com.example.feature.settings.ui.SettingsViewModel
 import com.example.mrcomic.home.ContinueLibraryChrome
 import com.example.mrcomic.home.ContinueScreen
 import com.example.mrcomic.icons.AppIconSettingsScreen
+import com.example.core.ui.library.rootChromePanelColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
@@ -122,18 +130,28 @@ sealed class Screen(val route: String) {
         fun create(audiobookId: String) = "audiobook_player/$audiobookId"
     }
 
-    data object Reader : Screen("reader?comicId={comicId}&uri={uri}&page={page}") {
-        fun createForComic(comicId: String, page: Int? = null): String {
+    data object Reader : Screen("reader?comicId={comicId}&uri={uri}&page={page}&locatorHref={locatorHref}&locatorProgression={locatorProgression}&locatorPosition={locatorPosition}&locatorTitle={locatorTitle}&locatorFragment={locatorFragment}") {
+        fun createForComic(comicId: String, page: Int? = null, locator: ReaderLocator? = null): String {
             val params = buildList {
                 add("comicId=${encodeRouteComponent(comicId)}")
                 if (page != null) add("page=$page")
+                locator?.href?.takeIf { it.isNotBlank() }?.let { add("locatorHref=${encodeRouteComponent(it)}") }
+                locator?.progression?.let { add("locatorProgression=${encodeRouteComponent(it.toString())}") }
+                locator?.position?.let { add("locatorPosition=$it") }
+                locator?.title?.takeIf { it.isNotBlank() }?.let { add("locatorTitle=${encodeRouteComponent(it)}") }
+                locator?.fragment?.takeIf { it.isNotBlank() }?.let { add("locatorFragment=${encodeRouteComponent(it)}") }
             }
             return "reader?${params.joinToString("&")}"
         }
-        fun createForUri(encodedUri: String, page: Int? = null): String {
+        fun createForUri(encodedUri: String, page: Int? = null, locator: ReaderLocator? = null): String {
             val params = buildList {
                 add("uri=$encodedUri")
                 if (page != null) add("page=$page")
+                locator?.href?.takeIf { it.isNotBlank() }?.let { add("locatorHref=${encodeRouteComponent(it)}") }
+                locator?.progression?.let { add("locatorProgression=${encodeRouteComponent(it.toString())}") }
+                locator?.position?.let { add("locatorPosition=$it") }
+                locator?.title?.takeIf { it.isNotBlank() }?.let { add("locatorTitle=${encodeRouteComponent(it)}") }
+                locator?.fragment?.takeIf { it.isNotBlank() }?.let { add("locatorFragment=${encodeRouteComponent(it)}") }
             }
             return "reader?${params.joinToString("&")}"
         }
@@ -281,61 +299,95 @@ fun AppNavHost(
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
+        val contentPadding =
+            if (showBottomBar) paddingValues else androidx.compose.foundation.layout.PaddingValues()
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(if (keepBottomBarSlot) paddingValues else androidx.compose.foundation.layout.PaddingValues())
+                .padding(contentPadding)
         ) {
             NavHost(
                 navController = navController,
                 startDestination = startDestination,
-                modifier = Modifier.consumeWindowInsets(paddingValues),
+                modifier = Modifier.fillMaxSize().consumeWindowInsets(contentPadding),
                 enterTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
+                    val isRootTransition = fromRoute in rootRoutes && toRoute in rootRoutes
                     if (
                         isEInk ||
-                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                        fromRoute == toRoute
                     ) {
                         EnterTransition.None
+                    } else if (isRootTransition) {
+                        appNavRootEnterTransition(effectiveTransitionStyle)
                     } else {
-                        appNavEnterTransition(effectiveTransitionStyle)
+                        appNavEnterTransition(
+                            style = effectiveTransitionStyle,
+                            fromRoute = fromRoute,
+                            toRoute = toRoute,
+                            rootRoutes = rootRoutes
+                        )
                     }
                 },
                 exitTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
+                    val isRootTransition = fromRoute in rootRoutes && toRoute in rootRoutes
                     if (
                         isEInk ||
-                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                        fromRoute == toRoute
                     ) {
                         ExitTransition.None
+                    } else if (isRootTransition) {
+                        appNavRootExitTransition(effectiveTransitionStyle)
                     } else {
-                        appNavExitTransition(effectiveTransitionStyle)
+                        appNavExitTransition(
+                            style = effectiveTransitionStyle,
+                            fromRoute = fromRoute,
+                            toRoute = toRoute,
+                            rootRoutes = rootRoutes
+                        )
                     }
                 },
                 popEnterTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
+                    val isRootTransition = fromRoute in rootRoutes && toRoute in rootRoutes
                     if (
                         isEInk ||
-                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                        fromRoute == toRoute
                     ) {
                         EnterTransition.None
+                    } else if (isRootTransition) {
+                        appNavRootPopEnterTransition(effectiveTransitionStyle)
                     } else {
-                        appNavEnterTransition(effectiveTransitionStyle)
+                        appNavPopEnterTransition(
+                            style = effectiveTransitionStyle,
+                            fromRoute = fromRoute,
+                            toRoute = toRoute,
+                            rootRoutes = rootRoutes
+                        )
                     }
                 },
                 popExitTransition = {
                     val fromRoute = initialState.destination.route?.substringBefore('?')
                     val toRoute = targetState.destination.route?.substringBefore('?')
+                    val isRootTransition = fromRoute in rootRoutes && toRoute in rootRoutes
                     if (
                         isEInk ||
-                        (fromRoute in rootRoutes && toRoute in rootRoutes)
+                        fromRoute == toRoute
                     ) {
                         ExitTransition.None
+                    } else if (isRootTransition) {
+                        appNavRootPopExitTransition(effectiveTransitionStyle)
                     } else {
-                        appNavExitTransition(effectiveTransitionStyle)
+                        appNavPopExitTransition(
+                            style = effectiveTransitionStyle,
+                            fromRoute = fromRoute,
+                            toRoute = toRoute,
+                            rootRoutes = rootRoutes
+                        )
                     }
                 }
             ) {
@@ -357,7 +409,13 @@ fun AppNavHost(
                         onComicClick = { comicId, page ->
                             scope.launch {
                                 vm.getComicById(comicId)?.let { comic ->
-                                    navigateToFullscreen(Screen.Reader.createForComic(comic.id, page))
+                                    navigateToFullscreen(
+                                        Screen.Reader.createForComic(
+                                            comicId = comic.id,
+                                            page = page,
+                                            locator = if (page == null) comic.storedReaderLocator() else null
+                                        )
+                                    )
                                 }
                             }
                         },
@@ -425,15 +483,26 @@ fun AppNavHost(
                         onComicClick = { comicId ->
                             scope.launch {
                                 vm.getComicById(comicId)?.let { comic ->
-                                    navigateToFullscreen(Screen.Reader.createForComic(comic.id))
+                                    navigateToFullscreen(
+                                        Screen.Reader.createForComic(
+                                            comicId = comic.id,
+                                            locator = comic.storedReaderLocator()
+                                        )
+                                    )
                                 }
                             }
                         },
                         onAudiobookClick = { audiobookId ->
                             navigateToFullscreen(Screen.AudiobookPlayer.create(audiobookId))
                         },
-                        onQuoteClick = { comicId, page ->
-                            navigateToFullscreen(Screen.Reader.createForComic(comicId, page))
+                        onQuoteClick = { quote ->
+                            navigateToFullscreen(
+                                Screen.Reader.createForComic(
+                                    comicId = quote.comicId,
+                                    page = quote.page,
+                                    locator = quote.storedReaderLocator()
+                                )
+                            )
                         },
                         onAddFileClick = {
                             filePicker.launch(
@@ -490,10 +559,24 @@ fun AppNavHost(
                 }
 
                 composable(Screen.ProgressProfile.route) {
+                    val vm: LibraryViewModel = hiltViewModel()
+                    val scope = rememberCoroutineScope()
                     MrComicProgressRoute(
                         onBackClick = { navController.popBackStack() },
                         onComicClick = { comicId ->
-                            navController.navigate(Screen.Reader.createForComic(comicId))
+                            scope.launch {
+                                val comic = vm.getComicById(comicId)
+                                navController.navigate(
+                                    if (comic != null) {
+                                        Screen.Reader.createForComic(
+                                            comicId = comic.id,
+                                            locator = comic.storedReaderLocator()
+                                        )
+                                    } else {
+                                        Screen.Reader.createForComic(comicId)
+                                    }
+                                )
+                            }
                         }
                     )
                 }
@@ -518,6 +601,30 @@ fun AppNavHost(
                         navArgument("page") {
                             type = NavType.IntType
                             defaultValue = -1
+                        },
+                        navArgument("locatorHref") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("locatorProgression") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("locatorPosition") {
+                            type = NavType.IntType
+                            defaultValue = -1
+                        },
+                        navArgument("locatorTitle") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("locatorFragment") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
                         }
                     )
                 ) {
@@ -566,20 +673,42 @@ fun AppNavHost(
                         navArgument("page") {
                             type = NavType.IntType
                             defaultValue = -1
+                        },
+                        navArgument("locatorHref") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("locatorProgression") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("locatorPosition") {
+                            type = NavType.IntType
+                            defaultValue = -1
+                        },
+                        navArgument("locatorTitle") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
+                        },
+                        navArgument("locatorFragment") {
+                            type = NavType.StringType
+                            nullable = true
+                            defaultValue = null
                         }
                     )
                 ) {
                     val readerContext = LocalContext.current
                     ReaderScreen(
                         onNavigateBack = {
-                            // Restore system bars BEFORE navigating back to prevent library chrome jump
+                            // Restore system bars BEFORE navigating back — use compat API
+                            // so insets animate in smoothly without a bottom bar jump
                             (readerContext as? android.app.Activity)?.window?.let { window ->
-                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                                    window.insetsController?.show(android.view.WindowInsets.Type.systemBars())
-                                } else {
-                                    @Suppress("DEPRECATION")
-                                    window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
-                                }
+                                androidx.core.view.WindowInsetsControllerCompat(
+                                    window, window.decorView
+                                ).show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
                             }
                             navController.navigateUp()
                         },
@@ -598,7 +727,6 @@ fun AppNavHost(
         }
     }
 }
-
 private fun normalizeAppNavTransitionStyle(value: String?): String = when (value?.uppercase()) {
     "NONE", "FADE", "SLIDE", "LIFT" -> value.uppercase()
     else -> "FADE"
@@ -624,28 +752,146 @@ private fun rootChromeOffsetDp(style: String) = when (style) {
     else -> 8.dp
 }
 
-private fun appNavEnterTransition(style: String): EnterTransition = when (style) {
+private fun appNavRootEnterTransition(style: String): EnterTransition = when (style) {
     "NONE" -> EnterTransition.None
-    "SLIDE" -> fadeIn(tween(220)) + slideInVertically(
-        animationSpec = tween(280),
-        initialOffsetY = { it / 14 }
-    )
-    "LIFT" -> fadeIn(tween(220)) + scaleIn(
+    "SLIDE" -> fadeIn(tween(180)) + slideInHorizontally(
         animationSpec = tween(240),
+        initialOffsetX = { it / 8 }
+    )
+    "LIFT" -> fadeIn(tween(180)) + scaleIn(
+        animationSpec = tween(220),
         initialScale = 0.985f
+    )
+    else -> fadeIn(tween(180))
+}
+
+private fun appNavRootExitTransition(style: String): ExitTransition = when (style) {
+    "NONE" -> ExitTransition.None
+    "SLIDE" -> fadeOut(tween(160)) + slideOutHorizontally(
+        animationSpec = tween(220),
+        targetOffsetX = { -(it / 8) }
+    )
+    "LIFT" -> fadeOut(tween(170)) + scaleOut(
+        animationSpec = tween(220),
+        targetScale = 1.01f
+    )
+    else -> fadeOut(tween(180))
+}
+
+private fun appNavRootPopEnterTransition(style: String): EnterTransition = when (style) {
+    "NONE" -> EnterTransition.None
+    "SLIDE" -> fadeIn(tween(180)) + slideInHorizontally(
+        animationSpec = tween(240),
+        initialOffsetX = { -(it / 8) }
+    )
+    "LIFT" -> fadeIn(tween(180)) + scaleIn(
+        animationSpec = tween(220),
+        initialScale = 1.01f
+    )
+    else -> fadeIn(tween(180))
+}
+
+private fun appNavRootPopExitTransition(style: String): ExitTransition = when (style) {
+    "NONE" -> ExitTransition.None
+    "SLIDE" -> fadeOut(tween(160)) + slideOutHorizontally(
+        animationSpec = tween(220),
+        targetOffsetX = { it / 8 }
+    )
+    "LIFT" -> fadeOut(tween(170)) + scaleOut(
+        animationSpec = tween(220),
+        targetScale = 0.99f
+    )
+    else -> fadeOut(tween(180))
+}
+
+private fun appNavEnterTransition(
+    style: String,
+    fromRoute: String?,
+    toRoute: String?,
+    rootRoutes: Set<String>
+): EnterTransition = when (style) {
+    "NONE" -> EnterTransition.None
+    "SLIDE" -> fadeIn(tween(180)) + slideInVertically(
+        animationSpec = tween(300),
+        initialOffsetY = {
+            if (fromRoute in rootRoutes && toRoute in rootRoutes) it / 8 else it / 6
+        }
+    )
+    "LIFT" -> fadeIn(tween(180)) + slideInVertically(
+        animationSpec = tween(240),
+        initialOffsetY = { it / 18 }
+    ) + scaleIn(
+        animationSpec = tween(240),
+        initialScale = 0.965f
     )
     else -> fadeIn(tween(220))
 }
 
-private fun appNavExitTransition(style: String): ExitTransition = when (style) {
+private fun appNavExitTransition(
+    style: String,
+    fromRoute: String?,
+    toRoute: String?,
+    rootRoutes: Set<String>
+): ExitTransition = when (style) {
     "NONE" -> ExitTransition.None
-    "SLIDE" -> fadeOut(tween(180)) + slideOutVertically(
+    "SLIDE" -> fadeOut(tween(160)) + slideOutVertically(
         animationSpec = tween(260),
-        targetOffsetY = { it / 16 }
+        targetOffsetY = {
+            if (fromRoute in rootRoutes && toRoute in rootRoutes) -(it / 10) else -(it / 12)
+        }
     )
-    "LIFT" -> fadeOut(tween(180)) + scaleOut(
+    "LIFT" -> fadeOut(tween(170)) + slideOutVertically(
         animationSpec = tween(220),
-        targetScale = 0.99f
+        targetOffsetY = { -(it / 24) }
+    ) + scaleOut(
+        animationSpec = tween(220),
+        targetScale = 1.015f
+    )
+    else -> fadeOut(tween(180))
+}
+
+private fun appNavPopEnterTransition(
+    style: String,
+    fromRoute: String?,
+    toRoute: String?,
+    rootRoutes: Set<String>
+): EnterTransition = when (style) {
+    "NONE" -> EnterTransition.None
+    "SLIDE" -> fadeIn(tween(180)) + slideInVertically(
+        animationSpec = tween(300),
+        initialOffsetY = {
+            if (fromRoute in rootRoutes && toRoute in rootRoutes) -(it / 10) else -(it / 8)
+        }
+    )
+    "LIFT" -> fadeIn(tween(180)) + slideInVertically(
+        animationSpec = tween(240),
+        initialOffsetY = { -(it / 28) }
+    ) + scaleIn(
+        animationSpec = tween(240),
+        initialScale = 1.015f
+    )
+    else -> fadeIn(tween(220))
+}
+
+private fun appNavPopExitTransition(
+    style: String,
+    fromRoute: String?,
+    toRoute: String?,
+    rootRoutes: Set<String>
+): ExitTransition = when (style) {
+    "NONE" -> ExitTransition.None
+    "SLIDE" -> fadeOut(tween(160)) + slideOutVertically(
+        animationSpec = tween(260),
+        targetOffsetY = {
+            if (fromRoute in rootRoutes && toRoute in rootRoutes) it / 8 else it / 6
+        }
+    )
+    "LIFT" -> fadeOut(tween(170)) + slideOutVertically(
+        animationSpec = tween(220),
+        targetOffsetY = { it / 20 }
+    ) + scaleOut(
+        animationSpec = tween(220),
+        targetScale = 0.965f
     )
     else -> fadeOut(tween(180))
 }
@@ -656,17 +902,27 @@ private fun AppBottomBar(
     menuItems: List<NavItem>,
     onNavigate: (String) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(0.dp),
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp
     ) {
-        menuItems.forEach { item ->
-            UniversalNavigationBarItem(
-                icon = item.icon,
-                label = item.label,
-                isSelected = currentRoute == item.route,
-                onClick = { onNavigate(item.destination) }
-            )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            menuItems.forEach { item ->
+                UniversalNavigationBarItem(
+                    icon = item.icon,
+                    label = item.label,
+                    isSelected = currentRoute == item.route,
+                    onClick = { onNavigate(item.destination) }
+                )
+            }
         }
     }
 }
@@ -679,46 +935,48 @@ private fun RowScope.UniversalNavigationBarItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    NavigationBarItem(
-        modifier = Modifier.weight(1f),
-        selected = isSelected,
-        onClick = onClick,
-        alwaysShowLabel = true,
-        colors = NavigationBarItemDefaults.colors(
-            indicatorColor = Color.Transparent,
-            selectedIconColor = MaterialTheme.colorScheme.primary,
-            selectedTextColor = MaterialTheme.colorScheme.primary,
-            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-        ),
-        icon = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(26.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-        },
-        label = {
+    val interactionSource = remember { MutableInteractionSource() }
+    val contentColor = if (isSelected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .height(52.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(20.dp),
+                tint = contentColor
+            )
             Text(
                 text = label,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Clip,
                 textAlign = TextAlign.Center,
+                color = contentColor,
                 modifier = Modifier
                     .fillMaxWidth()
                     .basicMarquee(),
                 style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                     platformStyle = PlatformTextStyle(includeFontPadding = false)
                 )
             )
         }
-    )
+    }
 }

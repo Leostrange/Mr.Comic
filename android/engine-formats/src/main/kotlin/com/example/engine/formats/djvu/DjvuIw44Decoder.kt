@@ -36,18 +36,24 @@ internal class DjvuIw44Decoder {
      * Call repeatedly for multi-chunk progressive decoding.
      * @return true if this chunk was parsed successfully
      */
-    fun feedChunk(chunkPayload: ByteArray): Boolean = runCatching {
+    fun feedChunk(chunkPayload: ByteArray): Boolean = try {
         feedChunkImpl(chunkPayload)
-    }.getOrDefault(false)
+    } catch (e: Exception) {
+        android.util.Log.w("DjvuIw44Decoder", "feedChunk failed: ${e.message}", e)
+        false
+    }
 
     /**
      * Render the current accumulated state to a Bitmap.
      * Can be called after any number of feedChunk() calls.
      * @return Bitmap or null if not enough data has been received yet.
      */
-    fun render(): Bitmap? = runCatching {
+    fun render(): Bitmap? = try {
         renderImpl()
-    }.getOrNull()
+    } catch (e: Exception) {
+        android.util.Log.w("DjvuIw44Decoder", "render failed: ${e.message}", e)
+        null
+    }
 
     // ── chunk parsing ───────────────────────────────────────────────────────
 
@@ -72,6 +78,12 @@ internal class DjvuIw44Decoder {
             pos += 2
             imageWidth  = wInBlocks * BLOCK
             imageHeight = hInBlocks * BLOCK
+
+            // Reject unreasonable dimensions to prevent OOM (max ~8000x8000 pixels)
+            if (wInBlocks > 250 || hInBlocks > 250 || wInBlocks <= 0 || hInBlocks <= 0) {
+                android.util.Log.w("DjvuIw44Decoder", "Rejecting IW44 image: ${imageWidth}x${imageHeight} (blocks ${wInBlocks}x${hInBlocks}) — too large or invalid")
+                return false
+            }
 
             planeY  = Iw44Plane(wInBlocks, hInBlocks)
             if (!isGrayscale) {

@@ -33,9 +33,16 @@ internal fun extractIw44Bitmap(documentBytes: ByteArray, renderQuality: Int = 1)
         offset = payloadEnd + if (chunkSize % 2 == 1) 1 else 0
     }
 
-    if (!hasBg44) return null
+    if (!hasBg44) {
+        android.util.Log.d("DjvuIw44", "No BG44 chunks found in document (${documentBytes.size} bytes)")
+        return null
+    }
 
-    val fullBitmap = decoder.render() ?: return null
+    val fullBitmap = decoder.render()
+    if (fullBitmap == null) {
+        android.util.Log.w("DjvuIw44", "IW44 render returned null after feeding BG44 chunks (w=${decoder.imageWidth}, h=${decoder.imageHeight}, gray=${decoder.isGrayscale})")
+        return null
+    }
     return scaleBitmapForQuality(fullBitmap, renderQuality)
 }
 
