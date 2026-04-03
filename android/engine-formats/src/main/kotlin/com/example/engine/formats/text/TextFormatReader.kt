@@ -3,6 +3,7 @@ package com.example.engine.formats.text
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import com.example.core.model.ComicFormat
 import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.FormatReaderWebResource
@@ -259,7 +260,7 @@ private const val PRESERVE_LAYOUT_HTML_CSS = READER_PRESERVE_LAYOUT_DOCUMENT_CSS
 private const val TECHNICAL_MARKDOWN_HTML_CSS = """
     body {
       margin: 0;
-      padding: 12px 16px 44px;
+      padding: 12px 22px 44px;
       max-width: none;
       box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
@@ -289,11 +290,17 @@ private const val TECHNICAL_MARKDOWN_HTML_CSS = """
       hyphens: none;
       -webkit-hyphens: none;
     }
-    h1 { font-size: 1.65em; }
-    h2 { font-size: 1.35em; }
+    h1 { font-size: 1.65em; padding-bottom: 0.3em; border-bottom: 1px solid rgba(120,120,120,0.15); }
+    h2 { font-size: 1.35em; padding-bottom: 0.2em; border-bottom: 1px solid rgba(120,120,120,0.10); }
     h3 { font-size: 1.15em; }
-    h4, h5, h6 { font-size: 1em; }
+    h4 { font-size: 1.05em; }
+    h5 { font-size: 1em; font-style: italic; }
+    h6 { font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; }
     pre, code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
+    code:not(pre code) {
+      background: rgba(120,120,120,0.08); padding: 0.15em 0.35em;
+      border-radius: 4px; font-size: 0.9em;
+    }
     pre {
       margin: 0.9rem 0;
       padding: 0.8rem 0.95rem;
@@ -308,26 +315,33 @@ private const val TECHNICAL_MARKDOWN_HTML_CSS = """
       word-break: break-word;
     }
     blockquote {
-      padding-left: 0.95rem;
+      padding: 0.8rem 1rem;
       border-left: 3px solid rgba(120,120,120,0.35);
+      background: rgba(120,120,120,0.03);
+      border-radius: 0 8px 8px 0;
     }
+    blockquote p { text-indent: 0; }
     ul, ol {
-      padding-left: 1.45rem;
+      padding-left: 1.8rem;
       margin: 0.8em 0;
     }
+    li { line-height: 1.55; }
     img { max-width: 100%; height: auto; display: block; margin: 0.8rem 0; }
     table {
       width: 100%;
       border-collapse: collapse;
       margin: 1rem 0;
-      display: block;
       overflow-x: auto;
+      font-size: 0.92em;
     }
     th, td {
       border: 1px solid rgba(120,120,120,0.35);
-      padding: 0.45rem 0.6rem;
+      padding: 0.5rem 0.65rem;
       text-align: left;
     }
+    th { font-weight: 600; background: rgba(120,120,120,0.08); }
+    thead th { background: rgba(120,120,120,0.12); }
+    tbody tr:nth-child(even) { background: rgba(120,120,120,0.04); }
     hr { border: 0; border-top: 1px solid rgba(120,120,120,0.3); margin: 1rem 0; }
     a[href] {
       color: var(--mrcomic-reader-accent-color, #1a6f9a);
@@ -616,7 +630,11 @@ class TextFormatReader @Inject constructor(
     override suspend fun getPage(index: Int): Bitmap? = null
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
-        htmlPages.getOrNull(index.coerceIn(0, (htmlPages.size - 1).coerceAtLeast(0)))
+        val page = htmlPages.getOrNull(index.coerceIn(0, (htmlPages.size - 1).coerceAtLeast(0)))
+        if (page != null) {
+            Log.d("TextFormatReader", "getHtmlPage($index) format=$format len=${page.length} first500=${page.take(500)}")
+        }
+        page
     }
 
     override fun getTableOfContents(): List<TocEntry> = tocEntries

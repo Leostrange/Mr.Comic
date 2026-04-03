@@ -1064,8 +1064,8 @@ private fun textSettingsJs(
         """document.body.style.textAlign='$align';""" +
         """document.body.style.hyphens='auto';""" +
         """document.body.style.webkitHyphens='auto';""" +
-        """document.body.style.paddingLeft='16px';""" +
-        """document.body.style.paddingRight='16px';""" +
+        """document.body.style.paddingLeft='22px';""" +
+        """document.body.style.paddingRight='22px';""" +
         """document.body.style.paddingTop='${topPaddingPx}px';""" +
         """document.body.style.paddingBottom='24px';""" +
         """}else{""" +
