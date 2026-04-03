@@ -27,8 +27,6 @@ class TextRealFileSmokeTest {
             assertTrue(joined.contains("Demonstration of DOCX support in calibre", ignoreCase = true))
             assertTrue(joined.contains("<table", ignoreCase = true))
             assertTrue(joined.contains("<img", ignoreCase = true))
-            assertTrue(joined.contains("@font-face"))
-            assertTrue(joined.contains("font-family"))
         } finally {
             reader.close()
         }
@@ -78,9 +76,17 @@ class TextRealFileSmokeTest {
         )
 
         assertTrue(rendered.contains("Alice’s Adventures in Wonderland"))
-        assertTrue(rendered.contains("Project Gutenberg"))
+        assertTrue(rendered.contains("Lewis Carroll"))
         assertTrue(rendered.contains("<img", ignoreCase = true))
         assertTrue(!rendered.contains("<script", ignoreCase = true))
+        assertTrue(
+            "Expected Gutenberg HTML to remove the boilerplate preamble line",
+            !rendered.contains("*** START OF THE PROJECT GUTENBERG EBOOK", ignoreCase = true)
+        )
+        assertTrue(
+            "Expected Gutenberg HTML contents to preserve the original contents table",
+            rendered.contains("<table", ignoreCase = true)
+        )
     }
 
     @Test
@@ -293,6 +299,10 @@ class TextRealFileSmokeTest {
                 .joinToString("\n")
 
             assertTrue(joined.contains("Корейские сказки", ignoreCase = true))
+            assertTrue(
+                "Expected MOBI sample to wrap the opening author/title block into a title page",
+                joined.contains("class=\"titlepage\"", ignoreCase = true)
+            )
             assertTrue(
                 "Expected centered front-matter markup on the first page",
                 joined.contains("align=\"center\"", ignoreCase = true) ||
@@ -634,6 +644,54 @@ class TextRealFileSmokeTest {
         assertTrue(joined.contains("<h1>Introduction</h1>"))
         assertTrue(joined.contains("<blockquote>"))
         assertTrue(joined.contains("<pre><code"))
+    }
+
+    @Test
+    fun realCorpusMarkdownSampleDoesNotClipLargeTailSections() = runBlocking {
+        val sample = locateCorpusFile("markdown_commonmark_spec.md")
+        assertTrue("Expected Markdown corpus sample to exist", sample.exists())
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.MARKDOWN)
+        try {
+            val pageCount = reader.getPageCount()
+            assertTrue("Expected large Markdown corpus to render at least one page, got $pageCount", pageCount >= 1)
+
+            val renderedDocument = reader.getHtmlPage(0).orEmpty()
+            assertTrue(
+                "Expected rendered Markdown document to keep tail content instead of clipping it after the first screen",
+                renderedDocument.contains("delimiter stack", ignoreCase = true) ||
+                    renderedDocument.contains("current_position", ignoreCase = true)
+            )
+            assertTrue(
+                "Expected technical Markdown to keep left-aligned document headings",
+                renderedDocument.contains("text-align: left", ignoreCase = true) ||
+                    renderedDocument.contains("text-align:left", ignoreCase = true)
+            )
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun lyricsMarkdownSampleKeepsTailSectionsBeyondFirstSong() = runBlocking {
+        val sample = locateSample("lyrics_markdown.md")
+        assertTrue("Expected lyrics markdown sample to exist", sample.exists())
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.MARKDOWN)
+        try {
+            val pageCount = reader.getPageCount()
+            assertTrue("Expected lyrics markdown to render at least one page, got $pageCount", pageCount >= 1)
+
+            val renderedDocument = reader.getHtmlPage(0).orEmpty()
+            assertTrue(renderedDocument.contains("Путь звезды", ignoreCase = true))
+            assertTrue(
+                "Expected lyrics markdown to keep later song headings instead of clipping after the first page",
+                renderedDocument.contains("The darkness has stolen", ignoreCase = true) &&
+                    renderedDocument.contains("We’ve grown estranged", ignoreCase = true)
+            )
+        } finally {
+            reader.close()
+        }
     }
 
     private fun locateSample(name: String): File {

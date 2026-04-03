@@ -722,26 +722,41 @@ class TextFormatReader @Inject constructor(
             }
             ComicFormat.DOCX -> {
                 val bytes = readSourceBytes() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
-                val entries = readZipEntries(bytes)
-                val relationships = parseDocxRelationships(
-                    entries["word/_rels/document.xml.rels"]?.toString(Charsets.UTF_8)
-                )
-                val archive = buildDocxArchive(entries, relationships)
-                val blocks = extractDocxBlocks(bytes)
-                
-                // For DOCX, render as a single continuous document without pagination
-                // to preserve the complete flow of text, styles, media, and embedded resources
-                val fullBody = blocks.joinToString(separator = "")
-                TextDocumentData(
-                    listOf(
-                    buildReaderHtmlDocument(
-                        body = fullBody,
-                        baseUrl = htmlBaseUrl(),
-                        extraCss = archive.styleContext.embeddedFontCss,
-                        preservePublisherLayout = true
+                // Primary path: Mammoth produces clean semantic HTML from DOCX
+                val mammothHtml = runCatching {
+                    val converter = org.zwobble.mammoth.DocumentConverter()
+                    converter.convertToHtml(java.io.ByteArrayInputStream(bytes)).value
+                }.getOrNull()
+                if (mammothHtml != null && mammothHtml.isNotBlank()) {
+                    TextDocumentData(
+                        listOf(
+                            buildReaderHtmlDocument(
+                                body = mammothHtml,
+                                baseUrl = htmlBaseUrl(),
+                                preservePublisherLayout = false
+                            )
+                        )
                     )
-                )
-                )
+                } else {
+                    // Fallback: custom XML parser
+                    val entries = readZipEntries(bytes)
+                    val relationships = parseDocxRelationships(
+                        entries["word/_rels/document.xml.rels"]?.toString(Charsets.UTF_8)
+                    )
+                    val archive = buildDocxArchive(entries, relationships)
+                    val blocks = extractDocxBlocks(bytes)
+                    val fullBody = blocks.joinToString(separator = "")
+                    TextDocumentData(
+                        listOf(
+                            buildReaderHtmlDocument(
+                                body = fullBody,
+                                baseUrl = htmlBaseUrl(),
+                                extraCss = archive.styleContext.embeddedFontCss,
+                                preservePublisherLayout = true
+                            )
+                        )
+                    )
+                }
             }
             ComicFormat.ODT -> {
                 val bytes = readSourceBytes() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
@@ -1847,9 +1862,15 @@ class TextFormatReader @Inject constructor(
 
         normalizedBlocks.forEach { block ->
             val visibleChars = block.replace(Regex("<[^>]+>"), "").length.coerceAtLeast(1)
-            if (chars + visibleChars > CHARS_PER_PAGE && chars > 0) flush()
+            val trimmed = block.trimStart()
+            val isAtomic = trimmed.startsWith("<table", ignoreCase = true) ||
+                trimmed.startsWith("<ul", ignoreCase = true) ||
+                trimmed.startsWith("<ol", ignoreCase = true)
+            if (isAtomic && chars > 0) flush()
+            if (chars + visibleChars > CHARS_PER_PAGE && chars > 0 && !isAtomic) flush()
             buffer.append(block)
             chars += visibleChars
+            if (isAtomic) flush()
         }
         flush()
         return pages.ifEmpty { listOf(wrapHtml("<p></p>", extraCss, baseCss, preservePublisherLayout)) }
@@ -1858,6 +1879,12 @@ class TextFormatReader @Inject constructor(
     private fun splitOversizedReaderBlock(block: String): List<String> {
         val visibleChars = block.replace(Regex("<[^>]+>"), "").length.coerceAtLeast(1)
         if (visibleChars <= CHARS_PER_PAGE) return listOf(block)
+        val trimmed = block.trimStart()
+        if (trimmed.startsWith("<table", ignoreCase = true) ||
+            trimmed.startsWith("<ul", ignoreCase = true) ||
+            trimmed.startsWith("<ol", ignoreCase = true)) {
+            return listOf(block)
+        }
 
         return runCatching {
             val document = Jsoup.parseBodyFragment(block)
