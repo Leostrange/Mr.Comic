@@ -26,6 +26,7 @@ dependencies {
     implementation(libs.commonmark.ext.gfm.tables)
     implementation(libs.commonmark.ext.footnotes)
     implementation(libs.jsoup)
+    implementation(libs.mammoth)
     implementation(libs.google.gson)
     // PDF: используем встроенный android.graphics.pdf.PdfRenderer — внешние lib не нужны
     implementation(libs.google.hilt.android)

@@ -40,6 +40,7 @@ pdfium = "2.0.27.0"
 media3 = "1.5.1"
 commonmark = "0.27.0"
 jsoup = "1.22.1"
+mammoth = "1.8.0"
 readium = "3.1.2"
 kotlinx-coroutines-android = "1.9.0"
 kotlinx-coroutines-play-services = "1.9.0"
@@ -102,6 +103,7 @@ commonmark-ext-gfm-strikethrough = { group = "org.commonmark", name = "commonmar
 commonmark-ext-gfm-tables = { group = "org.commonmark", name = "commonmark-ext-gfm-tables", version.ref = "commonmark" }
 commonmark-ext-footnotes = { group = "org.commonmark", name = "commonmark-ext-footnotes", version.ref = "commonmark" }
 jsoup = { group = "org.jsoup", name = "jsoup", version.ref = "jsoup" }
+mammoth = { group = "org.zwobble.mammoth", name = "mammoth", version.ref = "mammoth" }
 readium-shared = { group = "org.readium.kotlin-toolkit", name = "readium-shared", version.ref = "readium" }
 readium-streamer = { group = "org.readium.kotlin-toolkit", name = "readium-streamer", version.ref = "readium" }
 readium-navigator = { group = "org.readium.kotlin-toolkit", name = "readium-navigator", version.ref = "readium" }
