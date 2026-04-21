@@ -12,6 +12,18 @@ val localProps = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
+val signingStorePassword = localProps.getProperty("SIGNING_STORE_PASSWORD")
+    ?: System.getenv("SIGNING_STORE_PASSWORD")
+val signingKeyAlias = localProps.getProperty("SIGNING_KEY_ALIAS")
+    ?: System.getenv("SIGNING_KEY_ALIAS")
+val signingKeyPassword = localProps.getProperty("SIGNING_KEY_PASSWORD")
+    ?: System.getenv("SIGNING_KEY_PASSWORD")
+val customKeystoreFile = rootProject.file("keystore/mrcomic.keystore")
+val hasCustomSigning = customKeystoreFile.exists() &&
+    !signingStorePassword.isNullOrBlank() &&
+    !signingKeyAlias.isNullOrBlank() &&
+    !signingKeyPassword.isNullOrBlank()
+
 android {
     namespace = "com.example.mrcomic"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -30,11 +42,13 @@ android {
     }
 
     signingConfigs {
-        create("mrcomic") {
-            storeFile = file("${rootDir}/keystore/mrcomic.keystore")
-            storePassword = localProps.getProperty("SIGNING_STORE_PASSWORD")
-            keyAlias    = localProps.getProperty("SIGNING_KEY_ALIAS")
-            keyPassword = localProps.getProperty("SIGNING_KEY_PASSWORD")
+        if (hasCustomSigning) {
+            create("mrcomic") {
+                storeFile = customKeystoreFile
+                storePassword = signingStorePassword
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
+            }
         }
     }
 
@@ -43,13 +57,17 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("mrcomic")
+            if (hasCustomSigning) {
+                signingConfig = signingConfigs.getByName("mrcomic")
+            }
         }
         debug {
             isDebuggable = true
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
-            signingConfig = signingConfigs.getByName("mrcomic")
+            if (hasCustomSigning) {
+                signingConfig = signingConfigs.getByName("mrcomic")
+            }
         }
     }
 
