@@ -495,12 +495,11 @@ fun AppNavHost(
                         onAudiobookClick = { audiobookId ->
                             navigateToFullscreen(Screen.AudiobookPlayer.create(audiobookId))
                         },
-                        onQuoteClick = { quote ->
+                        onQuoteClick = { comicId, page ->
                             navigateToFullscreen(
                                 Screen.Reader.createForComic(
-                                    comicId = quote.comicId,
-                                    page = quote.page,
-                                    locator = quote.storedReaderLocator()
+                                    comicId = comicId,
+                                    page = page
                                 )
                             )
                         },

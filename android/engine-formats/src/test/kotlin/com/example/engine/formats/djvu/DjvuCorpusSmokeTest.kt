@@ -3,6 +3,7 @@ package com.example.engine.formats.djvu
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
 
@@ -72,7 +73,9 @@ class DjvuCorpusSmokeTest {
             if (candidate.exists()) return candidate
             current = current.parentFile ?: return@repeat
         }
-        return File(userDir, name)
+        val fallback = File(userDir, name)
+        assumeTrue("Optional local DjVu sample missing: $name", fallback.exists())
+        return fallback
     }
 
     private fun extractChunkPayload(documentBytes: ByteArray, chunkId: String): ByteArray? {

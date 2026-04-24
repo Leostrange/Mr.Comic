@@ -8,5 +8,7 @@ enum class ReaderImageScaleMode(val storedValue: String) {
     companion object {
         fun fromStored(value: String?): ReaderImageScaleMode =
             entries.firstOrNull { it.storedValue == value } ?: FIT_WIDTH
+
+        fun defaultFor(format: ComicFormat?): ReaderImageScaleMode = FIT_WIDTH
     }
 }

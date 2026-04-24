@@ -11,9 +11,23 @@ import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.TocEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
+
+private fun safeLogD(tag: String, message: String) {
+    runCatching { Log.d(tag, message) }
+}
+
+private fun safeLogW(tag: String, message: String, throwable: Throwable? = null) {
+    runCatching { Log.w(tag, message, throwable) }
+}
+
+private fun safeLogE(tag: String, message: String, throwable: Throwable? = null) {
+    runCatching { Log.e(tag, message, throwable) }
+}
 
 /**
  * FB2 reader.  Two automatic modes:
@@ -38,12 +52,161 @@ class Fb2FormatReader(
         private val IMAGE_EXTS     = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
         /**
          * Target non-whitespace character count per reader page.
-         * ~2000 chars ≈ roughly one screenful at 18px/1.8lh on a typical phone.
-         * Vertical scrolling is allowed within a page, so content is never clipped.
+         * Tuned for the current page-mode contract where each HTML page should fit the viewport
+         * without relying on an inner vertical scroll.
          */
-        private const val CHARS_PER_PAGE = 2000
+        private const val CHARS_PER_PAGE = 520
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
+
+        private const val TEXT_BLOCK_SOFT_SPLIT_THRESHOLD = 220
+
+        internal fun splitRawHtmlIntoViewportChunks(content: String): List<String> {
+            if (content.isEmpty()) return emptyList()
+            val parts = content.split(Regex("(?<=</(?:p|h2|h3|blockquote)>)", RegexOption.IGNORE_CASE))
+                .filter { it.isNotEmpty() }
+
+            if (parts.isEmpty()) return listOf(content)
+
+            val chunks = mutableListOf<String>()
+            var currentChunk = StringBuilder()
+            var currentChars = 0
+            for (part in parts.flatMap(::splitOversizedHtmlPart)) {
+                val partChars = HTML_TAG_RE.replace(part, "").length
+                if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
+                    chunks += currentChunk.toString()
+                    currentChunk = StringBuilder()
+                    currentChars = 0
+                }
+                currentChunk.append(part)
+                currentChars += partChars
+            }
+            if (currentChunk.isNotEmpty()) chunks += currentChunk.toString()
+            return chunks
+        }
+
+        private fun splitOversizedHtmlPart(part: String): List<String> {
+            val visibleChars = HTML_TAG_RE.replace(part, "").trim().length
+            if (visibleChars <= TEXT_BLOCK_SOFT_SPLIT_THRESHOLD) {
+                return listOf(part)
+            }
+
+            return runCatching {
+                val document = Jsoup.parseBodyFragment(part)
+                val element = document.body().children().firstOrNull() ?: return@runCatching listOf(part)
+                when (element.normalName()) {
+                    "div", "section", "article" -> {
+                        val children = element.children()
+                        if (children.size >= 2 && element.ownText().isBlank()) {
+                            children.flatMap { child -> splitOversizedHtmlPart(child.outerHtml()) }
+                        } else {
+                            splitOversizedTextElement(element)
+                        }
+                    }
+                    "table", "ul", "ol", "img", "svg" -> listOf(part)
+                    else -> splitOversizedTextElement(element)
+                }
+            }.getOrElse { listOf(part) }
+        }
+
+        private fun splitOversizedTextElement(element: Element): List<String> {
+            val plainText = element.wholeText()
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .replace(Regex("""[ \t]+"""), " ")
+                .replace(Regex("""\n{3,}"""), "\n\n")
+                .trim()
+            if (plainText.isBlank()) return listOf(element.outerHtml())
+            if (plainText.length <= TEXT_BLOCK_SOFT_SPLIT_THRESHOLD) return listOf(element.outerHtml())
+
+            val tag = element.normalName()
+            val attrs = element.attributes().html().trim().takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
+            val chunks = splitPlainTextIntoChunks(plainText, TEXT_BLOCK_SOFT_SPLIT_THRESHOLD)
+            if (chunks.size <= 1) return listOf(element.outerHtml())
+            return chunks.map { chunk ->
+                "<$tag$attrs data-mr-split-chunk=\"true\">${escapeHtml(chunk).replace("\n", "<br/>")}</$tag>"
+            }
+        }
+
+        private fun splitPlainTextIntoChunks(text: String, maxChars: Int): List<String> {
+            val normalized = text
+                .replace("\r\n", "\n")
+                .replace('\r', '\n')
+                .trim()
+            if (normalized.length <= maxChars) return listOf(normalized)
+
+            val result = mutableListOf<String>()
+            val buffer = StringBuilder()
+
+            fun flush() {
+                if (buffer.isNotBlank()) {
+                    result += buffer.toString().trim()
+                    buffer.clear()
+                }
+            }
+
+            fun appendToken(token: String, separator: String) {
+                if (token.isBlank()) return
+                if (buffer.isNotEmpty() && buffer.length + separator.length + token.length > maxChars) {
+                    flush()
+                }
+                if (token.length <= maxChars) {
+                    if (buffer.isNotEmpty()) buffer.append(separator)
+                    buffer.append(token)
+                    return
+                }
+
+                var remaining = token
+                while (remaining.isNotEmpty()) {
+                    if (buffer.isNotEmpty()) flush()
+                    val chunk = remaining.take(maxChars)
+                    buffer.append(chunk)
+                    remaining = remaining.drop(chunk.length)
+                    if (remaining.isNotEmpty()) flush()
+                }
+            }
+
+            var pendingLineBreaks = 0
+            normalized.split('\n').forEach { rawLine ->
+                val words = rawLine
+                    .trim()
+                    .split(Regex("""\s+"""))
+                    .filter { it.isNotBlank() }
+                if (words.isEmpty()) {
+                    pendingLineBreaks = (pendingLineBreaks + 1).coerceAtMost(2)
+                    return@forEach
+                }
+                words.forEachIndexed { index, word ->
+                    val separator = when {
+                        buffer.isEmpty() -> ""
+                        index == 0 -> "\n".repeat(pendingLineBreaks.coerceAtLeast(1))
+                        else -> " "
+                    }
+                    appendToken(word, separator)
+                    pendingLineBreaks = 0
+                }
+                pendingLineBreaks = 1
+            }
+
+            flush()
+            return result.ifEmpty { listOf(normalized) }
+        }
+
+        private fun escapeHtml(text: String): String = buildString(text.length) {
+            for (ch in text) {
+                append(
+                    when (ch) {
+                        '&' -> "&amp;"
+                        '<' -> "&lt;"
+                        '>' -> "&gt;"
+                        '"' -> "&quot;"
+                        '\'' -> "&#39;"
+                        else -> ch.toString()
+                    }
+                )
+            }
+        }
+
         private const val CSS = """<style>
 body{font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.6;
      padding:16px 20px 24px;color:#1a1a1a;background:#fafafa;max-width:720px;margin:auto;
@@ -120,7 +283,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             openStream()?.use { parse(it) }
                 ?: Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap())
         } catch (e: Exception) {
-            Log.e(TAG, "FB2 parse error for $path", e)
+            safeLogE(TAG, "FB2 parse error for $path", e)
             Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap())
         }
     }
@@ -149,7 +312,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
         val count = if (isTextMode) data.htmlPages.size else imageBitmapBytes.size
-        Log.d(TAG, "getPageCount=$count isTextMode=$isTextMode path=$path")
+        safeLogD(TAG, "getPageCount=$count isTextMode=$isTextMode path=$path")
         count
     }
 
@@ -216,13 +379,13 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
     private fun parse(stream: InputStream): Parsed {
         val rawBytes = try { stream.readBytes() } catch (e: Exception) {
-            Log.e(TAG, "Cannot read FB2 stream", e)
+            safeLogE(TAG, "Cannot read FB2 stream", e)
             return Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap())
         }
 
         // Clean up the bytes before XML parsing
         val bytes = try { preprocessBytes(rawBytes) } catch (e: Exception) {
-            Log.w(TAG, "FB2 preprocess failed, using raw bytes", e)
+            safeLogW(TAG, "FB2 preprocess failed, using raw bytes", e)
             rawBytes
         }
 
@@ -272,30 +435,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             if (sectionBuf.isEmpty()) return
             val content = sectionBuf.toString()
             sectionBuf.clear()
-
-            val parts = content.split(Regex("(?<=</p>)", RegexOption.IGNORE_CASE))
-                .filter { it.isNotEmpty() }
-
-            if (parts.isEmpty()) {
-                rawSections.add(content)
-                return
-            }
-
-            var currentChunk = StringBuilder()
-            var currentChars = 0
-            for (part in parts) {
-                val partChars = HTML_TAG_RE.replace(part, "").length
-                // Start a new page if adding this part would overflow — but only if the
-                // current page already has content (prevents empty leading pages).
-                if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
-                    rawSections.add(currentChunk.toString())
-                    currentChunk = StringBuilder()
-                    currentChars = 0
-                }
-                currentChunk.append(part)
-                currentChars += partChars
-            }
-            if (currentChunk.isNotEmpty()) rawSections.add(currentChunk.toString())
+            rawSections.addAll(splitRawHtmlIntoViewportChunks(content))
         }
 
         val parser = Xml.newPullParser().apply {
@@ -415,7 +555,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                     val dec = Base64.decode(binaryBuf.toString(), Base64.DEFAULT)
                                     if (dec.isNotEmpty()) binaries[binaryId] = dec
                                 } catch (e: Exception) {
-                                    Log.w(TAG, "Base64 decode failed for binary '$binaryId'", e)
+                                    safeLogW(TAG, "Base64 decode failed for binary '$binaryId'", e)
                                 }
                                 inBinary = false; binaryId = ""; binaryBuf.clear()
                             }
@@ -506,7 +646,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                 ev = parser.next()
             }
         } catch (e: Exception) {
-            Log.e(TAG, "FB2 XML parse exception", e)
+            safeLogE(TAG, "FB2 XML parse exception", e)
             // Flush whatever was buffered before the error
             flushPage()
         }
@@ -585,7 +725,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             pages = mainPages
         }
 
-        Log.d(TAG, "FB2 parsed: binaries=${binaries.size} bodyImageRefs=${bodyImageRefs.size} " +
+        safeLogD(TAG, "FB2 parsed: binaries=${binaries.size} bodyImageRefs=${bodyImageRefs.size} " +
                 "rawSections=${rawSections.size} pages=${pages.size} hasBodyText=$hasBodyText " +
                 "sections=$sectionCount toc=${tocEntries.size} footnotes=${footnoteMap.size}")
 
@@ -622,6 +762,21 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                 "<body>$resolved</body></html>"
     }
 
+    private fun escapeHtml(text: String): String = buildString(text.length) {
+        for (ch in text) {
+            append(
+                when (ch) {
+                    '&' -> "&amp;"
+                    '<' -> "&lt;"
+                    '>' -> "&gt;"
+                    '"' -> "&quot;"
+                    '\'' -> "&#39;"
+                    else -> ch.toString()
+                }
+            )
+        }
+    }
+
     private fun findHref(parser: XmlPullParser): String {
         parser.getAttributeValue(XLINK_NS, "href")?.let { return it }
         parser.getAttributeValue(null, "href")?.let { return it }
@@ -638,6 +793,6 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         else
             File(path).inputStream()
     } catch (e: Exception) {
-        Log.e(TAG, "Cannot open FB2: $path", e); null
+        safeLogE(TAG, "Cannot open FB2: $path", e); null
     }
 }

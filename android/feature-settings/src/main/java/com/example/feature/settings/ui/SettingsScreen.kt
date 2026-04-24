@@ -100,7 +100,10 @@ import com.example.core.ui.theme.ThemeMode
 import com.example.core.ui.theme.ThemePreset
 import com.example.core.ui.theme.previewColors
 import com.example.core.ui.theme.style
+import com.example.feature.reader.R as ReaderR
 import com.example.feature.reader.ui.ReaderTextFontCatalog
+import com.example.feature.reader.ui.components.ImageMessagePopup
+import com.example.feature.reader.ui.components.ImageMessagePopupConfig
 import java.util.Locale
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -108,6 +111,9 @@ import org.json.JSONObject
 // ──────────── Navigation model ────────────
 
 private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
+
+private fun nextSettingsUiEventToken(currentToken: Int): Int =
+    if (currentToken == Int.MAX_VALUE) 1 else currentToken + 1
 
 private enum class SettingsSection {
     APPEARANCE,
@@ -125,6 +131,7 @@ private enum class SettingsSection {
 private enum class AppearanceSettingsPage { OVERVIEW, BASICS, LIBRARY, THEME_STUDIO, THEME, SCALE, COLORS, EXTRA }
 private enum class ReaderSettingsPage { OVERVIEW, TEXT_APPEARANCE, PAGE_LAYOUT, HEADERS, PAGING, BEHAVIOR }
 private enum class LibrarySettingsPage { OVERVIEW, ACCESS, CACHE, IMPORT_EXPORT }
+private enum class SyncSettingsPage { OVERVIEW, BACKUP }
 private enum class TranslationSettingsPage { OVERVIEW, LANGUAGES, OCR, OVERLAY, SERVICES }
 
 private data class MainMenuText(
@@ -327,6 +334,14 @@ private data class TranslationSettingsMapText(
     val servicesDescription: String
 )
 
+private data class TranslationServicesGatewayText(
+    val previewSubtitle: String,
+    val ownershipTitle: String,
+    val ownershipBody: String,
+    val readAloudHint: String,
+    val openButtonLabel: String
+)
+
 private data class ServiceSectionText(
     val title: String,
     val description: String,
@@ -356,15 +371,24 @@ private data class AiServicesOverviewText(
     val providerLabel: String,
     val expandedExplainLabel: String,
     val localProviderValue: String,
+    val configuredValue: String,
     val notConnectedValue: String,
     val localFirstStatus: String,
+    val onlineReadyStatus: String,
+    val onlineNeedsNetworkStatus: String,
     val offlineStatus: String,
+    val offlineReadyStatus: String,
+    val offlineModelMissingStatus: String,
+    val offlineModelNeedsNetworkStatus: String,
+    val offlinePairUnsupportedStatus: String,
     val onlineUnavailableStatus: String,
     val translationDisabledStatus: String,
     val localExplainStatus: String,
     val advancedExplainDisabledStatus: String,
     val extendedExplainWaitingStatus: String,
     val summaryUnavailableStatus: String,
+    val providersReadyStatus: String,
+    val providersNeedNetworkStatus: String,
     val providersUnavailableStatus: String
 )
 
@@ -749,7 +773,7 @@ private fun translationSettingsMapText(language: String): TranslationSettingsMap
         overlayTitle = "Overlay",
         overlayDescription = "Overlay opacity, font scale, and presentation style.",
         servicesTitle = "Services",
-        servicesDescription = "Transport preference and explain service toggle."
+        servicesDescription = "Transport, Explain, and provider routes now live in AI Services."
     )
     "ja" -> TranslationSettingsMapText(
         overviewTitle = "翻訳エリア",
@@ -762,7 +786,7 @@ private fun translationSettingsMapText(language: String): TranslationSettingsMap
         overlayTitle = "オーバーレイ",
         overlayDescription = "不透明度、フォント倍率、表示スタイル。",
         servicesTitle = "サービス",
-        servicesDescription = "転送方式の優先度と Explain サービスの切り替え。"
+        servicesDescription = "転送方式、Explain、provider 経路は AI Services に集約されました。"
     )
     "zh" -> TranslationSettingsMapText(
         overviewTitle = "翻译区域",
@@ -775,7 +799,7 @@ private fun translationSettingsMapText(language: String): TranslationSettingsMap
         overlayTitle = "覆盖层",
         overlayDescription = "透明度、字体缩放和显示样式。",
         servicesTitle = "服务",
-        servicesDescription = "传输偏好和 Explain 服务开关。"
+        servicesDescription = "传输、Explain 和 provider 路径现在集中在 AI Services。"
     )
     "ko" -> TranslationSettingsMapText(
         overviewTitle = "번역 영역",
@@ -788,7 +812,7 @@ private fun translationSettingsMapText(language: String): TranslationSettingsMap
         overlayTitle = "오버레이",
         overlayDescription = "투명도, 글꼴 비율, 표시 스타일.",
         servicesTitle = "서비스",
-        servicesDescription = "전송 선호도와 Explain 서비스 토글."
+        servicesDescription = "전송, Explain, provider 경로는 이제 AI Services에 모였습니다."
     )
     else -> TranslationSettingsMapText(
         overviewTitle = "Зоны перевода",
@@ -801,7 +825,49 @@ private fun translationSettingsMapText(language: String): TranslationSettingsMap
         overlayTitle = "Оверлей",
         overlayDescription = "Прозрачность, масштаб шрифта и стиль показа.",
         servicesTitle = "Сервисы",
-        servicesDescription = "Приоритет транспорта и переключатель Explain."
+        servicesDescription = "Транспорт, Explain и маршруты провайдеров теперь собраны в AI Services."
+    )
+}
+
+private fun translationServicesGatewayText(
+    language: String,
+    aiServicesTitle: String,
+    readAloudTitle: String
+): TranslationServicesGatewayText = when (language) {
+    "en" -> TranslationServicesGatewayText(
+        previewSubtitle = "Service-level controls now live in $aiServicesTitle.",
+        ownershipTitle = "Where service controls live now",
+        ownershipBody = "Translation keeps languages, OCR behavior, and overlay presentation here. Transport, Explain, summary, and provider-level routing now open through $aiServicesTitle.",
+        readAloudHint = "Voice defaults and TTS-provider controls live in $readAloudTitle.",
+        openButtonLabel = "Open $aiServicesTitle"
+    )
+    "ja" -> TranslationServicesGatewayText(
+        previewSubtitle = "サービスレベルの設定は $aiServicesTitle に移動しました。",
+        ownershipTitle = "サービス設定の配置",
+        ownershipBody = "翻訳には言語、OCR挙動、オーバーレイ表示を残します。転送方式、Explain、summary、provider レベルの経路は $aiServicesTitle から開きます。",
+        readAloudHint = "音声の既定値と TTS provider の設定は $readAloudTitle にあります。",
+        openButtonLabel = "$aiServicesTitle を開く"
+    )
+    "zh" -> TranslationServicesGatewayText(
+        previewSubtitle = "服务级控制现在统一放到 $aiServicesTitle。",
+        ownershipTitle = "服务控制现在放在哪里",
+        ownershipBody = "翻译这里保留语言、OCR 行为和覆盖层展示。传输、Explain、摘要以及 provider 级路由现在都从 $aiServicesTitle 打开。",
+        readAloudHint = "语音默认值和 TTS provider 控制位于 $readAloudTitle。",
+        openButtonLabel = "打开 $aiServicesTitle"
+    )
+    "ko" -> TranslationServicesGatewayText(
+        previewSubtitle = "서비스 레벨 제어는 이제 $aiServicesTitle 에 모였습니다.",
+        ownershipTitle = "서비스 제어 위치",
+        ownershipBody = "번역에는 언어, OCR 동작, 오버레이 표시만 남깁니다. 전송, Explain, summary, provider 레벨 경로는 이제 $aiServicesTitle 에서 엽니다.",
+        readAloudHint = "음성 기본값과 TTS provider 제어는 $readAloudTitle 에 있습니다.",
+        openButtonLabel = "$aiServicesTitle 열기"
+    )
+    else -> TranslationServicesGatewayText(
+        previewSubtitle = "Сервисные настройки теперь вынесены в $aiServicesTitle.",
+        ownershipTitle = "Где теперь живут сервисные настройки",
+        ownershipBody = "В переводе остаются языки, OCR и способ показа. Транспорт, Explain, summary и маршруты внешних провайдеров теперь открываются через $aiServicesTitle.",
+        readAloudHint = "Голоса по умолчанию и TTS-провайдеры вынесены в $readAloudTitle.",
+        openButtonLabel = "Открыть $aiServicesTitle"
     )
 }
 
@@ -2055,6 +2121,103 @@ private fun compactPendingLabel(language: String): String = when (language) {
     else -> "Пока не подключено"
 }
 
+private fun preloadSummaryLabel(language: String, enabled: Boolean): String = when (language) {
+    "en" -> "Preload ${compactToggleLabel(language, enabled)}"
+    "ja" -> "先読み ${compactToggleLabel(language, enabled)}"
+    "zh" -> "预加载 ${compactToggleLabel(language, enabled)}"
+    "ko" -> "프리로드 ${compactToggleLabel(language, enabled)}"
+    else -> "Предзагрузка ${compactToggleLabel(language, enabled)}"
+}
+
+private fun syncMenuSummary(language: String, autoBackupEnabled: Boolean): String = when (language) {
+    "en" -> "Backup ${compactToggleLabel(language, autoBackupEnabled)} · Import · Export"
+    "ja" -> "バックアップ ${compactToggleLabel(language, autoBackupEnabled)} ・インポート・エクスポート"
+    "zh" -> "备份 ${compactToggleLabel(language, autoBackupEnabled)} · 导入 · 导出"
+    "ko" -> "백업 ${compactToggleLabel(language, autoBackupEnabled)} · 가져오기 · 내보내기"
+    else -> "Бэкап ${compactToggleLabel(language, autoBackupEnabled)} · Импорт · Экспорт"
+}
+
+private fun storageMenuSummary(language: String): String = when (language) {
+    "en" -> "Access · Cache"
+    "ja" -> "アクセス・キャッシュ"
+    "zh" -> "访问 · 缓存"
+    "ko" -> "접근 · 캐시"
+    else -> "Доступ · Кэш"
+}
+
+private fun settingsImportErrorPresentationLabel(
+    language: String,
+    presentation: String
+): String = when (presentation) {
+    SettingsImportErrorPresentation.IMAGE -> when (language) {
+        "en" -> "Image"
+        "ja" -> "画像"
+        "zh" -> "图片"
+        "ko" -> "이미지"
+        else -> "Картинка"
+    }
+    else -> when (language) {
+        "en" -> "Text"
+        "ja" -> "テキスト"
+        "zh" -> "文本"
+        "ko" -> "텍스트"
+        else -> "Текст"
+    }
+}
+
+private fun advancedMenuSummary(
+    language: String,
+    mascotRecapEnabled: Boolean,
+    questPromptsEnabled: Boolean,
+    importErrorPresentation: String
+): String = when (language) {
+    "en" -> "Mascot ${compactToggleLabel(language, mascotRecapEnabled)} · Quests ${compactToggleLabel(language, questPromptsEnabled)} · ${settingsImportErrorPresentationLabel(language, importErrorPresentation)} popups"
+    "ja" -> "マスコット ${compactToggleLabel(language, mascotRecapEnabled)} ・クエスト ${compactToggleLabel(language, questPromptsEnabled)} ・${settingsImportErrorPresentationLabel(language, importErrorPresentation)} ポップアップ"
+    "zh" -> "吉祥物 ${compactToggleLabel(language, mascotRecapEnabled)} · 任务 ${compactToggleLabel(language, questPromptsEnabled)} · ${settingsImportErrorPresentationLabel(language, importErrorPresentation)} 弹窗"
+    "ko" -> "마스코트 ${compactToggleLabel(language, mascotRecapEnabled)} · 퀘스트 ${compactToggleLabel(language, questPromptsEnabled)} · ${settingsImportErrorPresentationLabel(language, importErrorPresentation)} 팝업"
+    else -> "Маскот ${compactToggleLabel(language, mascotRecapEnabled)} · Квесты ${compactToggleLabel(language, questPromptsEnabled)} · ${settingsImportErrorPresentationLabel(language, importErrorPresentation)}-всплывашки"
+}
+
+private fun aboutMenuSummary(language: String): String = when (language) {
+    "en" -> "App · Libraries · Licenses"
+    "ja" -> "アプリ・ライブラリ・ライセンス"
+    "zh" -> "应用 · 库 · 许可证"
+    "ko" -> "앱 · 라이브러리 · 라이선스"
+    else -> "Приложение · Библиотеки · Лицензии"
+}
+
+private fun syncTransferLabel(language: String): String = when (language) {
+    "en" -> "Transfer"
+    "ja" -> "移行"
+    "zh" -> "传输"
+    "ko" -> "전송"
+    else -> "Перенос"
+}
+
+private fun storageFoldersLabel(language: String): String = when (language) {
+    "en" -> "Library folders"
+    "ja" -> "フォルダ"
+    "zh" -> "书库文件夹"
+    "ko" -> "라이브러리 폴더"
+    else -> "Папки библиотеки"
+}
+
+private fun cacheShortLabel(language: String): String = when (language) {
+    "en" -> "Cache"
+    "ja" -> "キャッシュ"
+    "zh" -> "缓存"
+    "ko" -> "캐시"
+    else -> "Кэш"
+}
+
+private fun aboutCountValue(language: String, count: Int): String = when (language) {
+    "en" -> "$count items"
+    "ja" -> "${count}件"
+    "zh" -> "${count}项"
+    "ko" -> "${count}개"
+    else -> "$count пункт."
+}
+
 private fun settingsSectionSummaryText(language: String): SettingsSectionSummaryText = when (language) {
     "en" -> SettingsSectionSummaryText(
         title = "Current setup",
@@ -2097,15 +2260,24 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         providerLabel = "プロバイダー",
         expandedExplainLabel = "拡張 Explain",
         localProviderValue = "ローカル",
+        configuredValue = "設定済み",
         notConnectedValue = "未接続",
         localFirstStatus = "自動ではローカル経路を優先します。",
+        onlineReadyStatus = "オンライン翻訳ルートは設定済みで利用できます。",
+        onlineNeedsNetworkStatus = "オンライン翻訳ルートは設定済みですが、今はネットワークが必要です。",
         offlineStatus = "オフライン翻訳だけを使います。",
+        offlineReadyStatus = "現在の言語ペアはオフラインで利用できます。",
+        offlineModelMissingStatus = "現在の言語ペアは対応していますが、オフラインモデルはまだ未インストールです。",
+        offlineModelNeedsNetworkStatus = "現在の言語ペアは対応していますが、モデル準備にはネットワークが必要です。",
+        offlinePairUnsupportedStatus = "現在の言語ペアはオフライン翻訳に対応していません。",
         onlineUnavailableStatus = "オンライン翻訳プロバイダーはまだ接続されていません。",
         translationDisabledStatus = "翻訳は現在オフです。",
         localExplainStatus = "ローカル Explain だけで動作します。",
         advancedExplainDisabledStatus = "外部プロバイダーが来るまでは拡張 Explain は待機します。",
         extendedExplainWaitingStatus = "外部プロバイダーが来るまではローカル Explain を保ちます。",
         summaryUnavailableStatus = "summary サービスはまだ接続されていません。",
+        providersReadyStatus = "少なくとも 1 つの外部ルートは設定済みで利用できます。",
+        providersNeedNetworkStatus = "外部ルートは設定済みですが、今はネットワークが必要です。",
         providersUnavailableStatus = "まだ外部 AI プロバイダーは設定されていません。"
     )
     "zh" -> AiServicesOverviewText(
@@ -2126,15 +2298,24 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         providerLabel = "Provider",
         expandedExplainLabel = "增强 Explain",
         localProviderValue = "本地",
+        configuredValue = "已配置",
         notConnectedValue = "未连接",
         localFirstStatus = "自动模式会优先尝试本地路径。",
+        onlineReadyStatus = "在线翻译路线已配置并可直接使用。",
+        onlineNeedsNetworkStatus = "在线翻译路线已配置，但当前需要网络连接。",
         offlineStatus = "只使用离线路径。",
+        offlineReadyStatus = "当前语言对可直接使用离线翻译。",
+        offlineModelMissingStatus = "当前语言对受支持，但离线模型还未安装。",
+        offlineModelNeedsNetworkStatus = "当前语言对受支持，但准备离线模型需要网络。",
+        offlinePairUnsupportedStatus = "当前语言对不支持离线翻译。",
         onlineUnavailableStatus = "在线翻译 provider 目前还没有接入。",
         translationDisabledStatus = "翻译当前已关闭。",
         localExplainStatus = "仅使用本地 Explain。",
         advancedExplainDisabledStatus = "在外部 provider 接入前，增强 Explain 会保持待机。",
         extendedExplainWaitingStatus = "在外部 provider 接入前仍保持本地 Explain。",
         summaryUnavailableStatus = "摘要服务目前还没有接入。",
+        providersReadyStatus = "至少有一个外部路线已配置并可用。",
+        providersNeedNetworkStatus = "外部路线已配置，但当前需要网络连接。",
         providersUnavailableStatus = "当前还没有配置任何外部 AI provider。"
     )
     "ko" -> AiServicesOverviewText(
@@ -2155,15 +2336,24 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         providerLabel = "Provider",
         expandedExplainLabel = "확장 Explain",
         localProviderValue = "로컬",
+        configuredValue = "설정됨",
         notConnectedValue = "미연결",
         localFirstStatus = "자동 모드는 로컬 경로를 먼저 시도합니다.",
+        onlineReadyStatus = "온라인 번역 경로가 설정되어 바로 사용할 수 있습니다.",
+        onlineNeedsNetworkStatus = "온라인 번역 경로가 설정되어 있지만 지금은 네트워크가 필요합니다.",
         offlineStatus = "오프라인 경로만 사용합니다.",
+        offlineReadyStatus = "현재 언어 쌍은 오프라인으로 바로 사용할 수 있습니다.",
+        offlineModelMissingStatus = "현재 언어 쌍은 지원되지만 오프라인 모델이 아직 설치되지 않았습니다.",
+        offlineModelNeedsNetworkStatus = "현재 언어 쌍은 지원되지만 모델 준비에는 네트워크가 필요합니다.",
+        offlinePairUnsupportedStatus = "현재 언어 쌍은 오프라인 번역을 지원하지 않습니다.",
         onlineUnavailableStatus = "온라인 번역 provider는 아직 연결되지 않았습니다.",
         translationDisabledStatus = "번역이 현재 꺼져 있습니다.",
         localExplainStatus = "로컬 Explain만 사용합니다.",
         advancedExplainDisabledStatus = "외부 provider가 생기기 전까지 확장 Explain은 대기 상태입니다.",
         extendedExplainWaitingStatus = "외부 provider가 생기기 전까지는 로컬 Explain을 유지합니다.",
         summaryUnavailableStatus = "요약 서비스는 아직 연결되지 않았습니다.",
+        providersReadyStatus = "적어도 하나의 외부 경로가 설정되어 바로 사용할 수 있습니다.",
+        providersNeedNetworkStatus = "외부 경로는 설정되었지만 지금은 네트워크가 필요합니다.",
         providersUnavailableStatus = "아직 설정된 외부 AI provider가 없습니다."
     )
     "ru" -> AiServicesOverviewText(
@@ -2184,15 +2374,24 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         providerLabel = "Провайдер",
         expandedExplainLabel = "Расширенный Explain",
         localProviderValue = "Локальный",
+        configuredValue = "Настроен",
         notConnectedValue = "Не подключён",
         localFirstStatus = "В автоматическом режиме сначала пробуется локальный маршрут.",
+        onlineReadyStatus = "Онлайн-маршрут перевода настроен и готов к работе.",
+        onlineNeedsNetworkStatus = "Онлайн-маршрут настроен, но сейчас ему нужна сеть.",
         offlineStatus = "Используется только офлайн-маршрут.",
+        offlineReadyStatus = "Текущая языковая пара уже готова для офлайн-перевода.",
+        offlineModelMissingStatus = "Текущая языковая пара поддерживается, но офлайн-модель ещё не установлена.",
+        offlineModelNeedsNetworkStatus = "Текущая языковая пара поддерживается, но для подготовки модели нужна сеть.",
+        offlinePairUnsupportedStatus = "Текущая языковая пара не поддерживается офлайн-переводом.",
         onlineUnavailableStatus = "Внешний провайдер онлайн-перевода пока не подключён.",
         translationDisabledStatus = "Перевод сейчас выключен.",
         localExplainStatus = "Работает только локальный Explain.",
         advancedExplainDisabledStatus = "Пока внешний провайдер не подключён, расширенный Explain остаётся в ожидании.",
         extendedExplainWaitingStatus = "До подключения внешнего провайдера останется локальный Explain.",
         summaryUnavailableStatus = "Сервис сводок пока не подключён.",
+        providersReadyStatus = "Как минимум один внешний маршрут настроен и готов к работе.",
+        providersNeedNetworkStatus = "Внешний маршрут настроен, но сейчас ему нужна сеть.",
         providersUnavailableStatus = "Внешние AI-провайдеры пока не настроены."
     )
     else -> AiServicesOverviewText(
@@ -2213,15 +2412,24 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         providerLabel = "Provider",
         expandedExplainLabel = "Expanded Explain",
         localProviderValue = "Local",
+        configuredValue = "Configured",
         notConnectedValue = "Not connected",
         localFirstStatus = "Auto mode tries the local route first.",
+        onlineReadyStatus = "The online translation route is configured and ready.",
+        onlineNeedsNetworkStatus = "The online translation route is configured, but it needs network access right now.",
         offlineStatus = "Offline translation is used exclusively.",
+        offlineReadyStatus = "The current language pair is ready for offline translation.",
+        offlineModelMissingStatus = "The current language pair is supported, but the offline model is not installed yet.",
+        offlineModelNeedsNetworkStatus = "The current language pair is supported, but network is needed to prepare the offline model.",
+        offlinePairUnsupportedStatus = "The current language pair is not supported for offline translation.",
         onlineUnavailableStatus = "No online translation provider is connected yet.",
         translationDisabledStatus = "Translation is currently off.",
         localExplainStatus = "Local Explain is active on its own.",
         advancedExplainDisabledStatus = "Advanced Explain stays idle until an external provider is connected.",
         extendedExplainWaitingStatus = "Expanded Explain stays local until an external provider is connected.",
         summaryUnavailableStatus = "Summary service is not connected yet.",
+        providersReadyStatus = "At least one external route is configured and ready.",
+        providersNeedNetworkStatus = "An external route is configured, but it currently needs network access.",
         providersUnavailableStatus = "No external AI providers are configured yet."
     )
 }
@@ -2231,11 +2439,44 @@ private fun aiMachineTranslationStatus(
     language: String
 ): String {
     val text = aiServicesOverviewText(language)
-    return when {
-        uiState.translationMode == "OFF" -> text.translationDisabledStatus
-        uiState.translationTransport == TranslationTransportPreference.ONLINE.name -> text.onlineUnavailableStatus
-        uiState.translationTransport == TranslationTransportPreference.OFFLINE.name -> text.offlineStatus
-        else -> text.localFirstStatus
+    return when (resolveSettingsMachineTranslationStatusKind(uiState)) {
+        SettingsMachineTranslationStatusKind.DISABLED -> text.translationDisabledStatus
+        SettingsMachineTranslationStatusKind.ONLINE_READY -> text.onlineReadyStatus
+        SettingsMachineTranslationStatusKind.ONLINE_MISSING -> text.onlineUnavailableStatus
+        SettingsMachineTranslationStatusKind.ONLINE_NEEDS_NETWORK -> text.onlineNeedsNetworkStatus
+        SettingsMachineTranslationStatusKind.OFFLINE_GENERIC -> text.offlineStatus
+        SettingsMachineTranslationStatusKind.OFFLINE_READY -> text.offlineReadyStatus
+        SettingsMachineTranslationStatusKind.OFFLINE_MODEL_MISSING -> text.offlineModelMissingStatus
+        SettingsMachineTranslationStatusKind.OFFLINE_MODEL_NEEDS_NETWORK -> text.offlineModelNeedsNetworkStatus
+        SettingsMachineTranslationStatusKind.OFFLINE_PAIR_UNSUPPORTED -> text.offlinePairUnsupportedStatus
+        SettingsMachineTranslationStatusKind.AUTO_LOCAL_FIRST -> text.localFirstStatus
+        SettingsMachineTranslationStatusKind.AUTO_OFFLINE_MODEL_MISSING -> text.offlineModelMissingStatus
+        SettingsMachineTranslationStatusKind.AUTO_OFFLINE_MODEL_NEEDS_NETWORK -> text.offlineModelNeedsNetworkStatus
+        SettingsMachineTranslationStatusKind.AUTO_PAIR_UNSUPPORTED -> text.offlinePairUnsupportedStatus
+    }
+}
+
+private fun aiProvidersStatus(
+    uiState: SettingsUiState,
+    language: String
+): String {
+    val text = aiServicesOverviewText(language)
+    return when (resolveSettingsProvidersStatusKind(uiState)) {
+        SettingsProvidersStatusKind.READY -> text.providersReadyStatus
+        SettingsProvidersStatusKind.NEEDS_NETWORK -> text.providersNeedNetworkStatus
+        SettingsProvidersStatusKind.NOT_CONFIGURED -> text.providersUnavailableStatus
+    }
+}
+
+private fun aiProvidersValue(
+    uiState: SettingsUiState,
+    language: String
+): String {
+    val text = aiServicesOverviewText(language)
+    return when (resolveSettingsProvidersStatusKind(uiState)) {
+        SettingsProvidersStatusKind.NOT_CONFIGURED -> text.notConnectedValue
+        SettingsProvidersStatusKind.READY,
+        SettingsProvidersStatusKind.NEEDS_NETWORK -> text.configuredValue
     }
 }
 
@@ -2372,28 +2613,28 @@ private fun settingsSectionMeta(
     "en" -> when (section) {
         SettingsSection.APPEARANCE -> SettingsSectionMeta("Appearance", "Theme, interface chrome, covers, and library visuals.")
         SettingsSection.READER -> SettingsSectionMeta("Reading", "Text, paging, headers, and reading session behavior.")
-        SettingsSection.LIBRARY -> SettingsSectionMeta("Library", "Sorting, grouping, sources, and library maintenance.")
+        SettingsSection.LIBRARY -> SettingsSectionMeta("Library", "Sorting, grouping, and collection organization.")
         SettingsSection.PERFORMANCE -> SettingsSectionMeta("Performance", "Startup, motion, and visual load tuning for calmer devices.")
-        SettingsSection.SYNC -> SettingsSectionMeta("Sync", "Export, import, and automatic reading backups.")
+        SettingsSection.SYNC -> SettingsSectionMeta("Sync", "Reading progress backup, import/export, and transfer between devices.")
         SettingsSection.READ_ALOUD -> SettingsSectionMeta("Audio", "Voice reading, player behavior, page sounds, and system TTS controls.")
         SettingsSection.TRANSLATION -> SettingsSectionMeta("Translation", "Languages, OCR behavior, and overlay presentation.")
         SettingsSection.AI_SERVICES -> SettingsSectionMeta("AI Services", "Explain, transport, and provider-level AI controls.")
         SettingsSection.STORAGE -> SettingsSectionMeta("Storage", "Library access, cache cleanup, and local data care.")
-        SettingsSection.ADVANCED -> SettingsSectionMeta("Advanced", "Rare and service-level switches that stay out of the main flow.")
+        SettingsSection.ADVANCED -> SettingsSectionMeta("Advanced", "Rare switches, popup behavior, and service-level utilities that stay out of the main flow.")
         SettingsSection.ABOUT -> SettingsSectionMeta(strings.sectionAbout, strings.sectionAboutDesc)
     }
 
     else -> when (section) {
         SettingsSection.APPEARANCE -> SettingsSectionMeta("Оформление", "Тема, интерфейс, обложки и визуал библиотеки.")
         SettingsSection.READER -> SettingsSectionMeta("Чтение", "Текст, листание, колонтитулы и поведение ридера.")
-        SettingsSection.LIBRARY -> SettingsSectionMeta("Библиотека", "Сортировка, группировка, источники и логика библиотеки.")
+        SettingsSection.LIBRARY -> SettingsSectionMeta("Библиотека", "Сортировка, группировка и организация коллекции.")
         SettingsSection.PERFORMANCE -> SettingsSectionMeta("Производительность", "Запуск, анимации и тяжёлые визуальные эффекты.")
-        SettingsSection.SYNC -> SettingsSectionMeta("Синхронизация", "Экспорт, импорт и автоматическое сохранение прогресса.")
+        SettingsSection.SYNC -> SettingsSectionMeta("Синхронизация", "Резервные копии прогресса, импорт/экспорт и перенос чтения между устройствами.")
         SettingsSection.READ_ALOUD -> SettingsSectionMeta("Аудио", "Голосовое чтение, аудиоплеер, звуки и системные TTS-настройки.")
         SettingsSection.TRANSLATION -> SettingsSectionMeta("Перевод", "Языки, OCR и способ показа перевода.")
         SettingsSection.AI_SERVICES -> SettingsSectionMeta("Искусственный интеллект", "Explain, транспорт и сервисные AI-настройки.")
         SettingsSection.STORAGE -> SettingsSectionMeta("Хранилище", "Доступ к библиотеке, очистка кэша и локальные данные.")
-        SettingsSection.ADVANCED -> SettingsSectionMeta("Расширенные", "Редкие и служебные параметры, которые не должны мешать основным настройкам.")
+        SettingsSection.ADVANCED -> SettingsSectionMeta("Расширенные", "Редкие переключатели, поведение всплывающих сообщений и служебные параметры вне основного потока.")
         SettingsSection.ABOUT -> SettingsSectionMeta(strings.sectionAbout, strings.sectionAboutDesc)
     }
 }
@@ -2427,16 +2668,19 @@ private fun settingsSectionItems(
             section = SettingsSection.PERFORMANCE,
             title = settingsSectionMeta(SettingsSection.PERFORMANCE, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.PERFORMANCE, strings.languageCode, strings).description,
-            summary = when (strings.languageCode) {
-                "en" -> "${uiState.perfProfile.lowercase().replaceFirstChar { it.uppercase() }} · Preload ${compactToggleLabel(strings.languageCode, uiState.perfStartupPreloadEnabled)}"
-                else -> "${perfProfileLabel(uiState.perfProfile, strings.languageCode)} · Предзагрузка ${compactToggleLabel(strings.languageCode, uiState.perfStartupPreloadEnabled)}"
-            }
+            summary = "${perfProfileLabel(uiState.perfProfile, strings.languageCode)} · ${preloadSummaryLabel(strings.languageCode, uiState.perfStartupPreloadEnabled)}"
         ),
         SettingsMainMenuSectionItem(
             section = SettingsSection.SYNC,
             title = settingsSectionMeta(SettingsSection.SYNC, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.SYNC, strings.languageCode, strings).description,
-            summary = "${strings.autoBackup} · ${compactToggleLabel(strings.languageCode, uiState.autoBackupEnabled)}"
+            summary = syncMenuSummary(strings.languageCode, uiState.autoBackupEnabled)
+        ),
+        SettingsMainMenuSectionItem(
+            section = SettingsSection.STORAGE,
+            title = settingsSectionMeta(SettingsSection.STORAGE, strings.languageCode, strings).title,
+            description = settingsSectionMeta(SettingsSection.STORAGE, strings.languageCode, strings).description,
+            summary = storageMenuSummary(strings.languageCode)
         ),
         SettingsMainMenuSectionItem(
             section = SettingsSection.READ_ALOUD,
@@ -2457,31 +2701,24 @@ private fun settingsSectionItems(
             section = SettingsSection.AI_SERVICES,
             title = settingsSectionMeta(SettingsSection.AI_SERVICES, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.AI_SERVICES, strings.languageCode, strings).description,
-            summary = "${transportLabel(strings.languageCode, uiState.translationTransport)} · Explain ${compactToggleLabel(strings.languageCode, uiState.translationExplainEnabled)}"
-        ),
-        SettingsMainMenuSectionItem(
-            section = SettingsSection.STORAGE,
-            title = settingsSectionMeta(SettingsSection.STORAGE, strings.languageCode, strings).title,
-            description = settingsSectionMeta(SettingsSection.STORAGE, strings.languageCode, strings).description,
-            summary = if (strings.languageCode == "en") "Library access · Cache" else "Доступ к библиотеке · Кэш"
+            summary = "${transportLabel(strings.languageCode, uiState.translationTransport)} · ${aiServicesOverviewText(strings.languageCode).advancedExplainTitle} ${compactToggleLabel(strings.languageCode, uiState.translationExplainEnabled)}"
         ),
         SettingsMainMenuSectionItem(
             section = SettingsSection.ADVANCED,
             title = settingsSectionMeta(SettingsSection.ADVANCED, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.ADVANCED, strings.languageCode, strings).description,
-            summary = when (strings.languageCode) {
-                "en" -> "App icon · Mascot ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
-                "ja" -> "アプリアイコン・マスコット ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
-                "zh" -> "应用图标 · 吉祥物 ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
-                "ko" -> "앱 아이콘 · 마스코트 ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
-                else -> "Иконка приложения · Маскот ${compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled)}"
-            }
+            summary = advancedMenuSummary(
+                language = strings.languageCode,
+                mascotRecapEnabled = uiState.mascotRecapEnabled,
+                questPromptsEnabled = uiState.questPromptsEnabled,
+                importErrorPresentation = uiState.settingsImportErrorPresentation
+            )
         ),
         SettingsMainMenuSectionItem(
             section = SettingsSection.ABOUT,
             title = settingsSectionMeta(SettingsSection.ABOUT, strings.languageCode, strings).title,
             description = settingsSectionMeta(SettingsSection.ABOUT, strings.languageCode, strings).description,
-            summary = "Leostrange"
+            summary = aboutMenuSummary(strings.languageCode)
         )
     )
 }
@@ -2520,7 +2757,7 @@ private fun aiServicesSummaryItems(
     aiServicesOverviewText(strings.languageCode).machineTranslationTitle to aiMachineTranslationStatus(uiState, strings.languageCode),
     aiServicesOverviewText(strings.languageCode).advancedExplainTitle to compactToggleLabel(strings.languageCode, uiState.translationExplainEnabled),
     aiServicesOverviewText(strings.languageCode).summaryTitle to aiServicesOverviewText(strings.languageCode).notConnectedValue,
-    aiServicesOverviewText(strings.languageCode).providersTitle to aiServicesOverviewText(strings.languageCode).notConnectedValue
+    aiServicesOverviewText(strings.languageCode).providersTitle to aiProvidersStatus(uiState, strings.languageCode)
 )
 
 private fun readAloudSummaryItems(
@@ -3210,12 +3447,14 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    var settingsImportErrorPopupToken by rememberSaveable { mutableIntStateOf(0) }
     var fontCatalogVersion by remember { mutableIntStateOf(0) }
     var pendingCustomFontDeletion by rememberSaveable { mutableStateOf<String?>(null) }
     var currentSectionName by rememberSaveable { mutableStateOf<String?>(null) }
     var currentAppearancePageName by rememberSaveable { mutableStateOf(AppearanceSettingsPage.OVERVIEW.name) }
     var currentReaderPageName by rememberSaveable { mutableStateOf(ReaderSettingsPage.OVERVIEW.name) }
     var currentLibraryPageName by rememberSaveable { mutableStateOf(LibrarySettingsPage.OVERVIEW.name) }
+    var currentSyncPageName by rememberSaveable { mutableStateOf(SyncSettingsPage.OVERVIEW.name) }
     var currentTranslationPageName by rememberSaveable { mutableStateOf(TranslationSettingsPage.OVERVIEW.name) }
     val currentSection = currentSectionName?.let { runCatching { SettingsSection.valueOf(it) }.getOrNull() }
     val currentAppearancePage = runCatching { AppearanceSettingsPage.valueOf(currentAppearancePageName) }
@@ -3230,8 +3469,22 @@ fun SettingsScreen(
         }
     val currentReaderPage = parseReaderSettingsPage(currentReaderPageName)
     val currentLibraryPage = parseLibrarySettingsPage(currentLibraryPageName)
+    val currentSyncPage = parseSyncSettingsPage(currentSyncPageName)
     val currentTranslationPage = runCatching { TranslationSettingsPage.valueOf(currentTranslationPageName) }
         .getOrDefault(TranslationSettingsPage.OVERVIEW)
+    val settingsImportErrorPopupConfig = remember(
+        uiState.imageMessagePopupPosition,
+        uiState.imageMessagePopupFreeMove,
+        uiState.imageMessagePopupSizeScale,
+        uiState.imageMessagePopupDurationSeconds
+    ) {
+        ImageMessagePopupConfig(
+            position = normalizeSettingsImageMessagePopupPosition(uiState.imageMessagePopupPosition),
+            allowFreeMove = uiState.imageMessagePopupFreeMove,
+            sizeScale = clampSettingsImageMessagePopupScale(uiState.imageMessagePopupSizeScale),
+            durationSeconds = clampSettingsImageMessagePopupDurationSeconds(uiState.imageMessagePopupDurationSeconds)
+        )
+    }
     val appearanceText = remember(strings.languageCode) { appearanceSectionText(strings.languageCode) }
     val readerMapText = remember(strings.languageCode) { readerSettingsMapText(strings.languageCode) }
     val libraryText = remember(strings.languageCode) { librarySectionText(strings.languageCode) }
@@ -3335,6 +3588,8 @@ fun SettingsScreen(
                 currentReaderPageName = ReaderSettingsPage.OVERVIEW.name
             currentSection == SettingsSection.LIBRARY && currentLibraryPage != LibrarySettingsPage.OVERVIEW ->
                 currentLibraryPageName = LibrarySettingsPage.OVERVIEW.name
+            currentSection == SettingsSection.SYNC && currentSyncPage != SyncSettingsPage.OVERVIEW ->
+                currentSyncPageName = SyncSettingsPage.OVERVIEW.name
             currentSection == SettingsSection.TRANSLATION && currentTranslationPage != TranslationSettingsPage.OVERVIEW ->
                 currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
             currentSection != null -> currentSectionName = null
@@ -3344,10 +3599,27 @@ fun SettingsScreen(
 
     BackHandler(enabled = currentSection != null) { navigateUp() }
 
-    LaunchedEffect(uiState.cacheMessage) {
+    LaunchedEffect(uiState.cacheMessage, uiState.settingsImportErrorPresentation) {
         val message = uiState.cacheMessage ?: return@LaunchedEffect
+        if (
+            message == SETTINGS_IMPORT_REJECTION_MESSAGE &&
+            uiState.settingsImportErrorPresentation == SettingsImportErrorPresentation.IMAGE
+        ) {
+            settingsImportErrorPopupToken = nextSettingsUiEventToken(settingsImportErrorPopupToken)
+            viewModel.consumeCacheMessage()
+            return@LaunchedEffect
+        }
         snackbarHostState.showSnackbar(message)
         viewModel.consumeCacheMessage()
+    }
+
+    if (settingsImportErrorPopupToken > 0) {
+        ImageMessagePopup(
+            drawableId = ReaderR.drawable.reader_import_error_popup,
+            contentDescription = SETTINGS_IMPORT_REJECTION_MESSAGE,
+            config = settingsImportErrorPopupConfig,
+            onDismiss = { settingsImportErrorPopupToken = 0 }
+        )
     }
 
     pendingCustomFontDeletion?.let { fontName ->
@@ -3399,7 +3671,10 @@ fun SettingsScreen(
             LibrarySettingsPage.IMPORT_EXPORT -> libraryImportExportTitle(strings.languageCode)
         }
         SettingsSection.PERFORMANCE  -> settingsSectionMeta(SettingsSection.PERFORMANCE, strings.languageCode, strings).title
-        SettingsSection.SYNC         -> settingsSectionMeta(SettingsSection.SYNC, strings.languageCode, strings).title
+        SettingsSection.SYNC         -> when (currentSyncPage) {
+            SyncSettingsPage.OVERVIEW -> settingsSectionMeta(SettingsSection.SYNC, strings.languageCode, strings).title
+            SyncSettingsPage.BACKUP -> syncBackupTitle(strings.languageCode)
+        }
         SettingsSection.TRANSLATION  -> when (currentTranslationPage) {
             TranslationSettingsPage.OVERVIEW -> settingsSectionMeta(SettingsSection.TRANSLATION, strings.languageCode, strings).title
             TranslationSettingsPage.LANGUAGES -> translationMapText.languagesTitle
@@ -3459,6 +3734,7 @@ fun SettingsScreen(
                         currentAppearancePageName = AppearanceSettingsPage.OVERVIEW.name
                         currentReaderPageName = ReaderSettingsPage.OVERVIEW.name
                         currentLibraryPageName = LibrarySettingsPage.OVERVIEW.name
+                        currentSyncPageName = SyncSettingsPage.OVERVIEW.name
                         currentTranslationPageName = TranslationSettingsPage.OVERVIEW.name
                     },
                     modifier = Modifier.padding(padding)
@@ -3516,9 +3792,20 @@ fun SettingsScreen(
                     viewModel = viewModel,
                     currentPage = currentTranslationPage,
                     onPageChange = { currentTranslationPageName = it.name },
+                    onOpenAiServices = {
+                        currentSectionName = SettingsSection.AI_SERVICES.name
+                    },
                     modifier = Modifier.padding(padding)
                 )
                 SettingsSection.SYNC -> SyncSection(
+                    uiState = uiState,
+                    strings = strings,
+                    viewModel = viewModel,
+                    currentPage = currentSyncPage,
+                    onPageChange = { currentSyncPageName = it.name },
+                    modifier = Modifier.padding(padding)
+                )
+                SettingsSection.STORAGE -> StorageSection(
                     uiState = uiState,
                     strings = strings,
                     viewModel = viewModel,
@@ -3533,12 +3820,6 @@ fun SettingsScreen(
                     uiState = uiState,
                     viewModel = viewModel,
                     strings = strings,
-                    modifier = Modifier.padding(padding)
-                )
-                SettingsSection.STORAGE -> StorageSection(
-                    uiState = uiState,
-                    strings = strings,
-                    viewModel = viewModel,
                     modifier = Modifier.padding(padding)
                 )
                 SettingsSection.ADVANCED -> AdvancedSection(
@@ -4847,6 +5128,12 @@ private fun parseReaderSettingsPage(raw: String): ReaderSettingsPage = when (raw
 private fun parseLibrarySettingsPage(raw: String): LibrarySettingsPage = when (raw) {
     "DISPLAY", "COVERS", "CANVAS", "THEME_STUDIO", "SORTING" -> LibrarySettingsPage.OVERVIEW
     else -> runCatching { LibrarySettingsPage.valueOf(raw) }.getOrDefault(LibrarySettingsPage.OVERVIEW)
+}
+
+private fun parseSyncSettingsPage(raw: String): SyncSettingsPage = when (raw) {
+    "IMPORT_EXPORT", "BACKUP" -> SyncSettingsPage.BACKUP
+    "ACCESS", "CACHE", "STORAGE", "POPUPS" -> SyncSettingsPage.OVERVIEW
+    else -> runCatching { SyncSettingsPage.valueOf(raw) }.getOrDefault(SyncSettingsPage.OVERVIEW)
 }
 
 @Composable
@@ -6752,37 +7039,6 @@ private fun LibrarySection(
                                 )
                             }
                         }
-                    }
-                }
-                item {
-                    SettingsCard(title = libraryMaintenanceTitle(uiState.appLanguage)) {
-                        SettingsNavItem(
-                            icon = Icons.Default.FolderOpen,
-                            title = libraryAccessTitle(uiState.appLanguage),
-                            description = null,
-                            onClick = { onPageChange(LibrarySettingsPage.ACCESS) }
-                        )
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 56.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                        )
-                        SettingsNavItem(
-                            icon = Icons.Default.CleaningServices,
-                            title = libraryCacheTitle(uiState.appLanguage),
-                            description = null,
-                            onClick = { onPageChange(LibrarySettingsPage.CACHE) }
-                        )
-                    }
-                }
-                item {
-                    SettingsCard(title = libraryTransferTitle(uiState.appLanguage)) {
-                        SettingsNavItem(
-                            icon = Icons.Default.Sync,
-                            title = libraryImportExportTitle(uiState.appLanguage),
-                            description = null,
-                            summary = libraryImportExportSummary(uiState.appLanguage),
-                            onClick = { onPageChange(LibrarySettingsPage.IMPORT_EXPORT) }
-                        )
                     }
                 }
             }
@@ -8888,6 +9144,7 @@ private fun TranslationSection(
     viewModel: SettingsViewModel,
     currentPage: TranslationSettingsPage,
     onPageChange: (TranslationSettingsPage) -> Unit,
+    onOpenAiServices: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sectionText = remember(strings.languageCode) { translationSectionText(strings.languageCode) }
@@ -8954,13 +9211,12 @@ private fun TranslationSection(
             TranslationSettingsPage.OVERLAY -> item {
                 TranslationOverlayCard(uiState = uiState, sectionText = sectionText, viewModel = viewModel)
             }
-            TranslationSettingsPage.SERVICES -> {
-                item {
-                    TranslationTransportCard(uiState = uiState, sectionText = sectionText, viewModel = viewModel)
-                }
-                item {
-                    TranslationExplainCard(uiState = uiState, sectionText = sectionText, viewModel = viewModel)
-                }
+            TranslationSettingsPage.SERVICES -> item {
+                TranslationServicesGatewayPage(
+                    uiState = uiState,
+                    strings = strings,
+                    onOpenAiServices = onOpenAiServices
+                )
             }
         }
         item { Spacer(Modifier.height(16.dp)) }
@@ -9107,67 +9363,51 @@ private fun TranslationTargetCard(
 }
 
 @Composable
-private fun TranslationTransportCard(
+private fun TranslationServicesGatewayPage(
     uiState: SettingsUiState,
-    sectionText: TranslationSectionText,
-    viewModel: SettingsViewModel
+    strings: AppStrings,
+    onOpenAiServices: () -> Unit
 ) {
-    SettingsCard(title = sectionText.transportCard) {
-        LabelText(sectionText.transportHint)
-        ChipRow {
-            listOf(
-                TranslationTransportPreference.AUTO.name to sectionText.transportAuto,
-                TranslationTransportPreference.OFFLINE.name to sectionText.transportOffline,
-                TranslationTransportPreference.ONLINE.name to sectionText.transportOnline
-            ).forEach { (code, label) ->
-                FilterChip(
-                    selected = uiState.translationTransport == code,
-                    onClick = { viewModel.setTranslationTransport(code) },
-                    label = { Text(label) }
-                )
-            }
-        }
+    val overviewText = remember(strings.languageCode) { aiServicesOverviewText(strings.languageCode) }
+    val summaryText = remember(strings.languageCode) { settingsSectionSummaryText(strings.languageCode) }
+    val transportText = remember(strings.languageCode) { translationSectionText(strings.languageCode).transportCard }
+    val aiServicesTitle = settingsSectionMeta(SettingsSection.AI_SERVICES, strings.languageCode, strings).title
+    val readAloudTitle = settingsSectionMeta(SettingsSection.READ_ALOUD, strings.languageCode, strings).title
+    val gatewayText = remember(strings.languageCode, aiServicesTitle, readAloudTitle) {
+        translationServicesGatewayText(strings.languageCode, aiServicesTitle, readAloudTitle)
     }
-}
+    val transport = transportLabel(strings.languageCode, uiState.translationTransport)
+    val explain = compactToggleLabel(strings.languageCode, uiState.translationExplainEnabled)
 
-@Composable
-private fun TranslationExplainCard(
-    uiState: SettingsUiState,
-    sectionText: TranslationSectionText,
-    viewModel: SettingsViewModel
-) {
-    SettingsCard(title = sectionText.explainCard) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = sectionText.explainTitle,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = sectionText.explainSubtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = uiState.translationExplainEnabled,
-                onCheckedChange = viewModel::setTranslationExplainEnabled
-            )
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = sectionText.explainComingSoon,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.secondary
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SettingsPreviewBanner(
+            title = aiServicesTitle,
+            subtitle = gatewayText.previewSubtitle,
+            details = "$transport · ${overviewText.advancedExplainTitle}: $explain"
         )
+        SettingsCompactSummaryCard(
+            title = summaryText.title,
+            hint = summaryText.hint,
+            items = listOf(
+                transportText to transport,
+                overviewText.machineTranslationTitle to aiMachineTranslationStatus(uiState, strings.languageCode),
+                overviewText.advancedExplainTitle to explain,
+                overviewText.providersTitle to overviewText.notConnectedValue
+            )
+        )
+        SettingsCard(title = gatewayText.ownershipTitle) {
+            Text(
+                text = gatewayText.ownershipBody,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            LabelText(gatewayText.readAloudHint)
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = onOpenAiServices) {
+                Text(gatewayText.openButtonLabel)
+            }
+        }
     }
 }
 
@@ -9347,7 +9587,7 @@ private fun AiServicesSection(
             AiServiceOcrOverviewCard(uiState = uiState, strings = strings, overviewText = overviewText)
         }
         item {
-            AiServiceProvidersOverviewCard(overviewText = overviewText)
+            AiServiceProvidersOverviewCard(uiState = uiState, strings = strings, overviewText = overviewText)
         }
         item { Spacer(Modifier.height(16.dp)) }
     }
@@ -9448,6 +9688,8 @@ private fun AiServiceOcrOverviewCard(
 
 @Composable
 private fun AiServiceProvidersOverviewCard(
+    uiState: SettingsUiState,
+    strings: AppStrings,
     overviewText: AiServicesOverviewText
 ) {
     SettingsCard(title = overviewText.providersTitle) {
@@ -9457,8 +9699,8 @@ private fun AiServiceProvidersOverviewCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(8.dp))
-        LabelText("${overviewText.providerLabel}: ${overviewText.notConnectedValue}")
-        LabelText("${overviewText.statusLabel}: ${overviewText.providersUnavailableStatus}")
+        LabelText("${overviewText.providerLabel}: ${aiProvidersValue(uiState, strings.languageCode)}")
+        LabelText("${overviewText.statusLabel}: ${aiProvidersStatus(uiState, strings.languageCode)}")
     }
 }
 
@@ -9994,45 +10236,100 @@ private fun LibraryCacheCard(
     }
 }
 
+private fun syncBackupTitle(language: String): String = when (language) {
+    "en" -> "Backup and transfer"
+    "ja" -> "バックアップと移行"
+    "zh" -> "备份与迁移"
+    "ko" -> "백업 및 전송"
+    else -> "Бэкап и перенос"
+}
+
+private fun syncBackupSummary(language: String): String = when (language) {
+    "en" -> "Reading progress export, import, and automatic backups."
+    "ja" -> "読書進捗のエクスポート、インポート、自動バックアップ。"
+    "zh" -> "阅读进度导出、导入和自动备份。"
+    "ko" -> "읽기 진행 내보내기, 가져오기, 자동 백업."
+    else -> "Экспорт и импорт прогресса чтения, плюс автоматические резервные копии."
+}
+
+private fun syncStorageTitle(language: String): String = when (language) {
+    "en" -> "Storage and access"
+    "ja" -> "ストレージとアクセス"
+    "zh" -> "存储与访问"
+    "ko" -> "저장소와 접근"
+    else -> "Хранилище и доступ"
+}
+
+private fun syncStorageSummary(language: String): String = when (language) {
+    "en" -> "Reconnect library folders after reinstall and clear local cache."
+    "ja" -> "再インストール後のライブラリ再接続とローカルキャッシュの整理。"
+    "zh" -> "重装后重新连接书库并清理本地缓存。"
+    "ko" -> "재설치 후 라이브러리 재연결과 로컬 캐시 정리."
+    else -> "Перепривязка папок библиотеки после переустановки и очистка локального кэша."
+}
+
+private fun syncPopupSettingsTitle(language: String): String = when (language) {
+    "en" -> "Popup messages"
+    "ja" -> "ポップアップ表示"
+    "zh" -> "弹窗消息"
+    "ko" -> "팝업 메시지"
+    else -> "Всплывающие сообщения"
+}
+
+private fun syncPopupSettingsSummary(language: String): String = when (language) {
+    "en" -> "Import error presentation and reader image popup behavior."
+    "ja" -> "インポートエラー表示とリーダー画像ポップアップの挙動。"
+    "zh" -> "导入错误展示方式和阅读器图片弹窗行为。"
+    "ko" -> "가져오기 오류 표시 방식과 리더 이미지 팝업 동작."
+    else -> "Показ ошибок импорта и поведение графических всплывашек в ридере."
+}
+
 @Composable
 private fun SyncSection(
     uiState: SettingsUiState,
     strings: AppStrings,
     viewModel: SettingsViewModel,
+    currentPage: SyncSettingsPage,
+    onPageChange: (SyncSettingsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val busy = uiState.isExporting || uiState.isImporting
-    val title = when (strings.languageCode) {
-        "en" -> "Sync and backup"
-        "ja" -> "同期とバックアップ"
-        "zh" -> "同步与备份"
-        "ko" -> "동기화와 백업"
-        else -> "Синхронизация и резервные копии"
-    }
-    val description = when (strings.languageCode) {
-        "en" -> "Move reading progress between devices and keep calm automatic backups."
-        "ja" -> "読書の進捗を端末間で移し、静かな自動バックアップを保ちます。"
-        "zh" -> "在设备之间转移阅读进度，并保持自动备份。"
-        "ko" -> "기기 사이에 읽기 진행을 옮기고 차분한 자동 백업을 유지합니다."
-        else -> "Переносите прогресс чтения между устройствами и держите включённые автоматические резервные копии."
-    }
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> uri?.let { viewModel.exportProgress(it) } }
-    val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let { viewModel.importProgress(it) } }
-
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item {
-            SyncProgressCard(uiState = uiState, strings = strings, viewModel = viewModel)
-        }
-        item {
-            SyncFormatCard(strings = strings)
+        when (currentPage) {
+            SyncSettingsPage.OVERVIEW -> {
+                item {
+                    SettingsCompactSummaryCard(
+                        title = settingsSectionSummaryText(strings.languageCode).title,
+                        hint = settingsSectionSummaryText(strings.languageCode).hint,
+                        items = listOf(
+                            strings.autoBackup to compactToggleLabel(strings.languageCode, uiState.autoBackupEnabled),
+                            syncTransferLabel(strings.languageCode) to "JSON"
+                        )
+                    )
+                }
+                item {
+                    SettingsCard(title = settingsSectionMeta(SettingsSection.SYNC, strings.languageCode, strings).title) {
+                        SettingsNavItem(
+                            icon = Icons.Default.Sync,
+                            title = syncBackupTitle(strings.languageCode),
+                            description = null,
+                            summary = syncBackupSummary(strings.languageCode),
+                            onClick = { onPageChange(SyncSettingsPage.BACKUP) }
+                        )
+                    }
+                }
+            }
+            SyncSettingsPage.BACKUP -> {
+                item {
+                    SyncProgressCard(uiState = uiState, strings = strings, viewModel = viewModel)
+                }
+                item {
+                    SyncFormatCard(strings = strings)
+                }
+            }
         }
         item { Spacer(Modifier.height(16.dp)) }
     }
@@ -10045,76 +10342,21 @@ private fun StorageSection(
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val busy = uiState.isRepairingLibraryAccess
-    val context = LocalContext.current
-    val title = when (strings.languageCode) {
-        "en" -> "Storage and access"
-        "ja" -> "ストレージとアクセス"
-        "zh" -> "存储与访问"
-        "ko" -> "저장소와 접근"
-        else -> "Хранилище и доступ"
-    }
-    val description = when (strings.languageCode) {
-        "en" -> "Recover library access after reinstall and clear local caches when the app gets heavy."
-        "ja" -> "再インストール後にライブラリアクセスを復元し、アプリが重くなったらローカルキャッシュを整理します。"
-        "zh" -> "重装后恢复书库访问，并在应用变重时清理本地缓存。"
-        "ko" -> "재설치 후 라이브러리 접근을 복구하고 앱이 무거워지면 로컬 캐시를 정리합니다."
-        else -> "Перепривязывайте доступ к библиотеке после переустановки и очищайте локальный кэш, когда приложение становится тяжёлым."
-    }
-    val reconnectTitle = when (strings.languageCode) {
-        "en" -> "Library access"
-        "ja" -> "ライブラリアクセス"
-        "zh" -> "书库访问"
-        "ko" -> "라이브러리 접근"
-        else -> "Доступ к библиотеке"
-    }
-    val reconnectDescription = when (strings.languageCode) {
-        "en" -> "If Android dropped folder permissions, reconnect the library root without losing reading progress."
-        "ja" -> "Android がフォルダ権限を失った場合でも、読書進捗を失わずにライブラリルートを再接続できます。"
-        "zh" -> "如果 Android 丢失了文件夹权限，可在不丢失阅读进度的情况下重新连接书库根目录。"
-        "ko" -> "Android가 폴더 권한을 잃어도 읽기 진행을 잃지 않고 라이브러리 루트를 다시 연결할 수 있습니다."
-        else -> "Если Android потерял права на папки, перепривяжите корень библиотеки без потери прогресса чтения."
-    }
-    val reconnectButton = when (strings.languageCode) {
-        "en" -> "Reconnect library"
-        "ja" -> "ライブラリを再接続"
-        "zh" -> "重新连接书库"
-        "ko" -> "라이브러리 다시 연결"
-        else -> "Перепривязать библиотеку"
-    }
-    val reconnectingButton = when (strings.languageCode) {
-        "en" -> "Reconnecting..."
-        "ja" -> "再接続中..."
-        "zh" -> "重新连接中..."
-        "ko" -> "다시 연결 중..."
-        else -> "Перепривязка..."
-    }
-
-    val reconnectLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        runCatching {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION
-            )
-        }
-        viewModel.repairLibraryAccess(uri)
-    }
-
-    LaunchedEffect(uiState.pendingLibraryRepairLaunchToken) {
-        val token = uiState.pendingLibraryRepairLaunchToken
-        if (token == 0L) return@LaunchedEffect
-        viewModel.consumePendingLibraryRepairLaunch()
-        reconnectLauncher.launch(null)
-    }
-
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item {
+            SettingsCompactSummaryCard(
+                title = settingsSectionSummaryText(strings.languageCode).title,
+                hint = settingsSectionSummaryText(strings.languageCode).hint,
+                items = listOf(
+                    storageFoldersLabel(strings.languageCode) to settingsSectionMeta(SettingsSection.STORAGE, strings.languageCode, strings).title,
+                    cacheShortLabel(strings.languageCode) to if (uiState.isClearingCache) strings.clearingBtn else strings.clearCacheBtn
+                )
+            )
+        }
         item {
             LibraryAccessCard(uiState = uiState, strings = strings, viewModel = viewModel)
         }
@@ -10122,6 +10364,202 @@ private fun StorageSection(
             LibraryCacheCard(uiState = uiState, strings = strings, viewModel = viewModel)
         }
         item { Spacer(Modifier.height(16.dp)) }
+    }
+}
+
+@Composable
+private fun SyncPopupSettingsCard(
+    uiState: SettingsUiState,
+    strings: AppStrings,
+    viewModel: SettingsViewModel
+) {
+    val language = strings.languageCode
+    val popupScalePercent = (uiState.imageMessagePopupSizeScale * 100).roundToInt()
+    val durationLabel = when {
+        uiState.imageMessagePopupDurationSeconds <= 0 -> when (language) {
+            "en" -> "Manual"
+            "ja" -> "手動"
+            "zh" -> "手动"
+            "ko" -> "수동"
+            else -> "Вручную"
+        }
+        language == "en" -> "${uiState.imageMessagePopupDurationSeconds} s"
+        else -> "${uiState.imageMessagePopupDurationSeconds} сек"
+    }
+    val presentationOptions = listOf(
+        SettingsImportErrorPresentation.TEXT to when (language) {
+            "en" -> "Text"
+            "ja" -> "テキスト"
+            "zh" -> "文本"
+            "ko" -> "텍스트"
+            else -> "Текст"
+        },
+        SettingsImportErrorPresentation.IMAGE to when (language) {
+            "en" -> "Image"
+            "ja" -> "画像"
+            "zh" -> "图片"
+            "ko" -> "이미지"
+            else -> "Картинка"
+        }
+    )
+    val positionOptions = listOf(
+        SettingsImageMessagePopupPosition.CENTER to when (language) {
+            "en" -> "Center"
+            "ja" -> "中央"
+            "zh" -> "居中"
+            "ko" -> "가운데"
+            else -> "По центру"
+        },
+        SettingsImageMessagePopupPosition.TOP to when (language) {
+            "en" -> "Top"
+            "ja" -> "上"
+            "zh" -> "顶部"
+            "ko" -> "상단"
+            else -> "Сверху"
+        },
+        SettingsImageMessagePopupPosition.BOTTOM to when (language) {
+            "en" -> "Bottom"
+            "ja" -> "下"
+            "zh" -> "底部"
+            "ko" -> "하단"
+            else -> "Снизу"
+        },
+        SettingsImageMessagePopupPosition.TOP_START to when (language) {
+            "en" -> "Top left"
+            "ja" -> "左上"
+            "zh" -> "左上"
+            "ko" -> "왼쪽 위"
+            else -> "Слева сверху"
+        },
+        SettingsImageMessagePopupPosition.TOP_END to when (language) {
+            "en" -> "Top right"
+            "ja" -> "右上"
+            "zh" -> "右上"
+            "ko" -> "오른쪽 위"
+            else -> "Справа сверху"
+        },
+        SettingsImageMessagePopupPosition.BOTTOM_START to when (language) {
+            "en" -> "Bottom left"
+            "ja" -> "左下"
+            "zh" -> "左下"
+            "ko" -> "왼쪽 아래"
+            else -> "Слева снизу"
+        },
+        SettingsImageMessagePopupPosition.BOTTOM_END to when (language) {
+            "en" -> "Bottom right"
+            "ja" -> "右下"
+            "zh" -> "右下"
+            "ko" -> "오른쪽 아래"
+            else -> "Справа снизу"
+        }
+    )
+
+    SettingsCard(title = syncPopupSettingsTitle(language)) {
+        Text(
+            text = syncPopupSettingsSummary(language),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(10.dp))
+        LabelText(
+            when (language) {
+                "en" -> "Import error presentation"
+                "ja" -> "インポートエラーの表示"
+                "zh" -> "导入错误展示"
+                "ko" -> "가져오기 오류 표시"
+                else -> "Показ ошибок импорта"
+            }
+        )
+        ChipRow {
+            presentationOptions.forEach { (value, label) ->
+                FilterChip(
+                    selected = uiState.settingsImportErrorPresentation == value,
+                    onClick = { viewModel.setSettingsImportErrorPresentation(value) },
+                    label = { Text(label) }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        LabelText(
+            when (language) {
+                "en" -> "Reader popup position"
+                "ja" -> "リーダーポップアップの位置"
+                "zh" -> "阅读器弹窗位置"
+                "ko" -> "리더 팝업 위치"
+                else -> "Положение всплывашки в ридере"
+            }
+        )
+        ChipRow {
+            positionOptions.forEach { (value, label) ->
+                FilterChip(
+                    selected = uiState.imageMessagePopupPosition == value,
+                    onClick = { viewModel.setImageMessagePopupPosition(value) },
+                    label = { Text(label) }
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        SwitchRow(
+            title = when (language) {
+                "en" -> "Allow free move"
+                "ja" -> "自由移動を許可"
+                "zh" -> "允许自由拖动"
+                "ko" -> "자유 이동 허용"
+                else -> "Разрешить свободное перемещение"
+            },
+            subtitle = when (language) {
+                "en" -> "Lets image popups be dragged after they appear."
+                "ja" -> "画像ポップアップを表示後にドラッグできます。"
+                "zh" -> "允许图片弹窗在出现后被拖动。"
+                "ko" -> "이미지 팝업이 표시된 뒤 드래그할 수 있습니다."
+                else -> "Позволяет перетаскивать графическую всплывашку после появления."
+            },
+            checked = uiState.imageMessagePopupFreeMove,
+            onCheckedChange = viewModel::setImageMessagePopupFreeMove
+        )
+        Spacer(Modifier.height(6.dp))
+        SettingsSliderTile(
+            title = when (language) {
+                "en" -> "Popup size"
+                "ja" -> "ポップアップサイズ"
+                "zh" -> "弹窗大小"
+                "ko" -> "팝업 크기"
+                else -> "Размер всплывашки"
+            },
+            valueLabel = "$popupScalePercent%",
+            value = uiState.imageMessagePopupSizeScale,
+            onValueChange = viewModel::setImageMessagePopupSizeScale,
+            valueRange = SETTINGS_IMAGE_MESSAGE_POPUP_MIN_SCALE..SETTINGS_IMAGE_MESSAGE_POPUP_MAX_SCALE,
+            subtitle = when (language) {
+                "en" -> "Controls the scale of image popups in the reader."
+                "ja" -> "リーダー内の画像ポップアップの大きさを調整します。"
+                "zh" -> "调整阅读器中图片弹窗的缩放。"
+                "ko" -> "리더 안의 이미지 팝업 크기를 조절합니다."
+                else -> "Управляет масштабом графических всплывашек в ридере."
+            }
+        )
+        Spacer(Modifier.height(6.dp))
+        SettingsSliderTile(
+            title = when (language) {
+                "en" -> "Auto close"
+                "ja" -> "自動で閉じる"
+                "zh" -> "自动关闭"
+                "ko" -> "자동 닫기"
+                else -> "Автозакрытие"
+            },
+            valueLabel = durationLabel,
+            value = uiState.imageMessagePopupDurationSeconds.toFloat(),
+            onValueChange = { viewModel.setImageMessagePopupDurationSeconds(it.roundToInt()) },
+            valueRange = 0f..SETTINGS_IMAGE_MESSAGE_POPUP_MAX_DURATION_SECONDS.toFloat(),
+            steps = SETTINGS_IMAGE_MESSAGE_POPUP_MAX_DURATION_SECONDS - 1,
+            subtitle = when (language) {
+                "en" -> "Set 0 to close popups manually."
+                "ja" -> "0 にすると手動で閉じます。"
+                "zh" -> "设为 0 表示手动关闭。"
+                "ko" -> "0으로 두면 수동으로 닫습니다."
+                else -> "0 означает закрытие только вручную."
+            }
+        )
     }
 }
 
@@ -10139,6 +10577,17 @@ private fun AdvancedSection(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item {
+            SettingsCompactSummaryCard(
+                title = settingsSectionSummaryText(strings.languageCode).title,
+                hint = settingsSectionSummaryText(strings.languageCode).hint,
+                items = listOf(
+                    appearanceText.mascotRecapTitle to compactToggleLabel(strings.languageCode, uiState.mascotRecapEnabled),
+                    appearanceText.questPromptsTitle to compactToggleLabel(strings.languageCode, uiState.questPromptsEnabled),
+                    syncPopupSettingsTitle(strings.languageCode) to settingsImportErrorPresentationLabel(strings.languageCode, uiState.settingsImportErrorPresentation)
+                )
+            )
+        }
         item {
             SettingsCard(title = appearanceText.serviceElementsTitle) {
                 SwitchRow(
@@ -10181,6 +10630,13 @@ private fun AdvancedSection(
                 }
             }
         }
+        item {
+            SyncPopupSettingsCard(
+                uiState = uiState,
+                strings = strings,
+                viewModel = viewModel
+            )
+        }
         item { Spacer(Modifier.height(16.dp)) }
     }
 }
@@ -10206,6 +10662,18 @@ private fun AboutSection(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        item {
+            SettingsCompactSummaryCard(
+                title = settingsSectionSummaryText(strings.languageCode).title,
+                hint = sectionText.description,
+                items = listOf(
+                    sectionText.featuresTitle to aboutCountValue(strings.languageCode, sectionText.features.size),
+                    sectionText.librariesTitle to aboutCountValue(strings.languageCode, sectionText.libraries.size),
+                    sectionText.licensesTitle to aboutCountValue(strings.languageCode, sectionText.licenses.size),
+                    sectionText.contactsTitle to aboutCountValue(strings.languageCode, contacts.size)
+                )
+            )
+        }
         item {
             SettingsCard(title = sectionText.overviewTitle) {
                 Text(

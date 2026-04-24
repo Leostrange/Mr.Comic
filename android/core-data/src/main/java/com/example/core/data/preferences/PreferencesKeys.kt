@@ -105,6 +105,11 @@ object PreferencesKeys {
     val OCR_OVERLAY_STYLE         = stringPreferencesKey("ocr_overlay_style") // AUTO/LIGHT/DARK
     // Бэкап
     val AUTO_BACKUP_ENABLED       = booleanPreferencesKey("auto_backup_enabled")
+    val SETTINGS_IMPORT_ERROR_PRESENTATION = stringPreferencesKey("settings_import_error_presentation") // TEXT/IMAGE
+    val IMAGE_MESSAGE_POPUP_POSITION = stringPreferencesKey("image_message_popup_position")
+    val IMAGE_MESSAGE_POPUP_FREE_MOVE = booleanPreferencesKey("image_message_popup_free_move")
+    val IMAGE_MESSAGE_POPUP_SIZE_SCALE = floatPreferencesKey("image_message_popup_size_scale")
+    val IMAGE_MESSAGE_POPUP_DURATION_SECONDS = intPreferencesKey("image_message_popup_duration_seconds")
     // Библиотека — размер плиток (80..200 dp, default 150)
     val LIBRARY_TILE_SIZE_DP      = intPreferencesKey("library_tile_size_dp")
     val LIBRARY_CARD_STYLE        = stringPreferencesKey("library_card_style") // COMPACT/BALANCED/SHOWCASE
@@ -178,6 +183,9 @@ object PreferencesKeys {
 
     // Закладки — сохраняются отдельно для каждого комикса: "0,5,12,…"
     fun bookmarks(comicId: String) = stringPreferencesKey("bookmarks_$comicId")
+
+    // Выделения текста — JSON-массив, сохраняется отдельно для каждой книги.
+    fun highlights(comicId: String) = stringPreferencesKey("highlights_$comicId")
 
     fun audiobookBookmarkChapter(audiobookId: String) =
         intPreferencesKey("audiobook_bookmark_${audiobookId}_chapter")

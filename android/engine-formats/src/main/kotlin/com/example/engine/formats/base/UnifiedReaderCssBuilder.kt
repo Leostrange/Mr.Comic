@@ -1,11 +1,19 @@
 package com.example.engine.formats.base
 
 internal const val READER_BASE_DOCUMENT_CSS = """
+    html {
+      width: 100%;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
     body {
       margin: 0 auto;
       padding: 16px 22px 44px;
+      width: 100%;
       max-width: 720px;
-      box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 18px;
       line-height: 1.6;
@@ -16,6 +24,10 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       word-break: normal;
       hyphens: auto;
       -webkit-hyphens: auto;
+    }
+    body > * {
+      max-width: 100%;
+      box-sizing: border-box;
     }
     p, div.paragraph {
       margin: 0.4em 0;
@@ -96,15 +108,29 @@ internal const val READER_BASE_DOCUMENT_CSS = """
 """
 
 internal const val READER_MOBI_DOCUMENT_CSS = """
+    html {
+      width: 100%;
+      box-sizing: border-box;
+      overflow-x: hidden;
+    }
+    *, *::before, *::after {
+      box-sizing: inherit;
+    }
     body {
       margin: 0 auto;
       padding: 16px 22px 44px;
+      width: 100%;
       max-width: 680px;
-      box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 1.05rem;
       line-height: 1.7;
       color: inherit;
+      overflow-wrap: break-word;
+      word-break: normal;
+    }
+    body > * {
+      max-width: 100%;
+      box-sizing: border-box;
     }
     p {
       margin: 0.4em 0;
@@ -244,10 +270,13 @@ internal const val READER_PRESERVE_LAYOUT_DOCUMENT_CSS = """
 """
 
 internal const val EPUB_READER_DOCUMENT_CSS = """
+    html{width:100%;box-sizing:border-box;overflow-x:hidden}
+    *,*::before,*::after{box-sizing:inherit}
     body{font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.6;
-         padding:16px 22px 44px;color:#1a1a1a;background:#fafafa;
-         max-width:720px;margin:0 auto;box-sizing:border-box;overflow-wrap:break-word;word-break:normal;
-         hyphens:auto;-webkit-hyphens:auto;text-align:justify}
+          padding:16px 22px 44px;color:#1a1a1a;background:#fafafa;
+          width:100%;max-width:720px;margin:0 auto;overflow-wrap:break-word;word-break:normal;
+          hyphens:auto;-webkit-hyphens:auto;text-align:justify}
+    body>*{max-width:100%;box-sizing:border-box}
     p,div.paragraph{margin:0.4em 0;text-indent:1.5em}
     p:first-child,div.paragraph:first-child,
     h1+p,h2+p,h3+p,h4+p,h5+p,h6+p,

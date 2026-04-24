@@ -2,6 +2,7 @@ package com.example.feature.library
 
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -760,44 +761,66 @@ fun LibraryScreen(
                                 (!isBookmarkSection && uiState.groupSections.isNotEmpty()))
                         ) {
                             val sections = if (isBookmarkSection) uiState.bookmarkedGroupSections else uiState.groupSections
-                            sections.forEach { (title, comics) ->
-                                item(key = "section_$title", span = { GridItemSpan(maxLineSpan) }) {
-                                    Text(
-                                        text = title,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 16.dp)
-                                            .padding(top = 8.dp, bottom = 4.dp)
+                            if (uiState.viewMode == LibraryViewMode.STRIPS) {
+                                val seriesStripSections = sections.mapIndexed { index, (title, comics) ->
+                                    LibraryStripSectionData(
+                                        key = "series_strip_${index}_$title",
+                                        title = title,
+                                        comics = comics
                                     )
                                 }
-                                items(comics, key = { it.id }) { comic ->
-                                    LibraryGridCell(
-                                        isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                        tileSizeDp = uiState.tileSizeDp
-                                    ) {
-                                        ComicGridItem(
-                                            comic = comic,
-                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                            cardStyle = uiState.cardStyle,
-                                            tileSizeDp = uiState.tileSizeDp,
-                                            coverScaleMode = uiState.coverScale,
-                                            thumbnailMode = uiState.thumbnailMode,
-                                            shelfStyle = uiState.shelfStyle,
-                                            shelfDepth = uiState.shelfDepth,
-                                            graphicCoverStyle = uiState.graphicCoverStyle,
-                                            cardShadow = uiState.cardShadow,
-                                            titleScale = uiState.titleScale,
-                                            titleLines = uiState.titleLines,
-                                            cardStroke = uiState.cardStroke,
-                                            cardCornerRadius = uiState.cardCornerRadius,
-                                            titlePanelOpacity = uiState.titlePanelOpacity,
-                                            showProgressIndicators = uiState.showProgressIndicators,
-                                            showCoverTitles = uiState.showCoverTitlesOnGrid,
-                                            onClick = { onComicClick(comic.id) },
-                                            onLongClick = { selectedComicId = comic.id }
+                                items(seriesStripSections, key = { it.key }) { section ->
+                                    LibraryDisplayStripSection(
+                                        section = section,
+                                        uiState = uiState,
+                                        onComicClick = { onComicClick(it.id) },
+                                        onComicLongClick = { selectedComicId = it.id },
+                                        onFolderClick = { viewModel.openFolderSheet(it.path) },
+                                        onFolderLongClick = { folderToDelete = it },
+                                        onAudiobookClick = { onAudiobookClick(it.id) },
+                                        onAudiobookLongClick = { audiobookToDelete = it }
+                                    )
+                                }
+                            } else {
+                                sections.forEach { (title, comics) ->
+                                    item(key = "section_$title", span = { GridItemSpan(maxLineSpan) }) {
+                                        Text(
+                                            text = title,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp)
+                                                .padding(top = 8.dp, bottom = 4.dp)
                                         )
+                                    }
+                                    items(comics, key = { it.id }) { comic ->
+                                        LibraryGridCell(
+                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                            tileSizeDp = uiState.tileSizeDp
+                                        ) {
+                                            ComicGridItem(
+                                                comic = comic,
+                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
+                                                cardStyle = uiState.cardStyle,
+                                                tileSizeDp = uiState.tileSizeDp,
+                                                coverScaleMode = uiState.coverScale,
+                                                thumbnailMode = uiState.thumbnailMode,
+                                                shelfStyle = uiState.shelfStyle,
+                                                shelfDepth = uiState.shelfDepth,
+                                                graphicCoverStyle = uiState.graphicCoverStyle,
+                                                cardShadow = uiState.cardShadow,
+                                                titleScale = uiState.titleScale,
+                                                titleLines = uiState.titleLines,
+                                                cardStroke = uiState.cardStroke,
+                                                cardCornerRadius = uiState.cardCornerRadius,
+                                                titlePanelOpacity = uiState.titlePanelOpacity,
+                                                showProgressIndicators = uiState.showProgressIndicators,
+                                                showCoverTitles = uiState.showCoverTitlesOnGrid,
+                                                onClick = { onComicClick(comic.id) },
+                                                onLongClick = { selectedComicId = comic.id }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -970,7 +993,9 @@ fun LibraryScreen(
                         statusFilter = uiState.statusFilter,
                 formatFilter = uiState.formatFilter,
                 groupByMode = uiState.groupByMode,
+                viewMode = uiState.viewMode,
                 thumbnailMode = uiState.thumbnailMode,
+                tileSizeDp = uiState.tileSizeDp,
                 onSortChange = viewModel::setSortOrder,
                 onStatusFilterChange = viewModel::setStatusFilter,
                 onFormatFilterChange = viewModel::setFormatFilter,
@@ -978,13 +1003,17 @@ fun LibraryScreen(
                     viewModel.setGroupBy(it)
                     if (it == GroupByMode.FOLDER) viewModel.openFolder(null)
                 },
+                onViewModeChange = viewModel::setViewMode,
                 onThumbnailModeChange = viewModel::setThumbnailMode,
+                onTileSizeChange = viewModel::setTileSizeDp,
                 onReset = {
                     viewModel.setSortOrder(SortOrder.DATE_ADDED_DESC)
                     viewModel.setStatusFilter(LibraryStatusFilter.ALL)
                     viewModel.setFormatFilter(LibraryFormatFilter.ALL)
                     viewModel.setGroupBy(GroupByMode.FOLDER)
+                    viewModel.setViewMode(LibraryViewMode.GRID)
                     viewModel.setThumbnailMode("RECTANGLE")
+                    viewModel.setTileSizeDp(150)
                     viewModel.openFolder(null)
                     showFilterSheet = false
                 }
@@ -1481,6 +1510,10 @@ private fun LibraryGridCell(
         content()
         return
     }
+    val animatedTileSize by animateDpAsState(
+        targetValue = tileSizeDp.dp,
+        label = "libraryTileSize"
+    )
     Box(
         modifier = Modifier.fillMaxWidth(),
         contentAlignment = Alignment.TopCenter
@@ -1488,7 +1521,7 @@ private fun LibraryGridCell(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = tileSizeDp.dp)
+                .widthIn(max = animatedTileSize)
         ) {
             content()
         }
@@ -1851,12 +1884,16 @@ private fun FilterSheet(
     statusFilter: LibraryStatusFilter,
     formatFilter: LibraryFormatFilter,
     groupByMode: GroupByMode,
+    viewMode: LibraryViewMode,
     thumbnailMode: String,
+    tileSizeDp: Int,
     onSortChange: (SortOrder) -> Unit,
     onStatusFilterChange: (LibraryStatusFilter) -> Unit,
     onFormatFilterChange: (LibraryFormatFilter) -> Unit,
     onGroupByChange: (GroupByMode) -> Unit,
+    onViewModeChange: (LibraryViewMode) -> Unit,
     onThumbnailModeChange: (String) -> Unit,
+    onTileSizeChange: (Int) -> Unit,
     onReset: () -> Unit
 ) {
     val strings = LocalStrings.current
@@ -1888,16 +1925,31 @@ private fun FilterSheet(
         HorizontalDivider()
 
         FilterSection(
-            title = strings.librarySortSection
+            title = libraryViewSectionLabel(strings.languageCode)
         ) {
             ChipWrap {
                 listOf(
-                    SortOrder.DATE_ADDED_DESC to strings.librarySortNewest,
-                    SortOrder.DATE_READ_DESC to strings.librarySortRecent,
-                    SortOrder.TITLE_ASC to strings.libraryTitle,
-                    SortOrder.PROGRESS_DESC to strings.librarySortProgress,
-                    SortOrder.FOLDER_ASC to strings.librarySortFolderAz
-                ).forEach { (order, label) ->
+                    LibraryViewMode.GRID,
+                    LibraryViewMode.LIST,
+                    LibraryViewMode.STRIPS
+                ).forEach { mode ->
+                    FilterChip(
+                        selected = viewMode == mode,
+                        onClick = { onViewModeChange(mode) },
+                        label = { Text(libraryViewModeLabel(mode, strings.languageCode)) },
+                        leadingIcon = if (viewMode == mode) ({
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        }) else null
+                    )
+                }
+            }
+        }
+
+        FilterSection(
+            title = strings.librarySortSection
+        ) {
+            ChipWrap {
+                librarySortOptions(strings).forEach { (order, label) ->
                     FilterChip(
                         selected = sortOrder == order,
                         onClick = { onSortChange(order) },
@@ -1988,6 +2040,28 @@ private fun FilterSheet(
                         onClick = { onThumbnailModeChange(mode) },
                         label = { Text(label) },
                         leadingIcon = if (thumbnailMode == mode) ({
+                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                        }) else null
+                    )
+                }
+            }
+        }
+
+        FilterSection(
+            title = libraryThumbnailSizeSectionLabel(strings.languageCode)
+        ) {
+            ChipWrap {
+                listOf(
+                    112 to libraryThumbnailSizeLabel(strings.languageCode, "small"),
+                    150 to libraryThumbnailSizeLabel(strings.languageCode, "medium"),
+                    190 to libraryThumbnailSizeLabel(strings.languageCode, "large")
+                ).forEach { (size, label) ->
+                    val selected = tileSizeDp in (size - 12)..(size + 12)
+                    FilterChip(
+                        selected = selected,
+                        onClick = { onTileSizeChange(size) },
+                        label = { Text(label) },
+                        leadingIcon = if (selected) ({
                             Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                         }) else null
                     )
@@ -4718,6 +4792,81 @@ private fun libraryViewAsStripsLabel(language: String): String = when (language)
     "zh" -> "视图：书架"
     "ko" -> "보기: 선반"
     else -> "Вид: ленты"
+}
+
+private fun libraryViewSectionLabel(language: String): String = when (language) {
+    "en" -> "View mode"
+    "ja" -> "表示モード"
+    "zh" -> "视图模式"
+    "ko" -> "보기 모드"
+    else -> "Режим отображения"
+}
+
+private fun libraryViewModeLabel(mode: LibraryViewMode, language: String): String = when (mode) {
+    LibraryViewMode.GRID -> when (language) {
+        "en" -> "Grid"
+        "ja" -> "グリッド"
+        "zh" -> "网格"
+        "ko" -> "그리드"
+        else -> "Сетка"
+    }
+    LibraryViewMode.LIST -> when (language) {
+        "en" -> "List"
+        "ja" -> "リスト"
+        "zh" -> "列表"
+        "ko" -> "목록"
+        else -> "Список"
+    }
+    LibraryViewMode.STRIPS -> when (language) {
+        "en" -> "Vertical strips"
+        "ja" -> "縦リボン"
+        "zh" -> "垂直条带"
+        "ko" -> "세로 스트립"
+        else -> "Вертикальная лента"
+    }
+}
+
+private fun libraryThumbnailSizeSectionLabel(language: String): String = when (language) {
+    "en" -> "Thumbnail size"
+    else -> "Размер миниатюр"
+}
+
+private fun libraryThumbnailSizeLabel(language: String, size: String): String = when (language) {
+    "en" -> when (size) {
+        "small" -> "Small"
+        "large" -> "Large"
+        else -> "Medium"
+    }
+    else -> when (size) {
+        "small" -> "Меньше"
+        "large" -> "Больше"
+        else -> "Средний"
+    }
+}
+
+private fun librarySortOptions(strings: AppStrings): List<Pair<SortOrder, String>> {
+    val language = strings.languageCode
+    return listOf(
+        SortOrder.DATE_ADDED_DESC to librarySortLabel(language, "Added: newest", "Добавлены: новые"),
+        SortOrder.DATE_ADDED_ASC to librarySortLabel(language, "Added: oldest", "Добавлены: старые"),
+        SortOrder.DATE_READ_DESC to librarySortLabel(language, "Read: recent", "Читали: недавние"),
+        SortOrder.DATE_READ_ASC to librarySortLabel(language, "Read: old first", "Читали: старые"),
+        SortOrder.TITLE_ASC to librarySortLabel(language, "Title: A-Z", "Название: А-Я"),
+        SortOrder.TITLE_DESC to librarySortLabel(language, "Title: Z-A", "Название: Я-А"),
+        SortOrder.PROGRESS_DESC to librarySortLabel(language, "Progress: high first", "Прогресс: больше"),
+        SortOrder.PROGRESS_ASC to librarySortLabel(language, "Progress: low first", "Прогресс: меньше"),
+        SortOrder.FILE_SIZE_DESC to librarySortLabel(language, "File: large first", "Файл: больше"),
+        SortOrder.FILE_SIZE_ASC to librarySortLabel(language, "File: small first", "Файл: меньше"),
+        SortOrder.GENRE_ASC to librarySortLabel(language, "Genre: A-Z", "Жанр: А-Я"),
+        SortOrder.GENRE_DESC to librarySortLabel(language, "Genre: Z-A", "Жанр: Я-А"),
+        SortOrder.FOLDER_ASC to librarySortLabel(language, "Folder: A-Z", "Папка: А-Я"),
+        SortOrder.FOLDER_DESC to librarySortLabel(language, "Folder: Z-A", "Папка: Я-А")
+    )
+}
+
+private fun librarySortLabel(language: String, english: String, russian: String): String = when (language) {
+    "ru" -> russian
+    else -> english
 }
 
 private fun filterAndSortAudiobooks(

@@ -139,6 +139,7 @@ internal fun ReaderPanelChip(
 fun ReaderExpandedBar(
     title: String,
     canShowToc: Boolean,
+    canSearch: Boolean = false,
     showTextSettings: Boolean,
     showOcrAction: Boolean = true,
     canSwapDirection: Boolean,
@@ -154,6 +155,7 @@ fun ReaderExpandedBar(
     showBrightnessIcon: Boolean = true,
     onNavigateBack: () -> Unit,
     onToggleToc: () -> Unit,
+    onToggleSearch: () -> Unit = {},
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
     onRequestOcr: () -> Unit,
@@ -191,6 +193,7 @@ fun ReaderExpandedBar(
             ) {
                 ReaderExpandedActionButtons(
                     canShowToc = canShowToc,
+                    canSearch = canSearch,
                     showTextSettings = showTextSettings,
                     showOcrAction = showOcrAction,
                     canSwapDirection = canSwapDirection,
@@ -206,6 +209,7 @@ fun ReaderExpandedBar(
                     showBrightnessIcon = showBrightnessIcon,
                     chromeIconTint = chromeIconTint,
                     onToggleToc = onToggleToc,
+                    onToggleSearch = onToggleSearch,
                     onToggleTextSettings = onToggleTextSettings,
                     onSwapDirection = onSwapDirection,
                     onRequestOcr = onRequestOcr,
@@ -221,6 +225,7 @@ fun ReaderExpandedBar(
 @Composable
 private fun ReaderExpandedActionButtons(
     canShowToc: Boolean,
+    canSearch: Boolean,
     showTextSettings: Boolean,
     showOcrAction: Boolean,
     canSwapDirection: Boolean,
@@ -236,6 +241,7 @@ private fun ReaderExpandedActionButtons(
     showBrightnessIcon: Boolean,
     chromeIconTint: Color,
     onToggleToc: () -> Unit,
+    onToggleSearch: () -> Unit,
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
     onRequestOcr: () -> Unit,

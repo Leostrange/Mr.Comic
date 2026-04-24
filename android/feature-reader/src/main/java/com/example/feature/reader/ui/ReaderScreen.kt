@@ -13,7 +13,9 @@ import android.view.ActionMode
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,6 +34,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,6 +60,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -115,6 +119,8 @@ import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlin.math.abs
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
@@ -222,6 +228,7 @@ private const val JS_TAP_HANDLER = """(function(){
           var anchorId=href.substring(1);
           var target=document.getElementById(anchorId)||document.querySelector('[name="'+anchorId+'"]');
           if(target){target.scrollIntoView({behavior:'smooth',block:'start'});}
+          else if(typeof _NativeReader!='undefined'){_NativeReader.onAnchorClick(href);}
           return;
         } else if(/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)){
           e.preventDefault();
@@ -285,6 +292,45 @@ private const val HTML_READER_BLANK_CHECK_JS = """(function(){
     return JSON.stringify({error:String(e)});
   }
 })();"""
+private const val HTML_READER_MEASURE_HEIGHT_JS = """(function(){
+  try{
+    var body=document.body;
+    var root=document.documentElement;
+    var height=body?Math.max(body.scrollHeight||0,body.offsetHeight||0):0;
+    if(body&&body.children&&body.children.length){
+      var bottom=0;
+      for(var i=0;i<body.children.length;i++){
+        var rect=body.children[i].getBoundingClientRect();
+        bottom=Math.max(bottom,rect.bottom+(window.scrollY||0));
+      }
+      height=Math.max(height,Math.ceil(bottom));
+    }
+    if(!height&&root)height=Math.max(root.scrollHeight||0,root.offsetHeight||0);
+    var ratio=window.devicePixelRatio||1;
+    return JSON.stringify({height:Math.ceil(height*ratio)});
+  }catch(e){
+    return JSON.stringify({height:0,error:String(e)});
+  }
+})();"""
+
+private fun scheduleReaderContentHeightMeasure(
+    view: WebView,
+    onHeightPx: (Int) -> Unit
+) {
+    fun measure() {
+        if (!view.isAttachedToWindow) return
+        view.evaluateJavascript(HTML_READER_MEASURE_HEIGHT_JS) { rawValue ->
+            if (!view.isAttachedToWindow) return@evaluateJavascript
+            val parsed = runCatching { JSONTokener(rawValue).nextValue() }.getOrNull()
+            val height = (parsed as? JSONObject)?.optInt("height", 0) ?: 0
+            if (height > 0) {
+                onHeightPx(height)
+            }
+        }
+    }
+    view.postDelayed({ measure() }, 64L)
+    view.postDelayed({ measure() }, 360L)
+}
 
 private sealed interface ReaderHtmlPageSource {
     val loadToken: String
@@ -302,8 +348,170 @@ private sealed interface ReaderHtmlPageSource {
     }
 }
 
+internal fun shouldDelegateReaderVerticalDragToParent(
+    horizontalDistancePx: Float,
+    verticalDistancePx: Float,
+    touchSlopPx: Int
+): Boolean {
+    val absHorizontal = abs(horizontalDistancePx)
+    val absVertical = abs(verticalDistancePx)
+    if (touchSlopPx <= 0) {
+        return absVertical > absHorizontal
+    }
+    return absVertical > touchSlopPx && absVertical > absHorizontal
+}
+
 private fun readerAssetDocumentBaseUrl(documentPath: String): String =
     "${HTML_READER_BASE_URL}content/${documentPath.trimStart('/')}"
+
+private val READER_HTML_HEAD_CONTENT_RE = Regex(
+    pattern = """(?is)<head[^>]*>(.*)</head>""",
+    options = setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+)
+
+private val READER_HTML_BODY_CONTENT_RE = Regex(
+    pattern = """(?is)<body[^>]*>(.*)</body>""",
+    options = setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
+)
+
+internal fun readerContinuousPageAnchorId(pageIndex: Int): String =
+    "mrcomic-page-${pageIndex.toString().padStart(4, '0')}"
+
+private fun extractReaderHeadInnerHtml(html: String): String =
+    READER_HTML_HEAD_CONTENT_RE.find(html)?.groupValues?.getOrNull(1)?.trim().orEmpty()
+
+private fun extractReaderBodyInnerHtml(html: String): String =
+    READER_HTML_BODY_CONTENT_RE.find(html)?.groupValues?.getOrNull(1)?.trim().orEmpty().ifBlank { html.trim() }
+
+internal fun buildContinuousReaderHtmlDocument(
+    htmlPages: Map<Int, ReaderHtmlPageContent>,
+    totalPages: Int,
+    currentPage: Int
+): ReaderHtmlPageContent? {
+    if (totalPages <= 0) return null
+    val clampedCurrentPage = currentPage.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+    val currentDocumentPage = htmlPages[clampedCurrentPage] ?: return null
+    val orderedPages = htmlPages
+        .asSequence()
+        .filter { (index, _) -> index in 0 until totalPages }
+        .sortedBy { (index, _) -> index }
+        .toList()
+    if (orderedPages.isEmpty()) return null
+
+    val firstPage = orderedPages.first().value
+    val mergedHead = extractReaderHeadInnerHtml(currentDocumentPage.html)
+        .ifBlank { extractReaderHeadInnerHtml(firstPage.html) }
+    val mergedBody = orderedPages.joinToString(separator = "") { (index, page) ->
+        val body = extractReaderBodyInnerHtml(page.html)
+        """<section class="mrcomic-continuous-page" id="${readerContinuousPageAnchorId(index)}" data-reader-page-index="$index">$body</section>"""
+    }
+
+    val continuousDocumentStyle = """
+        <style id="__mrcomic_continuous_document">
+          html, body {
+            height: auto !important;
+            min-height: 100% !important;
+          }
+          body.mrcomic-continuous-book {
+            overflow-y: auto !important;
+          }
+          .mrcomic-continuous-page {
+            display: block;
+            width: 100%;
+            scroll-margin-top: 24px;
+          }
+          .mrcomic-continuous-page + .mrcomic-continuous-page {
+            margin-top: 0.35rem;
+          }
+        </style>
+    """.trimIndent()
+
+    return ReaderHtmlPageContent(
+        html = """
+            <!DOCTYPE html>
+            <html>
+            <head>
+            $mergedHead
+            $continuousDocumentStyle
+            </head>
+            <body class="mrcomic-continuous-book">
+            $mergedBody
+            </body>
+            </html>
+        """.trimIndent(),
+        assetBasePath = currentDocumentPage.assetBasePath ?: firstPage.assetBasePath
+    )
+}
+
+private fun continuousReaderTrackingJs(anchorId: String?): String {
+    val escapedAnchorId = anchorId
+        ?.replace("\\", "\\\\")
+        ?.replace("'", "\\'")
+    val scrollToAnchorScript = if (escapedAnchorId != null) {
+        """
+        var anchor=document.getElementById('$escapedAnchorId');
+        if(anchor){
+          anchor.scrollIntoView({block:'start', inline:'nearest'});
+        }
+        """
+    } else {
+        ""
+    }
+
+    return """
+        (function(){
+          if(window.__mrcomicContinuousCleanup){
+            try{window.__mrcomicContinuousCleanup();}catch(e){}
+          }
+          var lastVisiblePage=null;
+          var rafHandle=0;
+          function reportVisiblePage(){
+            try{
+              var sections=document.querySelectorAll('[data-reader-page-index]');
+              if(!sections||sections.length===0){return;}
+              var threshold=Math.max(window.innerHeight*0.35,1);
+              var candidate=null;
+              for(var i=0;i<sections.length;i++){
+                var section=sections[i];
+                var rect=section.getBoundingClientRect();
+                if(rect.bottom<=0){continue;}
+                var rawIndex=section.getAttribute('data-reader-page-index');
+                var pageIndex=parseInt(rawIndex||'-1',10);
+                if(isNaN(pageIndex)||pageIndex<0){continue;}
+                if(rect.top<=threshold){
+                  candidate=pageIndex;
+                }else{
+                  if(candidate===null){candidate=pageIndex;}
+                  break;
+                }
+              }
+              if(candidate!==null&&candidate!==lastVisiblePage){
+                lastVisiblePage=candidate;
+                if(typeof _NativeReader!=='undefined'&&_NativeReader.onContinuousPageVisible){
+                  _NativeReader.onContinuousPageVisible(candidate);
+                }
+              }
+            }catch(e){}
+          }
+          function requestVisiblePageReport(){
+            if(rafHandle){return;}
+            rafHandle=window.requestAnimationFrame(function(){
+              rafHandle=0;
+              reportVisiblePage();
+            });
+          }
+          window.addEventListener('scroll', requestVisiblePageReport, {passive:true});
+          window.addEventListener('resize', requestVisiblePageReport, {passive:true});
+          $scrollToAnchorScript
+          window.setTimeout(reportVisiblePage, 24);
+          window.setTimeout(reportVisiblePage, 120);
+          window.__mrcomicContinuousCleanup=function(){
+            window.removeEventListener('scroll', requestVisiblePageReport);
+            window.removeEventListener('resize', requestVisiblePageReport);
+          };
+        })();
+    """.trimIndent()
+}
 
 internal fun readerPreserveLayoutMarkerScript(): String = """
     if(preservePublisherLayout){
@@ -317,29 +525,43 @@ private class ReaderFormatAssetPathHandler(
     private val resolver: (String) -> com.example.engine.formats.base.FormatReaderWebResource?
 ) : WebViewAssetLoader.PathHandler {
 
-    @Volatile
-    private var servedPage: Pair<String, ByteArray>? = null
+    private val servedPagesLock = Any()
+    private val servedPages = LinkedHashMap<String, ByteArray>()
 
     fun servePage(documentPath: String, themedHtml: String) {
         val key = documentPath.trimStart('/')
         Log.d(HTML_READER_TAG, "servePage: key=$key htmlLen=${themedHtml.length}")
-        servedPage = key to themedHtml.toByteArray(Charsets.UTF_8)
+        synchronized(servedPagesLock) {
+            servedPages.remove(key)
+            servedPages[key] = themedHtml.toByteArray(Charsets.UTF_8)
+            while (servedPages.size > 48) {
+                val iterator = servedPages.entries.iterator()
+                if (!iterator.hasNext()) break
+                iterator.next()
+                iterator.remove()
+            }
+        }
     }
 
     fun clearServedPage() {
-        servedPage = null
+        synchronized(servedPagesLock) {
+            servedPages.clear()
+        }
     }
 
     override fun handle(path: String): WebResourceResponse? {
         val rawPath = path.substringBefore('#').substringBefore('?').trimStart('/')
         val cleanPath = if (rawPath.startsWith("content/")) rawPath.removePrefix("content/") else rawPath
-        val served = servedPage
-        if (served != null && (cleanPath == served.first || rawPath == "content/${served.first}")) {
+        val served = synchronized(servedPagesLock) {
+            servedPages[cleanPath]
+                ?: servedPages[rawPath.removePrefix("content/")]
+        }
+        if (served != null) {
             Log.d(HTML_READER_TAG, "handle: serving page for $rawPath")
             return WebResourceResponse(
                 "text/html",
                 "UTF-8",
-                ByteArrayInputStream(served.second)
+                ByteArrayInputStream(served)
             ).apply {
                 responseHeaders = mapOf(
                     "Cache-Control" to "no-store, no-cache, must-revalidate, max-age=0",
@@ -962,6 +1184,8 @@ private tailrec fun findReaderHardwareKeyHost(context: Context): ReaderHardwareK
     else -> null
 }
 
+private fun jsQuoted(value: String): String = JSONObject.quote(value)
+
 private fun textSettingsJs(
     fontSize: Int,
     bg: String,
@@ -971,116 +1195,267 @@ private fun textSettingsJs(
     overrideAccentColor: String? = null,
     fontFamily: String = "Georgia",
     fontSourceUrl: String? = null,
-    lineHeight: Float  = 1.8f,
+    lineHeight: Float = 1.8f,
     letterSpacing: Float = 0f,
     wordSpacing: Float = 0f,
     paragraphSpacing: Float = 0.2f,
-    align: String      = "justify",
-    bold: Boolean      = false,
-    topPaddingPx: Int  = 16
+    align: String = "justify",
+    bold: Boolean = false,
+    topPaddingPx: Int = 16,
+    lockPageToViewport: Boolean = false
 ): String {
     val resolvedTextColor = normalizeReaderOverrideColor(overrideTextColor) ?: fg
     val resolvedBackgroundColor = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
     val resolvedAccentColor = normalizeReaderOverrideColor(overrideAccentColor)
         ?: defaultReaderAccentColor(resolvedBackgroundColor)
-    val fontWeight   = if (bold) "bold" else "normal"
+    val fontWeight = if (bold) "bold" else "normal"
     val isNightTheme = resolvedBackgroundColor.equals("#1a1a1a", ignoreCase = true) ||
         resolvedBackgroundColor.equals("#000000", ignoreCase = true)
-    val noteColor    = resolvedAccentColor
-    val headingBg    = "transparent"
+    val noteColor = resolvedAccentColor
+    val headingBg = "transparent"
     val headingBorder = when {
         isNightTheme -> "#5a5a5a"
         resolvedBackgroundColor.equals("#f4ecd8", ignoreCase = true) -> "#b79f78"
         else -> "#808080"
     }
     val quoteColor = if (isNightTheme) "#c9c9c9" else "#555555"
-    // Inject @font-face for custom fonts once (guard by style id)
-    val fontFaceSnip = if (fontSourceUrl != null) {
-        val id = "__cf_${fontFamily.replace(Regex("[^\\p{L}\\p{N}]+"), "_")}"
-        """if(!document.getElementById('$id')){var s=document.createElement('style');s.id='$id';""" +
-        """s.textContent="@font-face{font-family:'$fontFamily';src:url('$fontSourceUrl');font-display:swap;}";""" +
-        """document.head.appendChild(s);}"""
-    } else ""
-    val themeStyle = """
-        if(!document.getElementById('__reader_theme_overrides')){
-          var themeStyle=document.createElement('style');
-          themeStyle.id='__reader_theme_overrides';
-          document.head.appendChild(themeStyle);
+    val escapedFontFamily = fontFamily
+        .replace("\\", "\\\\")
+        .replace("'", "\\'")
+    val escapedFontSourceUrl = fontSourceUrl
+        ?.replace("\\", "\\\\")
+        ?.replace("'", "\\'")
+    val fontFaceCss = escapedFontSourceUrl?.let { sourceUrl ->
+        "@font-face{font-family:'$escapedFontFamily';src:url('$sourceUrl');font-display:swap;}"
+    }
+    val fontStack = "'$escapedFontFamily', Georgia, serif"
+    val themeCss = """
+        :root{
+          --mrcomic-reader-text-color:$resolvedTextColor;
+          --mrcomic-reader-background-color:$resolvedBackgroundColor;
+          --mrcomic-reader-accent-color:$resolvedAccentColor;
         }
-        document.getElementById('__reader_theme_overrides').textContent=
-          ":root{--mrcomic-reader-text-color:$resolvedTextColor;--mrcomic-reader-background-color:$resolvedBackgroundColor;--mrcomic-reader-accent-color:$resolvedAccentColor;}"+
-          "html,body{background-color:$resolvedBackgroundColor !important;}"+
-          "body{color:$resolvedTextColor !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']){color:$resolvedTextColor !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li,body:not([data-mrcomic-preserve-layout='true']) td,body:not([data-mrcomic-preserve-layout='true']) th,body:not([data-mrcomic-preserve-layout='true']) strong,body:not([data-mrcomic-preserve-layout='true']) em,body:not([data-mrcomic-preserve-layout='true']) i,body:not([data-mrcomic-preserve-layout='true']) b,body:not([data-mrcomic-preserve-layout='true']) small,body:not([data-mrcomic-preserve-layout='true']) big,body:not([data-mrcomic-preserve-layout='true']) sup,body:not([data-mrcomic-preserve-layout='true']) sub{color:$resolvedTextColor !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) a[href],body:not([data-mrcomic-preserve-layout='true']) a[href]:link,body:not([data-mrcomic-preserve-layout='true']) a[href]:visited,body:not([data-mrcomic-preserve-layout='true']) a[href]:hover,body:not([data-mrcomic-preserve-layout='true']) a[href]:active{color:$resolvedAccentColor !important;text-decoration:underline !important;text-underline-offset:0.14em !important;text-decoration-thickness:0.08em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) a[href] *{color:inherit !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) [bgcolor],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:#fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: #fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:#ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: #ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: rgb(255']{background-color:transparent !important;background-image:none !important;box-shadow:none !important;}"+
-          "h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{color:$resolvedTextColor !important;background-color:$headingBg !important;border-color:$headingBorder !important;}"+
-          "blockquote,cite,.epigraph{color:$quoteColor !important;border-left-color:$headingBorder !important;}"+
-          "a.fn,a[epub\\\\:type~='noteref'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
-          "a.fn *,a[epub\\\\:type~='noteref'] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[title][href*='#'] *{color:$noteColor !important;}"+
-          ".note-num,.footnote-label{color:$noteColor !important;}";
+        html,body{
+          background-color:$resolvedBackgroundColor !important;
+          color:$resolvedTextColor !important;
+          max-width:100vw !important;
+          overflow-x:hidden !important;
+        }
+        body{
+          color:$resolvedTextColor !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']){
+          color:$resolvedTextColor !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) p,
+        body:not([data-mrcomic-preserve-layout='true']) div,
+        body:not([data-mrcomic-preserve-layout='true']) span,
+        body:not([data-mrcomic-preserve-layout='true']) li,
+        body:not([data-mrcomic-preserve-layout='true']) td,
+        body:not([data-mrcomic-preserve-layout='true']) th,
+        body:not([data-mrcomic-preserve-layout='true']) strong,
+        body:not([data-mrcomic-preserve-layout='true']) em,
+        body:not([data-mrcomic-preserve-layout='true']) i,
+        body:not([data-mrcomic-preserve-layout='true']) b,
+        body:not([data-mrcomic-preserve-layout='true']) small,
+        body:not([data-mrcomic-preserve-layout='true']) big,
+        body:not([data-mrcomic-preserve-layout='true']) sup,
+        body:not([data-mrcomic-preserve-layout='true']) sub{
+          color:$resolvedTextColor !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) *{
+          box-sizing:border-box !important;
+          max-width:100% !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) a[href],
+        body:not([data-mrcomic-preserve-layout='true']) a[href]:link,
+        body:not([data-mrcomic-preserve-layout='true']) a[href]:visited,
+        body:not([data-mrcomic-preserve-layout='true']) a[href]:hover,
+        body:not([data-mrcomic-preserve-layout='true']) a[href]:active{
+          color:$resolvedAccentColor !important;
+          text-decoration:underline !important;
+          text-underline-offset:0.14em !important;
+          text-decoration-thickness:0.08em !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) a[href] *{
+          color:inherit !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) [bgcolor],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#fff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #fff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#ffffff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #ffffff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background:#fff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background: #fff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background:#ffffff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background: #ffffff'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:white'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: white'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background:white'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background: white'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:rgb(255'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: rgb(255'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background:rgb(255'],
+        body:not([data-mrcomic-preserve-layout='true']) [style*='background: rgb(255']{
+          background-color:transparent !important;
+          background-image:none !important;
+          box-shadow:none !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) img,
+        body:not([data-mrcomic-preserve-layout='true']) svg,
+        body:not([data-mrcomic-preserve-layout='true']) figure,
+        body:not([data-mrcomic-preserve-layout='true']) video,
+        body:not([data-mrcomic-preserve-layout='true']) canvas,
+        body:not([data-mrcomic-preserve-layout='true']) table{
+          max-width:100% !important;
+          height:auto !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) pre,
+        body:not([data-mrcomic-preserve-layout='true']) code{
+          overflow-wrap:anywhere !important;
+          white-space:pre-wrap !important;
+        }
+        h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{
+          color:$resolvedTextColor !important;
+          background-color:$headingBg !important;
+          border-color:$headingBorder !important;
+        }
+        blockquote,cite,.epigraph{
+          color:$quoteColor !important;
+          border-left-color:$headingBorder !important;
+        }
+        a.fn,a[epub\\:type~='noteref'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[title][href*='#']{
+          color:$noteColor !important;
+          text-decoration:none !important;
+          font-weight:bold !important;
+        }
+        a.fn *,a[epub\\:type~='noteref'] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[title][href*='#'] *{
+          color:$noteColor !important;
+        }
+        .note-num,.footnote-label{
+          color:$noteColor !important;
+        }
     """.trimIndent()
-    // Direct DOM coloring of footnote anchors — robust fallback for cases where
-    // CSS !important rules lose to element-level inline styles or specificity issues.
-    val colorNotesDom = """
+    val spacingCss = """
+        body:not([data-mrcomic-preserve-layout='true']){
+          letter-spacing:${letterSpacing}em !important;
+          word-spacing:${wordSpacing}em !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) p,
+        body:not([data-mrcomic-preserve-layout='true']) div.paragraph,
+        body:not([data-mrcomic-preserve-layout='true']) .paragraph{
+          margin-top:0 !important;
+          margin-bottom:${paragraphSpacing}em !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) li{
+          margin-bottom:${(paragraphSpacing * 0.8f).coerceAtLeast(0.1f)}em !important;
+        }
+        body:not([data-mrcomic-preserve-layout='true']) blockquote{
+          margin-bottom:${(paragraphSpacing + 0.4f).coerceAtLeast(0.4f)}em !important;
+        }
+    """.trimIndent()
+    val viewportOverflowScript = if (lockPageToViewport) {
+        """
+        document.documentElement.style.overflow='hidden';
+        document.documentElement.style.overscrollBehavior='none';
+        document.body.style.overflow='hidden';
+        document.body.style.overscrollBehavior='none';
+        """
+    } else {
+        """
+        document.documentElement.style.removeProperty('overflow');
+        document.documentElement.style.removeProperty('overscroll-behavior');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('overscroll-behavior');
+        """
+    }.trimIndent()
+    val fontFaceScript = if (fontFaceCss != null) {
+        "ensureStyle('__reader_font_face').textContent=${jsQuoted(fontFaceCss)};"
+    } else {
+        "var existingFontFace=document.getElementById('__reader_font_face');if(existingFontFace){existingFontFace.remove();}"
+    }
+    return """
         (function(){
-          var nc='$noteColor';
-          var sel='a.fn,a[href*="fbanchor://"],a[href*="FbAutId_"],a[epub\\:type~="noteref"],a[title][href*="#"]';
-          try{document.querySelectorAll(sel).forEach(function(a){
-            a.style.setProperty('color',nc,'important');
-            a.querySelectorAll('*').forEach(function(c){c.style.setProperty('color',nc,'important');});
-          });}catch(e){}
+          var head=document.head||document.getElementsByTagName('head')[0]||document.documentElement;
+          function ensureStyle(id){
+            var styleNode=document.getElementById(id);
+            if(!styleNode){
+              styleNode=document.createElement('style');
+              styleNode.id=id;
+              head.appendChild(styleNode);
+            }
+            return styleNode;
+          }
+          $fontFaceScript
+          ensureStyle('__reader_theme_overrides').textContent=${jsQuoted(themeCss)};
+          ensureStyle('__reader_spacing_overrides').textContent=${jsQuoted(spacingCss)};
+          if(!document.body){return;}
+          var preservePublisherLayout=
+            document.body.hasAttribute('data-mrcomic-preserve-layout')||
+            document.body.classList.contains('cover')||
+            document.body.classList.contains('mrcomic-epub-cover-only')||
+            document.body.classList.contains('mrcomic-epub-cover-title')||
+            document.body.classList.contains('mrcomic-epub-titlepage');
+          ${readerPreserveLayoutMarkerScript()}
+          document.documentElement.lang=document.documentElement.lang||'ru';
+          document.documentElement.style.backgroundColor=${jsQuoted(resolvedBackgroundColor)};
+          document.documentElement.style.width='100%';
+          document.documentElement.style.maxWidth='100%';
+          document.documentElement.style.boxSizing='border-box';
+          document.documentElement.style.overflowX='hidden';
+          document.body.style.backgroundColor=${jsQuoted(resolvedBackgroundColor)};
+          document.body.style.color=${jsQuoted(resolvedTextColor)};
+          document.body.style.minHeight='100%';
+          $viewportOverflowScript
+          if(!preservePublisherLayout){
+            document.body.style.boxSizing='border-box';
+            document.body.style.width='100%';
+            document.body.style.maxWidth='720px';
+            document.body.style.margin='0 auto';
+            document.body.style.overflowX='hidden';
+            document.body.style.fontSize=${jsQuoted("${fontSize}px")};
+            document.body.style.fontWeight=${jsQuoted(fontWeight)};
+            document.body.style.fontFamily=${jsQuoted(fontStack)};
+            document.body.style.lineHeight=${jsQuoted(lineHeight.toString())};
+            document.body.style.textAlign=${jsQuoted(align)};
+            document.body.style.hyphens='auto';
+            document.body.style.webkitHyphens='auto';
+            document.body.style.paddingLeft='22px';
+            document.body.style.paddingRight='22px';
+            document.body.style.paddingTop=${jsQuoted("${topPaddingPx}px")};
+            document.body.style.paddingBottom='24px';
+          }else{
+            document.body.style.removeProperty('font-size');
+            document.body.style.removeProperty('font-weight');
+            document.body.style.removeProperty('font-family');
+            document.body.style.removeProperty('line-height');
+            document.body.style.removeProperty('text-align');
+            document.body.style.removeProperty('box-sizing');
+            document.body.style.removeProperty('width');
+            document.body.style.removeProperty('max-width');
+            document.body.style.removeProperty('margin');
+            document.body.style.removeProperty('overflow-x');
+            document.body.style.removeProperty('padding-left');
+            document.body.style.removeProperty('padding-right');
+            document.body.style.removeProperty('padding-top');
+            document.body.style.removeProperty('padding-bottom');
+            document.body.style.removeProperty('hyphens');
+            document.body.style.removeProperty('-webkit-hyphens');
+          }
+          (function(){
+            var noteColor=${jsQuoted(noteColor)};
+            var selector='a.fn,a[href*="fbanchor://"],a[href*="FbAutId_"],a[epub\\:type~="noteref"],a[title][href*="#"]';
+            try{
+              document.querySelectorAll(selector).forEach(function(anchor){
+                anchor.style.setProperty('color', noteColor, 'important');
+                anchor.querySelectorAll('*').forEach(function(child){
+                  child.style.setProperty('color', noteColor, 'important');
+                });
+              });
+            }catch(e){}
+          })();
         })();
     """.trimIndent()
-    val spacingStyle = """
-        if(!document.getElementById('__reader_spacing_overrides')){
-          var spacingStyle=document.createElement('style');
-          spacingStyle.id='__reader_spacing_overrides';
-          document.head.appendChild(spacingStyle);
-        }
-        document.getElementById('__reader_spacing_overrides').textContent=
-          "body:not([data-mrcomic-preserve-layout='true']){letter-spacing:${letterSpacing}em !important;word-spacing:${wordSpacing}em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) p,"+
-          "body:not([data-mrcomic-preserve-layout='true']) div.paragraph,"+
-          "body:not([data-mrcomic-preserve-layout='true']) .paragraph{margin-top:0 !important;margin-bottom:${paragraphSpacing}em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) li{margin-bottom:${(paragraphSpacing * 0.8f).coerceAtLeast(0.1f)}em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) blockquote{margin-bottom:${(paragraphSpacing + 0.4f).coerceAtLeast(0.4f)}em !important;}";
-    """.trimIndent()
-    val fontStack = if (fontSourceUrl != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
-    return """(function(){$fontFaceSnip $themeStyle $spacingStyle if(document.body){""" +
-        """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover')||document.body.classList.contains('mrcomic-epub-cover-only')||document.body.classList.contains('mrcomic-epub-cover-title')||document.body.classList.contains('mrcomic-epub-titlepage');""" +
-        """${readerPreserveLayoutMarkerScript()}""" +
-        """document.documentElement.lang=document.documentElement.lang||'ru';""" +
-        """document.body.style.color='$resolvedTextColor';""" +
-        """document.documentElement.style.backgroundColor='$resolvedBackgroundColor';""" +
-        """document.body.style.backgroundColor='$resolvedBackgroundColor';""" +
-        """if(!preservePublisherLayout){""" +
-        """document.body.style.fontSize='${fontSize}px';""" +
-        """document.body.style.fontWeight='$fontWeight';""" +
-        """document.body.style.fontFamily="$fontStack";""" +
-        """document.body.style.lineHeight='$lineHeight';""" +
-        """document.body.style.textAlign='$align';""" +
-        """document.body.style.hyphens='auto';""" +
-        """document.body.style.webkitHyphens='auto';""" +
-        """document.body.style.paddingLeft='22px';""" +
-        """document.body.style.paddingRight='22px';""" +
-        """document.body.style.paddingTop='${topPaddingPx}px';""" +
-        """document.body.style.paddingBottom='24px';""" +
-        """}else{""" +
-        """document.body.style.removeProperty('font-size');""" +
-        """document.body.style.removeProperty('font-weight');""" +
-        """document.body.style.removeProperty('font-family');""" +
-        """document.body.style.removeProperty('line-height');""" +
-        """document.body.style.removeProperty('text-align');""" +
-        """document.body.style.removeProperty('padding-left');""" +
-        """document.body.style.removeProperty('padding-right');""" +
-        """document.body.style.removeProperty('padding-top');""" +
-        """document.body.style.removeProperty('padding-bottom');""" +
-        """document.body.style.removeProperty('hyphens');""" +
-        """document.body.style.removeProperty('-webkit-hyphens');""" +
-        """}}$colorNotesDom})();"""
 }
 
 private fun buildThemedHtmlDocument(
@@ -1153,10 +1528,24 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     var dictionarySelectionLabel: String = ""
     var explainSelectionLabel: String = ""
     var onSelectionActionRequest: ((ReaderSelectionAction, String) -> Unit)? = null
+    var internalVerticalScrollEnabled: Boolean = true
+        set(value) {
+            field = value
+            isVerticalScrollBarEnabled = value
+            if (!value && scrollY != 0) {
+                super.scrollTo(scrollX, 0)
+            }
+        }
+    var routeVerticalGesturesToParent: Boolean = false
+    private val touchSlopPx = ViewConfiguration.get(context).scaledTouchSlop
+    private var initialTouchX: Float = 0f
+    private var initialTouchY: Float = 0f
+    private var delegatedVerticalGestureToParent: Boolean = false
     private var committedLoadToken: String? = null
     private var inlineFallback: PendingInlineFallback? = null
     private var inlineFallbackRunnable: Runnable? = null
     private var inlineFallbackAttempts: Int = 0
+    var pendingContinuousAnchorId: String? = null
 
     private data class PendingInlineFallback(
         val loadToken: String,
@@ -1169,6 +1558,45 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
 
     override fun startActionMode(callback: ActionMode.Callback?, type: Int): ActionMode? =
         super.startActionMode(wrapSelectionCallback(callback), type)
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (routeVerticalGesturesToParent && !internalVerticalScrollEnabled) {
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    initialTouchX = event.x
+                    initialTouchY = event.y
+                    delegatedVerticalGestureToParent = false
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+
+                MotionEvent.ACTION_MOVE -> {
+                    if (!delegatedVerticalGestureToParent &&
+                        shouldDelegateReaderVerticalDragToParent(
+                            horizontalDistancePx = event.x - initialTouchX,
+                            verticalDistancePx = event.y - initialTouchY,
+                            touchSlopPx = touchSlopPx
+                        )
+                    ) {
+                        delegatedVerticalGestureToParent = true
+                        parent?.requestDisallowInterceptTouchEvent(false)
+                        cancelLongPress()
+                        val cancelEvent = MotionEvent.obtain(event)
+                        cancelEvent.action = MotionEvent.ACTION_CANCEL
+                        super.onTouchEvent(cancelEvent)
+                        cancelEvent.recycle()
+                        return false
+                    }
+                }
+
+                MotionEvent.ACTION_UP,
+                MotionEvent.ACTION_CANCEL -> {
+                    delegatedVerticalGestureToParent = false
+                    parent?.requestDisallowInterceptTouchEvent(false)
+                }
+            }
+        }
+        return super.onTouchEvent(event)
+    }
 
     private fun wrapSelectionCallback(callback: ActionMode.Callback?): ActionMode.Callback? {
         if (callback == null) return null
@@ -1335,6 +1763,10 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         inlineFallbackRunnable = null
     }
 
+    override fun scrollTo(x: Int, y: Int) {
+        super.scrollTo(x, if (internalVerticalScrollEnabled) y else 0)
+    }
+
     fun verifyVisibleContentOrFallback() {
         val expectedToken = tag as? String ?: return
         evaluateJavascript(HTML_READER_BLANK_CHECK_JS) { rawValue ->
@@ -1404,6 +1836,16 @@ private fun HtmlPageView(
     overrideTextColor: String? = null,
     overrideBackgroundColor: String? = null,
     overrideAccentColor: String? = null,
+    modifier: Modifier = Modifier
+        .fillMaxSize()
+        .statusBarsPadding()
+        .displayCutoutPadding(),
+    allowInternalVerticalScroll: Boolean = false,
+    allowParentVerticalScrollGestures: Boolean = false,
+    continuousPageAnchorId: String? = null,
+    continuousScrollTrackingEnabled: Boolean = false,
+    onContinuousPageChange: (Int) -> Unit = {},
+    onContentHeightPxChanged: (Int) -> Unit = {},
     translateActionLabel: String,
     dictionaryActionLabel: String,
     explainActionLabel: String
@@ -1446,14 +1888,15 @@ private fun HtmlPageView(
     val currentParagraphSpacing = rememberUpdatedState(paragraphSpacing)
     val currentAlign     = rememberUpdatedState(textAlign)
     val currentBold      = rememberUpdatedState(bold)
+    val onContentHeight  = rememberUpdatedState(onContentHeightPxChanged)
+    val onContinuousPage = rememberUpdatedState(onContinuousPageChange)
 
     AndroidView(
-        modifier = Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .displayCutoutPadding(),
+        modifier = modifier,
         factory = { ctx ->
             ReaderWebView(ctx).apply {
+                internalVerticalScrollEnabled = allowInternalVerticalScroll
+                routeVerticalGesturesToParent = allowParentVerticalScrollGestures
                 settings.javaScriptEnabled  = true   // required for tap bridge
                 settings.domStorageEnabled  = true
                 settings.loadsImagesAutomatically = true
@@ -1464,9 +1907,11 @@ private fun HtmlPageView(
                 // affecting CSS px values, ensuring CHARS_PER_PAGE stays accurate.
                 settings.textZoom           = 100
                 settings.defaultFontSize    = 16
-                // Required for proper viewport scaling on tablets / wide screens.
-                settings.useWideViewPort       = true
-                settings.loadWithOverviewMode  = true
+                // Reflowable book pages already inject a mobile viewport. Wide viewport mode
+                // makes WebView lay text out against a virtual desktop and then scale it down,
+                // which is what caused side clipping and "squeezed" text in page mode.
+                settings.useWideViewPort       = false
+                settings.loadWithOverviewMode  = false
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     settings.offscreenPreRaster = true
                 }
@@ -1508,8 +1953,15 @@ private fun HtmlPageView(
                                     android.net.Uri.parse(url)
                                 )
                                 context.startActivity(intent)
-                            } catch (_: Exception) {}
+                            } catch (error: Exception) {
+                                Log.w(HTML_READER_TAG, "Failed to open external URL: $url", error)
+                            }
                         }
+                    }
+
+                    @JavascriptInterface
+                    fun onContinuousPageVisible(pageIndex: Int) {
+                        post { onContinuousPage.value(pageIndex) }
                     }
 
                 }, "_NativeReader")
@@ -1576,7 +2028,9 @@ private fun HtmlPageView(
                                         android.content.Intent.ACTION_VIEW, uri
                                     )
                                     context.startActivity(intent)
-                                } catch (_: Exception) {}
+                                } catch (error: Exception) {
+                                    Log.w(HTML_READER_TAG, "Failed to open external URL: $uri", error)
+                                }
                                 return true
                             }
                         }
@@ -1608,12 +2062,18 @@ private fun HtmlPageView(
                                 paragraphSpacing = currentParagraphSpacing.value,
                                 align = currentAlign.value,
                                 bold = currentBold.value,
-                                topPaddingPx = topPaddingPx
+                                topPaddingPx = topPaddingPx,
+                                lockPageToViewport = !allowInternalVerticalScroll
                             ), null
                         )
-                        view.post {
-                            view.requestLayout()
-                            view.invalidate()
+                        scheduleReaderContentHeightMeasure(view) { heightPx ->
+                            onContentHeight.value(heightPx)
+                        }
+                        if (continuousScrollTrackingEnabled) {
+                            view.evaluateJavascript(
+                                continuousReaderTrackingJs((view as? ReaderWebView)?.pendingContinuousAnchorId),
+                                null
+                            )
                         }
                         (view as? ReaderWebView)?.post {
                             (view as? ReaderWebView)?.verifyVisibleContentOrFallback()
@@ -1623,10 +2083,6 @@ private fun HtmlPageView(
                     override fun onPageCommitVisible(view: WebView, url: String?) {
                         Log.d(HTML_READER_TAG, "WebView page commit visible: ${url ?: "about:blank"}")
                         (view as? ReaderWebView)?.markLoadCommitted()
-                        view.post {
-                            view.requestLayout()
-                            view.invalidate()
-                        }
                     }
 
                     override fun onReceivedError(
@@ -1647,6 +2103,9 @@ private fun HtmlPageView(
             }
         },
         update = { webView ->
+            webView.internalVerticalScrollEnabled = allowInternalVerticalScroll
+            webView.routeVerticalGesturesToParent = allowParentVerticalScrollGestures
+            webView.pendingContinuousAnchorId = continuousPageAnchorId
             webView.translateSelectionLabel = translateActionLabel
             webView.dictionarySelectionLabel = dictionaryActionLabel
             webView.explainSelectionLabel = explainActionLabel
@@ -1676,9 +2135,13 @@ private fun HtmlPageView(
                     paragraphSpacing = paragraphSpacing,
                     align = textAlign,
                     bold = bold,
-                    topPaddingPx = topPaddingPx
+                    topPaddingPx = topPaddingPx,
+                    lockPageToViewport = !allowInternalVerticalScroll
                 ), null
             )
+            scheduleReaderContentHeightMeasure(webView) { heightPx ->
+                onContentHeight.value(heightPx)
+            }
             val currentSource = pageSource ?: return@AndroidView
             // Only reload when content actually changes — prevents scroll position
             // from resetting on every recompose (e.g. when controls are toggled).
@@ -1720,12 +2183,229 @@ private fun HtmlPageView(
                         )
                     }
                 }
+            }
+            if (continuousScrollTrackingEnabled && cached == currentSource.loadToken) {
                 webView.post {
-                    webView.requestLayout()
-                    webView.invalidate()
+                    webView.evaluateJavascript(
+                        continuousReaderTrackingJs(webView.pendingContinuousAnchorId),
+                        null
+                    )
                 }
             }
         }
+    )
+}
+
+@Composable
+private fun HtmlContinuousView(
+    viewModel: ReaderViewModel,
+    uiState: ReaderUiState,
+    htmlPages: Map<Int, ReaderHtmlPageContent>,
+    baseUrl: String?,
+    assetLoader: WebViewAssetLoader?,
+    formatHandler: ReaderFormatAssetPathHandler?,
+    activeReaderPreset: ReadingPreset,
+    fontFamily: String,
+    fontSourceUrl: String?,
+    readerText: ReaderUiText,
+    onCenterTap: () -> Unit,
+    onAnchorClick: (String) -> Unit,
+    onInlineFootnote: (String) -> Unit,
+    onTranslateSelection: (String) -> Unit,
+    onDictionarySelection: (String) -> Unit,
+    onExplainSelection: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+    var lastVisiblePage by remember(uiState.comic?.id) { mutableIntStateOf(-1) }
+    var programmaticScrollTarget by remember(uiState.comic?.id) { mutableIntStateOf(-1) }
+    val latestCurrentPage = rememberUpdatedState(uiState.currentPage)
+    val latestTotalPages = rememberUpdatedState(uiState.totalPages)
+
+    fun preloadAround(pageIndex: Int, totalPages: Int) {
+        listOf(pageIndex - 1, pageIndex, pageIndex + 1, pageIndex + 2)
+            .distinct()
+            .filter { it in 0 until totalPages }
+            .forEach(viewModel::loadHtmlPageForContinuousReading)
+    }
+
+    LaunchedEffect(uiState.comic?.id, uiState.totalPages) {
+        if (uiState.totalPages <= 0) return@LaunchedEffect
+        val initialPage = uiState.currentPage.coerceIn(0, uiState.totalPages - 1)
+        programmaticScrollTarget = initialPage
+        listState.scrollToItem(initialPage)
+        lastVisiblePage = initialPage
+        preloadAround(initialPage, uiState.totalPages)
+    }
+
+    LaunchedEffect(listState, uiState.comic?.id, uiState.totalPages) {
+        snapshotFlow { listState.isScrollInProgress to listState.firstVisibleItemIndex }
+            .distinctUntilChanged()
+            .collect { (isScrolling, index) ->
+                lastVisiblePage = index
+                preloadAround(index, latestTotalPages.value)
+                if (!isScrolling && programmaticScrollTarget == index) {
+                    programmaticScrollTarget = -1
+                    return@collect
+                }
+                if (!isScrolling && latestCurrentPage.value != index) {
+                    viewModel.navigateTo(index)
+                }
+            }
+    }
+
+    LaunchedEffect(uiState.currentPage, uiState.totalPages, lastVisiblePage, uiState.comic?.id) {
+        if (uiState.totalPages <= 0) return@LaunchedEffect
+        val targetPage = uiState.currentPage.coerceIn(0, uiState.totalPages - 1)
+        if (
+            listState.firstVisibleItemIndex != targetPage &&
+            (lastVisiblePage < 0 || abs(targetPage - lastVisiblePage) > 1)
+        ) {
+            programmaticScrollTarget = targetPage
+            listState.scrollToItem(targetPage)
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .displayCutoutPadding(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        items(
+            count = uiState.totalPages,
+            key = { pageIndex -> "html-continuous-$pageIndex" }
+        ) { pageIndex ->
+            val page = htmlPages[pageIndex]
+            LaunchedEffect(pageIndex, page?.html) {
+                if (page == null) {
+                    viewModel.loadHtmlPageForContinuousReading(pageIndex)
+                }
+            }
+            if (page == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
+                HtmlContinuousPageItem(
+                    page = page,
+                    baseUrl = baseUrl,
+                    assetLoader = assetLoader,
+                    formatHandler = formatHandler,
+                    onCenterTap = onCenterTap,
+                    onAnchorClick = onAnchorClick,
+                    onInlineFootnote = onInlineFootnote,
+                    onTranslateSelection = onTranslateSelection,
+                    onDictionarySelection = onDictionarySelection,
+                    onExplainSelection = onExplainSelection,
+                    fontSize = uiState.textFontSize,
+                    colorScheme = uiState.textColorScheme,
+                    readerPreset = activeReaderPreset,
+                    fontFamily = fontFamily,
+                    fontSourceUrl = fontSourceUrl,
+                    lineHeight = uiState.textLineHeight,
+                    letterSpacing = uiState.textLetterSpacing,
+                    wordSpacing = uiState.textWordSpacing,
+                    paragraphSpacing = uiState.textParagraphSpacing,
+                    textAlign = uiState.textAlignment,
+                    bold = uiState.textBold,
+                    translateActionLabel = readerText.selectionTranslateAction,
+                    dictionaryActionLabel = readerText.openDictionary,
+                    explainActionLabel = readerText.selectionExplainAction
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HtmlContinuousPageItem(
+    page: ReaderHtmlPageContent,
+    baseUrl: String?,
+    assetLoader: WebViewAssetLoader?,
+    formatHandler: ReaderFormatAssetPathHandler?,
+    onCenterTap: () -> Unit,
+    onAnchorClick: (String) -> Unit,
+    onInlineFootnote: (String) -> Unit,
+    onTranslateSelection: (String) -> Unit,
+    onDictionarySelection: (String) -> Unit,
+    onExplainSelection: (String) -> Unit,
+    fontSize: Int,
+    colorScheme: String,
+    readerPreset: ReadingPreset,
+    fontFamily: String,
+    fontSourceUrl: String?,
+    lineHeight: Float,
+    letterSpacing: Float,
+    wordSpacing: Float,
+    paragraphSpacing: Float,
+    textAlign: String,
+    bold: Boolean,
+    translateActionLabel: String,
+    dictionaryActionLabel: String,
+    explainActionLabel: String
+) {
+    val density = LocalDensity.current
+    var measuredHeight by remember(
+        page.html,
+        page.assetBasePath,
+        fontSize,
+        lineHeight,
+        letterSpacing,
+        wordSpacing,
+        paragraphSpacing,
+        textAlign,
+        bold
+    ) { mutableStateOf(420.dp) }
+
+    HtmlPageView(
+        html = page.html,
+        baseUrl = baseUrl,
+        assetDocumentPath = page.assetBasePath,
+        assetLoader = assetLoader,
+        formatHandler = formatHandler,
+        onLeftTap = onCenterTap,
+        onRightTap = onCenterTap,
+        onCenterTap = onCenterTap,
+        onAnchorClick = onAnchorClick,
+        onInlineFootnote = onInlineFootnote,
+        onTranslateSelection = onTranslateSelection,
+        onDictionarySelection = onDictionarySelection,
+        onExplainSelection = onExplainSelection,
+        fontSize = fontSize,
+        colorScheme = colorScheme,
+        readerPreset = readerPreset,
+        fontFamily = fontFamily,
+        fontSourceUrl = fontSourceUrl,
+        lineHeight = lineHeight,
+        letterSpacing = letterSpacing,
+        wordSpacing = wordSpacing,
+        paragraphSpacing = paragraphSpacing,
+        textAlign = textAlign,
+        bold = bold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(measuredHeight),
+        allowInternalVerticalScroll = false,
+        allowParentVerticalScrollGestures = true,
+        onContentHeightPxChanged = { heightPx ->
+            val nextHeight = with(density) { heightPx.toDp() + 2.dp }
+                .coerceAtLeast(80.dp)
+            if (nextHeight != measuredHeight) {
+                measuredHeight = nextHeight
+            }
+        },
+        translateActionLabel = translateActionLabel,
+        dictionaryActionLabel = dictionaryActionLabel,
+        explainActionLabel = explainActionLabel
     )
 }
 
@@ -1792,8 +2472,8 @@ private fun HtmlPagePrewarmView(
                 settings.cacheMode = WebSettings.LOAD_NO_CACHE
                 settings.textZoom = 100
                 settings.defaultFontSize = 16
-                settings.useWideViewPort = true
-                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = false
+                settings.loadWithOverviewMode = false
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     settings.offscreenPreRaster = true
                 }
@@ -1858,7 +2538,6 @@ private fun HtmlPagePrewarmView(
             val currentSource = pageSource ?: return@AndroidView
             val cached = webView.tag as? String
             if (cached != currentSource.loadToken) {
-                webView.clearCache(true)
                 webView.markLoadRequested(currentSource.loadToken)
                 when (currentSource) {
                     is ReaderHtmlPageSource.FileUrl -> {
@@ -1899,6 +2578,7 @@ fun ReaderScreen(
     viewModel: ReaderViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val htmlPageContents by viewModel.htmlPageContents.collectAsState()
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val context = LocalContext.current
@@ -2384,86 +3064,116 @@ fun ReaderScreen(
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) }
                         )
                     } else if (htmlContent != null) {
-                        uiState.previousHtmlContent?.let { previousHtml ->
-                            HtmlPagePrewarmView(
-                                html = previousHtml,
+                        if (uiState.readingMode == ReadingMode.WEBTOON) {
+                            HtmlContinuousView(
+                                viewModel = viewModel,
+                                uiState = uiState,
+                                htmlPages = htmlPageContents,
                                 baseUrl = uiState.htmlBaseUrl,
-                                assetDocumentPath = uiState.previousHtmlAssetBasePath,
                                 assetLoader = readerAssetLoader,
-                                fontSize = uiState.textFontSize,
-                                colorScheme = uiState.textColorScheme,
-                                readerPreset = activeReaderPreset,
+                                formatHandler = readerFormatHandler,
+                                activeReaderPreset = activeReaderPreset,
                                 fontFamily = resolvedTextFont.familyName,
                                 fontSourceUrl = resolvedTextFont.sourceUrl,
-                                lineHeight = uiState.textLineHeight,
+                                readerText = readerText,
+                                onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
+                                onAnchorClick = viewModel::onAnchorClick,
+                                onInlineFootnote = viewModel::showInlineFootnote,
+                                onTranslateSelection = { selectedText ->
+                                    viewModel.translateSelectedText(
+                                        selectedText = selectedText,
+                                        preferDictionary = false
+                                    )
+                                },
+                                onDictionarySelection = { selectedText ->
+                                    viewModel.translateSelectedText(
+                                        selectedText = selectedText,
+                                        preferDictionary = true
+                                    )
+                                },
+                                onExplainSelection = viewModel::explainSelectedTextDirect
+                            )
+                        } else {
+                            uiState.previousHtmlContent?.let { previousHtml ->
+                                HtmlPagePrewarmView(
+                                    html = previousHtml,
+                                    baseUrl = uiState.htmlBaseUrl,
+                                    assetDocumentPath = uiState.previousHtmlAssetBasePath,
+                                    assetLoader = readerAssetLoader,
+                                    fontSize = uiState.textFontSize,
+                                    colorScheme = uiState.textColorScheme,
+                                    readerPreset = activeReaderPreset,
+                                    fontFamily = resolvedTextFont.familyName,
+                                    fontSourceUrl = resolvedTextFont.sourceUrl,
+                                    lineHeight = uiState.textLineHeight,
+                                    letterSpacing = uiState.textLetterSpacing,
+                                    wordSpacing = uiState.textWordSpacing,
+                                    paragraphSpacing = uiState.textParagraphSpacing,
+                                    textAlign = uiState.textAlignment,
+                                    bold = uiState.textBold
+                                )
+                            }
+                            uiState.nextHtmlContent?.let { nextHtml ->
+                                HtmlPagePrewarmView(
+                                    html = nextHtml,
+                                    baseUrl = uiState.htmlBaseUrl,
+                                    assetDocumentPath = uiState.nextHtmlAssetBasePath,
+                                    assetLoader = readerAssetLoader,
+                                    fontSize = uiState.textFontSize,
+                                    colorScheme = uiState.textColorScheme,
+                                    readerPreset = activeReaderPreset,
+                                    fontFamily = resolvedTextFont.familyName,
+                                    fontSourceUrl = resolvedTextFont.sourceUrl,
+                                    lineHeight = uiState.textLineHeight,
+                                    letterSpacing = uiState.textLetterSpacing,
+                                    wordSpacing = uiState.textWordSpacing,
+                                    paragraphSpacing = uiState.textParagraphSpacing,
+                                    textAlign = uiState.textAlignment,
+                                    bold = uiState.textBold
+                                )
+                            }
+                            // Text page mode stays discrete: one engine page per horizontal turn.
+                            HtmlPageView(
+                                html = htmlContent,
+                                baseUrl = uiState.htmlBaseUrl,
+                                assetDocumentPath = uiState.htmlAssetBasePath,
+                                assetLoader = readerAssetLoader,
+                                formatHandler = readerFormatHandler,
+                                onLeftTap   = { handleTapZoneAction(tapZoneLayout.left) },
+                                onRightTap  = { handleTapZoneAction(tapZoneLayout.right) },
+                                onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
+                                onAnchorClick = viewModel::onAnchorClick,
+                                onInlineFootnote = viewModel::showInlineFootnote,
+                                onTranslateSelection = { selectedText ->
+                                    viewModel.translateSelectedText(
+                                        selectedText = selectedText,
+                                        preferDictionary = false
+                                    )
+                                },
+                                onDictionarySelection = { selectedText ->
+                                    viewModel.translateSelectedText(
+                                        selectedText = selectedText,
+                                        preferDictionary = true
+                                    )
+                                },
+                                onExplainSelection = viewModel::explainSelectedTextDirect,
+                                fontSize     = uiState.textFontSize,
+                                colorScheme  = uiState.textColorScheme,
+                                readerPreset = activeReaderPreset,
+                                fontFamily   = resolvedTextFont.familyName,
+                                fontSourceUrl = resolvedTextFont.sourceUrl,
+                                lineHeight   = uiState.textLineHeight,
                                 letterSpacing = uiState.textLetterSpacing,
                                 wordSpacing = uiState.textWordSpacing,
                                 paragraphSpacing = uiState.textParagraphSpacing,
-                                textAlign = uiState.textAlignment,
-                                bold = uiState.textBold
+                                textAlign    = uiState.textAlignment,
+                                bold         = uiState.textBold,
+                                allowInternalVerticalScroll = false,
+                                translateActionLabel = readerText.selectionTranslateAction,
+                                dictionaryActionLabel = readerText.openDictionary,
+                                explainActionLabel = readerText.selectionExplainAction
                             )
                         }
-                        uiState.nextHtmlContent?.let { nextHtml ->
-                            HtmlPagePrewarmView(
-                                html = nextHtml,
-                                baseUrl = uiState.htmlBaseUrl,
-                                assetDocumentPath = uiState.nextHtmlAssetBasePath,
-                                assetLoader = readerAssetLoader,
-                                fontSize = uiState.textFontSize,
-                                colorScheme = uiState.textColorScheme,
-                                readerPreset = activeReaderPreset,
-                                fontFamily = resolvedTextFont.familyName,
-                                fontSourceUrl = resolvedTextFont.sourceUrl,
-                                lineHeight = uiState.textLineHeight,
-                                letterSpacing = uiState.textLetterSpacing,
-                                wordSpacing = uiState.textWordSpacing,
-                                paragraphSpacing = uiState.textParagraphSpacing,
-                                textAlign = uiState.textAlignment,
-                                bold = uiState.textBold
-                            )
-                        }
-                        // Text-based format (EPUB novel / FB2 text): render via WebView.
-                        // Tap callbacks are passed here because WebView intercepts all
-                        // touch events, making the outer pointerInput unreachable.
-                        HtmlPageView(
-                            html = htmlContent,
-                            baseUrl = uiState.htmlBaseUrl,
-                            assetDocumentPath = uiState.htmlAssetBasePath,
-                            assetLoader = readerAssetLoader,
-                            formatHandler = readerFormatHandler,
-                            onLeftTap   = { handleTapZoneAction(tapZoneLayout.left) },
-                            onRightTap  = { handleTapZoneAction(tapZoneLayout.right) },
-                            onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                            onAnchorClick = viewModel::onAnchorClick,
-                            onInlineFootnote = viewModel::showInlineFootnote,
-                            onTranslateSelection = { selectedText ->
-                                viewModel.translateSelectedText(
-                                    selectedText = selectedText,
-                                    preferDictionary = false
-                                )
-                            },
-                            onDictionarySelection = { selectedText ->
-                                viewModel.translateSelectedText(
-                                    selectedText = selectedText,
-                                    preferDictionary = true
-                                )
-                            },
-                            onExplainSelection = viewModel::explainSelectedTextDirect,
-                            fontSize     = uiState.textFontSize,
-                            colorScheme  = uiState.textColorScheme,
-                            readerPreset = activeReaderPreset,
-                            fontFamily   = resolvedTextFont.familyName,
-                            fontSourceUrl = resolvedTextFont.sourceUrl,
-                            lineHeight   = uiState.textLineHeight,
-                            letterSpacing = uiState.textLetterSpacing,
-                            wordSpacing = uiState.textWordSpacing,
-                            paragraphSpacing = uiState.textParagraphSpacing,
-                            textAlign    = uiState.textAlignment,
-                            bold         = uiState.textBold,
-                            translateActionLabel = readerText.selectionTranslateAction,
-                            dictionaryActionLabel = readerText.openDictionary,
-                            explainActionLabel = readerText.selectionExplainAction
-                        )
                     } else if (uiState.readingMode == ReadingMode.WEBTOON) {
                         WebtoonView(
                             viewModel = viewModel,
@@ -3613,8 +4323,7 @@ private fun TocBottomSheet(
                                                 onNavigate(
                                                     TocEntry(
                                                         title = readerPageLabel(page, strings.languageCode),
-                                                        pageIndex = page,
-                                                        locator = bookmarkedLocators[page]
+                                                        pageIndex = page
                                                     )
                                                 )
                                             }
@@ -3709,17 +4418,10 @@ private fun TocBottomSheet(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clickable {
-                                                val resolvedLocator = parseReadiumLocatorJson(highlight.locatorJson)
-                                                    ?.toReaderLocator()
-                                                    ?.copy(
-                                                        pageIndex = highlight.pageIndex,
-                                                        position = highlight.pageIndex
-                                                    )
                                                 onNavigate(
                                                     TocEntry(
                                                         title = highlight.text.take(120),
-                                                        pageIndex = highlight.pageIndex,
-                                                        locator = resolvedLocator
+                                                        pageIndex = highlight.pageIndex
                                                     )
                                                 )
                                             }

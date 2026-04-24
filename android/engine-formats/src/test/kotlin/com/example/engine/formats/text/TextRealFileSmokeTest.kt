@@ -3,8 +3,10 @@ package com.example.engine.formats.text
 import android.content.ContextWrapper
 import com.example.core.model.ComicFormat
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
 
@@ -20,7 +22,7 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected DOCX to render at least one page, got $pageCount", pageCount >= 1)
 
-            val joined = (0 until minOf(pageCount, 3))
+            val joined = (0 until pageCount)
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
@@ -42,7 +44,7 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected DOCX corpus sample to render at least one page, got $pageCount", pageCount >= 1)
 
-            val joined = (0 until minOf(pageCount, 4))
+            val joined = (0 until pageCount)
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
@@ -59,6 +61,10 @@ class TextRealFileSmokeTest {
                 "Expected DOCX corpus sample to keep readable body text rather than raw XML",
                 joined.contains("Various types of text", ignoreCase = true) ||
                     joined.contains("paragraph level formatting", ignoreCase = true)
+            )
+            assertFalse(
+                "Expected DOCX corpus sample to avoid inlining huge embedded font-face blobs",
+                joined.contains("@font-face", ignoreCase = true)
             )
         } finally {
             reader.close()
@@ -98,11 +104,12 @@ class TextRealFileSmokeTest {
         try {
             val firstChapterPage = reader.resolveHrefToPage("#chap01")
             val lastChapterPage = reader.resolveHrefToPage("#chap12")
+            val pageCount = reader.getPageCount()
 
             assertTrue("Expected chapter 1 anchor to resolve", firstChapterPage != null && firstChapterPage >= 0)
             assertTrue("Expected chapter 12 anchor to resolve", lastChapterPage != null && lastChapterPage >= 0)
             assertTrue("Expected later chapter to stay on or after chapter 1", lastChapterPage!! >= firstChapterPage!!)
-            assertEquals("Expected Gutenberg HTML to stay as one whole document page", 1, reader.getPageCount())
+            assertTrue("Expected Gutenberg HTML to paginate into multiple reader pages", pageCount > 1)
         } finally {
             reader.close()
         }
@@ -116,10 +123,12 @@ class TextRealFileSmokeTest {
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
         try {
             val html = reader.getHtmlPage(0).orEmpty()
-            assertEquals(sample.name, reader.htmlAssetBasePath(0))
+            val firstAssetBasePath = assertNamespacedHtmlAssetPath(reader.htmlAssetBasePath(0), 0)
+            val secondAssetBasePath = assertNamespacedHtmlAssetPath(reader.htmlAssetBasePath(1), 1)
+            assertTrue("Expected engine pages to get unique runtime document paths", firstAssetBasePath != secondAssetBasePath)
             assertTrue("Expected local HTML to avoid file base tag when asset-backed", !html.contains("<base href=\"file://", ignoreCase = true))
 
-            val mainAsset = reader.openHtmlAsset(sample.name)
+            val mainAsset = reader.openHtmlAsset(firstAssetBasePath)
             assertTrue("Expected local HTML file to be available through asset loader", mainAsset != null)
             assertEquals("text/html", mainAsset?.mimeType)
             assertTrue(mainAsset?.bytes?.isNotEmpty() == true)
@@ -160,7 +169,7 @@ class TextRealFileSmokeTest {
             assertTrue(html.contains("Title : Tilte with UTF-8 chars öäå"))
             assertTrue(html.contains("Content with UTF-8 chars"))
             assertTrue(html.contains("åäö"))
-            assertEquals(sample.name, reader.htmlAssetBasePath(0))
+            assertNamespacedHtmlAssetPath(reader.htmlAssetBasePath(0), 0)
             assertTrue(
                 "Expected reader-backed HTML to avoid a file base tag",
                 !html.contains("<base href=\"file://", ignoreCase = true)
@@ -177,12 +186,16 @@ class TextRealFileSmokeTest {
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
         try {
+            val pageCount = reader.getPageCount()
             val html = reader.getHtmlPage(0).orEmpty()
-            assertEquals(sample.name, reader.htmlAssetBasePath(0))
+            val leadingPages = (0 until minOf(pageCount, 2))
+                .mapNotNull { reader.getHtmlPage(it) }
+                .joinToString("\n")
+            val assetBasePath = assertNamespacedHtmlAssetPath(reader.htmlAssetBasePath(0), 0)
             assertTrue("Expected corpus HTML to avoid a file base tag when asset-backed", !html.contains("<base href=\"file://", ignoreCase = true))
-            assertTrue("Expected corpus HTML to keep the book title", html.contains("Alice’s Adventures in Wonderland"))
-            assertTrue("Expected corpus HTML to stay readable as a single document", reader.getPageCount() == 1)
-            assertTrue("Expected corpus HTML asset loader to expose the main document", reader.openHtmlAsset(sample.name) != null)
+            assertTrue("Expected corpus HTML to keep the book title near the opening pages", leadingPages.contains("Alice’s Adventures in Wonderland"))
+            assertTrue("Expected corpus HTML to paginate into multiple reader pages", pageCount > 1)
+            assertTrue("Expected corpus HTML asset loader to expose the main document", reader.openHtmlAsset(assetBasePath) != null)
         } finally {
             reader.close()
         }
@@ -245,7 +258,7 @@ class TextRealFileSmokeTest {
                 .joinToString("\n")
 
             assertTrue("Expected sanitized HTML to stay non-empty", html.isNotBlank())
-            assertTrue("Expected asset-backed local HTML base path", reader.htmlAssetBasePath(0) == sample.name)
+            assertNamespacedHtmlAssetPath(reader.htmlAssetBasePath(0), 0)
             assertTrue("Expected heavy script preamble to be stripped", !html.contains("<script", ignoreCase = true))
             assertTrue("Expected form-driven preamble markup to be stripped", !html.contains("<form", ignoreCase = true))
             assertTrue(
@@ -271,8 +284,8 @@ class TextRealFileSmokeTest {
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
-            assertTrue("Expected asset-backed HTML base path", reader.htmlAssetBasePath(0) == sample.name)
-            assertTrue("Expected main HTML file to be available through asset loader", reader.openHtmlAsset(sample.name) != null)
+            val assetBasePath = assertNamespacedHtmlAssetPath(reader.htmlAssetBasePath(0), 0)
+            assertTrue("Expected main HTML file to be available through asset loader", reader.openHtmlAsset(assetBasePath) != null)
             assertTrue("Expected heavy script preamble to be stripped", !html.contains("<script", ignoreCase = true))
             assertTrue("Expected form-driven preamble markup to be stripped", !html.contains("<form", ignoreCase = true))
             assertTrue(
@@ -525,7 +538,7 @@ class TextRealFileSmokeTest {
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.TXT)
         try {
-            val joined = (0 until minOf(reader.getPageCount(), 3))
+            val joined = (0 until minOf(reader.getPageCount(), 12))
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
@@ -656,7 +669,9 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected large Markdown corpus to render at least one page, got $pageCount", pageCount >= 1)
 
-            val renderedDocument = reader.getHtmlPage(0).orEmpty()
+            val renderedDocument = (0 until pageCount)
+                .mapNotNull { reader.getHtmlPage(it) }
+                .joinToString("\n")
             assertTrue(
                 "Expected rendered Markdown document to keep tail content instead of clipping it after the first screen",
                 renderedDocument.contains("delimiter stack", ignoreCase = true) ||
@@ -682,7 +697,9 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected lyrics markdown to render at least one page, got $pageCount", pageCount >= 1)
 
-            val renderedDocument = reader.getHtmlPage(0).orEmpty()
+            val renderedDocument = (0 until pageCount)
+                .mapNotNull { reader.getHtmlPage(it) }
+                .joinToString("\n")
             assertTrue(renderedDocument.contains("Путь звезды", ignoreCase = true))
             assertTrue(
                 "Expected lyrics markdown to keep later song headings instead of clipping after the first page",
@@ -702,7 +719,9 @@ class TextRealFileSmokeTest {
             if (candidate.exists()) return candidate
             current = current.parentFile ?: return@repeat
         }
-        return File(userDir, name)
+        val fallback = File(userDir, name)
+        assumeTrue("Optional local text sample missing: $name", fallback.exists())
+        return fallback
     }
 
     private fun locateCorpusFile(name: String): File {
@@ -714,5 +733,13 @@ class TextRealFileSmokeTest {
             current = current.parentFile ?: return@repeat
         }
         return File(userDir, name)
+    }
+
+    private fun assertNamespacedHtmlAssetPath(path: String?, pageIndex: Int): String {
+        val value = path.orEmpty()
+        val expectedSuffix = "/page-${pageIndex.toString().padStart(4, '0')}.html"
+        assertTrue("Expected namespaced HTML asset path for page $pageIndex, got '$value'", value.startsWith("text-"))
+        assertTrue("Expected page-specific HTML asset path suffix $expectedSuffix, got '$value'", value.endsWith(expectedSuffix))
+        return value
     }
 }

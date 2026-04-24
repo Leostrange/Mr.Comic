@@ -439,8 +439,8 @@ class EpubFormatReader(
 
     companion object {
         private const val TAG = "EpubFormatReader"
-        private const val EPUB_STRUCTURE_CACHE_VERSION = 4
-        private const val EPUB_MANIFEST_CACHE_VERSION = 2
+        private const val EPUB_STRUCTURE_CACHE_VERSION = 6
+        private const val EPUB_MANIFEST_CACHE_VERSION = 4
         private const val EPUB_STRUCTURE_CACHE_MAX_AGE_MS = 30L * 24L * 60L * 60L * 1000L
         private const val EPUB_FLAVOR_STANDARD = "standard"
         private const val EPUB_FLAVOR_FB2 = "fb2"
@@ -449,10 +449,11 @@ class EpubFormatReader(
         private val CACHE_GSON = Gson()
         /**
          * Target non-whitespace character count per reader page.
-         * ~2000 chars ≈ roughly one screenful at 18px/1.8lh on a typical phone.
-         * Vertical scrolling is allowed within a page, so content is never clipped.
+         * The reader treats each engine HTML page as viewport-sized, so long paragraphs
+         * must be split before they reach WebView page mode.
          */
-        private const val CHARS_PER_PAGE = 2000
+        private const val CHARS_PER_PAGE = 560
+        private const val TEXT_BLOCK_SOFT_SPLIT_THRESHOLD = 220
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
         private val HTML_BLOCK_RE = Regex(
@@ -664,7 +665,7 @@ class EpubFormatReader(
                 val isCalibreEpub = opfText.contains("calibre ", ignoreCase = true) ||
                     opfText.contains("<meta name=\"calibre:", ignoreCase = true) ||
                     opfText.contains("calibre-ebook.com", ignoreCase = true)
-                val (manifest, spine, ncxId) = runCatching {
+                val (manifest, parsedSpine, ncxId) = runCatching {
                     parseOpfRegexFallback(opfText)
                 }.recoverCatching {
                     parseOpf(opfBytes.inputStream())
@@ -672,6 +673,7 @@ class EpubFormatReader(
                     safeLogW(TAG, "Failed to parse OPF for manifest cache", error)
                     return@lazy null
                 }
+                val spine = mergeGuideFrontMatterIntoSpine(opfText, manifest, parsedSpine)
                 if (manifest.isEmpty() || spine.isEmpty()) {
                     return@lazy null
                 }
@@ -1605,13 +1607,17 @@ class EpubFormatReader(
         spineElement?.select("itemref")?.forEach { itemRef ->
             val idRef = itemRef.attr("idref").trim()
             val linear = itemRef.attr("linear").trim().ifBlank { "yes" }
-            if (idRef.isNotBlank() && !linear.equals("no", ignoreCase = true)) {
+            if (
+                idRef.isNotBlank() &&
+                (!linear.equals("no", ignoreCase = true) || shouldKeepNonLinearFrontMatter(idRef, manifest[idRef]))
+            ) {
                 spine += idRef
             }
         }
+        val normalizedSpine = mergeGuideFrontMatterIntoSpine(rawOpf, manifest, spine)
 
-        if (manifest.isNotEmpty() && spine.isNotEmpty()) {
-            return Triple(manifest, spine, ncxId)
+        if (manifest.isNotEmpty() && normalizedSpine.isNotEmpty()) {
+            return Triple(manifest, normalizedSpine, ncxId)
         }
         return parseOpfRegexFallback(rawOpf, ncxId)
     }
@@ -1659,12 +1665,133 @@ class EpubFormatReader(
             val attrs = match.groupValues[1]
             val idRef = attrValue(attrs, "idref") ?: return@forEach
             val linear = attrValue(attrs, "linear").orEmpty()
-            if (!linear.equals("no", ignoreCase = true)) {
+            if (!linear.equals("no", ignoreCase = true) || shouldKeepNonLinearFrontMatter(idRef, manifest[idRef])) {
                 spine += idRef
             }
         }
 
-        return Triple(manifest, spine, ncxId)
+        return Triple(manifest, mergeGuideFrontMatterIntoSpine(rawOpf, manifest, spine), ncxId)
+    }
+
+    private fun mergeGuideFrontMatterIntoSpine(
+        rawOpf: String,
+        manifest: Map<String, String>,
+        spine: List<String>
+    ): List<String> {
+        if (manifest.isEmpty()) return spine
+        val promotedIds = linkedSetOf<String>()
+
+        extractGuideFrontMatterHrefs(rawOpf).forEach { href ->
+            findManifestIdByHref(manifest, href)?.let(promotedIds::add)
+        }
+
+        manifest.forEach { (id, href) ->
+            if (shouldPromoteFrontMatter(id, href)) {
+                promotedIds += id
+            }
+        }
+
+        if (promotedIds.isEmpty()) return spine
+        val existing = spine.toHashSet()
+        val prefix = promotedIds.filter { it !in existing }
+        if (prefix.isEmpty()) return spine
+        return prefix + spine
+    }
+
+    private fun extractGuideFrontMatterHrefs(rawOpf: String): List<String> {
+        val result = linkedSetOf<String>()
+        runCatching {
+            val document = Jsoup.parse(rawOpf, "", JsoupXmlParser.xmlParser())
+            document.select("guide > reference[href], reference[href]").forEach { reference ->
+                val marker = listOf(
+                    reference.attr("type"),
+                    reference.attr("title"),
+                    reference.attr("href")
+                ).joinToString(" ").lowercase()
+                if (isPromotableFrontMatterMarker(marker)) {
+                    result += reference.attr("href").trim()
+                }
+            }
+        }
+
+        if (result.isEmpty()) {
+            val referenceRegex = Regex(
+                """<reference\b([^>]*)/?>""",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            )
+            referenceRegex.findAll(rawOpf).forEach { match ->
+                val attrs = match.groupValues[1]
+                val marker = attrs.lowercase()
+                val href = Regex("""\bhref\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+                    .find(attrs)
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    ?.trim()
+                if (!href.isNullOrBlank() && isPromotableFrontMatterMarker(marker)) {
+                    result += href
+                }
+            }
+        }
+        return result.toList()
+    }
+
+    private fun findManifestIdByHref(manifest: Map<String, String>, href: String): String? {
+        val normalizedHref = normalizeManifestHref(href)
+        if (normalizedHref.isBlank()) return null
+        return manifest.entries.firstOrNull { (_, manifestHref) ->
+            normalizeManifestHref(manifestHref).equals(normalizedHref, ignoreCase = true)
+        }?.key
+    }
+
+    private fun normalizeManifestHref(href: String): String {
+        val decoded = runCatching { URLDecoder.decode(href, "UTF-8") }.getOrDefault(href)
+        return normalizePath(
+            decoded
+                .substringBefore('#')
+                .substringBefore('?')
+                .replace('\\', '/')
+                .trim()
+                .trimStart('/')
+        )
+    }
+
+    private fun shouldPromoteFrontMatter(idRef: String, href: String?): Boolean {
+        val marker = "$idRef ${href.orEmpty()}".lowercase()
+        return isPromotableFrontMatterMarker(marker)
+    }
+
+    private fun isPromotableFrontMatterMarker(marker: String): Boolean {
+        return listOf(
+            "cover",
+            "coverpage",
+            "cover-page",
+            "cover_page",
+            "frontispiece",
+            "frontis",
+            "frontispis",
+            "front-piece",
+            "front_piece",
+            "titlepage",
+            "title-page",
+            "title_page"
+        ).any(marker::contains)
+    }
+
+    private fun shouldKeepNonLinearFrontMatter(idRef: String, href: String?): Boolean {
+        val marker = "$idRef ${href.orEmpty()}".lowercase()
+        return listOf(
+            "frontispiece",
+            "frontis",
+            "front-piece",
+            "front_piece",
+            "cover",
+            "titlepage",
+            "title-page",
+            "title_page",
+            "frontmatter",
+            "front-matter",
+            "front_matter"
+        ).any(marker::contains)
     }
 
     /**
@@ -2120,24 +2247,20 @@ class EpubFormatReader(
             val html = bytes.toString(detectCharset(bytes))
             val body = extractBodyContent(html)
             val keepWholeBody = shouldKeepWholeEpubHtmlBody(body)
-            val textCount = HTML_TAG_RE.replace(body, "").count { !it.isWhitespace() }
-            val imgCount = Regex("""<\s*(?:img|image)\b""", RegexOption.IGNORE_CASE)
-                .findAll(body)
-                .count()
-            val backgroundImageCount = Regex(
-                """background(?:-image)?\s*:\s*[^;]*url\s*\(""",
-                RegexOption.IGNORE_CASE
-            ).findAll(body).count()
-            // Files ≤ 8 KB have at most ~2 000 visible chars at 25 % text density — always 1 chunk.
-            // Skip the expensive extractChunkBlocks pass for these small spine items.
-            val chunkCount = if (keepWholeBody || header.uncompressedSize <= 8_000L) 1
-            else resolveEpubHtmlChunkCount(
-                blockCharCounts = extractChunkBlocks(body).map { it.visibleCharCount },
-                charsPerPage = CHARS_PER_PAGE
-            )
+            val textCount = visibleCharCountForHtml(body)
+            val imgCount = if (hasRenderableEpubMedia(body)) 1 else 0
+            val blocks = extractChunkBlocks(body)
+            val chunkCount = when {
+                blocks.isEmpty() -> 1
+                textCount <= CHARS_PER_PAGE && blocks.size == 1 -> 1
+                else -> resolveEpubHtmlChunkCount(
+                    blockCharCounts = blocks.map { it.visibleCharCount },
+                    charsPerPage = CHARS_PER_PAGE
+                )
+            }
             EpubContentEstimate(
                 textCharCount = textCount,
-                imageTagCount = imgCount + backgroundImageCount,
+                imageTagCount = imgCount,
                 chunkCount = chunkCount,
                 keepWholeBody = keepWholeBody
             )
@@ -2173,11 +2296,12 @@ class EpubFormatReader(
 
     private fun extractChunkBlocks(bodyHtml: String): List<EpubHtmlChunkBlock> {
         if (shouldKeepWholeEpubHtmlBody(bodyHtml)) {
-            val visibleCharCount = HTML_TAG_RE.replace(bodyHtml, "").count { !it.isWhitespace() }
-            val hasRenderableMedia = Regex(
-                """<\s*(?:img|image|svg)\b|background(?:-image)?\s*:\s*[^;]*url\s*\(""",
-                RegexOption.IGNORE_CASE
-            ).containsMatchIn(bodyHtml)
+            val splitBodyBlocks = splitOversizedEpubBody(bodyHtml)
+            if (splitBodyBlocks.isNotEmpty()) {
+                return splitBodyBlocks
+            }
+            val visibleCharCount = visibleCharCountForHtml(bodyHtml)
+            val hasRenderableMedia = hasRenderableEpubMedia(bodyHtml)
             return when {
                 visibleCharCount > 0 -> listOf(
                     EpubHtmlChunkBlock(
@@ -2204,34 +2328,226 @@ class EpubFormatReader(
             .toList()
         val result = mutableListOf<EpubHtmlChunkBlock>()
         for (block in rawBlocks) {
-            val visibleCharCount = HTML_TAG_RE.replace(block, "").count { !it.isWhitespace() }
-            val hasRenderableMedia = Regex(
-                """<\s*(?:img|image|svg)\b|background(?:-image)?\s*:\s*[^;]*url\s*\(""",
-                RegexOption.IGNORE_CASE
-            ).containsMatchIn(block)
-            when {
-                visibleCharCount > 0 -> result += EpubHtmlChunkBlock(
-                    html = block,
-                    visibleCharCount = visibleCharCount
+            val splitBlocks = splitOversizedEpubBlock(block)
+            if (splitBlocks.isNotEmpty()) {
+                result += splitBlocks
+            } else if (result.isNotEmpty()) {
+                // Empty block (e.g. closing </div>) — merge with previous
+                // block to keep the DOM tree intact.
+                val prev = result.last()
+                result[result.lastIndex] = prev.copy(
+                    html = prev.html + block
                 )
-                hasRenderableMedia -> result += EpubHtmlChunkBlock(
-                    html = block,
-                    visibleCharCount = 1
-                )
-                else -> {
-                    // Empty block (e.g. closing </div>) — merge with previous
-                    // block to keep the DOM tree intact.
-                    if (result.isNotEmpty()) {
-                        val prev = result.last()
-                        result[result.lastIndex] = prev.copy(
-                            html = prev.html + block
-                        )
-                    }
-                    // If no previous block exists, the tag is orphaned — safe to drop.
-                }
             }
+            // If no previous block exists, the tag is orphaned — safe to drop.
         }
         return result
+    }
+
+    private fun splitOversizedEpubBody(bodyHtml: String): List<EpubHtmlChunkBlock> {
+        return runCatching {
+            val document = Jsoup.parseBodyFragment(bodyHtml)
+            val children = document.body().children()
+            if (children.isEmpty()) {
+                emptyList()
+            } else {
+                children.flatMap { child -> splitOversizedEpubElement(child) }
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun splitOversizedEpubBlock(blockHtml: String): List<EpubHtmlChunkBlock> {
+        val visibleCharCount = visibleCharCountForHtml(blockHtml)
+        val hasRenderableMedia = hasRenderableEpubMedia(blockHtml)
+        if (visibleCharCount > 0 && visibleCharCount <= CHARS_PER_PAGE) {
+            return listOf(
+                EpubHtmlChunkBlock(
+                    html = blockHtml,
+                    visibleCharCount = visibleCharCount
+                )
+            )
+        }
+        if (hasRenderableMedia && visibleCharCount == 0) {
+            return listOf(EpubHtmlChunkBlock(html = blockHtml, visibleCharCount = 1))
+        }
+        return runCatching {
+            val document = Jsoup.parseBodyFragment(blockHtml)
+            val element = document.body().children().firstOrNull()
+            when {
+                element != null -> splitOversizedEpubElement(element)
+                visibleCharCount > 0 -> listOf(
+                    EpubHtmlChunkBlock(
+                        html = blockHtml,
+                        visibleCharCount = visibleCharCount
+                    )
+                )
+                else -> emptyList()
+            }
+        }.getOrElse {
+            if (visibleCharCount > 0) {
+                listOf(EpubHtmlChunkBlock(html = blockHtml, visibleCharCount = visibleCharCount))
+            } else {
+                emptyList()
+            }
+        }
+    }
+
+    private fun splitOversizedEpubElement(element: Element): List<EpubHtmlChunkBlock> {
+        val html = element.outerHtml()
+        val visibleCharCount = visibleCharCountForHtml(html)
+        val hasRenderableMedia = hasRenderableEpubMedia(html)
+        if (visibleCharCount > 0 && visibleCharCount <= CHARS_PER_PAGE) {
+            return listOf(EpubHtmlChunkBlock(html = html, visibleCharCount = visibleCharCount))
+        }
+        if (hasRenderableMedia && visibleCharCount == 0) {
+            return listOf(EpubHtmlChunkBlock(html = html, visibleCharCount = 1))
+        }
+
+        return when (element.normalName()) {
+            "table", "ul", "ol", "svg", "img", "figure", "picture" ->
+                listOf(EpubHtmlChunkBlock(html = html, visibleCharCount = visibleCharCount.coerceAtLeast(1)))
+            "div", "section", "article", "main", "span" -> {
+                val childElements = element.children()
+                if (childElements.size >= 2 && element.ownText().isBlank()) {
+                    childElements.flatMap { child -> splitOversizedEpubElement(child) }
+                } else {
+                    splitOversizedEpubTextElement(element)
+                }
+            }
+            else -> splitOversizedEpubTextElement(element)
+        }
+    }
+
+    private fun splitOversizedEpubTextElement(element: Element): List<EpubHtmlChunkBlock> {
+        val plainText = element.wholeText()
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .replace(Regex("""[ \t]+"""), " ")
+            .replace(Regex("""\n{3,}"""), "\n\n")
+            .trim()
+        if (plainText.isBlank()) {
+            val html = element.outerHtml()
+            return if (hasRenderableEpubMedia(html)) {
+                listOf(EpubHtmlChunkBlock(html = html, visibleCharCount = 1))
+            } else {
+                emptyList()
+            }
+        }
+        if (plainText.length <= TEXT_BLOCK_SOFT_SPLIT_THRESHOLD) {
+            val html = element.outerHtml()
+            return listOf(EpubHtmlChunkBlock(html = html, visibleCharCount = visibleCharCountForHtml(html)))
+        }
+
+        val tag = element.normalName()
+        val attrs = element.attributes().html().trim().takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
+        val chunks = splitPlainTextIntoChunks(
+            text = plainText,
+            maxChars = TEXT_BLOCK_SOFT_SPLIT_THRESHOLD,
+            preserveNewLines = true
+        )
+        if (chunks.size <= 1) {
+            val html = element.outerHtml()
+            return listOf(EpubHtmlChunkBlock(html = html, visibleCharCount = visibleCharCountForHtml(html)))
+        }
+
+        return chunks.map { chunk ->
+            val chunkHtml = "<$tag$attrs data-mr-split-chunk=\"true\">${escapeHtml(chunk).replace("\n", "<br/>")}</$tag>"
+            EpubHtmlChunkBlock(
+                html = chunkHtml,
+                visibleCharCount = visibleCharCountForHtml(chunkHtml)
+            )
+        }
+    }
+
+    private fun splitPlainTextIntoChunks(
+        text: String,
+        maxChars: Int,
+        preserveNewLines: Boolean
+    ): List<String> {
+        val normalized = text
+            .replace("\r\n", "\n")
+            .replace('\r', '\n')
+            .trim()
+        if (normalized.length <= maxChars) return listOf(normalized)
+
+        val result = mutableListOf<String>()
+        val buffer = StringBuilder()
+
+        fun flush() {
+            if (buffer.isNotBlank()) {
+                result += buffer.toString().trim()
+                buffer.clear()
+            }
+        }
+
+        fun appendToken(token: String, separator: String) {
+            if (token.isBlank()) return
+            if (buffer.isNotEmpty() && buffer.length + separator.length + token.length > maxChars) {
+                flush()
+            }
+            if (token.length <= maxChars) {
+                if (buffer.isNotEmpty()) buffer.append(separator)
+                buffer.append(token)
+                return
+            }
+
+            var remaining = token
+            while (remaining.isNotEmpty()) {
+                if (buffer.isNotEmpty()) flush()
+                val chunk = remaining.take(maxChars)
+                buffer.append(chunk)
+                remaining = remaining.drop(chunk.length)
+                if (remaining.isNotEmpty()) flush()
+            }
+        }
+
+        if (preserveNewLines) {
+            var pendingLineBreaks = 0
+            normalized.split('\n').forEach { rawLine ->
+                val words = rawLine
+                    .trim()
+                    .split(Regex("""\s+"""))
+                    .filter { it.isNotBlank() }
+                if (words.isEmpty()) {
+                    pendingLineBreaks = (pendingLineBreaks + 1).coerceAtMost(2)
+                    return@forEach
+                }
+                words.forEachIndexed { index, word ->
+                    val separator = when {
+                        buffer.isEmpty() -> ""
+                        index == 0 -> "\n".repeat(pendingLineBreaks.coerceAtLeast(1))
+                        else -> " "
+                    }
+                    appendToken(word, separator)
+                    pendingLineBreaks = 0
+                }
+                pendingLineBreaks = 1
+            }
+        } else {
+            normalized
+                .split(Regex("""\s+"""))
+                .filter { it.isNotBlank() }
+                .forEach { token ->
+                    appendToken(token, if (buffer.isEmpty()) "" else " ")
+                }
+        }
+
+        flush()
+        return result.ifEmpty { listOf(normalized) }
+    }
+
+    private fun visibleCharCountForHtml(html: String): Int {
+        return Jsoup.parseBodyFragment(html)
+            .text()
+            .replace('\u00A0', ' ')
+            .count { !it.isWhitespace() }
+    }
+
+    private fun hasRenderableEpubMedia(html: String): Boolean {
+        return Regex(
+            """<\s*(?:img|image|svg)\b|background(?:-image)?\s*:\s*[^;]*url\s*\(""",
+            RegexOption.IGNORE_CASE
+        ).containsMatchIn(html)
     }
 
     private fun partitionChunkBlocks(

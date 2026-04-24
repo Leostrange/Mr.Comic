@@ -26,6 +26,11 @@ data class Comic(
     val addedDate: Long = System.currentTimeMillis(),
     val lastModified: Long = System.currentTimeMillis(),
     val folderId: String? = null,
+    val readerLocatorHref: String? = null,
+    val readerLocatorProgression: Double? = null,
+    val readerLocatorPosition: Int? = null,
+    val readerLocatorTitle: String? = null,
+    val readerLocatorFragment: String? = null,
     val lastReadDate: Long? = null,
     val readingProgress: Float = 0f,
     val currentPage: Int = 0,
@@ -78,6 +83,35 @@ fun Comic.isReadingInProgress(): Boolean = readingStatus() == ComicReadingStatus
 
 fun Comic.isReadCompleted(): Boolean = readingStatus() == ComicReadingStatus.COMPLETED
 
+fun Comic.storedReaderLocator(): ReaderLocator? {
+    val href = readerLocatorHref?.takeIf { it.isNotBlank() }
+    val fragment = readerLocatorFragment?.takeIf { it.isNotBlank() }
+    val title = readerLocatorTitle?.takeIf { it.isNotBlank() }
+    val progression = readerLocatorProgression
+    val position = readerLocatorPosition
+    return if (href == null && fragment == null && title == null && progression == null && position == null) {
+        null
+    } else {
+        ReaderLocator(
+            href = href,
+            progression = progression,
+            position = position,
+            title = title,
+            fragment = fragment,
+            pageIndex = currentPage
+        )
+    }
+}
+
+fun Comic.withStoredReaderLocator(locator: ReaderLocator?): Comic =
+    copy(
+        readerLocatorHref = locator?.href?.takeIf { it.isNotBlank() },
+        readerLocatorProgression = locator?.progression,
+        readerLocatorPosition = locator?.position,
+        readerLocatorTitle = locator?.title?.takeIf { it.isNotBlank() },
+        readerLocatorFragment = locator?.fragment?.takeIf { it.isNotBlank() }
+    )
+
 enum class ComicFormat {
     CBZ,
     CBR,
@@ -115,6 +149,19 @@ fun ComicFormat.isTextReadingFormat(): Boolean = when (this) {
     else -> false
 }
 
+fun ComicFormat.supportsReaderImageScaling(): Boolean = when (this) {
+    ComicFormat.CBZ,
+    ComicFormat.CBR,
+    ComicFormat.PDF,
+    ComicFormat.ZIP,
+    ComicFormat.RAR,
+    ComicFormat.SEVENZ,
+    ComicFormat.TAR,
+    ComicFormat.DJVU,
+    ComicFormat.FOLDER -> true
+    else -> false
+}
+
 fun ComicFormat.supportsHighResZoomTiers(): Boolean = when (this) {
     ComicFormat.CBZ,
     ComicFormat.CBR,
@@ -123,6 +170,13 @@ fun ComicFormat.supportsHighResZoomTiers(): Boolean = when (this) {
     ComicFormat.RAR,
     ComicFormat.SEVENZ,
     ComicFormat.TAR,
+    ComicFormat.DJVU,
     ComicFormat.FOLDER -> true
     else -> false
 }
+
+fun ComicFormat.supportsAdaptiveLandscapeSpread(): Boolean =
+    supportsReaderImageScaling()
+
+fun ComicFormat.supportsDocumentMarginCrop(): Boolean =
+    this == ComicFormat.PDF || this == ComicFormat.DJVU
