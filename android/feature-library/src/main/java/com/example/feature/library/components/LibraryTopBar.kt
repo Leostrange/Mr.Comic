@@ -140,7 +140,7 @@ fun LibraryTopBar(
                                     contentDescription = when (nextViewMode) {
                                         LibraryViewMode.GRID -> strings.libraryViewGrid
                                         LibraryViewMode.LIST -> strings.libraryViewList
-                                        LibraryViewMode.STRIPS -> "Горизонтальная лента"
+                                        LibraryViewMode.STRIPS -> libraryViewStripsLabel(strings.languageCode)
                                     }
                                 )
                             }
@@ -229,4 +229,12 @@ fun LibraryTopBar(
             }
         )
     }
+}
+
+private fun libraryViewStripsLabel(language: String): String = when (language) {
+    "en" -> "Vertical strips"
+    "ja" -> "縦リボン"
+    "zh" -> "垂直条带"
+    "ko" -> "세로 스트립"
+    else -> "Вертикальная лента"
 }

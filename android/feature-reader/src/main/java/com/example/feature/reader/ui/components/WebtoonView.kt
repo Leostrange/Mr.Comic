@@ -160,8 +160,10 @@ private fun ZoomableFillWidthImage(
                     containerWidthPx to h
                 }
                 ReaderImageScaleMode.FIT_HEIGHT -> {
-                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
-                    w to containerHeightPx
+                    val heightScale = containerHeightPx / sourceHeightPx.coerceAtLeast(1f)
+                    val widthScale = containerWidthPx / sourceWidthPx.coerceAtLeast(1f)
+                    val scale = minOf(heightScale, widthScale)
+                    (sourceWidthPx * scale) to (sourceHeightPx * scale)
                 }
                 ReaderImageScaleMode.REAL_SIZE -> {
                     sourceWidthPx to sourceHeightPx

@@ -47,6 +47,7 @@ object PageSoundPlayer {
         soundPool = pool
     }
 
+    @Synchronized
     fun play(context: Context, style: PageSoundStyle = PageSoundStyle.PAPER) {
         init(context.applicationContext)
         val (soundId, volume) = when (style) {

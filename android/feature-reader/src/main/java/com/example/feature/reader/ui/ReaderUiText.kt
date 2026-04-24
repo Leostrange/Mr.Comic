@@ -113,7 +113,13 @@ internal data class ReaderUiText(
     val chapterReached: String,
     val chapterReachedNeutral: String,
     val dictionaryUnavailable: String,
-    val explainUnavailable: String
+    val explainUnavailable: String,
+    val selectionHighlightAction: String = "Highlight",
+    val noHighlights: String = "No highlights yet",
+    val editHighlightNote: String = "Edit note",
+    val deleteHighlight: String = "Delete highlight",
+    val save: String = "Save",
+    val highlightNotePlaceholder: String = "Add a note to this highlight"
 )
 
 internal fun readerUiText(language: String): ReaderUiText = when (language) {
@@ -675,7 +681,13 @@ internal fun readerUiText(language: String): ReaderUiText = when (language) {
         chapterReached = "Маркер: новая глава: %s.",
         chapterReachedNeutral = "Новая глава: %s.",
         dictionaryUnavailable = "Словарный поиск для этого слова сейчас недоступен.",
-        explainUnavailable = "Пояснение сейчас недоступно."
+        explainUnavailable = "Пояснение сейчас недоступно.",
+        selectionHighlightAction = "Выделить",
+        noHighlights = "Нет выделений",
+        editHighlightNote = "Изменить заметку",
+        deleteHighlight = "Удалить выделение",
+        save = "Сохранить",
+        highlightNotePlaceholder = "Добавьте заметку к выделению"
     )
 }
 
@@ -732,6 +744,17 @@ internal fun readerBookmarksTabLabel(count: Int, language: String): String {
         "zh" -> "书签"
         "ko" -> "북마크"
         else -> "Закладки"
+    }
+    return if (count > 0) "$base ($count)" else base
+}
+
+internal fun readerHighlightsTabLabel(count: Int, language: String): String {
+    val base = when (language) {
+        "en" -> "Highlights"
+        "ja" -> "ハイライト"
+        "zh" -> "高亮"
+        "ko" -> "하이라이트"
+        else -> "Выделения"
     }
     return if (count > 0) "$base ($count)" else base
 }

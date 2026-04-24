@@ -818,8 +818,10 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun setTileSizeDp(size: Int) {
+        val normalized = size.coerceIn(80, 200)
+        _uiState.update { it.copy(tileSizeDp = normalized) }
         viewModelScope.launch {
-            preferences.set(PreferencesKeys.LIBRARY_TILE_SIZE_DP, size.coerceIn(80, 200))
+            preferences.set(PreferencesKeys.LIBRARY_TILE_SIZE_DP, normalized)
         }
     }
 
@@ -1142,14 +1144,31 @@ class LibraryViewModel @Inject constructor(
         SortOrder.DATE_ADDED_DESC -> comics.sortedByDescending { it.addedDate }
         SortOrder.DATE_READ_ASC -> comics.sortedBy { it.lastReadDate ?: 0L }
         SortOrder.DATE_READ_DESC -> comics.sortedByDescending { it.lastReadDate ?: 0L }
-        SortOrder.PROGRESS_ASC -> comics.sortedBy { it.readingProgress }
-        SortOrder.PROGRESS_DESC -> comics.sortedByDescending { it.readingProgress }
+        SortOrder.PROGRESS_ASC -> comics.sortedWith(
+            compareBy<Comic> { effectiveReadingProgress(it) }
+                .thenBy { it.title.lowercase() }
+        )
+        SortOrder.PROGRESS_DESC -> comics.sortedWith(
+            compareByDescending<Comic> { effectiveReadingProgress(it) }
+                .thenBy { it.title.lowercase() }
+        )
         SortOrder.FILE_SIZE_ASC -> comics.sortedBy { it.fileSize }
         SortOrder.FILE_SIZE_DESC -> comics.sortedByDescending { it.fileSize }
         SortOrder.GENRE_ASC -> comics.sortedBy { it.genre.orEmpty().lowercase() }
         SortOrder.GENRE_DESC -> comics.sortedByDescending { it.genre.orEmpty().lowercase() }
         SortOrder.FOLDER_ASC -> comics.sortedBy { normalizeFolderId(it.folderId).orEmpty().lowercase() }
         SortOrder.FOLDER_DESC -> comics.sortedByDescending { normalizeFolderId(it.folderId).orEmpty().lowercase() }
+    }
+
+    private fun effectiveReadingProgress(comic: Comic): Float {
+        if (comic.isReadCompleted()) return 1f
+        val storedProgress = comic.readingProgress.coerceIn(0f, 1f)
+        val pageProgress = if (comic.pageCount > 0) {
+            ((comic.currentPage + 1).toFloat() / comic.pageCount.toFloat()).coerceIn(0f, 1f)
+        } else {
+            0f
+        }
+        return maxOf(storedProgress, pageProgress)
     }
 
     private fun buildSections(
@@ -1249,7 +1268,7 @@ class LibraryViewModel @Inject constructor(
                     newestAdded = descendants.maxOfOrNull { it.addedDate } ?: 0L,
                     lastReadDate = descendants.mapNotNull { it.lastReadDate }.maxOrNull(),
                     totalSize = descendants.sumOf { it.fileSize },
-                    progress = descendants.map { it.readingProgress }.average().toFloat()
+                    progress = descendants.map { effectiveReadingProgress(it) }.average().toFloat()
                 )
             },
             sortOrder

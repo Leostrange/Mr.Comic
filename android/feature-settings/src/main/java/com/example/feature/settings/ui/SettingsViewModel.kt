@@ -1,6 +1,9 @@
 package com.example.feature.settings.ui
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
@@ -31,6 +34,10 @@ import com.example.core.data.repository.QuoteRepository
 import com.example.core.domain.analytics.DailyReadingGoalStore
 import com.example.core.domain.analytics.ReadingAnalyticsEvent
 import com.example.core.domain.analytics.ReadingAnalyticsTracker
+import com.example.core.domain.translation.DictionaryEngine
+import com.example.core.domain.translation.OfflineTranslationEngine
+import com.example.core.domain.translation.OnlineTranslationEngine
+import com.example.core.domain.util.Result
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderInfoSlot
@@ -43,6 +50,7 @@ import com.example.core.model.ReaderTtsProviderType
 import com.example.core.model.ReaderTtsSleepTimerMode
 import com.example.core.model.ReadingMode
 import com.example.core.model.SavedQuote
+import com.example.core.model.TranslationAvailabilitySnapshot
 import com.example.core.model.TranslationServiceConfig
 import com.example.core.model.TranslationTransportPreference
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
@@ -69,6 +77,7 @@ import com.example.core.ui.library.normalizeLibraryShelfStyle
 import com.example.core.ui.library.parseLibraryThemePreset
 import com.example.core.ui.eink.isEInkDevice
 import com.example.core.ui.locale.normalizeAppLanguageCode
+import com.example.core.ui.locale.normalizeTranslationLanguageCode
 import com.example.core.ui.theme.ReadingPreset
 import com.example.core.ui.theme.ThemeMode
 import com.example.core.ui.theme.ThemePreferencesRepository
@@ -79,14 +88,18 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -375,7 +388,7 @@ data class SettingsUiState(
     val useDynamicColor: Boolean = true,
     val useAmoledDark: Boolean = false,
     val readingMode: ReadingMode = ReadingMode.PAGE_LTR,
-    val readerImageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
+    val readerImageScaleMode: String = ReaderImageScaleMode.defaultFor(null).storedValue,
     val readerImageMarginCropHorizontal: Float = 0f,
     val readerImageMarginCropVertical: Float = 0f,
     val brightness: Float = -1f,
@@ -499,6 +512,8 @@ data class SettingsUiState(
     val readerStylePresetEntries: List<ReaderStylePresetEntry> = emptyList(),
     // Перевод
     val translationConfig: TranslationServiceConfig = TranslationServiceConfig(),
+    val translationAvailability: TranslationAvailabilitySnapshot = TranslationAvailabilitySnapshot(),
+    val translationAvailabilityPairKnown: Boolean = false,
     val ocrLanguage: String = "JA",
     val ocrDialoguesOnly: Boolean = false,
     val ocrIncludeSfx: Boolean = true,
@@ -507,6 +522,11 @@ data class SettingsUiState(
     val ocrOverlayStyle: String = "AUTO",
     // Бэкап
     val autoBackupEnabled: Boolean = false,
+    val settingsImportErrorPresentation: String = SettingsImportErrorPresentation.TEXT,
+    val imageMessagePopupPosition: String = SettingsImageMessagePopupPosition.CENTER,
+    val imageMessagePopupFreeMove: Boolean = false,
+    val imageMessagePopupSizeScale: Float = 1f,
+    val imageMessagePopupDurationSeconds: Int = 0,
     val isClearingCache: Boolean = false,
     val isExporting: Boolean = false,
     val isImporting: Boolean = false,
@@ -564,6 +584,11 @@ private data class StatusState(
     val message: String? = null
 )
 
+private data class SettingsTranslationAvailabilityState(
+    val snapshot: TranslationAvailabilitySnapshot = TranslationAvailabilitySnapshot(),
+    val pairKnown: Boolean = false
+)
+
 private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
 private const val SETTINGS_READER_DEFAULT_TOOLBAR_BLUR = 0f
 
@@ -582,7 +607,10 @@ class SettingsViewModel @Inject constructor(
     private val comicRepository: ComicRepository,
     private val quoteRepository: QuoteRepository,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
-    private val analyticsTracker: ReadingAnalyticsTracker
+    private val analyticsTracker: ReadingAnalyticsTracker,
+    private val dictionaryEngine: DictionaryEngine,
+    private val offlineTranslationEngine: OfflineTranslationEngine,
+    private val onlineTranslationEngine: OnlineTranslationEngine
 ) : ViewModel() {
 
     private val preferences = UserPreferences(context.dataStore)
@@ -728,6 +756,59 @@ class SettingsViewModel @Inject constructor(
             targetLanguage = targetLanguage,
             preferredTransport = transport,
             explainEnabled = explainEnabled
+        )
+    }
+
+    private val appLanguageFlow = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
+        .map(::normalizeAppLanguageCode)
+
+    private val networkAvailableFlow: Flow<Boolean> = callbackFlow {
+        val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
+        if (connectivityManager == null) {
+            trySend(false)
+            close()
+            return@callbackFlow
+        }
+
+        fun emitCurrent() {
+            trySend(resolveSettingsNetworkAvailable(connectivityManager))
+        }
+
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) = emitCurrent()
+
+            override fun onLost(network: Network) = emitCurrent()
+
+            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) =
+                emitCurrent()
+
+            override fun onUnavailable() = emitCurrent()
+        }
+
+        emitCurrent()
+        val registered = runCatching {
+            connectivityManager.registerDefaultNetworkCallback(callback)
+        }.isSuccess
+        if (!registered) {
+            close()
+            return@callbackFlow
+        }
+        awaitClose {
+            runCatching { connectivityManager.unregisterNetworkCallback(callback) }
+        }
+    }.distinctUntilChanged()
+
+    private val translationAvailabilityFlow: Flow<SettingsTranslationAvailabilityState> = combine(
+        translationConfigFlow,
+        appLanguageFlow,
+        networkAvailableFlow
+    ) { translationConfig, appLanguage, networkAvailable ->
+        Triple(translationConfig, appLanguage, networkAvailable)
+    }.mapLatest { (translationConfig, appLanguage, networkAvailable) ->
+        resolveSettingsTranslationAvailabilityState(
+            translationConfig = translationConfig,
+            appLanguage = appLanguage,
+            networkAvailable = networkAvailable
         )
     }
 
@@ -1208,7 +1289,7 @@ class SettingsViewModel @Inject constructor(
     }.combine(
         preferences.get(
             PreferencesKeys.READER_IMAGE_SCALE_MODE,
-            ReaderImageScaleMode.FIT_WIDTH.storedValue
+            ReaderImageScaleMode.defaultFor(null).storedValue
         ).map { ReaderImageScaleMode.fromStored(it).storedValue }
     ) { state: SettingsUiState, imageScaleMode: String ->
         state.copy(readerImageScaleMode = imageScaleMode)
@@ -1240,6 +1321,45 @@ class SettingsViewModel @Inject constructor(
                 )
             }
         )
+    }.combine(
+        preferences.get(
+            PreferencesKeys.SETTINGS_IMPORT_ERROR_PRESENTATION,
+            SettingsImportErrorPresentation.TEXT
+        )
+    ) { state: SettingsUiState, presentation: String ->
+        state.copy(
+            settingsImportErrorPresentation = normalizeSettingsImportErrorPresentation(presentation)
+        )
+    }.combine(
+        preferences.get(
+            PreferencesKeys.IMAGE_MESSAGE_POPUP_POSITION,
+            SettingsImageMessagePopupPosition.CENTER
+        )
+    ) { state: SettingsUiState, position: String ->
+        state.copy(
+            imageMessagePopupPosition = normalizeSettingsImageMessagePopupPosition(position)
+        )
+    }.combine(
+        preferences.get(PreferencesKeys.IMAGE_MESSAGE_POPUP_FREE_MOVE, false)
+    ) { state: SettingsUiState, freeMove: Boolean ->
+        state.copy(imageMessagePopupFreeMove = freeMove)
+    }.combine(
+        preferences.get(PreferencesKeys.IMAGE_MESSAGE_POPUP_SIZE_SCALE, 1f)
+            .map(::clampSettingsImageMessagePopupScale)
+    ) { state: SettingsUiState, scale: Float ->
+        state.copy(imageMessagePopupSizeScale = scale)
+    }.combine(
+        preferences.get(PreferencesKeys.IMAGE_MESSAGE_POPUP_DURATION_SECONDS, 0)
+            .map(::clampSettingsImageMessagePopupDurationSeconds)
+    ) { state: SettingsUiState, durationSeconds: Int ->
+        state.copy(imageMessagePopupDurationSeconds = durationSeconds)
+    }.combine(
+        translationAvailabilityFlow
+    ) { state: SettingsUiState, availabilityState: SettingsTranslationAvailabilityState ->
+        state.copy(
+            translationAvailability = availabilityState.snapshot,
+            translationAvailabilityPairKnown = availabilityState.pairKnown
+        )
     }
 
     val uiState: StateFlow<SettingsUiState> = combinedSettingsUiState.stateIn(
@@ -1264,6 +1384,78 @@ class SettingsViewModel @Inject constructor(
                 persistReaderStylePresetEntries(migrated)
             }
         }
+    }
+
+    private suspend fun resolveSettingsTranslationAvailabilityState(
+        translationConfig: TranslationServiceConfig,
+        appLanguage: String,
+        networkAvailable: Boolean
+    ): SettingsTranslationAvailabilityState {
+        val sourceLanguage = translationConfig.sourceLanguage
+            .takeUnless { it.equals("AUTO", ignoreCase = true) }
+            ?.let(::normalizeTranslationLanguageCode)
+        val targetLanguage = when (translationConfig.targetLanguage.uppercase(Locale.US)) {
+            "APP" -> normalizeTranslationLanguageCode(appLanguage)
+            else -> normalizeTranslationLanguageCode(translationConfig.targetLanguage)
+        }
+        val onlineConfigured = when (val configured = onlineTranslationEngine.isConfigured()) {
+            is Result.Success -> configured.data
+            is Result.Error -> false
+            Result.Loading -> false
+        }
+
+        if (sourceLanguage == null || targetLanguage == null || sourceLanguage == targetLanguage) {
+            return SettingsTranslationAvailabilityState(
+                snapshot = TranslationAvailabilitySnapshot(
+                    networkAvailable = networkAvailable,
+                    onlineConfigured = onlineConfigured,
+                    explainToggleEnabled = translationConfig.explainEnabled
+                ),
+                pairKnown = false
+            )
+        }
+
+        val dictionaryAvailable = when (
+            val availability = dictionaryEngine.isLookupAvailable(
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage
+            )
+        ) {
+            is Result.Success -> availability.data
+            is Result.Error -> false
+            Result.Loading -> false
+        }
+
+        val offlineModelInstalled = when (
+            val availability = offlineTranslationEngine.isLanguagePairAvailable(
+                sourceLanguage = sourceLanguage,
+                targetLanguage = targetLanguage
+            )
+        ) {
+            is Result.Success -> availability.data
+            is Result.Error -> false
+            Result.Loading -> false
+        }
+
+        return SettingsTranslationAvailabilityState(
+            snapshot = TranslationAvailabilitySnapshot(
+                dictionaryAvailable = dictionaryAvailable,
+                offlinePairSupported = true,
+                offlineModelInstalled = offlineModelInstalled,
+                networkAvailable = networkAvailable,
+                onlineConfigured = onlineConfigured,
+                explainToggleEnabled = translationConfig.explainEnabled
+            ),
+            pairKnown = true
+        )
+    }
+
+    private fun resolveSettingsNetworkAvailable(
+        connectivityManager: ConnectivityManager
+    ): Boolean {
+        val network = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     fun setAppLanguage(code: String) {
@@ -2498,9 +2690,7 @@ class SettingsViewModel @Inject constructor(
         statusState.update { it.copy(isImporting = true, message = null) }
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.use { stream ->
-                    stream.readBytes().toString(Charsets.UTF_8)
-                } ?: throw IllegalStateException(settingsImportReadFailedMessage())
+                val jsonString = uri.readAcceptedSettingsImportText(context)
 
                 val root = JSONObject(jsonString)
                 val entries = root.getJSONArray("entries")
@@ -2567,7 +2757,7 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("SettingsVM", "Import failed", e)
                 statusState.update {
-                    it.copy(isImporting = false, message = settingsImportFailedMessage(e.localizedMessage))
+                    it.copy(isImporting = false, message = settingsImportFailureMessage(e))
                 }
             }
         }
@@ -3263,6 +3453,15 @@ class SettingsViewModel @Inject constructor(
         else -> "Ошибка импорта: ${detail ?: "неизвестная ошибка"}"
     }
 
+    private fun settingsImportFailureMessage(error: Throwable): String {
+        val detail = error.message?.takeIf { it.isNotBlank() } ?: error.localizedMessage
+        return if (detail == SETTINGS_IMPORT_REJECTION_MESSAGE) {
+            SETTINGS_IMPORT_REJECTION_MESSAGE
+        } else {
+            settingsImportFailedMessage(detail)
+        }
+    }
+
     private fun settingsRepairSummaryMessage(
         result: ComicRepository.RepairLibraryAccessResult
     ): String = when (settingsLanguage()) {
@@ -3329,6 +3528,42 @@ class SettingsViewModel @Inject constructor(
         "zh" -> "重新绑定访问权限失败：${detail ?: "未知错误"}"
         "ko" -> "접근 권한 재연결에 실패했습니다: ${detail ?: "알 수 없는 오류"}"
         else -> "Ошибка перепривязки доступа: ${detail ?: "неизвестная ошибка"}"
+    }
+
+    fun setSettingsImportErrorPresentation(value: String) = viewModelScope.launch {
+        preferences.set(
+            PreferencesKeys.SETTINGS_IMPORT_ERROR_PRESENTATION,
+            normalizeSettingsImportErrorPresentation(value)
+        )
+    }
+
+    fun setImageMessagePopupPosition(value: String) = viewModelScope.launch {
+        preferences.set(
+            PreferencesKeys.IMAGE_MESSAGE_POPUP_POSITION,
+            normalizeSettingsImageMessagePopupPosition(value)
+        )
+    }
+
+    fun setImageMessagePopupFreeMove(enabled: Boolean) = viewModelScope.launch {
+        preferences.set(PreferencesKeys.IMAGE_MESSAGE_POPUP_FREE_MOVE, enabled)
+    }
+
+    fun setImageMessagePopupSizeScale(value: Float) {
+        setSlider("imageMessagePopupSizeScale") {
+            preferences.set(
+                PreferencesKeys.IMAGE_MESSAGE_POPUP_SIZE_SCALE,
+                clampSettingsImageMessagePopupScale(value)
+            )
+        }
+    }
+
+    fun setImageMessagePopupDurationSeconds(value: Int) {
+        setSlider("imageMessagePopupDurationSeconds") {
+            preferences.set(
+                PreferencesKeys.IMAGE_MESSAGE_POPUP_DURATION_SECONDS,
+                clampSettingsImageMessagePopupDurationSeconds(value)
+            )
+        }
     }
 
     private fun settingsUntitledLabel(): String = when (settingsLanguage()) {
