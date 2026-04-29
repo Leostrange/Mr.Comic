@@ -184,10 +184,8 @@ private fun PagePane(
                     containerWidthPx to h
                 }
                 ReaderImageScaleMode.FIT_HEIGHT -> {
-                    val heightScale = containerHeightPx / sourceHeightPx.coerceAtLeast(1f)
-                    val widthScale = containerWidthPx / sourceWidthPx.coerceAtLeast(1f)
-                    val scale = minOf(heightScale, widthScale)
-                    (sourceWidthPx * scale) to (sourceHeightPx * scale)
+                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
+                    w to containerHeightPx
                 }
                 ReaderImageScaleMode.REAL_SIZE -> {
                     sourceWidthPx to sourceHeightPx
