@@ -14,7 +14,7 @@ class EpubChunkingTest {
             charsPerPage = 2_000
         )
 
-        assertEquals(4, chunks)
+        assertEquals(8, chunks)
     }
 
     @Test

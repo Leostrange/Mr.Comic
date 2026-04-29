@@ -3,17 +3,19 @@ package com.example.engine.formats.base
 internal const val READER_BASE_DOCUMENT_CSS = """
     html {
       width: 100%;
-      box-sizing: border-box;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
       overflow-x: hidden;
+      box-sizing: border-box;
     }
-    *, *::before, *::after {
-      box-sizing: inherit;
-    }
+    *, *::before, *::after { box-sizing: inherit; }
     body {
-      margin: 0 auto;
-      padding: 16px 22px 44px;
+      margin: 0;
+      padding: 16px 16px 44px;
       width: 100%;
-      max-width: 720px;
+      max-width: none;
+      box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 18px;
       line-height: 1.6;
@@ -25,12 +27,8 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       hyphens: auto;
       -webkit-hyphens: auto;
     }
-    body > * {
-      max-width: 100%;
-      box-sizing: border-box;
-    }
     p, div.paragraph {
-      margin: 0.4em 0;
+      margin: 0.2em 0;
       text-indent: 1.5em;
     }
     p:first-child,
@@ -49,22 +47,14 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       hyphens: none;
       -webkit-hyphens: none;
     }
-    h1 { font-size: 1.7em; letter-spacing: 0.04em; text-transform: uppercase;
-         padding-bottom: 0.3em; border-bottom: 1px solid rgba(120,120,120,0.15); }
-    h2 { font-size: 1.35em; letter-spacing: 0.02em;
-         padding-bottom: 0.2em; border-bottom: 1px solid rgba(120,120,120,0.10); }
+    h1 { font-size: 1.7em; letter-spacing: 0.04em; text-transform: uppercase; }
+    h2 { font-size: 1.35em; letter-spacing: 0.02em; }
     h3 { font-size: 1.15em; }
-    h4 { font-size: 1.05em; }
-    h5 { font-size: 1em; font-style: italic; }
-    h6 { font-size: 0.95em; text-transform: uppercase; letter-spacing: 0.05em; }
+    h4, h5, h6 { font-size: 1em; }
     img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
     figure { margin: 1rem 0; }
     figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
     pre, code { white-space: pre-wrap; word-break: break-word; }
-    code:not(pre code) {
-      background: rgba(120,120,120,0.08); padding: 0.15em 0.35em;
-      border-radius: 4px; font-size: 0.9em;
-    }
     pre {
       margin: 1rem 0;
       padding: 0.85rem 1rem;
@@ -73,15 +63,11 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       overflow-x: auto;
     }
     code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
-    ul, ol { padding-left: 1.8rem; margin: 0.8em 0; }
-    li { line-height: 1.55; }
+    ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
     li + li { margin-top: 0.25rem; }
-    table { width: 100%; border-collapse: collapse; margin: 1rem 0; overflow-x: auto;
-            font-size: 0.92em; }
+    table { max-width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
     th, td { border: 1px solid rgba(120,120,120,0.35); padding: 0.5rem 0.65rem; text-align: left; }
-    th { font-weight: 600; background: rgba(120,120,120,0.08); }
-    thead th { background: rgba(120,120,120,0.12); }
-    tbody tr:nth-child(even) { background: rgba(120,120,120,0.04); }
+    th { font-weight: 600; }
     hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: 1rem 0; }
     del { opacity: 0.75; }
     a[href] {
@@ -94,14 +80,11 @@ internal const val READER_BASE_DOCUMENT_CSS = """
     .footnotes ol { padding-left: 1.25rem; }
     blockquote {
       margin: 1rem 0;
-      padding: 0.8rem 1rem;
+      padding-left: 1rem;
       border-left: 3px solid rgba(120,120,120,0.35);
-      background: rgba(120,120,120,0.03);
-      border-radius: 0 8px 8px 0;
       text-indent: 0;
       text-align: left;
     }
-    blockquote p { text-indent: 0; }
     center, [align="center"], .center { text-align: center; text-indent: 0; }
     [align="right"], .right { text-align: right; text-indent: 0; }
     [align="left"], .left { text-align: left; }
@@ -110,36 +93,29 @@ internal const val READER_BASE_DOCUMENT_CSS = """
 internal const val READER_MOBI_DOCUMENT_CSS = """
     html {
       width: 100%;
-      box-sizing: border-box;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
       overflow-x: hidden;
+      box-sizing: border-box;
     }
-    *, *::before, *::after {
-      box-sizing: inherit;
-    }
+    *, *::before, *::after { box-sizing: inherit; }
     body {
-      margin: 0 auto;
-      padding: 16px 22px 44px;
+      margin: 0;
+      padding: 16px 16px 44px;
       width: 100%;
-      max-width: 680px;
+      max-width: none;
+      box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 1.05rem;
       line-height: 1.7;
       color: inherit;
-      overflow-wrap: break-word;
-      word-break: normal;
-    }
-    body > * {
-      max-width: 100%;
-      box-sizing: border-box;
     }
     p {
-      margin: 0.4em 0;
+      margin: 0.2em 0;
       text-align: justify;
       text-indent: 1.5em;
     }
-    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.92em; }
-    th, td { border: 1px solid rgba(120,120,120,0.35); padding: 0.5rem 0.65rem; text-align: left; }
-    th { font-weight: 600; background: rgba(120,120,120,0.08); }
     p:first-child,
     h1 + p,
     h2 + p,
@@ -198,30 +174,6 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
       page-break-before: always;
       break-before: page;
     }
-    .titlepage,
-    .title-page {
-      min-height: calc(100vh - 88px);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      gap: 0.18rem;
-    }
-    .titlepage p,
-    .title-page p,
-    .titlepage h1,
-    .titlepage h2,
-    .titlepage h3,
-    .title-page h1,
-    .title-page h2,
-    .title-page h3 {
-      text-align: center !important;
-      text-indent: 0 !important;
-      margin-left: auto;
-      margin-right: auto;
-      max-width: 24em;
-    }
     img { max-width: 100%; height: auto; display: block; margin: 0.8rem auto; }
     hr { border: 0; border-top: 1px solid rgba(120,120,120,0.3); margin: 1.5em 3em; }
     blockquote {
@@ -239,28 +191,39 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
 """
 
 internal const val READER_PRESERVE_LAYOUT_DOCUMENT_CSS = """
-    html, body {
-      width: 100% !important;
-      max-width: none !important;
-      margin: 0 !important;
-      min-width: 0;
+    html {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
       box-sizing: border-box;
     }
+    *, *::before, *::after { box-sizing: inherit; }
     body {
-      padding: 12px 18px 44px;
+      margin: 0;
+      padding: 16px 16px 44px;
       width: 100% !important;
       max-width: none !important;
+      min-width: 0 !important;
       box-sizing: border-box;
+      font-size: 20px !important;
+      line-height: 1.5 !important;
       word-wrap: break-word;
       overflow-wrap: break-word;
     }
-    body > * {
+    body > *,
+    main,
+    article,
+    section,
+    div {
       max-width: 100% !important;
+      min-width: 0 !important;
       box-sizing: border-box;
     }
-    img { max-width: 100% !important; height: auto !important; }
+    img { max-width: 100%; height: auto; }
     pre, code { white-space: pre-wrap; word-break: break-word; }
-    table { max-width: 100% !important; border-collapse: collapse; }
+    table { max-width: 100%; display: block; overflow-x: auto; border-collapse: collapse; }
     a[href] {
       color: var(--mrcomic-reader-accent-color, #1a6f9a);
       text-decoration: underline;
@@ -270,14 +233,13 @@ internal const val READER_PRESERVE_LAYOUT_DOCUMENT_CSS = """
 """
 
 internal const val EPUB_READER_DOCUMENT_CSS = """
-    html{width:100%;box-sizing:border-box;overflow-x:hidden}
+    html{width:100%;max-width:100%;margin:0;padding:0;overflow-x:hidden;box-sizing:border-box}
     *,*::before,*::after{box-sizing:inherit}
-    body{font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.6;
-          padding:16px 22px 44px;color:#1a1a1a;background:#fafafa;
-          width:100%;max-width:720px;margin:0 auto;overflow-wrap:break-word;word-break:normal;
-          hyphens:auto;-webkit-hyphens:auto;text-align:justify}
-    body>*{max-width:100%;box-sizing:border-box}
-    p,div.paragraph{margin:0.4em 0;text-indent:1.5em}
+    body{font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.65;
+         padding:16px 16px 44px;color:#1a1a1a;background:#fafafa;
+         width:100%;max-width:none;margin:0;box-sizing:border-box;overflow-wrap:break-word;word-break:normal;
+         hyphens:auto;-webkit-hyphens:auto;text-align:justify}
+    p,div.paragraph{margin:0.2em 0;text-indent:1.5em}
     p:first-child,div.paragraph:first-child,
     h1+p,h2+p,h3+p,h4+p,h5+p,h6+p,
     h1+div.paragraph,h2+div.paragraph,h3+div.paragraph,h4+div.paragraph,h5+div.paragraph,h6+div.paragraph{text-indent:0}
@@ -290,10 +252,8 @@ internal const val EPUB_READER_DOCUMENT_CSS = """
                     border-left:3px solid #bbb;font-style:italic;color:#555;
                     hyphens:none;-webkit-hyphens:none}
     cite{display:block;margin-top:0.3em}
-    table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.92em}
-    td,th{padding:0.5rem 0.65rem;border:1px solid rgba(120,120,120,0.35);text-align:left}
-    th{font-weight:600;background:rgba(120,120,120,0.08)}
-    tbody tr:nth-child(even){background:rgba(120,120,120,0.04)}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:4px 8px;border:1px solid #ccc}
     .center,.align-center,[align="center"]{text-align:center !important;text-indent:0}
     .right,.align-right,[align="right"]{text-align:right !important;text-indent:0}
     .left,.align-left,[align="left"]{text-align:left !important}
@@ -305,42 +265,6 @@ internal const val EPUB_READER_DOCUMENT_CSS = """
       {margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left}
     .note-num,.footnote-label{color:#1a6f9a;font-weight:bold;
       display:inline-block;min-width:2.8em;text-indent:0}
-    body.mrcomic-epub-cover-only{
-      padding:0 !important;max-width:none !important;margin:0 !important;
-      min-height:100vh;display:flex;align-items:center;justify-content:center;
-      text-align:center;background:transparent}
-    body.mrcomic-epub-cover-only .epub-inline-cover,
-    body.mrcomic-epub-cover-only figure[data-type="cover"],
-    body.mrcomic-epub-cover-only svg.cover-svg{width:100%;margin:0}
-    body.mrcomic-epub-cover-only img{
-      width:100%;max-width:none;height:auto;max-height:calc(100vh - 16px);
-      object-fit:contain;margin:0 auto}
-    body.mrcomic-epub-cover-title{
-      padding:12px 16px 36px;max-width:none !important;min-height:100vh;
-      display:flex;flex-direction:column;justify-content:flex-start;text-align:center}
-    body.mrcomic-epub-cover-title p,
-    body.mrcomic-epub-cover-title h1,
-    body.mrcomic-epub-cover-title h2,
-    body.mrcomic-epub-cover-title h3{text-align:center !important;text-indent:0 !important}
-    body.mrcomic-epub-cover-title .epub-inline-cover,
-    body.mrcomic-epub-cover-title figure[data-type="cover"],
-    body.mrcomic-epub-cover-title svg.cover-svg{
-      width:100%;flex:1;display:flex;align-items:center;justify-content:center;
-      margin:0 auto 0.9rem}
-    body.mrcomic-epub-cover-title .epub-inline-cover img,
-    body.mrcomic-epub-cover-title figure[data-type="cover"] img{
-      width:auto;max-width:100%;max-height:68vh;margin:0 auto 0.9rem}
-    body.mrcomic-epub-cover-title > *:not(.epub-inline-cover):not(figure[data-type="cover"]):not(svg.cover-svg){
-      width:min(28rem,100%);margin-left:auto;margin-right:auto}
-    body.mrcomic-epub-titlepage{
-      min-height:calc(100vh - 88px);display:flex;flex-direction:column;
-      justify-content:center;text-align:center;padding:12px 16px 36px}
-    body.mrcomic-epub-titlepage p,
-    body.mrcomic-epub-titlepage h1,
-    body.mrcomic-epub-titlepage h2,
-    body.mrcomic-epub-titlepage h3,
-    body.mrcomic-epub-titlepage .title p{
-      text-align:center !important;text-indent:0 !important}
     @media (prefers-color-scheme: dark) {
       body{color:#e8e8e8;background:#1a1a1a}
       h1,h2,h3,h4,h5,h6,.calibre5,.calibre12{color:#e8e8e8;background:#262626;border-color:#555}

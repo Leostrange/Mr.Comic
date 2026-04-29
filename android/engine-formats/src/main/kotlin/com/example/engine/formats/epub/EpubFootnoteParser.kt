@@ -3,6 +3,7 @@ package com.example.engine.formats.epub
 import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.w3c.dom.NodeList
+import org.jsoup.Jsoup
 import org.xml.sax.InputSource
 import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
@@ -187,7 +188,21 @@ internal object EpubFootnoteParser {
         }
         val document = builder.parse(InputSource(StringReader(rawHtml)))
         document.getElementsByTagName("body").item(0) as? Element
-    }.getOrNull()
+    }.getOrElse {
+        runCatching {
+            val document = Jsoup.parse(rawHtml)
+            val wrapped = document.body().outerHtml()
+            val fallbackFactory = DocumentBuilderFactory.newInstance().apply {
+                isNamespaceAware = false
+                isExpandEntityReferences = false
+            }
+            val fallbackBuilder = fallbackFactory.newDocumentBuilder().apply {
+                setEntityResolver { _, _ -> InputSource(StringReader("")) }
+            }
+            val xmlDocument = fallbackBuilder.parse(InputSource(StringReader(wrapped)))
+            xmlDocument.getElementsByTagName("body").item(0) as? Element
+        }.getOrNull()
+    }
 
     private fun hasNoteLikeAncestor(element: Element): Boolean {
         var current = element.parentNode
