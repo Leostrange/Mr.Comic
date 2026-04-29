@@ -69,7 +69,13 @@ fun ReaderBottomBar(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
-                if (isLandscape && !isTextBook) {
+                if (isTextBook) {
+                    ReaderPanelChip(
+                        selected = true,
+                        onClick = {},
+                        label = { Text(strings.readerPages) }
+                    )
+                } else if (isLandscape) {
                     ReaderPanelChip(
                         selected = true,
                         onClick = {},

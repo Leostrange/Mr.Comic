@@ -21,15 +21,11 @@ import com.example.core.data.repository.ComicRepository
 import com.example.core.data.repository.QuoteRepository
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
-import com.example.core.model.BookSearchHit
 import com.example.core.model.DictionaryEntry
 import com.example.core.model.ExplainRequest
 import com.example.core.model.ReadingMode
 import com.example.core.model.ReaderInfoSlot
 import com.example.core.model.ReaderImageScaleMode
-import com.example.core.model.ReaderLocator
-import com.example.core.model.ReaderPreferenceSnapshot
-import com.example.core.model.ReaderRendererKey
 import com.example.core.model.ReaderScreenTimeoutMode
 import com.example.core.model.ReaderTapZoneAction
 import com.example.core.model.ReaderTapZoneMode
@@ -70,7 +66,6 @@ import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.RenderDeviceTier
 import com.example.engine.formats.base.resolveRenderDeviceProfile
 import com.example.engine.formats.base.TocEntry
-import com.example.engine.epub.readium.ReadiumPublicationSessionAccess
 import com.example.engine.rendering.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -82,10 +77,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicReference
-import java.util.UUID
 import javax.inject.Inject
 
 enum class ReaderChromeState { HIDDEN, EXPANDED }
@@ -110,7 +102,6 @@ private const val DEFAULT_TEXT_ALIGNMENT = "justify"
 private const val DEFAULT_TEXT_BOLD = false
 private const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
 private const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
-private const val DEFAULT_HIGHLIGHT_COLOR_ARGB = 0x66FFEB3B
 
 private fun normalizeTapZoneActionName(value: String?): String {
     val action = ReaderTapZoneAction.fromStored(value)
@@ -120,11 +111,6 @@ private fun normalizeTapZoneActionName(value: String?): String {
         action.name
     }
 }
-
-data class ReaderHtmlPageContent(
-    val html: String,
-    val assetBasePath: String?
-)
 
 data class ReaderUiState(
     val comic: Comic? = null,
@@ -274,21 +260,7 @@ data class ReaderUiState(
     val chromeShowAudioIcon: Boolean = true,
     val chromeShowDirectionIcon: Boolean = true,
     val chromeShowTranslateIcon: Boolean = true,
-    val chromeShowBrightnessIcon: Boolean = true,
-    /** Renderer selected by newer engine migration code. Legacy stays default in this clone. */
-    val readerRendererKey: ReaderRendererKey = ReaderRendererKey.LEGACY_PAGED_BITMAP,
-    /** Optional location used by engine-backed EPUB sessions. Null for legacy readers. */
-    val sessionLocator: ReaderLocator? = null,
-    /** Locator map for bookmark-aware EPUB navigation. Empty keeps legacy page-index behavior. */
-    val bookmarkedLocators: Map<Int, ReaderLocator> = emptyMap(),
-    /** Saved EPUB highlights. Disabled by default while the migrated runtime is not wired. */
-    val savedHighlights: List<ReaderHighlightEntry> = emptyList(),
-    /** Search sheet state for migrated EPUB. Kept closed for legacy readers. */
-    val showSearchSheet: Boolean = false,
-    val searchQuery: String = "",
-    val searchResults: List<BookSearchHit> = emptyList(),
-    val isSearchLoading: Boolean = false,
-    val searchError: String? = null
+    val chromeShowBrightnessIcon: Boolean = true
 )
 
 data class SelectedTextTranslationState(
@@ -309,21 +281,7 @@ data class SelectedTextTranslationState(
 data class SelectedTextActionSheetState(
     val originalText: String,
     val canUseDictionary: Boolean,
-    val canExplain: Boolean,
-    val canHighlight: Boolean = false,
-    val locatorJson: String? = null
-)
-
-data class ReaderHighlightEntry(
-    val id: String,
-    val comicId: String,
-    val pageIndex: Int,
-    val text: String,
-    val note: String? = null,
-    val locatorJson: String,
-    val colorArgb: Int,
-    val createdAt: Long,
-    val updatedAt: Long = createdAt
+    val canExplain: Boolean
 )
 
 /** Data for the inline footnote popup shown when the user taps a footnote link. */
@@ -436,7 +394,6 @@ class ReaderViewModel @Inject constructor(
     private var eyeRestJob: Job? = null
     private var highQualityWarmupJob: Job? = null
     private var htmlPrewarmJob: Job? = null
-    private var htmlContinuousLoadJob: Job? = null
     private var progressSaveJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
     private var pendingProgressSave: PendingProgressSave? = null
@@ -457,8 +414,6 @@ class ReaderViewModel @Inject constructor(
     private val htmlPageCache = object : LinkedHashMap<Int, CachedHtmlPage>(12, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 10
     }
-    private val _htmlPageContents = MutableStateFlow<Map<Int, ReaderHtmlPageContent>>(emptyMap())
-    val htmlPageContents: StateFlow<Map<Int, ReaderHtmlPageContent>> = _htmlPageContents.asStateFlow()
 
     /**
      * The reading mode to restore when rotating back to portrait.
@@ -528,7 +483,6 @@ class ReaderViewModel @Inject constructor(
                     nextHtmlAssetBasePath = null,
                     tableOfContents = emptyList(),
                     bookmarkedPages = emptySet(),
-                    savedHighlights = emptyList(),
                     pageTranslationNote = null,
                     showTocSheet = false,
                     showTextSettings = false,
@@ -541,7 +495,6 @@ class ReaderViewModel @Inject constructor(
             eyeRestJob?.cancel()
             highQualityWarmupJob?.cancel()
             htmlPrewarmJob?.cancel()
-            htmlContinuousLoadJob?.cancel()
             if (!isOpenRequestCurrent(requestToken)) return
             lastRetainedHighQualityPages = emptySet()
             pagePreloader.clearPages()
@@ -641,8 +594,7 @@ class ReaderViewModel @Inject constructor(
                     nextHtmlContent = null,
                     nextHtmlAssetBasePath = null,
                     selectedTextActionSheet = null,
-                    selectedTextTranslation = null,
-                    savedHighlights = emptyList()
+                    selectedTextTranslation = null
                 )
             }
             val sessionStartedAtMillis = System.currentTimeMillis()
@@ -683,7 +635,6 @@ class ReaderViewModel @Inject constructor(
             scheduleHighQualityWarmup(startPage)
             scheduleDeferredTocWarmup()
             loadBookmarks(comic.id, pages)
-            loadHighlights(comic.id, pages)
             loadPageTranslationNote(comic.id, startPage)
             restartEyeRestTimer()
         } catch (e: CancellationException) {
@@ -769,76 +720,23 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun loadHtmlPageForContinuousReading(index: Int) {
-        val state = _uiState.value
+    fun preloadWebtoonWindow(pages: List<Int>) {
         val reader = formatReader ?: return
-        val comicId = state.comic?.id ?: return
-        val totalPages = state.totalPages
-        if (index !in 0 until totalPages) return
-        if (_htmlPageContents.value.containsKey(index)) return
-
-        viewModelScope.launch {
-            if (formatReader !== reader || _uiState.value.comic?.id != comicId) return@launch
-            runCatching {
-                getOrLoadHtmlPage(reader, index)
-            }.onFailure { error ->
-                Log.w("ReaderViewModel", "Failed to load continuous HTML page $index", error)
-            }
-        }
-    }
-
-    fun preloadAllHtmlPagesForContinuousReading() {
         val state = _uiState.value
-        val reader = formatReader ?: return
-        val comicId = state.comic?.id ?: return
-        val totalPages = state.totalPages
-        if (totalPages <= 0) return
-        if (_htmlPageContents.value.size >= totalPages) return
-        if (htmlContinuousLoadJob?.isActive == true) return
+        if (state.totalPages <= 0 || state.comic?.format?.isTextReadingFormat() == true) return
+        val validPages = pages
+            .asSequence()
+            .filter { it in 0 until state.totalPages }
+            .distinct()
+            .toList()
+        if (validPages.isEmpty()) return
 
-        val startPage = state.currentPage.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
-        val orderedPages = buildList {
-            add(startPage)
-            for (offset in 1 until totalPages) {
-                val next = startPage + offset
-                if (next < totalPages) add(next)
-                val previous = startPage - offset
-                if (previous >= 0) add(previous)
-            }
-        }.distinct()
-
-        htmlContinuousLoadJob = viewModelScope.launch {
-            val batchedPages = linkedMapOf<Int, ReaderHtmlPageContent>()
-            for (pageIndex in orderedPages) {
-                if (
-                    formatReader !== reader ||
-                    _uiState.value.comic?.id != comicId ||
-                    _uiState.value.readingMode != ReadingMode.WEBTOON
-                ) {
-                    return@launch
-                }
-                val cachedPage = getCachedHtmlPage(pageIndex)
-                if (cachedPage != null) {
-                    if (!_htmlPageContents.value.containsKey(pageIndex)) {
-                        batchedPages[pageIndex] = cachedPage.toReaderHtmlPageContent()
-                    }
-                    continue
-                }
-                runCatching {
-                    getOrLoadHtmlPage(reader, pageIndex, publishToState = false)
-                }.onFailure { error ->
-                    Log.w("ReaderViewModel", "Failed to preload continuous HTML page $pageIndex", error)
-                }.onSuccess { page ->
-                    if (page != null) {
-                        batchedPages[pageIndex] = page.toReaderHtmlPageContent()
-                    }
-                }
-            }
-            if (formatReader === reader && _uiState.value.comic?.id == comicId) {
-                publishHtmlPageContents(batchedPages)
-                refreshAdjacentHtmlPages(_uiState.value.currentPage)
-            }
-        }
+        pagePreloader.preloadAround(
+            reader = reader,
+            visiblePages = validPages,
+            totalPages = state.totalPages,
+            preloadAhead = state.preloadPages
+        )
     }
 
     fun navigateTo(
@@ -868,7 +766,7 @@ class ReaderViewModel @Inject constructor(
                 selectedTextTranslation = null
             )
         }
-        if (_uiState.value.pageSoundEnabled) {
+        if (_uiState.value.pageSoundEnabled && progressSource == ReaderNavigationProgressSource.READING) {
             PageSoundPlayer.play(
                 context = context,
                 style = PageSoundStyle.fromStored(_uiState.value.pageSoundStyle)
@@ -880,238 +778,6 @@ class ReaderViewModel @Inject constructor(
             persistProgress = true,
             progressSource = progressSource
         )
-    }
-
-    fun activeReadiumSessionAccess(): ReadiumPublicationSessionAccess? = null
-
-    fun activeReadiumSessionId(): String? = null
-
-    fun buildCurrentReaderPreferenceSnapshot(): ReaderPreferenceSnapshot {
-        val state = _uiState.value
-        return ReaderPreferenceSnapshot(
-            fontScale = state.textFontSize.toDouble() / DEFAULT_TEXT_FONT_SIZE.toDouble(),
-            lineHeight = state.textLineHeight.toDouble(),
-            paragraphSpacing = state.textParagraphSpacing.toDouble(),
-            letterSpacing = state.textLetterSpacing.toDouble(),
-            wordSpacing = state.textWordSpacing.toDouble(),
-            fontFamily = state.textFontFamily,
-            themePreset = state.textColorScheme,
-            textAlignment = state.textAlignment,
-            scrolling = state.readingMode == ReadingMode.WEBTOON
-        )
-    }
-
-    fun onReadiumLocatorChanged(locator: ReaderLocator) {
-        _uiState.update { it.copy(sessionLocator = locator) }
-    }
-
-    fun showReadiumSelectedTextActions(selectedText: String, locatorJson: String) {
-        val normalizedText = selectedText
-            .trim()
-            .replace(Regex("\\s+"), " ")
-        if (normalizedText.isBlank()) return
-        _uiState.update {
-            it.copy(
-                selectedTextActionSheet = SelectedTextActionSheetState(
-                    originalText = normalizedText,
-                    canUseDictionary = normalizedText.countSelectionTokens() == 1,
-                    canExplain = true,
-                    canHighlight = locatorJson.isNotBlank(),
-                    locatorJson = locatorJson.takeIf { value -> value.isNotBlank() }
-                ),
-                selectedTextTranslation = null
-            )
-        }
-    }
-
-    fun toggleSearchSheet() {
-        _uiState.update {
-            val nextVisible = !it.showSearchSheet
-            it.copy(
-                showSearchSheet = nextVisible,
-                searchQuery = if (nextVisible) it.searchQuery else "",
-                searchResults = if (nextVisible) it.searchResults else emptyList(),
-                isSearchLoading = false,
-                searchError = null
-            )
-        }
-    }
-
-    fun updateSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query, searchError = null) }
-    }
-
-    fun submitSearch(query: String = _uiState.value.searchQuery) {
-        _uiState.update {
-            it.copy(
-                searchQuery = query,
-                isSearchLoading = false,
-                searchResults = emptyList(),
-                searchError = null
-            )
-        }
-    }
-
-    fun navigateToSearchHit(hit: BookSearchHit) {
-        val targetPage = hit.locator.pageIndex ?: hit.locator.position
-        if (targetPage != null) {
-            navigateTo(targetPage, progressSource = ReaderNavigationProgressSource.JUMP)
-        }
-        _uiState.update { it.copy(showSearchSheet = false) }
-    }
-
-    fun navigateToTocEntry(entry: TocEntry) {
-        navigateTo(entry.pageIndex, progressSource = ReaderNavigationProgressSource.JUMP)
-    }
-
-    fun removeHighlight(id: String) {
-        val state = _uiState.value
-        val comicId = state.comic?.id ?: return
-        val updated = state.savedHighlights.filterNot { it.id == id }
-        if (updated.size == state.savedHighlights.size) return
-        _uiState.update { current ->
-            if (current.comic?.id == comicId) {
-                current.copy(savedHighlights = updated)
-            } else {
-                current
-            }
-        }
-        saveHighlightsForComic(comicId, updated)
-    }
-
-    fun updateHighlightNote(id: String, note: String) {
-        val state = _uiState.value
-        val comicId = state.comic?.id ?: return
-        val now = System.currentTimeMillis()
-        val normalizedNote = note.trim().takeIf { it.isNotBlank() }
-        val updated = state.savedHighlights.map { highlight ->
-            if (highlight.id == id) {
-                highlight.copy(note = normalizedNote, updatedAt = now)
-            } else {
-                highlight
-            }
-        }
-        if (updated == state.savedHighlights) return
-        _uiState.update { current ->
-            if (current.comic?.id == comicId) {
-                current.copy(savedHighlights = updated)
-            } else {
-                current
-            }
-        }
-        saveHighlightsForComic(comicId, updated)
-    }
-
-    fun saveHighlightFromSelectedTextActions() {
-        val state = _uiState.value
-        val comicId = state.comic?.id ?: run {
-            dismissSelectedTextActions()
-            return
-        }
-        val selectedText = state.selectedTextActionSheet ?: return
-        val locatorJson = selectedText.locatorJson?.takeIf { it.isNotBlank() } ?: run {
-            dismissSelectedTextActions()
-            return
-        }
-        val now = System.currentTimeMillis()
-        val highlight = ReaderHighlightEntry(
-            id = UUID.randomUUID().toString(),
-            comicId = comicId,
-            pageIndex = state.currentPage.coerceIn(0, (state.totalPages - 1).coerceAtLeast(0)),
-            text = selectedText.originalText,
-            locatorJson = locatorJson,
-            colorArgb = DEFAULT_HIGHLIGHT_COLOR_ARGB,
-            createdAt = now
-        )
-        val updated = (state.savedHighlights + highlight)
-            .distinctBy { "${it.locatorJson}|${it.text}" }
-            .sortedWith(compareBy<ReaderHighlightEntry> { it.pageIndex }.thenBy { it.createdAt })
-        _uiState.update { current ->
-            if (current.comic?.id == comicId) {
-                current.copy(
-                    savedHighlights = updated,
-                    selectedTextActionSheet = null
-                )
-            } else {
-                current
-            }
-        }
-        saveHighlightsForComic(comicId, updated)
-    }
-
-    private fun loadHighlights(comicId: String, totalPages: Int) {
-        viewModelScope.launch {
-            val raw = readerPreferences.get(PreferencesKeys.highlights(comicId), "").first()
-            val maxPage = (totalPages - 1).coerceAtLeast(0)
-            val highlights = parseHighlights(raw)
-                .filter { highlight ->
-                    highlight.comicId == comicId &&
-                        highlight.pageIndex in 0..maxPage &&
-                        highlight.text.isNotBlank() &&
-                        highlight.locatorJson.isNotBlank()
-                }
-                .distinctBy { "${it.locatorJson}|${it.text}" }
-                .sortedWith(compareBy<ReaderHighlightEntry> { it.pageIndex }.thenBy { it.createdAt })
-            if (_uiState.value.comic?.id != comicId) return@launch
-            _uiState.update { it.copy(savedHighlights = highlights) }
-            if (raw.isNotBlank() && serializeHighlights(highlights) != raw) {
-                saveHighlightsForComic(comicId, highlights)
-            }
-        }
-    }
-
-    private fun saveHighlightsForComic(comicId: String, highlights: List<ReaderHighlightEntry>) {
-        val raw = serializeHighlights(highlights)
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.highlights(comicId), raw) }
-    }
-
-    private fun parseHighlights(raw: String): List<ReaderHighlightEntry> {
-        if (raw.isBlank()) return emptyList()
-        return runCatching {
-            val array = JSONArray(raw)
-            buildList {
-                for (index in 0 until array.length()) {
-                    val item = array.optJSONObject(index) ?: continue
-                    val entryComicId = item.optString("comicId").takeIf { it.isNotBlank() } ?: continue
-                    val text = item.optString("text").trim().takeIf { it.isNotBlank() } ?: continue
-                    val locatorJson = item.optString("locatorJson").trim().takeIf { it.isNotBlank() } ?: continue
-                    val createdAt = item.optLong("createdAt", System.currentTimeMillis())
-                    add(
-                        ReaderHighlightEntry(
-                            id = item.optString("id").takeIf { it.isNotBlank() }
-                                ?: UUID.randomUUID().toString(),
-                            comicId = entryComicId,
-                            pageIndex = item.optInt("pageIndex", 0).coerceAtLeast(0),
-                            text = text,
-                            note = item.optString("note").trim().takeIf { it.isNotBlank() },
-                            locatorJson = locatorJson,
-                            colorArgb = item.optInt("colorArgb", DEFAULT_HIGHLIGHT_COLOR_ARGB),
-                            createdAt = createdAt,
-                            updatedAt = item.optLong("updatedAt", createdAt)
-                        )
-                    )
-                }
-            }
-        }.getOrDefault(emptyList())
-    }
-
-    private fun serializeHighlights(highlights: List<ReaderHighlightEntry>): String {
-        val array = JSONArray()
-        highlights.forEach { highlight ->
-            array.put(
-                JSONObject()
-                    .put("id", highlight.id)
-                    .put("comicId", highlight.comicId)
-                    .put("pageIndex", highlight.pageIndex)
-                    .put("text", highlight.text)
-                    .put("note", highlight.note ?: JSONObject.NULL)
-                    .put("locatorJson", highlight.locatorJson)
-                    .put("colorArgb", highlight.colorArgb)
-                    .put("createdAt", highlight.createdAt)
-                    .put("updatedAt", highlight.updatedAt)
-            )
-        }
-        return array.toString()
     }
 
     fun setHighQualityFocusPages(indices: Set<Int>?) {
@@ -2008,26 +1674,7 @@ class ReaderViewModel @Inject constructor(
         val filePart = if (hashIdx >= 0) cleanHref.substring(0, hashIdx) else cleanHref
         val fragPart = if (hashIdx >= 0) cleanHref.substring(hashIdx + 1) else cleanHref
 
-        val anchorId = fragPart.ifBlank { cleanHref }
-        formatReader?.getFootnoteText(anchorId)
-            ?.takeIf { it.isNotBlank() }
-            ?.let { text ->
-                val plain = text.replace(Regex("<[^>]+>"), "")
-                    .replace("\u00AD", "")
-                    .replace(Regex("""^\d+[\s\u00A0]+"""), "")
-                    .trim()
-                if (plain.isNotBlank()) {
-                    _uiState.update {
-                        it.copy(
-                            footnotePopup = FootnotePopup(plain),
-                            footnotePresentation = FootnotePresentation.PEEK
-                        )
-                    }
-                    return
-                }
-            }
-
-        // Fall back to page navigation for cross-file links and internal document anchors.
+        // 1. Try page navigation for cross-file links and internal document anchors.
         // For bare "#fragment" links inside the current page we avoid reloading the same
         // page so the WebView can keep its native in-page scroll behaviour.
         if ((filePart.isNotBlank() && filePart.contains('.')) || cleanHref.startsWith("#")) {
@@ -2036,7 +1683,24 @@ class ReaderViewModel @Inject constructor(
                 if (pageIdx != _uiState.value.currentPage) {
                     navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
                 }
+                return
             }
+        }
+
+        // 2. Fall back to footnote popup using the fragment (or the whole href for bare ids)
+        val anchorId = fragPart.ifBlank { cleanHref }
+        val text = formatReader?.getFootnoteText(anchorId) ?: return
+        if (text.isBlank()) return
+        // Strip HTML tags, soft hyphens, and leading note-number prefix (e.g. "2 ")
+        val plain = text.replace(Regex("<[^>]+>"), "")
+            .replace("\u00AD", "")               // soft hyphens → invisible
+            .replace(Regex("""^\d+[\s\u00A0]+"""), "") // strip leading "2 " or "12 "
+            .trim()
+        _uiState.update {
+            it.copy(
+                footnotePopup = FootnotePopup(plain),
+                footnotePresentation = FootnotePresentation.PEEK
+            )
         }
     }
 
@@ -2597,10 +2261,6 @@ class ReaderViewModel @Inject constructor(
         if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
             return
         }
-        if (mode != ReadingMode.WEBTOON) {
-            htmlContinuousLoadJob?.cancel()
-            htmlContinuousLoadJob = null
-        }
         _uiState.update { state ->
             state.copy(
                 readingMode = mode,
@@ -3127,10 +2787,12 @@ class ReaderViewModel @Inject constructor(
         }
         if (activeComicSupportsBitmapPreload()) {
             applyHighQualityRetention(visiblePages.toSet())
-            formatReader?.let { reader ->
-                pagePreloader.preloadAround(reader, visiblePages, _uiState.value.totalPages, _uiState.value.preloadPages)
+            if (mode != ReadingMode.WEBTOON) {
+                formatReader?.let { reader ->
+                    pagePreloader.preloadAround(reader, visiblePages, _uiState.value.totalPages, _uiState.value.preloadPages)
+                }
+                scheduleHighQualityWarmup(page)
             }
-            scheduleHighQualityWarmup(page)
         } else {
             applyHighQualityRetention(emptySet())
             prewarmHtmlPagesAround(page)
@@ -3183,15 +2845,7 @@ class ReaderViewModel @Inject constructor(
     private fun effectiveOpeningModeFor(format: ComicFormat): ReadingMode {
         val state = _uiState.value
         return when {
-            format.isTextReadingFormat() ->
-                if (
-                    state.readingMode == ReadingMode.WEBTOON ||
-                    portraitReadingMode == ReadingMode.WEBTOON
-                ) {
-                    ReadingMode.WEBTOON
-                } else {
-                    portraitPagedReadingMode
-                }
+            format.isTextReadingFormat() -> portraitPagedReadingMode
             state.isLandscape &&
                 state.landscapeSpreadEnabled &&
                 supportsAutomaticLandscapeSpread(portraitReadingMode) &&
@@ -3228,7 +2882,6 @@ class ReaderViewModel @Inject constructor(
         synchronized(htmlPageCache) {
             htmlPageCache.clear()
         }
-        _htmlPageContents.value = emptyMap()
     }
 
     private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
@@ -3251,49 +2904,20 @@ class ReaderViewModel @Inject constructor(
     private fun getCachedHtmlPage(index: Int): CachedHtmlPage? =
         synchronized(htmlPageCache) { htmlPageCache[index] }
 
-    private fun publishHtmlPageContents(entries: Map<Int, ReaderHtmlPageContent>) {
-        if (entries.isEmpty()) return
-        _htmlPageContents.update { current ->
-            current + entries
-        }
-    }
-
-    private fun storeCachedHtmlPage(index: Int, page: CachedHtmlPage, publishToState: Boolean = true) {
+    private fun storeCachedHtmlPage(index: Int, page: CachedHtmlPage) {
         synchronized(htmlPageCache) {
             htmlPageCache[index] = page
         }
-        if (publishToState) {
-            publishHtmlPageContents(
-                mapOf(index to page.toReaderHtmlPageContent())
-            )
-        }
     }
 
-    private fun CachedHtmlPage.toReaderHtmlPageContent(): ReaderHtmlPageContent =
-        ReaderHtmlPageContent(
-            html = html,
-            assetBasePath = assetBasePath
-        )
-
-    private suspend fun getOrLoadHtmlPage(
-        reader: FormatReader,
-        index: Int,
-        publishToState: Boolean = true
-    ): CachedHtmlPage? {
-        getCachedHtmlPage(index)?.let { cached ->
-            if (publishToState && !_htmlPageContents.value.containsKey(index)) {
-                publishHtmlPageContents(
-                    mapOf(index to cached.toReaderHtmlPageContent())
-                )
-            }
-            return cached
-        }
+    private suspend fun getOrLoadHtmlPage(reader: FormatReader, index: Int): CachedHtmlPage? {
+        getCachedHtmlPage(index)?.let { return it }
         val html = withContext(Dispatchers.IO) { reader.getHtmlPage(index) } ?: return null
         val cached = CachedHtmlPage(
             html = html,
             assetBasePath = reader.htmlAssetBasePath(index)
         )
-        storeCachedHtmlPage(index, cached, publishToState = publishToState)
+        storeCachedHtmlPage(index, cached)
         return cached
     }
 
@@ -3447,7 +3071,6 @@ class ReaderViewModel @Inject constructor(
         eyeRestJob?.cancel()
         highQualityWarmupJob?.cancel()
         htmlPrewarmJob?.cancel()
-        htmlContinuousLoadJob?.cancel()
         progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
         formatReader?.close()

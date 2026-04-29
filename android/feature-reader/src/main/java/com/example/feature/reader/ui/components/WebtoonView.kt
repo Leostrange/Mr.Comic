@@ -24,9 +24,11 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.core.model.ReaderImageScaleMode
 import com.example.core.ui.eink.LocalEInkMode
+import com.example.feature.reader.ui.ReaderNavigationProgressSource
 import com.example.feature.reader.ui.ReaderUiState
 import com.example.feature.reader.ui.ReaderViewModel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlin.math.max
 
 /** Zero-velocity fling behavior: drag scrolling only, no momentum after release. */
@@ -56,22 +58,44 @@ fun WebtoonView(
         )
     }
 
+    val webtoonPreloadBehind = 1
+    val webtoonPreloadAhead = 2
+
     // User scrolled the list → update the ViewModel's current page.
     // snapshotFlow + distinctUntilChanged prevents re-entrancy: the emission
     // only fires when firstVisibleItemIndex *actually* changes, and navigateTo()
     // updating uiState.currentPage does NOT scroll the list here (that's the
     // second effect below), so there is no feedback loop.
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, uiState.comic?.id) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { index -> viewModel.navigateTo(index) }
+            .collect { index -> viewModel.navigateTo(index, ReaderNavigationProgressSource.JUMP) }
     }
 
     // External page change (e.g. bottom bar slider) → scroll the list.
-    LaunchedEffect(uiState.currentPage) {
+    LaunchedEffect(uiState.comic?.id, uiState.currentPage) {
         if (listState.firstVisibleItemIndex != uiState.currentPage) {
             listState.scrollToItem(uiState.currentPage)
         }
+    }
+
+    LaunchedEffect(listState, uiState.comic?.id, uiState.totalPages) {
+        snapshotFlow {
+            val visible = listState.layoutInfo.visibleItemsInfo.map { it.index }
+            val first = visible.minOrNull() ?: listState.firstVisibleItemIndex
+            val last = visible.maxOrNull() ?: first
+            first to last
+        }
+            .distinctUntilChanged()
+            .map { (first, last) ->
+                val start = (first - webtoonPreloadBehind).coerceAtLeast(0)
+                val end = (last + webtoonPreloadAhead).coerceAtMost(uiState.totalPages - 1)
+                if (uiState.totalPages <= 0 || start > end) emptyList() else (start..end).toList()
+            }
+            .distinctUntilChanged()
+            .collect { pages ->
+                viewModel.preloadWebtoonWindow(pages)
+            }
     }
 
     LazyColumn(
@@ -86,8 +110,8 @@ fun WebtoonView(
         items(uiState.totalPages) { pageIndex ->
             // Collect from StateFlow — no polling, immediate update when bitmap is ready
             val bitmap by viewModel.getPageFlow(pageIndex).collectAsState(initial = viewModel.getPage(pageIndex))
-            LaunchedEffect(pageIndex) {
-                if (viewModel.getPage(pageIndex) == null) viewModel.loadPage(pageIndex)
+            LaunchedEffect(uiState.comic?.id, pageIndex) {
+                viewModel.loadPage(pageIndex)
             }
             Box(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
@@ -160,10 +184,8 @@ private fun ZoomableFillWidthImage(
                     containerWidthPx to h
                 }
                 ReaderImageScaleMode.FIT_HEIGHT -> {
-                    val heightScale = containerHeightPx / sourceHeightPx.coerceAtLeast(1f)
-                    val widthScale = containerWidthPx / sourceWidthPx.coerceAtLeast(1f)
-                    val scale = minOf(heightScale, widthScale)
-                    (sourceWidthPx * scale) to (sourceHeightPx * scale)
+                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
+                    w to containerHeightPx
                 }
                 ReaderImageScaleMode.REAL_SIZE -> {
                     sourceWidthPx to sourceHeightPx

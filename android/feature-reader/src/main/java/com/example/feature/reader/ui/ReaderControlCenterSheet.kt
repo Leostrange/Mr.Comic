@@ -167,7 +167,7 @@ internal fun ReaderControlCenterSheet(
         mutableStateOf(
             when {
                 openAtServicesTab -> ReaderControlTab.SERVICES
-                isTextReader -> ReaderControlTab.READING
+                isTextReader -> ReaderControlTab.STYLE
                 else -> ReaderControlTab.READING
             }
         )
