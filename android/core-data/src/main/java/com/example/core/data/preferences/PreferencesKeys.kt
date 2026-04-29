@@ -97,6 +97,8 @@ object PreferencesKeys {
     val TRANSLATION_TARGET_LANGUAGE = stringPreferencesKey("translation_target_language") // APP/RU/EN/JA/ZH/KO/FR/IT/PL/TR/PT
     val TRANSLATION_TRANSPORT     = stringPreferencesKey("translation_transport") // AUTO/OFFLINE/ONLINE
     val TRANSLATION_EXPLAIN_ENABLED = booleanPreferencesKey("translation_explain_enabled")
+    val TRANSLATION_OPENROUTER_API_KEY = stringPreferencesKey("translation_openrouter_api_key")
+    val TRANSLATION_OPENROUTER_MODEL = stringPreferencesKey("translation_openrouter_model")
     val OCR_LANGUAGE              = stringPreferencesKey("ocr_language")       // JA/ZH/EN/KO/FR/IT/PL/TR/PT
     val OCR_DIALOGUES_ONLY        = booleanPreferencesKey("ocr_dialogues_only")
     val OCR_INCLUDE_SFX           = booleanPreferencesKey("ocr_include_sfx")

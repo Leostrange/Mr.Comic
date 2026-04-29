@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -2476,7 +2477,18 @@ private fun aiProvidersValue(
     return when (resolveSettingsProvidersStatusKind(uiState)) {
         SettingsProvidersStatusKind.NOT_CONFIGURED -> text.notConnectedValue
         SettingsProvidersStatusKind.READY,
-        SettingsProvidersStatusKind.NEEDS_NETWORK -> text.configuredValue
+        SettingsProvidersStatusKind.NEEDS_NETWORK -> configuredOnlineProviderLabel(uiState, language)
+    }
+}
+
+private fun configuredOnlineProviderLabel(
+    uiState: SettingsUiState,
+    language: String
+): String {
+    return if (uiState.openRouterApiKey.isBlank()) {
+        aiServicesOverviewText(language).configuredValue
+    } else {
+        "OpenRouter"
     }
 }
 
@@ -3814,6 +3826,7 @@ fun SettingsScreen(
                 SettingsSection.AI_SERVICES -> AiServicesSection(
                     uiState = uiState,
                     strings = strings,
+                    viewModel = viewModel,
                     modifier = Modifier.padding(padding)
                 )
                 SettingsSection.READ_ALOUD -> ReadAloudSection(
@@ -9562,9 +9575,9 @@ private fun OcrLanguageCard(
 private fun AiServicesSection(
     uiState: SettingsUiState,
     strings: AppStrings,
+    viewModel: SettingsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val sectionText = remember(strings.languageCode) { aiServicesSectionText(strings.languageCode) }
     val overviewText = remember(strings.languageCode) { aiServicesOverviewText(strings.languageCode) }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -9588,6 +9601,13 @@ private fun AiServicesSection(
         }
         item {
             AiServiceProvidersOverviewCard(uiState = uiState, strings = strings, overviewText = overviewText)
+        }
+        item {
+            OpenRouterProviderCard(
+                uiState = uiState,
+                language = strings.languageCode,
+                viewModel = viewModel
+            )
         }
         item { Spacer(Modifier.height(16.dp)) }
     }
@@ -9701,7 +9721,120 @@ private fun AiServiceProvidersOverviewCard(
         Spacer(Modifier.height(8.dp))
         LabelText("${overviewText.providerLabel}: ${aiProvidersValue(uiState, strings.languageCode)}")
         LabelText("${overviewText.statusLabel}: ${aiProvidersStatus(uiState, strings.languageCode)}")
+        if (uiState.openRouterModel.isNotBlank()) {
+            LabelText("${openRouterModelLabel(strings.languageCode)}: ${uiState.openRouterModel}")
+        }
     }
+}
+
+@Composable
+private fun OpenRouterProviderCard(
+    uiState: SettingsUiState,
+    language: String,
+    viewModel: SettingsViewModel
+) {
+    var apiKeyDraft by rememberSaveable(uiState.openRouterApiKey) { mutableStateOf(uiState.openRouterApiKey) }
+    var modelDraft by rememberSaveable(uiState.openRouterModel) { mutableStateOf(uiState.openRouterModel) }
+    val status = when {
+        uiState.openRouterApiKey.isBlank() -> openRouterDisconnectedStatus(language)
+        uiState.translationAvailability.networkAvailable -> openRouterConnectedStatus(language)
+        else -> openRouterNeedsNetworkStatus(language)
+    }
+
+    SettingsCard(title = "OpenRouter") {
+        Text(
+            text = openRouterCardHint(language),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = apiKeyDraft,
+            onValueChange = { apiKeyDraft = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(openRouterApiKeyLabel(language)) },
+            placeholder = { Text("sk-or-v1-...") },
+            visualTransformation = PasswordVisualTransformation()
+        )
+        Spacer(Modifier.height(10.dp))
+        OutlinedTextField(
+            value = modelDraft,
+            onValueChange = { modelDraft = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text(openRouterModelLabel(language)) },
+            placeholder = { Text("openrouter/auto") }
+        )
+        Spacer(Modifier.height(10.dp))
+        LabelText("${openRouterStatusLabel(language)}: $status")
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = {
+                    viewModel.setOpenRouterApiKey(apiKeyDraft)
+                    viewModel.setOpenRouterModel(modelDraft)
+                }
+            ) {
+                Text(openRouterSaveLabel(language))
+            }
+            OutlinedButton(
+                onClick = {
+                    apiKeyDraft = ""
+                    modelDraft = "openrouter/auto"
+                    viewModel.setOpenRouterApiKey("")
+                    viewModel.setOpenRouterModel("openrouter/auto")
+                }
+            ) {
+                Text(openRouterClearLabel(language))
+            }
+        }
+    }
+}
+
+private fun openRouterCardHint(language: String): String = when (language) {
+    "ru" -> "Ключ и модель для онлайн-перевода через OpenRouter. Ключ хранится локально в настройках приложения."
+    else -> "API key and model for online translation through OpenRouter. The key is stored locally in app settings."
+}
+
+private fun openRouterApiKeyLabel(language: String): String = when (language) {
+    "ru" -> "API ключ"
+    else -> "API key"
+}
+
+private fun openRouterModelLabel(language: String): String = when (language) {
+    "ru" -> "Модель"
+    else -> "Model"
+}
+
+private fun openRouterStatusLabel(language: String): String = when (language) {
+    "ru" -> "Статус"
+    else -> "Status"
+}
+
+private fun openRouterSaveLabel(language: String): String = when (language) {
+    "ru" -> "Сохранить"
+    else -> "Save"
+}
+
+private fun openRouterClearLabel(language: String): String = when (language) {
+    "ru" -> "Очистить"
+    else -> "Clear"
+}
+
+private fun openRouterConnectedStatus(language: String): String = when (language) {
+    "ru" -> "Подключён"
+    else -> "Connected"
+}
+
+private fun openRouterNeedsNetworkStatus(language: String): String = when (language) {
+    "ru" -> "Ключ сохранён, нужна сеть"
+    else -> "Configured, network required"
+}
+
+private fun openRouterDisconnectedStatus(language: String): String = when (language) {
+    "ru" -> "Не настроен"
+    else -> "Not configured"
 }
 
 @Composable
