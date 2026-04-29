@@ -512,6 +512,8 @@ data class SettingsUiState(
     val readerStylePresetEntries: List<ReaderStylePresetEntry> = emptyList(),
     // Перевод
     val translationConfig: TranslationServiceConfig = TranslationServiceConfig(),
+    val openRouterApiKey: String = "",
+    val openRouterModel: String = "openrouter/auto",
     val translationAvailability: TranslationAvailabilitySnapshot = TranslationAvailabilitySnapshot(),
     val translationAvailabilityPairKnown: Boolean = false,
     val ocrLanguage: String = "JA",
@@ -1252,6 +1254,14 @@ class SettingsViewModel @Inject constructor(
         state.copy(
             readerTtsConfig = tts
         )
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_OPENROUTER_API_KEY, "")
+    ) { state: SettingsUiState, openRouterApiKey: String ->
+        state.copy(openRouterApiKey = openRouterApiKey)
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_OPENROUTER_MODEL, "openrouter/auto")
+    ) { state: SettingsUiState, openRouterModel: String ->
+        state.copy(openRouterModel = openRouterModel.ifBlank { "openrouter/auto" })
     }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state: SettingsUiState, showCoverTitles: Boolean ->
         state.copy(libraryShowCoverTitles = showCoverTitles)
     }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)) { state: SettingsUiState, showStatusChips: Boolean ->
@@ -2210,6 +2220,21 @@ class SettingsViewModel @Inject constructor(
 
     fun setTranslationExplainEnabled(enabled: Boolean) {
         viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, enabled) }
+    }
+
+    fun setOpenRouterApiKey(value: String) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.TRANSLATION_OPENROUTER_API_KEY, value.trim())
+        }
+    }
+
+    fun setOpenRouterModel(value: String) {
+        viewModelScope.launch {
+            preferences.set(
+                PreferencesKeys.TRANSLATION_OPENROUTER_MODEL,
+                value.trim().ifBlank { "openrouter/auto" }
+            )
+        }
     }
 
     fun setOcrLanguage(lang: String) {

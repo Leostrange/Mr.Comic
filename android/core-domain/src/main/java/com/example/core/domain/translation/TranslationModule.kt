@@ -24,8 +24,4 @@ abstract class TranslationModule {
         impl: SafeLlmExplainEngine
     ): LlmExplainEngine
 
-    @Binds
-    abstract fun bindOnlineTranslationEngine(
-        impl: SafeOnlineTranslationEngine
-    ): OnlineTranslationEngine
 }
