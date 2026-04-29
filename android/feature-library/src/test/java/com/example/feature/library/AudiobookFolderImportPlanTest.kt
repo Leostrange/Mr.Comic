@@ -8,7 +8,7 @@ import org.junit.Test
 class AudiobookFolderImportPlanTest {
 
     @Test
-    fun mixedFolderKeepsRootAudiobookWhenFolderGroupingIsEnabled() {
+    fun mixedFolderImportsDirectAudioFileSeparatelyWhenFolderContainsOtherMedia() {
         val root = AudiobookImportNode(
             name = "Library",
             uri = "content://tree/library",
@@ -32,8 +32,8 @@ class AudiobookFolderImportPlanTest {
         val imports = planAudiobookImports(root)
 
         assertEquals(1, imports.size)
-        assertEquals("Library", imports.first().title)
-        assertTrue(imports.first().sourceIsFolder)
+        assertEquals("story", imports.first().title)
+        assertFalse(imports.first().sourceIsFolder)
         assertEquals(1, imports.first().chapters.size)
         assertEquals("content://tree/library/document/story.mp3", imports.first().chapters.first().uri)
     }
@@ -112,7 +112,7 @@ class AudiobookFolderImportPlanTest {
     }
 
     @Test
-    fun mixedLibraryTreeKeepsParentBooksFolderAndSplitsAudiobookFolderFromStandaloneFile() {
+    fun mixedLibraryTreeSplitsStandaloneFileAndNestedAudiobookFolder() {
         val root = AudiobookImportNode(
             name = "Library",
             uri = "content://tree/library",
@@ -161,8 +161,8 @@ class AudiobookFolderImportPlanTest {
         val imports = planAudiobookImports(root)
 
         assertEquals(2, imports.size)
-        assertEquals("Library", imports.first().title)
-        assertTrue(imports.first().sourceIsFolder)
+        assertEquals("Single Track", imports.first().title)
+        assertFalse(imports.first().sourceIsFolder)
         assertEquals(1, imports.first().chapters.size)
         assertEquals("Audiobook Folder", imports.last().title)
         assertTrue(imports.last().sourceIsFolder)

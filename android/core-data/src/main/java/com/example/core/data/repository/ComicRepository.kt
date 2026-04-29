@@ -196,15 +196,14 @@ class ComicRepository @Inject constructor(
     suspend fun addComicsFromDirectory(treeUri: Uri) = withContext(Dispatchers.IO) {
         val root = DocumentFile.fromTreeUri(context, treeUri) ?: return@withContext
         val treeUriString = treeUri.toString()
-        val rootFolderName = root.name?.trim()?.ifBlank { "Imported" } ?: "Imported"
 
         // Pre-load existing paths from Room for fast in-scan dedup
         val existingPaths = comicDao.getAllPaths().toHashSet()
 
         val discovered = mutableListOf<Comic>()
         val now = System.currentTimeMillis()
-        val stack = ArrayDeque<Pair<DocumentFile, String>>()
-        stack.add(root to rootFolderName)
+        val stack = ArrayDeque<Pair<DocumentFile, String?>>()
+        stack.add(root to null)
 
         while (stack.isNotEmpty()) {
             val (dir, folderPath) = stack.removeLast()
@@ -219,7 +218,10 @@ class ComicRepository @Inject constructor(
                 when {
                     child.isDirectory -> {
                         val childName = child.name?.trim()?.ifBlank { "Folder" } ?: "Folder"
-                        stack.add(child to "$folderPath/$childName")
+                        val childFolderPath = folderPath
+                            ?.let { "$it/$childName" }
+                            ?: childName
+                        stack.add(child to childFolderPath)
                     }
                     child.isFile -> {
                         val format = detectFormat(child.uri, child.name, child.type)
