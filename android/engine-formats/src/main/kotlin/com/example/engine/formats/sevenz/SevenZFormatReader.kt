@@ -5,16 +5,30 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import com.example.core.data.db.EpubManifestCacheDao
+import com.example.core.data.db.EpubStructureCacheDao
+import com.example.core.model.ComicFormat
 import com.example.engine.formats.base.BitmapAllocator
-import com.example.engine.formats.base.decodeBitmapFromByteArray
 import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.base.FormatReaderWebResource
 import com.example.engine.formats.base.RenderDeviceProfile
+import com.example.engine.formats.base.TocEntry
+import com.example.engine.formats.base.decodeBitmapFromByteArray
+import com.example.engine.formats.archive.ArchiveContentKind
+import com.example.engine.formats.archive.ArchiveFormatSupport
+import com.example.engine.formats.epub.EpubFormatReader
+import com.example.engine.formats.text.HtmlFormatReader
+import com.example.engine.formats.text.MarkdownFormatReader
+import com.example.engine.formats.text.MobiFormatReader
+import com.example.engine.formats.text.PlainTextFormatReader
+import com.example.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.sevenz.SevenZArchiveEntry
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.Locale
 
 /**
  * Reader for 7-Zip (.7z / .cb7) archives.
@@ -27,24 +41,27 @@ class SevenZFormatReader(
     private val context: Context,
     private val path: String,
     private val deviceProfile: RenderDeviceProfile,
-    private val bitmapAllocator: BitmapAllocator
+    private val bitmapAllocator: BitmapAllocator,
+    private val epubStructureCacheDao: EpubStructureCacheDao? = null,
+    private val epubManifestCacheDao: EpubManifestCacheDao? = null
 ) : FormatReader {
 
     companion object {
         private const val TAG = "SevenZFormatReader"
-        private val IMAGE_EXTS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
     }
 
     private val lock = Any()
     private var szFile: SevenZFile? = null
     private var tempFile: File? = null
+    private var tempTextFile: File? = null
+    private val textDelegate: FormatReader? by lazy { createTextDelegateIfPresent() }
 
     // Sorted list of image entries — built once via getEntries() (no sequential scan needed)
     private val imageEntries: List<SevenZArchiveEntry> by lazy {
         try {
             val candidates = openSevenZFile()?.entries?.toList()
                 ?.filter { !it.isDirectory }
-                ?.sortedBy { it.name }
+                ?.sortedWith(compareBy(ArchiveFormatSupport.naturalPathComparator) { it.name.orEmpty() })
                 ?: emptyList()
 
             val byExtension = candidates.filter { isImage(it.name ?: "") }
@@ -60,11 +77,14 @@ class SevenZFormatReader(
         }
     }
 
-    override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) { imageEntries.size }
+    override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
+        textDelegate?.getPageCount() ?: imageEntries.size
+    }
 
     override suspend fun getPage(index: Int): Bitmap? = getPage(index, 1)
 
     override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? = withContext(Dispatchers.IO) {
+        textDelegate?.let { return@withContext it.getPage(index, renderQuality) }
         val entry = imageEntries.getOrNull(index) ?: return@withContext null
         synchronized(lock) {
             val sz = openSevenZFile() ?: return@withContext null
@@ -89,12 +109,78 @@ class SevenZFormatReader(
         }
     }
 
+    override suspend fun getHtmlPage(index: Int): String? =
+        textDelegate?.getHtmlPage(index)
+
+    override fun htmlBaseUrl(): String? =
+        textDelegate?.htmlBaseUrl()
+
+    override fun htmlAssetBasePath(index: Int): String? =
+        textDelegate?.htmlAssetBasePath(index)
+
+    override fun openHtmlAsset(path: String): FormatReaderWebResource? =
+        textDelegate?.openHtmlAsset(path)
+
+    override fun getTableOfContents(): List<TocEntry> =
+        textDelegate?.getTableOfContents().orEmpty()
+
     override fun close() {
         synchronized(lock) {
+            try { textDelegate?.close() } catch (_: Exception) {}
             try { szFile?.close() } catch (_: Exception) {}
             szFile = null
             tempFile?.let { runCatching { it.delete() } }
             tempFile = null
+            tempTextFile?.let { runCatching { it.delete() } }
+            tempTextFile = null
+        }
+    }
+
+    private fun createTextDelegateIfPresent(): FormatReader? {
+        synchronized(lock) {
+            return try {
+                val sz = openSevenZFile() ?: return null
+                val candidates = sz.entries
+                    .toList()
+                    .filter { !it.isDirectory }
+                    .sortedWith(compareBy(ArchiveFormatSupport.naturalPathComparator) { it.name.orEmpty() })
+                if (ArchiveFormatSupport.classify(candidates.map { it.name.orEmpty() }) != ArchiveContentKind.SINGLE_BOOK) return null
+                val textEntries = candidates.filter { isText(it.name.orEmpty()) }
+                if (textEntries.isEmpty()) return null
+                val textEntry = textEntries.first()
+                val entryName = textEntry.name.orEmpty()
+                val extension = entryName.substringAfterLast('.', "").lowercase(Locale.US)
+                val textFormat = textFormatForExtension(extension) ?: return null
+                val bytes = sz.getInputStream(textEntry).use { stream ->
+                    ByteArrayOutputStream().use { output ->
+                        stream.copyTo(output)
+                        output.toByteArray()
+                    }
+                }
+                val extracted = File(
+                    archiveCacheDir("archive_text_cache"),
+                    "7z_${path.hashCode()}_${System.currentTimeMillis()}_${safeArchiveName(entryName, extension)}"
+                )
+                extracted.outputStream().use { it.write(bytes) }
+                tempTextFile = extracted
+                when (textFormat) {
+                    ComicFormat.EPUB -> EpubFormatReader(
+                        context = context,
+                        path = extracted.absolutePath,
+                        structureCacheDao = epubStructureCacheDao,
+                        manifestCacheDao = epubManifestCacheDao
+                    )
+                    ComicFormat.MOBI,
+                    ComicFormat.AZW3 -> MobiFormatReader(context, extracted.absolutePath, textFormat)
+                    ComicFormat.TXT -> PlainTextFormatReader(context, extracted.absolutePath)
+                    ComicFormat.HTML -> HtmlFormatReader(context, extracted.absolutePath)
+                    ComicFormat.MARKDOWN -> MarkdownFormatReader(context, extracted.absolutePath)
+                    else -> TextFormatReader(context, extracted.absolutePath, textFormat)
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to prepare archived text entry", e)
+                null
+            }
         }
     }
 
@@ -126,7 +212,22 @@ class SevenZFormatReader(
     }
 
     private fun isImage(name: String): Boolean =
-        name.lowercase().substringAfterLast('.', "") in IMAGE_EXTS
+        ArchiveFormatSupport.isImageEntry(name)
+
+    private fun isText(name: String): Boolean =
+        ArchiveFormatSupport.isTextEntry(name)
+
+    private fun textFormatForExtension(extension: String): ComicFormat? =
+        ArchiveFormatSupport.textFormatForExtension(extension)
+
+    private fun archiveCacheDir(name: String): File {
+        val base = runCatching { context.cacheDir }.getOrNull()
+            ?: File(System.getProperty("java.io.tmpdir"), "mrcomic_engine_formats")
+        return File(base, name).apply { mkdirs() }
+    }
+
+    private fun safeArchiveName(name: String, extension: String): String =
+        ArchiveFormatSupport.safeArchiveName(name, extension)
 
     private fun isBitmapEntry(sz: SevenZFile, entry: SevenZArchiveEntry): Boolean {
         return sz.getInputStream(entry).use { stream ->

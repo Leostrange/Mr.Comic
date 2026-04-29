@@ -28,17 +28,7 @@ class StructuredDjvuBackend @Inject constructor(
     )
 
     override suspend fun open(path: String): DjvuDocument? {
-        val inputStream = openInputStream(path)
-        if (inputStream == null) {
-            android.util.Log.w("DjvuBackend", "open: cannot open input stream for $path")
-            return null
-        }
-        val probe = inputStream.use(DjvuProbe::probe)
-        if (probe == null) {
-            android.util.Log.w("DjvuBackend", "open: probe returned null for $path")
-            return null
-        }
-        android.util.Log.d("DjvuBackend", "open: formType=${probe.formType} pageCount=${probe.pageCount} pages=${probe.pages.size} path=$path")
+        val probe = openInputStream(path)?.use(DjvuProbe::probe) ?: return null
         val rangeReader = createRangeReader(path)
         return StructuredDjvuDocument(
             fileName = resolveFileName(path),
@@ -121,7 +111,7 @@ private class StructuredDjvuDocument(
 
     // Keep a wider warm window for long DjVu documents so quick browsing
     // does not immediately evict neighboring page analysis/results.
-    private val pageSourceCache = IntLruCache<DjvuPageSource>(maxEntries = 4)
+    private val pageSourceCache = IntLruCache<DjvuPageSource>(maxEntries = 16)
     private val renderPlanCache = IntLruCache<DjvuSimpleRenderPlan>(maxEntries = 16)
     private val renderPlanDecodeInfoCache = IntLruCache<DjvuJpegDecodeInfo>(maxEntries = 16)
     private val pageAnalysisCache = IntLruCache<DjvuPageAnalysis>(maxEntries = 16)
@@ -149,15 +139,8 @@ private class StructuredDjvuDocument(
         // ── Path 2: BG44 (IW44 wavelet background) ───────────────────────────
         if (bitmapRoute?.hasIw44Background == true) {
             val source = bitmapRoute.pageSource
-            if (source == null) {
-                android.util.Log.w("DjvuBackend", "Page $index: IW44 background detected but page source is null")
-                return null
-            }
-            val bitmap = extractIw44Bitmap(source.documentBytes, renderQuality)
-            if (bitmap == null) {
-                android.util.Log.w("DjvuBackend", "Page $index: IW44 decode returned null (${source.documentBytes.size} bytes)")
-            }
-            return bitmap
+            if (source == null) return null
+            return extractIw44Bitmap(source.documentBytes, renderQuality)
         }
         return null
     }
@@ -174,6 +157,15 @@ private class StructuredDjvuDocument(
         val hasCompressedTextLayer = analysis.hasCompressedTextLayer
         val annotations = analysis.annotations
         val visualLayerPlan = analysis.visualLayerPlan
+        if (visualLayerPlan != null) {
+            return buildDjvuVisualLayerHtml(
+                fileName = fileName,
+                pageIndex = index,
+                totalPages = totalPages,
+                visualLayerPlan = visualLayerPlan,
+                pageInfo = probe.pages.getOrNull(index)
+            )
+        }
         if (textLayer != null) {
             return buildDjvuTextLayerHtml(
                 fileName = fileName,
@@ -201,15 +193,6 @@ private class StructuredDjvuDocument(
                 hasCompressedAnnotations = annotations?.hasCompressedChunks == true,
                 pageInfo = probe.pages.getOrNull(index),
                 visualLayerPlan = visualLayerPlan
-            )
-        }
-        if (visualLayerPlan != null) {
-            return buildDjvuVisualLayerHtml(
-                fileName = fileName,
-                pageIndex = index,
-                totalPages = totalPages,
-                visualLayerPlan = visualLayerPlan,
-                pageInfo = probe.pages.getOrNull(index)
             )
         }
         return buildDjvuPlaceholderHtml(

@@ -139,7 +139,7 @@ class ReadiumEpubEnginePolicyTest {
     }
 
     @Test
-    fun readiumOpenIgnoresImageResourceRequestedLocatorWhenFallbackExists() {
+    fun readiumOpenKeepsImageResourceRequestedLocatorWhenExplicitlyResolved() {
         val requested = ReaderLocator(href = "OPS/images/cover.jpg", pageIndex = 0, position = 0)
         val fallback = ReaderLocator(href = "OPS/titlepage.xhtml", pageIndex = 1, position = 1)
 
@@ -149,7 +149,7 @@ class ReadiumEpubEnginePolicyTest {
             rendererKey = ReaderRendererKey.READIUM_EPUB
         )
 
-        assertEquals(fallback, actual)
+        assertEquals(requested, actual)
     }
 
     @Test

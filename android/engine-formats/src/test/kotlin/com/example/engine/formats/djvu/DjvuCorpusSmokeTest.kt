@@ -3,7 +3,6 @@ package com.example.engine.formats.djvu
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
 
@@ -65,17 +64,50 @@ class DjvuCorpusSmokeTest {
         assertFalse(html.contains("novaya_teoriya", ignoreCase = true))
     }
 
+    @Test
+    fun sampleDjvuWithScanChunksUsesVisualPageInsteadOfOcrText() {
+        val sample = locateSample("novaya_teoriya_razvitiya_obshchestva_bez_oshibok_marksa_i_le.djvu")
+        val bytes = sample.readBytes()
+        val probe = sample.inputStream().use(DjvuProbe::probe) ?: error("probe failed")
+        val page = probe.pages.first()
+        val rawPageBytes = bytes.copyOfRange(
+            page.fileOffset!!.toInt(),
+            (page.fileOffset + page.byteLength!!).toInt()
+        )
+        val standalone = buildStandaloneDjvuDocumentBytes(rawPageBytes) ?: error("standalone failed")
+        val visualLayerPlan = extractDjvuVisualLayerPlan(standalone)
+        val textLayer = extractDjvuTextLayer(standalone)
+
+        assertNotNull("Expected scanned DjVu page to expose a visual layer plan", visualLayerPlan)
+        assertNotNull("Expected OCR text to remain available as secondary data", textLayer)
+
+        val html = buildDjvuVisualLayerHtml(
+            fileName = sample.name,
+            pageIndex = 0,
+            totalPages = probe.pageCount,
+            visualLayerPlan = visualLayerPlan!!,
+            pageInfo = page
+        )
+
+        assertTrue("Expected scan-shaped DjVu page", html.contains("DjVu scan layer"))
+        assertTrue("Expected JB2/Sjbz scan layer to be represented", html.contains("Sjbz"))
+        assertFalse(
+            "OCR text must not become the primary reading surface for scanned DjVu",
+            html.contains("Новая теория развития общества", ignoreCase = true)
+        )
+    }
+
     private fun locateSample(name: String): File {
         val userDir = System.getProperty("user.dir") ?: "."
         var current = File(userDir).absoluteFile
         repeat(6) {
+            val directCandidate = File(current, name)
+            if (directCandidate.exists()) return directCandidate
             val candidate = File(current, "Epub bug/$name")
             if (candidate.exists()) return candidate
             current = current.parentFile ?: return@repeat
         }
-        val fallback = File(userDir, name)
-        assumeTrue("Optional local DjVu sample missing: $name", fallback.exists())
-        return fallback
+        return File(userDir, name)
     }
 
     private fun extractChunkPayload(documentBytes: ByteArray, chunkId: String): ByteArray? {

@@ -9,7 +9,10 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 class EpubCorpusSmokeTest {
 
@@ -34,7 +37,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun skottSampleBuildsVisibleHtmlPages() = runBlocking {
         val sample = locateSample("S_Skott_Protiv_zerna_glubinnaya_istoriya_drevneyshih_gosudarstv.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -87,7 +90,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun skottSampleResolvesMergedFrontMatterEntries() = runBlocking {
         val sample = locateSample("S_Skott_Protiv_zerna_glubinnaya_istoriya_drevneyshih_gosudarstv.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -104,7 +107,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun sample6177KeepsUtf8CyrillicReadable() = runBlocking {
         val sample = locateSample("6177.zip")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -125,7 +128,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun sample6177ExposesStylesheetsThroughAssetBackedHtml() = runBlocking {
         val sample = locateSample("6177.zip")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -158,7 +161,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun sample6177BuildsUsableTocEntries() = runBlocking {
         val sample = locateSample("6177.zip")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -181,7 +184,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun sample6177KeepsSecondaryStylesheetAndFrontMatterTargetsAccessible() = runBlocking {
         val sample = locateSample("6177.zip")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -232,7 +235,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun vibeSamplePersistsAndReusesStructureCache() = runBlocking {
         val sample = locateSample("vibe.coding.the.future.of.programming.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val cacheDao = FakeEpubStructureCacheDao()
         val firstReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath, cacheDao)
@@ -262,7 +265,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun vibeSampleKeepsRichPublisherMarkup() = runBlocking {
         val sample = locateSample("vibe.coding.the.future.of.programming.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -291,7 +294,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun vibeSampleKeepsTitleCopyrightAndPrefaceFrontMatter() = runBlocking {
         val sample = locateSample("vibe.coding.the.future.of.programming.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -318,7 +321,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun vibeSampleResolvesFrontMatterPagesAndAssetBackedBasePath() = runBlocking {
         val sample = locateSample("vibe.coding.the.future.of.programming.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -327,7 +330,7 @@ class EpubCorpusSmokeTest {
 
             assertNotNull("Expected titlepage01.xhtml to resolve", titlePage)
             assertNotNull("Expected copyright-page01.xhtml to resolve", copyrightPage)
-            assertTrue("Expected copyright page to stay on or after the title page", copyrightPage!! >= titlePage!!)
+            assertTrue("Expected copyright page to stay after the title page", copyrightPage!! > titlePage!!)
 
             val firstAssetBackedPage = (0 until reader.getPageCount())
                 .firstOrNull { index -> reader.htmlAssetBasePath(index) != null }
@@ -337,6 +340,27 @@ class EpubCorpusSmokeTest {
                 reader.htmlAssetBasePath(firstAssetBackedPage!!)!!.endsWith(".xhtml") ||
                     reader.htmlAssetBasePath(firstAssetBackedPage)!!.endsWith(".html")
             )
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun vibeSampleKeepsFrontMatterPagesSeparatedInsteadOfMerged() = runBlocking {
+        val sample = locateSample("vibe.coding.the.future.of.programming.epub")
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val titlePage = reader.resolveHrefToPage("titlepage01.xhtml")
+            val copyrightPage = reader.resolveHrefToPage("copyright-page01.xhtml")
+            val prefacePage = reader.resolveHrefToPage("preface01.xhtml")
+
+            assertNotNull("Expected titlepage01.xhtml to resolve", titlePage)
+            assertNotNull("Expected copyright-page01.xhtml to resolve", copyrightPage)
+            assertNotNull("Expected preface01.xhtml to resolve", prefacePage)
+            assertTrue("Expected copyright page to stay after the title page", copyrightPage!! > titlePage!!)
+            assertTrue("Expected preface page to stay after the copyright page", prefacePage!! > copyrightPage!!)
         } finally {
             reader.close()
         }
@@ -422,9 +446,10 @@ class EpubCorpusSmokeTest {
                 "Expected first EPUB TOC entry to point at a real page",
                 toc.first().pageIndex >= 0
             )
-            val firstAssetBackedPage = (0 until pageCount)
-                .firstOrNull { index -> reader.htmlAssetBasePath(index) != null }
-            assertNotNull("Expected EPUB to expose an asset-backed HTML page", firstAssetBackedPage)
+            assertNotNull(
+                "Expected EPUB opening page to be asset-backed",
+                reader.htmlAssetBasePath(0)
+            )
             assertTrue(
                 "Expected EPUB stylesheet asset to stay accessible",
                 reader.openHtmlAsset("style.css") != null
@@ -449,9 +474,7 @@ class EpubCorpusSmokeTest {
             assertNotNull("Expected chapters/chapter2.html to resolve", chapterTwoPage)
             assertTrue("Expected chapter 2 to stay on or after chapter 1", chapterTwoPage!! >= chapterOnePage!!)
             assertTrue("Expected TOC page to stay on or before chapter 1", tocPage!! <= chapterOnePage)
-            val firstAssetBackedPage = (0 until reader.getPageCount())
-                .firstOrNull { index -> reader.htmlAssetBasePath(index) != null }
-            assertNotNull("Expected EPUB to expose an asset-backed HTML page", firstAssetBackedPage)
+            assertNotNull("Expected EPUB opening page to stay asset-backed", reader.htmlAssetBasePath(0))
             assertTrue(
                 "Expected EPUB stylesheet asset to stay accessible",
                 reader.openHtmlAsset("style.css") != null
@@ -530,7 +553,7 @@ class EpubCorpusSmokeTest {
     @Test
     fun vibeSampleKeepsTocHtmlAssetAndFrontMatterTargetsAccessible() = runBlocking {
         val sample = locateSample("vibe.coding.the.future.of.programming.epub")
-        assertTrue("Expected EPUB sample to exist", sample.exists())
+        assumeTrue("Expected EPUB sample to exist", sample.exists())
 
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
@@ -550,6 +573,45 @@ class EpubCorpusSmokeTest {
         }
     }
 
+    @Test
+    fun syntheticEpubOversizedSingleChapterSplitsIntoMultipleReaderPages() = runBlocking {
+        val repeatedParagraph = buildString {
+            repeat(360) { index ->
+                append("Очень длинная глава EPUB для проверки разбиения страницы номер ")
+                append(index + 1)
+                append(". ")
+            }
+        }
+        val epubBytes = buildSyntheticEpub(
+            titlePageBody = "<h1>Тестовая книга</h1><p>Автор</p>",
+            chapterBody = "<div class=\"chapter\" lang=\"ru\">$repeatedParagraph</div>"
+        )
+        val sample = File.createTempFile("mrcomic-oversized-epub", ".epub").apply {
+            writeBytes(epubBytes)
+            deleteOnExit()
+        }
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val pageCount = reader.getPageCount()
+            assertTrue("Expected oversized EPUB chapter to span multiple reader pages, got $pageCount", pageCount >= 3)
+
+            val openingPages = (0 until minOf(pageCount, 3))
+                .mapNotNull { index -> reader.getHtmlPage(index) }
+
+            val firstChapterPageIndex = openingPages.indexOfFirst { html ->
+                html.contains("Очень длинная глава EPUB")
+            }.takeIf { it >= 0 } ?: 1
+            val firstChapterPage = reader.getHtmlPage(firstChapterPageIndex).orEmpty()
+            val nextChapterPage = reader.getHtmlPage((firstChapterPageIndex + 1).coerceAtMost(pageCount - 1)).orEmpty()
+            assertTrue(firstChapterPage.contains("Очень длинная глава EPUB"))
+            assertTrue(nextChapterPage.contains("Очень длинная глава EPUB"))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
     private fun locateSample(name: String): File {
         val userDir = System.getProperty("user.dir") ?: "."
         var current = File(userDir).absoluteFile
@@ -558,9 +620,7 @@ class EpubCorpusSmokeTest {
             if (candidate.exists()) return candidate
             current = current.parentFile ?: return@repeat
         }
-        val fallback = File(userDir, name)
-        assumeTrue("Optional local EPUB sample missing: $name", fallback.exists())
-        return fallback
+        return File(userDir, name)
     }
 
     private fun locateCorpusSample(name: String): File {
@@ -572,5 +632,69 @@ class EpubCorpusSmokeTest {
             current = current.parentFile ?: return@repeat
         }
         return File(userDir, name)
+    }
+
+    private fun buildSyntheticEpub(
+        titlePageBody: String,
+        chapterBody: String
+    ): ByteArray {
+        val contentOpf = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <package version="2.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId">
+              <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                <dc:title>Test EPUB</dc:title>
+                <dc:language>ru</dc:language>
+                <dc:identifier id="BookId">urn:uuid:test-epub</dc:identifier>
+              </metadata>
+              <manifest>
+                <item id="title" href="title.xhtml" media-type="application/xhtml+xml"/>
+                <item id="chapter1" href="chapter1.xhtml" media-type="application/xhtml+xml"/>
+              </manifest>
+              <spine toc="ncx">
+                <itemref idref="title"/>
+                <itemref idref="chapter1"/>
+              </spine>
+            </package>
+        """.trimIndent()
+        val containerXml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+              <rootfiles>
+                <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+              </rootfiles>
+            </container>
+        """.trimIndent()
+        val titleXhtml = """
+            <html xmlns="http://www.w3.org/1999/xhtml"><head><title>Title</title></head><body>$titlePageBody</body></html>
+        """.trimIndent()
+        val chapterXhtml = """
+            <html xmlns="http://www.w3.org/1999/xhtml"><head><title>Chapter</title></head><body>$chapterBody</body></html>
+        """.trimIndent()
+
+        return ByteArrayOutputStream().use { output ->
+            ZipOutputStream(output).use { zip ->
+                fun addEntry(name: String, content: String, store: Boolean = false) {
+                    val bytes = content.toByteArray(Charsets.UTF_8)
+                    val entry = ZipEntry(name)
+                    if (store) {
+                        entry.method = ZipEntry.STORED
+                        entry.size = bytes.size.toLong()
+                        entry.compressedSize = bytes.size.toLong()
+                        val crc = java.util.zip.CRC32().apply { update(bytes) }
+                        entry.crc = crc.value
+                    }
+                    zip.putNextEntry(entry)
+                    zip.write(bytes)
+                    zip.closeEntry()
+                }
+
+                addEntry("mimetype", "application/epub+zip", store = true)
+                addEntry("META-INF/container.xml", containerXml)
+                addEntry("OEBPS/content.opf", contentOpf)
+                addEntry("OEBPS/title.xhtml", titleXhtml)
+                addEntry("OEBPS/chapter1.xhtml", chapterXhtml)
+            }
+            output.toByteArray()
+        }
     }
 }

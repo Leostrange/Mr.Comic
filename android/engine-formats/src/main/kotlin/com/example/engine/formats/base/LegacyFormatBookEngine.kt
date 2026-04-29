@@ -3,8 +3,8 @@ package com.example.engine.formats.base
 import com.example.core.model.BookFormat
 import com.example.core.model.BookMetadata
 import com.example.core.model.BookSearchHit
-import com.example.core.model.BookSource
 import com.example.core.model.BookTocItem
+import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderLocator
 import com.example.core.model.ReaderPreferenceSnapshot
 import com.example.core.model.ReaderRendererKey
@@ -34,8 +34,8 @@ class LegacyFormatBookEngine @Inject constructor(
     private val formatFactory: FormatFactory
 ) : BookEngine {
 
-    override val supportedFormats: Set<BookFormat> = BookFormat.entries
-        .filterNot { it == BookFormat.UNKNOWN || it == BookFormat.EPUB || it == BookFormat.DJVU }
+    override val supportedFormats: Set<BookFormat> = ComicFormat.entries
+        .filterNot { it == ComicFormat.UNKNOWN || it == ComicFormat.EPUB || it == ComicFormat.DJVU }
         .toSet()
 
     private val activeSessions = ConcurrentHashMap<String, BookSession>()
@@ -43,7 +43,7 @@ class LegacyFormatBookEngine @Inject constructor(
     override suspend fun open(request: OpenBookRequest): BookSession {
         val path = request.source.asPathString()
         val reader = formatFactory.createReader(path, request.format)
-            ?: error("Legacy format engine failed to create reader for ${request.format} at $path")
+            ?: error("Format engine failed to create reader for ${request.format} at $path")
         val session = LegacyFormatBookSession(
             bookId = request.bookId,
             format = request.format,

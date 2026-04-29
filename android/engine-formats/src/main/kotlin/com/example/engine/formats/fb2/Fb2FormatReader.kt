@@ -9,25 +9,13 @@ import android.util.Log
 import android.util.Xml
 import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.TocEntry
+import com.example.engine.formats.base.buildUnifiedReaderHtmlDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
-
-private fun safeLogD(tag: String, message: String) {
-    runCatching { Log.d(tag, message) }
-}
-
-private fun safeLogW(tag: String, message: String, throwable: Throwable? = null) {
-    runCatching { Log.w(tag, message, throwable) }
-}
-
-private fun safeLogE(tag: String, message: String, throwable: Throwable? = null) {
-    runCatching { Log.e(tag, message, throwable) }
-}
+import java.nio.charset.Charset
 
 /**
  * FB2 reader.  Two automatic modes:
@@ -52,221 +40,42 @@ class Fb2FormatReader(
         private val IMAGE_EXTS     = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
         /**
          * Target non-whitespace character count per reader page.
-         * Tuned for the current page-mode contract where each HTML page should fit the viewport
-         * without relying on an inner vertical scroll.
+         * ~2000 chars ≈ roughly one screenful at 18px/1.8lh on a typical phone.
+         * Vertical scrolling is allowed within a page, so content is never clipped.
          */
-        private const val CHARS_PER_PAGE = 520
+        private const val CHARS_PER_PAGE = 2000
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
-
-        private const val TEXT_BLOCK_SOFT_SPLIT_THRESHOLD = 220
-
-        internal fun splitRawHtmlIntoViewportChunks(content: String): List<String> {
-            if (content.isEmpty()) return emptyList()
-            val parts = content.split(Regex("(?<=</(?:p|h2|h3|blockquote)>)", RegexOption.IGNORE_CASE))
-                .filter { it.isNotEmpty() }
-
-            if (parts.isEmpty()) return listOf(content)
-
-            val chunks = mutableListOf<String>()
-            var currentChunk = StringBuilder()
-            var currentChars = 0
-            for (part in parts.flatMap(::splitOversizedHtmlPart)) {
-                val partChars = HTML_TAG_RE.replace(part, "").length
-                if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
-                    chunks += currentChunk.toString()
-                    currentChunk = StringBuilder()
-                    currentChars = 0
-                }
-                currentChunk.append(part)
-                currentChars += partChars
-            }
-            if (currentChunk.isNotEmpty()) chunks += currentChunk.toString()
-            return chunks
-        }
-
-        private fun splitOversizedHtmlPart(part: String): List<String> {
-            val visibleChars = HTML_TAG_RE.replace(part, "").trim().length
-            if (visibleChars <= TEXT_BLOCK_SOFT_SPLIT_THRESHOLD) {
-                return listOf(part)
-            }
-
-            return runCatching {
-                val document = Jsoup.parseBodyFragment(part)
-                val element = document.body().children().firstOrNull() ?: return@runCatching listOf(part)
-                when (element.normalName()) {
-                    "div", "section", "article" -> {
-                        val children = element.children()
-                        if (children.size >= 2 && element.ownText().isBlank()) {
-                            children.flatMap { child -> splitOversizedHtmlPart(child.outerHtml()) }
-                        } else {
-                            splitOversizedTextElement(element)
-                        }
-                    }
-                    "table", "ul", "ol", "img", "svg" -> listOf(part)
-                    else -> splitOversizedTextElement(element)
-                }
-            }.getOrElse { listOf(part) }
-        }
-
-        private fun splitOversizedTextElement(element: Element): List<String> {
-            val plainText = element.wholeText()
-                .replace("\r\n", "\n")
-                .replace('\r', '\n')
-                .replace(Regex("""[ \t]+"""), " ")
-                .replace(Regex("""\n{3,}"""), "\n\n")
-                .trim()
-            if (plainText.isBlank()) return listOf(element.outerHtml())
-            if (plainText.length <= TEXT_BLOCK_SOFT_SPLIT_THRESHOLD) return listOf(element.outerHtml())
-
-            val tag = element.normalName()
-            val attrs = element.attributes().html().trim().takeIf { it.isNotEmpty() }?.let { " $it" }.orEmpty()
-            val chunks = splitPlainTextIntoChunks(plainText, TEXT_BLOCK_SOFT_SPLIT_THRESHOLD)
-            if (chunks.size <= 1) return listOf(element.outerHtml())
-            return chunks.map { chunk ->
-                "<$tag$attrs data-mr-split-chunk=\"true\">${escapeHtml(chunk).replace("\n", "<br/>")}</$tag>"
-            }
-        }
-
-        private fun splitPlainTextIntoChunks(text: String, maxChars: Int): List<String> {
-            val normalized = text
-                .replace("\r\n", "\n")
-                .replace('\r', '\n')
-                .trim()
-            if (normalized.length <= maxChars) return listOf(normalized)
-
-            val result = mutableListOf<String>()
-            val buffer = StringBuilder()
-
-            fun flush() {
-                if (buffer.isNotBlank()) {
-                    result += buffer.toString().trim()
-                    buffer.clear()
-                }
-            }
-
-            fun appendToken(token: String, separator: String) {
-                if (token.isBlank()) return
-                if (buffer.isNotEmpty() && buffer.length + separator.length + token.length > maxChars) {
-                    flush()
-                }
-                if (token.length <= maxChars) {
-                    if (buffer.isNotEmpty()) buffer.append(separator)
-                    buffer.append(token)
-                    return
-                }
-
-                var remaining = token
-                while (remaining.isNotEmpty()) {
-                    if (buffer.isNotEmpty()) flush()
-                    val chunk = remaining.take(maxChars)
-                    buffer.append(chunk)
-                    remaining = remaining.drop(chunk.length)
-                    if (remaining.isNotEmpty()) flush()
-                }
-            }
-
-            var pendingLineBreaks = 0
-            normalized.split('\n').forEach { rawLine ->
-                val words = rawLine
-                    .trim()
-                    .split(Regex("""\s+"""))
-                    .filter { it.isNotBlank() }
-                if (words.isEmpty()) {
-                    pendingLineBreaks = (pendingLineBreaks + 1).coerceAtMost(2)
-                    return@forEach
-                }
-                words.forEachIndexed { index, word ->
-                    val separator = when {
-                        buffer.isEmpty() -> ""
-                        index == 0 -> "\n".repeat(pendingLineBreaks.coerceAtLeast(1))
-                        else -> " "
-                    }
-                    appendToken(word, separator)
-                    pendingLineBreaks = 0
-                }
-                pendingLineBreaks = 1
-            }
-
-            flush()
-            return result.ifEmpty { listOf(normalized) }
-        }
-
-        private fun escapeHtml(text: String): String = buildString(text.length) {
-            for (ch in text) {
-                append(
-                    when (ch) {
-                        '&' -> "&amp;"
-                        '<' -> "&lt;"
-                        '>' -> "&gt;"
-                        '"' -> "&quot;"
-                        '\'' -> "&#39;"
-                        else -> ch.toString()
-                    }
-                )
-            }
-        }
-
-        private const val CSS = """<style>
-body{font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.6;
-     padding:16px 20px 24px;color:#1a1a1a;background:#fafafa;max-width:720px;margin:auto;
-     overflow-wrap:break-word;word-break:normal;
-     hyphens:auto;-webkit-hyphens:auto;text-align:justify}
-h1,h2,h3,h4{text-align:center;font-size:1.15em;margin:1.2em 0 0.5em;text-indent:0;
-             font-weight:bold;hyphens:none;-webkit-hyphens:none}
-p{margin:0.2em 0;text-indent:1.5em}
-p:first-child,h1+p,h2+p,h3+p,h4+p{text-indent:0}
-em{font-style:italic} strong{font-weight:bold}
-s{text-decoration:line-through} sup{font-size:0.75em;vertical-align:super}
-sub{font-size:0.75em;vertical-align:sub} code{font-family:monospace;font-size:0.9em}
-blockquote,cite{margin:0.8em 1.5em;padding-left:1em;border-left:3px solid #bbb;
-                font-style:italic;color:#555;hyphens:none;-webkit-hyphens:none}
-cite{display:block;margin-top:0.3em}
-img{max-width:100%;display:block;margin:12px auto}
-a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{font-size:0.75em;vertical-align:super;line-height:1;color:#1a6f9a;
+        private const val FB2_READER_CSS = """
+a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{font-size:0.75em;vertical-align:super;line-height:1;
      font-weight:bold;text-decoration:none;cursor:pointer}
-a.fn *,a[href*="FbAutId_"] *,a[href^="fbanchor://"] *{color:#1a6f9a}
 p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left}
-.note-num{color:#1a6f9a;font-weight:bold;display:inline-block;min-width:2.8em;text-indent:0}
-.center,[align="center"]{text-align:center !important;text-indent:0}
-.right,[align="right"]{text-align:right !important;text-indent:0}
-@media (prefers-color-scheme: dark) {
-  body{color:#e8e8e8;background:#1a1a1a}
-  h1,h2,h3,h4{color:#e8e8e8;background:#262626;border-color:#555}
-  blockquote,cite{border-left-color:#555;color:#aaa}
-  a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{color:#5ab4dc}
-  a.fn *,a[href*="FbAutId_"] *,a[href^="fbanchor://"] *{color:#5ab4dc}
-  .note-num{color:#5ab4dc}
-}
-</style>"""
+.note-num{font-weight:bold;display:inline-block;min-width:2.8em;text-indent:0}
+"""
 
-        // HTML entities illegal in XML that commonly appear in FB2 files
-        private val HTML_ENTITY_RE = Regex(
-            "&(nbsp|mdash|ndash|laquo|raquo|hellip|ldquo|rdquo|lsquo|rsquo|" +
-            "bull|copy|reg|trade|euro|pound|yen|cent|deg|plusmn|times|divide|" +
-            "frac12|frac14|frac34|para|middot|szlig|shy|iexcl|iquest|" +
-            "thinsp|ensp|emsp|zwj|zwnj|rlm|lrm|sbquo|bdquo|permil|" +
-            "lArr|rArr|uArr|dArr|hArr|forall|exist|empty|nabla|isin|" +
-            "notin|ni|prod|sum|minus|lowast|radic|prop|infin|ang|and|or|" +
-            "cap|cup|int|there4|sim|cong|asymp|ne|equiv|le|ge|sub|sup|" +
-            "sube|supe|oplus|otimes|perp|sdot);"
-        )
-        private val HTML_ENTITIES = mapOf(
-            "nbsp"   to "\u00A0", "mdash"  to "\u2014", "ndash"  to "\u2013",
-            "laquo"  to "\u00AB", "raquo"  to "\u00BB", "hellip" to "\u2026",
-            "ldquo"  to "\u201C", "rdquo"  to "\u201D", "lsquo"  to "\u2018",
-            "rsquo"  to "\u2019", "bull"   to "\u2022", "copy"   to "\u00A9",
-            "reg"    to "\u00AE", "trade"  to "\u2122", "euro"   to "\u20AC",
-            "pound"  to "\u00A3", "yen"    to "\u00A5", "cent"   to "\u00A2",
-            "deg"    to "\u00B0", "plusmn" to "\u00B1", "times"  to "\u00D7",
-            "divide" to "\u00F7", "frac12" to "\u00BD", "frac14" to "\u00BC",
-            "frac34" to "\u00BE", "para"   to "\u00B6", "middot" to "\u00B7",
-            "szlig"  to "\u00DF", "shy"    to "\u00AD", "iexcl"  to "\u00A1",
-            "iquest" to "\u00BF", "thinsp" to "\u2009", "ensp"   to "\u2002",
-            "emsp"   to "\u2003", "zwj"    to "\u200D", "zwnj"   to "\u200C",
-            "rlm"    to "\u200F", "lrm"    to "\u200E", "sbquo"  to "\u201A",
-            "bdquo"  to "\u201E", "permil" to "\u2030"
-        )
+        private inline fun logDebug(message: () -> String) {
+            try {
+                Log.d(TAG, message())
+            } catch (_: RuntimeException) {
+                // Plain JVM unit tests do not provide android.util.Log.
+            }
+        }
+
+        private fun logWarning(message: String, throwable: Throwable) {
+            try {
+                Log.w(TAG, message, throwable)
+            } catch (_: RuntimeException) {
+                // Plain JVM unit tests do not provide android.util.Log.
+            }
+        }
+
+        private fun logError(message: String, throwable: Throwable) {
+            try {
+                Log.e(TAG, message, throwable)
+            } catch (_: RuntimeException) {
+                // Plain JVM unit tests do not provide android.util.Log.
+            }
+        }
     }
 
     private data class Parsed(
@@ -275,16 +84,17 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         val htmlPages: List<String>,         // HTML strings (text mode)
         val hasBodyText: Boolean,            // true = text was found in body
         val tocEntries: List<TocEntry>,      // chapter TOC
-        val footnoteMap: Map<String, String> // anchorId → footnote HTML text
+        val footnoteMap: Map<String, String>, // anchorId → footnote HTML text
+        val metadata: Map<String, String>
     )
 
     private val data: Parsed by lazy {
         try {
             openStream()?.use { parse(it) }
-                ?: Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap())
+                ?: Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap())
         } catch (e: Exception) {
-            safeLogE(TAG, "FB2 parse error for $path", e)
-            Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap())
+            logError("FB2 parse error for $path", e)
+            Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap())
         }
     }
 
@@ -312,7 +122,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
         val count = if (isTextMode) data.htmlPages.size else imageBitmapBytes.size
-        safeLogD(TAG, "getPageCount=$count isTextMode=$isTextMode path=$path")
+        logDebug { "getPageCount=$count isTextMode=$isTextMode path=$path" }
         count
     }
 
@@ -331,6 +141,14 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
     override fun getFootnoteText(anchorId: String): String? = data.footnoteMap[anchorId]
 
+    override suspend fun getMetadata(): Map<String, String> = withContext(Dispatchers.IO) {
+        buildMap {
+            put("format", "FB2")
+            put("engine", "fb2-xml-reflowable-v1")
+            putAll(data.metadata)
+        }
+    }
+
     override fun close() { /* no persistent resources */ }
 
     // ── Pre-processing ────────────────────────────────────────────────────────
@@ -342,52 +160,22 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
      *  3. Replaces HTML entities (&nbsp; &mdash; etc.) that XmlPullParser cannot handle
      *  4. Re-encodes to UTF-8 and updates the XML declaration accordingly
      */
-    private fun preprocessBytes(bytes: ByteArray): ByteArray {
-        // Peek at the first 300 bytes as Latin-1 to read the XML declaration
-        val peek = bytes.take(300).toByteArray().toString(Charsets.ISO_8859_1)
-        val declaredEnc = Regex("""encoding\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(peek)?.groupValues?.get(1) ?: "UTF-8"
-        val charset = try {
-            java.nio.charset.Charset.forName(declaredEnc)
-        } catch (_: Exception) {
-            Charsets.UTF_8
-        }
-
-        // Decode with detected charset
-        var text = bytes.toString(charset)
-
-        // Replace illegal HTML entities with their Unicode equivalents
-        text = HTML_ENTITY_RE.replace(text) { mr -> HTML_ENTITIES[mr.groupValues[1]] ?: mr.value }
-
-        // Replace any remaining bare & not part of a valid XML entity/char-ref with &amp;
-        // Handles typos like "A&B" common in some FB2 files
-        text = Regex("&(?!(amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)").replace(text, "&amp;")
-
-        // If original was not UTF-8, update the XML declaration so the parser knows
-        if (!declaredEnc.equals("UTF-8", ignoreCase = true) &&
-            !declaredEnc.equals("UTF8",  ignoreCase = true)) {
-            text = text.replaceFirst(
-                Regex("""encoding\s*=\s*["'][^"']+["']""", RegexOption.IGNORE_CASE),
-                """encoding="UTF-8""""
-            )
-        }
-
-        return text.toByteArray(Charsets.UTF_8)
-    }
+    private fun preprocessBytes(bytes: ByteArray): ByteArray = Fb2Preprocessor.preprocess(bytes)
 
     // ── Parser ────────────────────────────────────────────────────────────────
 
     private fun parse(stream: InputStream): Parsed {
         val rawBytes = try { stream.readBytes() } catch (e: Exception) {
-            safeLogE(TAG, "Cannot read FB2 stream", e)
-            return Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap())
+            logError("Cannot read FB2 stream", e)
+            return Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap())
         }
 
         // Clean up the bytes before XML parsing
         val bytes = try { preprocessBytes(rawBytes) } catch (e: Exception) {
-            safeLogW(TAG, "FB2 preprocess failed, using raw bytes", e)
+            logWarning("FB2 preprocess failed, using raw bytes", e)
             rawBytes
         }
+        val metadata = Fb2MetadataParser.extract(bytes.toString(Charsets.UTF_8))
 
         val binaries = LinkedHashMap<String, ByteArray>()
         val bodyImageRefs = mutableListOf<String>()
@@ -435,7 +223,30 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             if (sectionBuf.isEmpty()) return
             val content = sectionBuf.toString()
             sectionBuf.clear()
-            rawSections.addAll(splitRawHtmlIntoViewportChunks(content))
+
+            val parts = content.split(Regex("(?<=</p>)", RegexOption.IGNORE_CASE))
+                .filter { it.isNotEmpty() }
+
+            if (parts.isEmpty()) {
+                rawSections.add(content)
+                return
+            }
+
+            var currentChunk = StringBuilder()
+            var currentChars = 0
+            for (part in parts) {
+                val partChars = HTML_TAG_RE.replace(part, "").length
+                // Start a new page if adding this part would overflow — but only if the
+                // current page already has content (prevents empty leading pages).
+                if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
+                    rawSections.add(currentChunk.toString())
+                    currentChunk = StringBuilder()
+                    currentChars = 0
+                }
+                currentChunk.append(part)
+                currentChars += partChars
+            }
+            if (currentChunk.isNotEmpty()) rawSections.add(currentChunk.toString())
         }
 
         val parser = Xml.newPullParser().apply {
@@ -555,7 +366,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                     val dec = Base64.decode(binaryBuf.toString(), Base64.DEFAULT)
                                     if (dec.isNotEmpty()) binaries[binaryId] = dec
                                 } catch (e: Exception) {
-                                    safeLogW(TAG, "Base64 decode failed for binary '$binaryId'", e)
+                                    logWarning("Base64 decode failed for binary '$binaryId'", e)
                                 }
                                 inBinary = false; binaryId = ""; binaryBuf.clear()
                             }
@@ -646,7 +457,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                 ev = parser.next()
             }
         } catch (e: Exception) {
-            safeLogE(TAG, "FB2 XML parse exception", e)
+            logError("FB2 XML parse exception", e)
             // Flush whatever was buffered before the error
             flushPage()
         }
@@ -725,9 +536,9 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             pages = mainPages
         }
 
-        safeLogD(TAG, "FB2 parsed: binaries=${binaries.size} bodyImageRefs=${bodyImageRefs.size} " +
+        logDebug { "FB2 parsed: binaries=${binaries.size} bodyImageRefs=${bodyImageRefs.size} " +
                 "rawSections=${rawSections.size} pages=${pages.size} hasBodyText=$hasBodyText " +
-                "sections=$sectionCount toc=${tocEntries.size} footnotes=${footnoteMap.size}")
+                "sections=$sectionCount toc=${tocEntries.size} footnotes=${footnoteMap.size}" }
 
         return Parsed(
             binaries     = binaries,
@@ -735,7 +546,8 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             htmlPages    = pages,
             hasBodyText  = hasBodyText,
             tocEntries   = tocEntries,
-            footnoteMap  = footnoteMap
+            footnoteMap  = footnoteMap,
+            metadata     = metadata
         )
     }
 
@@ -757,24 +569,10 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                 "<img src=\"data:$mime;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}\"/>"
             } else m.value
         }
-        return "<!DOCTYPE html><html lang=\"ru\"><head><meta charset=\"UTF-8\">" +
-                "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">$CSS</head>" +
-                "<body>$resolved</body></html>"
-    }
-
-    private fun escapeHtml(text: String): String = buildString(text.length) {
-        for (ch in text) {
-            append(
-                when (ch) {
-                    '&' -> "&amp;"
-                    '<' -> "&lt;"
-                    '>' -> "&gt;"
-                    '"' -> "&quot;"
-                    '\'' -> "&#39;"
-                    else -> ch.toString()
-                }
-            )
-        }
+        return buildUnifiedReaderHtmlDocument(
+            body = resolved,
+            extraCss = FB2_READER_CSS
+        )
     }
 
     private fun findHref(parser: XmlPullParser): String {
@@ -793,6 +591,105 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         else
             File(path).inputStream()
     } catch (e: Exception) {
-        safeLogE(TAG, "Cannot open FB2: $path", e); null
+        logError("Cannot open FB2: $path", e); null
     }
+}
+
+internal object Fb2Preprocessor {
+    private val htmlEntityRe = Regex(
+        "&(nbsp|mdash|ndash|laquo|raquo|hellip|ldquo|rdquo|lsquo|rsquo|" +
+            "bull|copy|reg|trade|euro|pound|yen|cent|deg|plusmn|times|divide|" +
+            "frac12|frac14|frac34|para|middot|szlig|shy|iexcl|iquest|" +
+            "thinsp|ensp|emsp|zwj|zwnj|rlm|lrm|sbquo|bdquo|permil|" +
+            "lArr|rArr|uArr|dArr|hArr|forall|exist|empty|nabla|isin|" +
+            "notin|ni|prod|sum|minus|lowast|radic|prop|infin|ang|and|or|" +
+            "cap|cup|int|there4|sim|cong|asymp|ne|equiv|le|ge|sub|sup|" +
+            "sube|supe|oplus|otimes|perp|sdot);"
+    )
+
+    private val htmlEntities = mapOf(
+        "nbsp" to "\u00A0", "mdash" to "\u2014", "ndash" to "\u2013",
+        "laquo" to "\u00AB", "raquo" to "\u00BB", "hellip" to "\u2026",
+        "ldquo" to "\u201C", "rdquo" to "\u201D", "lsquo" to "\u2018",
+        "rsquo" to "\u2019", "bull" to "\u2022", "copy" to "\u00A9",
+        "reg" to "\u00AE", "trade" to "\u2122", "euro" to "\u20AC",
+        "pound" to "\u00A3", "yen" to "\u00A5", "cent" to "\u00A2",
+        "deg" to "\u00B0", "plusmn" to "\u00B1", "times" to "\u00D7",
+        "divide" to "\u00F7", "frac12" to "\u00BD", "frac14" to "\u00BC",
+        "frac34" to "\u00BE", "para" to "\u00B6", "middot" to "\u00B7",
+        "szlig" to "\u00DF", "shy" to "\u00AD", "iexcl" to "\u00A1",
+        "iquest" to "\u00BF", "thinsp" to "\u2009", "ensp" to "\u2002",
+        "emsp" to "\u2003", "zwj" to "\u200D", "zwnj" to "\u200C",
+        "rlm" to "\u200F", "lrm" to "\u200E", "sbquo" to "\u201A",
+        "bdquo" to "\u201E", "permil" to "\u2030"
+    )
+
+    fun preprocess(bytes: ByteArray): ByteArray {
+        val peek = bytes.take(300).toByteArray().toString(Charsets.ISO_8859_1)
+        val declaredEnc = Regex("""encoding\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+            .find(peek)?.groupValues?.get(1) ?: "UTF-8"
+        val charset = try {
+            Charset.forName(declaredEnc)
+        } catch (_: Exception) {
+            Charsets.UTF_8
+        }
+
+        var text = bytes.toString(charset)
+        text = htmlEntityRe.replace(text) { mr -> htmlEntities[mr.groupValues[1]] ?: mr.value }
+        text = Regex("&(?!(amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)").replace(text, "&amp;")
+
+        if (!declaredEnc.equals("UTF-8", ignoreCase = true) &&
+            !declaredEnc.equals("UTF8", ignoreCase = true)) {
+            text = text.replaceFirst(
+                Regex("""encoding\s*=\s*["'][^"']+["']""", RegexOption.IGNORE_CASE),
+                """encoding="UTF-8""""
+            )
+        }
+
+        return text.toByteArray(Charsets.UTF_8)
+    }
+}
+
+internal object Fb2MetadataParser {
+    private val tagRe = Regex("<([A-Za-z0-9:_-]+)(?:\\s[^>]*)?>(.*?)</\\1>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    private val descriptionRe = Regex("<description(?:\\s[^>]*)?>(.*?)</description>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    private val titleInfoRe = Regex("<title-info(?:\\s[^>]*)?>(.*?)</title-info>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+    private val authorRe = Regex("<author(?:\\s[^>]*)?>(.*?)</author>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+
+    fun extract(xml: String): Map<String, String> {
+        val description = descriptionRe.find(xml)?.groupValues?.get(1).orEmpty()
+        val titleInfo = titleInfoRe.find(description)?.groupValues?.get(1).orEmpty()
+        return buildMap {
+            findTag(titleInfo, "book-title")?.let { put("title", it) }
+            findTag(titleInfo, "lang")?.let { put("language", it) }
+            findTag(titleInfo, "genre")?.let { put("genre", it) }
+            extractAuthor(titleInfo)?.let { put("author", it) }
+        }
+    }
+
+    private fun extractAuthor(titleInfo: String): String? {
+        val author = authorRe.find(titleInfo)?.groupValues?.get(1).orEmpty()
+        val parts = listOf("first-name", "middle-name", "last-name", "nickname")
+            .mapNotNull { findTag(author, it) }
+        return parts.joinToString(" ").takeIf { it.isNotBlank() }
+    }
+
+    private fun findTag(xml: String, tag: String): String? =
+        tagRe.findAll(xml)
+            .firstOrNull { it.groupValues[1].equals(tag, ignoreCase = true) }
+            ?.groupValues
+            ?.get(2)
+            ?.stripTags()
+            ?.xmlUnescape()
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+
+    private fun String.stripTags(): String = replace(Regex("<[^>]+>"), " ")
+
+    private fun String.xmlUnescape(): String =
+        replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&quot;", "\"")
+            .replace("&apos;", "'")
+            .replace("&amp;", "&")
 }

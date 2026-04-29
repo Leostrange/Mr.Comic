@@ -55,14 +55,18 @@ class DjvuProbeTest {
             listOf("DIRM", "FORM:DJVI", "FORM:DJVU", "FORM:THUM", "FORM:DJVU", "FORM:DJVU"),
             result?.topLevelChunkIds
         )
-        // DJVM probe skips inner chunk inspection for stream safety;
-        // chunkIds and info are resolved lazily during page rendering.
-        assertEquals(emptyList<String>(), result?.pages?.get(0)?.chunkIds)
-        assertEquals(emptyList<String>(), result?.pages?.get(1)?.chunkIds)
-        assertEquals(emptyList<String>(), result?.pages?.get(2)?.chunkIds)
-        assertEquals(null, result?.pages?.get(0)?.info)
-        assertEquals(null, result?.pages?.get(1)?.info)
-        assertEquals(null, result?.pages?.get(2)?.info)
+        assertEquals(listOf("INFO", "TXTa"), result?.pages?.get(0)?.chunkIds)
+        assertEquals(listOf("INFO"), result?.pages?.get(1)?.chunkIds)
+        assertEquals(listOf("INFO", "Sjbz"), result?.pages?.get(2)?.chunkIds)
+        assertEquals(1200, result?.pages?.get(0)?.info?.width)
+        assertEquals(1600, result?.pages?.get(0)?.info?.height)
+        assertEquals(400, result?.pages?.get(0)?.info?.dpi)
+        assertEquals(900, result?.pages?.get(1)?.info?.width)
+        assertEquals(1400, result?.pages?.get(1)?.info?.height)
+        assertEquals(null, result?.pages?.get(1)?.info?.dpi)
+        assertEquals(1024, result?.pages?.get(2)?.info?.width)
+        assertEquals(768, result?.pages?.get(2)?.info?.height)
+        assertEquals(300, result?.pages?.get(2)?.info?.dpi)
         assertEquals(36L, result?.pages?.get(0)?.fileOffset)
         assertEquals(34L, result?.pages?.get(0)?.byteLength)
         assertEquals(82L, result?.pages?.get(1)?.fileOffset)

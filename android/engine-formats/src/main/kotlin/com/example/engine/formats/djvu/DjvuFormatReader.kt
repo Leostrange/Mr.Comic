@@ -96,11 +96,7 @@ class DjvuFormatReader(
         return openMutex.withLock {
             if (isClosed) return@withLock null
             document?.let { return@withLock it }
-            val doc = backend.open(path)
-            if (doc == null) {
-                android.util.Log.w("DjvuFormatReader", "Backend returned null for path=$path")
-            }
-            doc?.also { document = it }
+            backend.open(path)?.also { document = it }
         }
     }
 
