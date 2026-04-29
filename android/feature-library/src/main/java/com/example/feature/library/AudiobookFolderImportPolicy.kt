@@ -30,12 +30,20 @@ internal fun planAudiobookImports(
 
     val directAudioFiles = childFiles.filter { it.isAudioNode() }
     val directImageFiles = childFiles.filter { it.isImageNode() }
+    val coverUri = directImageFiles.bestCoverUri()
+    val directNonAudioMediaFiles = childFiles.filterNot { it.isAudioNode() || it.isImageNode() }
     val currentLevelImports = when {
         directAudioFiles.isEmpty() -> emptyList()
+        isRoot && (childDirectories.isNotEmpty() || directNonAudioMediaFiles.isNotEmpty()) ->
+            directAudioFiles.map { file ->
+                file.toSingleFileAudiobook(
+                    coverUri = coverUri
+                )
+            }
         preferFolderImports -> listOf(
             Audiobook(
                 title = root.name.ifBlank { "Аудиокнига" },
-                coverUri = directImageFiles.firstOrNull()?.uri,
+                coverUri = coverUri,
                 sourcePath = root.uri,
                 sourceIsFolder = true,
                 chapters = directAudioFiles.mapIndexed { index, file ->
@@ -49,7 +57,7 @@ internal fun planAudiobookImports(
         )
         !preferFolderImports -> directAudioFiles.map { file ->
             file.toSingleFileAudiobook(
-                coverUri = directImageFiles.firstOrNull()?.uri
+                coverUri = coverUri
             )
         }
         else -> emptyList()
@@ -58,7 +66,7 @@ internal fun planAudiobookImports(
     return currentLevelImports + childDirectories.flatMap { child ->
         planAudiobookImports(
             root = child,
-            preferFolderImports = preferFolderImports,
+            preferFolderImports = true,
             isRoot = false
         )
     }
@@ -79,6 +87,18 @@ private fun AudiobookImportNode.toSingleFileAudiobook(coverUri: String? = null):
             )
         )
     )
+}
+
+private fun List<AudiobookImportNode>.bestCoverUri(): String? {
+    if (isEmpty()) return null
+    val preferredNames = listOf("cover", "folder", "front", "обложка")
+    return minWithOrNull(
+        compareBy<AudiobookImportNode> { node ->
+            val normalized = node.name.substringBeforeLast('.').lowercase(Locale.ROOT)
+            preferredNames.indexOfFirst { marker -> normalized.contains(marker) }
+                .let { if (it >= 0) it else Int.MAX_VALUE }
+        }.thenBy { it.name.lowercase(Locale.ROOT) }
+    )?.uri
 }
 
 private fun AudiobookImportNode.isAudioNode(): Boolean {

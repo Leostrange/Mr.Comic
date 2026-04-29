@@ -207,6 +207,7 @@ class LibraryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     private val preferences = UserPreferences(context.dataStore)
     private val reportedAchievementUnlocks = linkedSetOf<String>()
+    private val repairedAudiobookCoverIds = mutableSetOf<String>()
     private var lastTrackedMascotStage: MascotStage? = null
 
     /** Raw filtered list from the repository before local sorting/grouping is applied. */
@@ -1012,8 +1013,20 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             audiobookRepository.getAllFlow().collect { list ->
                 _uiState.update { it.copy(audiobooks = list) }
+                repairMissingAudiobookCovers(list)
             }
         }
+    }
+
+    private suspend fun repairMissingAudiobookCovers(audiobooks: List<Audiobook>) {
+        audiobooks
+            .filter { repairedAudiobookCoverIds.add(it.id) }
+            .forEach { audiobook ->
+                val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
+                if (!resolvedCover.isNullOrBlank() && resolvedCover != audiobook.coverUri) {
+                    audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover))
+                }
+            }
     }
 
     /** Add a single audio file as a 1-chapter audiobook. */
@@ -1040,7 +1053,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    /** Scan the top-level of a folder tree for audio files and add them as chapters. */
+    /** Scan a folder tree and add direct audio files and nested audio folders separately. */
     fun addAudiobookFromFolder(treeUri: Uri) {
         viewModelScope.launch {
             try {
@@ -1049,50 +1062,16 @@ class LibraryViewModel @Inject constructor(
                     _uiState.update { it.copy(error = "Не удалось открыть папку") }
                     return@launch
                 }
-                val title = root.name ?: treeUri.lastPathSegment ?: "Аудиокнига"
-                val allFiles = root.listFiles() ?: emptyArray()
-                val audioFiles = allFiles
-                    .filter { it.isFile && (it.type?.startsWith("audio/") == true || it.name.orEmpty().let { n ->
-                        n.endsWith(".mp3", true) || n.endsWith(".m4a", true) ||
-                        n.endsWith(".m4b", true) || n.endsWith(".ogg", true) ||
-                        n.endsWith(".flac", true) || n.endsWith(".wav", true) ||
-                        n.endsWith(".aac", true) || n.endsWith(".opus", true) ||
-                        n.endsWith(".wma", true)
-                    }) }
-                    .sortedBy { it.name.orEmpty() }
-                if (audioFiles.isEmpty()) {
-                    Log.w("LibraryViewModel", "No audio files in folder: $treeUri (total: ${allFiles.size})")
-                    _uiState.update { it.copy(error = "В папке нет аудиофайлов (файлов: ${allFiles.size})") }
+                val planned = planAudiobookImports(root.toAudiobookImportNode())
+                if (planned.isEmpty()) {
+                    Log.i("LibraryViewModel", "No audio files in folder tree: $treeUri")
                     return@launch
                 }
-                val chapters = audioFiles.mapIndexed { i, file ->
-                    AudioChapter(
-                        index = i,
-                        title = file.name?.substringBeforeLast('.') ?: "Глава ${i + 1}",
-                        uri = file.uri.toString()
-                    )
+                planned.forEach { audiobook ->
+                    val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
+                    audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover ?: audiobook.coverUri))
                 }
-                val coverUri = allFiles.firstOrNull { file ->
-                    file.isFile && (
-                        file.type?.startsWith("image/") == true ||
-                            file.name.orEmpty().let { name ->
-                                name.endsWith(".jpg", true) ||
-                                    name.endsWith(".jpeg", true) ||
-                                    name.endsWith(".png", true) ||
-                                    name.endsWith(".webp", true)
-                            }
-                        )
-                }?.uri?.toString()
-                val audiobook = Audiobook(
-                    title = title,
-                    coverUri = coverUri,
-                    sourcePath = treeUri.toString(),
-                    sourceIsFolder = true,
-                    chapters = chapters
-                )
-                val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
-                audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover ?: audiobook.coverUri))
-                Log.i("LibraryViewModel", "Audiobook added from folder: $title (${chapters.size} chapters)")
+                Log.i("LibraryViewModel", "Audiobook imports added from folder: ${planned.size}")
             } catch (e: Exception) {
                 Log.e("LibraryViewModel", "Failed to add audiobook from folder: $treeUri", e)
                 _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
@@ -1104,6 +1083,28 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             audiobookRepository.delete(audiobookId)
         }
+    }
+
+    private fun DocumentFile.toAudiobookImportNode(): AudiobookImportNode {
+        val childNodes = if (isDirectory) {
+            listFiles()
+                .map { it.toAudiobookImportNode() }
+                .sortedWith(
+                    compareBy<AudiobookImportNode>(
+                        { !it.isDirectory },
+                        { it.name.lowercase() }
+                    )
+                )
+        } else {
+            emptyList()
+        }
+        return AudiobookImportNode(
+            name = name?.trim()?.ifBlank { null } ?: uri.lastPathSegment.orEmpty().ifBlank { "Аудиокнига" },
+            uri = uri.toString(),
+            isDirectory = isDirectory,
+            mimeType = type,
+            children = childNodes
+        )
     }
 
     private fun filterComics(
