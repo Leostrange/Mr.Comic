@@ -433,12 +433,18 @@ fun LibraryScreen(
 
     val canNavigateUpWithinLibrary = showMrComicProgress ||
         uiState.contentSection != LibraryContentSection.FILES ||
-        (uiState.groupByMode == GroupByMode.FOLDER && uiState.currentFolderPath != null)
+        (uiState.groupByMode == GroupByMode.FOLDER && uiState.currentFolderPath != null) ||
+        uiState.statusFilter != LibraryStatusFilter.ALL ||
+        uiState.formatFilter != LibraryFormatFilter.ALL
     val navigateUpWithinLibrary = {
         if (showMrComicProgress) {
             showMrComicProgress = false
         } else if (uiState.contentSection != LibraryContentSection.FILES) {
             viewModel.setContentSection(LibraryContentSection.FILES)
+        } else if (uiState.statusFilter != LibraryStatusFilter.ALL) {
+            viewModel.setStatusFilter(LibraryStatusFilter.ALL)
+        } else if (uiState.formatFilter != LibraryFormatFilter.ALL) {
+            viewModel.setFormatFilter(LibraryFormatFilter.ALL)
         } else {
             viewModel.navigateUpFromFolder()
         }

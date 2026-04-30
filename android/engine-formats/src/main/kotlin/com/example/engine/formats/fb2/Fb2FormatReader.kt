@@ -151,38 +151,23 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
     override fun close() { /* no persistent resources */ }
 
-    // ── Pre-processing ────────────────────────────────────────────────────────
-
-    /**
-     * Converts raw FB2 bytes into clean XML bytes suitable for Android's XmlPullParser:
-     *  1. Detects encoding from the XML declaration (UTF-8, windows-1251, koi8-r …)
-     *  2. Decodes to a Kotlin String with that charset
-     *  3. Replaces HTML entities (&nbsp; &mdash; etc.) that XmlPullParser cannot handle
-     *  4. Re-encodes to UTF-8 and updates the XML declaration accordingly
-     */
-    private fun preprocessBytes(bytes: ByteArray): ByteArray = Fb2Preprocessor.preprocess(bytes)
-
     // ── Parser ────────────────────────────────────────────────────────────────
 
     private fun parse(stream: InputStream): Parsed {
-        val rawBytes = try { stream.readBytes() } catch (e: Exception) {
-            logError("Cannot read FB2 stream", e)
-            return Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap())
-        }
+        val bufferedStream = stream.buffered()
+        
+        // Peek metadata and detect charset
+        val metadataBuffer = ByteArray(1024 * 1024) // 1MB for metadata should be enough
+        bufferedStream.mark(metadataBuffer.size)
+        val readCount = bufferedStream.read(metadataBuffer)
+        val peekedBytes = if (readCount < metadataBuffer.size) metadataBuffer.copyOf(readCount) else metadataBuffer
+        bufferedStream.reset()
 
-        // Clean up the bytes before XML parsing
-        val bytes = try { preprocessBytes(rawBytes) } catch (e: Exception) {
-            logWarning("FB2 preprocess failed, using raw bytes", e)
-            rawBytes
-        }
-        val metadata = Fb2MetadataParser.extract(bytes.toString(Charsets.UTF_8))
+        val charset = Fb2Preprocessor.detectCharset(peekedBytes)
+        val metadata = Fb2MetadataParser.extract(peekedBytes.toString(charset))
 
         val binaries = LinkedHashMap<String, ByteArray>()
         val bodyImageRefs = mutableListOf<String>()
-        // Raw HTML fragments collected during body parsing.
-        // We MUST NOT call buildHtmlPage() here because <binary> elements (images) come
-        // AFTER </body> in the FB2 format — binaries would still be empty at flush time.
-        // Pages are built from rawSections after full parsing, when binaries is populated.
         val rawSections = mutableListOf<String>()
 
         val sectionBuf = StringBuilder()
@@ -191,34 +176,24 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
         var depth = 0
         var bodyDepth = -1
-        var mainBodyDone = false   // skip second <body> as main body
+        var mainBodyDone = false
         var sectionDepth = 0
         var inBinary = false
         var binaryId = ""
         val binaryBuf = StringBuilder()
 
-        // ── TOC tracking ──────────────────────────────────────────────────────
-        // Pairs of (chapterTitle, rawSectionIdxAtSectionStart)
         val tocRaw = mutableListOf<Pair<String, Int>>()
-        var pendingTocRawIdx = 0          // rawSections.size when current top-level section started
+        var pendingTocRawIdx = 0
         val titleTextBuf = StringBuilder()
-        var inTopLevelTitle = false       // collecting title text for the TOC
+        var inTopLevelTitle = false
 
-        // ── Notes body tracking ───────────────────────────────────────────────
         var notesBodyDepth = -1
         val footnoteMap = mutableMapOf<String, String>()
         val notesBuf = StringBuilder()
         var currentNoteId = ""
         var notesSectionDepth = 0
-
-        // ── Link tracking (main body <a> elements) ────────────────────────────
         var inLink = false
 
-        /**
-         * Emit sectionBuf as one or more reader pages and reset the buffer.
-         * Splits at </p> boundaries: a new page starts when accumulated non-tag characters
-         * would exceed CHARS_PER_PAGE, keeping each page to roughly one screen of text.
-         */
         fun flushPage() {
             if (sectionBuf.isEmpty()) return
             val content = sectionBuf.toString()
@@ -236,8 +211,6 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             var currentChars = 0
             for (part in parts) {
                 val partChars = HTML_TAG_RE.replace(part, "").length
-                // Start a new page if adding this part would overflow — but only if the
-                // current page already has content (prevents empty leading pages).
                 if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
                     rawSections.add(currentChunk.toString())
                     currentChunk = StringBuilder()
@@ -249,9 +222,10 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             if (currentChunk.isNotEmpty()) rawSections.add(currentChunk.toString())
         }
 
+        val reader = Fb2Preprocessor.createStreamingReader(bufferedStream, charset)
         val parser = Xml.newPullParser().apply {
             setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
-            setInput(bytes.inputStream(), "UTF-8")
+            setInput(reader)
         }
 
         try {
@@ -596,17 +570,6 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 }
 
 internal object Fb2Preprocessor {
-    private val htmlEntityRe = Regex(
-        "&(nbsp|mdash|ndash|laquo|raquo|hellip|ldquo|rdquo|lsquo|rsquo|" +
-            "bull|copy|reg|trade|euro|pound|yen|cent|deg|plusmn|times|divide|" +
-            "frac12|frac14|frac34|para|middot|szlig|shy|iexcl|iquest|" +
-            "thinsp|ensp|emsp|zwj|zwnj|rlm|lrm|sbquo|bdquo|permil|" +
-            "lArr|rArr|uArr|dArr|hArr|forall|exist|empty|nabla|isin|" +
-            "notin|ni|prod|sum|minus|lowast|radic|prop|infin|ang|and|or|" +
-            "cap|cup|int|there4|sim|cong|asymp|ne|equiv|le|ge|sub|sup|" +
-            "sube|supe|oplus|otimes|perp|sdot);"
-    )
-
     private val htmlEntities = mapOf(
         "nbsp" to "\u00A0", "mdash" to "\u2014", "ndash" to "\u2013",
         "laquo" to "\u00AB", "raquo" to "\u00BB", "hellip" to "\u2026",
@@ -624,29 +587,89 @@ internal object Fb2Preprocessor {
         "bdquo" to "\u201E", "permil" to "\u2030"
     )
 
-    fun preprocess(bytes: ByteArray): ByteArray {
-        val peek = bytes.take(300).toByteArray().toString(Charsets.ISO_8859_1)
+    fun detectCharset(peekedBytes: ByteArray): Charset {
+        val peek = peekedBytes.toString(Charsets.ISO_8859_1)
         val declaredEnc = Regex("""encoding\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
             .find(peek)?.groupValues?.get(1) ?: "UTF-8"
-        val charset = try {
+        return try {
             Charset.forName(declaredEnc)
         } catch (_: Exception) {
             Charsets.UTF_8
         }
+    }
 
-        var text = bytes.toString(charset)
-        text = htmlEntityRe.replace(text) { mr -> htmlEntities[mr.groupValues[1]] ?: mr.value }
-        text = Regex("&(?!(amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)").replace(text, "&amp;")
-
-        if (!declaredEnc.equals("UTF-8", ignoreCase = true) &&
-            !declaredEnc.equals("UTF8", ignoreCase = true)) {
-            text = text.replaceFirst(
-                Regex("""encoding\s*=\s*["'][^"']+["']""", RegexOption.IGNORE_CASE),
-                """encoding="UTF-8""""
-            )
-        }
-
+    fun preprocess(bytes: ByteArray): ByteArray {
+        val charset = detectCharset(bytes.take(1024).toByteArray())
+        val text = createStreamingReader(bytes.inputStream(), charset).use { reader ->
+            reader.readText()
+        }.replaceFirst(
+            Regex("""encoding\s*=\s*["'][^"']+["']""", RegexOption.IGNORE_CASE),
+            """encoding="UTF-8""""
+        )
         return text.toByteArray(Charsets.UTF_8)
+    }
+
+    fun createStreamingReader(inputStream: InputStream, charset: Charset): java.io.Reader {
+        val baseReader = inputStream.reader(charset)
+        return object : java.io.PushbackReader(baseReader, 32) {
+            private val entityBuf = StringBuilder()
+
+            override fun read(): Int {
+                val c = super.read()
+                if (c == '&'.code) {
+                    entityBuf.setLength(0)
+                    var next = super.read()
+                    while (next != -1 && next != ';'.code && next != '&'.code && entityBuf.length < 10) {
+                        entityBuf.append(next.toChar())
+                        next = super.read()
+                    }
+
+                    if (next == ';'.code) {
+                        val entity = entityBuf.toString()
+                        val replacement = htmlEntities[entity]
+                        if (replacement != null) {
+                            // Replace known HTML entity with char
+                            return replacement[0].code
+                        } else if (entity.startsWith("#")) {
+                            // Keep numeric entities
+                            val full = "&$entity;"
+                            for (i in full.length - 1 downTo 1) unread(full[i].code)
+                            return '&'.code
+                        } else if (entity in setOf("amp", "lt", "gt", "apos", "quot")) {
+                            // Keep standard XML entities
+                            val full = "&$entity;"
+                            for (i in full.length - 1 downTo 1) unread(full[i].code)
+                            return '&'.code
+                        } else {
+                            // Unknown entity, escape it as &amp;...
+                            val full = "amp;$entity;"
+                            for (i in full.length - 1 downTo 0) unread(full[i].code)
+                            return '&'.code
+                        }
+                    } else {
+                        // Not an entity or broken, escape lone & as &amp;
+                        if (next != -1) unread(next)
+                        val full = "amp;" + entityBuf.toString()
+                        for (i in full.length - 1 downTo 0) unread(full[i].code)
+                        return '&'.code
+                    }
+                }
+                return c
+            }
+
+            override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+                if (len <= 0) return 0
+                var count = 0
+                while (count < len) {
+                    val c = read()
+                    if (c == -1) break
+                    cbuf[off + count] = c.toChar()
+                    count++
+                    if (ready().not()) break // Don't block if we have some data
+                }
+                return if (count == 0) -1 else count
+            }
+        }
     }
 }
 
