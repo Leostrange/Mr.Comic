@@ -156,9 +156,11 @@ class ZipFormatReader(
             val textFormat = textFormatForExtension(extension) ?: return null
             val cacheDir = archiveCacheDir("archive_text_cache")
             val safeName = ArchiveFormatSupport.safeArchiveName(textEntry, extension)
-            val extracted = File(cacheDir, "zip_${path.hashCode()}_${System.currentTimeMillis()}_$safeName")
-            zip.getInputStream(header).use { input ->
-                extracted.outputStream().use { output -> input.copyTo(output) }
+            val extracted = File(cacheDir, "zip_${path.hashCode()}_${header.uncompressedSize}_$safeName")
+            if (!extracted.exists() || extracted.length() != header.uncompressedSize) {
+                zip.getInputStream(header).use { input ->
+                    extracted.outputStream().use { output -> input.copyTo(output) }
+                }
             }
             tempTextFile = extracted
             when (textFormat) {
@@ -187,12 +189,20 @@ class ZipFormatReader(
             return try {
                 val resolvedPath = if (path.startsWith("content://")) {
                     val uri = Uri.parse(path)
+                    val expectedSize = runCatching {
+                        context.contentResolver.openAssetFileDescriptor(uri, "r")
+                            ?.use { it.length.takeIf { len -> len > 0L } }
+                    }.getOrNull() ?: 0L
+                    
                     val cacheDir = archiveCacheDir("cbz_cache")
-                    val fileName = "cbz_${uri.hashCode()}_${System.currentTimeMillis()}.zip"
+                    val fileName = "cbz_${uri.hashCode()}_$expectedSize.zip"
                     val cached = File(cacheDir, fileName)
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        cached.outputStream().use { output -> input.copyTo(output) }
-                    } ?: return null
+                    
+                    if (!cached.exists() || cached.length() == 0L || (expectedSize > 0L && cached.length() != expectedSize)) {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            cached.outputStream().use { output -> input.copyTo(output) }
+                        } ?: return null
+                    }
                     tempFile = cached
                     cached.absolutePath
                 } else {

@@ -70,6 +70,7 @@ fun ImageMessagePopup(
     drawableId: Int,
     contentDescription: String,
     config: ImageMessagePopupConfig,
+    eventToken: Int = 0,
     onDismiss: () -> Unit
 ) {
     val popupAlignment = remember(config.position) {
@@ -87,11 +88,11 @@ fun ImageMessagePopup(
     val popupDurationSeconds = remember(config.durationSeconds) {
         clampImageMessagePopupDurationSeconds(config.durationSeconds)
     }
-    var dragOffsetX by rememberSaveable(drawableId, config.position) { mutableFloatStateOf(0f) }
-    var dragOffsetY by rememberSaveable(drawableId, config.position) { mutableFloatStateOf(0f) }
-    val popupInteractionSource = remember(drawableId, config.position) { MutableInteractionSource() }
+    var dragOffsetX by rememberSaveable(drawableId, config.position, eventToken) { mutableFloatStateOf(0f) }
+    var dragOffsetY by rememberSaveable(drawableId, config.position, eventToken) { mutableFloatStateOf(0f) }
+    val popupInteractionSource = remember(drawableId, config.position, eventToken) { MutableInteractionSource() }
 
-    LaunchedEffect(drawableId, popupDurationSeconds) {
+    LaunchedEffect(drawableId, popupDurationSeconds, eventToken) {
         if (popupDurationSeconds > 0) {
             delay(popupDurationSeconds * 1_000L)
             onDismiss()
@@ -125,7 +126,7 @@ fun ImageMessagePopup(
                         Modifier
                     }
                 )
-                .widthIn(max = (320.dp * popupScale).coerceAtLeast(176.dp))
+                .widthIn(max = (720.dp * popupScale).coerceAtLeast(176.dp))
         ) {
             Image(
                 painter = painterResource(drawableId),

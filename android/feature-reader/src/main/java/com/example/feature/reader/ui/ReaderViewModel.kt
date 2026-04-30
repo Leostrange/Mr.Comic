@@ -3612,8 +3612,11 @@ class ReaderViewModel @Inject constructor(
                     targetLanguage = targetLanguage
                 )
             }.onSuccess { result ->
-                if (result == null) return@onSuccess
                 val readerText = localizedReaderText()
+                if (result == null) {
+                    _quoteSaveMessages.emit(readerText.quoteSaveFailed)
+                    return@onSuccess
+                }
                 analyticsTracker.track(
                     ReadingAnalyticsEvent.QuoteSaved(
                         comicId = comic.id,

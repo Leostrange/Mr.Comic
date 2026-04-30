@@ -89,6 +89,9 @@ import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.theme.ReadingPreset
 import com.example.engine.formats.base.TocEntry
+import com.example.feature.reader.R
+import com.example.feature.reader.ui.components.ImageMessagePopup
+import com.example.feature.reader.ui.components.ImageMessagePopupConfig
 import com.example.feature.reader.ui.components.PageView
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
@@ -1637,6 +1640,8 @@ fun ReaderScreen(
     var showTextTranslationPageSheet by remember { mutableStateOf(false) }
     var pendingTtsRestartTargetPage by remember { mutableStateOf<Int?>(null) }
     var eyeRestReminderMinutes by remember { mutableStateOf<Int?>(null) }
+    var quoteSavePopupVisible by rememberSaveable { mutableStateOf(false) }
+    var quoteSavePopupToken by rememberSaveable { mutableIntStateOf(0) }
     var fontCatalogVersion by remember { mutableIntStateOf(0) }
     var pendingCustomFontDeletion by rememberSaveable { mutableStateOf<String?>(null) }
     val fontImportLauncher = rememberLauncherForActivityResult(
@@ -1745,7 +1750,8 @@ fun ReaderScreen(
     }
     LaunchedEffect(Unit) {
         viewModel.quoteSaveMessages.collect { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            quoteSavePopupVisible = true
+            quoteSavePopupToken = nextReaderUiEventToken(quoteSavePopupToken)
         }
     }
 
@@ -2575,6 +2581,15 @@ fun ReaderScreen(
             onSaveQuote = viewModel::saveQuoteFromSelectedTextResult
         )
     }
+    if (quoteSavePopupVisible) {
+        ImageMessagePopup(
+            drawableId = R.drawable.reader_quote_saved_popup,
+            contentDescription = readerText.quoteSaved,
+            config = ImageMessagePopupConfig(durationSeconds = 3),
+            eventToken = quoteSavePopupToken,
+            onDismiss = { quoteSavePopupVisible = false }
+        )
+    }
     eyeRestReminderMinutes?.let {
         AlertDialog(
             onDismissRequest = { eyeRestReminderMinutes = null },
@@ -2599,6 +2614,9 @@ fun ReaderScreen(
     }
 }
 }
+
+private fun nextReaderUiEventToken(currentToken: Int): Int =
+    if (currentToken == Int.MAX_VALUE) 1 else currentToken + 1
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

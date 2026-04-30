@@ -101,7 +101,7 @@ import com.example.core.ui.theme.ThemeMode
 import com.example.core.ui.theme.ThemePreset
 import com.example.core.ui.theme.previewColors
 import com.example.core.ui.theme.style
-import com.example.feature.reader.R as ReaderR
+import com.example.feature.settings.R as SettingsR
 import com.example.feature.reader.ui.ReaderTextFontCatalog
 import com.example.feature.reader.ui.components.ImageMessagePopup
 import com.example.feature.reader.ui.components.ImageMessagePopupConfig
@@ -3503,6 +3503,13 @@ fun SettingsScreen(
     val translationMapText = remember(strings.languageCode) { translationSettingsMapText(strings.languageCode) }
     val aiSectionText = remember(strings.languageCode) { aiServicesSectionText(strings.languageCode) }
     val readAloudText = remember(strings.languageCode) { readAloudSectionText(strings.languageCode) }
+    fun showSettingsImportRejection() {
+        if (uiState.settingsImportErrorPresentation == SettingsImportErrorPresentation.IMAGE) {
+            settingsImportErrorPopupToken = nextSettingsUiEventToken(settingsImportErrorPopupToken)
+        } else {
+            scope.launch { snackbarHostState.showSnackbar(SETTINGS_IMPORT_REJECTION_MESSAGE) }
+        }
+    }
     val fontImportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -3548,11 +3555,15 @@ fun SettingsScreen(
         uri ?: return@rememberLauncherForActivityResult
         scope.launch {
             val importedStyle = runCatching {
-                context.contentResolver.openInputStream(uri)
-                    ?.bufferedReader()
-                    ?.use { it.readText() }
+                uri.readAcceptedSettingsImportText(context)
                     ?.let { viewModel.importReaderTypographyFromJson(it) }
-            }.getOrNull()
+            }.getOrElse { error ->
+                if (error.message == SETTINGS_IMPORT_REJECTION_MESSAGE) {
+                    showSettingsImportRejection()
+                    return@launch
+                }
+                null
+            }
             if (importedStyle != null) {
                 Toast.makeText(
                     context,
@@ -3627,7 +3638,7 @@ fun SettingsScreen(
 
     if (settingsImportErrorPopupToken > 0) {
         ImageMessagePopup(
-            drawableId = ReaderR.drawable.reader_import_error_popup,
+            drawableId = SettingsR.drawable.settings_import_error_popup,
             contentDescription = SETTINGS_IMPORT_REJECTION_MESSAGE,
             config = settingsImportErrorPopupConfig,
             onDismiss = { settingsImportErrorPopupToken = 0 }

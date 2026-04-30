@@ -1,8 +1,8 @@
 [versions]
-agp = "8.7.3"
-kotlin = "2.1.0"
-hilt = "2.54"
-ksp = "2.1.0-1.0.29"
+agp = "9.2.0"
+kotlin = "2.2.10"
+hilt = "2.59.2"
+ksp = "2.3.2"
 
 compileSdk = "35"
 minSdk = "26"

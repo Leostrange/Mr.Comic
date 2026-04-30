@@ -10,9 +10,9 @@ plugins {
 subprojects {
     configurations.all {
         resolutionStrategy {
-            force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21")
-            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21")
+            force("org.jetbrains.kotlin:kotlin-stdlib:${libs.versions.kotlin.get()}")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:${libs.versions.kotlin.get()}")
+            force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:${libs.versions.kotlin.get()}")
         }
         // Запрещаем pdfium-android (использует android.support.v4, несовместим с AndroidX без Jetifier)
         exclude(group = "com.shockwave.pdfium", module = "pdfium-android")

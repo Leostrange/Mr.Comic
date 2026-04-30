@@ -782,39 +782,23 @@ class EpubFormatReader(
     }
 
     private fun buildPagesFromBlueprint(blueprint: ManifestBlueprint, zip: ZipFile): List<EpubPage> {
-        val builtPages = when (blueprint.flavor) {
-            EPUB_FLAVOR_FB2 -> buildFb2EpubPagesFromSpine(
-                blueprint.manifest,
-                blueprint.spine,
-                blueprint.opfDir,
-                zip
-            )
-            EPUB_FLAVOR_CALIBRE -> buildCalibreEpubPagesFromSpine(
-                blueprint.manifest,
-                blueprint.spine,
-                blueprint.opfDir,
-                zip
-            )
-            EPUB_FLAVOR_PUBLISHER -> buildPublisherEpubPagesFromSpine(
-                blueprint.manifest,
-                blueprint.spine,
-                blueprint.opfDir,
-                zip
-            )
-            else -> buildPagesFromOpf(
-                blueprint.manifest,
-                blueprint.spine,
-                blueprint.opfDir,
-                zip,
-                forceWholeHtmlEntries = false
-            )
-        }
+        val builtPages = buildPagesFromOpf(
+            manifest = blueprint.manifest,
+            spine = blueprint.spine,
+            opfDir = blueprint.opfDir,
+            zip = zip,
+            forceWholeHtmlEntries = false,
+            flavor = blueprint.flavor
+        )
         return if (blueprint.repairFrontMatter) {
-            buildStrictFb2EpubPagesFromSpine(
-                blueprint.manifest,
-                blueprint.spine,
-                blueprint.opfDir,
-                zip
+            buildPagesFromOpf(
+                manifest = blueprint.manifest,
+                spine = blueprint.spine,
+                opfDir = blueprint.opfDir,
+                zip = zip,
+                forceWholeHtmlEntries = false,
+                flavor = EPUB_FLAVOR_FB2,
+                allowFallback = false
             ).ifEmpty { builtPages }
         } else {
             builtPages
@@ -1027,16 +1011,19 @@ class EpubFormatReader(
         spine: List<String>,
         opfDir: String,
         zip: ZipFile,
-        forceWholeHtmlEntries: Boolean = false
+        forceWholeHtmlEntries: Boolean = false,
+        flavor: String = EPUB_FLAVOR_STANDARD,
+        allowFallback: Boolean = true
     ): List<EpubPage> {
         // ── First pass: build one EpubPage per spine item ────────────────────────
-        data class SpineItem(val page: EpubPage.Html, val uncompressedSize: Long)
         val rawResult = mutableListOf<EpubPage>()
-        val htmlSizes = mutableMapOf<String, Long>()   // entry → uncompressed byte size
         val htmlVisibleChars = mutableMapOf<String, Int>()
         val imageOnlyHtmlEntries = mutableSetOf<String>()
         val keepWholeBodyEntries = mutableSetOf<String>()
         val protectedFrontMatterEntries = mutableSetOf<String>()
+
+        val isSpecialFlavor = flavor in setOf(EPUB_FLAVOR_FB2, EPUB_FLAVOR_CALIBRE, EPUB_FLAVOR_PUBLISHER)
+
         spineLoop@ for (idref in spine) {
             val rawHref = manifest[idref] ?: continue
             val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
@@ -1052,7 +1039,6 @@ class EpubFormatReader(
                     if (isProtectedFrontMatter) {
                         protectedFrontMatterEntries += entry
                     }
-                    htmlSizes[entry] = header.uncompressedSize
                     val estimate = if (forceWholeHtmlEntries || isProtectedFrontMatter) {
                         EpubContentEstimate(
                             textCharCount = 1,
@@ -1081,16 +1067,25 @@ class EpubFormatReader(
                     }
                     // Skip structurally-empty pages: no text AND no images.
                     // Image-only wrapper pages (charCount=0, imgCount>0) are kept as a single page.
-                    if (charCount == 0 && imgCount == 0) continue@spineLoop
+                    if (charCount == 0 && imgCount == 0) {
+                        if (isSpecialFlavor && header.uncompressedSize > 0) {
+                             // Fallback for special flavors: always include if it has content
+                             rawResult.add(EpubPage.Html(entry, opfDir, 0, 1))
+                        }
+                        continue@spineLoop
+                    }
                     val chunks = estimate.chunkCount
                     repeat(chunks) { i -> rawResult.add(EpubPage.Html(entry, opfDir, i, chunks)) }
                 }
             }
         }
 
+        if (isSpecialFlavor) {
+            return if (rawResult.isNotEmpty()) rawResult else if (allowFallback) fallbackContentPages(zip) else emptyList()
+        }
+
         // ── Second pass: normalize note sections and only then merge tiny leftovers ──
         val normalized = mutableListOf<EpubPage>()
-        val TINY_BYTES = 2_000L
         var i = 0
         while (i < rawResult.size) {
             val pg = rawResult[i]
@@ -1170,181 +1165,9 @@ class EpubFormatReader(
             i++
         }
 
-        return merged.ifEmpty { fallbackContentPages(zip) }
+        return if (merged.isNotEmpty()) merged else if (allowFallback) fallbackContentPages(zip) else emptyList()
     }
 
-    private fun buildFb2EpubPagesFromSpine(
-        manifest: Map<String, String>,
-        spine: List<String>,
-        opfDir: String,
-        zip: ZipFile
-    ): List<EpubPage> {
-        // For FB2EPUB, preserve each spine item as a separate page without merging
-        // This ensures proper front matter structure: cover -> title page -> preliminaries -> chapters
-        val result = mutableListOf<EpubPage>()
-        
-        for (idRef in spine) {
-            val rawHref = manifest[idRef] ?: continue
-            val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
-            val href = hrefDecoded.substringBefore('#')
-            val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
-            val ext = entry.substringAfterLast('.', "").lowercase()
-            
-            when {
-                ext in IMAGE_EXTENSIONS -> {
-                    result.add(EpubPage.Image(entry))
-                }
-                ext in XHTML_EXTENSIONS -> {
-                    val header = findHeader(zip, entry) ?: continue
-                    if (header.uncompressedSize == 0L) continue
-                    
-                    val estimate = estimateContent(zip, entry)
-                    val charCount = estimate.textCharCount
-                    val imgCount = estimate.imageTagCount
-                    
-                    // Include pages that have either text or images
-                    if (charCount > 0 || imgCount > 0) {
-                        val chunks = estimate.chunkCount
-                        repeat(chunks) { i -> 
-                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
-                        }
-                    }
-                }
-            }
-        }
-        
-        return if (result.isNotEmpty()) result else fallbackContentPages(zip)
-    }
-
-    private fun buildCalibreEpubPagesFromSpine(
-        manifest: Map<String, String>,
-        spine: List<String>,
-        opfDir: String,
-        zip: ZipFile
-    ): List<EpubPage> {
-        // For Calibre-generated EPUBs, preserve the exact spine order without merging
-        // Calibre EPUBs often have TOC as the first page, followed by notes index, then content
-        val result = mutableListOf<EpubPage>()
-        
-        for (idRef in spine) {
-            val rawHref = manifest[idRef] ?: continue
-            val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
-            val href = hrefDecoded.substringBefore('#')
-            val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
-            val ext = entry.substringAfterLast('.', "").lowercase()
-            
-            when {
-                ext in IMAGE_EXTENSIONS -> {
-                    result.add(EpubPage.Image(entry))
-                }
-                ext in XHTML_EXTENSIONS -> {
-                    // For Calibre EPUBs, always include XHTML pages even if they appear short
-                    // This ensures TOC and notes pages are preserved
-                    val header = findHeader(zip, entry) ?: continue
-                    if (header.uncompressedSize == 0L) continue
-                    
-                    // Estimate content but don't skip based on char count
-                    val estimate = estimateContent(zip, entry)
-                    val charCount = estimate.textCharCount
-                    val imgCount = estimate.imageTagCount
-                    
-                    // Always include pages that have either text or images
-                    if (charCount > 0 || imgCount > 0) {
-                        val chunks = estimate.chunkCount
-                        repeat(chunks) { i -> 
-                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
-                        }
-                    }
-                }
-            }
-        }
-        
-        // If no pages were found, fall back to content listing
-        return if (result.isNotEmpty()) result else fallbackContentPages(zip)
-    }
-
-    private fun buildStrictFb2EpubPagesFromSpine(
-        manifest: Map<String, String>,
-        spine: List<String>,
-        opfDir: String,
-        zip: ZipFile
-    ): List<EpubPage> {
-        // Strict FB2EPUB processing: preserve exact spine order without any merging
-        val result = mutableListOf<EpubPage>()
-        
-        for (idRef in spine) {
-            val rawHref = manifest[idRef] ?: continue
-            val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
-            val href = hrefDecoded.substringBefore('#')
-            val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
-            val ext = entry.substringAfterLast('.', "").lowercase()
-            
-            when {
-                ext in IMAGE_EXTENSIONS -> {
-                    result.add(EpubPage.Image(entry))
-                }
-                ext in XHTML_EXTENSIONS -> {
-                    val header = findHeader(zip, entry) ?: continue
-                    if (header.uncompressedSize == 0L) continue
-                    
-                    val estimate = estimateContent(zip, entry)
-                    val charCount = estimate.textCharCount
-                    val imgCount = estimate.imageTagCount
-                    
-                    if (charCount > 0 || imgCount > 0) {
-                        val chunks = estimate.chunkCount
-                        repeat(chunks) { i -> 
-                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
-                        }
-                    }
-                }
-            }
-        }
-        
-        return result
-    }
-
-    private fun buildPublisherEpubPagesFromSpine(
-        manifest: Map<String, String>,
-        spine: List<String>,
-        opfDir: String,
-        zip: ZipFile
-    ): List<EpubPage> {
-        // For publisher-style EPUBs (O'Reilly, etc.), preserve exact spine order without merging
-        // This ensures proper front matter chain: cover -> title page -> copyright -> preface -> body
-        val result = mutableListOf<EpubPage>()
-        
-        for (idRef in spine) {
-            val rawHref = manifest[idRef] ?: continue
-            val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
-            val href = hrefDecoded.substringBefore('#')
-            val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
-            val ext = entry.substringAfterLast('.', "").lowercase()
-            
-            when {
-                ext in IMAGE_EXTENSIONS -> {
-                    result.add(EpubPage.Image(entry))
-                }
-                ext in XHTML_EXTENSIONS -> {
-                    val header = findHeader(zip, entry) ?: continue
-                    if (header.uncompressedSize == 0L) continue
-                    
-                    val estimate = estimateContent(zip, entry)
-                    val charCount = estimate.textCharCount
-                    val imgCount = estimate.imageTagCount
-                    
-                    if (charCount > 0 || imgCount > 0) {
-                        val chunks = estimate.chunkCount
-                        repeat(chunks) { i -> 
-                            result.add(EpubPage.Html(entry, opfDir, i, chunks)) 
-                        }
-                    }
-                }
-            }
-        }
-        
-        return if (result.isNotEmpty()) result else fallbackContentPages(zip)
-    }
 
     private fun hasExpectedFb2FrontMatter(pages: List<EpubPage>): Boolean {
         val coverIndex = resolveFileNameToPageIndex("cover.xhtml", pages)
