@@ -34,6 +34,14 @@ internal object MobiTextSupport {
     private const val MOBI_HEADER_LENGTH_OFFSET = 20
     private const val MOBI_TEXT_ENCODING_OFFSET = 28
     private val MOBI_IDENTIFIER = "MOBI".encodeToByteArray()
+    private const val CP1251_UTF8_MOJIBAKE_CONTINUATIONS =
+        "\u0402\u0403\u201A\u0453\u201E\u2026\u2020\u2021\u20AC\u2030\u0409\u2039\u040A\u040C\u040B\u040F" +
+            "\u0452\u2018\u2019\u201C\u201D\u2022\u2013\u2014\uFFFD\u2122\u0459\u203A\u045A\u045C\u045B\u045F" +
+            "\u00A0\u040E\u045E\u0408\u00A4\u0490\u00A6\u00A7\u0401\u00A9\u0404\u00AB\u00AC\u00AD\u00AE\u0407" +
+            "\u00B0\u00B1\u0406\u0456\u0491\u00B5\u00B6\u00B7\u0451\u2116\u0454\u00BB\u0458\u0405\u0455\u0457"
+    private const val CP1252_UTF8_MOJIBAKE_CONTINUATIONS =
+        "\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D" +
+            "\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178"
 
     fun extract(bytes: ByteArray): MobiExtractionResult {
         val records = readPalmDatabaseRecords(bytes)
@@ -187,13 +195,35 @@ internal object MobiTextSupport {
     )
 
     private fun decompressPalmDoc(data: ByteArray): ByteArray {
-        val out = ArrayList<Byte>(data.size * 2)
+        var out = ByteArray((data.size * 2).coerceAtLeast(32))
+        var size = 0
+
+        fun ensureCapacity(additional: Int) {
+            val required = size + additional
+            if (required <= out.size) return
+
+            var newSize = out.size
+            while (newSize < required) {
+                val doubled = newSize * 2
+                newSize = if (doubled > newSize) doubled else required
+            }
+            out = out.copyOf(newSize)
+        }
+
+        fun append(value: Byte) {
+            ensureCapacity(1)
+            out[size] = value
+            size++
+        }
+
+        fun append(value: Int) = append(value.toByte())
+
         var index = 0
         while (index < data.size) {
             val current = data[index].toInt() and 0xFF
             when {
                 current == 0 -> {
-                    out += 0
+                    append(0)
                     index++
                 }
 
@@ -203,14 +233,14 @@ internal object MobiTextSupport {
                         index++
                     } else {
                         repeat(literalLength) { offset ->
-                            out += data[index + 1 + offset]
+                            append(data[index + 1 + offset])
                         }
                         index += literalLength + 1
                     }
                 }
 
                 current in 9..0x7F -> {
-                    out += current.toByte()
+                    append(current)
                     index++
                 }
 
@@ -220,11 +250,11 @@ internal object MobiTextSupport {
                     val pair = (((current shl 8) or next) and 0x3FFF)
                     val distance = pair shr 3
                     val length = (pair and 0x7) + 3
-                    if (distance in 1..out.size) {
+                    if (distance in 1..size) {
                         repeat(length) {
-                            val sourceIndex = out.size - distance
-                            if (sourceIndex in out.indices) {
-                                out += out[sourceIndex]
+                            val sourceIndex = size - distance
+                            if (sourceIndex in 0 until size) {
+                                append(out[sourceIndex])
                             }
                         }
                     }
@@ -232,13 +262,13 @@ internal object MobiTextSupport {
                 }
 
                 else -> {
-                    out += ' '.code.toByte()
-                    out += (current xor 0x80).toByte()
+                    append(' '.code)
+                    append(current xor 0x80)
                     index++
                 }
             }
         }
-        return out.toByteArray()
+        return out.copyOf(size)
     }
 
     private fun decodeText(bytes: ByteArray, encoding: Int): DecodedChunk {
@@ -402,7 +432,7 @@ internal object MobiTextSupport {
                     controls++
                     score -= 40
                 }
-                ch in setOf('?', '�', '¤', '¦', '¨', '¬', '¯') -> {
+                ch == '?' || ch == '�' || ch == '¤' || ch == '¦' || ch == '¨' || ch == '¬' || ch == '¯' -> {
                     suspicious++
                     score -= 8
                 }
@@ -456,8 +486,7 @@ internal object MobiTextSupport {
 
     private fun looksLikeUtf8Mojibake(text: String): Boolean {
         if (text.length < 6) return false
-        val mojibakeMarkers = Regex("""(?:Р.|С.|Ð.|Ñ.)""")
-        return mojibakeMarkers.findAll(text).count() >= 3
+        return mojibakeMarkerCount(text, stopAt = 3) >= 3
     }
 
     private fun repairWholeTextMojibake(text: String): String {
@@ -486,8 +515,29 @@ internal object MobiTextSupport {
         return repaired?.first ?: text
     }
 
-    private fun mojibakeMarkerCount(text: String): Int =
-        Regex("""(?:Р.|С.|Ð.|Ñ.)""").findAll(text).count()
+    private fun mojibakeMarkerCount(text: String, stopAt: Int = Int.MAX_VALUE): Int {
+        var count = 0
+        var index = 0
+        while (index < text.lastIndex) {
+            if (isLikelyUtf8MojibakePair(text, index)) {
+                count++
+                if (count >= stopAt) return count
+                index += 2
+            } else {
+                index++
+            }
+        }
+        return count
+    }
+
+    private fun isLikelyUtf8MojibakePair(text: String, index: Int): Boolean {
+        val next = text[index + 1]
+        return when (text[index]) {
+            'Р', 'С' -> CP1251_UTF8_MOJIBAKE_CONTINUATIONS.indexOf(next) >= 0
+            'Ð', 'Ñ' -> next.code in 0x80..0xBF || CP1252_UTF8_MOJIBAKE_CONTINUATIONS.indexOf(next) >= 0
+            else -> false
+        }
+    }
 
     private data class DecodedChunk(
         val text: String,

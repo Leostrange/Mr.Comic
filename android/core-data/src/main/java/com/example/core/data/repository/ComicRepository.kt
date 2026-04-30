@@ -136,10 +136,14 @@ class ComicRepository @Inject constructor(
         val existing = comicDao.getComicByPath(sourcePath)
         if (existing != null) return@withContext existing
 
-        val singleDoc = DocumentFile.fromSingleUri(context, uri)
-        val localFile = if (singleDoc == null && (uri.scheme == "file" || uri.scheme == null)) {
+        val localFile = if (uri.scheme == "file" || uri.scheme == null) {
             val candidatePath = uri.path ?: uri.toString()
             File(candidatePath)
+        } else {
+            null
+        }
+        val singleDoc = if (localFile == null) {
+            DocumentFile.fromSingleUri(context, uri)
         } else {
             null
         }

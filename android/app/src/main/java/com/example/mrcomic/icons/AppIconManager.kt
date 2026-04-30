@@ -24,7 +24,8 @@ class AppIconManager @Inject constructor(
     companion object {
         private const val TAG = "AppIconManager"
         const val DEFAULT_ICON = DEFAULT_APP_ICON_ID
-        private val ICON_ALIAS_PACKAGE = AppIconManager::class.java.packageName.removeSuffix(".icons")
+        private val ICON_ALIAS_PACKAGE =
+            AppIconManager::class.java.`package`?.name?.removeSuffix(".icons") ?: "com.example.mrcomic"
 
         val AVAILABLE_ICONS = listOf(
             AppIcon("icon_1", R.drawable.ic_launcher_1_fg),
