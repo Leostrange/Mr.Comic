@@ -9,6 +9,7 @@ import com.example.engine.formats.base.RenderDeviceTier
 import com.example.engine.formats.djvu.DjvuFormatReader
 import com.example.engine.formats.djvu.StructuredDjvuBackend
 import com.example.engine.formats.epub.EpubFormatReader
+import com.example.engine.formats.text.MobiFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import com.example.engine.formats.zip.ZipFormatReader
 import kotlinx.coroutines.runBlocking
@@ -106,6 +107,26 @@ class RootReaderSampleRegressionTest {
                 maxVisiblePageLength < 5000
             )
             assertFalse("Expected MOBI text not mojibake", firstPages.contains("РњРѕРї"))
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun podSolntsemStandaloneMobiReaderHasManyReadablePages() = runBlocking {
+        val sample = locateRootSample("Под солнцем_868805.mobi")
+        val reader = MobiFormatReader(testContext, sample.absolutePath, ComicFormat.MOBI)
+        try {
+            val pageCount = reader.getPageCount()
+            assertTrue("Expected standalone MOBI pages, got $pageCount", pageCount > 20)
+            val firstPages = (0 until minOf(4, pageCount))
+                .map { index -> reader.getHtmlPage(index).orEmpty() }
+                .joinToString("\n")
+            assertTrue(
+                "Expected standalone MOBI Cyrillic title/author text",
+                firstPages.contains("Мопассан") || firstPages.contains("Под солнцем")
+            )
+            assertFalse("Expected standalone MOBI text not mojibake", firstPages.contains("РњРѕРї"))
         } finally {
             reader.close()
         }
