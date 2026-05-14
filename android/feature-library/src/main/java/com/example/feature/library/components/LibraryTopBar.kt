@@ -26,9 +26,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -39,8 +37,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.core.ui.designsystem.MrComicTypographyTokens
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicIconButtonVariant
 import com.example.core.model.SortOrder
 import com.example.core.ui.library.RootChromeTone
 import com.example.core.ui.library.RootChromeTopBarHost
@@ -100,9 +102,14 @@ fun LibraryTopBar(
                     text = when (contentSection) {
                         LibraryContentSection.QUOTES -> strings.libraryQuotes
                         LibraryContentSection.BOOKMARKS -> strings.libraryBookmarks
-                        LibraryContentSection.ACHIEVEMENTS -> "Mr.Comic"
+                        LibraryContentSection.ACHIEVEMENTS -> strings.libraryAchievements
                         else -> strings.navLibrary
                     },
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontSize = MrComicTypographyTokens.libraryTitle,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = MrComicTypographyTokens.LetterSpacing.display
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -111,7 +118,10 @@ fun LibraryTopBar(
             colors = rootChromeTopBarColors(),
             navigationIcon = {
                 if (canNavigateUp) {
-                    IconButton(onClick = onNavigateUp) {
+                    MrComicIconButton(
+                        onClick = onNavigateUp,
+                        variant = MrComicIconButtonVariant.Tonal
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = strings.back
@@ -130,7 +140,7 @@ fun LibraryTopBar(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            FilledTonalIconButton(onClick = onToggleView) {
+                            MrComicIconButton(onClick = onToggleView, variant = MrComicIconButtonVariant.Tonal) {
                                 Icon(
                                     when (nextViewMode) {
                                         LibraryViewMode.GRID -> Icons.Default.GridView
@@ -140,15 +150,18 @@ fun LibraryTopBar(
                                     contentDescription = when (nextViewMode) {
                                         LibraryViewMode.GRID -> strings.libraryViewGrid
                                         LibraryViewMode.LIST -> strings.libraryViewList
-                                        LibraryViewMode.STRIPS -> libraryViewStripsLabel(strings.languageCode)
+                                        LibraryViewMode.STRIPS -> strings.libraryViewStrips
                                     }
                                 )
                             }
-                            FilledTonalIconButton(onClick = onOpenFilters) {
+                            MrComicIconButton(onClick = onOpenFilters, variant = MrComicIconButtonVariant.Tonal) {
                                 Icon(Icons.Default.Tune, contentDescription = strings.actionSort)
                             }
                             Box {
-                                FilledTonalIconButton(onClick = { thumbnailMenuExpanded = true }) {
+                                MrComicIconButton(
+                                    onClick = { thumbnailMenuExpanded = true },
+                                    variant = MrComicIconButtonVariant.Tonal
+                                ) {
                                     Icon(
                                         if (thumbnailMode == "SQUARE") Icons.Default.CropSquare else Icons.Default.Crop169,
                                         contentDescription = if (thumbnailMode == "SQUARE") {
@@ -181,7 +194,10 @@ fun LibraryTopBar(
                                 }
                             }
                             Box {
-                                FilledTonalIconButton(onClick = { addMenuExpanded = true }) {
+                                MrComicIconButton(
+                                    onClick = { addMenuExpanded = true },
+                                    variant = MrComicIconButtonVariant.Tonal
+                                ) {
                                     Icon(Icons.Default.FolderOpen, contentDescription = strings.actionFolder)
                                 }
                                 DropdownMenu(
@@ -214,7 +230,10 @@ fun LibraryTopBar(
                             }
                         }
                     }
-                    IconButton(onClick = onToggleControls) {
+                    MrComicIconButton(
+                        onClick = onToggleControls,
+                        variant = MrComicIconButtonVariant.Tonal
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Menu,
                             contentDescription = strings.navSettings,
@@ -231,10 +250,3 @@ fun LibraryTopBar(
     }
 }
 
-private fun libraryViewStripsLabel(language: String): String = when (language) {
-    "en" -> "Vertical strips"
-    "ja" -> "縦リボン"
-    "zh" -> "垂直条带"
-    "ko" -> "세로 스트립"
-    else -> "Вертикальная лента"
-}

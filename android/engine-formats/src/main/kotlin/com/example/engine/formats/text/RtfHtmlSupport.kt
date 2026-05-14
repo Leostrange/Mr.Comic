@@ -5,6 +5,11 @@ import java.nio.charset.Charset
 import java.util.Base64
 
 internal object RtfHtmlSupport {
+    private const val MAX_INLINE_RTF_IMAGE_BYTES = 900_000
+    private const val READER_IMAGE_MAX_WIDTH_PT = 430.0
+    private const val READER_IMAGE_MAX_HEIGHT_PT = 620.0
+    private const val READER_PAGEBREAK_MARKER = "<hr data-mrcomic-pagebreak=\"true\"/>"
+
     private val DESTINATIONS_TO_SKIP = setOf(
         "fonttbl", "colortbl", "stylesheet", "info", "header", "footer",
         "headerl", "headerr", "headerf", "footerl", "footerr", "footerf",
@@ -73,7 +78,7 @@ internal object RtfHtmlSupport {
                         while (index < raw.length && raw[index] !in charArrayOf('{', '}', '\\', '\r', '\n')) {
                             index++
                         }
-                        nodes += Node.Text(raw.substring(start, index))
+                        nodes += Node.Text(decodeRawText(raw.substring(start, index)))
                     }
                 }
             }
@@ -197,6 +202,13 @@ internal object RtfHtmlSupport {
         }
 
         private fun currentCharset(): Charset = charset
+
+        private fun decodeRawText(segment: String): String {
+            if (segment.isEmpty()) return segment
+            if (segment.all { it.code in 0..0x7F }) return segment
+            val bytes = ByteArray(segment.length) { i -> (segment[i].code and 0xFF).toByte() }
+            return bytes.toString(currentCharset())
+        }
 
         private data class ParsedControl(
             val node: Node?,
@@ -369,6 +381,9 @@ internal object RtfHtmlSupport {
             val bytes = ByteArray(hex.length / 2) { offset ->
                 hex.substring(offset * 2, offset * 2 + 2).toInt(16).toByte()
             }
+            if (bytes.size > MAX_INLINE_RTF_IMAGE_BYTES && isOversizedPictureForReader(controls)) {
+                return READER_PAGEBREAK_MARKER
+            }
             val base64 = Base64.getEncoder().encodeToString(bytes)
             val style = buildPictureStyle(controls)
             val styleAttr = style?.let { """ style="$it"""" }.orEmpty()
@@ -506,6 +521,14 @@ internal object RtfHtmlSupport {
         private fun flushParagraph() {
             val html = paragraph.toString().trim()
             if (html.isNotBlank()) {
+                if (html.contains(READER_PAGEBREAK_MARKER) &&
+                    html.replace(READER_PAGEBREAK_MARKER, "").trim().isBlank()
+                ) {
+                    blocks += READER_PAGEBREAK_MARKER
+                    paragraph.clear()
+                    paragraphStyle = ParagraphStyle()
+                    return
+                }
                 val styles = buildList {
                     paragraphStyle.align?.let { add("text-align:$it") }
                     if (paragraphStyle.indentLeftTwips != 0) add("margin-left:${trimDouble(paragraphStyle.indentLeftTwips / 20.0)}pt")
@@ -586,6 +609,38 @@ internal object RtfHtmlSupport {
         }
 
         private fun buildPictureStyle(controls: List<Node.Control>): String? {
+            val (widthPt, heightPt) = pictureDimensionsPt(controls)
+            val oversizedForReader = isOversizedPictureForReader(widthPt, heightPt)
+            return buildList {
+                add("display:block")
+                add("margin:0.8rem auto")
+                add("max-width:100%")
+                if (oversizedForReader) {
+                    add("width:100%")
+                    add("height:72vh")
+                    add("max-height:72vh")
+                    add("object-fit:contain")
+                } else {
+                    widthPt?.let { add("width:${trimDouble(it)}pt") }
+                    if (heightPt != null) {
+                        add("height:${trimDouble(heightPt)}pt")
+                        add("object-fit:contain")
+                    } else {
+                        add("height:auto")
+                    }
+                }
+            }.joinToString(";").takeIf { it.isNotBlank() }
+        }
+
+        private fun isOversizedPictureForReader(controls: List<Node.Control>): Boolean {
+            val (widthPt, heightPt) = pictureDimensionsPt(controls)
+            return isOversizedPictureForReader(widthPt, heightPt)
+        }
+
+        private fun isOversizedPictureForReader(widthPt: Double?, heightPt: Double?): Boolean =
+            (widthPt ?: 0.0) > READER_IMAGE_MAX_WIDTH_PT || (heightPt ?: 0.0) > READER_IMAGE_MAX_HEIGHT_PT
+
+        private fun pictureDimensionsPt(controls: List<Node.Control>): Pair<Double?, Double?> {
             val widthTwips = controls.firstNotNullOfOrNull { control ->
                 when (control.word) {
                     "picwgoal" -> control.param
@@ -612,19 +667,7 @@ internal object RtfHtmlSupport {
             } ?: 100
             val widthPt = widthTwips?.let { it / 20.0 * (scaleX / 100.0) }
             val heightPt = heightTwips?.let { it / 20.0 * (scaleY / 100.0) }
-            return buildList {
-                add("max-width:100%")
-                when {
-                    widthPt != null -> add("width:${trimDouble(widthPt)}pt")
-                    heightPt != null -> add("height:${trimDouble(heightPt)}pt")
-                }
-                if (widthPt != null && heightPt != null) {
-                    add("height:${trimDouble(heightPt)}pt")
-                    add("object-fit:contain")
-                } else {
-                    add("height:auto")
-                }
-            }.joinToString(";").takeIf { it.isNotBlank() }
+            return widthPt to heightPt
         }
     }
 

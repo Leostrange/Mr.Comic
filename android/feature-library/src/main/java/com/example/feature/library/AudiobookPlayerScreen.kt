@@ -28,7 +28,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -40,16 +39,11 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +54,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,6 +66,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicButton
+import com.example.core.ui.designsystem.MrComicButtonVariant
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicIconButtonVariant
+import com.example.core.ui.designsystem.MrComicPill
+import com.example.core.ui.designsystem.MrComicSlider
 import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.library.rootChromeStableTopBarInsets
 import coil.compose.AsyncImage
@@ -115,7 +117,10 @@ fun AudiobookPlayerScreen(
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
+                        MrComicIconButton(
+                            onClick = onNavigateBack,
+                            variant = MrComicIconButtonVariant.Tonal
+                        ) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                         }
                     }
@@ -181,11 +186,12 @@ fun AudiobookPlayerScreen(
             Spacer(Modifier.height(6.dp))
             if (uiState.durationMs > 0) {
                 val progress = (uiState.positionMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
-                Slider(
+                MrComicSlider(
                     value = progress,
                     onValueChange = { frac ->
                         viewModel.seekTo((frac * uiState.durationMs).toLong())
                     },
+                    valueRange = 0f..1f,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
@@ -215,22 +221,26 @@ fun AudiobookPlayerScreen(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
+                MrComicIconButton(
                     onClick = {
                         showSettings = !showSettings
                         if (showSettings) showChapters = false
-                    }
+                    },
+                    variant = MrComicIconButtonVariant.Tonal
                 ) {
                     Icon(Icons.Default.Tune, contentDescription = "Аудионастройки", modifier = Modifier.size(24.dp))
                 }
-                IconButton(onClick = viewModel::skipPreviousChapter) {
+                MrComicIconButton(
+                    onClick = viewModel::skipPreviousChapter,
+                    variant = MrComicIconButtonVariant.Tonal
+                ) {
                     Icon(Icons.Default.SkipPrevious, contentDescription = "Предыдущая глава", modifier = Modifier.size(32.dp))
                 }
                 Spacer(Modifier.width(8.dp))
-                FilledIconButton(
+                MrComicIconButton(
                     onClick = { if (uiState.isPlaying) viewModel.pause() else viewModel.play() },
-                    modifier = Modifier.size(56.dp),
-                    shape = CircleShape
+                    size = 56.dp,
+                    variant = MrComicIconButtonVariant.Filled
                 ) {
                     Icon(
                         imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -239,15 +249,19 @@ fun AudiobookPlayerScreen(
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                IconButton(onClick = viewModel::skipNextChapter) {
+                MrComicIconButton(
+                    onClick = viewModel::skipNextChapter,
+                    variant = MrComicIconButtonVariant.Tonal
+                ) {
                     Icon(Icons.Default.SkipNext, contentDescription = "Следующая глава", modifier = Modifier.size(32.dp))
                 }
-                IconButton(
+                MrComicIconButton(
                     onClick = {
                         showChapters = !showChapters
                         if (showChapters) showSettings = false
                     },
-                    enabled = audiobook?.chapters?.isNotEmpty() == true
+                    enabled = audiobook?.chapters?.isNotEmpty() == true,
+                    variant = MrComicIconButtonVariant.Tonal
                 ) {
                     Icon(Icons.Default.MenuBook, contentDescription = "Оглавление", modifier = Modifier.size(24.dp))
                 }
@@ -345,25 +359,27 @@ fun AudiobookPlayerScreen(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilledTonalButton(
+                            MrComicButton(
                                 onClick = { viewModel.seekBy(-15_000L) },
+                                variant = MrComicButtonVariant.Tonal,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                             ) {
                                 Text("-15с", style = MaterialTheme.typography.labelMedium)
                             }
-                            FilledTonalButton(
+                            MrComicButton(
                                 onClick = { viewModel.seekBy(30_000L) },
+                                variant = MrComicButtonVariant.Tonal,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                             ) {
                                 Text("+30с", style = MaterialTheme.typography.labelMedium)
                             }
-                            Surface(
-                                shape = RoundedCornerShape(999.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            MrComicPill(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Text(
                                     text = if (audiobook?.sourceIsFolder == true) "Папка" else "Файл",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -406,6 +422,18 @@ fun AudiobookPlayerScreen(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            val activeTimerPreset = remember(uiState.sleepTimerRemainingMs) {
+                                val remaining = uiState.sleepTimerRemainingMs
+                                val durations = listOf(
+                                    15 * 60 * 1000L,
+                                    30 * 60 * 1000L,
+                                    60 * 60 * 1000L
+                                )
+                                when {
+                                    remaining == null -> null
+                                    else -> durations.firstOrNull { it >= remaining } ?: durations.last()
+                                }
+                            }
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 modifier = Modifier.weight(1f)
@@ -418,10 +446,9 @@ fun AudiobookPlayerScreen(
                                         "60м" to 60 * 60 * 1000L
                                     )
                                 ) { (label, durationMs) ->
-                                    FilterChip(
+                                    MrComicFilterChip(
                                         selected = (durationMs == null && uiState.sleepTimerRemainingMs == null) ||
-                                            (durationMs != null && uiState.sleepTimerRemainingMs != null &&
-                                                uiState.sleepTimerRemainingMs!! <= durationMs),
+                                            (durationMs != null && durationMs == activeTimerPreset),
                                         onClick = { viewModel.setSleepTimer(durationMs) },
                                         label = { Text(label, style = MaterialTheme.typography.labelSmall) }
                                     )
@@ -440,9 +467,10 @@ fun AudiobookPlayerScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            FilledTonalButton(
+                            MrComicButton(
                                 onClick = viewModel::saveBookmark,
                                 enabled = audiobook != null,
+                                variant = MrComicButtonVariant.Tonal,
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                             ) {
                                 Text("Закладка", style = MaterialTheme.typography.labelMedium)

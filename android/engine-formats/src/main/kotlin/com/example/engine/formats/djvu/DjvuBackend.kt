@@ -6,7 +6,8 @@ sealed interface DjvuBackendStatus {
     val backendName: String
 
     data class Available(
-        override val backendName: String
+        override val backendName: String,
+        val nativeCompositeRendererAvailable: Boolean = false
     ) : DjvuBackendStatus
 
     data class Unavailable(

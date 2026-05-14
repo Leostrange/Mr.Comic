@@ -63,16 +63,21 @@ class DjvuFormatReader(
     override suspend fun getMetadata(): Map<String, String> {
         val currentDocument = ensureDocument()
         val placeholderInfo = if (currentDocument == null) ensurePlaceholderProbe() else null
+        val status = backend.status
         return buildMap {
             put("format", "DjVu")
             put("fileName", resolveFileName())
-            when (val status = backend.status) {
+            when (status) {
                 is DjvuBackendStatus.Available -> put("djvuBackend", status.backendName)
                 is DjvuBackendStatus.Unavailable -> {
                     put("djvuBackend", status.backendName)
                     put("djvuStatus", status.summary)
                 }
             }
+            put(
+                "nativeCompositeRendererAvailable",
+                ((status as? DjvuBackendStatus.Available)?.nativeCompositeRendererAvailable == true).toString()
+            )
             placeholderInfo?.let {
                 put("djvuFormType", it.formType)
                 put("djvuPageCount", it.pageCount.toString())

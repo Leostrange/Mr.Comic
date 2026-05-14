@@ -2,13 +2,24 @@ package com.example.engine.formats.text
 
 import org.jsoup.nodes.Element
 
+// Matches <w:instrText>...</w:instrText> including multi-line content.
+// Used to strip raw field instruction strings before plain-text fallback extraction.
+private val DOCX_INSTR_TEXT_RE = Regex(
+    """<w:instrText\b[^>]*>[\s\S]*?</w:instrText>""",
+    RegexOption.IGNORE_CASE
+)
+
 internal fun renderDocxParagraph(paragraph: Element, archive: DocxArchive): String? {
     val headingLevel = docxHeadingLevel(paragraph)
     val alignment = docxParagraphAlignment(paragraph)
     val anchorId = docxParagraphAnchorId(paragraph)
     val fontFamily = docxParagraphFontFamily(paragraph, archive)
     val content = renderDocxInlineChildren(paragraph, archive).ifBlank {
-        xmlTextToPlain(paragraph.outerHtml()).takeIf { it.isNotBlank() }
+        // Strip w:instrText (field instructions like " HYPERLINK "url" " or " TOC \o "1-3" ")
+        // before plain-text extraction. Without this, the fallback would expose raw field
+        // instruction strings as visible paragraph content.
+        val sanitizedHtml = DOCX_INSTR_TEXT_RE.replace(paragraph.outerHtml(), "")
+        xmlTextToPlain(sanitizedHtml).takeIf { it.isNotBlank() }
             ?.let { escapeDocxHtml(it).replace("\n", "<br/>") }
             .orEmpty()
     }
@@ -55,8 +66,8 @@ internal fun renderDocxTable(table: Element, archive: DocxArchive): String? {
         if (cells.isEmpty()) null else "<tr>${cells.joinToString(separator = "")}</tr>"
     }
     return rows.takeIf { it.isNotEmpty() }?.joinToString(
-        prefix = "<table><tbody>",
-        postfix = "</tbody></table>",
+        prefix = """<div class="mrcomic-table-scroll"><table><tbody>""",
+        postfix = "</tbody></table></div>",
         separator = ""
     )
 }
@@ -67,9 +78,25 @@ internal fun renderDocxInlineChildren(container: Element, archive: DocxArchive):
         when (child.tagName()) {
             "w:r" -> renderDocxRun(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
             "w:hyperlink" -> renderDocxHyperlink(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
-            "w:smartTag", "w:sdt", "w:ins", "w:del" -> {
+            "w:smartTag", "w:sdt", "w:ins" -> {
                 renderDocxInlineChildren(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
             }
+            // Simple field — w:instr is an attribute (not a child element); the child w:r
+            // runs contain the already-computed field result and should be rendered normally.
+            "w:fldSimple" -> {
+                renderDocxInlineChildren(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
+            }
+            // Deleted content — skip entirely; do not recurse and render deleted text.
+            "w:del" -> Unit
+            // Field codes: w:fldChar marks start/separator/end of a field; w:instrText is the
+            // raw field instruction (e.g. " HYPERLINK "url" " or " TOC \o "1-3" ").
+            // Neither should appear as visible text in the rendered document.
+            "w:fldChar", "w:instrText" -> Unit
+            // Revision property change records — markup metadata, not content.
+            "w:rPrChange", "w:pPrChange" -> Unit
+            // Structural bookmarks and comment range markers — not visible content.
+            "w:bookmarkStart", "w:bookmarkEnd",
+            "w:commentRangeStart", "w:commentRangeEnd" -> Unit
         }
     }
     return parts.joinToString(separator = "")
@@ -168,7 +195,6 @@ private fun docxRunStyle(run: Element, archive: DocxArchive): DocxRunStyle {
         fontFamily = resolveDocxFontFamily(
             rFonts = properties?.getElementsByTag("w:rFonts")?.firstOrNull(),
             fallbackFamily = archive.styleContext.runStyleFonts[runStyleId]
-                ?: archive.styleContext.defaultFontFamily
         )
     )
 }
@@ -232,7 +258,6 @@ private fun docxParagraphFontFamily(paragraph: Element, archive: DocxArchive): S
     return resolveDocxFontFamily(
         rFonts = findDocxNestedChild(paragraph, "w:pPr", "w:rPr", "w:rFonts"),
         fallbackFamily = archive.styleContext.paragraphStyleFonts[styleId]
-            ?: archive.styleContext.defaultFontFamily
     )
 }
 

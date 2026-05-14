@@ -17,10 +17,14 @@ import com.example.engine.formats.base.RenderDeviceProfile
 import com.example.engine.formats.archive.ArchiveContentKind
 import com.example.engine.formats.archive.ArchiveFormatSupport
 import com.example.engine.formats.epub.EpubFormatReader
+import com.example.engine.formats.fb2.Fb2FormatReader
+import com.example.engine.formats.text.DocxFormatReader
 import com.example.engine.formats.text.HtmlFormatReader
 import com.example.engine.formats.text.MarkdownFormatReader
 import com.example.engine.formats.text.MobiFormatReader
+import com.example.engine.formats.text.OdtFormatReader
 import com.example.engine.formats.text.PlainTextFormatReader
+import com.example.engine.formats.text.RtfFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -49,7 +53,28 @@ class ZipFormatReader(
     private var tempFile: File? = null
     private var tempTextFile: File? = null
     private var zipFile: ZipFile? = null
-    private val textDelegate: FormatReader? by lazy { createTextDelegateIfPresent() }
+    // Lightweight classification — reads ZIP headers only, no file extraction.
+    // This lets rendersHtmlContent() return the correct value *before* getPageCount() is called,
+    // so the reader loading state can show the right toolbar theme immediately.
+    private val archiveContentKind: ArchiveContentKind by lazy { classifyArchiveContent() }
+
+    private fun classifyArchiveContent(): ArchiveContentKind = try {
+        val zip = ensureZipFile() ?: return ArchiveContentKind.UNSUPPORTED
+        val fileNames = zip.fileHeaders
+            .asSequence()
+            .filter { !it.isDirectory }
+            .map { it.fileName }
+            .toList()
+        ArchiveFormatSupport.classify(fileNames)
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to classify archive content", e)
+        ArchiveContentKind.UNSUPPORTED
+    }
+
+    private val textDelegate: FormatReader? by lazy {
+        if (archiveContentKind != ArchiveContentKind.SINGLE_BOOK) null
+        else createTextDelegateIfPresent()
+    }
 
     private val imageEntries: List<String> by lazy {
         try {
@@ -116,6 +141,9 @@ class ZipFormatReader(
     override fun getTableOfContents(): List<TocEntry> =
         textDelegate?.getTableOfContents().orEmpty()
 
+    override fun rendersHtmlContent(): Boolean =
+        archiveContentKind == ArchiveContentKind.SINGLE_BOOK
+
     override fun close() {
         synchronized(lock) {
             try { zipFile?.close() } catch (_: Exception) {}
@@ -126,10 +154,6 @@ class ZipFormatReader(
                     .onFailure { Log.w(TAG, "Failed to delete temp CBZ: ${file.absolutePath}", it) }
             }
             tempFile = null
-            tempTextFile?.let { file ->
-                runCatching { file.delete() }
-                    .onFailure { Log.w(TAG, "Failed to delete temp archived text: ${file.absolutePath}", it) }
-            }
             tempTextFile = null
         }
     }
@@ -155,8 +179,16 @@ class ZipFormatReader(
             val extension = textEntry.substringAfterLast('.', "").lowercase(Locale.US)
             val textFormat = textFormatForExtension(extension) ?: return null
             val cacheDir = archiveCacheDir("archive_text_cache")
-            val safeName = ArchiveFormatSupport.safeArchiveName(textEntry, extension)
-            val extracted = File(cacheDir, "zip_${path.hashCode()}_${header.uncompressedSize}_$safeName")
+            val extracted = File(
+                cacheDir,
+                ArchiveFormatSupport.textCacheFileName(
+                    prefix = "zip",
+                    archiveKey = path,
+                    entryName = textEntry,
+                    entrySize = header.uncompressedSize,
+                    extension = extension
+                )
+            )
             if (!extracted.exists() || extracted.length() != header.uncompressedSize) {
                 zip.getInputStream(header).use { input ->
                     extracted.outputStream().use { output -> input.copyTo(output) }
@@ -175,6 +207,10 @@ class ZipFormatReader(
                 ComicFormat.TXT -> PlainTextFormatReader(context, extracted.absolutePath)
                 ComicFormat.HTML -> HtmlFormatReader(context, extracted.absolutePath)
                 ComicFormat.MARKDOWN -> MarkdownFormatReader(context, extracted.absolutePath)
+                ComicFormat.FB2 -> Fb2FormatReader(context, extracted.absolutePath)
+                ComicFormat.RTF -> RtfFormatReader(context, extracted.absolutePath)
+                ComicFormat.DOCX -> DocxFormatReader(context, extracted.absolutePath)
+                ComicFormat.ODT -> OdtFormatReader(context, extracted.absolutePath)
                 else -> TextFormatReader(context, extracted.absolutePath, textFormat)
             }
         } catch (e: Exception) {

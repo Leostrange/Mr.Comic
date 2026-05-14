@@ -17,7 +17,6 @@ import android.graphics.Bitmap
  * Reference: DjVu3 Specification §12 "IW44 Image Codec"; djvulibre IW44Image.{h,cpp}.
  */
 internal class DjvuIw44Decoder {
-
     // ── public state (filled after first chunk with serial==0) ──────────────
     var imageWidth: Int  = 0; private set
     var imageHeight: Int = 0; private set
@@ -70,6 +69,15 @@ internal class DjvuIw44Decoder {
             val hInBlocks  = ((payload[pos].toInt() and 0xFF) shl 8) or
                               (payload[pos + 1].toInt() and 0xFF)
             pos += 2
+            if (
+                wInBlocks <= 0 ||
+                hInBlocks <= 0 ||
+                wInBlocks > MAX_BLOCKS_PER_AXIS ||
+                hInBlocks > MAX_BLOCKS_PER_AXIS ||
+                wInBlocks.toLong() * hInBlocks.toLong() > MAX_TOTAL_BLOCKS
+            ) {
+                return false
+            }
             imageWidth  = wInBlocks * BLOCK
             imageHeight = hInBlocks * BLOCK
 
@@ -155,6 +163,8 @@ internal class DjvuIw44Decoder {
 
     companion object {
         const val BLOCK = 32    // IW44 block size in pixels
+        private const val MAX_BLOCKS_PER_AXIS = 10_000
+        private const val MAX_TOTAL_BLOCKS = 40_000
     }
 }
 

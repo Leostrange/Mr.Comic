@@ -32,6 +32,17 @@ class DjvuVisualLayerPlanTest {
         assertTrue(plan?.usesIw44 ?: false)
         assertTrue(plan?.usesJb2 ?: false)
         assertTrue(plan?.requiresCompositeDecode ?: false)
+        assertTrue(plan?.requiresNativeCompositeRenderer ?: false)
+        assertEquals(
+            listOf(
+                "IW44 background",
+                "foreground layer FG44",
+                "JB2 mask",
+                "foreground palette FGbz",
+                "shared included chunks"
+            ),
+            plan?.unsupportedRenderFeatures
+        )
     }
 
     @Test
@@ -48,6 +59,27 @@ class DjvuVisualLayerPlanTest {
         assertEquals("BGjp", plan?.backgroundLayer)
         assertFalse(plan?.usesIw44 ?: true)
         assertFalse(plan?.usesJb2 ?: true)
+        assertFalse(plan?.requiresNativeCompositeRenderer ?: true)
+        assertEquals(emptyList<String>(), plan?.unsupportedRenderFeatures)
+    }
+
+    @Test
+    fun `visual layer html names composite diagnostics without missing renderer fallback`() {
+        val html = buildDjvuVisualLayerHtml(
+            fileName = "sample.djvu",
+            pageIndex = 0,
+            totalPages = 1,
+            visualLayerPlan = DjvuVisualLayerPlan(
+                chunkIds = listOf("INFO", "BG44", "Sjbz"),
+                backgroundLayer = "BG44",
+                maskLayer = "Sjbz"
+            )
+        )
+
+        assertFalse(html.contains("Нужен композитный DjVu renderer"))
+        assertTrue(html.contains("Скан DjVu с композитными слоями"))
+        assertTrue(html.contains("IW44 background"))
+        assertTrue(html.contains("JB2 mask"))
     }
 
     private fun document(formType: String, vararg nestedChunks: ByteArray): ByteArray {

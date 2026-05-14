@@ -10,6 +10,7 @@ import android.provider.DocumentsContract
 import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -77,6 +78,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
@@ -87,6 +89,7 @@ enum class FootnotePresentation { PEEK, EXPANDED }
 private data class PreparedReaderOpen(
     val resolvedPath: String,
     val detectedFormat: ComicFormat,
+    val contentIsText: Boolean,
     val reader: FormatReader?,
     val pages: Int
 )
@@ -102,6 +105,7 @@ private const val DEFAULT_TEXT_ALIGNMENT = "justify"
 private const val DEFAULT_TEXT_BOLD = false
 private const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
 private const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
+private val FOOTNOTE_MARKER_RE = Regex("""\b(footnote|note|notebody|rearnote|endnote|fnote|noteref)\b""", RegexOption.IGNORE_CASE)
 
 private fun normalizeTapZoneActionName(value: String?): String {
     val action = ReaderTapZoneAction.fromStored(value)
@@ -150,6 +154,11 @@ data class ReaderUiState(
     val imageMarginCropVertical: Float = DEFAULT_IMAGE_MARGIN_CROP_VERTICAL,
     /** Number of pages to preload ahead of the current page */
     val preloadPages: Int = 3,
+    /**
+     * True when the active reader exposes HTML/reflowable pages even if the stored
+     * container format is an archive such as ZIP/RAR/7Z/TAR.
+     */
+    val readerContentIsText: Boolean = false,
     /**
      * Non-null when the current page is rendered as HTML (text EPUB / FB2 novel).
      * Null when the page is a Bitmap (image-based formats).
@@ -388,6 +397,15 @@ class ReaderViewModel @Inject constructor(
     private val readerPreferences = UserPreferences(context.dataStore)
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
+
+    /**
+     * Per-page HTML cache for WEBTOON mode — used for formats (DjVu) where some pages
+     * have no bitmap render path but do provide HTML content via [FormatReader.getHtmlPage].
+     */
+    private val _webtoonHtmlCache = MutableStateFlow<Map<Int, String>>(emptyMap())
+
+    fun getWebtoonHtmlPageFlow(index: Int): kotlinx.coroutines.flow.Flow<String?> =
+        _webtoonHtmlCache.map { it[index] }.distinctUntilChanged()
     private var loadComicJob: Job? = null
     private var tocLoadJob: Job? = null
     private var deferredTocWarmupJob: Job? = null
@@ -476,6 +494,7 @@ class ReaderViewModel @Inject constructor(
                 it.copy(
                     isLoading = true,
                     error = null,
+                    readerContentIsText = false,
                     currentHtmlContent = null,
                     previousHtmlContent = null,
                     previousHtmlAssetBasePath = null,
@@ -514,15 +533,44 @@ class ReaderViewModel @Inject constructor(
                     else -> comic.format
                 }
                 val newReader = formatFactory.createReader(resolvedPath, detectedFormat)
-                val pages = try {
-                    newReader?.getPageCount() ?: 0
-                } catch (t: Throwable) {
-                    newReader?.close()
-                    throw t
+                val contentIsText = resolveReaderContentIsText(
+                    storedFormat = detectedFormat,
+                    readerRendersHtmlContent = newReader?.rendersHtmlContent() == true
+                )
+                // Update readerContentIsText on Main while page count is still loading,
+                // so the reader UI opens with the correct text/graphic theme right away.
+                withContext(Dispatchers.Main.immediate) {
+                    _uiState.update { it.copy(readerContentIsText = contentIsText) }
+                }
+                // For heavy reflowable formats (MOBI/AZW3/RTF/DOCX/ODT) the first call to
+                // getPageCount() triggers full document parsing, blocking the UI for several
+                // seconds. Show the UI shell immediately with a placeholder page count of 1;
+                // a background coroutine will supply the real count after the reader is open.
+                // Archive formats (ZIP/RAR/7Z/TAR) containing a text book also require full
+                // parsing on first getPageCount(). Treat them as heavy when contentIsText.
+                // Archive formats (ZIP/RAR/7Z/TAR) are NOT treated as heavy even when their
+                // content is text. Their delegate readers parse synchronously on first access
+                // and adding them to the deferred path caused a race condition: getHtmlPage(0)
+                // and the background getPageCount() both hit textDelegate concurrently,
+                // producing black screens, wrong page counts, and garbled formatting.
+                val isHeavy = shouldDeferTextPageCount(
+                    format = detectedFormat,
+                    contentIsText = contentIsText
+                )
+                val pages = if (contentIsText && isHeavy) {
+                    1 // placeholder — real count loaded asynchronously below
+                } else {
+                    try {
+                        newReader?.getPageCount() ?: 0
+                    } catch (t: Throwable) {
+                        newReader?.close()
+                        throw t
+                    }
                 }
                 PreparedReaderOpen(
                     resolvedPath = resolvedPath,
                     detectedFormat = detectedFormat,
+                    contentIsText = contentIsText,
                     reader = newReader,
                     pages = pages
                 )
@@ -551,13 +599,17 @@ class ReaderViewModel @Inject constructor(
                 return
             }
             val pages = prepared.pages
+            val contentIsText = prepared.contentIsText
             if (pages <= 0) {
                 val errorMessage = localizedReaderError(::readerNoReadablePagesMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
                 return
             }
 
-            val openingMode = effectiveOpeningModeFor(detectedFormat)
+            val openingMode = effectiveOpeningModeFor(
+                format = detectedFormat,
+                contentIsText = contentIsText
+            )
             val requestedPage = pendingRequestedPage
             val startPage = normalizePageForMode(
                 page = requestedPage ?: comic.currentPage,
@@ -584,6 +636,7 @@ class ReaderViewModel @Inject constructor(
                 it.copy(
                     comic = comic,
                     totalPages = pages,
+                    readerContentIsText = contentIsText,
                     readingMode = openingMode,
                     currentPage = startPage,
                     isLoading = false,
@@ -596,6 +649,51 @@ class ReaderViewModel @Inject constructor(
                     selectedTextActionSheet = null,
                     selectedTextTranslation = null
                 )
+            }
+            // For heavy reflowable formats the real page count is resolved in the background
+            // so the UI shell appeared immediately. Once the count arrives, update totalPages
+            // and jump to the actual start page (clamped to the real range).
+            val isHeavyForDeferred = shouldDeferTextPageCount(
+                format = detectedFormat,
+                contentIsText = contentIsText
+            )
+            if (contentIsText && isHeavyForDeferred) {
+                val capturedReader = newReader
+                val capturedToken = requestToken
+                val capturedComicCurrentPage = comic.currentPage
+                viewModelScope.launch(Dispatchers.IO) {
+                    val realPages = try {
+                        capturedReader?.getPageCount() ?: 1
+                    } catch (t: Throwable) {
+                        Log.w("ReaderViewModel", "Deferred page count failed for $detectedFormat", t)
+                        return@launch
+                    }
+                    if (!isOpenRequestCurrent(capturedToken) || realPages <= 1) return@launch
+                    val mode = _uiState.value.readingMode
+                    val targetPage = normalizePageForMode(
+                        page = capturedComicCurrentPage,
+                        mode = mode,
+                        totalPages = realPages
+                    )
+                    withContext(Dispatchers.Main.immediate) {
+                        _uiState.update { state ->
+                            if (state.totalPages == 1) {
+                                state.copy(
+                                    totalPages = realPages,
+                                    currentPage = targetPage
+                                )
+                            } else state
+                        }
+                    }
+                    if (!isOpenRequestCurrent(capturedToken)) return@launch
+                    loadPageTranslationNote(comic.id, targetPage)
+                    // Load the target page directly — prewarmHtmlPagesAround only loads pages
+                    // around the center (offset ≥ 1), not the center itself. Without this, the
+                    // deferred update sets currentPage = targetPage but currentHtmlContent stays
+                    // null, causing a persistent black screen for all archive text formats.
+                    loadPage(targetPage)
+                    prewarmHtmlPagesAround(targetPage, delayMillis = 0L)
+                }
             }
             val sessionStartedAtMillis = System.currentTimeMillis()
             val resumedFromProgress = requestedPage != null || comic.currentPage > 0
@@ -623,13 +721,13 @@ class ReaderViewModel @Inject constructor(
             )
             if (!isOpenRequestCurrent(requestToken)) return
             val visiblePages = visiblePagesFor(startPage, openingMode)
-            formatReader?.takeUnless { detectedFormat.isTextReadingFormat() }?.let { reader ->
+            formatReader?.takeUnless { contentIsText }?.let { reader ->
                 pagePreloader.preloadAround(reader, visiblePages, pages, _uiState.value.preloadPages)
             }
             visiblePages.forEach { visiblePage ->
                 loadPage(visiblePage)
             }
-            if (detectedFormat.isTextReadingFormat()) {
+            if (contentIsText) {
                 prewarmHtmlPagesAround(startPage, delayMillis = 180L)
             }
             scheduleHighQualityWarmup(startPage)
@@ -680,21 +778,27 @@ class ReaderViewModel @Inject constructor(
         val reader = formatReader
         viewModelScope.launch {
             if (reader == null || formatReader !== reader) return@launch
-            // Try HTML page first (text-based EPUB / FB2 novel).
-            // Always dispatch to IO so heavy work (ZIP reads, BZZ/ZP decoding, etc.)
-            // never blocks the main thread regardless of the FormatReader implementation.
-            val cachedHtmlPage = getOrLoadHtmlPage(reader, index)
-            if (cachedHtmlPage != null) {
-                if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
-                    _uiState.update {
-                        it.copy(
-                            currentHtmlContent = cachedHtmlPage.html,
-                            htmlAssetBasePath = cachedHtmlPage.assetBasePath
-                        )
+            // HTML rendering is only the contract for text/reflowable formats.
+            // Raster formats such as DjVu can expose diagnostic/visual HTML, but
+            // the reader must keep them on the bitmap path.
+            if (_uiState.value.usesTextReaderContent()) {
+                val cachedHtmlPage = getOrLoadHtmlPage(reader, index)
+                if (cachedHtmlPage != null) {
+                    if (
+                        formatReader === reader &&
+                        _uiState.value.comic?.id == comicId &&
+                        _uiState.value.currentPage == index
+                    ) {
+                        _uiState.update {
+                            it.copy(
+                                currentHtmlContent = cachedHtmlPage.html,
+                                htmlAssetBasePath = cachedHtmlPage.assetBasePath
+                            )
+                        }
+                        refreshAdjacentHtmlPages(index)
                     }
-                    refreshAdjacentHtmlPages(index)
+                    return@launch
                 }
-                return@launch
             }
             // Bitmap page (image-based formats)
             if (renderQuality == 1) {
@@ -723,13 +827,34 @@ class ReaderViewModel @Inject constructor(
     fun preloadWebtoonWindow(pages: List<Int>) {
         val reader = formatReader ?: return
         val state = _uiState.value
-        if (state.totalPages <= 0 || state.comic?.format?.isTextReadingFormat() == true) return
+        if (state.totalPages <= 0 || state.usesTextReaderContent()) return
         val validPages = pages
             .asSequence()
             .filter { it in 0 until state.totalPages }
             .distinct()
             .toList()
         if (validPages.isEmpty()) return
+
+        validPages.forEach { pageIndex ->
+            viewModelScope.launch {
+                if (formatReader !== reader) return@launch
+                if (pagePreloader.getPage(pageIndex, 1) == null) {
+                    pagePreloader.loadPage(reader, pageIndex, 1)
+                }
+                // HTML fallback for formats (e.g. DjVu) where some pages have no bitmap.
+                if (formatReader !== reader) return@launch
+                if (pagePreloader.getPage(pageIndex, 1) == null &&
+                    _webtoonHtmlCache.value[pageIndex] == null
+                ) {
+                    val html = withContext(Dispatchers.IO) {
+                        runCatching { reader.getHtmlPage(pageIndex) }.getOrNull()
+                    }
+                    if (html != null && formatReader === reader) {
+                        _webtoonHtmlCache.update { it + (pageIndex to html) }
+                    }
+                }
+            }
+        }
 
         pagePreloader.preloadAround(
             reader = reader,
@@ -805,6 +930,18 @@ class ReaderViewModel @Inject constructor(
         _uiState.value.currentPage - pageStepForMode(_uiState.value.readingMode),
         progressSource = ReaderNavigationProgressSource.READING
     )
+
+    /**
+     * Called when the JS reader has finished building pages in the WebView and reports back
+     * the actual page count. Used to update totalPages for formats where the server-side
+     * getPageCount() returns 1 (e.g. DOCX) but the real count is known only after JS layout.
+     */
+    fun onJsPageCountReported(count: Int) {
+        if (count <= 1) return
+        _uiState.update { state ->
+            if (state.totalPages <= 1) state.copy(totalPages = count) else state
+        }
+    }
 
     /**
      * Saves the current page bitmap to the app cache directory and emits the file path
@@ -1380,6 +1517,7 @@ class ReaderViewModel @Inject constructor(
 
     fun saveQuoteFromSelectedTextResult() {
         val state = _uiState.value.selectedTextTranslation ?: return
+        _uiState.update { it.copy(selectedTextTranslation = null) }
         saveQuote(
             text = state.originalText,
             translatedText = state.translatedText.ifBlank { null },
@@ -1669,16 +1807,36 @@ class ReaderViewModel @Inject constructor(
      *  - `chapter.xhtml#fragment` — navigate to page for that file; footnote lookup for fragment
      */
     fun onAnchorClick(href: String) {
-        val cleanHref = href.trimStart('/')
+        val rawHref = href.trim()
+        val rawStartsWithHash = rawHref.startsWith("#")
+        val cleanHref = normalizeReaderAnchorHref(href)
         val hashIdx = cleanHref.indexOf('#')
         val filePart = if (hashIdx >= 0) cleanHref.substring(0, hashIdx) else cleanHref
         val fragPart = if (hashIdx >= 0) cleanHref.substring(hashIdx + 1) else cleanHref
 
-        // 1. Try page navigation for cross-file links and internal document anchors.
+        // 1. Footnote links — try the format reader's note map only.
+        // (extractCurrentHtmlFootnote is NOT called here to avoid hijacking TOC/chapter links.)
+        val footnoteCandidates = listOf(
+            fragPart,
+            cleanHref,
+            cleanHref.trimStart('#')
+        ).map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
+        val footnoteText = footnoteCandidates.firstNotNullOfOrNull { candidate ->
+            formatReader?.getFootnoteText(candidate)
+        }
+        if (!footnoteText.isNullOrBlank()) {
+            showFootnotePopup(footnoteText)
+            return
+        }
+
+        // 2. Try page navigation for cross-file links and internal document anchors.
         // For bare "#fragment" links inside the current page we avoid reloading the same
         // page so the WebView can keep its native in-page scroll behaviour.
-        if ((filePart.isNotBlank() && filePart.contains('.')) || cleanHref.startsWith("#")) {
-            val pageIdx = formatReader?.resolveHrefToPage(cleanHref)
+        if ((filePart.isNotBlank() && filePart.contains('.')) || rawStartsWithHash || cleanHref.contains("#")) {
+            val navigationHref = if (rawStartsWithHash) "#$cleanHref" else cleanHref
+            val pageIdx = formatReader?.resolveHrefToPage(navigationHref)
             if (pageIdx != null && pageIdx >= 0) {
                 if (pageIdx != _uiState.value.currentPage) {
                     navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
@@ -1687,15 +1845,64 @@ class ReaderViewModel @Inject constructor(
             }
         }
 
-        // 2. Fall back to footnote popup using the fragment (or the whole href for bare ids)
+        // 3. Last-resort HTML fallback: look for the anchor inside the current page HTML.
+        // Only treat elements with footnote-like id/class patterns as popups; plain headings
+        // and chapter anchors are skipped so they don't produce false footnote popups.
         val anchorId = fragPart.ifBlank { cleanHref }
-        val text = formatReader?.getFootnoteText(anchorId) ?: return
+        val text = formatReader?.getFootnoteText(anchorId)
+            ?: extractCurrentHtmlFootnote(anchorId, cleanHref)
+            ?: return
         if (text.isBlank()) return
-        // Strip HTML tags, soft hyphens, and leading note-number prefix (e.g. "2 ")
-        val plain = text.replace(Regex("<[^>]+>"), "")
-            .replace("\u00AD", "")               // soft hyphens → invisible
-            .replace(Regex("""^\d+[\s\u00A0]+"""), "") // strip leading "2 " or "12 "
+        showFootnotePopup(text)
+    }
+
+    private fun normalizeReaderAnchorHref(rawHref: String): String {
+        var value = rawHref.trim()
+        value = when {
+            value.startsWith("fbanchor://", ignoreCase = true) -> value.substringAfter("://")
+            value.startsWith("fbanchor:", ignoreCase = true) -> value.substringAfter(':')
+            else -> value
+        }
+        value = runCatching { Uri.decode(value) }.getOrDefault(value)
+        return value.trim().trimStart('/', '#')
+    }
+
+    private fun extractCurrentHtmlFootnote(anchorId: String, href: String): String? {
+        val currentHtml = _uiState.value.currentHtmlContent ?: return null
+        val fragment = href.substringAfter('#', "")
             .trim()
+            .ifBlank { anchorId.trimStart('#').trim() }
+        if (fragment.isBlank()) return null
+
+        // Only treat elements as footnotes if the anchor ID looks like a footnote/note,
+        // not a chapter heading (e.g. "txt-chapter-1", "chapter_1" etc.)
+        val isFootnoteAnchor = FOOTNOTE_MARKER_RE.containsMatchIn(fragment) ||
+            fragment.matches(Regex("""^fn[-_]?\d+$""", RegexOption.IGNORE_CASE)) ||
+            fragment.matches(Regex("""^\d+$"""))
+        if (!isFootnoteAnchor) return null
+
+        val escapedFragment = Regex.escape(fragment)
+        val directBlock = Regex(
+            """<([a-z0-9:_-]+)\b(?=[^>]*(?:id|name)\s*=\s*["']$escapedFragment["'])[^>]*>(.*?)</\1>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        ).find(currentHtml)?.groupValues?.getOrNull(2)?.trim()
+        if (!directBlock.isNullOrBlank()) {
+            return directBlock
+        }
+
+        val anchoredParagraph = Regex(
+            """<a\b(?=[^>]*(?:id|name)\s*=\s*["']$escapedFragment["'])[^>]*>\s*</a>\s*(.*?)</(p|div|li|aside|blockquote|section)>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        ).find(currentHtml)?.groupValues?.getOrNull(1)?.trim()
+        return anchoredParagraph?.takeIf { it.isNotBlank() }
+    }
+
+    private fun showFootnotePopup(html: String) {
+        val plain = html.replace(Regex("<[^>]+>"), "")
+            .replace("\u00AD", "")
+            .replace(Regex("""^\d+[\s\u00A0]+"""), "")
+            .trim()
+        if (plain.isBlank()) return
         _uiState.update {
             it.copy(
                 footnotePopup = FootnotePopup(plain),
@@ -2219,7 +2426,6 @@ class ReaderViewModel @Inject constructor(
         }
         // Remember portrait-specific mode so we can restore it on landscape→portrait rotation
         rememberPortraitMode(mode)
-        markReaderPresetCustom()
         applyReadingMode(mode)
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
@@ -2320,8 +2526,7 @@ class ReaderViewModel @Inject constructor(
         }
         onOrientationChanged(
             useLandscapeSpread = _uiState.value.isLandscape,
-            isTextReader = _uiState.value.currentHtmlContent != null ||
-                (_uiState.value.comic?.format?.isTextReadingFormat() == true)
+            isTextReader = _uiState.value.usesTextReaderContent()
         )
     }
 
@@ -2842,10 +3047,20 @@ class ReaderViewModel @Inject constructor(
     private fun pageStepForMode(mode: ReadingMode): Int =
         if (mode == ReadingMode.DUAL_PAGE) 2 else 1
 
-    private fun effectiveOpeningModeFor(format: ComicFormat): ReadingMode {
+    private fun effectiveOpeningModeFor(
+        format: ComicFormat,
+        contentIsText: Boolean = format.isTextReadingFormat()
+    ): ReadingMode {
         val state = _uiState.value
         return when {
-            format.isTextReadingFormat() -> portraitPagedReadingMode
+            contentIsText -> {
+                val rememberedMode = if (state.readingMode == ReadingMode.DUAL_PAGE) {
+                    portraitReadingMode
+                } else {
+                    state.readingMode
+                }
+                if (rememberedMode == ReadingMode.WEBTOON) ReadingMode.WEBTOON else portraitPagedReadingMode
+            }
             state.isLandscape &&
                 state.landscapeSpreadEnabled &&
                 supportsAutomaticLandscapeSpread(portraitReadingMode) &&
@@ -2876,12 +3091,13 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun activeComicSupportsBitmapPreload(): Boolean =
-        !(_uiState.value.comic?.format?.isTextReadingFormat() ?: false)
+        !_uiState.value.usesTextReaderContent()
 
     private fun clearHtmlPageCache() {
         synchronized(htmlPageCache) {
             htmlPageCache.clear()
         }
+        _webtoonHtmlCache.value = emptyMap()
     }
 
     private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
@@ -3119,139 +3335,153 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
+    private suspend fun readReaderPreferencesSnapshot(): Preferences =
+        context.dataStore.data
+            .catch { exception ->
+                if (exception is IOException) {
+                    emit(emptyPreferences())
+                } else {
+                    throw exception
+                }
+            }
+            .first()
+
     private suspend fun restoreReaderPreferences() {
-        val storedMode = readerPreferences.get(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name).first()
+        val preferences = readReaderPreferencesSnapshot()
+        fun <T> pref(key: Preferences.Key<T>, defaultValue: T): T = preferences[key] ?: defaultValue
+
+        val storedMode = pref(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name)
         val mode = runCatching { ReadingMode.valueOf(storedMode) }.getOrDefault(ReadingMode.PAGE_LTR)
         rememberPortraitMode(mode)
-        val brightness = readerPreferences.get(PreferencesKeys.READING_BRIGHTNESS, -1f).first().let { stored ->
+        val brightness = pref(PreferencesKeys.READING_BRIGHTNESS, -1f).let { stored ->
             if (stored < 0f) -1f else stored.coerceIn(0.05f, 1f)
         }
-        val keepScreenOn = readerPreferences.get(PreferencesKeys.READER_KEEP_SCREEN_ON, false).first()
+        val keepScreenOn = pref(PreferencesKeys.READER_KEEP_SCREEN_ON, false)
         val screenTimeoutMode = ReaderScreenTimeoutMode.fromStored(
-            readerPreferences.get(
+            pref(
                 PreferencesKeys.READER_SCREEN_TIMEOUT_MODE,
                 ReaderScreenTimeoutMode.SYSTEM.storedValue
-            ).first()
+            )
         )
-        val landscapeSpreadEnabled = readerPreferences.get(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, true).first()
-        val animation    = readerPreferences.get(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE").first()
-        val pageSound    = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND, false).first()
-        val soundStyle   = readerPreferences.get(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER").first()
-        val immersive    = readerPreferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false).first()
-        val chromeAutoHideEnabled = readerPreferences.get(PreferencesKeys.READER_CHROME_AUTO_HIDE, true).first()
-        val topToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).first().coerceIn(0f, 1.0f)
-        val bottomToolbarOpacity = readerPreferences.get(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).first().coerceIn(0f, 1.0f)
-        val toolbarBlur = readerPreferences.get(PreferencesKeys.READER_TOOLBAR_BLUR, READER_TOOLBAR_DEFAULT_BLUR).first().coerceIn(0f, 1f)
+        val landscapeSpreadEnabled = pref(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, true)
+        val animation    = pref(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE")
+        val pageSound    = pref(PreferencesKeys.READER_PAGE_SOUND, false)
+        val soundStyle   = pref(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER")
+        val immersive    = pref(PreferencesKeys.READER_IMMERSIVE_MODE, false)
+        val chromeAutoHideEnabled = pref(PreferencesKeys.READER_CHROME_AUTO_HIDE, true)
+        val topToolbarOpacity = pref(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).coerceIn(0f, 1.0f)
+        val bottomToolbarOpacity = pref(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).coerceIn(0f, 1.0f)
+        val toolbarBlur = pref(PreferencesKeys.READER_TOOLBAR_BLUR, READER_TOOLBAR_DEFAULT_BLUR).coerceIn(0f, 1f)
         val imageScaleMode = ReaderImageScaleMode.fromStored(
-            readerPreferences.get(
+            pref(
                 PreferencesKeys.READER_IMAGE_SCALE_MODE,
                 ReaderImageScaleMode.FIT_WIDTH.storedValue
-            ).first()
+            )
         )
-        val imageMarginCropHorizontal = readerPreferences.get(
+        val imageMarginCropHorizontal = pref(
             PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
             DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL
-        ).first().coerceIn(0f, 0.22f)
-        val imageMarginCropVertical = readerPreferences.get(
+        ).coerceIn(0f, 0.22f)
+        val imageMarginCropVertical = pref(
             PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
             DEFAULT_IMAGE_MARGIN_CROP_VERTICAL
-        ).first().coerceIn(0f, 0.22f)
-        val preload      = readerPreferences.get(
+        ).coerceIn(0f, 0.22f)
+        val preload      = pref(
             PreferencesKeys.READER_PRELOAD_PAGES,
             renderProfile.defaultPreloadPages
-        ).first()
+        )
             .coerceIn(2, 8)
             .coerceAtMost(renderProfile.maxPreloadPages)
         // Text reader settings
-        val fontSize     = readerPreferences.get(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE).first().coerceIn(12, 32)
-        val colorScheme  = readerPreferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME).first()
-        val customTextColor = readerPreferences.get(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE).first()
+        val fontSize     = pref(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE).coerceIn(12, 32)
+        val colorScheme  = pref(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
+        val customTextColor = pref(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
-        val customBackgroundColor = readerPreferences.get(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE).first()
+        val customBackgroundColor = pref(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
-        val customAccentColor = readerPreferences.get(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE).first()
+        val customAccentColor = pref(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
-        val fontFamily   = readerPreferences.get(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY).first()
-        val lineHeight   = readerPreferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT).first().coerceIn(1.0f, 3.0f)
-        val letterSpacing = readerPreferences.get(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING).first().coerceIn(0f, 0.2f)
-        val wordSpacing  = readerPreferences.get(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING).first().coerceIn(0f, 0.6f)
-        val paragraphSpacing = readerPreferences.get(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING).first().coerceIn(0.1f, 1.2f)
-        val alignment    = readerPreferences.get(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT).first()
-        val bold         = readerPreferences.get(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD).first()
+        val fontFamily   = pref(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY)
+        val lineHeight   = pref(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT).coerceIn(1.0f, 3.0f)
+        val letterSpacing = pref(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING).coerceIn(0f, 0.2f)
+        val wordSpacing  = pref(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING).coerceIn(0f, 0.6f)
+        val paragraphSpacing = pref(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING).coerceIn(0.1f, 1.2f)
+        val alignment    = pref(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT)
+        val bold         = pref(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD)
         val tapZoneMode = ReaderTapZoneMode.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name).first()
+            pref(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name)
         )
-        val tapZoneSwap = readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_SWAP, false).first()
-        val volumeKeysPagingEnabled = readerPreferences.get(PreferencesKeys.READER_VOLUME_KEYS_PAGING, false).first()
+        val tapZoneSwap = pref(PreferencesKeys.READER_TAP_ZONE_SWAP, false)
+        val volumeKeysPagingEnabled = pref(PreferencesKeys.READER_VOLUME_KEYS_PAGING, false)
         val ttsProvider = ReaderTtsProviderType.fromStored(
-            readerPreferences.get(
+            pref(
                 PreferencesKeys.READER_TTS_PROVIDER,
                 ReaderTtsProviderType.SYSTEM.storedValue
-            ).first()
+            )
         )
-        val ttsSpeed = readerPreferences.get(PreferencesKeys.READER_TTS_SPEED, 1.0f).first().coerceIn(0.5f, 2.0f)
-        val ttsPitch = readerPreferences.get(PreferencesKeys.READER_TTS_PITCH, 1.0f).first().coerceIn(0.5f, 2.0f)
-        val ttsVolume = readerPreferences.get(PreferencesKeys.READER_TTS_VOLUME, 1.0f).first().coerceIn(0f, 1.0f)
-        val ttsVoiceName = readerPreferences.get(PreferencesKeys.READER_TTS_VOICE_NAME, "").first().ifBlank { null }
+        val ttsSpeed = pref(PreferencesKeys.READER_TTS_SPEED, 1.0f).coerceIn(0.5f, 2.0f)
+        val ttsPitch = pref(PreferencesKeys.READER_TTS_PITCH, 1.0f).coerceIn(0.5f, 2.0f)
+        val ttsVolume = pref(PreferencesKeys.READER_TTS_VOLUME, 1.0f).coerceIn(0f, 1.0f)
+        val ttsVoiceName = pref(PreferencesKeys.READER_TTS_VOICE_NAME, "").ifBlank { null }
         val ttsSleepTimerMode = ReaderTtsSleepTimerMode.fromStored(
-            readerPreferences.get(
+            pref(
                 PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE,
                 ReaderTtsSleepTimerMode.OFF.storedValue
-            ).first()
+            )
         )
         val tapZoneLeft = normalizeTapZoneActionName(
-            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name).first()
+            pref(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name)
         )
         val tapZoneCenter = normalizeTapZoneActionName(
-            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name).first()
+            pref(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name)
         )
         val tapZoneRight = normalizeTapZoneActionName(
-            readerPreferences.get(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name).first()
+            pref(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name)
         )
         val headerLeftSlot = ReaderInfoSlot.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_HEADER_LEFT_SLOT, ReaderInfoSlot.BOOK_TITLE.name).first()
+            pref(PreferencesKeys.READER_HEADER_LEFT_SLOT, ReaderInfoSlot.BOOK_TITLE.name)
         )
         val headerCenterSlot = ReaderInfoSlot.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_HEADER_CENTER_SLOT, ReaderInfoSlot.NONE.name).first()
+            pref(PreferencesKeys.READER_HEADER_CENTER_SLOT, ReaderInfoSlot.NONE.name)
         )
         val headerRightSlot = ReaderInfoSlot.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_HEADER_RIGHT_SLOT, ReaderInfoSlot.TIME.name).first()
+            pref(PreferencesKeys.READER_HEADER_RIGHT_SLOT, ReaderInfoSlot.TIME.name)
         )
         val footerLeftSlot = ReaderInfoSlot.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_FOOTER_LEFT_SLOT, ReaderInfoSlot.CHAPTER_TITLE.name).first()
+            pref(PreferencesKeys.READER_FOOTER_LEFT_SLOT, ReaderInfoSlot.CHAPTER_TITLE.name)
         )
         val footerCenterSlot = ReaderInfoSlot.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_FOOTER_CENTER_SLOT, ReaderInfoSlot.PAGE.name).first()
+            pref(PreferencesKeys.READER_FOOTER_CENTER_SLOT, ReaderInfoSlot.PAGE.name)
         )
         val footerRightSlot = ReaderInfoSlot.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_FOOTER_RIGHT_SLOT, ReaderInfoSlot.PROGRESS.name).first()
+            pref(PreferencesKeys.READER_FOOTER_RIGHT_SLOT, ReaderInfoSlot.PROGRESS.name)
         )
-        val headerFooterFontSize = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, 12).first().coerceIn(10, 20)
-        val headerFooterVerticalPadding = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, 6).first().coerceIn(4, 20)
-        val headerFooterLeftPadding = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, 16).first().coerceIn(8, 32)
-        val headerFooterRightPadding = readerPreferences.get(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, 16).first().coerceIn(8, 32)
-        val eyeRestEnabled = readerPreferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false).first()
-        val eyeRestMinutes = readerPreferences.get(PreferencesKeys.READER_EYE_REST_MINUTES, 20).first().coerceIn(10, 60)
-        val mascotUiEnabled = readerPreferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true).first()
+        val headerFooterFontSize = pref(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, 12).coerceIn(10, 20)
+        val headerFooterVerticalPadding = pref(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, 6).coerceIn(4, 20)
+        val headerFooterLeftPadding = pref(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, 16).coerceIn(8, 32)
+        val headerFooterRightPadding = pref(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, 16).coerceIn(8, 32)
+        val eyeRestEnabled = pref(PreferencesKeys.READER_EYE_REST_ENABLED, false)
+        val eyeRestMinutes = pref(PreferencesKeys.READER_EYE_REST_MINUTES, 20).coerceIn(10, 60)
+        val mascotUiEnabled = pref(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true)
         val chromeIconOrder = ReaderChromeButton.normalizeStoredOrder(
-            readerPreferences.get(
+            pref(
                 PreferencesKeys.READER_CHROME_ICON_ORDER,
                 ReaderChromeButton.defaultStoredOrder
-            ).first()
+            )
         )
-        val chromeShowTocIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_TOC, true).first()
-        val chromeShowStyleIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_STYLE, true).first()
-        val chromeShowAudioIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_AUDIO, true).first()
-        val chromeShowDirectionIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, true).first()
-        val chromeShowTranslateIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true).first()
-        val chromeShowBrightnessIcon = readerPreferences.get(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true).first()
+        val chromeShowTocIcon = pref(PreferencesKeys.READER_CHROME_SHOW_TOC, true)
+        val chromeShowStyleIcon = pref(PreferencesKeys.READER_CHROME_SHOW_STYLE, true)
+        val chromeShowAudioIcon = pref(PreferencesKeys.READER_CHROME_SHOW_AUDIO, true)
+        val chromeShowDirectionIcon = pref(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, true)
+        val chromeShowTranslateIcon = pref(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true)
+        val chromeShowBrightnessIcon = pref(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true)
         val legacyReaderStylePresetSlots = listOf(
-            ReaderStylePresetSlot(1, readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_1, "").first().ifBlank { null }),
-            ReaderStylePresetSlot(2, readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_2, "").first().ifBlank { null }),
-            ReaderStylePresetSlot(3, readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_3, "").first().ifBlank { null })
+            ReaderStylePresetSlot(1, pref(PreferencesKeys.READER_STYLE_PRESET_1, "").ifBlank { null }),
+            ReaderStylePresetSlot(2, pref(PreferencesKeys.READER_STYLE_PRESET_2, "").ifBlank { null }),
+            ReaderStylePresetSlot(3, pref(PreferencesKeys.READER_STYLE_PRESET_3, "").ifBlank { null })
         )
         val savedReaderStylePresetEntries = parseReaderStylePresetEntries(
-            readerPreferences.get(PreferencesKeys.READER_STYLE_PRESET_LIST, "").first()
+            pref(PreferencesKeys.READER_STYLE_PRESET_LIST, "")
         )
         val readerStylePresetEntries = savedReaderStylePresetEntries.ifEmpty {
             migrateLegacyReaderStyleSlotsToEntries(legacyReaderStylePresetSlots)
@@ -3262,7 +3492,7 @@ class ReaderViewModel @Inject constructor(
             legacyReaderStylePresetSlots
         }
         val readerPreset = ReadingPreset.fromStored(
-            readerPreferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name).first()
+            pref(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
         )
         _uiState.update { state ->
             val effectiveMode = if (state.isLandscape && supportsAutomaticLandscapeSpread(mode)) {
@@ -3396,13 +3626,13 @@ class ReaderViewModel @Inject constructor(
 
     private fun resolveReadablePath(comic: Comic, fallbackPath: String): String {
         if (!fallbackPath.startsWith("content://")) {
-            val filePath = java.io.File(fallbackPath)
-            if (filePath.exists()) return fallbackPath
             val sourceUri = comic.treeUri
             if (!sourceUri.isNullOrBlank() && !DocumentsContract.isTreeUri(Uri.parse(sourceUri)) && hasReadAccess(sourceUri)) {
                 return sourceUri
             }
             resolveReadablePathFromPersistedPermissions(comic)?.let { return it }
+            val filePath = java.io.File(fallbackPath)
+            if (filePath.exists()) return fallbackPath
             return fallbackPath
         }
         if (hasReadAccess(fallbackPath)) return fallbackPath
@@ -3453,7 +3683,11 @@ class ReaderViewModel @Inject constructor(
                 }
             }
 
-        return documentIdToExternalPath(documentId)?.takeIf(::isLocalFileReadable)
+        // Do not fall back to /storage/emulated/... for SAF documents.  On Android 13+
+        // File.exists/canRead may report true while MediaProvider rejects direct lower-FS
+        // access for scoped-storage apps.  Keep the content:// source so format readers can
+        // use ContentResolver or their own app-private cache.
+        return null
     }
 
     private fun isDocumentInsideTree(treeDocumentId: String, documentId: String): Boolean {

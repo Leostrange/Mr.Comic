@@ -5,8 +5,15 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser as JsoupXmlParser
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.util.Base64
 import java.util.zip.ZipInputStream
+
+private const val MAX_DOCX_MAIN_XML_ENTRY_BYTES = 16 * 1024 * 1024
+private const val MAX_DOCX_AUX_XML_ENTRY_BYTES = 4 * 1024 * 1024
+private const val MAX_DOCX_MEDIA_ENTRY_BYTES = 8 * 1024 * 1024
+private const val MAX_DOCX_FONT_ENTRY_BYTES = 4 * 1024 * 1024
+private const val MAX_DOCX_OTHER_ENTRY_BYTES = 512 * 1024
 
 internal data class DocxArchive(
     val entries: Map<String, ByteArray>,
@@ -129,6 +136,7 @@ internal fun docxTargetToDataUri(target: String, archive: DocxArchive): String? 
         else -> "word/$target"
     }
     val bytes = archive.entries[normalizedTarget] ?: return null
+    if (bytes.size > maxDocxEntryBytes(normalizedTarget)) return null
     return "data:${docxMimeType(normalizedTarget)};base64,${Base64.getEncoder().encodeToString(bytes)}"
 }
 
@@ -138,12 +146,49 @@ internal fun readDocxZipEntries(bytes: ByteArray): Map<String, ByteArray> {
         ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
             generateSequence { zip.nextEntry }.forEach { entry ->
                 if (!entry.isDirectory) {
-                    result[entry.name] = zip.readBytes()
+                    readBoundedDocxEntry(zip, maxDocxEntryBytes(entry.name))
+                        ?.let { result[entry.name] = it }
                 }
             }
         }
     }
     return result
+}
+
+private fun maxDocxEntryBytes(entryName: String): Int {
+    val normalized = entryName.replace('\\', '/').lowercase()
+    return when {
+        normalized == "word/document.xml" -> MAX_DOCX_MAIN_XML_ENTRY_BYTES
+        normalized.endsWith(".rels") ||
+            normalized == "[content_types].xml" ||
+            normalized in setOf(
+                "word/styles.xml",
+                "word/numbering.xml",
+                "word/fonttable.xml",
+                "word/footnotes.xml",
+                "word/endnotes.xml",
+                "word/settings.xml"
+            ) -> MAX_DOCX_AUX_XML_ENTRY_BYTES
+        normalized.startsWith("word/media/") -> MAX_DOCX_MEDIA_ENTRY_BYTES
+        normalized.startsWith("word/fonts/") -> MAX_DOCX_FONT_ENTRY_BYTES
+        else -> MAX_DOCX_OTHER_ENTRY_BYTES
+    }
+}
+
+private fun readBoundedDocxEntry(zip: ZipInputStream, maxBytes: Int): ByteArray? {
+    val output = ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+    val buffer = ByteArray(16 * 1024)
+    var total = 0
+    while (true) {
+        val read = zip.read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > maxBytes) {
+            return null
+        }
+        output.write(buffer, 0, read)
+    }
+    return output.toByteArray()
 }
 
 private fun docxMimeType(path: String): String = when (path.substringAfterLast('.', "").lowercase()) {
@@ -284,7 +329,10 @@ private fun parseEmbeddedFonts(
             if (relationshipId.isBlank()) return@forEach
             val target = fontRelationships[relationshipId] ?: return@forEach
             val rawBytes = entries[normalizeDocxEntryTarget(target)] ?: return@forEach
-            val fontBytes = deobfuscateEmbeddedFont(rawBytes, embedding.attr("w:fontKey").trim())
+            val fontBytes = resolveEmbeddedFontBytes(
+                rawBytes = rawBytes,
+                fontKey = embedding.attr("w:fontKey").trim()
+            ) ?: return@forEach
             val dataUri = "data:${detectEmbeddedFontMimeType(fontBytes)};base64,${Base64.getEncoder().encodeToString(fontBytes)}"
             result.getOrPut(family) { mutableListOf() } += DocxFontFace(
                 cssFontFamily = family,
@@ -295,6 +343,14 @@ private fun parseEmbeddedFonts(
         }
     }
     return result
+}
+
+private fun resolveEmbeddedFontBytes(rawBytes: ByteArray, fontKey: String): ByteArray? {
+    if (rawBytes.isEmpty()) return null
+    if (hasValidEmbeddedFontSignature(rawBytes)) return rawBytes
+    if (fontKey.isBlank()) return null
+    val decoded = deobfuscateEmbeddedFont(rawBytes, fontKey)
+    return decoded.takeIf(::hasValidEmbeddedFontSignature)
 }
 
 private fun buildEmbeddedFontCss(embeddedFaces: Map<String, List<DocxFontFace>>): String {
@@ -350,6 +406,19 @@ private fun detectEmbeddedFontMimeType(bytes: ByteArray): String {
         if (header == "wOF2") return "font/woff2"
     }
     return "font/ttf"
+}
+
+private fun hasValidEmbeddedFontSignature(bytes: ByteArray): Boolean {
+    if (bytes.size < 4) return false
+    val header = bytes.copyOfRange(0, 4).decodeToString()
+    return header == "OTTO" ||
+        header == "wOFF" ||
+        header == "wOF2" ||
+        header == "ttcf" ||
+        (bytes[0] == 0x00.toByte() &&
+            bytes[1] == 0x01.toByte() &&
+            bytes[2] == 0x00.toByte() &&
+            bytes[3] == 0x00.toByte())
 }
 
 private fun fontFormatHint(dataUri: String): String = when {

@@ -1,7 +1,12 @@
 package com.example.engine.formats.text
 
+import com.example.core.model.ComicFormat
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class MarkdownSupportTest {
 
@@ -37,7 +42,7 @@ class MarkdownSupportTest {
 
         val html = renderMarkdownToHtmlBlocks(markdown).joinToString("\n")
 
-        assertTrue(html.contains("<h1>Sample</h1>"))
+        assertTrue(html.contains("Sample</h1>"))
         assertTrue(html.contains("<pre><code"))
         assertTrue(html.contains("println(&quot;Hello&quot;)") || html.contains("println(\"Hello\")"))
     }
@@ -64,7 +69,7 @@ class MarkdownSupportTest {
         val blocks = renderMarkdownToHtmlBlocks(samplePath.readText(Charsets.UTF_8))
 
         assertTrue(blocks.size > 50)
-        assertTrue(blocks.joinToString("\n").contains("<h1>"))
+        assertTrue(blocks.joinToString("\n").contains("<h1"))
     }
 
     @Test
@@ -80,6 +85,39 @@ class MarkdownSupportTest {
         assertTrue(html.contains("<blockquote>"))
         assertTrue(html.contains("<li>"))
         assertTrue(html.contains("Introduction"))
+    }
+
+    @Test
+    fun readerBuildsTocAndHrefTargetsFromMarkdownHeadings() = runBlocking {
+        val sample = File.createTempFile("mrcomic-markdown-toc", ".md").apply {
+            writeText(
+                """
+                    # First Chapter
+
+                    Opening text.
+
+                    ## Под солнцем
+
+                    Кириллический заголовок тоже должен стать якорем.
+                """.trimIndent()
+            )
+            deleteOnExit()
+        }
+
+        val reader = TextFormatReader(
+            mockk(relaxed = true),
+            sample.absolutePath,
+            ComicFormat.MARKDOWN
+        )
+        try {
+            val toc = reader.getTableOfContents()
+            assertEquals(listOf("First Chapter", "Под солнцем"), toc.map { it.title })
+            assertEquals(toc[0].pageIndex, reader.resolveHrefToPage("#first-chapter"))
+            assertEquals(toc[1].pageIndex, reader.resolveHrefToPage("#под-солнцем"))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
     }
 
     private fun locateCorpusFile(name: String): java.io.File {

@@ -1,26 +1,43 @@
 package com.example.engine.formats.text
 
-import com.example.engine.formats.base.READER_PRESERVE_LAYOUT_DOCUMENT_CSS
+import android.util.Log
+import com.example.engine.formats.base.READER_BASE_DOCUMENT_CSS
 import com.example.engine.formats.base.TocEntry
-import com.example.engine.formats.base.buildUnifiedReaderHtmlDocument
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.parser.Parser as JsoupXmlParser
 
 internal object DocxTextSupport {
+    private const val TAG = "DocxTextSupport"
+
     fun render(bytes: ByteArray, baseUrl: String?): ReflowableDocument {
         val rendered = renderDocument(bytes, baseUrl)
-        return ReflowableDocument(
-            pages = rendered.pages,
-            toc = rendered.toc
+        safeLogD("render: blocks=${rendered.blocks.size} toc=${rendered.toc.size}")
+        val reflowed = ReflowableDocumentBuilder.fromHtmlBlocks(
+            blocks = rendered.blocks,
+            baseCss = READER_BASE_DOCUMENT_CSS + "\n" + rendered.extraCss
         )
+        safeLogD("render: pageCount=${reflowed.pageCount}")
+        // Build TOC from the *paginated* pages so page indices are correct.
+        // rendered.toc was built from raw blocks (pre-pagination) and has pageIndex=0 for all
+        // entries, making every TOC tap land on page 1. buildTocFromPages iterates the final
+        // page list and records the actual page index for each heading it finds.
+        val toc = buildTocFromPages(reflowed.pages, emptyMap())
+        return reflowed.copy(
+            toc = toc.ifEmpty { rendered.toc },
+            footnoteMap = rendered.footnoteMap
+        )
+    }
+
+    private fun safeLogD(message: String) {
+        runCatching { Log.d(TAG, message) }
     }
 
     private fun renderDocument(bytes: ByteArray, baseUrl: String?): DocxRenderedDocument {
         val entries = readDocxZipEntries(bytes)
         val xml = entries["word/document.xml"]?.toString(Charsets.UTF_8)
             ?: return DocxRenderedDocument(
-                pages = listOf(buildDocxHtmlPage("<p>Unable to read DOCX document.</p>", baseUrl))
+                blocks = listOf("<p>Unable to read DOCX document.</p>")
             )
         val relationships = parseDocxRelationships(
             entries["word/_rels/document.xml.rels"]?.toString(Charsets.UTF_8)
@@ -62,28 +79,18 @@ internal object DocxTextSupport {
                 }
         }
         return DocxRenderedDocument(
-            pages = listOf(
-                buildDocxHtmlPage(
-                    body = (safeBlocks + footnoteBlocks).joinToString(separator = ""),
-                    baseUrl = baseUrl,
-                    extraCss = archive.styleContext.embeddedFontCss
-                )
-            ),
-            toc = toc
+            blocks = safeBlocks + footnoteBlocks,
+            toc = toc,
+            extraCss = archive.styleContext.embeddedFontCss,
+            footnoteMap = archive.footnotes + archive.endnotes
         )
     }
 
     private data class DocxRenderedDocument(
-        val pages: List<String>,
-        val toc: List<TocEntry> = emptyList()
+        val blocks: List<String>,
+        val toc: List<TocEntry> = emptyList(),
+        val extraCss: String = "",
+        val footnoteMap: Map<String, String> = emptyMap()
     )
 
-    private fun buildDocxHtmlPage(body: String, baseUrl: String?, extraCss: String = ""): String =
-        buildUnifiedReaderHtmlDocument(
-            body = body,
-            baseUrl = baseUrl,
-            extraCss = extraCss,
-            baseCss = READER_PRESERVE_LAYOUT_DOCUMENT_CSS,
-            preservePublisherLayout = true
-        )
 }

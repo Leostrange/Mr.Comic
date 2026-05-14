@@ -60,6 +60,12 @@ interface FormatReader {
     fun getTableOfContents(): List<TocEntry> = emptyList()
 
     /**
+     * True when this reader's primary page contract is HTML/reflowable text even if the
+     * container format is not itself a text format, e.g. a ZIP containing one TXT/HTML book.
+     */
+    fun rendersHtmlContent(): Boolean = false
+
+    /**
      * Returns the HTML content of a footnote/note identified by [anchorId],
      * or null if no such footnote exists. Used for the inline footnote popup.
      */

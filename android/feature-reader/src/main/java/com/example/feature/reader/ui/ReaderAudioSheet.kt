@@ -43,16 +43,11 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -72,6 +67,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.core.model.ReaderTtsSleepTimerMode
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicIconButtonVariant
+import com.example.core.ui.designsystem.MrComicProgressLine
+import com.example.core.ui.designsystem.MrComicSlider
 import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.library.rootChromeStableTopBarInsets
@@ -141,7 +141,10 @@ internal fun ReaderAudioSheet(
                                 )
                             },
                             navigationIcon = {
-                                IconButton(onClick = onDismiss) {
+                                MrComicIconButton(
+                                    onClick = onDismiss,
+                                    variant = MrComicIconButtonVariant.Tonal
+                                ) {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = readerText.close)
                                 }
                             }
@@ -198,7 +201,7 @@ internal fun ReaderAudioSheet(
                     )
 
                     Spacer(Modifier.height(6.dp))
-                    LinearProgressIndicator(
+                    MrComicProgressLine(
                         progress = { progress },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -229,22 +232,27 @@ internal fun ReaderAudioSheet(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(
+                        MrComicIconButton(
                             onClick = {
                                 showSettings = !showSettings
                                 if (showSettings) showChapters = false
-                            }
+                            },
+                            variant = MrComicIconButtonVariant.Tonal
                         ) {
                             Icon(Icons.Default.Tune, contentDescription = "Аудионастройки", modifier = Modifier.size(24.dp))
                         }
-                        IconButton(onClick = onPrevious, enabled = runtimeState.totalChunks > 0) {
+                        MrComicIconButton(
+                            onClick = onPrevious,
+                            enabled = runtimeState.totalChunks > 0,
+                            variant = MrComicIconButtonVariant.Tonal
+                        ) {
                             Icon(Icons.Default.SkipPrevious, contentDescription = "Назад", modifier = Modifier.size(32.dp))
                         }
                         Spacer(Modifier.width(8.dp))
-                        FilledIconButton(
+                        MrComicIconButton(
                             onClick = onTogglePlayback,
-                            modifier = Modifier.size(56.dp),
-                            shape = CircleShape
+                            size = 56.dp,
+                            variant = MrComicIconButtonVariant.Filled
                         ) {
                             Icon(
                                 imageVector = if (runtimeState.isSpeaking) Icons.Default.Pause else Icons.Default.PlayArrow,
@@ -253,14 +261,19 @@ internal fun ReaderAudioSheet(
                             )
                         }
                         Spacer(Modifier.width(8.dp))
-                        IconButton(onClick = onNext, enabled = runtimeState.totalChunks > 0) {
+                        MrComicIconButton(
+                            onClick = onNext,
+                            enabled = runtimeState.totalChunks > 0,
+                            variant = MrComicIconButtonVariant.Tonal
+                        ) {
                             Icon(Icons.Default.SkipNext, contentDescription = "Вперёд", modifier = Modifier.size(32.dp))
                         }
-                        IconButton(
+                        MrComicIconButton(
                             onClick = {
                                 showChapters = !showChapters
                                 if (showChapters) showSettings = false
-                            }
+                            },
+                            variant = MrComicIconButtonVariant.Tonal
                         ) {
                             Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = readerText.chapters, modifier = Modifier.size(24.dp))
                         }
@@ -379,7 +392,7 @@ internal fun ReaderAudioSheet(
                                                     modifier = Modifier.weight(1f)
                                                 ) {
                                                     items(ReaderTtsSleepTimerMode.entries.toList()) { mode ->
-                                                        FilterChip(
+                                                        MrComicFilterChip(
                                                             selected = sleepTimerMode == mode.storedValue,
                                                             onClick = { onSleepTimerChange(mode.storedValue) },
                                                             label = {
@@ -526,7 +539,7 @@ private fun ReaderAudioSliderRow(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Slider(
+        MrComicSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange

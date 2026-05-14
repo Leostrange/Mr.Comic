@@ -43,8 +43,11 @@ import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.File
 import java.io.InputStream
+import java.io.PushbackReader
 import java.io.RandomAccessFile
+import java.io.Reader
 import java.net.URLDecoder
+import java.nio.charset.Charset
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
 import kotlin.math.min
@@ -1082,33 +1085,25 @@ class ComicRepository @Inject constructor(
 
     private fun extractCoverFromFb2(sourcePath: String): Bitmap? {
         return try {
-            val rawBytes: ByteArray = if (sourcePath.startsWith("content://"))
-                context.contentResolver.openInputStream(Uri.parse(sourcePath))?.use { it.readBytes() } ?: return null
-            else
-                File(sourcePath).readBytes()
-
-            // Apply the same entity/charset preprocessing as Fb2FormatReader to avoid
-            // XmlPullParserException on HTML entities like &nbsp; common in Russian FB2 files
-            val bytes = preprocessFb2ForCover(rawBytes)
-
-            val parser = Xml.newPullParser().apply {
-                setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
-                setInput(bytes.inputStream(), "UTF-8")
-            }
-            var event = parser.eventType
-            while (event != XmlPullParser.END_DOCUMENT) {
-                if (event == XmlPullParser.START_TAG && parser.name == "binary") {
-                    val contentType = parser.getAttributeValue(null, "content-type") ?: ""
-                    if (contentType.startsWith("image/")) {
-                        event = parser.next()
-                        if (event == XmlPullParser.TEXT) {
-                            val base64Data = parser.text.replace("\\s".toRegex(), "")
-                            val bytes2 = Base64.decode(base64Data, Base64.DEFAULT)
-                            if (bytes2.isNotEmpty()) return decodeCoverBitmap(ByteArrayInputStream(bytes2))
+            openSourceInputStream(sourcePath)?.use { source ->
+                val buffered = source.buffered()
+                val charset = detectFb2CoverCharset(buffered)
+                createFb2CoverXmlReader(buffered, charset).use { reader ->
+                    val parser = Xml.newPullParser().apply {
+                        setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
+                        setInput(reader)
+                    }
+                    var event = parser.eventType
+                    while (event != XmlPullParser.END_DOCUMENT) {
+                        if (event == XmlPullParser.START_TAG && parser.name == "binary") {
+                            val contentType = parser.getAttributeValue(null, "content-type") ?: ""
+                            if (contentType.startsWith("image/")) {
+                                decodeFb2BinaryCover(parser)?.let { return it }
+                            }
                         }
+                        event = parser.next()
                     }
                 }
-                event = parser.next()
             }
             null
         } catch (e: Exception) {
@@ -1117,21 +1112,106 @@ class ComicRepository @Inject constructor(
         }
     }
 
-    /** Minimal FB2 preprocessing: detect charset + strip illegal HTML entities */
-    private fun preprocessFb2ForCover(raw: ByteArray): ByteArray {
-        val peek = raw.take(300).toByteArray().toString(Charsets.ISO_8859_1)
-        val declaredEnc = Regex("""encoding\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-            .find(peek)?.groupValues?.get(1) ?: "UTF-8"
-        val charset = try { java.nio.charset.Charset.forName(declaredEnc) } catch (_: Exception) { Charsets.UTF_8 }
-        var text = raw.toString(charset)
-        // Remove common HTML entities illegal in XML
-        text = Regex("&(?!(?:amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)\\w+;").replace(text, "")
-        // Fix bare &
-        text = Regex("&(?!(amp|lt|gt|apos|quot|#[0-9]+|#x[0-9a-fA-F]+);)").replace(text, "&amp;")
-        if (!declaredEnc.equals("UTF-8", ignoreCase = true) && !declaredEnc.equals("UTF8", ignoreCase = true)) {
-            text = text.replaceFirst(Regex("""encoding\s*=\s*["'][^"']+["']""", RegexOption.IGNORE_CASE), """encoding="UTF-8"""")
+    private fun openSourceInputStream(sourcePath: String): InputStream? =
+        if (sourcePath.startsWith("content://")) {
+            context.contentResolver.openInputStream(Uri.parse(sourcePath))
+        } else {
+            File(sourcePath).inputStream()
         }
-        return text.toByteArray(Charsets.UTF_8)
+
+    private fun decodeFb2BinaryCover(parser: XmlPullParser): Bitmap? {
+        val base64Data = StringBuilder()
+        var event = parser.next()
+        while (event != XmlPullParser.END_DOCUMENT) {
+            when (event) {
+                XmlPullParser.TEXT, XmlPullParser.CDSECT -> base64Data.append(parser.text)
+                XmlPullParser.END_TAG -> if (parser.name == "binary") break
+            }
+            event = parser.next()
+        }
+        if (base64Data.isBlank()) return null
+        val bytes = Base64.decode(base64Data.toString(), Base64.DEFAULT)
+        return if (bytes.isNotEmpty()) decodeCoverBitmap(ByteArrayInputStream(bytes)) else null
+    }
+
+    private fun detectFb2CoverCharset(input: InputStream): Charset {
+        val markLimit = 4096
+        input.mark(markLimit)
+        val buffer = ByteArray(markLimit)
+        val read = input.read(buffer)
+        input.reset()
+        val peek = if (read > 0) buffer.copyOf(read).toString(Charsets.ISO_8859_1) else ""
+        val declaredEnc = Regex("""encoding\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+            .find(peek)
+            ?.groupValues
+            ?.get(1)
+            ?: "UTF-8"
+        return runCatching { Charset.forName(declaredEnc) }.getOrElse { Charsets.UTF_8 }
+    }
+
+    private fun createFb2CoverXmlReader(input: InputStream, charset: Charset): Reader {
+        val standardXmlEntities = setOf("amp", "lt", "gt", "apos", "quot")
+        val fb2HtmlEntities = mapOf(
+            "nbsp" to "\u00A0",
+            "mdash" to "\u2014",
+            "ndash" to "\u2013",
+            "laquo" to "\u00AB",
+            "raquo" to "\u00BB",
+            "hellip" to "\u2026"
+        )
+
+        return object : PushbackReader(input.reader(charset), 64) {
+            private val entityBuffer = StringBuilder()
+
+            override fun read(): Int {
+                val current = super.read()
+                if (current != '&'.code) return current
+
+                entityBuffer.setLength(0)
+                var next = super.read()
+                while (next != -1 && next != ';'.code && next != '&'.code && entityBuffer.length < 32) {
+                    entityBuffer.append(next.toChar())
+                    next = super.read()
+                }
+
+                return if (next == ';'.code) {
+                    val entity = entityBuffer.toString()
+                    when {
+                        entity in fb2HtmlEntities -> fb2HtmlEntities.getValue(entity).first().code
+                        entity in standardXmlEntities || entity.startsWith("#") -> {
+                            unreadString("$entity;")
+                            '&'.code
+                        }
+                        else -> {
+                            unreadString("amp;$entity;")
+                            '&'.code
+                        }
+                    }
+                } else {
+                    if (next != -1) unread(next)
+                    unreadString("amp;$entityBuffer")
+                    '&'.code
+                }
+            }
+
+            override fun read(cbuf: CharArray, off: Int, len: Int): Int {
+                if (len <= 0) return 0
+                var count = 0
+                while (count < len) {
+                    val current = read()
+                    if (current == -1) break
+                    cbuf[off + count] = current.toChar()
+                    count++
+                }
+                return if (count == 0) -1 else count
+            }
+
+            private fun unreadString(value: String) {
+                for (index in value.length - 1 downTo 0) {
+                    unread(value[index].code)
+                }
+            }
+        }
     }
 
     // ── EPUB cover ────────────────────────────────────────────────────────────

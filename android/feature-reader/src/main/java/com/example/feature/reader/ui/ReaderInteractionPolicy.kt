@@ -1,6 +1,7 @@
 package com.example.feature.reader.ui
 
 import android.view.KeyEvent
+import com.example.core.model.ReadingMode
 import com.example.engine.formats.base.TocEntry
 
 data class ReaderHardwareKeyDecision(
@@ -39,6 +40,12 @@ fun readerVolumePagingStep(keyCode: Int): Int? = when (keyCode) {
     KeyEvent.KEYCODE_VOLUME_DOWN -> 1
     else -> null
 }
+
+fun readerModeAllowsHorizontalPageTurn(readingMode: ReadingMode): Boolean =
+    readingMode != ReadingMode.WEBTOON
+
+fun readerModeLocksHtmlVerticalScroll(readingMode: ReadingMode): Boolean =
+    readingMode != ReadingMode.WEBTOON
 
 fun resolveReaderHardwareKeyDecision(
     event: KeyEvent,

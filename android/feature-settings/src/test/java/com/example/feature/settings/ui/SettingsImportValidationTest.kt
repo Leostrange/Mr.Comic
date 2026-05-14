@@ -49,4 +49,11 @@ class SettingsImportValidationTest {
 
         assertFalse(metadata.isAcceptedJsonImport())
     }
+
+    @Test
+    fun jsonContentMustBeObject() {
+        assertTrue("""{"entries":[]}""".isAcceptedSettingsJsonContent())
+        assertFalse("not-json".isAcceptedSettingsJsonContent())
+        assertFalse("""["array", "is", "not", "backup"]""".isAcceptedSettingsJsonContent())
+    }
 }

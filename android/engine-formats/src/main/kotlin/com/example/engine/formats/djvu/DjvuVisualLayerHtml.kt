@@ -17,6 +17,16 @@ internal fun buildDjvuVisualLayerHtml(
         visualLayerPlan.maskLayer?.let { add(it) }
         if (visualLayerPlan.includedChunkCount > 0) add("INCL x${visualLayerPlan.includedChunkCount}")
     }.joinToString(", ")
+    val unsupportedFeatures = visualLayerPlan.unsupportedRenderFeatures
+    val diagnostics = buildList {
+        if (detectedLayers.isNotBlank()) add(detectedLayers)
+        addAll(unsupportedFeatures)
+    }
+    val supportNotice = if (unsupportedFeatures.isEmpty()) {
+        "Визуальный слой DjVu"
+    } else {
+        "Скан DjVu с композитными слоями"
+    }
 
     val body = """
         <div class="wrap">
@@ -24,12 +34,12 @@ internal fun buildDjvuVisualLayerHtml(
           <div class="scan" role="img" aria-label="${escapeDjvuVisualHtml(fileName)}">
             <div class="scan-inner">
               <div class="scan-title">${escapeDjvuVisualHtml(fileName.substringBeforeLast('.').replace('_', ' '))}</div>
-              <div class="scan-note">DjVu scan layer</div>
+              <div class="scan-note">${escapeDjvuVisualHtml(supportNotice)}</div>
             </div>
           </div>
           <div class="meta-row">
             ${geometry?.let { "<span>${escapeDjvuVisualHtml(it)}</span>" }.orEmpty()}
-            ${if (detectedLayers.isBlank()) "" else "<span>${escapeDjvuVisualHtml(detectedLayers)}</span>"}
+            ${diagnostics.joinToString("") { "<span>${escapeDjvuVisualHtml(it)}</span>" }}
           </div>
         </div>
     """.trimIndent()
@@ -128,3 +138,5 @@ private fun escapeDjvuVisualHtml(text: String): String = text
     .replace("&", "&amp;")
     .replace("<", "&lt;")
     .replace(">", "&gt;")
+    .replace("\"", "&quot;")
+    .replace("'", "&#39;")

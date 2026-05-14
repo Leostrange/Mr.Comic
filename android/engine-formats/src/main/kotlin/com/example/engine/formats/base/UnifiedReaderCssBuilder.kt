@@ -12,7 +12,8 @@ internal const val READER_BASE_DOCUMENT_CSS = """
     *, *::before, *::after { box-sizing: inherit; }
     body {
       margin: 0;
-      padding: 16px 16px 44px;
+      padding: 1.6em 16px 1.6em;
+      padding-block: 1lh;
       width: 100%;
       max-width: none;
       box-sizing: border-box;
@@ -22,7 +23,7 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       color: inherit;
       background: transparent;
       text-align: justify;
-      overflow-wrap: break-word;
+      overflow-wrap: normal;
       word-break: normal;
       hyphens: auto;
       -webkit-hyphens: auto;
@@ -51,6 +52,9 @@ internal const val READER_BASE_DOCUMENT_CSS = """
     h2 { font-size: 1.35em; letter-spacing: 0.02em; }
     h3 { font-size: 1.15em; }
     h4, h5, h6 { font-size: 1em; }
+    font { font-size: 1em !important; font-family: inherit !important; line-height: inherit !important; }
+    big { font-size: 1.08em !important; }
+    small { font-size: 0.92em !important; }
     img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
     figure { margin: 1rem 0; }
     figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
@@ -65,8 +69,24 @@ internal const val READER_BASE_DOCUMENT_CSS = """
     code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
     ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
     li + li { margin-top: 0.25rem; }
-    table { max-width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
-    th, td { border: 1px solid rgba(120,120,120,0.35); padding: 0.5rem 0.65rem; text-align: left; }
+    .mrcomic-table-scroll {
+      overflow-x: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      margin: 1rem 0;
+      table-layout: auto;
+    }
+    caption { caption-side: top; text-align: center; margin-bottom: 0.35rem; font-weight: 600; }
+    th, td {
+      border: 1px solid rgba(120,120,120,0.35);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
     th { font-weight: 600; }
     hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: 1rem 0; }
     del { opacity: 0.75; }
@@ -102,7 +122,8 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
     *, *::before, *::after { box-sizing: inherit; }
     body {
       margin: 0;
-      padding: 16px 16px 44px;
+      padding: 1.6em 16px 1.6em;
+      padding-block: 1lh;
       width: 100%;
       max-width: none;
       box-sizing: border-box;
@@ -147,6 +168,13 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
     .center p {
       margin: 0.9em 0;
     }
+    font {
+      font-size: 1em !important;
+      font-family: inherit !important;
+      line-height: inherit !important;
+    }
+    big { font-size: 1.08em !important; }
+    small { font-size: 0.92em !important; }
     h1, h2, h3 {
       line-height: 1.3;
       margin: 1.6em 0 0.7em;
@@ -202,15 +230,16 @@ internal const val READER_PRESERVE_LAYOUT_DOCUMENT_CSS = """
     *, *::before, *::after { box-sizing: inherit; }
     body {
       margin: 0;
-      padding: 16px 16px 44px;
+      padding: 1.6em 16px 1.6em;
+      padding-block: 1lh;
       width: 100% !important;
       max-width: none !important;
       min-width: 0 !important;
       box-sizing: border-box;
       font-size: 20px !important;
       line-height: 1.5 !important;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
+      word-wrap: normal;
+      overflow-wrap: normal;
     }
     body > *,
     main,
@@ -223,7 +252,24 @@ internal const val READER_PRESERVE_LAYOUT_DOCUMENT_CSS = """
     }
     img { max-width: 100%; height: auto; }
     pre, code { white-space: pre-wrap; word-break: break-word; }
-    table { max-width: 100%; display: block; overflow-x: auto; border-collapse: collapse; }
+    .mrcomic-table-scroll {
+      overflow-x: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      table-layout: auto;
+      margin: 1rem 0;
+    }
+    caption { caption-side: top; text-align: center; margin-bottom: 0.35rem; font-weight: 600; }
+    th, td {
+      border: 1px solid rgba(120,120,120,0.35);
+      padding: 0.45rem 0.6rem;
+      text-align: left;
+      vertical-align: top;
+    }
     a[href] {
       color: var(--mrcomic-reader-accent-color, #1a6f9a);
       text-decoration: underline;
@@ -236,8 +282,8 @@ internal const val EPUB_READER_DOCUMENT_CSS = """
     html{width:100%;max-width:100%;margin:0;padding:0;overflow-x:hidden;box-sizing:border-box}
     *,*::before,*::after{box-sizing:inherit}
     body{font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.65;
-         padding:16px 16px 44px;color:#1a1a1a;background:#fafafa;
-         width:100%;max-width:none;margin:0;box-sizing:border-box;overflow-wrap:break-word;word-break:normal;
+         padding:1.65em 16px 1.65em;padding-block:1lh;color:#1a1a1a;background:#fafafa;
+         width:100%;max-width:none;margin:0;box-sizing:border-box;overflow-wrap:normal;word-break:normal;
          hyphens:auto;-webkit-hyphens:auto;text-align:justify}
     p,div.paragraph{margin:0.2em 0;text-indent:1.5em}
     p:first-child,div.paragraph:first-child,
@@ -252,8 +298,9 @@ internal const val EPUB_READER_DOCUMENT_CSS = """
                     border-left:3px solid #bbb;font-style:italic;color:#555;
                     hyphens:none;-webkit-hyphens:none}
     cite{display:block;margin-top:0.3em}
-    table{width:100%;border-collapse:collapse}
-    td,th{padding:4px 8px;border:1px solid #ccc}
+    .mrcomic-table-scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+    table{border-collapse:collapse;border-spacing:0;table-layout:auto}
+    td,th{padding:4px 8px;border:1px solid #ccc;vertical-align:top}
     .center,.align-center,[align="center"]{text-align:center !important;text-indent:0}
     .right,.align-right,[align="right"]{text-align:right !important;text-indent:0}
     .left,.align-left,[align="left"]{text-align:left !important}

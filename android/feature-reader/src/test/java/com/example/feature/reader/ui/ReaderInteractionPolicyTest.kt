@@ -1,6 +1,7 @@
 package com.example.feature.reader.ui
 
 import android.view.KeyEvent
+import com.example.core.model.ReadingMode
 import com.example.engine.formats.base.TocEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,5 +40,25 @@ class ReaderInteractionPolicyTest {
         assertEquals(-1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_UP))
         assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN))
         assertNull(readerVolumePagingStep(KeyEvent.KEYCODE_MENU))
+    }
+
+    @Test
+    fun pagedModesAllowHorizontalTurnAndLockHtmlVerticalScroll() {
+        val pagedModes = listOf(
+            ReadingMode.PAGE_LTR,
+            ReadingMode.PAGE_RTL,
+            ReadingMode.DUAL_PAGE
+        )
+
+        pagedModes.forEach { mode ->
+            assertTrue("$mode should accept horizontal page turns", readerModeAllowsHorizontalPageTurn(mode))
+            assertTrue("$mode should lock HTML vertical scroll", readerModeLocksHtmlVerticalScroll(mode))
+        }
+    }
+
+    @Test
+    fun webtoonModeUsesVerticalFeedOnly() {
+        assertFalse(readerModeAllowsHorizontalPageTurn(ReadingMode.WEBTOON))
+        assertFalse(readerModeLocksHtmlVerticalScroll(ReadingMode.WEBTOON))
     }
 }

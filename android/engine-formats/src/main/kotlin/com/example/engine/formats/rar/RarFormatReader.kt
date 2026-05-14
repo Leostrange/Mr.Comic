@@ -17,10 +17,14 @@ import com.example.engine.formats.base.decodeBitmapFromByteArray
 import com.example.engine.formats.archive.ArchiveContentKind
 import com.example.engine.formats.archive.ArchiveFormatSupport
 import com.example.engine.formats.epub.EpubFormatReader
+import com.example.engine.formats.fb2.Fb2FormatReader
+import com.example.engine.formats.text.DocxFormatReader
 import com.example.engine.formats.text.HtmlFormatReader
 import com.example.engine.formats.text.MarkdownFormatReader
 import com.example.engine.formats.text.MobiFormatReader
+import com.example.engine.formats.text.OdtFormatReader
 import com.example.engine.formats.text.PlainTextFormatReader
+import com.example.engine.formats.text.RtfFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -60,7 +64,26 @@ class RarFormatReader(
     private var tempFile: File? = null
     private var tempTextFile: File? = null
 
-    private val textDelegate: FormatReader? by lazy { createTextDelegateIfPresent() }
+    // Lightweight classification — lists entry names only, no data extraction.
+    private val archiveContentKind: ArchiveContentKind by lazy { classifyArchiveContent() }
+
+    private fun classifyArchiveContent(): ArchiveContentKind = try {
+        val inArchive = ensureArchive() ?: return ArchiveContentKind.UNSUPPORTED
+        val fileNames = (0 until inArchive.numberOfItems).mapNotNull { idx ->
+            val path = inArchive.getStringProperty(idx, PropID.PATH)?.trim().orEmpty()
+            if (path.isBlank() || inArchive.getProperty(idx, PropID.IS_FOLDER).asBooleanFlag()) null
+            else path
+        }
+        ArchiveFormatSupport.classify(fileNames)
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to classify archive content", e)
+        ArchiveContentKind.UNSUPPORTED
+    }
+
+    private val textDelegate: FormatReader? by lazy {
+        if (archiveContentKind != ArchiveContentKind.SINGLE_BOOK) null
+        else createTextDelegateIfPresent()
+    }
     private val pageItems: List<ArchivePage> by lazy { collectPageItems() }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
@@ -99,6 +122,9 @@ class RarFormatReader(
     override fun getTableOfContents(): List<TocEntry> =
         textDelegate?.getTableOfContents().orEmpty()
 
+    override fun rendersHtmlContent(): Boolean =
+        textDelegate != null
+
     override fun close() {
         synchronized(lock) {
             try {
@@ -125,10 +151,6 @@ class RarFormatReader(
                     .onFailure { Log.w(TAG, "Failed to delete temp RAR: ${file.absolutePath}", it) }
             }
             tempFile = null
-            tempTextFile?.let { file ->
-                runCatching { file.delete() }
-                    .onFailure { Log.w(TAG, "Failed to delete temp archived text: ${file.absolutePath}", it) }
-            }
             tempTextFile = null
         }
     }
@@ -156,9 +178,19 @@ class RarFormatReader(
                 val textFormat = textFormatForExtension(extension) ?: return null
                 val bytes = extractEntryBytes(textEntry.itemIndex) ?: return null
                 val cacheDir = archiveCacheDir("archive_text_cache")
-                val safeName = ArchiveFormatSupport.safeArchiveName(textEntry.path, extension)
-                val extracted = File(cacheDir, "rar_${path.hashCode()}_${System.currentTimeMillis()}_$safeName")
-                extracted.outputStream().use { it.write(bytes) }
+                val extracted = File(
+                    cacheDir,
+                    ArchiveFormatSupport.textCacheFileName(
+                        prefix = "rar",
+                        archiveKey = path,
+                        entryName = textEntry.path,
+                        entrySize = bytes.size.toLong(),
+                        extension = extension
+                    )
+                )
+                if (!extracted.exists() || extracted.length() != bytes.size.toLong()) {
+                    extracted.outputStream().use { it.write(bytes) }
+                }
                 tempTextFile = extracted
                 when (textFormat) {
                     ComicFormat.EPUB -> EpubFormatReader(
@@ -172,6 +204,10 @@ class RarFormatReader(
                     ComicFormat.TXT -> PlainTextFormatReader(context, extracted.absolutePath)
                     ComicFormat.HTML -> HtmlFormatReader(context, extracted.absolutePath)
                     ComicFormat.MARKDOWN -> MarkdownFormatReader(context, extracted.absolutePath)
+                    ComicFormat.FB2 -> Fb2FormatReader(context, extracted.absolutePath)
+                    ComicFormat.RTF -> RtfFormatReader(context, extracted.absolutePath)
+                    ComicFormat.DOCX -> DocxFormatReader(context, extracted.absolutePath)
+                    ComicFormat.ODT -> OdtFormatReader(context, extracted.absolutePath)
                     else -> TextFormatReader(context, extracted.absolutePath, textFormat)
                 }
             } catch (error: Throwable) {

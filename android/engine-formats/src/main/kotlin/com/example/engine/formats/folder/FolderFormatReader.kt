@@ -22,6 +22,7 @@ class FolderFormatReader(
 
     companion object {
         private const val TAG = "FolderFormatReader"
+        private const val MAX_BITMAP_FALLBACK_PROBE = 50
         private val IMAGE_MIMES = setOf("image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp")
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
     }
@@ -39,7 +40,10 @@ class FolderFormatReader(
             if (byMimeOrExtension.isNotEmpty()) {
                 byMimeOrExtension
             } else {
-                candidates.filter(::isBitmapFile)
+                candidates.asSequence()
+                    .take(MAX_BITMAP_FALLBACK_PROBE)
+                    .filter(::isBitmapFile)
+                    .toList()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to list folder", e)

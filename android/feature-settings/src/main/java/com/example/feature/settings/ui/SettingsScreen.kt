@@ -69,6 +69,19 @@ import com.example.core.model.ReaderTtsProviderType
 import com.example.core.model.ReaderTtsSleepTimerMode
 import com.example.core.model.resolveReaderTapZoneLayout
 import com.example.core.model.TranslationTransportPreference
+import com.example.core.ui.designsystem.MrComicButton
+import com.example.core.ui.designsystem.MrComicButtonVariant
+import com.example.core.ui.designsystem.MrComicCardSurface
+import com.example.core.ui.designsystem.MrComicCompactValueRow
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicIconButtonVariant
+import com.example.core.ui.designsystem.MrComicLibraryPresetCard
+import com.example.core.ui.designsystem.MrComicPanelCard
+import com.example.core.ui.designsystem.MrComicPill
+import com.example.core.ui.designsystem.MrComicProgressLine
+import com.example.core.ui.designsystem.MrComicSliderTile
+import com.example.core.ui.designsystem.MrComicSwitchRow
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
@@ -99,6 +112,7 @@ import com.example.core.ui.tts.SystemTtsVoiceOption
 import com.example.core.ui.theme.ReadingPreset
 import com.example.core.ui.theme.ThemeMode
 import com.example.core.ui.theme.ThemePreset
+import com.example.core.ui.theme.argbLongToThemeColor
 import com.example.core.ui.theme.previewColors
 import com.example.core.ui.theme.style
 import com.example.feature.settings.R as SettingsR
@@ -390,6 +404,7 @@ private data class AiServicesOverviewText(
     val summaryUnavailableStatus: String,
     val providersReadyStatus: String,
     val providersNeedNetworkStatus: String,
+    val providersNeedValidationStatus: String,
     val providersUnavailableStatus: String
 )
 
@@ -756,10 +771,55 @@ private fun readerSavedStyleActive(language: String): String = when (language) {
 
 private fun readerDeleteCustomFontCancel(language: String): String = when (language) {
     "en" -> "Cancel"
-    "ja" -> "Cancel"
+    "ja" -> "キャンセル"
     "zh" -> "取消"
     "ko" -> "취소"
     else -> "Отмена"
+}
+
+private fun readerChromeSlotPickerTitle(language: String, target: String): String = when (target) {
+    "header_left" -> when (language) {
+        "en" -> "Header left slot"
+        "ja" -> "ヘッダー左スロット"
+        "zh" -> "页眉左侧栏位"
+        "ko" -> "상단 왼쪽 슬롯"
+        else -> "Левый слот сверху"
+    }
+    "header_center" -> when (language) {
+        "en" -> "Header center slot"
+        "ja" -> "ヘッダー中央スロット"
+        "zh" -> "页眉中间栏位"
+        "ko" -> "상단 가운데 슬롯"
+        else -> "Центральный слот сверху"
+    }
+    "header_right" -> when (language) {
+        "en" -> "Header right slot"
+        "ja" -> "ヘッダー右スロット"
+        "zh" -> "页眉右侧栏位"
+        "ko" -> "상단 오른쪽 슬롯"
+        else -> "Правый слот сверху"
+    }
+    "footer_left" -> when (language) {
+        "en" -> "Footer left slot"
+        "ja" -> "フッター左スロット"
+        "zh" -> "页脚左侧栏位"
+        "ko" -> "하단 왼쪽 슬롯"
+        else -> "Левый слот снизу"
+    }
+    "footer_center" -> when (language) {
+        "en" -> "Footer center slot"
+        "ja" -> "フッター中央スロット"
+        "zh" -> "页脚中间栏位"
+        "ko" -> "하단 가운데 슬롯"
+        else -> "Центральный слот снизу"
+    }
+    else -> when (language) {
+        "en" -> "Footer right slot"
+        "ja" -> "フッター右スロット"
+        "zh" -> "页脚右侧栏位"
+        "ko" -> "하단 오른쪽 슬롯"
+        else -> "Правый слот снизу"
+    }
 }
 
 private fun translationSettingsMapText(language: String): TranslationSettingsMapText = when (language) {
@@ -2279,6 +2339,7 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         summaryUnavailableStatus = "summary サービスはまだ接続されていません。",
         providersReadyStatus = "少なくとも 1 つの外部ルートは設定済みで利用できます。",
         providersNeedNetworkStatus = "外部ルートは設定済みですが、今はネットワークが必要です。",
+        providersNeedValidationStatus = "OpenRouter のキーまたはモデルを確認してください。",
         providersUnavailableStatus = "まだ外部 AI プロバイダーは設定されていません。"
     )
     "zh" -> AiServicesOverviewText(
@@ -2317,6 +2378,7 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         summaryUnavailableStatus = "摘要服务目前还没有接入。",
         providersReadyStatus = "至少有一个外部路线已配置并可用。",
         providersNeedNetworkStatus = "外部路线已配置，但当前需要网络连接。",
+        providersNeedValidationStatus = "请检查 OpenRouter 密钥或模型。",
         providersUnavailableStatus = "当前还没有配置任何外部 AI provider。"
     )
     "ko" -> AiServicesOverviewText(
@@ -2355,6 +2417,7 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         summaryUnavailableStatus = "요약 서비스는 아직 연결되지 않았습니다.",
         providersReadyStatus = "적어도 하나의 외부 경로가 설정되어 바로 사용할 수 있습니다.",
         providersNeedNetworkStatus = "외부 경로는 설정되었지만 지금은 네트워크가 필요합니다.",
+        providersNeedValidationStatus = "OpenRouter 키 또는 모델을 확인하세요.",
         providersUnavailableStatus = "아직 설정된 외부 AI provider가 없습니다."
     )
     "ru" -> AiServicesOverviewText(
@@ -2393,6 +2456,7 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         summaryUnavailableStatus = "Сервис сводок пока не подключён.",
         providersReadyStatus = "Как минимум один внешний маршрут настроен и готов к работе.",
         providersNeedNetworkStatus = "Внешний маршрут настроен, но сейчас ему нужна сеть.",
+        providersNeedValidationStatus = "Проверьте ключ или модель OpenRouter.",
         providersUnavailableStatus = "Внешние AI-провайдеры пока не настроены."
     )
     else -> AiServicesOverviewText(
@@ -2431,6 +2495,7 @@ private fun aiServicesOverviewText(language: String): AiServicesOverviewText = w
         summaryUnavailableStatus = "Summary service is not connected yet.",
         providersReadyStatus = "At least one external route is configured and ready.",
         providersNeedNetworkStatus = "An external route is configured, but it currently needs network access.",
+        providersNeedValidationStatus = "Check the OpenRouter key or model.",
         providersUnavailableStatus = "No external AI providers are configured yet."
     )
 }
@@ -2465,6 +2530,7 @@ private fun aiProvidersStatus(
     return when (resolveSettingsProvidersStatusKind(uiState)) {
         SettingsProvidersStatusKind.READY -> text.providersReadyStatus
         SettingsProvidersStatusKind.NEEDS_NETWORK -> text.providersNeedNetworkStatus
+        SettingsProvidersStatusKind.NEEDS_VALIDATION -> text.providersNeedValidationStatus
         SettingsProvidersStatusKind.NOT_CONFIGURED -> text.providersUnavailableStatus
     }
 }
@@ -2477,6 +2543,7 @@ private fun aiProvidersValue(
     return when (resolveSettingsProvidersStatusKind(uiState)) {
         SettingsProvidersStatusKind.NOT_CONFIGURED -> text.notConnectedValue
         SettingsProvidersStatusKind.READY,
+        SettingsProvidersStatusKind.NEEDS_VALIDATION,
         SettingsProvidersStatusKind.NEEDS_NETWORK -> configuredOnlineProviderLabel(uiState, language)
     }
 }
@@ -2621,33 +2688,47 @@ private fun settingsSectionMeta(
     section: SettingsSection,
     language: String,
     strings: AppStrings
-): SettingsSectionMeta = when (language) {
-    "en" -> when (section) {
-        SettingsSection.APPEARANCE -> SettingsSectionMeta("Appearance", "Theme, interface chrome, covers, and library visuals.")
-        SettingsSection.READER -> SettingsSectionMeta("Reading", "Text, paging, headers, and reading session behavior.")
-        SettingsSection.LIBRARY -> SettingsSectionMeta("Library", "Sorting, grouping, and collection organization.")
-        SettingsSection.PERFORMANCE -> SettingsSectionMeta("Performance", "Startup, motion, and visual load tuning for calmer devices.")
-        SettingsSection.SYNC -> SettingsSectionMeta("Sync", "Reading progress backup, import/export, and transfer between devices.")
-        SettingsSection.READ_ALOUD -> SettingsSectionMeta("Audio", "Voice reading, player behavior, page sounds, and system TTS controls.")
-        SettingsSection.TRANSLATION -> SettingsSectionMeta("Translation", "Languages, OCR behavior, and overlay presentation.")
-        SettingsSection.AI_SERVICES -> SettingsSectionMeta("AI Services", "Explain, transport, and provider-level AI controls.")
-        SettingsSection.STORAGE -> SettingsSectionMeta("Storage", "Library access, cache cleanup, and local data care.")
-        SettingsSection.ADVANCED -> SettingsSectionMeta("Advanced", "Rare switches, popup behavior, and service-level utilities that stay out of the main flow.")
-        SettingsSection.ABOUT -> SettingsSectionMeta(strings.sectionAbout, strings.sectionAboutDesc)
+): SettingsSectionMeta = when (section) {
+    SettingsSection.APPEARANCE -> SettingsSectionMeta(strings.sectionAppearance, strings.sectionAppearanceDesc)
+    SettingsSection.READER -> SettingsSectionMeta(strings.sectionReader, strings.sectionReaderDesc)
+    SettingsSection.LIBRARY -> SettingsSectionMeta(strings.sectionLibrary, strings.sectionLibraryDesc)
+    SettingsSection.TRANSLATION -> SettingsSectionMeta(strings.sectionTranslation, strings.sectionTranslationDesc)
+    SettingsSection.SYNC -> SettingsSectionMeta(strings.sectionBackup, strings.sectionBackupDesc)
+    SettingsSection.ABOUT -> SettingsSectionMeta(strings.sectionAbout, strings.sectionAboutDesc)
+    SettingsSection.PERFORMANCE -> when (language) {
+        "en" -> SettingsSectionMeta("Performance", "Startup, motion, and visual load tuning for calmer devices.")
+        "ja" -> SettingsSectionMeta("パフォーマンス", "起動、動き、重い視覚効果を調整します。")
+        "zh" -> SettingsSectionMeta("性能", "启动、动效和视觉负载调优。")
+        "ko" -> SettingsSectionMeta("성능", "시작, 모션, 시각 효과 부하를 조정합니다.")
+        else -> SettingsSectionMeta("Производительность", "Запуск, анимации и тяжёлые визуальные эффекты.")
     }
-
-    else -> when (section) {
-        SettingsSection.APPEARANCE -> SettingsSectionMeta("Оформление", "Тема, интерфейс, обложки и визуал библиотеки.")
-        SettingsSection.READER -> SettingsSectionMeta("Чтение", "Текст, листание, колонтитулы и поведение ридера.")
-        SettingsSection.LIBRARY -> SettingsSectionMeta("Библиотека", "Сортировка, группировка и организация коллекции.")
-        SettingsSection.PERFORMANCE -> SettingsSectionMeta("Производительность", "Запуск, анимации и тяжёлые визуальные эффекты.")
-        SettingsSection.SYNC -> SettingsSectionMeta("Синхронизация", "Резервные копии прогресса, импорт/экспорт и перенос чтения между устройствами.")
-        SettingsSection.READ_ALOUD -> SettingsSectionMeta("Аудио", "Голосовое чтение, аудиоплеер, звуки и системные TTS-настройки.")
-        SettingsSection.TRANSLATION -> SettingsSectionMeta("Перевод", "Языки, OCR и способ показа перевода.")
-        SettingsSection.AI_SERVICES -> SettingsSectionMeta("Искусственный интеллект", "Explain, транспорт и сервисные AI-настройки.")
-        SettingsSection.STORAGE -> SettingsSectionMeta("Хранилище", "Доступ к библиотеке, очистка кэша и локальные данные.")
-        SettingsSection.ADVANCED -> SettingsSectionMeta("Расширенные", "Редкие переключатели, поведение всплывающих сообщений и служебные параметры вне основного потока.")
-        SettingsSection.ABOUT -> SettingsSectionMeta(strings.sectionAbout, strings.sectionAboutDesc)
+    SettingsSection.READ_ALOUD -> when (language) {
+        "en" -> SettingsSectionMeta("Audio", "Voice reading, player behavior, page sounds, and system TTS controls.")
+        "ja" -> SettingsSectionMeta("音声", "読み上げ、プレイヤー、ページ音、システム TTS。")
+        "zh" -> SettingsSectionMeta("音频", "朗读、播放器、翻页声音和系统 TTS。")
+        "ko" -> SettingsSectionMeta("오디오", "음성 읽기, 플레이어, 페이지 소리, 시스템 TTS.")
+        else -> SettingsSectionMeta("Аудио", "Голосовое чтение, аудиоплеер, звуки и системные TTS-настройки.")
+    }
+    SettingsSection.AI_SERVICES -> when (language) {
+        "en" -> SettingsSectionMeta("AI Services", "Explain, transport, and provider-level AI controls.")
+        "ja" -> SettingsSectionMeta("AI サービス", "説明、通信方式、プロバイダー設定。")
+        "zh" -> SettingsSectionMeta("AI 服务", "解释、传输和服务提供方设置。")
+        "ko" -> SettingsSectionMeta("AI 서비스", "설명, 전송 방식, 제공자 설정.")
+        else -> SettingsSectionMeta("Искусственный интеллект", "Explain, транспорт и сервисные AI-настройки.")
+    }
+    SettingsSection.STORAGE -> when (language) {
+        "en" -> SettingsSectionMeta("Storage", "Library access, cache cleanup, and local data care.")
+        "ja" -> SettingsSectionMeta("ストレージ", "ライブラリアクセス、キャッシュ整理、ローカルデータ。")
+        "zh" -> SettingsSectionMeta("存储", "书库访问、缓存清理和本地数据维护。")
+        "ko" -> SettingsSectionMeta("저장소", "라이브러리 접근, 캐시 정리, 로컬 데이터 관리.")
+        else -> SettingsSectionMeta("Хранилище", "Доступ к библиотеке, очистка кэша и локальные данные.")
+    }
+    SettingsSection.ADVANCED -> when (language) {
+        "en" -> SettingsSectionMeta("Advanced", "Rare switches, popup behavior, and service-level utilities that stay out of the main flow.")
+        "ja" -> SettingsSectionMeta("詳細設定", "通常は使わない切り替え、ポップアップ、サービス設定。")
+        "zh" -> SettingsSectionMeta("高级", "低频开关、弹窗行为和服务级工具。")
+        "ko" -> SettingsSectionMeta("고급", "드문 옵션, 팝업 동작, 서비스 도구.")
+        else -> SettingsSectionMeta("Расширенные", "Редкие переключатели, поведение всплывающих сообщений и служебные параметры вне основного потока.")
     }
 }
 
@@ -2788,8 +2869,8 @@ private fun readAloudSummaryItems(
 private fun readAloudProviderTitle(language: String): String = when (language) {
     "en" -> "Provider"
     "ja" -> "プロバイダー"
-    "zh" -> "Provider"
-    "ko" -> "Provider"
+    "zh" -> "提供者"
+    "ko" -> "제공자"
     else -> "Провайдер"
 }
 
@@ -2968,7 +3049,7 @@ private fun readAloudPreviewStopLabel(language: String): String = when (language
 
 private fun readAloudPreviewReadyLabel(ready: Boolean, language: String): String = if (ready) {
     when (language) {
-        "ja" -> "System TTS готов"
+        "ja" -> "システムTTSは準備完了"
         "zh" -> "系统 TTS 已就绪"
         "ko" -> "시스템 TTS 준비 완료"
         "ru" -> "Системный TTS готов"
@@ -2976,7 +3057,7 @@ private fun readAloudPreviewReadyLabel(ready: Boolean, language: String): String
     }
 } else {
     when (language) {
-        "ja" -> "System TTS недоступен"
+        "ja" -> "システムTTSは利用できません"
         "zh" -> "系统 TTS 不可用"
         "ko" -> "시스템 TTS 사용 불가"
         "ru" -> "Системный TTS недоступен"
@@ -3555,8 +3636,8 @@ fun SettingsScreen(
         uri ?: return@rememberLauncherForActivityResult
         scope.launch {
             val importedStyle = runCatching {
-                uri.readAcceptedSettingsImportText(context)
-                    ?.let { viewModel.importReaderTypographyFromJson(it) }
+                val rawJson = uri.readAcceptedSettingsImportText(context)
+                viewModel.importReaderTypographyFromJson(rawJson)
             }.getOrElse { error ->
                 if (error.message == SETTINGS_IMPORT_REJECTION_MESSAGE) {
                     showSettingsImportRejection()
@@ -3620,7 +3701,7 @@ fun SettingsScreen(
         }
     }
 
-    BackHandler(enabled = currentSection != null) { navigateUp() }
+    BackHandler(enabled = currentSection != null || onBackClick != null) { navigateUp() }
 
     LaunchedEffect(uiState.cacheMessage, uiState.settingsImportErrorPresentation) {
         val message = uiState.cacheMessage ?: return@LaunchedEffect
@@ -3641,6 +3722,7 @@ fun SettingsScreen(
             drawableId = SettingsR.drawable.settings_import_error_popup,
             contentDescription = SETTINGS_IMPORT_REJECTION_MESSAGE,
             config = settingsImportErrorPopupConfig,
+            eventToken = settingsImportErrorPopupToken,
             onDismiss = { settingsImportErrorPopupToken = 0 }
         )
     }
@@ -3725,9 +3807,10 @@ fun SettingsScreen(
                     windowInsets = WindowInsets(0, 0, 0, 0),
                     navigationIcon = {
                         if (currentSection != null || onBackClick != null) {
-                            IconButton(onClick = {
-                                navigateUp()
-                            }) {
+                            MrComicIconButton(
+                                onClick = { navigateUp() },
+                                variant = MrComicIconButtonVariant.Tonal
+                            ) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                             }
                         }
@@ -3736,16 +3819,22 @@ fun SettingsScreen(
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            LibraryBackdropLayer(
-                backgroundStyle = uiState.libraryBackgroundStyle,
-                backgroundImageUri = uiState.libraryBackgroundImageUri,
-                colorScheme = MaterialTheme.colorScheme,
-                backdropStrength = rootChromeBackdropStrength(uiState.libraryBackdropStrength),
-                backgroundBlur = uiState.libraryBackgroundBlur,
-                imageVeil = rootChromeBackdropVeil(uiState.libraryBackgroundVeil),
-                modifier = Modifier.fillMaxSize()
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            if (currentSection == SettingsSection.LIBRARY) {
+                LibraryBackdropLayer(
+                    backgroundStyle = uiState.libraryBackgroundStyle,
+                    backgroundImageUri = uiState.libraryBackgroundImageUri,
+                    colorScheme = MaterialTheme.colorScheme,
+                    backdropStrength = rootChromeBackdropStrength(uiState.libraryBackdropStrength),
+                    backgroundBlur = uiState.libraryBackgroundBlur,
+                    imageVeil = rootChromeBackdropVeil(uiState.libraryBackgroundVeil),
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             when (currentSection) {
                 null -> SettingsMainMenu(
@@ -3800,6 +3889,7 @@ fun SettingsScreen(
                     strings = strings,
                     viewModel = viewModel,
                     currentPage = currentLibraryPage,
+                    onImportRejected = ::showSettingsImportRejection,
                     onPageChange = { currentLibraryPageName = it.name },
                     modifier = Modifier.padding(padding)
                 )
@@ -3825,6 +3915,7 @@ fun SettingsScreen(
                     strings = strings,
                     viewModel = viewModel,
                     currentPage = currentSyncPage,
+                    onImportRejected = ::showSettingsImportRejection,
                     onPageChange = { currentSyncPageName = it.name },
                     modifier = Modifier.padding(padding)
                 )
@@ -4023,15 +4114,15 @@ private fun SettingsNavItem(
             }
             summary?.let {
                 Spacer(Modifier.height(6.dp))
-                Surface(
-                    shape = RootChromePillShape,
-                    color = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true)
+                MrComicPill(
+                    containerColor = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true),
+                    contentColor = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Text(
                         text = it,
                         style = MaterialTheme.typography.labelSmall,
-                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true)
                     )
                 }
             }
@@ -4050,10 +4141,10 @@ private fun SettingsSectionLead(
     description: String,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    MrComicCardSurface(
         modifier = modifier.fillMaxWidth(),
         shape = RootChromePanelShape,
-        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -4093,15 +4184,15 @@ private fun SettingsCompactSummaryCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
-                Surface(
-                    shape = RootChromePillShape,
-                    color = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true)
+                MrComicPill(
+                    containerColor = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true),
+                    contentColor = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Text(
                         text = value,
                         style = MaterialTheme.typography.labelSmall,
-                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true)
                     )
                 }
             }
@@ -4221,6 +4312,7 @@ private fun AppearanceSection(
         "EINK_WASH" to libraryBackgroundStyleLabel("EINK_WASH", uiState.appLanguage),
         "MIDNIGHT_MICA" to libraryBackgroundStyleLabel("MIDNIGHT_MICA", uiState.appLanguage),
         "LIQUID_GLASS" to libraryBackgroundStyleLabel("LIQUID_GLASS", uiState.appLanguage),
+        "AURORA_MIST" to libraryBackgroundStyleLabel("AURORA_MIST", uiState.appLanguage),
         "IMAGE" to libraryText.imageBackgroundOption
     )
     val shelfOptions = listOf(
@@ -4277,7 +4369,7 @@ private fun AppearanceSection(
                     )
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(langs) { (code, label) ->
-                            FilterChip(
+                            MrComicFilterChip(
                                 selected = uiState.appLanguage == code,
                                 onClick = { viewModel.setAppLanguage(code) },
                                 label = { Text(label) }
@@ -4429,16 +4521,18 @@ private fun AppearanceSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    FilledTonalButton(
+                    MrComicButton(
                         onClick = { backgroundImageLauncher.launch(arrayOf("image/*")) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        variant = MrComicButtonVariant.Tonal
                     ) {
                         Text(if (uiState.libraryBackgroundImageUri == null) libraryText.chooseBackground else libraryText.changeBackground)
                     }
-                    OutlinedButton(
+                    MrComicButton(
                         onClick = { viewModel.setLibraryBackgroundImageUri(null) },
                         modifier = Modifier.weight(1f),
-                        enabled = uiState.libraryBackgroundImageUri != null
+                        enabled = uiState.libraryBackgroundImageUri != null,
+                        variant = MrComicButtonVariant.Outlined
                     ) {
                         Text(libraryText.resetBackground)
                     }
@@ -4533,7 +4627,7 @@ private fun AppearanceSection(
                 LabelText(strings.colorTheme)
                 ChipRow {
                     ThemeMode.entries.forEach { mode ->
-                        FilterChip(
+                        MrComicFilterChip(
                             selected = uiState.themeMode == mode,
                             onClick = { viewModel.setThemeMode(mode) },
                             label = { Text(themeLabel(strings, mode)) }
@@ -4575,7 +4669,7 @@ private fun AppearanceSection(
                         1.15f to strings.fontScaleLarge,
                         1.3f  to strings.fontScaleXL
                     ).forEach { (scale, label) ->
-                        FilterChip(
+                        MrComicFilterChip(
                             selected = uiState.uiFontScale == scale,
                             onClick = { viewModel.setUiFontScale(scale) },
                             label = { Text(label) }
@@ -4583,22 +4677,22 @@ private fun AppearanceSection(
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-                LabelText("${appearanceDensityLabel(uiState.appLanguage)}: ${uiDensityLabel(uiState.appLanguage, uiState.uiDensityScale)}")
-                Slider(
+                SettingsSliderTile(
+                    title = appearanceDensityLabel(uiState.appLanguage),
+                    valueLabel = uiDensityLabel(uiState.appLanguage, uiState.uiDensityScale),
                     value = uiState.uiDensityScale,
                     onValueChange = viewModel::setUiDensityScale,
                     valueRange = 0.82f..1.18f,
-                    steps = 7,
-                    modifier = Modifier.fillMaxWidth()
+                    steps = 7
                 )
                 Spacer(Modifier.height(4.dp))
-                LabelText("${strings.cornerRadius}: ${uiState.uiCornerRadius} dp")
-                Slider(
+                SettingsSliderTile(
+                    title = strings.cornerRadius,
+                    valueLabel = "${uiState.uiCornerRadius} dp",
                     value = uiState.uiCornerRadius.toFloat(),
                     onValueChange = { viewModel.setUiCornerRadius(it.toInt()) },
                     valueRange = 0f..32f,
-                    steps = 7,
-                    modifier = Modifier.fillMaxWidth()
+                    steps = 7
                 )
             }
         }
@@ -4612,13 +4706,13 @@ private fun AppearanceSection(
                 Spacer(Modifier.height(8.dp))
                 ColorPickerRow(
                     label = strings.colorPrimary,
-                    selectedColor = uiState.customPrimaryColor?.let { Color(it.toInt()) },
+                    selectedColor = uiState.customPrimaryColor?.let(::argbLongToThemeColor),
                     onColorSelected = { viewModel.setCustomPrimaryColor(it?.toArgb()?.toUInt()?.toLong()) }
                 )
                 Spacer(Modifier.height(8.dp))
                 ColorPickerRow(
                     label = strings.colorSecondary,
-                    selectedColor = uiState.customSecondaryColor?.let { Color(it.toInt()) },
+                    selectedColor = uiState.customSecondaryColor?.let(::argbLongToThemeColor),
                     onColorSelected = { viewModel.setCustomSecondaryColor(it?.toArgb()?.toUInt()?.toLong()) }
                 )
             }
@@ -4633,25 +4727,25 @@ private fun AppearanceSection(
                 Spacer(Modifier.height(8.dp))
                 ColorPickerRow(
                     label = strings.colorBackground,
-                    selectedColor = uiState.customBackgroundColor?.let { Color(it.toInt()) },
+                    selectedColor = uiState.customBackgroundColor?.let(::argbLongToThemeColor),
                     onColorSelected = { viewModel.setCustomBackgroundColor(it?.toArgb()?.toUInt()?.toLong()) }
                 )
                 Spacer(Modifier.height(8.dp))
                 ColorPickerRow(
                     label = menuText.surfaceCardsLabel,
-                    selectedColor = uiState.customSurfaceColor?.let { Color(it.toInt()) },
+                    selectedColor = uiState.customSurfaceColor?.let(::argbLongToThemeColor),
                     onColorSelected = { viewModel.setCustomSurfaceColor(it?.toArgb()?.toUInt()?.toLong()) }
                 )
                 Spacer(Modifier.height(8.dp))
-                LabelText("${surfaceOpacityLabel(uiState.appLanguage)}: ${(uiState.surfaceOpacity * 100).toInt()}%")
-                Slider(
+                SettingsSliderTile(
+                    title = surfaceOpacityLabel(uiState.appLanguage),
+                    valueLabel = "${(uiState.surfaceOpacity * 100).toInt()}%",
                     value = uiState.surfaceOpacity,
                     onValueChange = viewModel::setSurfaceOpacity,
                     valueRange = 0.35f..1f,
-                    steps = 12,
-                    modifier = Modifier.fillMaxWidth()
+                    steps = 12
                 )
-                TextButton(
+                MrComicButton(
                     onClick = {
                         viewModel.setCustomPrimaryColor(null)
                         viewModel.setCustomSecondaryColor(null)
@@ -4659,7 +4753,8 @@ private fun AppearanceSection(
                         viewModel.setCustomSurfaceColor(null)
                         viewModel.setSurfaceOpacity(1f)
                     },
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier.align(Alignment.End),
+                    variant = MrComicButtonVariant.Text
                 ) {
                     Text(sectionText.paletteResetLabel)
                 }
@@ -4695,6 +4790,9 @@ private fun AppearanceSection(
 
 // ──────────── Live preview card ────────────
 
+private fun Color.contentColorForPreview(): Color =
+    if (luminance() > 0.56f) Color(0xFF171717) else Color(0xFFF8F7F3)
+
 @Composable
 private fun ThemePreviewCard(
     uiState: SettingsUiState,
@@ -4707,30 +4805,33 @@ private fun ThemePreviewCard(
         ThemeMode.SYSTEM,
         ThemeMode.DYNAMIC -> currentScheme.background.luminance() < 0.45f
     }
-    val previewBackground = when {
+    val previewBackground = uiState.customBackgroundColor?.let(::argbLongToThemeColor) ?: when {
         uiState.themeMode == ThemeMode.LIGHT -> Color(0xFFF7F3EE)
         uiState.themeMode == ThemeMode.DARK && uiState.useAmoledDark -> Color(0xFF000000)
         uiState.themeMode == ThemeMode.DARK -> Color(0xFF121216)
         uiState.themeMode == ThemeMode.SYSTEM && uiState.useAmoledDark && isDarkPreview -> Color(0xFF000000)
         else -> currentScheme.background
     }
-    val previewSurface = when {
+    val previewSurface = uiState.customSurfaceColor?.let(::argbLongToThemeColor) ?: when {
         previewBackground == Color(0xFF000000) -> Color(0xFF0A0A0A)
         isDarkPreview -> Color(0xFF1B1B1F)
         uiState.themeMode == ThemeMode.LIGHT -> Color(0xFFFFFFFF)
-        else -> currentScheme.surface
+        else -> currentScheme.surface.copy(alpha = 1f)
     }
-    val previewPrimary = currentScheme.primary
-    val previewSecondary = if (isDarkPreview) {
-        previewPrimary.copy(alpha = 0.18f)
-    } else {
-        currentScheme.secondaryContainer
-    }
+    val previewPrimary = uiState.customPrimaryColor?.let(::argbLongToThemeColor) ?: currentScheme.primary
+    val previewSecondary = uiState.customSecondaryColor?.let(::argbLongToThemeColor) ?: currentScheme.secondary
+    val previewPrimaryContainer = uiState.customPrimaryColor?.let {
+        lerp(previewSurface, previewPrimary, if (isDarkPreview) 0.36f else 0.18f)
+    } ?: currentScheme.primaryContainer.copy(alpha = 1f)
+    val previewSecondaryContainer = uiState.customSecondaryColor?.let {
+        lerp(previewSurface, previewSecondary, if (isDarkPreview) 0.34f else 0.18f)
+    } ?: currentScheme.secondaryContainer.copy(alpha = 1f)
     val onPreview = if (previewBackground.luminance() > 0.45f) {
         Color(0xFF1F1B16)
     } else {
         Color(0xFFF4F1ED)
     }
+    val onPreviewSurface = previewSurface.contentColorForPreview()
     val mutedPreview = if (previewBackground.luminance() > 0.45f) {
         Color(0xFF6B6259)
     } else {
@@ -4744,12 +4845,12 @@ private fun ThemePreviewCard(
     }
     val previewCardShape = RoundedCornerShape(20.dp)
 
-    Card(
+    MrComicCardSurface(
         modifier = Modifier
             .fillMaxWidth()
             .clip(previewCardShape),
         shape = previewCardShape,
-        colors = CardDefaults.cardColors(containerColor = previewBackground),
+        containerColor = previewBackground,
         border = CardDefaults.outlinedCardBorder()
     ) {
         Column(
@@ -4760,13 +4861,13 @@ private fun ThemePreviewCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.large)
-                    .background(previewPrimary.copy(alpha = if (previewBackground.luminance() > 0.5f) 0.12f else 0.2f))
+                    .background(previewSurface)
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Surface(
-                    color = previewPrimary.copy(alpha = 0.18f),
+                    color = previewPrimaryContainer,
                     shape = CircleShape
                 ) {
                     Icon(
@@ -4789,7 +4890,7 @@ private fun ThemePreviewCard(
                     )
                 }
                 Surface(
-                    color = previewPrimary.copy(alpha = 0.14f),
+                    color = previewPrimaryContainer,
                     shape = MaterialTheme.shapes.extraLarge
                 ) {
                     Text(
@@ -4804,7 +4905,7 @@ private fun ThemePreviewCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(MaterialTheme.shapes.large)
-                    .background(previewSurface.copy(alpha = uiState.surfaceOpacity))
+                    .background(previewSurface)
                     .padding(horizontal = 12.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -4813,26 +4914,26 @@ private fun ThemePreviewCard(
                         .fillMaxWidth(0.92f)
                         .height(8.dp)
                         .clip(MaterialTheme.shapes.small)
-                        .background(onPreview.copy(alpha = 0.18f))
+                        .background(onPreviewSurface.copy(alpha = 0.18f))
                 )
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(MaterialTheme.shapes.small)
-                        .background(onPreview.copy(alpha = 0.16f))
+                        .background(onPreviewSurface.copy(alpha = 0.16f))
                 )
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(0.82f)
                         .height(8.dp)
                         .clip(MaterialTheme.shapes.small)
-                        .background(onPreview.copy(alpha = 0.14f))
+                        .background(onPreviewSurface.copy(alpha = 0.14f))
                 )
             }
             Surface(
                 shape = MaterialTheme.shapes.large,
-                color = previewSecondary
+                color = previewSecondaryContainer
             ) {
                 Row(
                     modifier = Modifier
@@ -4849,12 +4950,12 @@ private fun ThemePreviewCard(
                     )
                     Text(
                         strings.translationCard,
-                        color = onPreview,
+                        color = onPreviewSurface,
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )
                     Surface(
-                        color = previewPrimary.copy(alpha = 0.14f),
+                        color = previewPrimaryContainer,
                         shape = MaterialTheme.shapes.extraLarge
                     ) {
                         Text(
@@ -4873,7 +4974,7 @@ private fun ThemePreviewCard(
                 Surface(
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.extraLarge,
-                    color = previewSurface.copy(alpha = uiState.surfaceOpacity)
+                    color = previewSurface
                 ) {
                     Row(
                         modifier = Modifier
@@ -4891,7 +4992,7 @@ private fun ThemePreviewCard(
                         Text(
                             strings.previewCard,
                             style = MaterialTheme.typography.bodySmall,
-                            color = onPreview
+                            color = onPreviewSurface
                         )
                     }
                 }
@@ -5143,7 +5244,7 @@ private fun ReaderSection(
 private fun parseReaderSettingsPage(raw: String): ReaderSettingsPage = when (raw) {
     "STYLE" -> ReaderSettingsPage.TEXT_APPEARANCE
     "BEHAVIOR" -> ReaderSettingsPage.BEHAVIOR
-    "PROGRESS" -> ReaderSettingsPage.HEADERS
+    "PROGRESS" -> ReaderSettingsPage.BEHAVIOR
     "EFFECTS" -> ReaderSettingsPage.PAGING
     "WELLNESS" -> ReaderSettingsPage.BEHAVIOR
     else -> runCatching { ReaderSettingsPage.valueOf(raw) }.getOrDefault(ReaderSettingsPage.OVERVIEW)
@@ -5176,16 +5277,16 @@ private fun ReaderTextAppearancePreviewCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Surface(
+            MrComicCardSurface(
                 shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = if (strings.languageCode == "en") "Reading preview" else "Предпросмотр чтения",
+                        text = strings.readerTextPreviewTitle,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = if (uiState.textBold) FontWeight.Bold else FontWeight.SemiBold,
                             fontSize = (uiState.textFontSize + 2).sp
@@ -5196,7 +5297,7 @@ private fun ReaderTextAppearancePreviewCard(
                         horizontalAlignment = align
                     ) {
                         Text(
-                            text = if (strings.languageCode == "en") "A compact paragraph shows font size, line height, weight, and alignment before you open a book." else "Компактный абзац показывает размер шрифта, межстрочный интервал, насыщенность и выравнивание ещё до открытия книги.",
+                            text = strings.readerTextPreviewDescription,
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = uiState.textFontSize.sp,
                                 lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
@@ -5230,12 +5331,11 @@ private fun ReaderPageLayoutPreviewCard(
         }
     ) {
         val previewShape = MaterialTheme.shapes.large
-        Surface(
+        MrComicCardSurface(
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(previewShape),
+                .fillMaxWidth(),
             shape = previewShape,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -5260,9 +5360,10 @@ private fun ReaderPageLayoutPreviewCard(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold
                     )
-                    Surface(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        shape = RoundedCornerShape(999.dp)
+                    MrComicPill(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Text(
                             text = if (uiState.readerLandscapeSpreadEnabled) {
@@ -5282,13 +5383,12 @@ private fun ReaderPageLayoutPreviewCard(
                                     else -> "Только одна страница"
                                 }
                             },
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-                LinearProgressIndicator(
+                MrComicProgressLine(
                     progress = { (uiState.readerPreloadPages - 2).toFloat() / 6f },
                     modifier = Modifier.fillMaxWidth(),
                     trackColor = MaterialTheme.colorScheme.surface,
@@ -5483,10 +5583,10 @@ private fun ReaderHeaderFooterPreviewCard(
             else -> "Компактный preview колонтитулов"
         }
     ) {
-        Surface(
+        MrComicCardSurface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
             Column(
                 modifier = Modifier.padding(
@@ -5721,14 +5821,7 @@ private fun ReaderHeaderFooterSettingsCard(
 
     pickerTarget?.let { target ->
         SettingsPickerDialog(
-            title = when (target) {
-                "header_left" -> if (language == "en") "Header left slot" else "Левый слот сверху"
-                "header_center" -> if (language == "en") "Header center slot" else "Центральный слот сверху"
-                "header_right" -> if (language == "en") "Header right slot" else "Правый слот сверху"
-                "footer_left" -> if (language == "en") "Footer left slot" else "Левый слот снизу"
-                "footer_center" -> if (language == "en") "Footer center slot" else "Центральный слот снизу"
-                else -> if (language == "en") "Footer right slot" else "Правый слот снизу"
-            },
+            title = readerChromeSlotPickerTitle(language, target),
             options = options,
             selectedValue = when (target) {
                 "header_left" -> uiState.readerHeaderLeftSlot
@@ -5844,7 +5937,7 @@ private fun ReaderPagingSettingsCard(
                     else -> "Настраиваемый"
                 }
             ).forEach { (mode, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = ReaderTapZoneMode.fromStored(uiState.readerTapZoneMode) == mode,
                     onClick = { viewModel.setReaderTapZoneMode(mode.name) },
                     label = { Text(label) }
@@ -6027,7 +6120,7 @@ private fun ReaderPresetsCard(
         }
         ChipRow {
             presets.forEach { (preset, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = activePreset == preset,
                     onClick = { viewModel.setReaderPreset(preset.name) },
                     label = { Text(label) }
@@ -6058,17 +6151,17 @@ private fun ReaderModeCard(
 ) {
     SettingsCard(title = strings.readingModeCard) {
         ChipRow {
-            FilterChip(
+            MrComicFilterChip(
                 selected = uiState.readingMode == ReadingMode.PAGE_LTR,
                 onClick = { viewModel.setReadingMode(ReadingMode.PAGE_LTR) },
                 label = { Text(readerModeSettingsLabel(strings.languageCode, ReadingMode.PAGE_LTR)) }
             )
-            FilterChip(
+            MrComicFilterChip(
                 selected = uiState.readingMode == ReadingMode.PAGE_RTL,
                 onClick = { viewModel.setReadingMode(ReadingMode.PAGE_RTL) },
                 label = { Text(readerModeSettingsLabel(strings.languageCode, ReadingMode.PAGE_RTL)) }
             )
-            FilterChip(
+            MrComicFilterChip(
                 selected = uiState.readingMode == ReadingMode.WEBTOON,
                 onClick = { viewModel.setReadingMode(ReadingMode.WEBTOON) },
                 label = { Text(readerModeSettingsLabel(strings.languageCode, ReadingMode.WEBTOON)) }
@@ -6093,7 +6186,7 @@ private fun ReaderImageLayoutCard(
         LabelText(readerImageScaleModeTitle(language))
         ChipRow {
             ReaderImageScaleMode.entries.forEach { mode ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.readerImageScaleMode == mode.storedValue,
                     onClick = { viewModel.setReaderImageScaleMode(mode.storedValue) },
                     label = { Text(readerImageScaleModeLabel(mode, language)) }
@@ -6197,18 +6290,12 @@ private fun ReaderScreenCard(
     val behaviorText = remember(strings.languageCode) { readerBehaviorText(strings.languageCode) }
     val sliderValue = if (uiState.brightness < 0f) 0f else uiState.brightness.coerceIn(0.05f, 1f)
     SettingsCard(title = strings.readerScreenCard) {
-        LabelText(
-            if (uiState.brightness < 0f) {
-                "${strings.brightnessLabel}: ${strings.themeSystem}"
-            } else {
-                "${strings.brightnessLabel}: ${(sliderValue * 100).toInt()}%"
-            }
-        )
-        Slider(
+        SettingsSliderTile(
+            title = strings.brightnessLabel,
+            valueLabel = if (uiState.brightness < 0f) strings.themeSystem else "${(sliderValue * 100).toInt()}%",
             value = sliderValue,
             onValueChange = viewModel::setBrightness,
-            valueRange = 0f..1f,
-            modifier = Modifier.fillMaxWidth()
+            valueRange = 0f..1f
         )
         Spacer(Modifier.height(4.dp))
         LabelText(
@@ -6217,7 +6304,7 @@ private fun ReaderScreenCard(
         )
         ChipRow {
             ReaderScreenTimeoutMode.entries.forEach { mode ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.readerScreenTimeoutMode == mode.storedValue,
                     onClick = { viewModel.setReaderScreenTimeoutMode(mode.storedValue) },
                     label = { Text(readerScreenTimeoutLabel(mode.storedValue, strings.languageCode)) }
@@ -6477,7 +6564,7 @@ private fun ReaderWellnessCard(
             LabelText("${eyeRestText.intervalLabel}: ${uiState.readerEyeRestMinutes} ${eyeRestText.minutesSuffix}")
             ChipRow {
                 listOf(10, 20, 30, 45, 60).forEach { minutes ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = uiState.readerEyeRestMinutes == minutes,
                         onClick = { viewModel.setReaderEyeRestMinutes(minutes) },
                         label = { Text("$minutes ${eyeRestText.minutesSuffix}") }
@@ -6533,7 +6620,7 @@ private fun ReaderProgressCard(
             LabelText("${readingGoalText.targetLabel}: ${uiState.dailyReadingGoalTargetPages} ${readingGoalText.pagesSuffix}")
             ChipRow {
                 listOf(10, 20, 30, 50).forEach { targetPages ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = uiState.dailyReadingGoalTargetPages == targetPages,
                         onClick = { viewModel.setDailyReadingGoalTargetPages(targetPages) },
                         label = { Text("$targetPages ${readingGoalText.pagesSuffix}") }
@@ -6600,7 +6687,7 @@ private fun ReaderEffectsCard(
                 "SLIDE" to strings.animSlide,
                 "FADE" to strings.animFade
             ).forEach { (key, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.readerPageAnimation == key,
                     onClick = { viewModel.setReaderPageAnimation(key) },
                     label = { Text(label) }
@@ -6623,7 +6710,7 @@ private fun ReaderEffectsCard(
                     "CRISP" to strings.soundCrisp,
                     "SOFT" to strings.soundSoft
                 ).forEach { (key, label) ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = uiState.readerPageSoundStyle == key,
                         onClick = { viewModel.setReaderPageSoundStyle(key) },
                         label = { Text(label) }
@@ -6641,18 +6728,14 @@ private fun ReaderPreloadCard(
     viewModel: SettingsViewModel
 ) {
     SettingsCard(title = strings.preloadCard) {
-        LabelText("${strings.preloadLabel}: ${uiState.readerPreloadPages}")
-        Slider(
+        SettingsSliderTile(
+            title = strings.preloadLabel,
+            valueLabel = uiState.readerPreloadPages.toString(),
             value = uiState.readerPreloadPages.toFloat(),
             onValueChange = { viewModel.setReaderPreloadPages(it.toInt()) },
             valueRange = 2f..8f,
             steps = 5,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            strings.preloadHint,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            subtitle = strings.preloadHint
         )
     }
 }
@@ -6688,7 +6771,7 @@ private fun ReaderTextStyleCard(
             com.example.core.ui.theme.readingPresetQuickChoices().map { preset ->
                 preset to readingPresetQuickLabel(strings, preset)
             }.forEach { (preset, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = ReadingPreset.fromStored(uiState.readerPreset) == preset,
                     onClick = { viewModel.setReaderPreset(preset.name) },
                     label = { Text(label) }
@@ -6703,7 +6786,7 @@ private fun ReaderTextStyleCard(
                 "SEPIA" to styleText.sepia,
                 "NIGHT" to styleText.night
             ).forEach { (scheme, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.textColorScheme == scheme,
                     onClick = { viewModel.setTextColorScheme(scheme) },
                     label = { Text(label) }
@@ -6711,16 +6794,18 @@ private fun ReaderTextStyleCard(
             }
         }
         Spacer(Modifier.height(4.dp))
-        OutlinedButton(
+        MrComicButton(
             onClick = onImportReaderStyle,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            variant = MrComicButtonVariant.Outlined
         ) {
             Text(styleText.importPresetLabel)
         }
         Spacer(Modifier.height(4.dp))
-        OutlinedButton(
+        MrComicButton(
             onClick = onExportReaderStyle,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            variant = MrComicButtonVariant.Outlined
         ) {
             Text(styleText.exportPresetLabel)
         }
@@ -6782,9 +6867,10 @@ private fun ReaderTextStyleCard(
             )
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(
+        MrComicButton(
             onClick = { viewModel.saveCurrentReaderStylePreset() },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            variant = MrComicButtonVariant.Outlined
         ) {
             Text(if (strings.languageCode == "ru") "Сохранить текущий стиль как новый" else "Save current style as new")
         }
@@ -6812,9 +6898,10 @@ private fun ReaderTextStyleCard(
         }
         Spacer(Modifier.height(4.dp))
         LabelText("${styleText.fontTitle} (${fonts.size})")
-        OutlinedButton(
+        MrComicButton(
             onClick = onImportCustomFont,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            variant = MrComicButtonVariant.Outlined
         ) {
             Text(styleText.importFontLabel)
         }
@@ -6841,7 +6928,7 @@ private fun ReaderTextStyleCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             orderedFonts.forEach { family ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.textFontFamily == family,
                     onClick = { viewModel.setTextFontFamily(family) },
                     label = { Text(family, style = MaterialTheme.typography.bodySmall) }
@@ -6870,13 +6957,13 @@ private fun ReaderTextStyleCard(
             ) {
                 orderedCustomFonts.forEach { family ->
                     val selected = uiState.textFontFamily == family
-                    Surface(
+                    MrComicCardSurface(
                         modifier = Modifier
                             .widthIn(min = 152.dp)
-                            .clip(RoundedCornerShape(14.dp))
                             .clickable(onClick = { viewModel.setTextFontFamily(family) }),
-                        shape = RoundedCornerShape(14.dp),
-                        color = if (selected) {
+                        fillMaxWidth = false,
+                        cornerRadius = 14.dp,
+                        containerColor = if (selected) {
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
                         } else {
                             MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
@@ -6916,7 +7003,10 @@ private fun ReaderTextStyleCard(
                                     )
                                 }
                             }
-                            IconButton(onClick = { onDeleteCustomFont(family) }) {
+                            MrComicIconButton(
+                                onClick = { onDeleteCustomFont(family) },
+                                variant = MrComicIconButtonVariant.Tonal
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = readerDeleteCustomFontAction(strings.languageCode)
@@ -6934,49 +7024,49 @@ private fun ReaderTextStyleCard(
             )
         }
         Spacer(Modifier.height(4.dp))
-        LabelText("${styleText.fontSizeTitle}: ${readerTextFontSizeLabel(uiState.textFontSize, uiState.appLanguage)}")
-        Slider(
+        SettingsSliderTile(
+            title = styleText.fontSizeTitle,
+            valueLabel = readerTextFontSizeLabel(uiState.textFontSize, uiState.appLanguage),
             value = uiState.textFontSize.toFloat(),
             onValueChange = { viewModel.setTextFontSize(it.toInt()) },
             valueRange = 12f..32f,
-            steps = 19,
-            modifier = Modifier.fillMaxWidth()
+            steps = 19
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${styleText.lineHeightTitle}: ${readerTextLineHeightLabel((uiState.textLineHeight * 100).toInt(), uiState.appLanguage)}")
-        Slider(
+        SettingsSliderTile(
+            title = styleText.lineHeightTitle,
+            valueLabel = readerTextLineHeightLabel((uiState.textLineHeight * 100).toInt(), uiState.appLanguage),
             value = uiState.textLineHeight,
             onValueChange = viewModel::setTextLineHeight,
             valueRange = 1.0f..3.0f,
-            steps = 19,
-            modifier = Modifier.fillMaxWidth()
+            steps = 19
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${styleText.letterSpacingTitle}: ${"%.2f".format(Locale.US, uiState.textLetterSpacing)}em")
-        Slider(
+        SettingsSliderTile(
+            title = styleText.letterSpacingTitle,
+            valueLabel = "${"%.2f".format(Locale.US, uiState.textLetterSpacing)}em",
             value = uiState.textLetterSpacing,
             onValueChange = viewModel::setTextLetterSpacing,
             valueRange = 0f..0.2f,
-            steps = 19,
-            modifier = Modifier.fillMaxWidth()
+            steps = 19
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${styleText.wordSpacingTitle}: ${"%.2f".format(Locale.US, uiState.textWordSpacing)}em")
-        Slider(
+        SettingsSliderTile(
+            title = styleText.wordSpacingTitle,
+            valueLabel = "${"%.2f".format(Locale.US, uiState.textWordSpacing)}em",
             value = uiState.textWordSpacing,
             onValueChange = viewModel::setTextWordSpacing,
             valueRange = 0f..0.6f,
-            steps = 23,
-            modifier = Modifier.fillMaxWidth()
+            steps = 23
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${styleText.paragraphSpacingTitle}: ${"%.2f".format(Locale.US, uiState.textParagraphSpacing)}em")
-        Slider(
+        SettingsSliderTile(
+            title = styleText.paragraphSpacingTitle,
+            valueLabel = "${"%.2f".format(Locale.US, uiState.textParagraphSpacing)}em",
             value = uiState.textParagraphSpacing,
             onValueChange = viewModel::setTextParagraphSpacing,
             valueRange = 0.1f..1.2f,
-            steps = 21,
-            modifier = Modifier.fillMaxWidth()
+            steps = 21
         )
         Spacer(Modifier.height(4.dp))
         LabelText(styleText.alignmentTitle)
@@ -6987,7 +7077,7 @@ private fun ReaderTextStyleCard(
                 "right" to styleText.right,
                 "center" to styleText.center
             ).forEach { (alignment, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.textAlignment == alignment,
                     onClick = { viewModel.setTextAlignment(alignment) },
                     label = { Text(label) }
@@ -7024,6 +7114,7 @@ private fun LibrarySection(
     strings: AppStrings,
     viewModel: SettingsViewModel,
     currentPage: LibrarySettingsPage,
+    onImportRejected: () -> Unit,
     onPageChange: (LibrarySettingsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -7045,7 +7136,7 @@ private fun LibrarySection(
                                 "TITLE_ASC" to librarySortOrderLabel("TITLE_ASC", uiState.appLanguage),
                                 "PROGRESS_DESC" to librarySortOrderLabel("PROGRESS_DESC", uiState.appLanguage)
                             ).forEach { (sortOrder, label) ->
-                                FilterChip(
+                                MrComicFilterChip(
                                     selected = uiState.librarySortOrder == sortOrder,
                                     onClick = { viewModel.setLibrarySortOrder(sortOrder) },
                                     label = { Text(label) }
@@ -7056,7 +7147,7 @@ private fun LibrarySection(
                         LabelText(libraryText.groupBy)
                         ChipRow {
                             libraryText.groupByLabels.forEach { (groupBy, label) ->
-                                FilterChip(
+                                MrComicFilterChip(
                                     selected = uiState.libraryGroupBy == groupBy,
                                     onClick = { viewModel.setLibraryGroupBy(groupBy) },
                                     label = { Text(label) }
@@ -7085,7 +7176,8 @@ private fun LibrarySection(
                     SyncProgressCard(
                         uiState = uiState,
                         strings = strings,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        onImportRejected = onImportRejected
                     )
                 }
                 item {
@@ -7109,7 +7201,7 @@ private fun LibraryLayoutCard(
         val currentViewMode = uiState.libraryViewMode
         LabelText(strings.libraryDefaultView)
         ChipRow {
-            FilterChip(
+            MrComicFilterChip(
                 selected = currentViewMode == "GRID",
                 onClick = { viewModel.setLibraryViewMode("GRID") },
                 label = { Text(strings.libraryViewGrid) },
@@ -7121,7 +7213,7 @@ private fun LibraryLayoutCard(
                     )
                 }
             )
-            FilterChip(
+            MrComicFilterChip(
                 selected = currentViewMode == "LIST",
                 onClick = { viewModel.setLibraryViewMode("LIST") },
                 label = { Text(strings.libraryViewList) },
@@ -7133,7 +7225,7 @@ private fun LibraryLayoutCard(
                     )
                 }
             )
-            FilterChip(
+            MrComicFilterChip(
                 selected = currentViewMode == "STRIPS",
                 onClick = { viewModel.setLibraryViewMode("STRIPS") },
                 label = { Text(settingsLibraryViewLabel(uiState.appLanguage, "STRIPS")) },
@@ -7151,7 +7243,7 @@ private fun LibraryLayoutCard(
             LabelText("${strings.libraryGridColumns}: ${uiState.libraryGridColumns}")
             ChipRow {
                 listOf(2, 3, 4).forEach { n ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = uiState.libraryGridColumns == n,
                         onClick = { viewModel.setLibraryGridColumns(n) },
                         label = { Text("$n") }
@@ -7197,7 +7289,7 @@ private fun LibraryLayoutCard(
                     else -> "Снизу"
                 }
             ).forEach { (position, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.libraryRecentStripPosition == position,
                     onClick = { viewModel.setLibraryRecentStripPosition(position) },
                     label = { Text(label) }
@@ -7217,12 +7309,12 @@ private fun LibraryCardsStyleCard(
 ) {
     val coverTitleText = coverTitleSettingsText(uiState.appLanguage)
     SettingsCard(title = title) {
-        LabelText("${strings.libraryTileSize}: ${uiState.libraryTileSize} dp")
-        Slider(
+        SettingsSliderTile(
+            title = strings.libraryTileSize,
+            valueLabel = "${uiState.libraryTileSize} dp",
             value = uiState.libraryTileSize.toFloat(),
             onValueChange = { viewModel.setLibraryTileSize(it.toInt()) },
-            valueRange = 80f..200f,
-            modifier = Modifier.fillMaxWidth()
+            valueRange = 80f..200f
         )
         Spacer(Modifier.height(4.dp))
         LabelText(libraryText.cardDensity)
@@ -7232,7 +7324,7 @@ private fun LibraryCardsStyleCard(
                 "BALANCED" to libraryCardStyleLabel("BALANCED", uiState.appLanguage),
                 "SHOWCASE" to libraryCardStyleLabel("SHOWCASE", uiState.appLanguage)
             ).forEach { (style, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.libraryCardStyle == style,
                     onClick = { viewModel.setLibraryCardStyle(style) },
                     label = { Text(label) }
@@ -7246,7 +7338,7 @@ private fun LibraryCardsStyleCard(
                 "CROP" to libraryCoverScaleLabel("CROP", uiState.appLanguage),
                 "FIT" to libraryCoverScaleLabel("FIT", uiState.appLanguage)
             ).forEach { (scale, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.libraryCoverScale == scale,
                     onClick = { viewModel.setLibraryCoverScale(scale) },
                     label = { Text(label) }
@@ -7260,7 +7352,7 @@ private fun LibraryCardsStyleCard(
                 "RECTANGLE" to libraryText.rectangle,
                 "SQUARE" to libraryText.square
             ).forEach { (mode, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.libraryThumbnailMode == mode,
                     onClick = { viewModel.setLibraryThumbnailMode(mode) },
                     label = { Text(label) }
@@ -7275,7 +7367,7 @@ private fun LibraryCardsStyleCard(
                 "INK" to graphicCoverStyleOptionLabel("INK", uiState.appLanguage),
                 "MINIMAL" to graphicCoverStyleOptionLabel("MINIMAL", uiState.appLanguage)
             ).forEach { (style, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.libraryGraphicCoverStyle == style,
                     onClick = { viewModel.setLibraryGraphicCoverStyle(style) },
                     label = { Text(label) }
@@ -7295,28 +7387,28 @@ private fun LibraryCardsStyleCard(
             checked = uiState.libraryShowCoverTitles,
             onCheckedChange = viewModel::setLibraryShowCoverTitles
         )
-        LabelText("${libraryText.cardShadow}: ${(uiState.libraryCardShadow * 100).toInt()}%")
-        Slider(
+        SettingsSliderTile(
+            title = libraryText.cardShadow,
+            valueLabel = "${(uiState.libraryCardShadow * 100).toInt()}%",
             value = uiState.libraryCardShadow,
             onValueChange = viewModel::setLibraryCardShadow,
             valueRange = 0f..1f,
-            steps = 9,
-            modifier = Modifier.fillMaxWidth()
+            steps = 9
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${libraryText.titleScale}: ${(uiState.libraryTitleScale * 100).toInt()}%")
-        Slider(
+        SettingsSliderTile(
+            title = libraryText.titleScale,
+            valueLabel = "${(uiState.libraryTitleScale * 100).toInt()}%",
             value = uiState.libraryTitleScale,
             onValueChange = viewModel::setLibraryTitleScale,
             valueRange = 0.85f..1.3f,
-            steps = 8,
-            modifier = Modifier.fillMaxWidth()
+            steps = 8
         )
         Spacer(Modifier.height(4.dp))
         LabelText(libraryText.titleLines)
         ChipRow {
             listOf(1, 2, 3).forEach { lines ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.libraryTitleLines == lines,
                     onClick = { viewModel.setLibraryTitleLines(lines) },
                     label = { Text("$lines") }
@@ -7324,31 +7416,31 @@ private fun LibraryCardsStyleCard(
             }
         }
         Spacer(Modifier.height(4.dp))
-        LabelText("${libraryText.cardStroke}: ${(uiState.libraryCardStroke * 100).toInt()}%")
-        Slider(
+        SettingsSliderTile(
+            title = libraryText.cardStroke,
+            valueLabel = "${(uiState.libraryCardStroke * 100).toInt()}%",
             value = uiState.libraryCardStroke,
             onValueChange = viewModel::setLibraryCardStroke,
             valueRange = 0f..1f,
-            steps = 9,
-            modifier = Modifier.fillMaxWidth()
+            steps = 9
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${libraryText.cardCornerRadius}: ${uiState.libraryCardCornerRadius} dp")
-        Slider(
+        SettingsSliderTile(
+            title = libraryText.cardCornerRadius,
+            valueLabel = "${uiState.libraryCardCornerRadius} dp",
             value = uiState.libraryCardCornerRadius.toFloat(),
             onValueChange = { viewModel.setLibraryCardCornerRadius(it.roundToInt()) },
             valueRange = 6f..24f,
-            steps = 8,
-            modifier = Modifier.fillMaxWidth()
+            steps = 8
         )
         Spacer(Modifier.height(4.dp))
-        LabelText("${libraryText.titlePanelOpacity}: ${(uiState.libraryTitlePanelOpacity * 100).toInt()}%")
-        Slider(
+        SettingsSliderTile(
+            title = libraryText.titlePanelOpacity,
+            valueLabel = "${(uiState.libraryTitlePanelOpacity * 100).toInt()}%",
             value = uiState.libraryTitlePanelOpacity,
             onValueChange = viewModel::setLibraryTitlePanelOpacity,
             valueRange = 0.18f..0.78f,
-            steps = 9,
-            modifier = Modifier.fillMaxWidth()
+            steps = 9
         )
     }
 }
@@ -7423,72 +7515,49 @@ private fun LibraryBackgroundPresetCard(
     selectedImageUri: String?,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(16.dp)
     val usesSelectedImage = style == "IMAGE" && !selectedImageUri.isNullOrBlank()
     val previewStyle = when {
         style == "IMAGE" && selectedImageUri.isNullOrBlank() -> "PAPER_GRAIN"
         else -> style
     }
-    Surface(
-        modifier = modifier
-            .width(148.dp)
-            .clickable(onClick = onClick),
-        shape = shape,
-        border = BorderStroke(
-            width = if (selected) 1.4.dp else 0.8.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-            }
-        ),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-        tonalElevation = if (selected) 4.dp else 0.dp
+    MrComicLibraryPresetCard(
+        title = label,
+        subtitle = "",
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier.width(148.dp),
+        accentColor = MaterialTheme.colorScheme.primary
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .height(74.dp)
+                .clip(RoundedCornerShape(12.dp))
         ) {
+            LibraryBackdropLayer(
+                backgroundStyle = previewStyle,
+                backgroundImageUri = if (usesSelectedImage) selectedImageUri else null,
+                colorScheme = MaterialTheme.colorScheme,
+                backdropStrength = DEFAULT_LIBRARY_BACKDROP_STRENGTH,
+                backgroundBlur = if (previewStyle == "LIQUID_GLASS") 0.32f else DEFAULT_LIBRARY_BACKGROUND_BLUR,
+                imageVeil = DEFAULT_LIBRARY_BACKGROUND_VEIL,
+                modifier = Modifier.fillMaxSize()
+            )
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(74.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                LibraryBackdropLayer(
-                    backgroundStyle = previewStyle,
-                    backgroundImageUri = if (usesSelectedImage) selectedImageUri else null,
-                    colorScheme = MaterialTheme.colorScheme,
-                    backdropStrength = DEFAULT_LIBRARY_BACKDROP_STRENGTH,
-                    backgroundBlur = if (previewStyle == "LIQUID_GLASS") 0.32f else DEFAULT_LIBRARY_BACKGROUND_BLUR,
-                    imageVeil = DEFAULT_LIBRARY_BACKGROUND_VEIL,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.06f))
-                )
-                if (style == "IMAGE" && selectedImageUri.isNullOrBlank()) {
-                    Icon(
-                        imageVector = Icons.Default.Image,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f)
-                    )
-                }
-            }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.06f))
             )
+            if (style == "IMAGE" && selectedImageUri.isNullOrBlank()) {
+                Icon(
+                    imageVector = Icons.Default.Image,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f)
+                )
+            }
         }
     }
 }
@@ -7509,10 +7578,10 @@ private fun SelectedLibraryBackgroundPreview(
             ?: imageUri
     }
 
-    Surface(
+    MrComicCardSurface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
+        cornerRadius = 16.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)
     ) {
         Row(
             modifier = Modifier
@@ -7569,65 +7638,42 @@ private fun LibraryShelfPresetCard(
     shelfDepth: Float,
     modifier: Modifier = Modifier
 ) {
-    val shape = RoundedCornerShape(16.dp)
-    Surface(
-        modifier = modifier
-            .width(148.dp)
-            .clickable(onClick = onClick),
-        shape = shape,
-        border = BorderStroke(
-            width = if (selected) 1.4.dp else 0.8.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)
-            }
-        ),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f),
-        tonalElevation = if (selected) 4.dp else 0.dp
+    MrComicLibraryPresetCard(
+        title = label,
+        subtitle = "",
+        selected = selected,
+        onClick = onClick,
+        modifier = modifier.width(148.dp),
+        accentColor = MaterialTheme.colorScheme.primary
     ) {
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .height(74.dp)
+                .clip(RoundedCornerShape(12.dp))
         ) {
+            LibraryBackdropLayer(
+                backgroundStyle = backgroundStyle,
+                backgroundImageUri = backgroundImageUri,
+                colorScheme = MaterialTheme.colorScheme,
+                backdropStrength = 0.24f,
+                backgroundBlur = backgroundBlur,
+                imageVeil = 0.14f,
+                modifier = Modifier.fillMaxSize()
+            )
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(74.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                contentAlignment = Alignment.BottomCenter
             ) {
-                LibraryBackdropLayer(
-                    backgroundStyle = backgroundStyle,
-                    backgroundImageUri = backgroundImageUri,
+                LibraryShelfBar(
+                    shelfStyle = shelfStyle,
                     colorScheme = MaterialTheme.colorScheme,
-                    backdropStrength = 0.24f,
-                    backgroundBlur = backgroundBlur,
-                    imageVeil = 0.14f,
-                    modifier = Modifier.fillMaxSize()
+                    depth = shelfDepth,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 10.dp, vertical = 10.dp),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    LibraryShelfBar(
-                        shelfStyle = shelfStyle,
-                        colorScheme = MaterialTheme.colorScheme,
-                        depth = shelfDepth,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             }
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }
@@ -7918,10 +7964,10 @@ private fun SettingsPreviewBanner(
     details: String,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    MrComicCardSurface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        cornerRadius = 16.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f))
     ) {
         Row(
@@ -7986,29 +8032,28 @@ private fun AppThemePresetCard(
             runCatching { ThemeMode.valueOf(it.themeMode) }.getOrDefault(ThemeMode.SYSTEM)
         )
     }.orEmpty()
-    val primaryColor = snapshot?.customPrimaryColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.primary
-    val surfaceColor = snapshot?.customSurfaceColor?.let { Color(it.toInt()) }
+    val primaryColor = snapshot?.customPrimaryColor?.let(::argbLongToThemeColor) ?: MaterialTheme.colorScheme.primary
+    val surfaceColor = snapshot?.customSurfaceColor?.let(::argbLongToThemeColor)
         ?: MaterialTheme.colorScheme.surface.copy(alpha = snapshot?.surfaceOpacity ?: 1f)
-    val backgroundColor = snapshot?.customBackgroundColor?.let { Color(it.toInt()) } ?: MaterialTheme.colorScheme.background
+    val backgroundColor = snapshot?.customBackgroundColor?.let(::argbLongToThemeColor) ?: MaterialTheme.colorScheme.background
 
-    Card(
+    MrComicCardSurface(
         modifier = modifier
             .width(160.dp)
             .clip(cardShape),
+        fillMaxWidth = false,
         shape = cardShape,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.86f)
-            } else {
-                MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-            }
-        ),
+        containerColor = if (isActive) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.86f)
+        } else {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+        },
         border = if (isActive) {
             BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.42f))
         } else {
             BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.16f))
         },
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 5.dp else 4.dp)
+        shadowElevation = if (isActive) 5.dp else 4.dp
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -8160,8 +8205,8 @@ private fun ReaderStylePresetCard(
             "NIGHT" -> Color(0xFF000000) to Color(0xFFF2F5F7)
             else -> Color(0xFFF6F1E7) to Color(0xFF2B2118)
         }
-        (snapshot?.textCustomBackgroundColor?.let(::Color) ?: base.first) to
-            (snapshot?.textCustomTextColor?.let(::Color) ?: base.second)
+        (snapshot?.textCustomBackgroundColor?.let(::argbLongToThemeColor) ?: base.first) to
+            (snapshot?.textCustomTextColor?.let(::argbLongToThemeColor) ?: base.second)
     }
     val slotLabel = "${text.savedStyleSlotPrefix} ${slot.index}"
     val titleLabel = snapshot?.displayName?.takeIf { it.isNotBlank() } ?: slotLabel
@@ -8211,23 +8256,21 @@ private fun ReaderStylePresetCard(
         )
     }
 
-    Card(
+    MrComicCardSurface(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape),
         shape = shape,
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.84f)
-            } else {
-                MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-            }
-        ),
+        containerColor = if (isActive) {
+            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.84f)
+        } else {
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+        },
         border = BorderStroke(
             width = if (isActive) 1.2.dp else 0.dp,
             color = MaterialTheme.colorScheme.primary.copy(alpha = if (isActive) 0.48f else 0f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 5.dp else 4.dp)
+        shadowElevation = if (isActive) 5.dp else 4.dp
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -8379,11 +8422,12 @@ private fun LibraryThemePresetCard(
         "${libraryBackgroundStyleLabel(it.backgroundStyle, appLanguage)} • ${libraryShelfStyleLabel(it.shelfStyle, appLanguage)}"
     } ?: emptyLabel
 
-    Card(
+    MrComicCardSurface(
         modifier = modifier.width(160.dp),
+        fillMaxWidth = false,
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -8546,14 +8590,14 @@ private fun FlowRowScope.LibraryQuickPresetTile(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
+    MrComicCardSurface(
         modifier = Modifier
             .widthIn(min = 148.dp, max = 220.dp)
             .weight(1f)
-            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = if (selected) {
+        fillMaxWidth = false,
+        cornerRadius = 14.dp,
+        containerColor = if (selected) {
             accent.copy(alpha = 0.14f)
         } else {
             MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
@@ -8666,11 +8710,11 @@ private fun LibraryStylePreview(
     val styleLabel = libraryBackgroundStyleLabel(uiState.libraryBackgroundStyle, uiState.appLanguage)
     val shelfLabel = libraryShelfStyleLabel(uiState.libraryShelfStyle, uiState.appLanguage)
     val shape = RoundedCornerShape(22.dp)
-    Card(
+    MrComicCardSurface(
         modifier = modifier,
+        fillMaxWidth = false,
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        containerColor = Color.Transparent
     ) {
         Box(
             modifier = Modifier
@@ -8825,11 +8869,12 @@ private fun LibraryPreviewVolume(
             0.18f
         ).copy(alpha = 0.82f)
     }
-    Card(
+    MrComicCardSurface(
         modifier = modifier,
+        fillMaxWidth = false,
         shape = cardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(shadow)),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shadowElevation = libraryCardElevation(shadow),
+        containerColor = containerColor,
         border = BorderStroke(
             width = (0.65f + cardStroke.coerceIn(0f, 1f) * 0.9f).dp,
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.06f + cardStroke.coerceIn(0f, 1f) * if (isGraphic) 0.18f else 0.14f)
@@ -9064,11 +9109,12 @@ private fun LibraryPreviewFolder(
         "SHOWCASE" -> 0.69f
         else -> 0.66f
     }
-    Card(
+    MrComicCardSurface(
         modifier = modifier,
+        fillMaxWidth = false,
         shape = cardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(shadow)),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        shadowElevation = libraryCardElevation(shadow),
+        containerColor = containerColor,
         border = BorderStroke(
             width = (0.65f + cardStroke.coerceIn(0f, 1f) * 0.9f).dp,
             color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.08f + cardStroke.coerceIn(0f, 1f) * 0.16f)
@@ -9324,7 +9370,7 @@ private fun TranslationBehaviorCard(
                 "OCR" to strings.transOcr,
                 "DICTIONARY" to strings.transDict
             ).forEach { (key, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.translationMode == key,
                     onClick = { viewModel.setTranslationMode(key) },
                     label = { Text(label) }
@@ -9344,13 +9390,13 @@ private fun TranslationSourceCard(
     SettingsCard(title = sectionText.sourceLanguageCard) {
         LabelText(sectionText.sourceLanguageHint)
         ChipRow {
-            FilterChip(
+            MrComicFilterChip(
                 selected = uiState.translationSourceLanguage == "AUTO",
                 onClick = { viewModel.setTranslationSourceLanguage("AUTO") },
                 label = { Text(sectionText.autoSource) }
             )
             languageOptions.forEach { (code, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.translationSourceLanguage == code,
                     onClick = { viewModel.setTranslationSourceLanguage(code) },
                     label = { Text(label) }
@@ -9370,13 +9416,13 @@ private fun TranslationTargetCard(
     SettingsCard(title = sectionText.targetLanguageCard) {
         LabelText(sectionText.targetLanguageHint)
         ChipRow {
-            FilterChip(
+            MrComicFilterChip(
                 selected = uiState.translationTargetLanguage == "APP",
                 onClick = { viewModel.setTranslationTargetLanguage("APP") },
                 label = { Text(sectionText.appLanguageTarget) }
             )
             languageOptions.forEach { (code, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.translationTargetLanguage == code,
                     onClick = { viewModel.setTranslationTargetLanguage(code) },
                     label = { Text(label) }
@@ -9416,7 +9462,7 @@ private fun TranslationServicesGatewayPage(
                 transportText to transport,
                 overviewText.machineTranslationTitle to aiMachineTranslationStatus(uiState, strings.languageCode),
                 overviewText.advancedExplainTitle to explain,
-                overviewText.providersTitle to overviewText.notConnectedValue
+                overviewText.providersTitle to aiProvidersStatus(uiState, strings.languageCode)
             )
         )
         SettingsCard(title = gatewayText.ownershipTitle) {
@@ -9428,7 +9474,10 @@ private fun TranslationServicesGatewayPage(
             Spacer(Modifier.height(8.dp))
             LabelText(gatewayText.readAloudHint)
             Spacer(Modifier.height(12.dp))
-            OutlinedButton(onClick = onOpenAiServices) {
+            MrComicButton(
+                onClick = onOpenAiServices,
+                variant = MrComicButtonVariant.Outlined
+            ) {
                 Text(gatewayText.openButtonLabel)
             }
         }
@@ -9444,57 +9493,19 @@ private fun OcrFiltersCard(
     SettingsCard(title = sectionText.comicFiltersCard) {
         LabelText(sectionText.comicFiltersHint)
         Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = sectionText.dialoguesOnlyTitle,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = sectionText.dialoguesOnlySubtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = uiState.ocrDialoguesOnly,
-                onCheckedChange = viewModel::setOcrDialoguesOnly
-            )
-        }
+        MrComicSwitchRow(
+            title = sectionText.dialoguesOnlyTitle,
+            subtitle = sectionText.dialoguesOnlySubtitle,
+            checked = uiState.ocrDialoguesOnly,
+            onCheckedChange = viewModel::setOcrDialoguesOnly
+        )
         Spacer(Modifier.height(12.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Text(
-                    text = sectionText.includeSfxTitle,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = sectionText.includeSfxSubtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Switch(
-                checked = uiState.ocrIncludeSfx,
-                onCheckedChange = viewModel::setOcrIncludeSfx
-            )
-        }
+        MrComicSwitchRow(
+            title = sectionText.includeSfxTitle,
+            subtitle = sectionText.includeSfxSubtitle,
+            checked = uiState.ocrIncludeSfx,
+            onCheckedChange = viewModel::setOcrIncludeSfx
+        )
     }
 }
 
@@ -9507,12 +9518,9 @@ private fun TranslationOverlayCard(
     SettingsCard(title = sectionText.overlayCard) {
         LabelText(sectionText.overlayHint)
         Spacer(Modifier.height(12.dp))
-        Text(
-            text = "${sectionText.overlayOpacityTitle}: ${(uiState.ocrOverlayOpacity * 100).toInt()}%",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Slider(
+        SettingsSliderTile(
+            title = sectionText.overlayOpacityTitle,
+            valueLabel = "${(uiState.ocrOverlayOpacity * 100).toInt()}%",
             value = uiState.ocrOverlayOpacity,
             onValueChange = viewModel::setOcrOverlayOpacity,
             valueRange = 0.45f..1.0f
@@ -9525,7 +9533,7 @@ private fun TranslationOverlayCard(
         )
         ChipRow {
             listOf(0.85f, 1.0f, 1.15f, 1.3f).forEach { scale ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = kotlin.math.abs(uiState.ocrOverlayFontScale - scale) < 0.01f,
                     onClick = { viewModel.setOcrOverlayFontScale(scale) },
                     label = { Text("${(scale * 100).toInt()}%") }
@@ -9544,7 +9552,7 @@ private fun TranslationOverlayCard(
                 "LIGHT" to sectionText.overlayStyleLight,
                 "DARK" to sectionText.overlayStyleDark
             ).forEach { (code, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.ocrOverlayStyle == code,
                     onClick = { viewModel.setOcrOverlayStyle(code) },
                     label = { Text(label) }
@@ -9564,7 +9572,7 @@ private fun OcrLanguageCard(
         LabelText(strings.ocrLanguageHint)
         ChipRow {
             ocrSourceLanguageOptions(strings.languageCode).forEach { option ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.ocrLanguage == option.code.uppercase(),
                     onClick = { viewModel.setOcrLanguage(option.code.uppercase()) },
                     label = { Text(option.label) }
@@ -9675,7 +9683,7 @@ private fun AiServiceAdvancedExplainCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(8.dp))
-        LabelText("${overviewText.providerLabel}: ${overviewText.notConnectedValue}")
+        LabelText("${overviewText.providerLabel}: ${aiProvidersValue(uiState, strings.languageCode)}")
         LabelText("${overviewText.expandedExplainLabel}: ${compactToggleLabel(strings.languageCode, uiState.translationExplainEnabled)}")
         LabelText("${overviewText.statusLabel}: ${aiAdvancedExplainStatus(uiState, strings.languageCode)}")
     }
@@ -9744,10 +9752,12 @@ private fun OpenRouterProviderCard(
     language: String,
     viewModel: SettingsViewModel
 ) {
-    var apiKeyDraft by rememberSaveable(uiState.openRouterApiKey) { mutableStateOf(uiState.openRouterApiKey) }
+    var apiKeyDraft by rememberSaveable { mutableStateOf("") }
     var modelDraft by rememberSaveable(uiState.openRouterModel) { mutableStateOf(uiState.openRouterModel) }
     val status = when {
         uiState.openRouterApiKey.isBlank() -> openRouterDisconnectedStatus(language)
+        !openRouterCredentialsPassLocalValidation(uiState.openRouterApiKey, uiState.openRouterModel) ->
+            openRouterNeedsValidationStatus(language)
         uiState.translationAvailability.networkAvailable -> openRouterConnectedStatus(language)
         else -> openRouterNeedsNetworkStatus(language)
     }
@@ -9765,7 +9775,9 @@ private fun OpenRouterProviderCard(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text(openRouterApiKeyLabel(language)) },
-            placeholder = { Text("sk-or-v1-...") },
+            placeholder = {
+                Text(if (uiState.openRouterApiKey.isNotBlank()) "••••••••" else "sk-or-v1-...")
+            },
             visualTransformation = PasswordVisualTransformation()
         )
         Spacer(Modifier.height(10.dp))
@@ -9781,21 +9793,30 @@ private fun OpenRouterProviderCard(
         LabelText("${openRouterStatusLabel(language)}: $status")
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Button(
+            MrComicButton(
                 onClick = {
-                    viewModel.setOpenRouterApiKey(apiKeyDraft)
-                    viewModel.setOpenRouterModel(modelDraft)
-                }
+                    val normalizedKey = apiKeyDraft.trim()
+                    val normalizedModel = modelDraft.trim().ifEmpty { "openrouter/auto" }
+                    viewModel.saveEncryptedOpenRouterApiKey(
+                        normalizedKey.ifEmpty { uiState.openRouterApiKey }
+                    )
+                    viewModel.setOpenRouterModel(normalizedModel)
+                    apiKeyDraft = ""
+                },
+                variant = MrComicButtonVariant.Filled
             ) {
                 Text(openRouterSaveLabel(language))
             }
-            OutlinedButton(
+            MrComicButton(
                 onClick = {
-                    apiKeyDraft = ""
-                    modelDraft = "openrouter/auto"
-                    viewModel.setOpenRouterApiKey("")
-                    viewModel.setOpenRouterModel("openrouter/auto")
-                }
+                    val normalizedKey = ""
+                    val normalizedModel = "openrouter/auto"
+                    apiKeyDraft = normalizedKey
+                    modelDraft = normalizedModel
+                    viewModel.saveEncryptedOpenRouterApiKey(normalizedKey)
+                    viewModel.setOpenRouterModel(normalizedModel)
+                },
+                variant = MrComicButtonVariant.Outlined
             ) {
                 Text(openRouterClearLabel(language))
             }
@@ -9804,8 +9825,8 @@ private fun OpenRouterProviderCard(
 }
 
 private fun openRouterCardHint(language: String): String = when (language) {
-    "ru" -> "Ключ и модель для онлайн-перевода через OpenRouter. Ключ хранится локально в настройках приложения."
-    else -> "API key and model for online translation through OpenRouter. The key is stored locally in app settings."
+    "ru" -> "Ключ и модель для онлайн-перевода через OpenRouter. Ключ хранится локально в зашифрованном виде."
+    else -> "API key and model for online translation through OpenRouter. The key is stored encrypted on this device."
 }
 
 private fun openRouterApiKeyLabel(language: String): String = when (language) {
@@ -9841,6 +9862,11 @@ private fun openRouterConnectedStatus(language: String): String = when (language
 private fun openRouterNeedsNetworkStatus(language: String): String = when (language) {
     "ru" -> "Ключ сохранён, нужна сеть"
     else -> "Configured, network required"
+}
+
+private fun openRouterNeedsValidationStatus(language: String): String = when (language) {
+    "ru" -> "Проверьте ключ или модель"
+    else -> "Check key or model"
 }
 
 private fun openRouterDisconnectedStatus(language: String): String = when (language) {
@@ -9908,13 +9934,13 @@ private fun ReadAloudSection(
                 )
                 Spacer(Modifier.height(8.dp))
                 ChipRow {
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = provider == ReaderTtsProviderType.SYSTEM,
                         onClick = { viewModel.setReaderTtsProvider(ReaderTtsProviderType.SYSTEM.storedValue) },
                         label = { Text(readAloudProviderLabel(ReaderTtsProviderType.SYSTEM.storedValue, strings.languageCode)) }
                     )
                     listOf(ReaderTtsProviderType.OPENAI, ReaderTtsProviderType.AZURE, ReaderTtsProviderType.ALIYUN).forEach { item ->
-                        FilterChip(
+                        MrComicFilterChip(
                             selected = false,
                             enabled = false,
                             onClick = {},
@@ -10009,7 +10035,7 @@ private fun ReadAloudSection(
                 LabelText(readAloudSleepTimerTitle(strings.languageCode))
                 ChipRow {
                     ReaderTtsSleepTimerMode.entries.forEach { mode ->
-                        FilterChip(
+                        MrComicFilterChip(
                             selected = uiState.readerTtsSleepTimerMode == mode.storedValue,
                             onClick = { viewModel.setReaderTtsSleepTimerMode(mode.storedValue) },
                             label = { Text(readAloudSleepTimerLabel(mode.storedValue, strings.languageCode)) }
@@ -10059,7 +10085,7 @@ private fun ReadAloudSection(
                     )
                     ChipRow {
                         listOf("PAPER", "CRISP", "SOFT").forEach { style ->
-                            FilterChip(
+                            MrComicFilterChip(
                                 selected = uiState.readerPageSoundStyle == style,
                                 onClick = { viewModel.setReaderPageSoundStyle(style) },
                                 label = { Text(style) }
@@ -10114,10 +10140,11 @@ private fun ReadAloudSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    FilledTonalButton(
+                    MrComicButton(
                         modifier = Modifier.weight(1f),
                         enabled = provider == ReaderTtsProviderType.SYSTEM && previewState.ready,
-                        onClick = { previewController.togglePreview(readAloudPreviewSample(strings.languageCode)) }
+                        onClick = { previewController.togglePreview(readAloudPreviewSample(strings.languageCode)) },
+                        variant = MrComicButtonVariant.Tonal
                     ) {
                         Text(
                             text = if (previewState.isSpeaking) {
@@ -10129,10 +10156,11 @@ private fun ReadAloudSection(
                             overflow = TextOverflow.Ellipsis
                         )
                     }
-                    OutlinedButton(
+                    MrComicButton(
                         modifier = Modifier.weight(1f),
                         enabled = previewState.isSpeaking,
-                        onClick = previewController::stop
+                        onClick = previewController::stop,
+                        variant = MrComicButtonVariant.Outlined
                     ) {
                         Text(
                             text = readAloudPreviewStopLabel(strings.languageCode),
@@ -10179,15 +10207,24 @@ private fun ReadAloudSection(
 private fun SyncProgressCard(
     uiState: SettingsUiState,
     strings: AppStrings,
-    viewModel: SettingsViewModel
+    viewModel: SettingsViewModel,
+    onImportRejected: () -> Unit
 ) {
+    val context = LocalContext.current
     val busy = uiState.isExporting || uiState.isImporting
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> uri?.let { viewModel.exportProgress(it) } }
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let { viewModel.importProgress(it) } }
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        if (runCatching { uri.isAcceptedSettingsJsonImport(context) }.getOrDefault(false)) {
+            viewModel.importProgress(uri)
+        } else {
+            onImportRejected()
+        }
+    }
 
     SettingsCard(title = strings.progressCard) {
         Text(
@@ -10200,12 +10237,13 @@ private fun SyncProgressCard(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilledTonalButton(
+            MrComicButton(
                 onClick = {
                     exportLauncher.launch("mr_comic_progress_${System.currentTimeMillis()}.json")
                 },
                 enabled = !busy,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                variant = MrComicButtonVariant.Tonal
             ) {
                 if (uiState.isExporting) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -10217,10 +10255,11 @@ private fun SyncProgressCard(
                     Text(strings.exportBtn)
                 }
             }
-            FilledTonalButton(
+            MrComicButton(
                 onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
                 enabled = !busy,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                variant = MrComicButtonVariant.Tonal
             ) {
                 if (uiState.isImporting) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
@@ -10434,6 +10473,7 @@ private fun SyncSection(
     strings: AppStrings,
     viewModel: SettingsViewModel,
     currentPage: SyncSettingsPage,
+    onImportRejected: () -> Unit,
     onPageChange: (SyncSettingsPage) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -10468,7 +10508,12 @@ private fun SyncSection(
             }
             SyncSettingsPage.BACKUP -> {
                 item {
-                    SyncProgressCard(uiState = uiState, strings = strings, viewModel = viewModel)
+                    SyncProgressCard(
+                        uiState = uiState,
+                        strings = strings,
+                        viewModel = viewModel,
+                        onImportRejected = onImportRejected
+                    )
                 }
                 item {
                     SyncFormatCard(strings = strings)
@@ -10528,6 +10573,9 @@ private fun SyncPopupSettingsCard(
             else -> "Вручную"
         }
         language == "en" -> "${uiState.imageMessagePopupDurationSeconds} s"
+        language == "ja" -> "${uiState.imageMessagePopupDurationSeconds}秒"
+        language == "zh" -> "${uiState.imageMessagePopupDurationSeconds} 秒"
+        language == "ko" -> "${uiState.imageMessagePopupDurationSeconds}초"
         else -> "${uiState.imageMessagePopupDurationSeconds} сек"
     }
     val presentationOptions = listOf(
@@ -10616,7 +10664,7 @@ private fun SyncPopupSettingsCard(
         )
         ChipRow {
             presentationOptions.forEach { (value, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.settingsImportErrorPresentation == value,
                     onClick = { viewModel.setSettingsImportErrorPresentation(value) },
                     label = { Text(label) }
@@ -10635,7 +10683,7 @@ private fun SyncPopupSettingsCard(
         )
         ChipRow {
             positionOptions.forEach { (value, label) ->
-                FilterChip(
+                MrComicFilterChip(
                     selected = uiState.imageMessagePopupPosition == value,
                     onClick = { viewModel.setImageMessagePopupPosition(value) },
                     label = { Text(label) }
@@ -10867,9 +10915,10 @@ private fun AboutSection(
                 androidx.compose.foundation.text.selection.SelectionContainer {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         contacts.forEach { contact ->
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                            MrComicCardSurface(
+                                fillMaxWidth = false,
+                                cornerRadius = 14.dp,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
                             ) {
                                 Text(
                                     text = contact,
@@ -10938,11 +10987,14 @@ private fun ColorPickerRow(
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(6.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
+            item(key = "$label-default") {
                 ColorSwatch(color = null, isSelected = selectedColor == null,
                     onClick = { onColorSelected(null) })
             }
-            items(COLOR_PALETTE) { argb ->
+            items(
+                items = COLOR_PALETTE,
+                key = { argb -> "$label-$argb" }
+            ) { argb ->
                 val color = Color(argb.toInt())
                 ColorSwatch(
                     color = color,
@@ -10957,11 +11009,12 @@ private fun ColorPickerRow(
 @Composable
 private fun ColorSwatch(color: Color?, isSelected: Boolean, onClick: () -> Unit) {
     val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val swatchColor = color ?: MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 1f)
     Box(
         modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
-            .background(color ?: MaterialTheme.colorScheme.surfaceVariant)
+            .background(swatchColor)
             .border(2.dp, borderColor, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -10989,31 +11042,10 @@ private fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = RootChromePanelShape
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth(),
-        shape = shape,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
-        ),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = rootChromePanelColor(MaterialTheme.colorScheme)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            content()
-        }
-    }
+    MrComicPanelCard(
+        title = title,
+        content = content
+    )
 }
 
 @Composable
@@ -11041,53 +11073,16 @@ private fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = shape
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = if (enabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    }
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (enabled) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
-                    }
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(
-                checked = checked,
-                enabled = enabled,
-                onCheckedChange = { value ->
-                    UIFeedback.playSelect()
-                    onCheckedChange(value)
-                }
-            )
+    MrComicSwitchRow(
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        enabled = enabled,
+        onCheckedChange = { value ->
+            UIFeedback.playSelect()
+            onCheckedChange(value)
         }
-    }
+    )
 }
 
 @Composable
@@ -11098,58 +11093,16 @@ private fun SettingsPickerTile(
     subtitle: String? = null,
     compact: Boolean = false
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                UIFeedback.playSelect()
-                onClick()
-            },
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = shape
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = if (compact) 10.dp else 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                if (!subtitle.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Spacer(Modifier.width(12.dp))
-            Row(
-                modifier = Modifier.widthIn(max = 220.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Text(
-                    value,
-                    modifier = Modifier.widthIn(max = 180.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.End
-                )
-                Icon(
-                    imageVector = Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
+    MrComicCompactValueRow(
+        title = title,
+        subtitle = subtitle,
+        value = value,
+        onClick = {
+            UIFeedback.playSelect()
+            onClick()
+        },
+        compact = compact
+    )
 }
 
 @Composable
@@ -11162,53 +11115,15 @@ private fun SettingsSliderTile(
     steps: Int = 0,
     subtitle: String? = null
 ) {
-    val shape = RoundedCornerShape(20.dp)
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(shape),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = shape
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleSmall)
-                    if (!subtitle.isNullOrBlank()) {
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    valueLabel,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                valueRange = valueRange,
-                steps = steps,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
+    MrComicSliderTile(
+        title = title,
+        valueLabel = valueLabel,
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        subtitle = subtitle
+    )
 }
 
 @Composable

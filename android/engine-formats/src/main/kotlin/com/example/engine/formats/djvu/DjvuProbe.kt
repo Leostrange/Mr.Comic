@@ -94,7 +94,10 @@ object DjvuProbe {
                 topLevelChunkIds += "FORM:$nestedFormType"
                 cursorOffset += 4
                 if (nestedFormType == FORM_DJVU) {
-                    val chunks = collectDirectChunks(input, chunkSize - 4)
+                    val payloadSize = chunkSize - 4
+                    if (payloadSize > Int.MAX_VALUE) break
+                    val pagePayload = input.readByteArray(payloadSize.toInt()) ?: break
+                    val chunks = collectDirectChunks(pagePayload.inputStream(), payloadSize)
                     pages += DjvuPlaceholderPage(
                         index = pages.size,
                         formType = nestedFormType,

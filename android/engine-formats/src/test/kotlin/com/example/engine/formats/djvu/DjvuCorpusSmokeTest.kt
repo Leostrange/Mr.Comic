@@ -13,6 +13,7 @@ class DjvuCorpusSmokeTest {
         val sample = locateSample("novaya_teoriya_razvitiya_obshchestva_bez_oshibok_marksa_i_le.djvu")
         val probe = sample.inputStream().use(DjvuProbe::probe)
         assertNotNull("Expected DjVu sample to be probeable", probe)
+        assertTrue("Expected bundled DjVu sample to expose all pages", probe!!.pageCount > 1)
     }
 
     @Test
@@ -89,8 +90,29 @@ class DjvuCorpusSmokeTest {
             pageInfo = page
         )
 
-        assertTrue("Expected scan-shaped DjVu page", html.contains("DjVu scan layer"))
+        assertTrue(
+            "Expected scan-shaped DjVu page",
+            html.contains("DjVu visual layer") ||
+                html.contains("композитными слоями", ignoreCase = true)
+        )
+        assertFalse(
+            "User-facing page should not expose missing-renderer wording",
+            html.contains("нужен", ignoreCase = true) ||
+                html.contains("renderer", ignoreCase = true)
+        )
         assertTrue("Expected JB2/Sjbz scan layer to be represented", html.contains("Sjbz"))
+        assertTrue(
+            "Expected composite DjVu page to require a native-capable renderer",
+            visualLayerPlan.requiresNativeCompositeRenderer
+        )
+        assertTrue(
+            "Expected unsupported features to name the JB2 mask",
+            visualLayerPlan.unsupportedRenderFeatures.any { it.contains("JB2 mask") }
+        )
+        assertTrue(
+            "Expected unsupported features to name shared includes",
+            visualLayerPlan.unsupportedRenderFeatures.any { it.contains("shared included chunks") }
+        )
         assertFalse(
             "OCR text must not become the primary reading surface for scanned DjVu",
             html.contains("Новая теория развития общества", ignoreCase = true)

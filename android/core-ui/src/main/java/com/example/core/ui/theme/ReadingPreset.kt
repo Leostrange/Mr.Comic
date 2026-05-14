@@ -1,5 +1,7 @@
 package com.example.core.ui.theme
 
+import com.example.core.ui.designsystem.MrComicReadingPresetTokens
+
 enum class ReadingPreset {
     CUSTOM,
     PAPER,
@@ -70,9 +72,9 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         backgroundColor = null
     )
     ReadingPreset.PAPER -> ReadingPresetStyle(
-        textColorScheme = "DAY",
-        fontFamily = "Literata",
-        lineHeight = 1.76f,
+        textColorScheme = MrComicReadingPresetTokens.paper.textColorScheme,
+        fontFamily = MrComicReadingPresetTokens.paper.fontFamily,
+        lineHeight = MrComicReadingPresetTokens.paper.lineHeight,
         letterSpacing = 0.01f,
         wordSpacing = 0.02f,
         paragraphSpacing = 0.32f,
@@ -83,14 +85,14 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         pageAnimation = "SLIDE",
         themeMode = ThemeMode.LIGHT,
         useAmoledDark = false,
-        primaryColor = 0xFF26415FL,
-        secondaryColor = 0xFF9A7241L,
-        backgroundColor = 0xFFF6F1E7L
+        primaryColor = MrComicReadingPresetTokens.paper.primaryArgb,
+        secondaryColor = MrComicReadingPresetTokens.paper.secondaryArgb,
+        backgroundColor = MrComicReadingPresetTokens.paper.backgroundArgb
     )
     ReadingPreset.SEPIA_BOOK -> ReadingPresetStyle(
-        textColorScheme = "SEPIA",
-        fontFamily = "Merriweather",
-        lineHeight = 1.84f,
+        textColorScheme = MrComicReadingPresetTokens.sepiaBook.textColorScheme,
+        fontFamily = MrComicReadingPresetTokens.sepiaBook.fontFamily,
+        lineHeight = MrComicReadingPresetTokens.sepiaBook.lineHeight,
         letterSpacing = 0.01f,
         wordSpacing = 0.03f,
         paragraphSpacing = 0.42f,
@@ -101,14 +103,14 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         pageAnimation = "SLIDE",
         themeMode = ThemeMode.LIGHT,
         useAmoledDark = false,
-        primaryColor = 0xFF7B5C34L,
-        secondaryColor = 0xFFB1844DL,
-        backgroundColor = 0xFFF4ECD8L
+        primaryColor = MrComicReadingPresetTokens.sepiaBook.primaryArgb,
+        secondaryColor = MrComicReadingPresetTokens.sepiaBook.secondaryArgb,
+        backgroundColor = MrComicReadingPresetTokens.sepiaBook.backgroundArgb
     )
     ReadingPreset.NEWSPAPER -> ReadingPresetStyle(
-        textColorScheme = "DAY",
-        fontFamily = "Roboto Slab",
-        lineHeight = 1.58f,
+        textColorScheme = MrComicReadingPresetTokens.newspaper.textColorScheme,
+        fontFamily = MrComicReadingPresetTokens.newspaper.fontFamily,
+        lineHeight = MrComicReadingPresetTokens.newspaper.lineHeight,
         letterSpacing = 0.02f,
         wordSpacing = 0.06f,
         paragraphSpacing = 0.18f,
@@ -119,14 +121,14 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         pageAnimation = "SLIDE",
         themeMode = ThemeMode.LIGHT,
         useAmoledDark = false,
-        primaryColor = 0xFF2F3F4FL,
-        secondaryColor = 0xFF6A7684L,
-        backgroundColor = 0xFFF1EEE7L
+        primaryColor = MrComicReadingPresetTokens.newspaper.primaryArgb,
+        secondaryColor = MrComicReadingPresetTokens.newspaper.secondaryArgb,
+        backgroundColor = MrComicReadingPresetTokens.newspaper.backgroundArgb
     )
     ReadingPreset.NIGHT_INK -> ReadingPresetStyle(
-        textColorScheme = "NIGHT",
-        fontFamily = "PT Serif",
-        lineHeight = 1.7f,
+        textColorScheme = MrComicReadingPresetTokens.nightInk.textColorScheme,
+        fontFamily = MrComicReadingPresetTokens.nightInk.fontFamily,
+        lineHeight = MrComicReadingPresetTokens.nightInk.lineHeight,
         letterSpacing = 0.01f,
         wordSpacing = 0.03f,
         paragraphSpacing = 0.3f,
@@ -137,14 +139,14 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         pageAnimation = "FADE",
         themeMode = ThemeMode.DARK,
         useAmoledDark = false,
-        primaryColor = 0xFFAEC8EFL,
-        secondaryColor = 0xFFD4B384L,
-        backgroundColor = 0xFF10161DL
+        primaryColor = MrComicReadingPresetTokens.nightInk.primaryArgb,
+        secondaryColor = MrComicReadingPresetTokens.nightInk.secondaryArgb,
+        backgroundColor = MrComicReadingPresetTokens.nightInk.backgroundArgb
     )
     ReadingPreset.OLED_BLACK -> ReadingPresetStyle(
-        textColorScheme = "NIGHT",
-        fontFamily = "Open Sans",
-        lineHeight = 1.68f,
+        textColorScheme = MrComicReadingPresetTokens.oledBlack.textColorScheme,
+        fontFamily = MrComicReadingPresetTokens.oledBlack.fontFamily,
+        lineHeight = MrComicReadingPresetTokens.oledBlack.lineHeight,
         letterSpacing = 0.01f,
         wordSpacing = 0.04f,
         paragraphSpacing = 0.28f,
@@ -155,14 +157,14 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         pageAnimation = "FADE",
         themeMode = ThemeMode.DARK,
         useAmoledDark = true,
-        primaryColor = 0xFFB8D3FFL,
-        secondaryColor = 0xFF7E8A99L,
-        backgroundColor = 0xFF000000L
+        primaryColor = MrComicReadingPresetTokens.oledBlack.primaryArgb,
+        secondaryColor = MrComicReadingPresetTokens.oledBlack.secondaryArgb,
+        backgroundColor = MrComicReadingPresetTokens.oledBlack.backgroundArgb
     )
     ReadingPreset.EINK -> ReadingPresetStyle(
-        textColorScheme = "DAY",
-        fontFamily = "Merriweather",
-        lineHeight = 1.9f,
+        textColorScheme = MrComicReadingPresetTokens.eink.textColorScheme,
+        fontFamily = MrComicReadingPresetTokens.eink.fontFamily,
+        lineHeight = MrComicReadingPresetTokens.eink.lineHeight,
         letterSpacing = 0f,
         wordSpacing = 0.04f,
         paragraphSpacing = 0.34f,
@@ -173,8 +175,8 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         pageAnimation = "NONE",
         themeMode = ThemeMode.LIGHT,
         useAmoledDark = false,
-        primaryColor = 0xFF111111L,
-        secondaryColor = 0xFF555555L,
-        backgroundColor = 0xFFFFFFFFL
+        primaryColor = MrComicReadingPresetTokens.eink.primaryArgb,
+        secondaryColor = MrComicReadingPresetTokens.eink.secondaryArgb,
+        backgroundColor = MrComicReadingPresetTokens.eink.backgroundArgb
     )
 }

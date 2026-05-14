@@ -2,6 +2,7 @@ package com.example.core.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -15,6 +16,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.example.core.ui.designsystem.MrComicColorTokens
+import com.example.core.ui.designsystem.MrComicRadiusTokens
 import com.example.core.ui.eink.LocalEInkMode
 
 enum class ThemeMode {
@@ -41,6 +44,90 @@ private fun Color.contentColorForBackground(): Color =
 
 private fun deriveContainerColor(base: Color, background: Color, isDark: Boolean): Color =
     lerp(background, base, if (isDark) 0.34f else 0.18f)
+
+fun argbLongToThemeColor(value: Long): Color {
+    val argb = if (value in 0x000000L..0x00FFFFFFL) {
+        value or 0xFF000000L
+    } else {
+        value
+    }
+    return Color(argb.toInt())
+}
+
+internal fun applyCustomThemeColors(
+    baseColorScheme: ColorScheme,
+    themeConfig: ThemeConfig,
+    isDarkTheme: Boolean
+): ColorScheme {
+    var result = baseColorScheme
+    val backgroundColor = themeConfig.customBackgroundColor?.let(::argbLongToThemeColor) ?: result.background
+    val surfaceBaseColor = themeConfig.customSurfaceColor?.let(::argbLongToThemeColor) ?: result.surface
+    val surfaceAnchorBackground = baseColorScheme.background
+    val surfaceAlpha = themeConfig.surfaceOpacity.coerceIn(0.35f, 1f)
+    val effectiveSurface = surfaceBaseColor.copy(alpha = surfaceAlpha)
+    val onBackground = backgroundColor.contentColorForBackground()
+    val onSurface = surfaceBaseColor.contentColorForBackground()
+
+    // Stored as unsigned ARGB (toUInt().toLong()), reconstruct via toInt() for Color(Int) constructor.
+    themeConfig.customPrimaryColor?.let {
+        val primary = argbLongToThemeColor(it)
+        val primaryContainer = deriveContainerColor(primary, backgroundColor, isDarkTheme)
+        result = result.copy(
+            primary = primary,
+            onPrimary = primary.contentColorForBackground(),
+            primaryContainer = primaryContainer,
+            onPrimaryContainer = primaryContainer.contentColorForBackground()
+        )
+    }
+    themeConfig.customSecondaryColor?.let {
+        val secondary = argbLongToThemeColor(it)
+        val secondaryContainer = deriveContainerColor(secondary, backgroundColor, isDarkTheme)
+        result = result.copy(
+            secondary = secondary,
+            onSecondary = secondary.contentColorForBackground(),
+            secondaryContainer = secondaryContainer,
+            onSecondaryContainer = secondaryContainer.contentColorForBackground()
+        )
+    }
+    if (themeConfig.customBackgroundColor != null) {
+        result = result.copy(
+            background = backgroundColor,
+            onBackground = onBackground
+        )
+    }
+    if (themeConfig.customSurfaceColor != null || themeConfig.surfaceOpacity < 0.999f) {
+        val surfaceVariant = lerp(effectiveSurface, onSurface, if (isDarkTheme) 0.14f else 0.08f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceDim = lerp(surfaceAnchorBackground, surfaceBaseColor, if (isDarkTheme) 0.78f else 0.9f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceBright = lerp(surfaceBaseColor, onSurface, if (isDarkTheme) 0.1f else 0.04f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceContainerLowest = lerp(surfaceAnchorBackground, surfaceBaseColor, if (isDarkTheme) 0.35f else 0.55f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceContainerLow = lerp(surfaceAnchorBackground, surfaceBaseColor, if (isDarkTheme) 0.5f else 0.68f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceContainer = lerp(surfaceAnchorBackground, surfaceBaseColor, if (isDarkTheme) 0.62f else 0.78f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceContainerHigh = lerp(surfaceAnchorBackground, surfaceBaseColor, if (isDarkTheme) 0.72f else 0.86f)
+            .copy(alpha = surfaceAlpha)
+        val surfaceContainerHighest = lerp(surfaceBaseColor, onSurface, if (isDarkTheme) 0.08f else 0.05f)
+            .copy(alpha = surfaceAlpha)
+        result = result.copy(
+            surfaceDim = surfaceDim,
+            surface = effectiveSurface,
+            surfaceBright = surfaceBright,
+            surfaceContainerLowest = surfaceContainerLowest,
+            surfaceContainerLow = surfaceContainerLow,
+            surfaceContainer = surfaceContainer,
+            surfaceContainerHigh = surfaceContainerHigh,
+            surfaceContainerHighest = surfaceContainerHighest,
+            onSurface = onSurface,
+            surfaceVariant = surfaceVariant,
+            onSurfaceVariant = surfaceVariant.contentColorForBackground()
+        )
+    }
+    return result
+}
 
 /**
  * High-contrast grayscale color scheme for e-ink / e-paper displays.
@@ -69,64 +156,78 @@ private val EInkColorScheme = lightColorScheme(
     onError              = Color.White,
 )
 
-private val InkPaperLightColorScheme = lightColorScheme(
-    primary = Color(0xFF26415F),
-    onPrimary = Color(0xFFFFFBF5),
-    primaryContainer = Color(0xFFDCE7F6),
-    onPrimaryContainer = Color(0xFF10243D),
-    secondary = Color(0xFF9A7241),
-    onSecondary = Color(0xFFFFF8EF),
-    secondaryContainer = Color(0xFFF2E3CC),
-    onSecondaryContainer = Color(0xFF3A2710),
-    tertiary = Color(0xFF50684B),
-    onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFD7E8CF),
-    onTertiaryContainer = Color(0xFF10200D),
-    background = Color(0xFFF6F1E7),
-    onBackground = Color(0xFF1B1B18),
-    surface = Color(0xFFFFFBF5),
-    onSurface = Color(0xFF1B1B18),
-    surfaceVariant = Color(0xFFE7DED0),
-    onSurfaceVariant = Color(0xFF4C473F),
-    outline = Color(0xFF7C756A),
-    outlineVariant = Color(0xFFCBC3B8),
-    error = Color(0xFFB3261E),
-    onError = Color.White,
-    errorContainer = Color(0xFFF9DEDC),
-    onErrorContainer = Color(0xFF410E0B)
-)
+private val InkPaperLightColorScheme = MrComicColorTokens.inkPaperLight.let { p ->
+    lightColorScheme(
+        primary = p.primary,
+        onPrimary = p.onPrimary,
+        primaryContainer = p.primaryContainer,
+        onPrimaryContainer = p.onPrimaryContainer,
+        secondary = p.secondary,
+        onSecondary = p.onSecondary,
+        secondaryContainer = p.secondaryContainer,
+        onSecondaryContainer = p.onSecondaryContainer,
+        tertiary = p.tertiary,
+        onTertiary = p.onTertiary,
+        tertiaryContainer = p.tertiaryContainer,
+        onTertiaryContainer = p.onTertiaryContainer,
+        background = p.background,
+        onBackground = p.onBackground,
+        surface = p.surface,
+        onSurface = p.onSurface,
+        surfaceVariant = p.surfaceVariant,
+        onSurfaceVariant = p.onSurfaceVariant,
+        surfaceContainerLowest  = p.surfaceContainerLowest,
+        surfaceContainerLow     = p.surfaceContainerLow,
+        surfaceContainer        = p.surfaceContainer,
+        surfaceContainerHigh    = p.surfaceContainerHigh,
+        surfaceContainerHighest = p.surfaceContainerHighest,
+        outline = p.outline,
+        outlineVariant = p.outlineVariant,
+        error = p.error,
+        onError = p.onError,
+        errorContainer = p.errorContainer,
+        onErrorContainer = p.onErrorContainer
+    )
+}
 
-private val InkPaperDarkColorScheme = darkColorScheme(
-    primary = Color(0xFFAEC8EF),
-    onPrimary = Color(0xFF10243D),
-    primaryContainer = Color(0xFF294567),
-    onPrimaryContainer = Color(0xFFDCE7F6),
-    secondary = Color(0xFFE6C79B),
-    onSecondary = Color(0xFF463117),
-    secondaryContainer = Color(0xFF5D4422),
-    onSecondaryContainer = Color(0xFFF7E3CC),
-    tertiary = Color(0xFFB7CFB1),
-    onTertiary = Color(0xFF243421),
-    tertiaryContainer = Color(0xFF384D34),
-    onTertiaryContainer = Color(0xFFD7E8CF),
-    background = Color(0xFF10161D),
-    onBackground = Color(0xFFE8E1D4),
-    surface = Color(0xFF151C24),
-    onSurface = Color(0xFFE8E1D4),
-    surfaceVariant = Color(0xFF3A444F),
-    onSurfaceVariant = Color(0xFFC0C7CF),
-    outline = Color(0xFF89929B),
-    outlineVariant = Color(0xFF414B55),
-    error = Color(0xFFF2B8B5),
-    onError = Color(0xFF601410),
-    errorContainer = Color(0xFF8C1D18),
-    onErrorContainer = Color(0xFFF9DEDC)
-)
+private val InkPaperDarkColorScheme = MrComicColorTokens.inkPaperDark.let { p ->
+    darkColorScheme(
+        primary = p.primary,
+        onPrimary = p.onPrimary,
+        primaryContainer = p.primaryContainer,
+        onPrimaryContainer = p.onPrimaryContainer,
+        secondary = p.secondary,
+        onSecondary = p.onSecondary,
+        secondaryContainer = p.secondaryContainer,
+        onSecondaryContainer = p.onSecondaryContainer,
+        tertiary = p.tertiary,
+        onTertiary = p.onTertiary,
+        tertiaryContainer = p.tertiaryContainer,
+        onTertiaryContainer = p.onTertiaryContainer,
+        background = p.background,
+        onBackground = p.onBackground,
+        surface = p.surface,
+        onSurface = p.onSurface,
+        surfaceVariant = p.surfaceVariant,
+        onSurfaceVariant = p.onSurfaceVariant,
+        surfaceContainerLowest  = p.surfaceContainerLowest,
+        surfaceContainerLow     = p.surfaceContainerLow,
+        surfaceContainer        = p.surfaceContainer,
+        surfaceContainerHigh    = p.surfaceContainerHigh,
+        surfaceContainerHighest = p.surfaceContainerHighest,
+        outline = p.outline,
+        outlineVariant = p.outlineVariant,
+        error = p.error,
+        onError = p.onError,
+        errorContainer = p.errorContainer,
+        onErrorContainer = p.onErrorContainer
+    )
+}
 
 @Composable
 fun MrComicTheme(
     themeConfig: ThemeConfig = ThemeConfig(),
-    cornerRadius: Int = 12,
+    cornerRadius: Int = MrComicRadiusTokens.DefaultCornerRadius,
     content: @Composable () -> Unit
 ) {
     val isEInk = LocalEInkMode.current
@@ -160,76 +261,11 @@ fun MrComicTheme(
             else -> InkPaperLightColorScheme
         }
 
-        // Apply per-element custom colors on top of the base scheme
-        baseColorScheme.let { s ->
-            var result = s
-            val isDarkTheme = darkTheme || themeConfig.useAmoledDark
-            val backgroundColor = themeConfig.customBackgroundColor?.let { Color(it.toInt()) } ?: result.background
-            val surfaceBaseColor = themeConfig.customSurfaceColor?.let { Color(it.toInt()) }
-                ?: lerp(backgroundColor, if (isDarkTheme) Color.White else Color.Black, if (isDarkTheme) 0.06f else 0.03f)
-            val surfaceAlpha = themeConfig.surfaceOpacity.coerceIn(0.35f, 1f)
-            val effectiveSurface = surfaceBaseColor.copy(alpha = surfaceAlpha)
-            val onBackground = backgroundColor.contentColorForBackground()
-            val onSurface = surfaceBaseColor.contentColorForBackground()
-
-            // Stored as unsigned ARGB (toUInt().toLong()), reconstruct via toInt() for Color(Int) constructor
-            themeConfig.customPrimaryColor?.let {
-                val primary = Color(it.toInt())
-                val primaryContainer = deriveContainerColor(primary, backgroundColor, isDarkTheme)
-                result = result.copy(
-                    primary = primary,
-                    onPrimary = primary.contentColorForBackground(),
-                    primaryContainer = primaryContainer,
-                    onPrimaryContainer = primaryContainer.contentColorForBackground()
-                )
-            }
-            themeConfig.customSecondaryColor?.let {
-                val secondary = Color(it.toInt())
-                val secondaryContainer = deriveContainerColor(secondary, backgroundColor, isDarkTheme)
-                result = result.copy(
-                    secondary = secondary,
-                    onSecondary = secondary.contentColorForBackground(),
-                    secondaryContainer = secondaryContainer,
-                    onSecondaryContainer = secondaryContainer.contentColorForBackground()
-                )
-            }
-            if (themeConfig.customBackgroundColor != null || themeConfig.customSurfaceColor != null || themeConfig.surfaceOpacity < 0.999f) {
-                val surfaceVariant = lerp(effectiveSurface, onSurface, if (isDarkTheme) 0.14f else 0.08f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceDim = lerp(backgroundColor, surfaceBaseColor, if (isDarkTheme) 0.78f else 0.9f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceBright = lerp(surfaceBaseColor, onSurface, if (isDarkTheme) 0.1f else 0.04f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceContainerLowest = lerp(backgroundColor, surfaceBaseColor, if (isDarkTheme) 0.35f else 0.55f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceContainerLow = lerp(backgroundColor, surfaceBaseColor, if (isDarkTheme) 0.5f else 0.68f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceContainer = lerp(backgroundColor, surfaceBaseColor, if (isDarkTheme) 0.62f else 0.78f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceContainerHigh = lerp(backgroundColor, surfaceBaseColor, if (isDarkTheme) 0.72f else 0.86f)
-                    .copy(alpha = surfaceAlpha)
-                val surfaceContainerHighest = lerp(surfaceBaseColor, onSurface, if (isDarkTheme) 0.08f else 0.05f)
-                    .copy(alpha = surfaceAlpha)
-                result = result.copy(
-                    background = backgroundColor,
-                    onBackground = onBackground,
-                    surfaceDim = surfaceDim,
-                    surface = effectiveSurface,
-                    surfaceBright = surfaceBright,
-                    surfaceContainerLowest = surfaceContainerLowest,
-                    surfaceContainerLow = surfaceContainerLow,
-                    surfaceContainer = surfaceContainer,
-                    surfaceContainerHigh = surfaceContainerHigh,
-                    surfaceContainerHighest = surfaceContainerHighest,
-                    onSurface = onSurface,
-                    surfaceVariant = surfaceVariant,
-                    onSurfaceVariant = surfaceVariant.contentColorForBackground(),
-                    outline = lerp(backgroundColor, onBackground, if (isDarkTheme) 0.48f else 0.28f),
-                    outlineVariant = lerp(backgroundColor, onBackground, if (isDarkTheme) 0.28f else 0.16f)
-                )
-            }
-            result
-        }
+        applyCustomThemeColors(
+            baseColorScheme = baseColorScheme,
+            themeConfig = themeConfig,
+            isDarkTheme = darkTheme || themeConfig.useAmoledDark
+        )
     }
 
     val r = cornerRadius.dp
@@ -243,6 +279,7 @@ fun MrComicTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = MrComicTypography,
         shapes = shapes,
         content = content
     )

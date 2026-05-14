@@ -730,6 +730,18 @@ class LibraryViewModel @Inject constructor(
         applyFiltersAndSort()
     }
 
+    fun showAllFiles() {
+        _uiState.update {
+            it.copy(
+                contentSection = LibraryContentSection.FILES,
+                statusFilter = LibraryStatusFilter.ALL,
+                formatFilter = LibraryFormatFilter.ALL,
+                currentFolderPath = null
+            )
+        }
+        applyFiltersAndSort()
+    }
+
     fun setFormatFilter(filter: LibraryFormatFilter) {
         _uiState.update { it.copy(formatFilter = filter) }
         applyFiltersAndSort()
@@ -1020,11 +1032,21 @@ class LibraryViewModel @Inject constructor(
 
     private suspend fun repairMissingAudiobookCovers(audiobooks: List<Audiobook>) {
         audiobooks
-            .filter { repairedAudiobookCoverIds.add(it.id) }
             .forEach { audiobook ->
+                val hasValidStoredCover = audiobook.coverUri
+                    ?.takeIf { cover -> runCatching { android.net.Uri.parse(cover) }.isSuccess }
+                    ?.let { AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook) == audiobook.coverUri }
+                    ?: false
+                if (hasValidStoredCover) {
+                    return@forEach
+                }
+                if (audiobook.id in repairedAudiobookCoverIds) return@forEach
                 val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
                 if (!resolvedCover.isNullOrBlank() && resolvedCover != audiobook.coverUri) {
                     audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover))
+                    repairedAudiobookCoverIds += audiobook.id
+                } else {
+                    repairedAudiobookCoverIds.remove(audiobook.id)
                 }
             }
     }

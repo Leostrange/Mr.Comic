@@ -17,10 +17,14 @@ import com.example.engine.formats.base.decodeBitmapFromByteArray
 import com.example.engine.formats.archive.ArchiveContentKind
 import com.example.engine.formats.archive.ArchiveFormatSupport
 import com.example.engine.formats.epub.EpubFormatReader
+import com.example.engine.formats.fb2.Fb2FormatReader
+import com.example.engine.formats.text.DocxFormatReader
 import com.example.engine.formats.text.HtmlFormatReader
 import com.example.engine.formats.text.MarkdownFormatReader
 import com.example.engine.formats.text.MobiFormatReader
+import com.example.engine.formats.text.OdtFormatReader
 import com.example.engine.formats.text.PlainTextFormatReader
+import com.example.engine.formats.text.RtfFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -49,13 +53,22 @@ class TarFormatReader(
         private const val TAG = "TarFormatReader"
     }
 
-    private data class TarEntryData(
-        val name: String,
-        val bytes: ByteArray
-    )
-
     private var tempTextFile: File? = null
-    private val textDelegate: FormatReader? by lazy { createTextDelegateIfPresent() }
+
+    // Lightweight classification — reads TAR headers only (sequential name scan, no data extraction).
+    private val archiveContentKind: ArchiveContentKind by lazy { classifyArchiveContent() }
+
+    private fun classifyArchiveContent(): ArchiveContentKind = try {
+        ArchiveFormatSupport.classify(readEntryNames())
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to classify archive content", e)
+        ArchiveContentKind.UNSUPPORTED
+    }
+
+    private val textDelegate: FormatReader? by lazy {
+        if (archiveContentKind != ArchiveContentKind.SINGLE_BOOK) null
+        else createTextDelegateIfPresent()
+    }
 
     // All image bytes extracted once, sorted by entry name (alphabetical = page order)
     private val pages: List<ByteArray> by lazy {
@@ -121,28 +134,39 @@ class TarFormatReader(
     override fun getTableOfContents(): List<TocEntry> =
         textDelegate?.getTableOfContents().orEmpty()
 
+    override fun rendersHtmlContent(): Boolean =
+        archiveContentKind == ArchiveContentKind.SINGLE_BOOK
+
     override fun close() {
         runCatching { textDelegate?.close() }
-        tempTextFile?.let { runCatching { it.delete() } }
         tempTextFile = null
     }
 
     private fun createTextDelegateIfPresent(): FormatReader? {
         return try {
-            val entries = readEntries()
-            if (ArchiveFormatSupport.classify(entries.map { it.name }) != ArchiveContentKind.SINGLE_BOOK) return null
-            val textEntries = entries.filter { isText(it.name) }
+            val entryNames = readEntryNames()
+            if (ArchiveFormatSupport.classify(entryNames) != ArchiveContentKind.SINGLE_BOOK) return null
+            val textEntries = entryNames.filter(::isText)
             if (textEntries.isEmpty()) return null
             val textEntry = textEntries
-                .sortedWith(compareBy(ArchiveFormatSupport.naturalPathComparator) { it.name })
+                .sortedWith(ArchiveFormatSupport.naturalPathComparator)
                 .first()
-            val extension = textEntry.name.substringAfterLast('.', "").lowercase(Locale.US)
+            val extension = textEntry.substringAfterLast('.', "").lowercase(Locale.US)
             val textFormat = textFormatForExtension(extension) ?: return null
+            val textBytes = readEntryBytes(textEntry) ?: return null
             val extracted = File(
                 archiveCacheDir("archive_text_cache"),
-                "tar_${path.hashCode()}_${System.currentTimeMillis()}_${safeArchiveName(textEntry.name, extension)}"
+                ArchiveFormatSupport.textCacheFileName(
+                    prefix = "tar",
+                    archiveKey = path,
+                    entryName = textEntry,
+                    entrySize = textBytes.size.toLong(),
+                    extension = extension
+                )
             )
-            extracted.outputStream().use { it.write(textEntry.bytes) }
+            if (!extracted.exists() || extracted.length() != textBytes.size.toLong()) {
+                extracted.outputStream().use { it.write(textBytes) }
+            }
             tempTextFile = extracted
             when (textFormat) {
                 ComicFormat.EPUB -> EpubFormatReader(
@@ -156,6 +180,10 @@ class TarFormatReader(
                 ComicFormat.TXT -> PlainTextFormatReader(context, extracted.absolutePath)
                 ComicFormat.HTML -> HtmlFormatReader(context, extracted.absolutePath)
                 ComicFormat.MARKDOWN -> MarkdownFormatReader(context, extracted.absolutePath)
+                ComicFormat.FB2 -> Fb2FormatReader(context, extracted.absolutePath)
+                ComicFormat.RTF -> RtfFormatReader(context, extracted.absolutePath)
+                ComicFormat.DOCX -> DocxFormatReader(context, extracted.absolutePath)
+                ComicFormat.ODT -> OdtFormatReader(context, extracted.absolutePath)
                 else -> TextFormatReader(context, extracted.absolutePath, textFormat)
             }
         } catch (e: Exception) {
@@ -164,20 +192,37 @@ class TarFormatReader(
         }
     }
 
-    private fun readEntries(): List<TarEntryData> {
+    private fun readEntryNames(): List<String> {
         return openStream()?.use { raw ->
             TarArchiveInputStream(raw).use { tis ->
-                val entries = mutableListOf<TarEntryData>()
+                val names = mutableListOf<String>()
                 var entry = tis.nextEntry
                 while (entry != null) {
                     if (!entry.isDirectory) {
-                        entries += TarEntryData(entry.name ?: "", tis.readBytes())
+                        entry.name?.takeIf { it.isNotBlank() }?.let(names::add)
                     }
                     entry = tis.nextEntry
                 }
-                entries
+                names
             }
         }.orEmpty()
+    }
+
+    private fun readEntryBytes(targetName: String): ByteArray? {
+        var result: ByteArray? = null
+        return openStream()?.use { raw ->
+            TarArchiveInputStream(raw).use { tis ->
+                var entry = tis.nextEntry
+                while (entry != null && result == null) {
+                    if (!entry.isDirectory && entry.name == targetName) {
+                        result = tis.readBytes()
+                    } else {
+                        entry = tis.nextEntry
+                    }
+                }
+                result
+            }
+        }
     }
 
     private fun openStream(): InputStream? = try {
@@ -204,9 +249,6 @@ class TarFormatReader(
             ?: File(System.getProperty("java.io.tmpdir"), "mrcomic_engine_formats")
         return File(base, name).apply { mkdirs() }
     }
-
-    private fun safeArchiveName(name: String, extension: String): String =
-        ArchiveFormatSupport.safeArchiveName(name, extension)
 
     private fun ByteArray.isBitmapBytes(): Boolean {
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

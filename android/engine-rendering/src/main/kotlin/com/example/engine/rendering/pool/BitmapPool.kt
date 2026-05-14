@@ -48,7 +48,8 @@ class BitmapPool @Inject constructor(
     @Suppress("DEPRECATION")
     override fun trimMemory(level: Int) {
         when {
-            level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> clear()
+            level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN -> return
+            level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> clear()
             level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> trimToSize((maxSize / 2).coerceAtLeast(0))
         }
     }

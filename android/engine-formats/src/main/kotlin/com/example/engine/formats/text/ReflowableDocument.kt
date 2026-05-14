@@ -10,7 +10,10 @@ import org.jsoup.nodes.TextNode
 
 internal data class ReflowableDocument(
     val pages: List<String>,
-    val toc: List<TocEntry> = emptyList()
+    val toc: List<TocEntry> = emptyList(),
+    val anchorPageIndex: Map<String, Int> = emptyMap(),
+    val hrefToPage: Map<String, Int> = emptyMap(),
+    val footnoteMap: Map<String, String> = emptyMap()
 ) {
     val pageCount: Int get() = pages.size.coerceAtLeast(1)
 
@@ -19,7 +22,28 @@ internal data class ReflowableDocument(
 }
 
 internal object ReflowableDocumentBuilder {
-    private const val CHARS_PER_PAGE = 2200
+    // Backend fragments are the stable reader pages for PAGE mode. WebView
+    // column pagination is only a safety net for occasional overflow; if these
+    // fragments span several screens, the last internal column exposes a seam
+    // where the next backend fragment starts from a new paragraph.
+    private const val PAGE_LAYOUT_UNITS = 2_700
+    private const val LAYOUT_UNITS_PER_LINE = 100
+    private const val READER_TEXT_CHARS_PER_LINE = 38
+    private const val READER_HEADING_CHARS_PER_LINE = 28
+    private const val READER_PARAGRAPH_INDENT_COLUMNS = 4
+    private const val TEXT_CHARS_PER_PAGE = 1_350
+    private const val MIN_REMAINDER_LAYOUT_UNITS = 100
+    private const val MIN_SPLIT_TEXT_CHARS = 34
+    private const val MIN_PAGE_FILL_REMAINDER_UNITS = 220
+    private const val MIN_PAGE_FILL_TEXT_CHARS = 72
+    private const val MIN_ORPHAN_TEXT_CHARS = 80
+    private const val MIN_STANDALONE_PAGE_TEXT_CHARS = 300
+    private const val MIN_SECTION_BREAK_CURRENT_UNITS = PAGE_LAYOUT_UNITS / 3
+    private const val PAGE_FILL_LAYOUT_UNITS = PAGE_LAYOUT_UNITS
+    private const val PAGE_FILL_TEXT_TARGET = 1_050
+    private const val TITLE_PAGE_FILL_TEXT_TARGET = 820
+    private const val MAX_REBALANCED_PAGE_TEXT_CHARS = 2_200
+    private const val IMAGE_BLOCK_LAYOUT_UNITS = 2400
     private const val FORCED_PAGEBREAK_MARKER = "<hr data-mrcomic-pagebreak=\"true\"/>"
     private val READER_BLOCK_TAGS = setOf(
         "p", "div", "section", "article", "blockquote", "pre",
@@ -28,6 +52,9 @@ internal object ReflowableDocumentBuilder {
         "h1", "h2", "h3", "h4", "h5", "h6", "img"
     )
     private val READER_CONTAINER_TAGS = setOf("body", "main", "div", "section", "article", "aside")
+    private val NARROW_READER_CHARS = setOf(
+        '.', ',', ':', ';', '!', '?', '\'', '"', '\u2019', '\u201D', '\u00AB', '\u00BB'
+    )
 
     fun fromPlainText(text: String, baseCss: String = READER_MOBI_DOCUMENT_CSS): ReflowableDocument {
         val blocks = textBlocks(text)
@@ -66,21 +93,67 @@ internal object ReflowableDocumentBuilder {
     }
 
     private fun paginateBlocks(blocks: List<String>, baseCss: String): List<String> {
-        val pages = mutableListOf<String>()
+        val pageBodySegments = mutableListOf<MutableList<String>>(mutableListOf())
         val current = StringBuilder()
         var currentLength = 0
-        blocks.forEach { block ->
-            val blockTextLength = block.visibleTextLength()
-            if (current.isNotEmpty() && currentLength + blockTextLength > CHARS_PER_PAGE) {
-                pages += wrapBody(current.toString(), baseCss)
+
+        fun flushPage() {
+            if (current.isNotEmpty()) {
+                pageBodySegments.last() += current.toString()
                 current.clear()
                 currentLength = 0
             }
-            current.append(block)
-            currentLength += blockTextLength
         }
-        if (current.isNotEmpty()) pages += wrapBody(current.toString(), baseCss)
-        return pages.ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
+
+        fun startNewSegment() {
+            if (pageBodySegments.last().isNotEmpty()) {
+                pageBodySegments.add(mutableListOf())
+            }
+        }
+
+        fun appendBlock(block: String) {
+            if (block == FORCED_PAGEBREAK_MARKER) {
+                flushPage()
+                startNewSegment()
+                return
+            }
+            if (current.isNotEmpty() && block.isReaderSectionStartBlock()) {
+                flushPage()
+                startNewSegment()
+            }
+            val blockLayoutCost = block.readerLayoutCost()
+            if (current.isNotEmpty() && currentLength + blockLayoutCost > PAGE_LAYOUT_UNITS) {
+                flushPage()
+            }
+            current.append(block)
+            currentLength += blockLayoutCost
+        }
+
+        blocks.flatMap(::splitOversizedMarkupBlock).forEach { block ->
+            val blockTextLength = block.visibleTextLength()
+            val remaining = PAGE_LAYOUT_UNITS - currentLength
+            val firstChunkTextBudget = block.readerTextBudgetForLayoutUnits(remaining)
+            val splitForRemainder = if (
+                current.isNotEmpty() &&
+                remaining >= MIN_REMAINDER_LAYOUT_UNITS &&
+                firstChunkTextBudget >= MIN_SPLIT_TEXT_CHARS &&
+                blockTextLength > firstChunkTextBudget
+            ) {
+                splitTextMarkupBlock(block, firstChunkTextBudget, TEXT_CHARS_PER_PAGE)
+            } else {
+                null
+            }
+
+            if (splitForRemainder != null) {
+                splitForRemainder.forEach(::appendBlock)
+            } else {
+                appendBlock(block)
+            }
+        }
+        flushPage()
+        return normalizePageBodySegments(pageBodySegments)
+            .map { wrapBody(it, baseCss) }
+            .ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
     }
 
     private fun splitReaderDocument(html: String, baseCss: String): List<String> {
@@ -142,56 +215,234 @@ internal object ReflowableDocumentBuilder {
     }
 
     private fun paginateMarkupBlocks(blocks: List<String>, baseCss: String): List<String> {
-        val pages = mutableListOf<String>()
+        val pageBodySegments = mutableListOf<MutableList<String>>(mutableListOf())
         val current = StringBuilder()
         var currentLength = 0
 
         fun flushPage() {
             if (current.isNotEmpty()) {
-                pages += wrapBody(current.toString(), baseCss)
+                pageBodySegments.last() += current.toString()
                 current.clear()
                 currentLength = 0
             }
         }
 
-        blocks.flatMap(::splitOversizedMarkupBlock).forEach { block ->
+        fun startNewSegment() {
+            if (pageBodySegments.last().isNotEmpty()) {
+                pageBodySegments.add(mutableListOf())
+            }
+        }
+
+        fun appendBlock(block: String) {
             if (block == FORCED_PAGEBREAK_MARKER) {
                 flushPage()
-                return@forEach
+                startNewSegment()
+                return
             }
-            val blockLength = block.visibleTextLength().coerceAtLeast(1)
-            if (current.isNotEmpty() && currentLength + blockLength > CHARS_PER_PAGE) {
+            if (current.isNotEmpty() && block.isReaderSectionStartBlock()) {
+                flushPage()
+                startNewSegment()
+            }
+            val blockLayoutCost = block.readerLayoutCost()
+            if (current.isNotEmpty() && currentLength + blockLayoutCost > PAGE_LAYOUT_UNITS) {
                 flushPage()
             }
             current.append(block)
-            currentLength += blockLength
+            currentLength += blockLayoutCost
+        }
+
+        blocks.flatMap(::splitOversizedMarkupBlock).forEach { block ->
+            if (block == FORCED_PAGEBREAK_MARKER) {
+                appendBlock(block)
+                return@forEach
+            }
+            val blockLength = block.visibleTextLength().coerceAtLeast(1)
+            val remaining = PAGE_LAYOUT_UNITS - currentLength
+            val firstChunkTextBudget = block.readerTextBudgetForLayoutUnits(remaining)
+            val splitForRemainder = if (
+                current.isNotEmpty() &&
+                remaining >= MIN_REMAINDER_LAYOUT_UNITS &&
+                firstChunkTextBudget >= MIN_SPLIT_TEXT_CHARS &&
+                blockLength > firstChunkTextBudget
+            ) {
+                splitTextMarkupBlock(block, firstChunkTextBudget, TEXT_CHARS_PER_PAGE)
+            } else {
+                null
+            }
+
+            if (splitForRemainder != null) {
+                splitForRemainder.forEach(::appendBlock)
+            } else {
+                appendBlock(block)
+            }
         }
 
         flushPage()
-        return pages.ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
+        return normalizePageBodySegments(pageBodySegments)
+            .map { wrapBody(it, baseCss) }
+            .ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
+    }
+
+    private fun normalizePageBodySegments(pageBodySegments: List<List<String>>): List<String> =
+        pageBodySegments
+            .filter { it.isNotEmpty() }
+            .flatMap(::normalizePageBodies)
+
+    private fun normalizePageBodies(pageBodies: List<String>): List<String> {
+        if (pageBodies.size < 2) return pageBodies
+        return rebalanceShortPageBodies(
+            fillUnderfilledPageBodies(
+                rebalanceShortPageBodies(pageBodies)
+            )
+        )
     }
 
     private fun splitOversizedMarkupBlock(block: String): List<String> {
         if (block == FORCED_PAGEBREAK_MARKER) return listOf(block)
-        if (block.visibleTextLength() <= CHARS_PER_PAGE * 2) return listOf(block)
+        if (block.visibleTextLength() <= TEXT_CHARS_PER_PAGE &&
+            block.readerLayoutCost() <= PAGE_LAYOUT_UNITS
+        ) {
+            return listOf(block)
+        }
 
-        return runCatching {
-            val body = Jsoup.parseBodyFragment(block).body()
-            val root = body.children().firstOrNull()
-            val text = body.text().trim()
-            if (text.length <= CHARS_PER_PAGE * 2) return@runCatching listOf(block)
+        val firstChunkTextBudget = block.readerTextBudgetForLayoutUnits(PAGE_LAYOUT_UNITS)
+            .coerceIn(MIN_SPLIT_TEXT_CHARS, TEXT_CHARS_PER_PAGE)
+        return splitTextMarkupBlock(
+            block = block,
+            firstChunkSize = firstChunkTextBudget,
+            subsequentChunkSize = TEXT_CHARS_PER_PAGE
+        ) ?: listOf(block)
+    }
 
-            val tag = root?.normalName()?.takeIf { it.isNotBlank() } ?: "p"
-            val attrs = root?.attributes()
-                ?.joinToString(" ") { attr -> """${attr.key}="${escapeHtml(attr.value)}"""" }
-                ?.takeIf { it.isNotBlank() }
-                ?.let { " $it" }
-                .orEmpty()
+    private fun splitTextMarkupBlock(
+        block: String,
+        firstChunkSize: Int,
+        subsequentChunkSize: Int
+    ): List<String>? = runCatching {
+        val body = Jsoup.parseBodyFragment(block).body()
+        val root = body.children().firstOrNull()
+        if (root != null && !isSplittableTextBlock(root)) return@runCatching null
 
-            splitTextIntoReaderChunks(text, CHARS_PER_PAGE).map { chunk ->
-                "<$tag$attrs>${escapeHtml(chunk)}</$tag>"
+        val text = body.text().trim()
+        if (text.length <= firstChunkSize) return@runCatching null
+
+        val tag = root?.normalName()?.takeIf { it.isNotBlank() } ?: "p"
+        val attrs = root?.attributes()
+            ?.joinToString(" ") { attr -> """${attr.key}="${escapeHtml(attr.value)}"""" }
+            ?.takeIf { it.isNotBlank() }
+            ?.let { " $it" }
+            .orEmpty()
+
+        // Split the child nodes while preserving inline HTML elements (a, strong, em, etc.)
+        val htmlChunks = splitChildNodesToHtmlChunks(
+            parent = root ?: body,
+            firstChunkSize = firstChunkSize,
+            subsequentChunkSize = subsequentChunkSize
+        ) ?: return@runCatching null
+
+        htmlChunks
+            .filter { it.isNotBlank() }
+            .map { htmlChunk -> "<$tag$attrs>$htmlChunk</$tag>" }
+            .takeIf { it.size > 1 }
+    }.getOrNull()
+
+    /**
+     * Splits the direct children of [parent] into HTML chunks of approximately
+     * [firstChunkSize] / [subsequentChunkSize] visible text characters each.
+     * Inline elements (a, strong, em, …) are kept whole — never split mid-tag.
+     * Text nodes are split at word boundaries.
+     */
+    private fun splitChildNodesToHtmlChunks(
+        parent: Element,
+        firstChunkSize: Int,
+        subsequentChunkSize: Int
+    ): List<String>? {
+        val chunks = mutableListOf<String>()
+        val current = StringBuilder()
+        var charCount = 0
+        var budget = firstChunkSize
+
+        fun flushChunk() {
+            chunks += current.toString()
+            current.clear()
+            charCount = 0
+            budget = subsequentChunkSize
+        }
+
+        for (child in parent.childNodes()) {
+            when (child) {
+                is TextNode -> {
+                    var text = child.text()
+                    while (text.isNotEmpty()) {
+                        val available = budget - charCount
+                        if (text.length <= available) {
+                            current.append(escapeHtml(text))
+                            charCount += text.length
+                            break
+                        }
+                        // Find a word boundary within the available window
+                        val boundary = text.lastIndexOf(' ', (available - 1).coerceAtLeast(0))
+                            .let { if (it > 0) it else available.coerceAtMost(text.length) }
+                        current.append(escapeHtml(text.substring(0, boundary).trimEnd()))
+                        flushChunk()
+                        text = text.substring(boundary).trimStart()
+                    }
+                }
+                is Element -> {
+                    val childTextLen = child.text().length
+                    val available = budget - charCount
+                    // If element doesn't fit and we have enough content, flush to a new chunk first
+                    if (charCount > 0 && childTextLen > available && charCount >= budget / 2) {
+                        flushChunk()
+                    }
+                    current.append(child.outerHtml())
+                    charCount += childTextLen
+                    // If this element pushed us over budget, flush
+                    if (charCount >= budget) flushChunk()
+                }
             }
-        }.getOrElse { listOf(block) }
+        }
+
+        val remaining = current.toString()
+        if (remaining.isNotBlank()) chunks += remaining
+
+        // Merge trailing orphan chunk using visible text length (not raw string length)
+        val merged = if (chunks.size >= 2) {
+            val last = chunks.last()
+            if (last.visibleTextLength() in 1 until MIN_ORPHAN_TEXT_CHARS) {
+                chunks.toMutableList().also {
+                    it[it.lastIndex - 1] = "${it[it.lastIndex - 1]} ${it.last()}"
+                    it.removeAt(it.lastIndex)
+                }
+            } else chunks
+        } else chunks
+
+        return merged.takeIf { it.size > 1 }
+    }
+
+    private fun isSplittableTextBlock(element: Element): Boolean {
+        val tag = element.normalName()
+        if (tag !in setOf("p", "div")) return false
+        return element.children().none { child ->
+            child.normalName() in READER_BLOCK_TAGS && child.normalName() !in setOf(
+                "span", "a", "strong", "em", "b", "i", "u", "sup", "sub", "font", "small", "big"
+            )
+        }
+    }
+
+    private fun splitTextAtBoundary(text: String, maxChars: Int): Pair<String, String>? {
+        if (text.length <= maxChars) return null
+        val targetEnd = maxChars.coerceIn(1, text.length)
+        var boundary = targetEnd
+        if (targetEnd < text.length) {
+            val whitespaceBoundary = text.lastIndexOf(' ', startIndex = targetEnd - 1)
+            if (whitespaceBoundary > maxChars / 2) {
+                boundary = whitespaceBoundary
+            }
+        }
+        val first = text.substring(0, boundary).trim()
+        val second = text.substring(boundary).trim()
+        return if (first.isNotBlank() && second.isNotBlank()) first to second else null
     }
 
     private fun splitTextIntoReaderChunks(text: String, charsPerPage: Int): List<String> {
@@ -215,6 +466,121 @@ internal object ReflowableDocumentBuilder {
         return chunks.ifEmpty { listOf(text) }
     }
 
+    private fun mergeTrailingOrphanTextChunks(chunks: List<String>): List<String> {
+        if (chunks.size < 2) return chunks
+        val merged = chunks.toMutableList()
+        val last = merged.last()
+        if (last.length in 1 until MIN_ORPHAN_TEXT_CHARS) {
+            val previousIndex = merged.lastIndex - 1
+            merged[previousIndex] = listOf(merged[previousIndex], last).joinToString(" ").trim()
+            merged.removeAt(merged.lastIndex)
+        }
+        return merged
+    }
+
+    private fun rebalanceShortPageBodies(pageBodies: List<String>): List<String> {
+        if (pageBodies.size < 2) return pageBodies
+        val rebalanced = mutableListOf<String>()
+        var index = 0
+        while (index < pageBodies.size) {
+            val body = pageBodies[index]
+            val textLength = body.visibleTextLength()
+            if (index < pageBodies.lastIndex && textLength in 1 until MIN_STANDALONE_PAGE_TEXT_CHARS) {
+                if (rebalanced.isNotEmpty()) {
+                    val previousCombined = rebalanced.last() + body
+                    if (previousCombined.canRebalanceIntoSinglePage()) {
+                        rebalanced[rebalanced.lastIndex] = previousCombined
+                        index++
+                        continue
+                    }
+                }
+                val next = pageBodies[index + 1]
+                val combined = body + next
+                if (combined.canRebalanceIntoSinglePage()) {
+                    rebalanced += combined
+                    index += 2
+                    continue
+                }
+            }
+            rebalanced += body
+            index++
+        }
+        return rebalanced
+    }
+
+    private fun fillUnderfilledPageBodies(pageBodies: List<String>): List<String> {
+        if (pageBodies.size < 2) return pageBodies
+        val bodies = pageBodies.map { body -> body.readerBlocksForBody() }.toMutableList()
+        var index = 0
+        while (index < bodies.lastIndex) {
+            while (index < bodies.lastIndex) {
+                val currentBlocks = bodies[index]
+                val currentTextLength = currentBlocks.visibleTextLength()
+                val targetTextLength = if (currentBlocks.containsTitleLikeBlock()) {
+                    TITLE_PAGE_FILL_TEXT_TARGET
+                } else {
+                    PAGE_FILL_TEXT_TARGET
+                }
+                if (currentTextLength >= targetTextLength) break
+
+                val remainingUnits = PAGE_FILL_LAYOUT_UNITS - currentBlocks.readerLayoutCost()
+                if (remainingUnits < MIN_PAGE_FILL_REMAINDER_UNITS) break
+
+                val nextBlocks = bodies[index + 1]
+                val firstNextBlock = nextBlocks.firstOrNull() ?: break
+                if (firstNextBlock.startsChapterLikeBlock()) break
+
+                val textBudget = firstNextBlock
+                    .readerTextBudgetForLayoutUnits(remainingUnits)
+                    .coerceAtMost(targetTextLength - currentTextLength)
+                    .coerceAtLeast(0)
+                if (textBudget < MIN_PAGE_FILL_TEXT_CHARS) break
+
+                val moved = takeLeadingBlockForPageFill(
+                    block = firstNextBlock,
+                    textBudget = textBudget,
+                    remainingUnits = remainingUnits
+                ) ?: break
+
+                val updatedCurrentBlocks = currentBlocks + moved.first
+                if (updatedCurrentBlocks.readerLayoutCost() > PAGE_FILL_LAYOUT_UNITS) break
+                if (updatedCurrentBlocks.visibleTextLength() > targetTextLength + MIN_PAGE_FILL_TEXT_CHARS) break
+
+                val updatedNextBlocks = buildList {
+                    moved.second?.takeIf { it.visibleTextLength() > 0 }?.let(::add)
+                    addAll(nextBlocks.drop(1))
+                }
+                if (updatedNextBlocks.isEmpty()) break
+
+                bodies[index] = updatedCurrentBlocks
+                bodies[index + 1] = updatedNextBlocks
+            }
+            index++
+        }
+        return bodies.map { blocks -> blocks.joinToString("") }
+    }
+
+    private fun takeLeadingBlockForPageFill(
+        block: String,
+        textBudget: Int,
+        remainingUnits: Int
+    ): Pair<String, String?>? {
+        val blockCost = block.readerLayoutCost()
+        if (blockCost <= remainingUnits && block.visibleTextLength() <= textBudget) {
+            return block to null
+        }
+
+        val split = splitTextMarkupBlock(
+            block = block,
+            firstChunkSize = textBudget,
+            subsequentChunkSize = TEXT_CHARS_PER_PAGE
+        ) ?: return null
+        val leading = split.firstOrNull() ?: return null
+        if (leading.visibleTextLength() < MIN_PAGE_FILL_TEXT_CHARS) return null
+        val remainder = split.drop(1).joinToString("").takeIf { it.isNotBlank() }
+        return leading to remainder
+    }
+
     private fun shouldEmitStandaloneBlock(element: Element): Boolean {
         val tag = element.normalName()
         if (tag == "hr") return true
@@ -236,6 +602,23 @@ internal object ReflowableDocumentBuilder {
             element.classNames().contains("mrcomic-pagebreak")
     }
 
+    private fun String.isReaderSectionStartBlock(): Boolean = runCatching {
+        val first = Jsoup.parseBodyFragment(this).body().children().firstOrNull() ?: return@runCatching false
+        val tag = first.normalName()
+        val id = first.id().trim()
+        val classes = first.classNames()
+        first.hasClass("chapter") ||
+            first.hasClass("heading") ||
+            first.hasClass("title") ||
+            classes.any { cssClass ->
+                cssClass.equals("section-title", ignoreCase = true) ||
+                    cssClass.equals("chapter-title", ignoreCase = true)
+            } ||
+            id.startsWith("chapter", ignoreCase = true) ||
+            id.startsWith("part", ignoreCase = true) ||
+            first.attr("data-mrcomic-section-start").equals("true", ignoreCase = true)
+    }.getOrDefault(false)
+
     private fun wrapBody(body: String, baseCss: String): String =
         buildUnifiedReaderHtmlDocument(
             body = body,
@@ -249,6 +632,149 @@ internal object ReflowableDocumentBuilder {
             .replace(Regex("\\s+"), " ")
             .trim()
             .length
+
+    private fun String.readerLayoutCost(): Int {
+        val estimatedLines = estimatedReaderLineCount()
+        if (contains("<img", ignoreCase = true)) {
+            return IMAGE_BLOCK_LAYOUT_UNITS + estimatedLines * LAYOUT_UNITS_PER_LINE
+        }
+        return estimatedLines * LAYOUT_UNITS_PER_LINE + readerLayoutOverhead()
+    }
+
+    private fun String.readerBodyLayoutCost(): Int =
+        extractReaderBlocks("<body>$this</body>")
+            .ifEmpty { listOf(this) }
+            .sumOf { it.readerLayoutCost() }
+
+    private fun String.readerBlocksForBody(): List<String> =
+        extractReaderBlocks("<body>$this</body>")
+            .filter { it.visibleTextLength() > 0 || it.contains("<img", ignoreCase = true) }
+            .ifEmpty { listOf(this) }
+
+    private fun List<String>.visibleTextLength(): Int = sumOf { it.visibleTextLength() }
+
+    private fun List<String>.readerLayoutCost(): Int = sumOf { it.readerLayoutCost() }
+
+    private fun String.canRebalanceIntoSinglePage(): Boolean =
+        // Allow pages with images to be rebalanced as long as their layout cost fits one backend page.
+        readerBodyLayoutCost() <= PAGE_LAYOUT_UNITS &&
+            visibleTextLength() <= MAX_REBALANCED_PAGE_TEXT_CHARS
+
+    private fun List<String>.containsTitleLikeBlock(): Boolean =
+        any { block ->
+            block.startsChapterLikeBlock() ||
+                Regex("""(?is)<\s*(center|h[1-6])\b""").containsMatchIn(block)
+        }
+
+    private fun String.startsChapterLikeBlock(): Boolean {
+        val tag = Regex("""(?is)^\s*<\s*([a-z0-9:]+)\b""")
+            .find(this)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.lowercase()
+            .orEmpty()
+        return contains("mrcomic-pagebreak", ignoreCase = true)
+    }
+
+    private fun String.readerTextBudgetForLayoutUnits(layoutUnits: Int): Int {
+        val usableUnits = layoutUnits - readerLayoutOverhead()
+        if (usableUnits < MIN_REMAINDER_LAYOUT_UNITS) return 0
+        val usableLines = usableUnits / LAYOUT_UNITS_PER_LINE
+        if (usableLines <= 0) return 0
+        return (usableLines * READER_TEXT_CHARS_PER_LINE)
+            .coerceIn(MIN_SPLIT_TEXT_CHARS, TEXT_CHARS_PER_PAGE)
+    }
+
+    private fun String.estimatedReaderLineCount(): Int {
+        val text = visibleTextForLayout()
+        if (text.isBlank()) return 1
+        val columnsPerLine = if (startsHeadingLikeBlock()) {
+            READER_HEADING_CHARS_PER_LINE
+        } else {
+            READER_TEXT_CHARS_PER_LINE
+        }
+        val startsWithIndent = startsParagraphLikeBlock() && !startsCenteredLikeBlock()
+        var lineCount = 0
+        var currentColumns = if (startsWithIndent) READER_PARAGRAPH_INDENT_COLUMNS else 0
+
+        text.split(Regex("\\s+"))
+            .filter(String::isNotBlank)
+            .forEach { word ->
+                val wordColumns = word.readerColumnWidth().coerceAtLeast(1)
+                val separatorColumns = if (currentColumns > 0) 1 else 0
+                if (currentColumns > 0 && currentColumns + separatorColumns + wordColumns > columnsPerLine) {
+                    lineCount++
+                    currentColumns = 0
+                }
+                if (wordColumns > columnsPerLine) {
+                    lineCount += wordColumns / columnsPerLine
+                    currentColumns = wordColumns % columnsPerLine
+                } else {
+                    currentColumns += (if (currentColumns > 0) 1 else 0) + wordColumns
+                }
+            }
+        if (currentColumns > 0) lineCount++
+        return lineCount.coerceAtLeast(1)
+    }
+
+    private fun String.readerColumnWidth(): Int {
+        var width = 0
+        for (char in this) {
+            width += when {
+                char == '\u00AD' -> 0
+                char.isWhitespace() -> 1
+                char in NARROW_READER_CHARS -> 1
+                char == '\u2014' || char == '-' || char == '\u2013' -> 1
+                char.isUpperCase() -> 2
+                else -> 1
+            }
+        }
+        return width
+    }
+
+    private fun String.visibleTextForLayout(): String =
+        replace(Regex("(?is)<style\\b[^>]*>.*?</style>"), " ")
+            .replace(Regex("(?is)<script\\b[^>]*>.*?</script>"), " ")
+            .replace(Regex("(?i)<br\\s*/?>"), "\n")
+            .replace(Regex("<[^>]+>"), " ")
+            .replace('\u00A0', ' ')
+            .replace(Regex("[ \\t\\x0B\\f\\r]+"), " ")
+            .trim()
+
+    private fun String.startsHeadingLikeBlock(): Boolean =
+        Regex("""(?is)^\s*<\s*h[1-6]\b""").containsMatchIn(this)
+
+    private fun String.startsParagraphLikeBlock(): Boolean =
+        Regex("""(?is)^\s*<\s*(p|div|section|article)\b""").containsMatchIn(this)
+
+    private fun String.startsCenteredLikeBlock(): Boolean =
+        contains("text-align:center", ignoreCase = true) ||
+            contains("align=\"center\"", ignoreCase = true) ||
+            contains("class=\"center", ignoreCase = true)
+
+    private fun String.readerLayoutOverhead(): Int {
+        if (this == FORCED_PAGEBREAK_MARKER) return 0
+        val tag = Regex("""(?is)<\s*([a-z0-9:]+)\b""")
+            .find(this)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.lowercase()
+            .orEmpty()
+        val visible = visibleTextLength()
+        val centered = contains("text-align:center", ignoreCase = true) ||
+            contains("align=\"center\"", ignoreCase = true) ||
+            contains("class=\"center", ignoreCase = true)
+        return when {
+            tag in setOf("h1", "h2", "h3") -> 360
+            tag in setOf("h4", "h5", "h6") -> 270
+            tag == "img" || contains("<img", ignoreCase = true) -> IMAGE_BLOCK_LAYOUT_UNITS
+            tag in setOf("blockquote", "pre", "table", "ul", "ol") -> 180
+            centered && visible <= 120 -> 220
+            visible <= 32 -> 170
+            visible <= 96 -> 110
+            else -> 30
+        }
+    }
 
     private fun escapeHtml(text: String): String = text
         .replace("&", "&amp;")

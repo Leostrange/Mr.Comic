@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -31,13 +32,10 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TaskAlt
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -71,6 +69,11 @@ import com.example.core.domain.analytics.resolveMascotStageArchive
 import com.example.core.domain.analytics.resolveMascotStageTimeline
 import com.example.core.domain.analytics.resolveMrComicMascotState
 import com.example.core.model.Comic
+import com.example.core.ui.designsystem.MrComicCardSurface
+import com.example.core.ui.designsystem.MrComicCardVariant
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicPill
+import com.example.core.ui.designsystem.MrComicProgressLine
 import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.mascot.MrComicStageArchivePortrait
@@ -383,9 +386,9 @@ private fun MrComicProgressHeroCard(
     totalCount: Int
 ) {
     val stageTimeline = remember(progress) { resolveMascotStageTimeline(progress) }
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface
+    MrComicCardSurface(
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -427,25 +430,33 @@ private fun MrComicProgressHeroCard(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(mrComicMascotMoodLabel(appLanguage, mascotState.mood)) }
-                        )
-                        AssistChip(
-                            onClick = {},
-                            label = { Text(mrComicMascotContextLabel(appLanguage, mascotState.context)) }
-                        )
+                        MrComicPill(
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = mrComicMascotMoodLabel(appLanguage, mascotState.mood),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
+                        MrComicPill(
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = mrComicMascotContextLabel(appLanguage, mascotState.context),
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                MrComicPill(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = "${progress.xp} XP",
                         style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -456,7 +467,7 @@ private fun MrComicProgressHeroCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            LinearProgressIndicator(
+            MrComicProgressLine(
                 progress = { progress.stageProgress },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -519,10 +530,11 @@ private fun MrComicProgressStageTimeline(
                     entry.isCompleted -> MaterialTheme.colorScheme.secondary
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 }
-                Surface(
+                MrComicCardSurface(
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    color = containerColor
+                    fillMaxWidth = false,
+                    cornerRadius = 18.dp,
+                    containerColor = containerColor
                 ) {
                     Column(
                         modifier = Modifier
@@ -563,9 +575,10 @@ private fun MrComicProgressStageTimeline(
 private fun MrComicProgressSearchContextCard(
     appLanguage: String
 ) {
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.26f)
+    MrComicCardSurface(
+        variant = MrComicCardVariant.Secondary,
+        cornerRadius = 20.dp,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.26f)
     ) {
         Column(
             modifier = Modifier
@@ -594,9 +607,10 @@ private fun MrComicProgressStageArchiveCard(
     archive: MascotStageArchive,
     showMascot: Boolean
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
+    MrComicCardSurface(
+        variant = MrComicCardVariant.Muted,
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
     ) {
         Column(
             modifier = Modifier
@@ -629,9 +643,10 @@ private fun MrComicProgressStageArchiveCard(
                         entry.isHighestReached -> MaterialTheme.colorScheme.secondary
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
-                    Surface(
-                        shape = RoundedCornerShape(18.dp),
-                        color = containerColor
+                    MrComicCardSurface(
+                        fillMaxWidth = false,
+                        cornerRadius = 18.dp,
+                        containerColor = containerColor
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -681,9 +696,10 @@ private fun MrComicProgressHighlightsCard(
         return
     }
 
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
+    MrComicCardSurface(
+        variant = MrComicCardVariant.Muted,
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
     ) {
         Column(
             modifier = Modifier
@@ -738,9 +754,10 @@ private fun MrComicProgressHighlightTile(
     value: String,
     supporting: String? = null
 ) {
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+    MrComicCardSurface(
+        fillMaxWidth = false,
+        cornerRadius = 18.dp,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -784,9 +801,10 @@ private fun MrComicProgressRhythmCard(
     text: MrComicProgressText,
     goalState: DailyReadingGoalState
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)
+    MrComicCardSurface(
+        variant = MrComicCardVariant.Muted,
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)
     ) {
         Column(
             modifier = Modifier
@@ -838,9 +856,10 @@ private fun MrComicProgressStreakGraceCard(
     val streakDays = remember(goalState.recentActivity) {
         mrComicProgressStreakDays(goalState)
     }
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.58f)
+    MrComicCardSurface(
+        variant = MrComicCardVariant.Muted,
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.58f)
     ) {
         Column(
             modifier = Modifier
@@ -923,9 +942,9 @@ private fun MrComicProgressHistoryCard(
         }
     }
 
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface
+    MrComicCardSurface(
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -943,7 +962,7 @@ private fun MrComicProgressHistoryCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 MrComicProgressHistoryRange.values().forEach { range ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = selectedRange == range,
                         onClick = { selectedRange = range },
                         label = {
@@ -1101,9 +1120,10 @@ private fun MrComicProgressStreakWeekRow(
                 hasReading -> MaterialTheme.colorScheme.secondary
                 else -> MaterialTheme.colorScheme.onSurfaceVariant
             }
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = container
+            MrComicCardSurface(
+                fillMaxWidth = false,
+                cornerRadius = 14.dp,
+                containerColor = container
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
@@ -1139,9 +1159,9 @@ private fun MrComicProgressRecentCard(
     recent: List<Comic>,
     onComicClick: (String) -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surface
+    MrComicCardSurface(
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -1167,10 +1187,10 @@ private fun MrComicProgressRecentCard(
                 )
             } else {
                 recent.forEach { comic ->
-                    Surface(
+                    MrComicCardSurface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)
+                        cornerRadius = 18.dp,
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.7f)
                     ) {
                         Row(
                             modifier = Modifier
@@ -1209,7 +1229,8 @@ private fun MrComicProgressRecentCard(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            AssistChip(
+                            MrComicFilterChip(
+                                selected = false,
                                 onClick = { onComicClick(comic.id) },
                                 label = { Text(text.openRecent) },
                                 leadingIcon = {
@@ -1234,9 +1255,10 @@ private fun MrComicProgressAchievementHeader(
     text: MrComicProgressText,
     achievementSummary: MrComicAchievementSummary
 ) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f)
+    MrComicCardSurface(
+        variant = MrComicCardVariant.Muted,
+        cornerRadius = 24.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.65f)
     ) {
         Column(
             modifier = Modifier
@@ -1273,7 +1295,7 @@ private fun MrComicProgressAchievementHeader(
                     )
                 }
             }
-            LinearProgressIndicator(
+            MrComicProgressLine(
                 progress = { achievementSummary.completionFraction },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1306,7 +1328,7 @@ private fun MrComicProgressAchievementHeader(
                 if (achievementSummary.nextAchievement.progressCurrent != null &&
                     achievementSummary.nextAchievement.progressTarget != null
                 ) {
-                    LinearProgressIndicator(
+                    MrComicProgressLine(
                         progress = { achievementSummary.nextAchievement.progressFraction },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1326,26 +1348,22 @@ private fun MrComicProgressPill(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String
 ) {
-    Surface(
-        shape = RoundedCornerShape(999.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f)
+    MrComicPill(
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
+        horizontalSpacing = 6.dp
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium
+        )
     }
 }
 

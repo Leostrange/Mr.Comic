@@ -44,6 +44,7 @@ import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -74,7 +75,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.webkit.WebViewAssetLoader
 import org.json.JSONTokener
-import com.example.core.model.isTextReadingFormat
 import com.example.core.model.ReadingMode
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderInfoSlot
@@ -103,6 +103,7 @@ import java.io.File
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * JS snippet injected via evaluateJavascript after each page load.
@@ -123,6 +124,15 @@ private const val JS_TAP_HANDLER = """(function(){
   window.__readerTouchStartY=0;
   window.__readerTouchMoved=false;
   window.__readerSelectionTs=0;
+  function readerDispatchTap(x){
+    try{
+      var dir=x<0.35?-1:(x>0.65?1:0);
+      if(window.__mrcomicVerticalScrollLocked&&dir!==0&&typeof window.__mrcomicTurnPaged==='function'){
+        if(window.__mrcomicTurnPaged(dir))return;
+      }
+    }catch(err){}
+    if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
+  }
   document.addEventListener('selectionchange',function(){
     try{
       var selected=(window.getSelection&&window.getSelection().toString())||'';
@@ -139,9 +149,16 @@ private const val JS_TAP_HANDLER = """(function(){
       window.__readerTouchStartY=e.touches[0].clientY;
     }
   },{passive:true});
-  document.addEventListener('touchmove',function(){
+  document.addEventListener('touchmove',function(e){
     window.__readerTouchMoved=true;
-  },{passive:true});
+    if(window.__mrcomicVerticalScrollLocked&&e.touches&&e.touches.length===1){
+      var dx=e.touches[0].clientX-window.__readerTouchStartX;
+      var dy=e.touches[0].clientY-window.__readerTouchStartY;
+      if(Math.abs(dy)>8&&Math.abs(dy)>Math.abs(dx)*1.2){
+        e.preventDefault();
+      }
+    }
+  },{passive:false});
   document.addEventListener('touchend',function(e){
     var now=Date.now();
     var elapsed=now-window.__readerTouchStartTs;
@@ -155,8 +172,24 @@ private const val JS_TAP_HANDLER = """(function(){
     if(!ch)return;
     var dx=ch.clientX-window.__readerTouchStartX;
     var dy=ch.clientY-window.__readerTouchStartY;
+    if(window.__mrcomicVerticalScrollLocked&&Math.abs(dy)>18&&Math.abs(dy)>Math.abs(dx)*1.2){
+      e.preventDefault();
+      return;
+    }
+    if(window.__mrcomicVerticalBoundaryEnabled&&Math.abs(dy)>64&&Math.abs(dx)<56&&Math.abs(dy)>Math.abs(dx)*1.55){
+      var scroller=document.scrollingElement||document.documentElement||document.body;
+      var top=scroller&&typeof scroller.scrollTop==='number'?scroller.scrollTop:0;
+      var height=scroller&&scroller.scrollHeight?scroller.scrollHeight:0;
+      var atTop=top<=2;
+      var atBottom=(top+window.innerHeight)>=(height-2);
+      if((dy<0&&atBottom)||(dy>0&&atTop)){
+        e.preventDefault();
+        if(typeof _NativeReader!='undefined')_NativeReader.onVerticalBoundary(dy<0?1:-1);
+        return;
+      }
+    }
     if(Math.abs(dx)>54&&Math.abs(dy)<24&&Math.abs(dx)>Math.abs(dy)*1.8){
-      if(typeof _NativeReader!='undefined')_NativeReader.onTap(dx>0?0.1:0.9);
+      readerDispatchTap(dx>0?0.1:0.9);
     }
   },{passive:true});
   document.addEventListener('click',function(e){
@@ -173,6 +206,28 @@ private const val JS_TAP_HANDLER = """(function(){
     }
     var t=e.target;
     while(t&&t!==document.body){
+      var noteAttr='';
+      var noteRole='';
+      try{
+        noteAttr=(t.getAttribute&&(
+          t.getAttribute('data-footnote-id')||
+          t.getAttribute('data-note-id')||
+          t.getAttribute('data-mrcomic-anchor')||
+          t.getAttribute('id')||
+          t.getAttribute('name')||
+          ''
+        ))||'';
+        noteRole=(t.getAttribute&&(
+          (t.getAttribute('role')||'')+' '+
+          (t.getAttribute('epub:type')||'')+' '+
+          (t.getAttribute('class')||'')
+        ))||'';
+      }catch(err){}
+      if(noteAttr&&/\b(doc-noteref|noteref|footnote-ref|footnote|fn|note-num)\b/i.test(noteRole)){
+        e.preventDefault();
+        if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(noteAttr);
+        return;
+      }
       if(t.tagName==='A'){
         var href=t.getAttribute('href')||'';
         var title=t.getAttribute('title')||'';
@@ -187,9 +242,7 @@ private const val JS_TAP_HANDLER = """(function(){
             return;
           }
           e.preventDefault();
-          var anchorId=href.substring(1);
-          var target=document.getElementById(anchorId)||document.querySelector('[name="'+anchorId+'"]');
-          if(target){target.scrollIntoView({behavior:'smooth',block:'start'});}
+          if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
           return;
         } else if(/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)){
           e.preventDefault();
@@ -201,12 +254,6 @@ private const val JS_TAP_HANDLER = """(function(){
           var targetBase=(absHref||'').split('#')[0];
           if(href.indexOf('#')>=0&&targetBase&&targetBase===currentBase){
             e.preventDefault();
-            var fragHref=href.split('#')[1]||'';
-            var fragTarget=document.getElementById(fragHref)||document.querySelector('[name="'+fragHref+'"]');
-            if(fragTarget){
-              fragTarget.scrollIntoView({behavior:'smooth',block:'start'});
-              return;
-            }
             if(title&&typeof _NativeReader!='undefined'){
               _NativeReader.onInlineFootnote(title);
               return;
@@ -223,14 +270,14 @@ private const val JS_TAP_HANDLER = """(function(){
         } else {
           e.preventDefault();
           var x=e.clientX/window.innerWidth;
-          if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
+          readerDispatchTap(x);
         }
         return;
       }
       t=t.parentNode;
     }
     var x=e.clientX/window.innerWidth;
-    if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
+    readerDispatchTap(x);
   },false);
 })();"""
 
@@ -664,7 +711,9 @@ private fun textSettingsJs(
     paragraphSpacing: Float = 0.2f,
     align: String      = "justify",
     bold: Boolean      = false,
-    topPaddingPx: Int  = 16
+    topPaddingPx: Int  = 16,
+    bottomPaddingPx: Int = 24,
+    lockVerticalScroll: Boolean = false
 ): String {
     val resolvedTextColor = normalizeReaderOverrideColor(overrideTextColor) ?: fg
     val resolvedBackgroundColor = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
@@ -742,6 +791,155 @@ private fun textSettingsJs(
           "body:not([data-mrcomic-preserve-layout='true']) li{margin-bottom:${(paragraphSpacing * 0.8f).coerceAtLeast(0.1f)}em !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) blockquote{margin-bottom:${(paragraphSpacing + 0.4f).coerceAtLeast(0.4f)}em !important;}";
     """.trimIndent()
+    val scrollModeStyle = if (lockVerticalScroll) {
+        """
+        document.documentElement.style.overflowY='hidden';
+        document.documentElement.style.height='100%';
+        document.body.style.overflowY='hidden';
+        document.body.style.minHeight='100%';
+        window.scrollTo(0,0);
+        """.trimIndent()
+    } else {
+        """
+        document.documentElement.style.overflowY='auto';
+        document.documentElement.style.height='auto';
+        document.body.style.overflowY='auto';
+        document.body.style.minHeight='100%';
+        """.trimIndent()
+    }
+    val pagedLayoutStyle = if (lockVerticalScroll) {
+        """
+        (function(){
+          function viewportWidth(){
+            return Math.max(1,window.innerWidth||document.documentElement.clientWidth||document.body.clientWidth||1);
+          }
+          function viewportHeight(){
+            return Math.max(1,window.innerHeight||document.documentElement.clientHeight||document.body.clientHeight||1);
+          }
+          function readerInset(name,fallback){
+            var raw=window[name];
+            var value=parseInt(raw,10);
+            if(isFinite(value)&&value>=0)return value;
+            return fallback;
+          }
+          window.__mrcomicApplyPagedLayout=function(){
+            try{
+              var body=document.body;
+              var root=document.documentElement;
+              if(!body||!root)return false;
+              var w=viewportWidth();
+              var h=viewportHeight();
+              var pageTop=readerInset('__mrcomicContentTopInsetPx',${topPaddingPx});
+              var pageBottom=readerInset('__mrcomicContentBottomInsetPx',${bottomPaddingPx});
+              var usableH=Math.max(120,h-pageTop-pageBottom);
+              root.style.width=w+'px';
+              root.style.maxWidth=w+'px';
+              root.style.height=h+'px';
+              root.style.maxHeight=h+'px';
+              root.style.overflow='hidden';
+              root.style.overflowX='hidden';
+              root.style.overflowY='hidden';
+              body.style.boxSizing='border-box';
+              body.style.width=w+'px';
+              body.style.minWidth=w+'px';
+              body.style.maxWidth=w+'px';
+              body.style.height=usableH+'px';
+              body.style.minHeight=usableH+'px';
+              body.style.maxHeight=usableH+'px';
+              body.style.marginTop=pageTop+'px';
+              body.style.marginBottom='0px';
+              body.style.paddingTop='0px';
+              body.style.paddingBottom='0px';
+              body.style.overflow='visible';
+              body.style.columnWidth=w+'px';
+              body.style.webkitColumnWidth=w+'px';
+              body.style.columnGap='0px';
+              body.style.webkitColumnGap='0px';
+              body.style.columnFill='auto';
+              body.style.webkitColumnFill='auto';
+              body.style.transformOrigin='0 0';
+              body.style.willChange='transform';
+              body.style.transition='transform 120ms ease-out';
+              window.scrollTo(0,0);
+              if(document.documentElement.scrollLeft!==0)document.documentElement.scrollLeft=0;
+              if(document.body.scrollLeft!==0)document.body.scrollLeft=0;
+              void body.offsetWidth;
+              var fullWidth=Math.max(body.scrollWidth||0,root.scrollWidth||0,w);
+              var count=Math.max(1,Math.ceil((fullWidth-1)/w));
+              var index=parseInt(window.__mrcomicPagedPageIndex||0,10);
+              if(!isFinite(index)||index<0)index=0;
+              if(index>=count)index=count-1;
+              window.__mrcomicPagedPageIndex=index;
+              window.__mrcomicPagedPageCount=count;
+              body.style.transform='translate3d(-'+(index*w)+'px,0,0)';
+              return true;
+            }catch(e){
+              return false;
+            }
+          };
+          window.__mrcomicTurnPaged=function(dir){
+            try{
+              if(!window.__mrcomicApplyPagedLayout())return false;
+              var count=parseInt(window.__mrcomicPagedPageCount||1,10);
+              var index=parseInt(window.__mrcomicPagedPageIndex||0,10);
+              if(!isFinite(count)||count<1)count=1;
+              if(!isFinite(index)||index<0)index=0;
+              var next=index+(dir<0?-1:1);
+              if(next<0||next>=count)return false;
+              window.__mrcomicPagedPageIndex=next;
+              window.__mrcomicApplyPagedLayout();
+              return true;
+            }catch(e){
+              return false;
+            }
+          };
+          if(!window.__mrcomicPagedResizeBound){
+            window.__mrcomicPagedResizeBound=true;
+            var resizeTimer=null;
+            window.addEventListener('resize',function(){
+              clearTimeout(resizeTimer);
+              resizeTimer=setTimeout(function(){
+                if(window.__mrcomicVerticalScrollLocked&&window.__mrcomicApplyPagedLayout){
+                  window.__mrcomicApplyPagedLayout();
+                }
+              },80);
+            });
+          }
+          setTimeout(window.__mrcomicApplyPagedLayout,0);
+          setTimeout(window.__mrcomicApplyPagedLayout,120);
+        })();
+        """.trimIndent()
+    } else {
+        """
+        (function(){
+          try{
+            var body=document.body;
+            var root=document.documentElement;
+            if(body){
+              body.style.removeProperty('column-width');
+              body.style.removeProperty('-webkit-column-width');
+              body.style.removeProperty('column-gap');
+              body.style.removeProperty('-webkit-column-gap');
+              body.style.removeProperty('column-fill');
+              body.style.removeProperty('-webkit-column-fill');
+              body.style.removeProperty('transform');
+              body.style.removeProperty('transition');
+              body.style.removeProperty('will-change');
+              body.style.removeProperty('height');
+              body.style.removeProperty('max-height');
+              body.style.removeProperty('margin-top');
+              body.style.removeProperty('margin-bottom');
+            }
+            if(root){
+              root.style.removeProperty('height');
+              root.style.removeProperty('max-height');
+              root.style.overflowX='hidden';
+              root.style.overflowY='auto';
+            }
+          }catch(e){}
+        })();
+        """.trimIndent()
+    }
     val fontStack = if (fontSourceUrl != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
     return """(function(){$fontFaceSnip $themeStyle $spacingStyle if(document.body){""" +
         """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover');""" +
@@ -749,6 +947,7 @@ private fun textSettingsJs(
         """document.documentElement.style.width='100%';""" +
         """document.documentElement.style.maxWidth='100%';""" +
         """document.documentElement.style.overflowX='hidden';""" +
+        scrollModeStyle +
         """document.body.style.color='$resolvedTextColor';""" +
         """document.documentElement.style.background='$resolvedBackgroundColor';""" +
         """document.body.style.background='$resolvedBackgroundColor';""" +
@@ -757,6 +956,8 @@ private fun textSettingsJs(
         """document.body.style.maxWidth='none';""" +
         """document.body.style.marginLeft='0';""" +
         """document.body.style.marginRight='0';""" +
+        """window.__mrcomicContentTopInsetPx=${topPaddingPx};""" +
+        """window.__mrcomicContentBottomInsetPx=${bottomPaddingPx};""" +
         """if(!preservePublisherLayout){""" +
         """document.body.style.fontSize='${fontSize}px';""" +
         """document.body.style.fontWeight='$fontWeight';""" +
@@ -768,21 +969,21 @@ private fun textSettingsJs(
         """document.body.style.paddingLeft='16px';""" +
         """document.body.style.paddingRight='16px';""" +
         """document.body.style.paddingTop='${topPaddingPx}px';""" +
-        """document.body.style.paddingBottom='24px';""" +
+        """document.body.style.paddingBottom='${bottomPaddingPx}px';""" +
         """}else{""" +
         """document.body.style.fontSize='${fontSize.coerceAtLeast(20)}px';""" +
         """document.body.style.lineHeight='${lineHeight.coerceAtLeast(1.45f)}';""" +
         """document.body.style.paddingLeft='16px';""" +
         """document.body.style.paddingRight='16px';""" +
         """document.body.style.paddingTop='${topPaddingPx}px';""" +
-        """document.body.style.paddingBottom='24px';""" +
+        """document.body.style.paddingBottom='${bottomPaddingPx}px';""" +
         """document.body.style.width='100%';""" +
         """document.body.style.maxWidth='none';""" +
         """document.body.style.minWidth='0';""" +
         """Array.prototype.forEach.call(document.body.children,function(el){el.style.maxWidth='100%';el.style.minWidth='0';el.style.boxSizing='border-box';});""" +
         """document.body.style.removeProperty('hyphens');""" +
         """document.body.style.removeProperty('-webkit-hyphens');""" +
-        """}}$colorNotesDom})();"""
+        """}$pagedLayoutStyle}$colorNotesDom})();"""
 }
 
 private fun buildThemedHtmlDocument(
@@ -851,6 +1052,14 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     var explainSelectionLabel: String = ""
     var saveQuoteSelectionLabel: String = ""
     var onSelectionActionRequest: ((ReaderSelectionAction, String) -> Unit)? = null
+    var verticalScrollLocked: Boolean = false
+        set(value) {
+            field = value
+            isVerticalScrollBarEnabled = !value
+            if (value && scrollY != 0) {
+                super.scrollTo(scrollX, 0)
+            }
+        }
     private var committedLoadToken: String? = null
     private var inlineFallback: PendingInlineFallback? = null
     private var inlineFallbackRunnable: Runnable? = null
@@ -990,12 +1199,23 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         }
     }
 
+    override fun scrollTo(x: Int, y: Int) {
+        super.scrollTo(
+            if (verticalScrollLocked) 0 else x,
+            if (verticalScrollLocked) 0 else y
+        )
+    }
+
     fun markLoadRequested(loadToken: String) {
         committedLoadToken = null
         cancelInlineFallback()
         inlineFallback = null
         inlineFallbackAttempts = 0
         tag = loadToken
+        evaluateJavascript(
+            "window.__mrcomicPagedPageIndex=0;window.__mrcomicPagedPageCount=1;",
+            null
+        )
     }
 
     fun markLoadCommitted() {
@@ -1097,6 +1317,10 @@ private fun HtmlPageView(
     onSaveQuoteSelection: (String) -> Unit,
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
+    webtoonMode: Boolean = false,
+    onVerticalBoundary: (Int) -> Unit = {},
+    contentTopInsetPx: Int = 16,
+    contentBottomInsetPx: Int = 24,
     fontSize: Int    = 18,
     colorScheme: String = "DAY",
     readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
@@ -1117,7 +1341,8 @@ private fun HtmlPageView(
     saveQuoteActionLabel: String
 ) {
     val context = LocalContext.current
-    val topPaddingPx = 8
+    val topPaddingPx = contentTopInsetPx.coerceAtLeast(0)
+    val bottomPaddingPx = contentBottomInsetPx.coerceAtLeast(0)
     val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
     val resolvedBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
     val resolvedFg = normalizeReaderOverrideColor(overrideTextColor) ?: fg
@@ -1155,6 +1380,8 @@ private fun HtmlPageView(
     val currentParagraphSpacing = rememberUpdatedState(paragraphSpacing)
     val currentAlign     = rememberUpdatedState(textAlign)
     val currentBold      = rememberUpdatedState(bold)
+    val currentWebtoonMode = rememberUpdatedState(webtoonMode)
+    val onVerticalBoundaryState = rememberUpdatedState(onVerticalBoundary)
 
     AndroidView(
         modifier = Modifier
@@ -1182,6 +1409,7 @@ private fun HtmlPageView(
                 setBackgroundColor(bgColor)
                 // Disable overscroll bounce but allow natural vertical scrolling within a page.
                 overScrollMode = android.view.View.OVER_SCROLL_NEVER
+                verticalScrollLocked = !currentWebtoonMode.value
 
                 // JavascriptInterface — called from JS on a background thread;
                 // WebView.post() dispatches back to the main thread safely.
@@ -1205,6 +1433,17 @@ private fun HtmlPageView(
                     @JavascriptInterface
                     fun onInlineFootnote(text: String) {
                         post { onInlineNote.value(text) }
+                    }
+
+                    @JavascriptInterface
+                    fun onVerticalBoundary(direction: Int) {
+                        post {
+                            if (!currentWebtoonMode.value) return@post
+                            when {
+                                direction > 0 -> onVerticalBoundaryState.value(1)
+                                direction < 0 -> onVerticalBoundaryState.value(-1)
+                            }
+                        }
                     }
 
                     @JavascriptInterface
@@ -1297,6 +1536,11 @@ private fun HtmlPageView(
                     override fun onPageFinished(view: WebView, url: String) {
                         Log.d(HTML_READER_TAG, "WebView page finished: $url")
                         view.evaluateJavascript(JS_TAP_HANDLER, null)
+                        view.evaluateJavascript(
+                            "window.__mrcomicVerticalBoundaryEnabled=${currentWebtoonMode.value};" +
+                                "window.__mrcomicVerticalScrollLocked=${!currentWebtoonMode.value};",
+                            null
+                        )
                         val (themeBg, themeFg) = colorSchemePaletteForPreset(currentScheme.value, currentPreset.value)
                         val runtimeBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: themeBg
                         val runtimeFg = normalizeReaderOverrideColor(overrideTextColor) ?: themeFg
@@ -1318,7 +1562,9 @@ private fun HtmlPageView(
                                 paragraphSpacing = currentParagraphSpacing.value,
                                 align = currentAlign.value,
                                 bold = currentBold.value,
-                                topPaddingPx = topPaddingPx
+                                topPaddingPx = topPaddingPx,
+                                bottomPaddingPx = bottomPaddingPx,
+                                lockVerticalScroll = !currentWebtoonMode.value
                             ), null
                         )
                         view.post {
@@ -1371,7 +1617,13 @@ private fun HtmlPageView(
             }
             // Apply text settings immediately when any setting changes (no page reload).
             // Also update the WebView's own background so the color is correct before JS fires.
+            webView.verticalScrollLocked = !webtoonMode
             webView.setBackgroundColor(bgColor)
+            webView.evaluateJavascript(
+                "window.__mrcomicVerticalBoundaryEnabled=$webtoonMode;" +
+                    "window.__mrcomicVerticalScrollLocked=${!webtoonMode};",
+                null
+            )
             webView.evaluateJavascript(
                 textSettingsJs(
                     fontSize = fontSize,
@@ -1388,7 +1640,9 @@ private fun HtmlPageView(
                     paragraphSpacing = paragraphSpacing,
                     align = textAlign,
                     bold = bold,
-                    topPaddingPx = topPaddingPx
+                    topPaddingPx = topPaddingPx,
+                    bottomPaddingPx = bottomPaddingPx,
+                    lockVerticalScroll = !webtoonMode
                 ), null
             )
             val currentSource = pageSource ?: return@AndroidView
@@ -1602,6 +1856,7 @@ fun ReaderScreen(
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val context = LocalContext.current
+    val density = LocalDensity.current
     val readerAssetLoader = remember(viewModel, context) {
         WebViewAssetLoader.Builder()
             .addPathHandler(
@@ -1622,8 +1877,7 @@ fun ReaderScreen(
     val ttsController = remember { ReaderTextToSpeechControllerStore.get(context) }
     val ttsRuntimeState by ttsController.state.collectAsState()
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val isTextReader = uiState.currentHtmlContent != null ||
-        (uiState.comic?.format?.isTextReadingFormat() == true)
+    val isTextReader = uiState.usesTextReaderContent()
     val supportsDocumentMarginCrop = uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU
     val effectiveMarginCropHorizontal = if (supportsDocumentMarginCrop) uiState.imageMarginCropHorizontal else 0f
     val effectiveMarginCropVertical = if (supportsDocumentMarginCrop) uiState.imageMarginCropVertical else 0f
@@ -1634,6 +1888,15 @@ fun ReaderScreen(
     val resolvedTextFont = remember(uiState.textFontFamily, context) {
         ReaderTextFontCatalog.resolve(context, uiState.textFontFamily)
     }
+    val textLineInsetPx = remember(uiState.textFontSize, uiState.textLineHeight) {
+        (uiState.textFontSize * uiState.textLineHeight)
+            .roundToInt()
+            .coerceAtLeast(18)
+    }
+    val persistentChromeTopInsetPx = remember(density) { with(density) { 58.dp.roundToPx() } }
+    val persistentChromeBottomInsetPx = remember(density) { with(density) { 92.dp.roundToPx() } }
+    val htmlContentTopInsetPx = textLineInsetPx + if (uiState.chromeAutoHideEnabled) 0 else persistentChromeTopInsetPx
+    val htmlContentBottomInsetPx = textLineInsetPx + if (uiState.chromeAutoHideEnabled) 0 else persistentChromeBottomInsetPx
     var showBrightnessRow by remember { mutableStateOf(false) }
     var openControlCenterAtServices by remember { mutableStateOf(false) }
     var showReaderAudioSheet by remember { mutableStateOf(false) }
@@ -2112,6 +2375,15 @@ fun ReaderScreen(
                             onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
                             onAnchorClick = viewModel::onAnchorClick,
                             onInlineFootnote = viewModel::showInlineFootnote,
+                            webtoonMode = uiState.readingMode == ReadingMode.WEBTOON,
+                            onVerticalBoundary = { direction ->
+                                when {
+                                    direction > 0 -> viewModel.nextPage()
+                                    direction < 0 -> viewModel.prevPage()
+                                }
+                            },
+                            contentTopInsetPx = htmlContentTopInsetPx,
+                            contentBottomInsetPx = htmlContentBottomInsetPx,
                             onTranslateSelection = { selectedText ->
                                 viewModel.translateSelectedText(
                                     selectedText = selectedText,
@@ -2141,6 +2413,14 @@ fun ReaderScreen(
                             dictionaryActionLabel = readerText.openDictionary,
                             explainActionLabel = readerText.selectionExplainAction,
                             saveQuoteActionLabel = readerText.saveQuote
+                        )
+                    } else if (uiState.usesTextReaderContent()) {
+                        // Text/archive readers must never fall through to bitmap PageView/WebtoonView:
+                        // while their first HTML page is still being parsed, the bitmap path can only
+                        // show an endless spinner because text readers intentionally return no Bitmap.
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.primary
                         )
                     } else if (uiState.readingMode == ReadingMode.WEBTOON) {
                         WebtoonView(
@@ -2174,12 +2454,20 @@ fun ReaderScreen(
                 val chromeSurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.06f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
-                    minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else READER_TOOLBAR_MIN_OPACITY
+                    minAlpha = if (activeReaderPreset == ReadingPreset.EINK) {
+                        1f
+                    } else {
+                        READER_TOOLBAR_MIN_OPACITY
+                    }
                 )
                 val overlaySurface = readerPanelSurfaceColor(
                     base = MaterialTheme.colorScheme.surface,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.03f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
-                    minAlpha = if (activeReaderPreset == ReadingPreset.EINK) 1f else READER_TOOLBAR_MIN_OPACITY
+                    minAlpha = if (activeReaderPreset == ReadingPreset.EINK) {
+                        1f
+                    } else {
+                        READER_TOOLBAR_MIN_OPACITY
+                    }
                 )
                 val overlayTextStyle = remember(overlaySurface, activeReaderPreset) {
                     readerHeaderFooterOverlayStyle(

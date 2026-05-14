@@ -10,9 +10,15 @@ import com.example.engine.formats.base.TocEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.nio.charset.Charset
+import java.util.zip.ZipInputStream
+
+private const val MAX_RICH_TEXT_SOURCE_BYTES = 96 * 1024 * 1024
+private const val MAX_ODT_CONTENT_XML_ENTRY_BYTES = 16 * 1024 * 1024
 
 private val RTF_DESTINATIONS_TO_SKIP = setOf(
     "fonttbl", "colortbl", "stylesheet", "info", "pict",
@@ -71,7 +77,13 @@ internal class RtfFormatReader(
     private val path: String
 ) : FormatReader {
 
-    private val document: ReflowableDocument by lazy { readRtfReflowableDocument(context, path) }
+    private val document: ReflowableDocument by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflowableDocumentMemoryCache.getOrPut(
+            ReflowableDocumentMemoryCache.keyFor(context, path, ComicFormat.RTF, "rtf")
+        ) {
+            readRtfReflowableDocument(context, path)
+        }
+    }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) { document.pageCount }
 
@@ -96,7 +108,14 @@ internal class DocxFormatReader(
     private val path: String
 ) : FormatReader {
 
-    private val document: ReflowableDocument by lazy { readDocxReflowableDocument(context, path) }
+    private val document: ReflowableDocument by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflowableDocumentMemoryCache.getOrPut(
+            ReflowableDocumentMemoryCache.keyFor(context, path, ComicFormat.DOCX, "docx")
+        ) {
+            readDocxReflowableDocument(context, path)
+        }
+    }
+    private val anchorPageIndex: Map<String, Int> by lazy { buildRichTextAnchorPageIndex(document.pages) }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) { document.pageCount }
 
@@ -113,6 +132,17 @@ internal class DocxFormatReader(
 
     override fun getTableOfContents(): List<TocEntry> = document.toc
 
+    override fun getFootnoteText(anchorId: String): String? {
+        val normalized = anchorId.trim().removePrefix("#").removePrefix("docx-footnote-")
+        return document.footnoteMap[normalized]
+            ?: document.footnoteMap[anchorId.trim().removePrefix("#")]
+    }
+
+    override fun resolveHrefToPage(href: String): Int? {
+        val fragment = href.trim().substringAfter('#', href.trim()).removePrefix("#").trim()
+        return fragment.takeIf { it.isNotBlank() }?.let { anchorPageIndex[it] }
+    }
+
     override fun close() = Unit
 }
 
@@ -121,7 +151,13 @@ internal class OdtFormatReader(
     private val path: String
 ) : FormatReader {
 
-    private val document: ReflowableDocument by lazy { readOdtReflowableDocument(context, path) }
+    private val document: ReflowableDocument by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflowableDocumentMemoryCache.getOrPut(
+            ReflowableDocumentMemoryCache.keyFor(context, path, ComicFormat.ODT, "odt")
+        ) {
+            readOdtReflowableDocument(context, path)
+        }
+    }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) { document.pageCount }
 
@@ -136,25 +172,51 @@ internal class OdtFormatReader(
         "engine" to "odt-reflowable-v1"
     )
 
-    override fun getTableOfContents(): List<TocEntry> = emptyList()
+    override fun getTableOfContents(): List<TocEntry> = document.toc
 
     override fun close() = Unit
 }
 
 internal fun readRtfReflowableDocument(context: Context, path: String): ReflowableDocument {
-    val rawBytes = openRichTextStream(context, path)?.use(InputStream::readBytes)
+    val rawBytes = readRichTextBytes(context, path)
         ?: return ReflowableDocumentBuilder.error("Unable to read file.")
     val rawRtf = rawBytes.toString(Charsets.ISO_8859_1)
+
+    // Fast path: modern HTML-block renderer.
     val blocks = RtfTextSupport.renderHtmlBlocks(rawRtf)
-    val renderedText = Jsoup.parse(blocks.joinToString("\n")).text().replace(Regex("\\s+"), " ").trim()
-    val legacyText = RtfTextSupport.extractLegacyPlainText(rawRtf)
-    val shouldFallbackToLegacy = shouldFallbackRtfToLegacyPlainText(
-        rawRtf = rawRtf,
-        renderedText = renderedText,
-        legacyText = legacyText
-    ) ||
-        renderedText.isBlank() ||
-        (legacyText.isNotBlank() && legacyText.length > renderedText.length * 3 / 2)
+    val renderedText = if (blocks.isEmpty()) "" else
+        Jsoup.parse(blocks.joinToString("\n")).text().replace(Regex("\\s+"), " ").trim()
+
+    // Determine whether we need the legacy plain-text fallback without running it eagerly.
+    // Only invoke the heavy legacy parser when a mojibake signal is detected or the fast
+    // path produced nothing (avoids double-parsing the majority of well-formed RTF files).
+    val isCp1251 = Regex("""\\ansicpg1251\b""").containsMatchIn(rawRtf)
+    val fastPathOk = renderedText.isNotBlank() &&
+        blocks.isNotEmpty() &&
+        !(isCp1251 && hasRtfMojibake(renderedText))
+
+    if (fastPathOk) {
+        return ReflowableDocumentBuilder.fromHtmlBlocks(blocks)
+    }
+
+    // Fast path failed or looks suspicious.
+    // The legacy char-by-char scanner is only worth running for CP1251-declared files
+    // (Cyrillic Windows codepage) or when the fast path produced nothing at all.
+    // Skipping it for all other files avoids a full second O(n) pass on large RTFs.
+    val needsLegacyScan = renderedText.isBlank() || isCp1251
+    val legacyText = if (needsLegacyScan) RtfTextSupport.extractLegacyPlainText(rawRtf) else ""
+
+    val shouldFallbackToLegacy = if (legacyText.isNotBlank()) {
+        shouldFallbackRtfToLegacyPlainText(
+            rawRtf = rawRtf,
+            renderedText = renderedText,
+            legacyText = legacyText
+        ) ||
+            renderedText.isBlank() ||
+            legacyText.length > renderedText.length * 3 / 2
+    } else {
+        false
+    }
 
     return if (shouldFallbackToLegacy && legacyText.isNotBlank()) {
         ReflowableDocumentBuilder.fromPlainText(legacyText)
@@ -176,8 +238,8 @@ private fun shouldFallbackRtfToLegacyPlainText(
 
     val renderedCyrillic = renderedText.count { it in '\u0400'..'\u04FF' }
     val legacyCyrillic = legacyText.count { it in '\u0400'..'\u04FF' }
-    val renderedHasMojibake = Regex("""[РС][\p{L}\p{M}]""").containsMatchIn(renderedText)
-    val legacyHasMojibake = Regex("""[РС][\p{L}\p{M}]""").containsMatchIn(legacyText)
+    val renderedHasMojibake = hasRtfMojibake(renderedText)
+    val legacyHasMojibake = hasRtfMojibake(legacyText)
 
     if (renderedHasMojibake && !legacyHasMojibake) return true
     if (legacyCyrillic >= 12 && renderedCyrillic < legacyCyrillic / 2) return true
@@ -185,19 +247,39 @@ private fun shouldFallbackRtfToLegacyPlainText(
 }
 
 internal fun readOdtReflowableDocument(context: Context, path: String): ReflowableDocument {
-    val bytes = openRichTextStream(context, path)?.use(InputStream::readBytes)
+    val bytes = readRichTextBytes(context, path)
         ?: return ReflowableDocumentBuilder.error("Unable to read file.")
     val blocks = OdtTextSupport.extractBlocks(bytes)
-    return ReflowableDocumentBuilder.fromHtmlBlocks(blocks)
+    val doc = ReflowableDocumentBuilder.fromHtmlBlocks(blocks)
+    // Build TOC once from paginated pages and store it in the document so repeated
+    // getTableOfContents() calls don't re-scan all pages with Jsoup.
+    val toc = buildTocFromPages(doc.pages, emptyMap())
+    return if (toc.isEmpty()) doc else doc.copy(toc = toc)
 }
 
 internal fun readDocxReflowableDocument(context: Context, path: String): ReflowableDocument {
-    val bytes = openRichTextStream(context, path)?.use(InputStream::readBytes)
+    val bytes = readRichTextBytes(context, path)
         ?: return ReflowableDocumentBuilder.error("Unable to read file.")
     return DocxTextSupport.render(
         bytes = bytes,
         baseUrl = richTextBaseUrl(path)
     )
+}
+
+private fun buildRichTextAnchorPageIndex(pages: List<String>): Map<String, Int> {
+    val result = linkedMapOf<String, Int>()
+    pages.forEachIndexed { index, html ->
+        runCatching {
+            val document = Jsoup.parse(html)
+            document.select("[id]").forEach { element ->
+                element.id().trim().takeIf { it.isNotBlank() }?.let { result.putIfAbsent(it, index) }
+            }
+            document.select("a[name], [name]").forEach { element ->
+                element.attr("name").trim().takeIf { it.isNotBlank() }?.let { result.putIfAbsent(it, index) }
+            }
+        }
+    }
+    return result
 }
 
 private fun openRichTextStream(context: Context, path: String): InputStream? = try {
@@ -208,6 +290,25 @@ private fun openRichTextStream(context: Context, path: String): InputStream? = t
     }
 } catch (_: Exception) {
     null
+}
+
+private fun readRichTextBytes(context: Context, path: String): ByteArray? =
+    openRichTextStream(context, path)?.use { input ->
+        input.readBytesBounded(MAX_RICH_TEXT_SOURCE_BYTES)
+    }
+
+private fun InputStream.readBytesBounded(maxBytes: Int): ByteArray? {
+    val output = ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+    val buffer = ByteArray(16 * 1024)
+    var total = 0
+    while (true) {
+        val read = read(buffer)
+        if (read < 0) break
+        total += read
+        if (total > maxBytes) return null
+        output.write(buffer, 0, read)
+    }
+    return output.toByteArray()
 }
 
 private fun richTextBaseUrl(path: String): String? {
@@ -223,7 +324,7 @@ internal object RtfTextSupport {
         val legacy = extractLegacyPlainText(raw)
         return when {
             rendered.isBlank() -> legacy
-            legacy.isNotBlank() && legacy.length > rendered.length * 3 / 2 -> legacy
+            legacy.isNotBlank() && !hasRtfMojibake(legacy) && legacy.length > rendered.length * 3 / 2 -> legacy
             else -> rendered
         }
     }
@@ -331,8 +432,11 @@ internal object RtfTextSupport {
                 }
                 '\r', '\n' -> i++
                 else -> {
-                    if (!skipping) out.append(raw[i])
-                    i++
+                    val start = i
+                    while (i < raw.length && raw[i] !in charArrayOf('{', '}', '\\', '\r', '\n')) {
+                        i++
+                    }
+                    if (!skipping) out.append(decodeRtfRawTextRun(raw.substring(start, i), charset))
                 }
             }
         }
@@ -343,6 +447,16 @@ internal object RtfTextSupport {
             .replace('\u00A0', ' ')
             .trim()
     }
+}
+
+private fun hasRtfMojibake(text: String): Boolean =
+    Regex("""(?:[ÃÐÑ][\p{L}\p{M}]|[РС][\p{L}\p{M}])""").containsMatchIn(text)
+
+private fun decodeRtfRawTextRun(segment: String, charset: Charset): String {
+    if (segment.isEmpty()) return segment
+    if (segment.all { it.code in 0..0x7F }) return segment
+    val bytes = ByteArray(segment.length) { index -> (segment[index].code and 0xFF).toByte() }
+    return bytes.toString(charset)
 }
 
 internal object OdtTextSupport {
@@ -411,10 +525,13 @@ internal object OdtTextSupport {
 
     private fun readZipEntryText(bytes: ByteArray, entryName: String): String? {
         return runCatching {
-            java.util.zip.ZipInputStream(java.io.ByteArrayInputStream(bytes)).use { zip ->
+            ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
                 generateSequence { zip.nextEntry }
                     .firstOrNull { it.name.equals(entryName, ignoreCase = true) }
-                    ?.let { zip.readBytes().toString(Charsets.UTF_8) }
+                    ?.let {
+                        zip.readBytesBounded(MAX_ODT_CONTENT_XML_ENTRY_BYTES)
+                            ?.toString(Charsets.UTF_8)
+                    }
             }
         }.getOrNull()
     }

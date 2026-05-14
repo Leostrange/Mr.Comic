@@ -17,10 +17,13 @@ internal fun extractSimpleRenderPlan(documentBytes: ByteArray): DjvuSimpleRender
     var jpegPayload: ByteArray? = null
     while (offset + 8 <= documentBytes.size) {
         val chunkId = documentBytes.readAscii(offset, 4) ?: return null
-        val chunkSize = documentBytes.readUnsignedInt(offset + 4)?.toInt() ?: return null
+        val chunkSize = documentBytes.readUnsignedInt(offset + 4)
+            ?.takeIf { it <= Int.MAX_VALUE }
+            ?.toInt()
+            ?: return null
         val payloadStart = offset + 8
+        if (chunkSize > documentBytes.size - payloadStart) return null
         val payloadEnd = payloadStart + chunkSize
-        if (payloadEnd > documentBytes.size) return null
 
         when {
             chunkId == BGJP_CHUNK_ID -> {

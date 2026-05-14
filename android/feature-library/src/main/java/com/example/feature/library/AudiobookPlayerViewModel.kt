@@ -272,7 +272,7 @@ class AudiobookPlayerViewModel @Inject constructor(
         stopPositionPolling()
         sleepTimerJob?.cancel()
         controller?.removeListener(playerListener)
-        MediaController.releaseFuture(controllerFuture ?: return)
+        controllerFuture?.let(MediaController::releaseFuture)
         super.onCleared()
     }
 

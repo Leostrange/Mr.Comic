@@ -30,6 +30,10 @@
 # zip4j
 -keep class net.lingala.zip4j.** { *; }
 
+# Jsoup can reference its optional re2j regex backend even when the dependency
+# is absent; the default regex backend works without these classes.
+-dontwarn com.google.re2j.**
+
 # slf4j binder is optional at runtime; libraries fall back gracefully when it's absent.
 -dontwarn org.slf4j.impl.StaticLoggerBinder
 

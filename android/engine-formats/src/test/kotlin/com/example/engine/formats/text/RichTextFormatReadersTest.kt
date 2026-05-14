@@ -4,10 +4,12 @@ import android.content.ContextWrapper
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.charset.Charset
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -38,6 +40,20 @@ class RichTextFormatReadersTest {
         val text = RtfTextSupport.extractPlainText(raw)
 
         assertEquals("Привет, мир!", text)
+    }
+
+    @Test
+    fun rtfTextSupportDecodesRawCp1251TextRuns() {
+        val raw = "{\\rtf1\\ansi\\ansicpg1251 ".toByteArray(Charsets.ISO_8859_1) +
+            "Ги де Мопассан\nПод солнцем".toByteArray(Charset.forName("windows-1251")) +
+            "}".toByteArray(Charsets.ISO_8859_1)
+
+        val text = RtfTextSupport.extractPlainText(raw.toString(Charsets.ISO_8859_1))
+
+        assertTrue(text.contains("Ги де Мопассан"))
+        assertTrue(text.contains("Под солнцем"))
+        assertFalse(text.contains("Ã"))
+        assertFalse(text.contains("Ð"))
     }
 
     @Test
@@ -171,6 +187,22 @@ class RichTextFormatReadersTest {
     }
 
     @Test
+    fun rtfTextSupportConstrainsOversizedPicturesToReaderPage() {
+        val raw = """
+            {\rtf1\ansi
+            {\pict\jpegblip\picw1359\pich2126\picwgoal20385\pichgoal31890
+            ffd8ffe000104a46494600010101004800480000ffd9}}
+        """.trimIndent()
+
+        val html = RtfTextSupport.renderHtmlBlocks(raw).joinToString("\n")
+
+        assertTrue(html.contains("<img", ignoreCase = true))
+        assertTrue(html.contains("width:100%"))
+        assertTrue(html.contains("height:72vh"))
+        assertTrue(html.contains("object-fit:contain"))
+    }
+
+    @Test
     fun odtTextSupportBuildsStyledBlocksFromContentXml() {
         val xml = """
             <office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"
@@ -195,6 +227,19 @@ class RichTextFormatReadersTest {
         assertTrue(blocks.any { it.contains("<h2>Section</h2>") })
         assertTrue(blocks.any { it.contains("<strong>bold</strong>") })
         assertTrue(blocks.any { it.contains("<em>italic</em>") })
+    }
+
+    @Test
+    fun odtTextSupportRejectsOversizedContentXmlEntry() {
+        val oversizedText = "A".repeat(17 * 1024 * 1024)
+        val odtBytes = buildSimpleZip(
+            "content.xml",
+            "<office:document-content><office:body><office:text><text:p>$oversizedText</text:p></office:text></office:body></office:document-content>"
+        )
+
+        val blocks = OdtTextSupport.extractBlocks(odtBytes)
+
+        assertEquals(listOf("<p>Unable to read ODT document.</p>"), blocks)
     }
 
     @Test
@@ -268,13 +313,56 @@ class RichTextFormatReadersTest {
         )
 
         val document = DocxTextSupport.render(docxBytes, "file:///books/")
-        val html = document.pageAt(0).orEmpty()
+        val html = (0 until minOf(document.pageCount, 2))
+            .joinToString("\n") { document.pageAt(it).orEmpty() }
 
         assertTrue(html.contains("Demo heading"))
         assertTrue(html.contains("<table", ignoreCase = true))
         assertTrue(html.contains("<img", ignoreCase = true))
         assertTrue(html.contains("@font-face"))
         assertTrue(html.contains("font-family"))
+    }
+
+    @Test
+    fun docxTextSupportSkipsOversizedEmbeddedMediaButKeepsText() {
+        val oversizedImage = ByteArray(9 * 1024 * 1024) { 0x42 }
+        val docxBytes = buildZip(
+            "word/document.xml" to """
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                    xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+                    xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                    xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">
+                  <w:body>
+                    <w:p><w:r><w:t>Text survives oversized image</w:t></w:r></w:p>
+                    <w:p>
+                      <w:r>
+                        <w:drawing>
+                          <wp:inline>
+                            <wp:docPr descr="Huge media"/>
+                            <a:graphic><a:graphicData><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                              <pic:blipFill><a:blip r:embed="rImgHuge"/></pic:blipFill>
+                            </pic:pic></a:graphicData></a:graphic>
+                          </wp:inline>
+                        </w:drawing>
+                      </w:r>
+                    </w:p>
+                  </w:body>
+                </w:document>
+            """.trimIndent(),
+            "word/_rels/document.xml.rels" to """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rImgHuge" Target="media/huge.png"/>
+                </Relationships>
+            """.trimIndent(),
+            "word/media/huge.png" to oversizedImage
+        )
+
+        val document = DocxTextSupport.render(docxBytes, "file:///books/")
+        val html = document.pageAt(0).orEmpty()
+
+        assertTrue(html.contains("Text survives oversized image"))
+        assertFalse(html.contains("data:image/png;base64"))
+        assertFalse(html.contains("<img", ignoreCase = true))
     }
 
     private fun buildSimpleZip(entryName: String, content: String): ByteArray {

@@ -1,5 +1,6 @@
 package com.example.engine.formats.text
 
+import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import kotlin.math.min
 
@@ -11,9 +12,19 @@ internal sealed interface MobiExtractionResult {
     ) : MobiExtractionResult
 
     data class Unsupported(
-        val message: String
+        val message: String,
+        val details: MobiUnsupportedDetails? = null
     ) : MobiExtractionResult
 }
+
+internal data class MobiUnsupportedDetails(
+    val reason: String,
+    val declaredEncoding: Int? = null,
+    val compression: Int? = null,
+    val textRecordCount: Int? = null,
+    val encryptionType: Int? = null,
+    val containsHuffCdicTables: Boolean = false
+)
 
 internal data class MobiDiagnostics(
     val declaredEncoding: Int,
@@ -30,10 +41,15 @@ internal object MobiTextSupport {
     private const val PALMDOC_COMPRESSION_NONE = 1
     private const val PALMDOC_COMPRESSION = 2
     private const val HUFF_CDIC_COMPRESSION = 17480
+    private const val MAX_MOBI_DECOMPRESSED_RECORD_BYTES = 8 * 1024 * 1024
+    private const val MAX_MOBI_DECOMPRESSED_TEXT_BYTES = 64 * 1024 * 1024
+    private const val MAX_MOBI_DECODED_TEXT_CHARS = 32 * 1024 * 1024
     private const val MOBI_HEADER_OFFSET = 16
     private const val MOBI_HEADER_LENGTH_OFFSET = 20
     private const val MOBI_TEXT_ENCODING_OFFSET = 28
     private val MOBI_IDENTIFIER = "MOBI".encodeToByteArray()
+    private val HUFF_IDENTIFIER = "HUFF".encodeToByteArray()
+    private val CDIC_IDENTIFIER = "CDIC".encodeToByteArray()
     private const val CP1251_UTF8_MOJIBAKE_CONTINUATIONS =
         "\u0402\u0403\u201A\u0453\u201E\u2026\u2020\u2021\u20AC\u2030\u0409\u2039\u040A\u040C\u040B\u040F" +
             "\u0452\u2018\u2019\u201C\u201D\u2022\u2013\u2014\uFFFD\u2122\u0459\u203A\u045A\u045C\u045B\u045F" +
@@ -42,6 +58,16 @@ internal object MobiTextSupport {
     private const val CP1252_UTF8_MOJIBAKE_CONTINUATIONS =
         "\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D" +
             "\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178"
+    private enum class LocalizedMojibakeCharset {
+        WINDOWS_1251,
+        WINDOWS_1252
+    }
+
+    private val LOCALIZED_UTF8_MOJIBAKE_SOURCE_CHARSETS = listOf(
+        LocalizedMojibakeCharset.WINDOWS_1251,
+        LocalizedMojibakeCharset.WINDOWS_1252
+    )
+    private const val ASCII_MOBI_CORRUPTION_CHARS = "abcefghjknopqrstuwyz"
 
     fun extract(bytes: ByteArray): MobiExtractionResult {
         val records = readPalmDatabaseRecords(bytes)
@@ -56,18 +82,36 @@ internal object MobiTextSupport {
         }
 
         val compression = header.readUInt16BE(0) ?: return MobiExtractionResult.Unsupported("Broken MOBI/AZW3 compression header.")
+        val declaredTextLength = header.readUInt32BE(4)
+            ?.takeIf { it in 1..MAX_MOBI_DECOMPRESSED_TEXT_BYTES.toLong() }
+            ?.toInt()
         val textRecordCount = header.readUInt16BE(8) ?: return MobiExtractionResult.Unsupported("Broken MOBI/AZW3 text record header.")
         val encryptionType = header.readUInt16BE(12) ?: 0
-        if (encryptionType != 0) {
-            return MobiExtractionResult.Unsupported("This MOBI/AZW3 file is DRM-protected and cannot be opened.")
-        }
-
         val headerLength = header.readUInt32BE(MOBI_HEADER_LENGTH_OFFSET)?.toInt()
         val textEncoding = header.readUInt32BE(MOBI_TEXT_ENCODING_OFFSET)?.toInt() ?: 65001
+        val unsupportedDetails = MobiUnsupportedDetails(
+            reason = "unknown",
+            declaredEncoding = textEncoding,
+            compression = compression,
+            textRecordCount = min(textRecordCount, records.lastIndex),
+            encryptionType = encryptionType,
+            containsHuffCdicTables = containsHuffCdicTables(records)
+        )
+
+        if (encryptionType != 0) {
+            return MobiExtractionResult.Unsupported(
+                message = "This MOBI/AZW3 file is DRM-protected and cannot be opened.",
+                details = unsupportedDetails.copy(reason = "drm")
+            )
+        }
+
         val extraDataFlags = resolveExtraDataFlags(header, headerLength)
 
         if (compression == HUFF_CDIC_COMPRESSION) {
-            return MobiExtractionResult.Unsupported("This MOBI/AZW3 file uses unsupported HuffDic compression.")
+            return MobiExtractionResult.Unsupported(
+                message = "This MOBI/AZW3 file uses HUFF/CDIC compression, which needs a dedicated MOBI/AZW3 decoder.",
+                details = unsupportedDetails.copy(reason = "huff-cdic")
+            )
         }
 
         val limit = min(textRecordCount, records.lastIndex)
@@ -75,38 +119,69 @@ internal object MobiTextSupport {
             return MobiExtractionResult.Unsupported("MOBI/AZW3 file does not contain readable text content.")
         }
 
-        val decodedChunks = mutableListOf<DecodedChunk>()
-        val decoded = buildString {
-            for (index in 1..limit) {
-                val trimmedRecord = stripTrailingData(records[index], extraDataFlags)
-                val chunk = when (compression) {
-                    PALMDOC_COMPRESSION_NONE -> trimmedRecord
-                    PALMDOC_COMPRESSION -> decompressPalmDoc(trimmedRecord)
-                    else -> return MobiExtractionResult.Unsupported("This MOBI/AZW3 file uses unsupported compression: $compression.")
+        val decompressedChunks = mutableListOf<ByteArray>()
+        var decompressedBytes = 0
+        var writtenBytes = 0
+        for (index in 1..limit) {
+            val trimmedRecord = stripTrailingData(records[index], extraDataFlags)
+            val chunk = when (compression) {
+                PALMDOC_COMPRESSION_NONE -> trimmedRecord
+                PALMDOC_COMPRESSION -> decompressPalmDoc(trimmedRecord)
+                    ?: return MobiExtractionResult.Unsupported(
+                        message = "PalmDOC text record expands beyond the safe MOBI/AZW3 limit.",
+                        details = unsupportedDetails.copy(reason = "palm-doc-expansion-limit")
+                    )
+                else -> return MobiExtractionResult.Unsupported(
+                    message = "This MOBI/AZW3 file uses unsupported compression: $compression.",
+                    details = unsupportedDetails.copy(reason = "unsupported-compression")
+                )
+            }
+            decompressedBytes += chunk.size
+            if (decompressedBytes > MAX_MOBI_DECOMPRESSED_TEXT_BYTES) {
+                return MobiExtractionResult.Unsupported(
+                    message = "MOBI/AZW3 text expands beyond the safe reader limit.",
+                    details = unsupportedDetails.copy(reason = "decompressed-text-limit")
+                )
+            }
+            val bytesToWrite = declaredTextLength?.let { expectedLength ->
+                (expectedLength - writtenBytes).coerceIn(0, chunk.size)
+            } ?: chunk.size
+            if (bytesToWrite > 0) {
+                decompressedChunks += if (bytesToWrite == chunk.size) {
+                    chunk
+                } else {
+                    chunk.copyOf(bytesToWrite)
                 }
-                val decodedChunk = decodeText(chunk, textEncoding)
-                decodedChunks += decodedChunk
-                append(decodedChunk.text)
+                writtenBytes += bytesToWrite
+            }
+            if (declaredTextLength != null && writtenBytes >= declaredTextLength) {
+                break
             }
         }
+        val decodedChunk = decodeTextRecords(decompressedChunks, textEncoding)
+        if (decodedChunk.text.length > MAX_MOBI_DECODED_TEXT_CHARS) {
+            return MobiExtractionResult.Unsupported(
+                message = "MOBI/AZW3 text expands beyond the safe reader limit.",
+                details = unsupportedDetails.copy(reason = "decoded-text-limit")
+            )
+        }
+        val decoded = decodedChunk.text
 
         val cleaned = decoded
             .replace("\u0000", "")
+            .replace("\uFFFD", "")
             .replace(Regex("[\\u0001-\\u0008\\u000B\\u000C\\u000E-\\u001F]"), "")
             .trim()
-        val normalizedText = repairWholeTextMojibake(cleaned)
+        val normalizedText = sanitizeResidualMobiCorruption(
+            repairWholeTextMojibake(repairLocalizedUtf8Mojibake(cleaned))
+        ).replace("\uFFFD", "")
 
         if (normalizedText.isBlank()) {
             return MobiExtractionResult.Unsupported("Unable to extract readable text from MOBI/AZW3.")
         }
 
         val markup = extractMarkupFragment(normalizedText)
-        val resolvedEncoding = decodedChunks
-            .groupingBy { it.encodingName }
-            .eachCount()
-            .maxByOrNull { it.value }
-            ?.key
-            ?: declaredEncodingName(textEncoding)
+        val resolvedEncoding = decodedChunk.encodingName
         val pageBreakCount = Regex(
             """(?is)<(?:mbp:pagebreak|pagebreak)\b[^>]*(?:/?>|>.*?</(?:mbp:pagebreak|pagebreak)>)"""
         ).findAll(markup ?: normalizedText).count()
@@ -148,8 +223,15 @@ internal object MobiTextSupport {
         if (headerLength == null || headerLength < 0xF4) return 0
         val offset = MOBI_HEADER_OFFSET + 0xF2
         val flags = header.readUInt16BE(offset) ?: return 0
-        return flags.takeUnless { it == 0xFFFF } ?: 0
+        // Some legacy PalmDOC files use 0xFFFF here; stripping the common trailing
+        // data entry matches reader output while avoiding leaked bytes in text.
+        return flags.takeUnless { it == 0xFFFF } ?: 0x0002
     }
+
+    private fun containsHuffCdicTables(records: List<ByteArray>): Boolean =
+        records.any { record ->
+            record.hasSliceAt(0, HUFF_IDENTIFIER) || record.hasSliceAt(0, CDIC_IDENTIFIER)
+        }
 
     @Suppress("MagicNumber")
     private fun stripTrailingData(record: ByteArray, extraDataFlags: Int): ByteArray {
@@ -194,13 +276,14 @@ internal object MobiTextSupport {
         val totalLength: Int
     )
 
-    private fun decompressPalmDoc(data: ByteArray): ByteArray {
+    private fun decompressPalmDoc(data: ByteArray): ByteArray? {
         var out = ByteArray((data.size * 2).coerceAtLeast(32))
         var size = 0
 
-        fun ensureCapacity(additional: Int) {
+        fun ensureCapacity(additional: Int): Boolean {
             val required = size + additional
-            if (required <= out.size) return
+            if (required > MAX_MOBI_DECOMPRESSED_RECORD_BYTES) return false
+            if (required <= out.size) return true
 
             var newSize = out.size
             while (newSize < required) {
@@ -208,22 +291,24 @@ internal object MobiTextSupport {
                 newSize = if (doubled > newSize) doubled else required
             }
             out = out.copyOf(newSize)
+            return true
         }
 
-        fun append(value: Byte) {
-            ensureCapacity(1)
+        fun append(value: Byte): Boolean {
+            if (!ensureCapacity(1)) return false
             out[size] = value
             size++
+            return true
         }
 
-        fun append(value: Int) = append(value.toByte())
+        fun append(value: Int): Boolean = append(value.toByte())
 
         var index = 0
         while (index < data.size) {
             val current = data[index].toInt() and 0xFF
             when {
                 current == 0 -> {
-                    append(0)
+                    if (!append(0)) return null
                     index++
                 }
 
@@ -233,14 +318,14 @@ internal object MobiTextSupport {
                         index++
                     } else {
                         repeat(literalLength) { offset ->
-                            append(data[index + 1 + offset])
+                            if (!append(data[index + 1 + offset])) return null
                         }
                         index += literalLength + 1
                     }
                 }
 
                 current in 9..0x7F -> {
-                    append(current)
+                    if (!append(current)) return null
                     index++
                 }
 
@@ -254,7 +339,7 @@ internal object MobiTextSupport {
                         repeat(length) {
                             val sourceIndex = size - distance
                             if (sourceIndex in 0 until size) {
-                                append(out[sourceIndex])
+                                if (!append(out[sourceIndex])) return null
                             }
                         }
                     }
@@ -262,8 +347,8 @@ internal object MobiTextSupport {
                 }
 
                 else -> {
-                    append(' '.code)
-                    append(current xor 0x80)
+                    if (!append(' '.code)) return null
+                    if (!append(current xor 0x80)) return null
                     index++
                 }
             }
@@ -271,7 +356,35 @@ internal object MobiTextSupport {
         return out.copyOf(size)
     }
 
-    private fun decodeText(bytes: ByteArray, encoding: Int): DecodedChunk {
+    private fun decodeTextRecords(chunks: List<ByteArray>, encoding: Int): DecodedChunk {
+        if (chunks.isEmpty()) return DecodedChunk("", declaredEncodingName(encoding))
+        val combined = ByteArrayOutputStream(chunks.sumOf { it.size }).apply {
+            chunks.forEach { write(it, 0, it.size) }
+        }.toByteArray()
+
+        if (encoding == 65001 && isValidUtf8(combined)) {
+            return DecodedChunk(
+                text = combined.toString(Charsets.UTF_8),
+                encodingName = Charsets.UTF_8.name(),
+                score = Int.MAX_VALUE / 3
+            )
+        }
+
+        val decodedChunks = chunks.map { chunk -> decodeTextRecord(chunk, encoding) }
+        val resolvedEncoding = decodedChunks
+            .groupingBy { it.encodingName }
+            .eachCount()
+            .maxByOrNull { it.value }
+            ?.key
+            ?: declaredEncodingName(encoding)
+        return DecodedChunk(
+            text = decodedChunks.joinToString(separator = "") { it.text },
+            encodingName = resolvedEncoding,
+            score = decodedChunks.sumOf { it.score }
+        )
+    }
+
+    private fun decodeTextRecord(bytes: ByteArray, encoding: Int): DecodedChunk {
         if (bytes.isEmpty()) {
             return DecodedChunk("", declaredEncodingName(encoding))
         }
@@ -282,7 +395,16 @@ internal object MobiTextSupport {
             return DecodedChunk(bytes.toString(Charsets.UTF_8), Charsets.UTF_8.name(), score = Int.MAX_VALUE / 3)
         }
 
-        val candidates = buildList {
+        val utf8Lenient = DecodedChunk(
+            text = bytes.toString(Charsets.UTF_8),
+            encodingName = Charsets.UTF_8.name(),
+            score = scoreDecodedText(bytes.toString(Charsets.UTF_8), Charsets.UTF_8)
+        )
+        if (encoding == 65001 && utf8Lenient.text.count { it == '\uFFFD' } <= (bytes.size / 512).coerceAtLeast(8)) {
+            return utf8Lenient
+        }
+
+        val charsetCandidates = buildList {
             add(encodingToCharset(encoding))
             add(Charsets.UTF_8)
             add(Charsets.UTF_16LE)
@@ -294,7 +416,7 @@ internal object MobiTextSupport {
             add(Charsets.ISO_8859_1)
         }.distinctBy(Charset::name)
 
-        val best = candidates
+        val best = charsetCandidates
             .map { charset ->
                 val text = runCatching { bytes.toString(charset) }
                     .getOrElse { bytes.toString(Charsets.UTF_8) }
@@ -303,8 +425,136 @@ internal object MobiTextSupport {
             .maxByOrNull(DecodedChunk::score)
 
         val resolved = best ?: DecodedChunk(bytes.toString(Charsets.UTF_8), Charsets.UTF_8.name())
+        if (encoding == 65001 && utf8Lenient.score + 300 >= resolved.score) {
+            return utf8Lenient
+        }
         val repaired = repairUtf8Mojibake(resolved)
         return if (repaired.score > resolved.score) repaired else resolved
+    }
+
+    private fun decodeMixedUtf8AndSingleByte(bytes: ByteArray, fallbackCharset: Charset): String {
+        val output = StringBuilder(bytes.size)
+        val fallback = when {
+            fallbackCharset.name().equals("windows-1251", ignoreCase = true) -> SingleByteFallback.WINDOWS_1251
+            fallbackCharset.name().equals("windows-1252", ignoreCase = true) -> SingleByteFallback.WINDOWS_1252
+            else -> SingleByteFallback.CHARSET
+        }
+        var index = 0
+        while (index < bytes.size) {
+            val value = bytes[index].toInt() and 0xFF
+            if (value <= 0x7F) {
+                output.append(value.toChar())
+                index++
+                continue
+            }
+
+            val utf8Length = validUtf8SequenceLength(bytes, index)
+            if (utf8Length > 0) {
+                val runStart = index
+                index += utf8Length
+                while (index < bytes.size) {
+                    val nextLength = validUtf8SequenceLength(bytes, index)
+                    if (nextLength <= 0) break
+                    index += nextLength
+                }
+                output.append(String(bytes, runStart, index - runStart, Charsets.UTF_8))
+                continue
+            }
+
+            val nextUtf8Length = validUtf8SequenceLength(bytes, index + 1)
+            if (value in 0xC2..0xF4 && nextUtf8Length > 0) {
+                index++
+                continue
+            }
+
+            output.appendSingleByte(bytes[index].toInt() and 0xFF, fallback, fallbackCharset)
+            index++
+        }
+        return output.toString()
+    }
+
+    private enum class SingleByteFallback {
+        WINDOWS_1251,
+        WINDOWS_1252,
+        CHARSET
+    }
+
+    private fun StringBuilder.appendSingleByte(value: Int, fallback: SingleByteFallback, charset: Charset) {
+        when (fallback) {
+            SingleByteFallback.WINDOWS_1251 -> append(charFromWindows1251Byte(value))
+            SingleByteFallback.WINDOWS_1252 -> append(charFromWindows1252Byte(value))
+            SingleByteFallback.CHARSET -> append(byteArrayOf(value.toByte()).toString(charset))
+        }
+    }
+
+    private fun charFromWindows1251Byte(value: Int): Char =
+        when (value) {
+            in 0x00..0x7F -> value.toChar()
+            in 0x80..0xBF -> CP1251_UTF8_MOJIBAKE_CONTINUATIONS[value - 0x80]
+            in 0xC0..0xFF -> (0x0410 + value - 0xC0).toChar()
+            else -> '\uFFFD'
+        }
+
+    private fun charFromWindows1252Byte(value: Int): Char =
+        when (value) {
+            in 0x00..0x7F -> value.toChar()
+            0x80 -> '\u20AC'
+            0x82 -> '\u201A'
+            0x83 -> '\u0192'
+            0x84 -> '\u201E'
+            0x85 -> '\u2026'
+            0x86 -> '\u2020'
+            0x87 -> '\u2021'
+            0x88 -> '\u02C6'
+            0x89 -> '\u2030'
+            0x8A -> '\u0160'
+            0x8B -> '\u2039'
+            0x8C -> '\u0152'
+            0x8E -> '\u017D'
+            0x91 -> '\u2018'
+            0x92 -> '\u2019'
+            0x93 -> '\u201C'
+            0x94 -> '\u201D'
+            0x95 -> '\u2022'
+            0x96 -> '\u2013'
+            0x97 -> '\u2014'
+            0x98 -> '\u02DC'
+            0x99 -> '\u2122'
+            0x9A -> '\u0161'
+            0x9B -> '\u203A'
+            0x9C -> '\u0153'
+            0x9E -> '\u017E'
+            0x9F -> '\u0178'
+            in 0xA0..0xFF -> value.toChar()
+            else -> '\uFFFD'
+        }
+
+    private fun validUtf8SequenceLength(bytes: ByteArray, start: Int): Int {
+        if (start !in bytes.indices) return 0
+        val value = bytes[start].toInt() and 0xFF
+        return when {
+            value <= 0x7F -> 1
+            value in 0xC2..0xDF -> {
+                if (hasUtf8Continuation(bytes, start, 1)) 2 else 0
+            }
+            value in 0xE0..0xEF -> {
+                if (!hasUtf8Continuation(bytes, start, 2)) {
+                    0
+                } else {
+                    val b1 = bytes[start + 1].toInt() and 0xFF
+                    if ((value == 0xE0 && b1 < 0xA0) || (value == 0xED && b1 >= 0xA0)) 0 else 3
+                }
+            }
+            value in 0xF0..0xF4 -> {
+                if (!hasUtf8Continuation(bytes, start, 3)) {
+                    0
+                } else {
+                    val b1 = bytes[start + 1].toInt() and 0xFF
+                    if ((value == 0xF0 && b1 < 0x90) || (value == 0xF4 && b1 >= 0x90)) 0 else 4
+                }
+            }
+            else -> 0
+        }
     }
 
     private fun extractMarkupFragment(text: String): String? {
@@ -415,6 +665,10 @@ internal object MobiTextSupport {
         text.forEach { ch ->
             when {
                 ch == '\uFFFD' -> score -= 120
+                isSuspiciousMobiSupplementGlyph(ch) -> {
+                    suspicious++
+                    score -= 180
+                }
                 ch == '\n' || ch == '\r' || ch == '\t' -> score += 1
                 ch.isLetter() -> {
                     printable++
@@ -463,6 +717,16 @@ internal object MobiTextSupport {
         return score
     }
 
+    private fun isSuspiciousMobiSupplementGlyph(ch: Char): Boolean =
+        ch in setOf(
+            '\u0402', '\u0403', '\u0409', '\u040A', '\u040B', '\u040C', '\u040F',
+            '\u0452', '\u0453', '\u0459', '\u045A', '\u045B', '\u045C', '\u045F',
+            '\u047B', '\u0475', '\u0477', '\u0491'
+        )
+
+    private fun suspiciousMobiSupplementGlyphCount(text: String): Int =
+        text.count(::isSuspiciousMobiSupplementGlyph)
+
     private fun repairUtf8Mojibake(chunk: DecodedChunk): DecodedChunk {
         if (!looksLikeUtf8Mojibake(chunk.text)) return chunk
 
@@ -486,13 +750,13 @@ internal object MobiTextSupport {
 
     private fun looksLikeUtf8Mojibake(text: String): Boolean {
         if (text.length < 6) return false
-        return mojibakeMarkerCount(text, stopAt = 3) >= 3
+        return cyrillicMojibakeMarkerCount(text, stopAt = 3) >= 3
     }
 
     private fun repairWholeTextMojibake(text: String): String {
         if (!looksLikeUtf8Mojibake(text)) return text
 
-        val originalPenalty = mojibakeMarkerCount(text)
+        val originalPenalty = cyrillicMojibakeMarkerCount(text)
         val originalScore = scoreDecodedText(text, Charsets.UTF_8)
         val repaired = listOf(
             Charset.forName("windows-1251"),
@@ -501,7 +765,7 @@ internal object MobiTextSupport {
         ).mapNotNull { sourceCharset ->
             runCatching {
                 val candidate = text.toByteArray(sourceCharset).toString(Charsets.UTF_8)
-                Triple(candidate, mojibakeMarkerCount(candidate), scoreDecodedText(candidate, Charsets.UTF_8))
+                Triple(candidate, cyrillicMojibakeMarkerCount(candidate), scoreDecodedText(candidate, Charsets.UTF_8))
             }.getOrNull()
         }.filter { (candidate, _, _) ->
             candidate.any { it in '\u0400'..'\u04FF' }
@@ -515,11 +779,100 @@ internal object MobiTextSupport {
         return repaired?.first ?: text
     }
 
+    private fun repairLocalizedUtf8Mojibake(text: String): String {
+        if (mojibakeMarkerCount(text, stopAt = 1) == 0) return text
+        val repaired = StringBuilder(text.length)
+        var index = 0
+        while (index < text.length) {
+            val token = decodeLocalizedUtf8MojibakeAt(text, index)
+            if (token == null) {
+                repaired.append(text[index])
+                index++
+                continue
+            }
+
+            repaired.append(token.text)
+            index += token.sourceLength
+        }
+        return repaired.toString()
+    }
+
+    private fun sanitizeResidualMobiCorruption(text: String): String =
+        if (!needsResidualMobiCorruptionSanitizer(text)) {
+            text
+        } else {
+            text
+                .replace(Regex("[\u0402\u0403\u0409\u040A\u040B\u040C\u040F\u0452\u0453\u0459\u045A\u045B\u045C\u045F\u0475\u0477\u047B\u0491]"), "")
+                .replace(Regex("""(?iu)(?<=[а-яё])\s*[\u00C0-\u024F]\s*(?=[а-яё])""")) { match ->
+                    if (match.value.any(Char::isWhitespace)) " " else ""
+                }
+                .replace("\u00B5", "")
+                .replace(Regex("""(?iu)(?<=[а-яё])\s*[abcefghjknopqrstuwyz]\s*(?=[а-яё])""")) { match ->
+                    if (match.value.any(Char::isWhitespace)) " " else ""
+                }
+                .replace(Regex("""[ \t]{2,}"""), " ")
+        }
+
+    private fun needsResidualMobiCorruptionSanitizer(text: String): Boolean {
+        text.forEachIndexed { index, ch ->
+            if (isSuspiciousMobiSupplementGlyph(ch)) return true
+            if (ch == '\u00B5') return true
+            if (ch in '\u00C0'..'\u024F' && hasCyrillicNeighbor(text, index)) return true
+            if (ch.lowercaseChar() in ASCII_MOBI_CORRUPTION_CHARS && hasCyrillicNeighbor(text, index)) return true
+        }
+        return false
+    }
+
+    private fun hasCyrillicNeighbor(text: String, index: Int): Boolean {
+        val previous = previousNonWhitespace(text, index - 1)
+        val next = nextNonWhitespace(text, index + 1)
+        return previous?.isCyrillicLetter() == true || next?.isCyrillicLetter() == true
+    }
+
+    private fun previousNonWhitespace(text: String, start: Int): Char? {
+        var index = start
+        while (index >= 0) {
+            val ch = text[index]
+            if (!ch.isWhitespace()) return ch
+            index--
+        }
+        return null
+    }
+
+    private fun nextNonWhitespace(text: String, start: Int): Char? {
+        var index = start
+        while (index < text.length) {
+            val ch = text[index]
+            if (!ch.isWhitespace()) return ch
+            index++
+        }
+        return null
+    }
+
+    private fun Char.isCyrillicLetter(): Boolean =
+        this in '\u0400'..'\u04FF'
+
     private fun mojibakeMarkerCount(text: String, stopAt: Int = Int.MAX_VALUE): Int {
         var count = 0
         var index = 0
+        while (index < text.length) {
+            val token = decodeLocalizedUtf8MojibakeAt(text, index)
+            if (token != null) {
+                count++
+                if (count >= stopAt) return count
+                index += token.sourceLength
+            } else {
+                index++
+            }
+        }
+        return count
+    }
+
+    private fun cyrillicMojibakeMarkerCount(text: String, stopAt: Int = Int.MAX_VALUE): Int {
+        var count = 0
+        var index = 0
         while (index < text.lastIndex) {
-            if (isLikelyUtf8MojibakePair(text, index)) {
+            if (isLikelyCyrillicUtf8MojibakePairAt(text, index)) {
                 count++
                 if (count >= stopAt) return count
                 index += 2
@@ -530,14 +883,156 @@ internal object MobiTextSupport {
         return count
     }
 
-    private fun isLikelyUtf8MojibakePair(text: String, index: Int): Boolean {
+    private fun isLikelyCyrillicUtf8MojibakePairAt(text: String, index: Int): Boolean {
+        if (index !in 0 until text.lastIndex) return false
         val next = text[index + 1]
         return when (text[index]) {
-            'Р', 'С' -> CP1251_UTF8_MOJIBAKE_CONTINUATIONS.indexOf(next) >= 0
-            'Ð', 'Ñ' -> next.code in 0x80..0xBF || CP1252_UTF8_MOJIBAKE_CONTINUATIONS.indexOf(next) >= 0
+            'Р', 'С' -> singleByteInWindows1251(next) in 0x80..0xBF
+            'Ð', 'Ñ' -> singleByteInWindows1252(next) in 0x80..0xBF
             else -> false
         }
     }
+
+    private fun decodeLocalizedUtf8MojibakeAt(text: String, index: Int): LocalizedMojibakeToken? {
+        LOCALIZED_UTF8_MOJIBAKE_SOURCE_CHARSETS.forEach { charset ->
+            decodeLocalizedUtf8MojibakeAt(text, index, charset)?.let { return it }
+        }
+        return null
+    }
+
+    private fun decodeLocalizedUtf8MojibakeAt(
+        text: String,
+        index: Int,
+        sourceCharset: LocalizedMojibakeCharset
+    ): LocalizedMojibakeToken? {
+        if (!isLocalizedMojibakeLead(text.getOrNull(index) ?: return null, sourceCharset)) return null
+
+        val bytes = ByteArrayOutputStream(64)
+        var cursor = index
+        var sequenceCount = 0
+        while (cursor < text.length) {
+            val firstChar = text[cursor]
+            if (!isLocalizedMojibakeLead(firstChar, sourceCharset)) break
+            val firstByte = singleByteInLocalizedCharset(firstChar, sourceCharset) ?: break
+            val sourceLength = utf8SequenceLength(firstByte) ?: break
+            if (cursor + sourceLength > text.length) break
+
+            var secondByte = -1
+            var thirdByte = -1
+            var fourthByte = -1
+            var validSequence = true
+            for (offset in 1 until sourceLength) {
+                val nextByte = singleByteInLocalizedCharset(text[cursor + offset], sourceCharset)
+                if (nextByte == null || nextByte !in 0x80..0xBF) {
+                    validSequence = false
+                    break
+                }
+                when (offset) {
+                    1 -> secondByte = nextByte
+                    2 -> thirdByte = nextByte
+                    3 -> fourthByte = nextByte
+                }
+            }
+            if (!validSequence) break
+
+            bytes.write(firstByte)
+            bytes.write(secondByte)
+            if (sourceLength >= 3) bytes.write(thirdByte)
+            if (sourceLength >= 4) bytes.write(fourthByte)
+            cursor += sourceLength
+            sequenceCount++
+        }
+
+        if (sequenceCount == 0) return null
+        val decoded = runCatching { bytes.toByteArray().toString(Charsets.UTF_8) }.getOrNull() ?: return null
+        if (decoded.isBlank() || '\uFFFD' in decoded) return null
+        val source = text.substring(index, cursor)
+        if (!isUsefulLocalizedMojibakeRepair(decoded, source)) return null
+        return LocalizedMojibakeToken(decoded, cursor - index)
+    }
+
+    private fun utf8SequenceLength(firstByte: Int): Int? =
+        when (firstByte) {
+            in 0xC2..0xDF -> 2
+            in 0xE0..0xEF -> 3
+            in 0xF0..0xF4 -> 4
+            else -> null
+        }
+
+    private fun isLocalizedMojibakeLead(char: Char, charset: LocalizedMojibakeCharset): Boolean =
+        when (charset) {
+            LocalizedMojibakeCharset.WINDOWS_1251 -> char == 'Р' || char == 'С' || char == 'В' || char == 'в'
+            LocalizedMojibakeCharset.WINDOWS_1252 -> char == 'Ð' || char == 'Ñ' || char == 'Â' || char == 'â'
+        }
+
+    private fun singleByteInLocalizedCharset(char: Char, charset: LocalizedMojibakeCharset): Int? =
+        when (charset) {
+            LocalizedMojibakeCharset.WINDOWS_1251 -> singleByteInWindows1251(char)
+            LocalizedMojibakeCharset.WINDOWS_1252 -> singleByteInWindows1252(char)
+        }
+
+    private fun singleByteInWindows1251(char: Char): Int? =
+        when {
+            char.code in 0x00..0x7F -> char.code
+            char in '\u0410'..'\u044F' -> char.code - 0x0410 + 0xC0
+            char == '\u0401' -> 0xA8
+            char == '\u0451' -> 0xB8
+            else -> CP1251_UTF8_MOJIBAKE_CONTINUATIONS.indexOf(char)
+                .takeIf { it >= 0 }
+                ?.let { 0x80 + it }
+        }
+
+    private fun singleByteInWindows1252(char: Char): Int? =
+        when {
+            char.code in 0x00..0x7F -> char.code
+            char.code in 0xA0..0xFF -> char.code
+            else -> when (char) {
+                '\u20AC' -> 0x80
+                '\u201A' -> 0x82
+                '\u0192' -> 0x83
+                '\u201E' -> 0x84
+                '\u2026' -> 0x85
+                '\u2020' -> 0x86
+                '\u2021' -> 0x87
+                '\u02C6' -> 0x88
+                '\u2030' -> 0x89
+                '\u0160' -> 0x8A
+                '\u2039' -> 0x8B
+                '\u0152' -> 0x8C
+                '\u017D' -> 0x8E
+                '\u2018' -> 0x91
+                '\u2019' -> 0x92
+                '\u201C' -> 0x93
+                '\u201D' -> 0x94
+                '\u2022' -> 0x95
+                '\u2013' -> 0x96
+                '\u2014' -> 0x97
+                '\u02DC' -> 0x98
+                '\u2122' -> 0x99
+                '\u0161' -> 0x9A
+                '\u203A' -> 0x9B
+                '\u0153' -> 0x9C
+                '\u017E' -> 0x9E
+                '\u0178' -> 0x9F
+                else -> null
+            }
+        }
+
+    private fun isUsefulLocalizedMojibakeRepair(decoded: String, source: String): Boolean {
+        if (decoded == source) return false
+        return decoded.any { char ->
+            char in '\u0400'..'\u04FF' ||
+                char in setOf(
+                    '\u00A0', '\u00AB', '\u00BB', '\u2013', '\u2014', '\u2018', '\u2019',
+                    '\u201C', '\u201D', '\u2022', '\u2026', '\u2116'
+                )
+        }
+    }
+
+    private data class LocalizedMojibakeToken(
+        val text: String,
+        val sourceLength: Int
+    )
 
     private data class DecodedChunk(
         val text: String,

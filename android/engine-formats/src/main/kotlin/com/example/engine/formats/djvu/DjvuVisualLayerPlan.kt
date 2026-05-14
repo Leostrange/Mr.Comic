@@ -16,6 +16,19 @@ data class DjvuVisualLayerPlan(
 
     val requiresCompositeDecode: Boolean
         get() = usesIw44 || usesJb2 || includedChunkCount > 0 || foregroundLayer != null || paletteChunk != null
+
+    val unsupportedRenderFeatures: List<String>
+        get() = buildList {
+            if (backgroundLayer == "BG44") add("IW44 background")
+            if (backgroundLayer == "BG2k") add("JPEG2000 background")
+            if (foregroundLayer != null) add("foreground layer $foregroundLayer")
+            if (maskLayer == "Sjbz") add("JB2 mask")
+            if (paletteChunk != null) add("foreground palette $paletteChunk")
+            if (includedChunkCount > 0) add("shared included chunks")
+        }
+
+    val requiresNativeCompositeRenderer: Boolean
+        get() = unsupportedRenderFeatures.isNotEmpty()
 }
 
 internal fun extractDjvuVisualLayerPlan(documentBytes: ByteArray): DjvuVisualLayerPlan? {

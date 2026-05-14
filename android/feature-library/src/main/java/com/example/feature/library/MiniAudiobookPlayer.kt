@@ -21,8 +21,6 @@ import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,6 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicProgressLine
+import com.example.core.ui.locale.LocalStrings
+import com.example.core.ui.locale.audiobookPauseActionLabel
+import com.example.core.ui.locale.audiobookPlayActionLabel
+import com.example.core.ui.locale.audiobookStopActionLabel
 
 /**
  * Compact playback strip shown above the bottom navigation bar whenever an
@@ -52,6 +56,7 @@ fun MiniAudiobookPlayer(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val audiobook = uiState.audiobook
+    val strings = LocalStrings.current
 
     AnimatedVisibility(
         visible = audiobook != null,
@@ -72,7 +77,7 @@ fun MiniAudiobookPlayer(
             Column {
                 // Progress line at the top
                 if (uiState.durationMs > 0) {
-                    LinearProgressIndicator(
+                    MrComicProgressLine(
                         progress = {
                             (uiState.positionMs.toFloat() / uiState.durationMs.toFloat())
                                 .coerceIn(0f, 1f)
@@ -137,23 +142,27 @@ fun MiniAudiobookPlayer(
                     }
 
                     // Play/Pause button
-                    IconButton(onClick = {
+                    MrComicIconButton(onClick = {
                         if (uiState.isPlaying) viewModel.pause() else viewModel.play()
                     }) {
                         Icon(
                             imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (uiState.isPlaying) "Пауза" else "Воспроизведение"
+                            contentDescription = if (uiState.isPlaying) {
+                                strings.audiobookPauseActionLabel()
+                            } else {
+                                strings.audiobookPlayActionLabel()
+                            }
                         )
                     }
 
                     // Stop/close button
-                    IconButton(onClick = {
+                    MrComicIconButton(onClick = {
                         viewModel.pause()
                         viewModel.saveProgress()
                     }) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Остановить",
+                            contentDescription = strings.audiobookStopActionLabel(),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

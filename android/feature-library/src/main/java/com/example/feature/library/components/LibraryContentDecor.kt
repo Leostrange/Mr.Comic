@@ -34,9 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.core.model.Comic
 import com.example.core.model.ComicLibraryShelf
@@ -44,6 +42,8 @@ import com.example.core.model.ComicFormat
 import com.example.core.model.isReadCompleted
 import com.example.core.model.isTextReadingFormat
 import com.example.core.model.libraryShelfCategory
+import com.example.core.ui.designsystem.MrComicFormatBadge
+import com.example.core.ui.designsystem.mrComicCompletedColor
 import com.example.core.ui.library.normalizeLibraryGraphicCoverStyle
 import java.io.File
 
@@ -84,38 +84,11 @@ internal fun FormatBadge(
     isGraphic: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val container = if (isGraphic) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-    } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-    }
-    val content = if (isGraphic) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(6.dp),
-        color = container,
-        border = androidx.compose.foundation.BorderStroke(
-            width = 0.6.dp,
-            color = if (isGraphic) {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            } else {
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.26f)
-            }
-        )
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-            color = content,
-            maxLines = 1,
-            overflow = TextOverflow.Clip
-        )
-    }
+    MrComicFormatBadge(
+        label = label,
+        isGraphic = isGraphic,
+        modifier = modifier
+    )
 }
 
 @Composable
@@ -134,7 +107,7 @@ internal fun BoxScope.ComicCoverTreatment(
     val minimalOutline = MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (hasCover) 0.16f else 0.3f)
     val posterSpinePrimary = MaterialTheme.colorScheme.primary.copy(alpha = if (hasCover) 0.26f else 0.6f)
     val posterSpineSecondary = MaterialTheme.colorScheme.tertiary.copy(alpha = if (hasCover) 0.12f else 0.28f)
-    val completedGraphicBorder = MaterialTheme.colorScheme.primary.copy(alpha = if (hasCover) 0.22f else 0.36f)
+    val completedGraphicBorder = mrComicCompletedColor().copy(alpha = if (hasCover) 0.22f else 0.36f)
     when {
         comic.isTextBookFormat() -> {
             if (hasCover) {

@@ -12,6 +12,7 @@ import com.example.engine.formats.base.TocEntry
 import com.example.engine.formats.base.buildUnifiedReaderHtmlDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jsoup.parser.Parser
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
@@ -40,18 +41,69 @@ class Fb2FormatReader(
         private val IMAGE_EXTS     = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
         /**
          * Target non-whitespace character count per reader page.
-         * ~2000 chars ≈ roughly one screenful at 18px/1.8lh on a typical phone.
-         * Vertical scrolling is allowed within a page, so content is never clipped.
+         * ~1200 visible chars ≈ 30 lines at 38 chars/line, filling roughly one
+         * phone screen. Avoids vertical scroll in PAGE mode and page-skipping.
          */
-        private const val CHARS_PER_PAGE = 2000
+private const val CHARS_PER_PAGE = 1200
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
+        private val GENERATED_BLOCK_RE = Regex(
+            """<(?:h2|h3|p|blockquote)\b[^>]*>.*?</(?:h2|h3|p|blockquote)>|<br\s*/?>""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
         private const val FB2_READER_CSS = """
 a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{font-size:0.75em;vertical-align:super;line-height:1;
      font-weight:bold;text-decoration:none;cursor:pointer}
 p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left}
 .note-num{font-weight:bold;display:inline-block;min-width:2.8em;text-indent:0}
 """
+
+        private fun appendEscapedFb2Text(target: StringBuilder, text: String) {
+            val trimmed = text.trim()
+            if (trimmed.isEmpty()) return
+            val previous = target.lastMeaningfulChar()
+            val first = trimmed.first()
+            if (previous != null && previous.shouldSeparateFrom(first)) {
+                target.append(' ')
+            }
+            target.append(
+                trimmed
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+            )
+        }
+
+        internal fun appendEscapedFb2TextForTest(target: StringBuilder, text: String) {
+            appendEscapedFb2Text(target, text)
+        }
+
+        private fun StringBuilder.lastMeaningfulChar(): Char? {
+            var index = length - 1
+            while (index >= 0) {
+                val char = this[index]
+                if (char == '>') {
+                    index = previousIndexOf('<', index - 1) - 1
+                    continue
+                }
+                if (!char.isWhitespace()) return char
+                index--
+            }
+            return null
+        }
+
+        private fun StringBuilder.previousIndexOf(target: Char, fromIndex: Int): Int {
+            var index = fromIndex.coerceAtMost(length - 1)
+            while (index >= 0) {
+                if (this[index] == target) return index
+                index--
+            }
+            return -1
+        }
+
+        private fun Char.shouldSeparateFrom(next: Char): Boolean =
+            (isLetterOrDigit() || this == ')' || this == '»' || this == '"') &&
+                (next.isLetterOrDigit() || next == '(' || next == '«' || next == '"')
 
         private inline fun logDebug(message: () -> String) {
             try {
@@ -159,7 +211,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         // Peek metadata and detect charset
         val metadataBuffer = ByteArray(1024 * 1024) // 1MB for metadata should be enough
         bufferedStream.mark(metadataBuffer.size)
-        val readCount = bufferedStream.read(metadataBuffer)
+        val readCount = bufferedStream.read(metadataBuffer).coerceAtLeast(0)
         val peekedBytes = if (readCount < metadataBuffer.size) metadataBuffer.copyOf(readCount) else metadataBuffer
         bufferedStream.reset()
 
@@ -194,13 +246,34 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         var notesSectionDepth = 0
         var inLink = false
 
+        fun extractPageBlocks(content: String): List<String> {
+            val blocks = mutableListOf<String>()
+            var cursor = 0
+            for (match in GENERATED_BLOCK_RE.findAll(content)) {
+                if (match.range.first > cursor) {
+                    content.substring(cursor, match.range.first)
+                        .trim()
+                        .takeIf { it.isNotEmpty() }
+                        ?.let(blocks::add)
+                }
+                match.value.trim().takeIf { it.isNotEmpty() }?.let(blocks::add)
+                cursor = match.range.last + 1
+            }
+            if (cursor < content.length) {
+                content.substring(cursor)
+                    .trim()
+                    .takeIf { it.isNotEmpty() }
+                    ?.let(blocks::add)
+            }
+            return blocks
+        }
+
         fun flushPage() {
             if (sectionBuf.isEmpty()) return
             val content = sectionBuf.toString()
             sectionBuf.clear()
 
-            val parts = content.split(Regex("(?<=</p>)", RegexOption.IGNORE_CASE))
-                .filter { it.isNotEmpty() }
+            val parts = extractPageBlocks(content)
 
             if (parts.isEmpty()) {
                 rawSections.add(content)
@@ -408,21 +481,13 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 // text, preserving inline spaces like "Hello <em>world</em>".
                                 if (text.trim().isNotEmpty()) {
                                     hasBodyText = true
-                                    val escaped = text
-                                        .replace("&", "&amp;")
-                                        .replace("<", "&lt;")
-                                        .replace(">", "&gt;")
-                                    sectionBuf.append(escaped)
+                                    appendEscapedFb2Text(sectionBuf, text)
                                     if (inTopLevelTitle) titleTextBuf.append(text)
                                 }
                             }
                             notesBodyDepth > 0 && depth > notesBodyDepth -> {
                                 if (text.trim().isNotEmpty()) {
-                                    notesBuf.append(
-                                        text.replace("&", "&amp;")
-                                            .replace("<", "&lt;")
-                                            .replace(">", "&gt;")
-                                    )
+                                    appendEscapedFb2Text(notesBuf, text)
                                 }
                             }
                         }
@@ -570,22 +635,9 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 }
 
 internal object Fb2Preprocessor {
-    private val htmlEntities = mapOf(
-        "nbsp" to "\u00A0", "mdash" to "\u2014", "ndash" to "\u2013",
-        "laquo" to "\u00AB", "raquo" to "\u00BB", "hellip" to "\u2026",
-        "ldquo" to "\u201C", "rdquo" to "\u201D", "lsquo" to "\u2018",
-        "rsquo" to "\u2019", "bull" to "\u2022", "copy" to "\u00A9",
-        "reg" to "\u00AE", "trade" to "\u2122", "euro" to "\u20AC",
-        "pound" to "\u00A3", "yen" to "\u00A5", "cent" to "\u00A2",
-        "deg" to "\u00B0", "plusmn" to "\u00B1", "times" to "\u00D7",
-        "divide" to "\u00F7", "frac12" to "\u00BD", "frac14" to "\u00BC",
-        "frac34" to "\u00BE", "para" to "\u00B6", "middot" to "\u00B7",
-        "szlig" to "\u00DF", "shy" to "\u00AD", "iexcl" to "\u00A1",
-        "iquest" to "\u00BF", "thinsp" to "\u2009", "ensp" to "\u2002",
-        "emsp" to "\u2003", "zwj" to "\u200D", "zwnj" to "\u200C",
-        "rlm" to "\u200F", "lrm" to "\u200E", "sbquo" to "\u201A",
-        "bdquo" to "\u201E", "permil" to "\u2030"
-    )
+    private val xmlEntities = setOf("amp", "lt", "gt", "apos", "quot")
+    private const val MAX_ENTITY_LENGTH = 64
+    private const val PUSHBACK_BUFFER_SIZE = 128
 
     fun detectCharset(peekedBytes: ByteArray): Charset {
         val peek = peekedBytes.toString(Charsets.ISO_8859_1)
@@ -611,7 +663,7 @@ internal object Fb2Preprocessor {
 
     fun createStreamingReader(inputStream: InputStream, charset: Charset): java.io.Reader {
         val baseReader = inputStream.reader(charset)
-        return object : java.io.PushbackReader(baseReader, 32) {
+        return object : java.io.PushbackReader(baseReader, PUSHBACK_BUFFER_SIZE) {
             private val entityBuf = StringBuilder()
 
             override fun read(): Int {
@@ -619,23 +671,23 @@ internal object Fb2Preprocessor {
                 if (c == '&'.code) {
                     entityBuf.setLength(0)
                     var next = super.read()
-                    while (next != -1 && next != ';'.code && next != '&'.code && entityBuf.length < 10) {
+                    while (next != -1 && next != ';'.code && next != '&'.code && entityBuf.length < MAX_ENTITY_LENGTH) {
                         entityBuf.append(next.toChar())
                         next = super.read()
                     }
 
                     if (next == ';'.code) {
                         val entity = entityBuf.toString()
-                        val replacement = htmlEntities[entity]
+                        val replacement = decodeHtmlNamedEntity(entity)
                         if (replacement != null) {
-                            // Replace known HTML entity with char
+                            for (i in replacement.length - 1 downTo 1) unread(replacement[i].code)
                             return replacement[0].code
                         } else if (entity.startsWith("#")) {
                             // Keep numeric entities
                             val full = "&$entity;"
                             for (i in full.length - 1 downTo 1) unread(full[i].code)
                             return '&'.code
-                        } else if (entity in setOf("amp", "lt", "gt", "apos", "quot")) {
+                        } else if (entity in xmlEntities) {
                             // Keep standard XML entities
                             val full = "&$entity;"
                             for (i in full.length - 1 downTo 1) unread(full[i].code)
@@ -665,11 +717,17 @@ internal object Fb2Preprocessor {
                     if (c == -1) break
                     cbuf[off + count] = c.toChar()
                     count++
-                    if (ready().not()) break // Don't block if we have some data
                 }
                 return if (count == 0) -1 else count
             }
         }
+    }
+
+    private fun decodeHtmlNamedEntity(entity: String): String? {
+        if (entity.isEmpty() || entity.startsWith("#") || entity in xmlEntities) return null
+        val encoded = "&$entity;"
+        val decoded = Parser.unescapeEntities(encoded, false)
+        return decoded.takeIf { it != encoded && it.isNotEmpty() && '&' !in it }
     }
 }
 

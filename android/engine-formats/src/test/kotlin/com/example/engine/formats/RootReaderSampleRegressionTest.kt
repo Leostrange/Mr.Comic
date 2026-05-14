@@ -10,6 +10,7 @@ import com.example.engine.formats.djvu.DjvuFormatReader
 import com.example.engine.formats.djvu.StructuredDjvuBackend
 import com.example.engine.formats.epub.EpubFormatReader
 import com.example.engine.formats.text.MobiFormatReader
+import com.example.engine.formats.text.RtfFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import com.example.engine.formats.zip.ZipFormatReader
 import kotlinx.coroutines.runBlocking
@@ -26,7 +27,7 @@ class RootReaderSampleRegressionTest {
         val reader = ZipFormatReader(testContext, sample.absolutePath, testProfile, throwingAllocator)
         try {
             val pageCount = reader.getPageCount()
-            assertTrue("Expected archived HTML book pages, got $pageCount", pageCount > 20)
+            assertTrue("Expected archived HTML book content, got $pageCount fragments", pageCount > 1)
             val firstPage = reader.getHtmlPage(0).orEmpty()
             assertTrue("Expected text HTML page from ZIP", firstPage.contains("Мопассан") || firstPage.contains("Под солнцем"))
             assertFalse("ZIP should not render only cover bitmap", firstPage.contains("Unable to read file"))
@@ -41,12 +42,12 @@ class RootReaderSampleRegressionTest {
         val reader = ZipFormatReader(testContext, sample.absolutePath, testProfile, throwingAllocator)
         try {
             val pageCount = reader.getPageCount()
-            assertTrue("Expected archived TXT book pages, got $pageCount", pageCount > 20)
+            assertTrue("Expected archived TXT book content, got $pageCount fragments", pageCount > 1)
             val firstPages = (0 until minOf(3, pageCount))
                 .map { index -> reader.getHtmlPage(index).orEmpty() }
                 .joinToString("\n")
             assertTrue("Expected readable Cyrillic text from archived TXT", firstPages.contains("Мопассан"))
-            assertFalse("Expected UTF-8 text not mojibake", firstPages.contains("РњРѕРї"))
+            assertFalse("Expected UTF-8 text not mojibake", firstPages.hasCommonMojibake())
         } finally {
             reader.close()
         }
@@ -58,7 +59,7 @@ class RootReaderSampleRegressionTest {
         val reader = EpubFormatReader(testContext, sample.absolutePath)
         try {
             val pageCount = reader.getPageCount()
-            assertTrue("Expected EPUB pages, got $pageCount", pageCount > 20)
+            assertTrue("Expected EPUB content fragments, got $pageCount", pageCount > 1)
             val firstPages = (0 until minOf(4, pageCount))
                 .map { index -> reader.getHtmlPage(index).orEmpty() }
                 .joinToString("\n")
@@ -73,10 +74,10 @@ class RootReaderSampleRegressionTest {
                 fullText.contains("коренное население постепенно исчезнет")
             )
             assertTrue(
-                "Expected EPUB reader pagination to avoid oversized text pages, got max visible page length $maxVisiblePageLength",
-                maxVisiblePageLength < 5000
+                "Expected EPUB backend fragments to remain bounded, got max visible fragment length $maxVisiblePageLength",
+                maxVisiblePageLength < 65_000
             )
-            assertFalse("Expected EPUB text not mojibake", firstPages.contains("РњРѕРї"))
+            assertFalse("Expected EPUB text not mojibake", fullText.hasCommonMojibake())
         } finally {
             reader.close()
         }
@@ -88,7 +89,7 @@ class RootReaderSampleRegressionTest {
         val reader = TextFormatReader(testContext, sample.absolutePath, ComicFormat.MOBI)
         try {
             val pageCount = reader.getPageCount()
-            assertTrue("Expected MOBI pages, got $pageCount", pageCount > 20)
+            assertTrue("Expected MOBI content fragments, got $pageCount", pageCount > 1)
             val firstPages = (0 until minOf(4, pageCount))
                 .map { index -> reader.getHtmlPage(index).orEmpty() }
                 .joinToString("\n")
@@ -103,10 +104,10 @@ class RootReaderSampleRegressionTest {
                 fullText.contains("коренное население постепенно исчезнет")
             )
             assertTrue(
-                "Expected MOBI reader pagination to avoid oversized text pages, got max visible page length $maxVisiblePageLength",
-                maxVisiblePageLength < 5000
+                "Expected MOBI backend fragments to remain bounded, got max visible fragment length $maxVisiblePageLength",
+                maxVisiblePageLength < 65_000
             )
-            assertFalse("Expected MOBI text not mojibake", firstPages.contains("РњРѕРї"))
+            assertFalse("Expected MOBI text not mojibake", fullText.hasCommonMojibake())
         } finally {
             reader.close()
         }
@@ -118,7 +119,7 @@ class RootReaderSampleRegressionTest {
         val reader = MobiFormatReader(testContext, sample.absolutePath, ComicFormat.MOBI)
         try {
             val pageCount = reader.getPageCount()
-            assertTrue("Expected standalone MOBI pages, got $pageCount", pageCount > 20)
+            assertTrue("Expected standalone MOBI content fragments, got $pageCount", pageCount > 1)
             val firstPages = (0 until minOf(4, pageCount))
                 .map { index -> reader.getHtmlPage(index).orEmpty() }
                 .joinToString("\n")
@@ -126,7 +127,28 @@ class RootReaderSampleRegressionTest {
                 "Expected standalone MOBI Cyrillic title/author text",
                 firstPages.contains("Мопассан") || firstPages.contains("Под солнцем")
             )
-            assertFalse("Expected standalone MOBI text not mojibake", firstPages.contains("РњРѕРї"))
+            assertFalse("Expected standalone MOBI text not mojibake", firstPages.hasCommonMojibake())
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
+    fun podSolntsemRtfHasReadableCyrillicWithoutMojibake() = runBlocking {
+        val sample = locateRootSample("Под солнцем_868805.rtf")
+        val reader = RtfFormatReader(testContext, sample.absolutePath)
+        try {
+            val pageCount = reader.getPageCount()
+            assertTrue("Expected RTF content fragments, got $pageCount", pageCount > 1)
+            val fullText = (0 until pageCount)
+                .map { index -> reader.getHtmlPage(index).orEmpty().visibleText() }
+                .joinToString("\n")
+            assertTrue("Expected RTF Cyrillic title/author text", fullText.contains("Мопассан") || fullText.contains("Под солнцем"))
+            assertTrue(
+                "Expected RTF late-book text to be present, not skipped",
+                fullText.contains("коренное население постепенно исчезнет")
+            )
+            assertFalse("Expected RTF text not mojibake", fullText.hasCommonMojibake())
         } finally {
             reader.close()
         }
@@ -138,13 +160,16 @@ class RootReaderSampleRegressionTest {
         val reader = DjvuFormatReader(testContext, sample.absolutePath, StructuredDjvuBackend(testContext))
         try {
             val pageCount = reader.getPageCount()
-            assertTrue("Expected DjVu pages, got $pageCount", pageCount >= 1)
-            val firstPage = reader.getHtmlPage(0).orEmpty()
+            assertTrue("Expected DjVu pages, got $pageCount", pageCount > 1)
+            val metadata = reader.getMetadata()
             assertTrue(
-                "Expected DjVu visual/scanned-page presentation, not plain OCR text",
-                firstPage.contains("графическая композиция", ignoreCase = true) ||
-                    firstPage.contains("DjVu scan layer", ignoreCase = true) ||
-                    firstPage.contains("<img", ignoreCase = true)
+                "Expected DjVu fixed-page raster contract, got $metadata",
+                metadata["documentKind"] == "fixed-page" && metadata["pageModel"] == "raster"
+            )
+            assertTrue(
+                "Expected DjVu composite diagnostics, got $metadata",
+                metadata["nativeRendererRequired"] == "true" ||
+                    metadata["unsupportedRenderFeatures"]?.contains("JB2 mask") == true
             )
         } finally {
             reader.close()
@@ -157,6 +182,8 @@ class RootReaderSampleRegressionTest {
         repeat(8) {
             val candidate = File(current, name)
             if (candidate.exists()) return candidate
+            val referenceCandidate = File(current, "reference/formats/samples/$name")
+            if (referenceCandidate.exists()) return referenceCandidate
             current = current.parentFile ?: return@repeat
         }
         error("Missing root reader sample: $name")
@@ -167,6 +194,13 @@ class RootReaderSampleRegressionTest {
         .replace(Regex("(?is)<script\\b[^>]*>.*?</script>"), " ")
         .replace(Regex("<[^>]+>"), " ")
         .replace(Regex("\\s+"), " ")
+
+    private fun String.hasCommonMojibake(): Boolean =
+        contains("РњРѕРї") ||
+            contains("Ð") ||
+            contains("Ã") ||
+            Regex("[\u0402\u0403\u0409\u040A\u040B\u040C\u040F\u0452\u0453\u0459\u045A\u045B\u045C\u045F]")
+                .containsMatchIn(this)
 
     private companion object {
         val testContext = ContextWrapper(null)

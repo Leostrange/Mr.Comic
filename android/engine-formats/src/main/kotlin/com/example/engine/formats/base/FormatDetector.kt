@@ -19,8 +19,12 @@ object FormatDetector {
     fun detect(stream: InputStream, name: String): ComicFormat {
         return try {
             val header = ByteArray(80)
-            stream.read(header)
-            detectByBytes(header) ?: detectByExtension(name)
+            val bytesRead = stream.read(header)
+            if (bytesRead > 0) {
+                detectByBytes(header.copyOf(bytesRead)) ?: detectByExtension(name)
+            } else {
+                detectByExtension(name)
+            }
         } catch (_: Exception) {
             detectByExtension(name)
         }
