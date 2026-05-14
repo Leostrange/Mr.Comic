@@ -3,6 +3,7 @@ package com.example.engine.formats.text
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import com.example.core.model.ComicFormat
 import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.FormatReaderWebResource
 import com.example.engine.formats.base.READER_BASE_DOCUMENT_CSS
@@ -20,7 +21,11 @@ class PlainTextFormatReader(
     private val path: String
 ) : FormatReader {
 
-    private val document: ReflowableDocument by lazy { parseDocument() }
+    private val document: ReflowableDocument by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflowableDocumentMemoryCache.getOrPut(
+            ReflowableDocumentMemoryCache.keyFor(context, path, ComicFormat.TXT, "txt")
+        ) { parseDocument() }
+    }
     private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(document.pages) }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
@@ -58,7 +63,11 @@ class MarkdownFormatReader(
     private val path: String
 ) : FormatReader {
 
-    private val document: ReflowableDocument by lazy { parseDocument() }
+    private val document: ReflowableDocument by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflowableDocumentMemoryCache.getOrPut(
+            ReflowableDocumentMemoryCache.keyFor(context, path, ComicFormat.MARKDOWN, "markdown")
+        ) { parseDocument() }
+    }
     private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(document.pages) }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
@@ -71,6 +80,8 @@ class MarkdownFormatReader(
         document.pageAt(index)
     }
 
+    override fun getTableOfContents(): List<TocEntry> = document.toc
+
     override fun resolveHrefToPage(href: String): Int? =
         resolveLocalHref(path, href, anchorPageIndex)
 
@@ -79,9 +90,17 @@ class MarkdownFormatReader(
     private fun parseDocument(): ReflowableDocument {
         val raw = readSourceText(context, path)
             ?: return ReflowableDocumentBuilder.error("Unable to read file.")
-        return ReflowableDocument(
-            pages = paginateReaderBlocks(renderMarkdownToHtmlBlocks(raw))
+        // Use ReflowableDocumentBuilder.fromHtmlBlocks instead of the legacy paginateReaderBlocks.
+        // The legacy path strips HTML via Jsoup.text() when splitting oversized blocks, destroying
+        // code blocks, tables, and inline markup in long Markdown sections.
+        val blocks = renderMarkdownToHtmlBlocks(raw)
+        val doc = ReflowableDocumentBuilder.fromHtmlBlocks(
+            blocks = blocks,
+            baseCss = READER_BASE_DOCUMENT_CSS
         )
+        val pageIndex = buildAnchorPageIndex(doc.pages)
+        val toc = buildTocFromPages(doc.pages, pageIndex)
+        return if (toc.isEmpty()) doc else doc.copy(toc = toc)
     }
 }
 
@@ -90,7 +109,11 @@ class HtmlFormatReader(
     private val path: String
 ) : FormatReader {
 
-    private val document: ReflowableDocument by lazy { parseDocument() }
+    private val document: ReflowableDocument by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        ReflowableDocumentMemoryCache.getOrPut(
+            ReflowableDocumentMemoryCache.keyFor(context, path, ComicFormat.HTML, "html")
+        ) { parseDocument() }
+    }
     private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(document.pages) }
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
@@ -143,6 +166,8 @@ class HtmlFormatReader(
         )
     }
 
+    override fun getTableOfContents(): List<TocEntry> = document.toc
+
     override fun resolveHrefToPage(href: String): Int? =
         resolveLocalHref(path, href, anchorPageIndex)
 
@@ -152,11 +177,16 @@ class HtmlFormatReader(
         val raw = readSourceText(context, path)
             ?: return ReflowableDocumentBuilder.error("Unable to read file.")
         val readerBaseUrl = if (supportsHtmlAssetLoading()) null else htmlBaseUrl()
-        return ReflowableDocumentBuilder.fromMarkup(
+        val doc = ReflowableDocumentBuilder.fromMarkup(
             markup = raw,
             baseUrl = readerBaseUrl,
             baseCss = READER_BASE_DOCUMENT_CSS
         )
+        // Build TOC by scanning pages for heading elements (h1–h6).
+        // fromMarkup() leaves toc empty; we extract it here from the paginated output.
+        val pageIndex = buildAnchorPageIndex(doc.pages)
+        val toc = buildTocFromPages(doc.pages, pageIndex)
+        return if (toc.isEmpty()) doc else doc.copy(toc = toc)
     }
 
     private fun supportsHtmlAssetLoading(): Boolean =
@@ -197,7 +227,7 @@ private fun textBlocksWithChapterAnchors(raw: String): Pair<List<String>, List<C
             anchors += anchor
             blocks += """<h2 id="${anchor.id}" class="chapter">${escapeHtml(anchor.title)}</h2>"""
         } else {
-            blocks += "<p>${escapeHtml(trimmed).replace("\n", "<br/>")}</p>"
+            blocks += "<p>${renderInlineMarkup(escapeHtml(trimmed)).replace("\n", "<br/>")}</p>"
         }
     }
     return blocks.ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") } to anchors
@@ -215,7 +245,10 @@ private fun paginateReaderBlocks(blocks: List<String>): List<String> {
     var currentLength = 0
     blocks.flatMap(::splitOversizedReaderBlock).forEach { block ->
         val blockLength = visibleTextLength(block)
-        if (current.isNotEmpty() && currentLength + blockLength > READER_CHARS_PER_PAGE) {
+        if (
+            current.isNotEmpty() &&
+            (block.isReaderSectionStartBlock() || currentLength + blockLength > READER_CHARS_PER_PAGE)
+        ) {
             pages += wrapReaderPage(current.toString())
             current.clear()
             currentLength = 0
@@ -287,6 +320,14 @@ private fun visibleTextLength(html: String): Int =
         .trim()
         .length
 
+private fun String.isReaderSectionStartBlock(): Boolean = runCatching {
+    val first = Jsoup.parseBodyFragment(this).body().children().firstOrNull() ?: return@runCatching false
+    val tag = first.normalName()
+    tag in setOf("h1", "h2", "h3") ||
+        first.hasClass("chapter") ||
+        first.attr("data-mrcomic-section-start").equals("true", ignoreCase = true)
+}.getOrDefault(false)
+
 private fun readerMimeTypeFor(extension: String): String = when (extension.lowercase()) {
     "html", "htm" -> "text/html"
     "css" -> "text/css"
@@ -313,7 +354,55 @@ private fun escapeHtml(text: String): String = text
     .replace("<", "&lt;")
     .replace(">", "&gt;")
 
-private const val READER_CHARS_PER_PAGE = 2200
+/**
+ * Converts plain-text inline markup conventions (common in Project Gutenberg texts
+ * and similar sources) to HTML after the text has already been HTML-escaped.
+ *
+ * Rules applied in order:
+ *  - _word_  → <em>word</em>   (italics)
+ *  - *word*  → <em>word</em>   (italics, alternate marker)
+ *  - **word** or __word__ → <strong>word</strong> (bold; checked first to avoid partial match)
+ *
+ * Only ASCII-style markers at word boundaries are converted; underscores inside
+ * words (snake_case identifiers) are left intact.
+ */
+private fun renderInlineMarkup(escaped: String): String {
+    // Double-marker bold first so single-marker italic doesn't partially consume them.
+    var s = escaped
+    s = s.replace(Regex("""(?<!\w)\*\*(.+?)\*\*(?!\w)""")) { "<strong>${it.groupValues[1]}</strong>" }
+    s = s.replace(Regex("""(?<!\w)__(.+?)__(?!\w)""")) { "<strong>${it.groupValues[1]}</strong>" }
+    // Single-marker italic — underscore only at non-word-char boundaries to avoid
+    // breaking snake_case or mid-word underscores in code/titles.
+    s = s.replace(Regex("""(?<![A-Za-z0-9])_([^_\n]+?)_(?![A-Za-z0-9])""")) { "<em>${it.groupValues[1]}</em>" }
+    s = s.replace(Regex("""(?<!\w)\*([^*\n]+?)\*(?!\w)""")) { "<em>${it.groupValues[1]}</em>" }
+    return s
+}
+
+/**
+ * Extracts a Table of Contents from paginated HTML pages by scanning for h1–h6 elements
+ * that have an id attribute. Used by HtmlFormatReader and MarkdownFormatReader where the
+ * underlying ReflowableDocumentBuilder does not populate the toc field.
+ */
+internal fun buildTocFromPages(pages: List<String>, pageIndex: Map<String, Int>): List<TocEntry> {
+    val seen = linkedSetOf<String>() // deduplicate identical headings on same page
+    val result = mutableListOf<TocEntry>()
+    pages.forEachIndexed { idx, html ->
+        runCatching {
+            val doc = Jsoup.parse(html)
+            doc.select("h1, h2, h3, h4, h5, h6").forEach { el ->
+                val title = el.text().trim()
+                if (title.isBlank()) return@forEach
+                val id = el.id().trim()
+                val page = if (id.isNotBlank()) pageIndex[id] ?: idx else idx
+                val key = "$page:$title"
+                if (seen.add(key)) result += TocEntry(title = title, pageIndex = page)
+            }
+        }
+    }
+    return result
+}
+
+private const val READER_CHARS_PER_PAGE = 1200
 private val TXT_READER_CHAPTER_PATTERNS = listOf(
     Regex("""(?iu)^(глава|часть|книга|том)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),
     Regex("""(?iu)^(chapter|part|book|volume)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),

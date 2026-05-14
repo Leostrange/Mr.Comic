@@ -54,6 +54,13 @@ Packt.Mastering.Kotlin.for.Android.14.1837631719.pdf
 # Local review / scratch files
 old_ComicGridItem.kt
 test.diff
+.qa_run/
+Incorrect display/
+Mr.Comic Design System-handoff/
+mr-comic-design-system/
+offline-translation/
+PLAN.md
+photo_*.jpg
 
 # Design/media source dumps that are not runtime assets
 media/

@@ -28,7 +28,7 @@ class ThemePreferencesRepository @Inject constructor(
         private val THEME_MODE_KEY = stringPreferencesKey("theme_mode")
         private val USE_DYNAMIC_COLOR_KEY = booleanPreferencesKey("use_dynamic_color")
         private val USE_AMOLED_KEY = booleanPreferencesKey("use_amoled_dark")
-        // Custom per-element colors stored as hex strings (e.g. "FF6200EE") or null
+        // Custom per-element colors are stored as decimal strings via Long.toString().
         private val CUSTOM_PRIMARY_COLOR_KEY = stringPreferencesKey("custom_primary_color")
         private val CUSTOM_SECONDARY_COLOR_KEY = stringPreferencesKey("custom_secondary_color")
         private val CUSTOM_BACKGROUND_COLOR_KEY = stringPreferencesKey("custom_background_color")
@@ -49,7 +49,7 @@ class ThemePreferencesRepository @Inject constructor(
             }.getOrDefault(ThemeMode.SYSTEM),
             useDynamicColor = prefs[USE_DYNAMIC_COLOR_KEY] ?: true,
             useAmoledDark = prefs[USE_AMOLED_KEY] ?: false,
-            // Stored as unsigned decimal string (toUInt().toLong().toString())
+            // Parsed from the decimal strings written by the setters below.
             customPrimaryColor = prefs[CUSTOM_PRIMARY_COLOR_KEY]?.toLongOrNull(),
             customSecondaryColor = prefs[CUSTOM_SECONDARY_COLOR_KEY]?.toLongOrNull(),
             customBackgroundColor = prefs[CUSTOM_BACKGROUND_COLOR_KEY]?.toLongOrNull(),
@@ -74,7 +74,7 @@ class ThemePreferencesRepository @Inject constructor(
         dataStore.edit { prefs -> prefs[THEME_PRESET_KEY] = preset.name }
     }
 
-    /** Pass null to reset to theme default. Color value is ARGB Long (e.g. 0xFF6200EEEL). */
+    /** Pass null to reset to theme default. Non-null values are persisted as decimal Long strings. */
     suspend fun setCustomPrimaryColor(color: Long?) {
         dataStore.edit { prefs ->
             if (color == null) prefs.remove(CUSTOM_PRIMARY_COLOR_KEY)

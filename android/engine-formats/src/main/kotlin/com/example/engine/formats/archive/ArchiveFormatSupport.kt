@@ -2,6 +2,8 @@ package com.example.engine.formats.archive
 
 import com.example.core.model.ComicFormat
 import java.math.BigInteger
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.util.Locale
 
 enum class ArchiveContentKind {
@@ -74,6 +76,31 @@ object ArchiveFormatSupport {
             .replace(Regex("[^A-Za-z0-9._-]"), "_")
             .ifBlank { "archived_text.$extension" }
 
+    /**
+     * Creates a deterministic cache filename for one text entry extracted from an archive.
+     *
+     * @param prefix short archive-type prefix, for example `zip`, `rar`, `7z`, or `tar`.
+     * @param archiveKey stable identity for the source archive, usually its path or URI.
+     * @param entryName path/name of the text entry inside the archive.
+     * @param entrySize size of the entry in bytes; must be non-negative.
+     * @param extension extension used when [entryName] must be sanitized into a fallback name.
+     * @return `{prefix}_{digest}_{sanitizedName}`, where `digest` is derived from length-prefixed
+     * archive identity parts and `sanitizedName` comes from [safeArchiveName].
+     */
+    fun textCacheFileName(
+        prefix: String,
+        archiveKey: String,
+        entryName: String,
+        entrySize: Long,
+        extension: String
+    ): String {
+        require(entrySize >= 0) {
+            "Archive entry size must be non-negative: archiveKey=$archiveKey, entryName=$entryName, entrySize=$entrySize"
+        }
+        val digest = stableDigest(stableDigestInput(archiveKey, entryName, entrySize.toString()))
+        return "${prefix}_${digest}_${safeArchiveName(entryName, extension)}"
+    }
+
     private fun compareNatural(left: String, right: String): Int {
         val leftTokens = tokenize(left)
         val rightTokens = tokenize(right)
@@ -103,6 +130,17 @@ object ArchiveFormatSupport {
             else -> left.compareTo(right)
         }
     }
+
+    private fun stableDigest(value: String): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(StandardCharsets.UTF_8))
+            .take(12)
+            .joinToString(separator = "") { byte ->
+                (byte.toInt() and 0xFF).toString(16).padStart(2, '0')
+            }
+
+    private fun stableDigestInput(vararg parts: String): String =
+        parts.joinToString(separator = "") { part -> "${part.length}:$part;" }
 
     private val NATURAL_TOKEN_REGEX = Regex("""\d+|\D+""")
 }

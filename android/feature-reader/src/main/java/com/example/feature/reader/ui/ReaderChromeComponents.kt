@@ -5,8 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,13 +32,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -53,6 +48,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.model.ReadingMode
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicIconButtonVariant
+import com.example.core.ui.designsystem.MrComicSlider
 import com.example.core.ui.library.RootChromeTopBarHost
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.library.rootChromeStableTopBarInsets
@@ -104,12 +103,13 @@ private fun ReaderChromeIconButton(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
-    IconButton(
+    MrComicIconButton(
         onClick = onClick,
-        modifier = modifier.size(42.dp)
-    ) {
-        content()
-    }
+        modifier = modifier,
+        size = 42.dp,
+        variant = MrComicIconButtonVariant.Tonal,
+        content = content
+    )
 }
 
 @Composable
@@ -119,17 +119,10 @@ internal fun ReaderPanelChip(
     modifier: Modifier = Modifier,
     label: @Composable () -> Unit
 ) {
-    FilterChip(
+    MrComicFilterChip(
         selected = selected,
         onClick = onClick,
-        modifier = modifier.heightIn(min = 38.dp),
-        shape = RoundedCornerShape(999.dp),
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            labelColor = MaterialTheme.colorScheme.onSurface,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
+        modifier = modifier,
         label = label
     )
 }
@@ -165,11 +158,11 @@ fun ReaderExpandedBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.width(44.dp),
+            modifier = Modifier.weight(1f),
             contentAlignment = Alignment.Center
         ) {
             ReaderChromeIconButton(onClick = onNavigateBack) {
@@ -180,46 +173,34 @@ fun ReaderExpandedBar(
                 )
             }
         }
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
-            ) {
-                ReaderExpandedActionButtons(
-                    canShowToc = canShowToc,
-                    showTextSettings = showTextSettings,
-                    showOcrAction = showOcrAction,
-                    canSwapDirection = canSwapDirection,
-                    directionShortcutActive = directionShortcutActive,
-                    showBrightnessRow = showBrightnessRow,
-                    showTtsAction = useDirectActions,
-                    chromeIconOrder = chromeIconOrder,
-                    showTocIcon = showTocIcon,
-                    showTextSettingsIcon = showTextSettingsIcon,
-                    showAudioIcon = showAudioIcon,
-                    showDirectionIcon = showDirectionIcon,
-                    showTranslateIcon = showTranslateIcon,
-                    showBrightnessIcon = showBrightnessIcon,
-                    chromeIconTint = chromeIconTint,
-                    onToggleToc = onToggleToc,
-                    onToggleTextSettings = onToggleTextSettings,
-                    onSwapDirection = onSwapDirection,
-                    onRequestOcr = onRequestOcr,
-                    onToggleBrightness = onToggleBrightness,
-                    onToggleTtsControls = onToggleTtsControls
-                )
-            }
-        }
-        Spacer(Modifier.width(44.dp))
+        ReaderExpandedActionButtons(
+            canShowToc = canShowToc,
+            showTextSettings = showTextSettings,
+            showOcrAction = showOcrAction,
+            canSwapDirection = canSwapDirection,
+            directionShortcutActive = directionShortcutActive,
+            showBrightnessRow = showBrightnessRow,
+            showTtsAction = useDirectActions,
+            chromeIconOrder = chromeIconOrder,
+            showTocIcon = showTocIcon,
+            showTextSettingsIcon = showTextSettingsIcon,
+            showAudioIcon = showAudioIcon,
+            showDirectionIcon = showDirectionIcon,
+            showTranslateIcon = showTranslateIcon,
+            showBrightnessIcon = showBrightnessIcon,
+            chromeIconTint = chromeIconTint,
+            onToggleToc = onToggleToc,
+            onToggleTextSettings = onToggleTextSettings,
+            onSwapDirection = onSwapDirection,
+            onRequestOcr = onRequestOcr,
+            onToggleBrightness = onToggleBrightness,
+            onToggleTtsControls = onToggleTtsControls
+        )
     }
 }
 
 @Composable
-private fun ReaderExpandedActionButtons(
+private fun RowScope.ReaderExpandedActionButtons(
     canShowToc: Boolean,
     showTextSettings: Boolean,
     showOcrAction: Boolean,
@@ -358,7 +339,12 @@ private fun ReaderExpandedActionButtons(
     }
 
     actions.forEach { action ->
-        action.content()
+        Box(
+            modifier = Modifier.weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            action.content()
+        }
     }
 }
 
@@ -385,16 +371,11 @@ fun ReaderBrightnessRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
-        Slider(
+        MrComicSlider(
             value = brightness,
             onValueChange = onBrightnessChange,
             valueRange = 0.05f..1f,
-            modifier = Modifier.weight(1f),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            modifier = Modifier.weight(1f)
         )
         Icon(
             Icons.Default.BrightnessHigh,
@@ -559,9 +540,9 @@ private fun ReaderCompactLandscapeBottomPanel(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    IconButton(
+                    MrComicIconButton(
                         onClick = onToggleBookmark,
-                        modifier = Modifier.size(32.dp)
+                        size = 32.dp
                     ) {
                         Icon(
                             imageVector = if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
@@ -588,19 +569,12 @@ private fun ReaderCompactLandscapeBottomPanel(
         }
 
         if (totalPages > 1) {
-            Slider(
+            MrComicSlider(
                 value = currentPage.toFloat(),
                 onValueChange = { onPageChange(it.toInt()) },
                 valueRange = 0f..(totalPages - 1).toFloat(),
                 steps = (totalPages - 2).coerceAtLeast(0),
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
-                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
-                )
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -682,15 +656,15 @@ fun ReaderNotePanel(
                 )
                 Row {
                     if (expanded) {
-                        IconButton(onClick = onCollapse, modifier = Modifier.size(24.dp)) {
+                        MrComicIconButton(onClick = onCollapse, size = 24.dp) {
                             Icon(Icons.Default.KeyboardArrowDown, contentDescription = readerText.collapse, tint = fgColor)
                         }
                     } else {
-                        IconButton(onClick = onExpand, modifier = Modifier.size(24.dp)) {
+                        MrComicIconButton(onClick = onExpand, size = 24.dp) {
                             Icon(Icons.Default.KeyboardArrowUp, contentDescription = readerText.expand, tint = fgColor)
                         }
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                    MrComicIconButton(onClick = onDismiss, size = 24.dp) {
                         Icon(Icons.Default.Close, contentDescription = readerText.close, tint = fgColor, modifier = Modifier.size(18.dp))
                     }
                 }

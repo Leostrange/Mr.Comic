@@ -31,7 +31,8 @@ import java.nio.charset.Charset
 import java.net.URLDecoder
 import javax.inject.Inject
 
-private const val CHARS_PER_PAGE = 2200
+private const val CHARS_PER_PAGE = 1200
+private const val MAX_TEXT_SOURCE_BYTES = 96 * 1024 * 1024
 private val UTF8_BOM = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 private val MARKDOWN_EXTENSIONS: List<Extension> = listOf(
     AutolinkExtension.create(),
@@ -60,7 +61,8 @@ private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
     .addAttributes("th", "colspan", "rowspan")
     .addAttributes("td", "colspan", "rowspan")
     .addAttributes("table", "width", "border", "cellpadding", "cellspacing", "align")
-    .addAttributes("col", "span")
+    .addAttributes("colgroup", "span", "width")
+    .addAttributes("col", "span", "width")
     .addProtocols("a", "href", "http", "https", "mailto", "tel", "file", "content")
     .addProtocols("img", "src", "http", "https", "file", "content", "data")
     .preserveRelativeLinks(true)
@@ -84,7 +86,18 @@ private data class TxtChapterAnchor(
 
 private data class TextDocumentData(
     val pages: List<String>,
-    val chapterAnchors: List<TxtChapterAnchor> = emptyList()
+    val chapterAnchors: List<TxtChapterAnchor> = emptyList(),
+    val footnoteMap: Map<String, String> = emptyMap()
+)
+
+private data class MarkdownDocumentBlocks(
+    val blocks: List<String>,
+    val anchors: List<TxtChapterAnchor>
+)
+
+private data class HtmlPageAnchorResult(
+    val pages: List<String>,
+    val anchors: List<TxtChapterAnchor>
 )
 
 // ── RTF non-content destination groups ────────────────────────────────────────
@@ -392,15 +405,57 @@ internal fun renderMarkdownToHtmlBlocks(raw: String): List<String> {
     val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
     val document = MARKDOWN_PARSER.parse(normalized)
     val blocks = mutableListOf<String>()
+    val usedSlugs = mutableMapOf<String, Int>()
     var node: Node? = document.firstChild
     while (node != null) {
-        val rendered = MARKDOWN_RENDERER.render(node).trim()
+        var rendered = MARKDOWN_RENDERER.render(node).trim()
         if (rendered.isNotBlank()) {
+            rendered = postProcessMarkdownBlock(rendered, usedSlugs)
             blocks += rendered
         }
         node = node.next
     }
     return blocks
+}
+
+private val MARKDOWN_HEADING_RE = Regex("""(?i)<h[1-6]\b""")
+
+/**
+ * Post-processes a single rendered CommonMark block:
+ *  - Wraps bare `<table>` in a scrollable container so wide tables don't clip off-screen.
+ *  - Adds `id` attributes to heading elements for anchor navigation and TOC linking.
+ */
+private fun postProcessMarkdownBlock(rendered: String, usedSlugs: MutableMap<String, Int>): String {
+    val trimmed = rendered.trimStart()
+    // Wrap top-level tables in a horizontally-scrollable container.
+    if (trimmed.startsWith("<table")) {
+        return """<div class="mrcomic-table-scroll">$rendered</div>"""
+    }
+    // Add slug IDs to headings that lack them, so anchor links (#section) resolve.
+    if (MARKDOWN_HEADING_RE.containsMatchIn(trimmed)) {
+        val frag = Jsoup.parseBodyFragment(rendered)
+        frag.select("h1, h2, h3, h4, h5, h6").forEach { el ->
+            if (el.id().isBlank()) {
+                val slug = markdownHeadingSlug(el.text(), usedSlugs)
+                if (slug.isNotBlank()) el.attr("id", slug)
+            }
+        }
+        return frag.body().html()
+    }
+    return rendered
+}
+
+private fun markdownHeadingSlug(text: String, used: MutableMap<String, Int>): String {
+    val base = text.lowercase()
+        .replace(Regex("[^\\p{L}\\p{N}\\s-]"), "")
+        .trim()
+        .replace(Regex("\\s+"), "-")
+        .take(60)
+        .trimEnd('-')
+    if (base.isBlank()) return ""
+    val count = used.getOrDefault(base, 0)
+    used[base] = count + 1
+    return if (count == 0) base else "$base-$count"
 }
 
 internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): String {
@@ -471,12 +526,13 @@ class TextFormatReader @Inject constructor(
     private val format: ComicFormat
 ) : FormatReader {
 
-    private val mobiDocument: ReflowableDocument? by lazy {
+    private val mobiPayload: MobiReaderPayload? by lazy {
         when (format) {
-            ComicFormat.MOBI, ComicFormat.AZW3 -> readMobiReflowableDocument(context, path)
+            ComicFormat.MOBI, ComicFormat.AZW3 -> readMobiReflowablePayload(context, path)
             else -> null
         }
     }
+    private val mobiDocument: ReflowableDocument? get() = mobiPayload?.document
     private val documentData: TextDocumentData by lazy { parseDocument() }
     private val htmlPages: List<String> get() = documentData.pages
     private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex() }
@@ -496,9 +552,41 @@ class TextFormatReader @Inject constructor(
 
     override suspend fun getMetadata(): Map<String, String> = withContext(Dispatchers.IO) {
         when (format) {
-            ComicFormat.MOBI, ComicFormat.AZW3 -> mapOf(
+            ComicFormat.MOBI, ComicFormat.AZW3 -> buildMap {
+                put("format", format.name)
+                put("engine", "mobi-reflowable-v1")
+                put("parserVersion", "2")
+                mobiPayload?.diagnostics?.let { diagnostics ->
+                    put("declaredEncoding", diagnostics.declaredEncoding.toString())
+                    put("resolvedEncoding", diagnostics.resolvedEncoding)
+                    put("compression", diagnostics.compression.toString())
+                    put("textRecordCount", diagnostics.textRecordCount.toString())
+                    put("pageBreakCount", diagnostics.pageBreakCount.toString())
+                    put("containsMarkup", diagnostics.containsMarkup.toString())
+                }
+                mobiPayload?.unsupportedDetails?.let { details ->
+                    put("unsupportedReason", details.reason)
+                    details.declaredEncoding?.let { put("declaredEncoding", it.toString()) }
+                    details.compression?.let { put("compression", it.toString()) }
+                    details.textRecordCount?.let { put("textRecordCount", it.toString()) }
+                    details.encryptionType?.let { put("encryptionType", it.toString()) }
+                    put("containsHuffCdicTables", details.containsHuffCdicTables.toString())
+                }
+            }
+            ComicFormat.HTML -> mapOf(
                 "format" to format.name,
-                "engine" to "mobi-reflowable-v1"
+                "engine" to "html-reflowable-v1",
+                "anchorCount" to documentData.chapterAnchors.size.toString()
+            )
+            ComicFormat.MARKDOWN -> mapOf(
+                "format" to format.name,
+                "engine" to "markdown-reflowable-v1",
+                "anchorCount" to documentData.chapterAnchors.size.toString()
+            )
+            ComicFormat.TXT -> mapOf(
+                "format" to format.name,
+                "engine" to "txt-reflowable-v1",
+                "anchorCount" to documentData.chapterAnchors.size.toString()
             )
             else -> emptyMap()
         }
@@ -572,6 +660,13 @@ class TextFormatReader @Inject constructor(
         }
     }
 
+    override fun getFootnoteText(anchorId: String): String? {
+        val map = documentData.footnoteMap
+        if (map.isEmpty()) return null
+        val normalized = anchorId.trimStart('#').trim()
+        return map[normalized] ?: map["#$normalized"] ?: map[anchorId.trim()]
+    }
+
     override fun close() = Unit
 
     private fun parseDocument(): TextDocumentData {
@@ -581,7 +676,8 @@ class TextFormatReader @Inject constructor(
                 val document = mobiDocument ?: ReflowableDocumentBuilder.error("Unable to read file.")
                 TextDocumentData(
                     pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) }
+                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) },
+                    footnoteMap = document.footnoteMap
                 )
             }
             ComicFormat.RTF -> {
@@ -595,48 +691,57 @@ class TextFormatReader @Inject constructor(
                 val document = readDocxReflowableDocument(context, path)
                 TextDocumentData(
                     pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) }
+                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) },
+                    footnoteMap = document.footnoteMap
                 )
             }
             ComicFormat.ODT -> {
                 val document = readOdtReflowableDocument(context, path)
                 TextDocumentData(
                     pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) }
+                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) },
+                    footnoteMap = document.footnoteMap
                 )
             }
             else -> {
                 val raw = readSourceText() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
                 when (format) {
                     ComicFormat.HTML -> {
-                        val readerBaseUrl = if (supportsHtmlAssetLoading()) null else htmlBaseUrl()
-                        if (isGutenbergHtml(raw)) {
-                            // For Gutenberg HTML, preserve complete document structure with working internal links
-                            TextDocumentData(listOf(preserveGutenbergHtmlDocument(raw, readerBaseUrl)))
+                        val readerBaseUrl = htmlBaseUrl()
+                        val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
+                        val pages = if (isGutenbergHtml(raw)) {
+                            paginateHtmlDocument(
+                                raw = raw,
+                                baseUrl = readerBaseUrl,
+                                preservePublisherLayout = true,
+                                baseCss = PRESERVE_LAYOUT_HTML_CSS,
+                                keepWholeDocument = false
+                            )
                         } else {
-                            val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
-                            TextDocumentData(paginateHtmlDocument(
+                            paginateHtmlDocument(
                                 raw = raw,
                                 baseUrl = readerBaseUrl,
                                 preservePublisherLayout = preservePublisherLayout,
-                            baseCss = if (preservePublisherLayout) {
-                                PRESERVE_LAYOUT_HTML_CSS
-                            } else {
-                                DEFAULT_READER_HTML_CSS
-                            },
-                            keepWholeDocument = false
-                        ))
-                    }
+                                baseCss = if (preservePublisherLayout) {
+                                    PRESERVE_LAYOUT_HTML_CSS
+                                } else {
+                                    DEFAULT_READER_HTML_CSS
+                                },
+                                keepWholeDocument = false
+                            )
+                        }
+                        val anchored = addHtmlHeadingAnchorsToPages(pages)
+                        TextDocumentData(
+                            pages = anchored.pages,
+                            chapterAnchors = anchored.anchors
+                        )
                     }
                     ComicFormat.MARKDOWN -> {
-                        if (isTechnicalMarkdown(raw)) {
-                            // For technical Markdown documents (specs, documentation),
-                            // process YAML front matter and ensure proper technical rendering
-                            TextDocumentData(paginateBlocks(processTechnicalMarkdown(raw)))
-                        } else {
-                            // For regular Markdown, use standard processing
-                            TextDocumentData(paginateBlocks(markdownBlocks(raw)))
-                        }
+                        val markdown = markdownDocumentBlocks(raw)
+                        TextDocumentData(
+                            pages = paginateBlocks(markdown.blocks),
+                            chapterAnchors = markdown.anchors
+                        )
                     }
                     ComicFormat.TXT -> paginateTxtDocument(raw)
                     else -> TextDocumentData(paginateBlocks(textBlocks(raw)))
@@ -650,7 +755,22 @@ class TextFormatReader @Inject constructor(
         return decodeTextBytes(bytes)
     }
 
-    private fun readSourceBytes(): ByteArray? = openStream()?.use(InputStream::readBytes)
+    private fun readSourceBytes(): ByteArray? =
+        openStream()?.use { input -> input.readBytesBounded(MAX_TEXT_SOURCE_BYTES) }
+
+    private fun InputStream.readBytesBounded(maxBytes: Int): ByteArray? {
+        val output = java.io.ByteArrayOutputStream(minOf(maxBytes, 64 * 1024))
+        val buffer = ByteArray(16 * 1024)
+        var total = 0
+        while (true) {
+            val read = read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > maxBytes) return null
+            output.write(buffer, 0, read)
+        }
+        return output.toByteArray()
+    }
 
     private fun openStream(): InputStream? = try {
         if (path.startsWith("content://")) {
@@ -725,6 +845,101 @@ class TextFormatReader @Inject constructor(
 
     private fun markdownBlocks(raw: String): List<String> {
         return renderMarkdownToHtmlBlocks(raw).ifEmpty { textBlocks(raw) }
+    }
+
+    private fun markdownDocumentBlocks(raw: String): MarkdownDocumentBlocks {
+        val blocks = if (isTechnicalMarkdown(raw)) {
+            processTechnicalMarkdown(raw)
+        } else {
+            markdownBlocks(raw)
+        }
+        return addHeadingAnchors(blocks)
+    }
+
+    private fun addHeadingAnchors(blocks: List<String>): MarkdownDocumentBlocks {
+        val usedIds = linkedSetOf<String>()
+        val anchors = mutableListOf<TxtChapterAnchor>()
+        val anchoredBlocks = blocks.map { block ->
+            runCatching {
+                val document = Jsoup.parseBodyFragment(block)
+                val heading = document.body().children().firstOrNull { child ->
+                    child.normalName() in setOf("h1", "h2", "h3", "h4", "h5", "h6")
+                } ?: return@runCatching block
+                val title = heading.text().replace(Regex("\\s+"), " ").trim()
+                if (title.isBlank()) return@runCatching block
+                val existingId = heading.id().trim()
+                val id = if (existingId.isNotBlank()) {
+                    uniqueMarkdownAnchor(existingId, usedIds)
+                } else {
+                    uniqueMarkdownAnchor(markdownAnchorSlug(title), usedIds)
+                }
+                heading.attr("id", id)
+                anchors += TxtChapterAnchor(id = id, title = title)
+                document.body().html().trim().ifBlank { block }
+            }.getOrElse { block }
+        }
+        return MarkdownDocumentBlocks(
+            blocks = anchoredBlocks.ifEmpty { blocks },
+            anchors = anchors
+        )
+    }
+
+    private fun addHtmlHeadingAnchorsToPages(pages: List<String>): HtmlPageAnchorResult {
+        val usedIds = linkedSetOf<String>()
+        val anchors = mutableListOf<TxtChapterAnchor>()
+        val updatedPages = pages.map { page ->
+            runCatching {
+                val document = Jsoup.parse(page)
+                document.outputSettings(Document.OutputSettings().prettyPrint(false))
+                document.select("h1, h2, h3, h4, h5, h6").forEach { heading ->
+                    val title = heading.text().replace(Regex("\\s+"), " ").trim()
+                    if (title.isBlank()) return@forEach
+                    val existingId = heading.id().trim()
+                    val id = if (existingId.isNotBlank()) {
+                        uniqueMarkdownAnchor(existingId, usedIds)
+                    } else {
+                        uniqueMarkdownAnchor(markdownAnchorSlug(title), usedIds)
+                    }
+                    heading.attr("id", id)
+                    anchors += TxtChapterAnchor(id = id, title = title)
+                }
+                document.select("[id], a[name], [name]").forEach { element ->
+                    val id = element.id().trim()
+                        .ifBlank { element.attr("name").trim() }
+                    if (id.isBlank() || id in usedIds) return@forEach
+                    usedIds += id
+                    val title = element.text()
+                        .replace(Regex("\\s+"), " ")
+                        .trim()
+                        .ifBlank { id }
+                    anchors += TxtChapterAnchor(id = id, title = title)
+                }
+                document.outerHtml()
+            }.getOrElse { page }
+        }
+        return HtmlPageAnchorResult(
+            pages = updatedPages.ifEmpty { pages },
+            anchors = anchors
+        )
+    }
+
+    private fun uniqueMarkdownAnchor(base: String, usedIds: MutableSet<String>): String {
+        val safeBase = base.ifBlank { "section" }
+        var candidate = safeBase
+        var index = 2
+        while (!usedIds.add(candidate)) {
+            candidate = "$safeBase-$index"
+            index += 1
+        }
+        return candidate
+    }
+
+    private fun markdownAnchorSlug(title: String): String {
+        val asciiSlug = title
+            .lowercase()
+            .replace(Regex("""[^\p{L}\p{N}]+"""), "-")
+            .trim('-')
+        return asciiSlug.ifBlank { "section" }
     }
 
     /**
@@ -894,7 +1109,12 @@ class TextFormatReader @Inject constructor(
 
         blocks.flatMap(::splitOversizedReaderHtmlBlock).forEach { block ->
             val visibleChars = block.replace(Regex("<[^>]+>"), "").length.coerceAtLeast(1)
-            if (chars + visibleChars > CHARS_PER_PAGE && chars > 0) flush()
+            if (
+                chars > 0 &&
+                (block.isReaderSectionStartBlock() || chars + visibleChars > CHARS_PER_PAGE)
+            ) {
+                flush()
+            }
             buffer.append(block)
             chars += visibleChars
         }
@@ -1088,7 +1308,12 @@ class TextFormatReader @Inject constructor(
 
         childBlocks.forEach { block ->
             val visible = block.replace(Regex("<[^>]+>"), "").length.coerceAtLeast(1)
-            if (chars + visible > CHARS_PER_PAGE && chars > 0) flush()
+            if (
+                chars > 0 &&
+                (block.isReaderSectionStartBlock() || chars + visible > CHARS_PER_PAGE)
+            ) {
+                flush()
+            }
             buffer.append(block)
             chars += visible
         }
@@ -1111,7 +1336,7 @@ class TextFormatReader @Inject constructor(
         val blockSelector = listOf(
             "h1", "h2", "h3", "h4", "h5", "h6",
             "p", "blockquote", "pre", "li", "figure", "figcaption",
-            "table", "hr"
+            "table", "hr", "img"
         ).joinToString(",")
 
         val candidates = body.select(blockSelector)
@@ -1128,7 +1353,7 @@ class TextFormatReader @Inject constructor(
                         Document.OutputSettings().prettyPrint(false)
                     ).trim()
                 )
-                if (cleaned.isBlank() || visibleReaderText(cleaned).isBlank()) {
+                if (cleaned.isBlank() || !hasReaderVisibleContent(cleaned)) {
                     emptyList()
                 } else {
                     splitOversizedReaderHtmlBlock(cleaned)
@@ -1136,18 +1361,51 @@ class TextFormatReader @Inject constructor(
             }
     }
 
+    private fun hasReaderVisibleContent(html: String): Boolean {
+        if (visibleReaderText(html).isNotBlank()) return true
+        val document = Jsoup.parseBodyFragment(html)
+        return document.select("img[src], svg, table, hr").isNotEmpty()
+    }
+
     private fun splitOversizedReaderHtmlBlock(block: String): List<String> {
         val visible = visibleReaderText(block)
-        if (visible.length <= CHARS_PER_PAGE * 2) return listOf(block)
+        if (visible.length <= CHARS_PER_PAGE) return listOf(block)
         val document = Jsoup.parseBodyFragment(block)
         val tag = document.body().children().firstOrNull()?.normalName()
             ?.takeIf { it in setOf("p", "blockquote", "li") }
             ?: "p"
-        return visible
-            .chunked(CHARS_PER_PAGE)
+        return splitReaderTextIntoChunks(visible, CHARS_PER_PAGE)
             .map { chunk -> "<$tag>${htmlEscapeText(chunk.trim())}</$tag>" }
             .filter { visibleReaderText(it).isNotBlank() }
             .ifEmpty { listOf(block) }
+    }
+
+    private fun String.isReaderSectionStartBlock(): Boolean = runCatching {
+        val first = Jsoup.parseBodyFragment(this).body().children().firstOrNull() ?: return@runCatching false
+        val tag = first.normalName()
+        tag in setOf("h1", "h2", "h3") ||
+            first.hasClass("chapter") ||
+            first.attr("data-mrcomic-section-start").equals("true", ignoreCase = true)
+    }.getOrDefault(false)
+
+    private fun splitReaderTextIntoChunks(text: String, charsPerChunk: Int): List<String> {
+        if (text.length <= charsPerChunk) return listOf(text)
+        val chunks = mutableListOf<String>()
+        var start = 0
+        while (start < text.length) {
+            val targetEnd = (start + charsPerChunk).coerceAtMost(text.length)
+            var boundary = targetEnd
+            if (targetEnd < text.length) {
+                val whitespaceBoundary = text.lastIndexOf(' ', startIndex = targetEnd - 1)
+                if (whitespaceBoundary > start + charsPerChunk / 3) {
+                    boundary = whitespaceBoundary
+                }
+            }
+            val chunk = text.substring(start, boundary).trim()
+            if (chunk.isNotBlank()) chunks += chunk
+            start = boundary.coerceAtLeast(start + 1)
+        }
+        return chunks
     }
 
     private fun supportsHtmlAssetLoading(): Boolean =

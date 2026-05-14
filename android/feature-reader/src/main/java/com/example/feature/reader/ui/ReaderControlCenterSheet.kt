@@ -25,16 +25,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -43,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -61,6 +55,10 @@ import com.example.core.model.ReaderImageScaleMode
 import com.example.core.model.ReaderScreenTimeoutMode
 import com.example.core.model.ReaderTtsSleepTimerMode
 import com.example.core.model.resolveReaderTapZoneLayout
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicSliderTile
+import com.example.core.ui.designsystem.MrComicSurfaceCard
+import com.example.core.ui.designsystem.MrComicSwitchRow
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.theme.ReadingPreset
 
@@ -1596,29 +1594,12 @@ private fun ReaderSettingsCard(
     selected: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    Surface(
-        modifier = if (fillMaxWidth) modifier.fillMaxWidth() else modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.84f)
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
-        },
-        border = if (selected) {
-            BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
-            )
-        } else {
-            null
-        }
+    MrComicSurfaceCard(
+        modifier = modifier,
+        fillMaxWidth = fillMaxWidth,
+        selected = selected
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            content()
-        }
+        content()
     }
 }
 
@@ -1630,18 +1611,12 @@ private fun ReaderChoiceChip(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    FilterChip(
+    MrComicFilterChip(
         selected = selected,
         onClick = onClick,
         enabled = enabled,
-        shape = RoundedCornerShape(999.dp),
-        modifier = modifier.heightIn(min = 28.dp),
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-            labelColor = MaterialTheme.colorScheme.onSurface,
-            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-        ),
+        modifier = modifier,
+        minHeight = 28.dp,
         label = label
     )
 }
@@ -1699,39 +1674,13 @@ private fun ReaderSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     subtitle: String? = null
 ) {
-    ReaderSettingsCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(1.dp)
-            ) {
-                Text(text = title, style = MaterialTheme.typography.bodySmall)
-                subtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.scale(0.88f),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
-                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surface
-        )
+    MrComicSwitchRow(
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        switchScale = 0.88f
     )
-}
-
-    }
 }
 
 @Composable
@@ -1744,38 +1693,15 @@ private fun ReaderSliderRow(
     steps: Int = 0,
     enabled: Boolean = true
 ) {
-    ReaderSettingsCard {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = title, style = MaterialTheme.typography.bodySmall)
-                Text(
-                    text = valueText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Slider(
-                value = value,
-                onValueChange = onValueChange,
-                enabled = enabled,
-                valueRange = valueRange,
-                steps = steps,
-                colors = androidx.compose.material3.SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
-                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
-                )
-            )
-        }
-    }
+    MrComicSliderTile(
+        title = title,
+        valueLabel = valueText,
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        enabled = enabled
+    )
 }
 
 private data class ReaderInfoSlotPickerItem(

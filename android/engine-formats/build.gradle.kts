@@ -7,7 +7,20 @@ plugins {
 android {
     namespace = "com.example.engine.formats"
     compileSdk = libs.versions.compileSdk.get().toInt()
-    defaultConfig { minSdk = libs.versions.minSdk.get().toInt() }
+    ndkVersion = "27.0.12077973"
+    defaultConfig {
+        minSdk = libs.versions.minSdk.get().toInt()
+        externalNativeBuild {
+            cmake {
+                cppFlags += listOf("-std=c++17")
+            }
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
 }
@@ -20,6 +33,7 @@ dependencies {
     implementation(libs.zip4j)
     implementation(libs.sevenzipjbinding.android)
     implementation(libs.commons.compress)
+    implementation(libs.axet.libdjvu)
     implementation(libs.commonmark)
     implementation(libs.commonmark.ext.autolink)
     implementation(libs.commonmark.ext.gfm.strikethrough)
@@ -32,4 +46,5 @@ dependencies {
     ksp(libs.google.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.test.junit)
+    testImplementation(libs.test.mockk)
 }

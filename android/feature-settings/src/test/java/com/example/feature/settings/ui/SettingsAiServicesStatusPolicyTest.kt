@@ -77,6 +77,23 @@ class SettingsAiServicesStatusPolicyTest {
     }
 
     @Test
+    fun `providers status reports validation needed for malformed openrouter credentials`() {
+        val state = settingsState(
+            availability = TranslationAvailabilitySnapshot(
+                networkAvailable = true,
+                onlineConfigured = true
+            ),
+            openRouterApiKey = "not-a-real-openrouter-key",
+            openRouterModel = "openrouter/auto"
+        )
+
+        assertEquals(
+            SettingsProvidersStatusKind.NEEDS_VALIDATION,
+            resolveSettingsProvidersStatusKind(state)
+        )
+    }
+
+    @Test
     fun `providers status reports not configured when no external route exists`() {
         val state = settingsState(
             availability = TranslationAvailabilitySnapshot(
@@ -94,7 +111,9 @@ class SettingsAiServicesStatusPolicyTest {
     private fun settingsState(
         transport: TranslationTransportPreference = TranslationTransportPreference.AUTO,
         availability: TranslationAvailabilitySnapshot = TranslationAvailabilitySnapshot(),
-        pairKnown: Boolean = false
+        pairKnown: Boolean = false,
+        openRouterApiKey: String = "",
+        openRouterModel: String = "openrouter/auto"
     ): SettingsUiState = SettingsUiState(
         translationConfig = TranslationServiceConfig(
             mode = "AUTO",
@@ -104,6 +123,8 @@ class SettingsAiServicesStatusPolicyTest {
             explainEnabled = false
         ),
         translationAvailability = availability,
-        translationAvailabilityPairKnown = pairKnown
+        translationAvailabilityPairKnown = pairKnown,
+        openRouterApiKey = openRouterApiKey,
+        openRouterModel = openRouterModel
     )
 }

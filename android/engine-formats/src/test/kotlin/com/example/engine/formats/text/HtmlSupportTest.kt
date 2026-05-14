@@ -1,7 +1,13 @@
 package com.example.engine.formats.text
 
+import android.content.ContextWrapper
+import com.example.core.model.ComicFormat
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 class HtmlSupportTest {
 
@@ -74,6 +80,123 @@ class HtmlSupportTest {
         val html = renderHtmlToReaderDocument(raw)
 
         assertTrue(html.contains("data-mrcomic-preserve-layout=\"true\"", ignoreCase = true))
+    }
+
+    @Test
+    fun readerKeepsHtmlTablesRenderableInPages() = runBlocking {
+        val sample = File.createTempFile("mrcomic-html-table", ".html").apply {
+            writeText(
+                """
+                    <html><body>
+                    <h1>Table chapter</h1>
+                    <table>
+                      <caption>Supplies</caption>
+                      <colgroup><col width="40%"/><col width="60%"/></colgroup>
+                      <tr><th>Item</th><th>Needed</th></tr>
+                      <tr><td>Books</td><td>1</td></tr>
+                    </table>
+                    </body></html>
+                """.trimIndent()
+            )
+            deleteOnExit()
+        }
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
+        try {
+            val html = reader.getHtmlPage(0).orEmpty()
+            assertTrue(html.contains("<table", ignoreCase = true))
+            assertTrue(html.contains("mrcomic-table-scroll", ignoreCase = true))
+            assertTrue(html.contains("<caption", ignoreCase = true))
+            assertTrue(html.contains("<colgroup", ignoreCase = true))
+            assertTrue(html.contains("<th", ignoreCase = true))
+            assertTrue(html.contains("Supplies"))
+            assertTrue(html.contains("Books"))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
+    @Test
+    fun readerPreservesImageOnlyBlocksInPaginatedHtml() = runBlocking {
+        val sample = File.createTempFile("mrcomic-html-image", ".html").apply {
+            writeText(
+                """
+                    <html><body>
+                    <img src="cover.jpg" alt="Cover"/>
+                    <h1>Chapter One</h1>
+                    <p>Opening text.</p>
+                    </body></html>
+                """.trimIndent()
+            )
+            deleteOnExit()
+        }
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
+        try {
+            val firstPage = reader.getHtmlPage(0).orEmpty()
+            assertTrue(firstPage.contains("src=\"cover.jpg\""))
+            assertTrue(firstPage.contains("alt=\"Cover\""))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
+    @Test
+    fun readerBuildsTocAndHrefTargetsFromHtmlHeadings() = runBlocking {
+        val sample = File.createTempFile("mrcomic-html-toc", ".html").apply {
+            writeText(
+                """
+                    <html><body>
+                    <p><a href="#chapter-two">Chapter Two</a></p>
+                    <h1>Chapter One</h1>
+                    <p>${"Opening. ".repeat(260)}</p>
+                    <h2 id="chapter-two">Chapter Two</h2>
+                    <p>Target text.</p>
+                    </body></html>
+                """.trimIndent()
+            )
+            deleteOnExit()
+        }
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
+        try {
+            val toc = reader.getTableOfContents()
+            assertEquals(listOf("Chapter One", "Chapter Two"), toc.map { it.title })
+            assertEquals(toc[1].pageIndex, reader.resolveHrefToPage("#chapter-two"))
+            assertTrue(toc[1].pageIndex > toc[0].pageIndex)
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
+    @Test
+    fun readerResolvesExistingHtmlNameAnchorsFromTableOfContents() = runBlocking {
+        val sample = File.createTempFile("mrcomic-html-named-anchor", ".html").apply {
+            writeText(
+                """
+                    <html><body>
+                    <nav><a href="#chapter-2">Chapter Two</a></nav>
+                    <h1>Chapter One</h1>
+                    <p>${"Opening. ".repeat(8_000)}</p>
+                    <p id="chapter-2">Chapter Two starts here.</p>
+                    </body></html>
+                """.trimIndent()
+            )
+            deleteOnExit()
+        }
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
+        try {
+            val targetPage = reader.resolveHrefToPage("#chapter-2")
+            assertNotNull("Expected legacy name anchor to resolve", targetPage)
+            assertTrue("Expected named anchor to land after the opening page", targetPage!! > 0)
+        } finally {
+            reader.close()
+            sample.delete()
+        }
     }
 
     private fun locateCorpusFile(name: String): java.io.File {

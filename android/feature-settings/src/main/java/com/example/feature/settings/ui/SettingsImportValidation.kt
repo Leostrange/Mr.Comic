@@ -3,6 +3,8 @@ package com.example.feature.settings.ui
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.util.Locale
 
 internal const val SETTINGS_IMPORT_REJECTION_MESSAGE = "Это ошибка, которую я не могу игнорировать."
@@ -26,23 +28,36 @@ internal fun Uri.readAcceptedSettingsImportText(context: Context): String {
         throw IllegalArgumentException(SETTINGS_IMPORT_REJECTION_MESSAGE)
     }
 
-    val builder = StringBuilder()
     val stream = context.contentResolver.openInputStream(this)
         ?: throw IllegalStateException("Failed to read the file")
-    stream.bufferedReader(Charsets.UTF_8).use { reader ->
-        val buffer = CharArray(8 * 1024)
-        var totalChars = 0L
+    val bytes = stream.use { input ->
+        val buffer = ByteArray(8 * 1024)
+        val output = ByteArrayOutputStream()
+        var totalBytes = 0L
         while (true) {
-            val count = reader.read(buffer)
+            val count = input.read(buffer)
             if (count <= 0) break
-            totalChars += count
-            if (totalChars > SETTINGS_IMPORT_MAX_BYTES) {
+            totalBytes += count
+            if (totalBytes > SETTINGS_IMPORT_MAX_BYTES) {
                 throw IllegalArgumentException(SETTINGS_IMPORT_REJECTION_MESSAGE)
             }
-            builder.append(buffer, 0, count)
+            output.write(buffer, 0, count)
+        }
+        output.toByteArray()
+    }
+    return bytes.toString(Charsets.UTF_8).also { raw ->
+        if (!raw.isAcceptedSettingsJsonContent()) {
+            throw IllegalArgumentException(SETTINGS_IMPORT_REJECTION_MESSAGE)
         }
     }
-    return builder.toString()
+}
+
+internal fun String.isAcceptedSettingsJsonContent(): Boolean {
+    val raw = trim()
+    if (!raw.startsWith("{") || !raw.endsWith("}")) return false
+    return runCatching { JSONObject(raw) }
+        .map { true }
+        .getOrDefault(false)
 }
 
 internal fun SettingsImportMetadata.looksLikeJson(): Boolean {

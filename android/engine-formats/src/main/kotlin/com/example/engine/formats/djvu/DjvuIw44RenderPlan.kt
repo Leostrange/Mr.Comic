@@ -20,10 +20,13 @@ internal fun extractIw44Bitmap(documentBytes: ByteArray, renderQuality: Int = 1)
     var offset = 16
     while (offset + 8 <= documentBytes.size) {
         val chunkId  = documentBytes.readAsciiAt(offset, 4) ?: break
-        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)?.toInt() ?: break
+        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)
+            ?.takeIf { it <= Int.MAX_VALUE }
+            ?.toInt()
+            ?: break
         val payloadStart = offset + 8
+        if (chunkSize > documentBytes.size - payloadStart) break
         val payloadEnd   = payloadStart + chunkSize
-        if (payloadEnd > documentBytes.size) break
 
         if (chunkId == "BG44") {
             val payload = documentBytes.copyOfRange(payloadStart, payloadEnd)
@@ -50,9 +53,13 @@ internal fun hasIw44Background(documentBytes: ByteArray): Boolean {
     var offset = 16
     while (offset + 8 <= documentBytes.size) {
         val chunkId   = documentBytes.readAsciiAt(offset, 4) ?: return false
-        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)?.toInt() ?: return false
-        val payloadEnd = offset + 8 + chunkSize
-        if (payloadEnd > documentBytes.size) return false
+        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)
+            ?.takeIf { it <= Int.MAX_VALUE }
+            ?.toInt()
+            ?: return false
+        val payloadStart = offset + 8
+        if (chunkSize > documentBytes.size - payloadStart) return false
+        val payloadEnd = payloadStart + chunkSize
         if (chunkId == "BG44") return true
         offset = payloadEnd + if (chunkSize % 2 == 1) 1 else 0
     }

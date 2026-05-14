@@ -8,15 +8,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.core.model.ReadingMode
+import com.example.core.ui.designsystem.MrComicSlider
 import com.example.core.ui.locale.LocalStrings
 import com.example.feature.reader.ui.ReaderPanelChip
 
@@ -38,11 +38,12 @@ fun ReaderBottomBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .heightIn(min = if (isTextBook) 104.dp else 88.dp)
             .padding(
                 start = 16.dp,
                 end = 16.dp,
                 top = if (compactImageLayout) 10.dp else 16.dp,
-                bottom = if (compactImageLayout) 10.dp else 16.dp
+                bottom = if (compactImageLayout) 12.dp else 24.dp
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -52,10 +53,10 @@ fun ReaderBottomBar(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = strings.readingModeDual,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelMedium
+                ReaderPanelChip(
+                    selected = true,
+                    onClick = {},
+                    label = { Text(strings.readingModeDual) }
                 )
                 Text(
                     text = "${currentPage + 1} / $totalPages",
@@ -69,30 +70,16 @@ fun ReaderBottomBar(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
-                if (isTextBook) {
-                    ReaderPanelChip(
-                        selected = true,
-                        onClick = {},
-                        label = { Text(strings.readerPages) }
-                    )
-                } else if (isLandscape) {
-                    ReaderPanelChip(
-                        selected = true,
-                        onClick = {},
-                        label = { Text(strings.readingModeDual) }
-                    )
-                } else {
-                    ReaderPanelChip(
-                        selected = readingMode == ReadingMode.PAGE_LTR || readingMode == ReadingMode.PAGE_RTL,
-                        onClick = { onReadingModeChange(ReadingMode.PAGE_LTR) },
-                        label = { Text(strings.readerPages) }
-                    )
-                    ReaderPanelChip(
-                        selected = readingMode == ReadingMode.WEBTOON,
-                        onClick = { onReadingModeChange(ReadingMode.WEBTOON) },
-                        label = { Text(strings.readingModeWebtoon) }
-                    )
-                }
+                ReaderPanelChip(
+                    selected = readingMode == ReadingMode.PAGE_LTR || readingMode == ReadingMode.PAGE_RTL,
+                    onClick = { onReadingModeChange(ReadingMode.PAGE_LTR) },
+                    label = { Text(strings.readerPages) }
+                )
+                ReaderPanelChip(
+                    selected = readingMode == ReadingMode.WEBTOON,
+                    onClick = { onReadingModeChange(ReadingMode.WEBTOON) },
+                    label = { Text(strings.readingModeWebtoon) }
+                )
             }
 
             Spacer(Modifier.height(12.dp))
@@ -109,19 +96,12 @@ fun ReaderBottomBar(
         }
 
         if (totalPages > 1) {
-            Slider(
+            MrComicSlider(
                 value = currentPage.toFloat(),
                 onValueChange = { onPageChange(it.toInt()) },
                 valueRange = 0f..(totalPages - 1).toFloat(),
                 steps = (totalPages - 2).coerceAtLeast(0),
-                modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
-                    activeTickColor = MaterialTheme.colorScheme.onPrimary,
-                    inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
-                )
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

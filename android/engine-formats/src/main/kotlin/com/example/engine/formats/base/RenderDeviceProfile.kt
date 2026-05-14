@@ -58,9 +58,21 @@ fun Context.resolveRenderDeviceProfile(): RenderDeviceProfile {
     val lowRam = activityManager?.isLowRamDevice ?: false
     val runtimeHeapMb = (Runtime.getRuntime().maxMemory() / (1024 * 1024)).toInt()
     val cpuCount = Runtime.getRuntime().availableProcessors()
+    val lowResourceSignals = listOf(
+        lowRam,
+        memoryClassMb <= 192,
+        runtimeHeapMb <= 256,
+        cpuCount <= 4
+    ).count { it }
+    val highResourceSignals = listOf(
+        !lowRam,
+        memoryClassMb >= 320,
+        runtimeHeapMb >= 512,
+        cpuCount >= 8
+    ).count { it }
 
     return when {
-        lowRam || memoryClassMb <= 192 || runtimeHeapMb <= 256 || cpuCount <= 4 -> RenderDeviceProfile(
+        lowResourceSignals >= 2 -> RenderDeviceProfile(
             tier = RenderDeviceTier.LOW_END,
             defaultPreloadPages = 2,
             maxPreloadPages = 2,
@@ -77,7 +89,7 @@ fun Context.resolveRenderDeviceProfile(): RenderDeviceProfile {
             disableAnimations = false
         )
 
-        memoryClassMb >= 320 || runtimeHeapMb >= 512 || cpuCount >= 8 -> RenderDeviceProfile(
+        highResourceSignals >= 3 -> RenderDeviceProfile(
             tier = RenderDeviceTier.HIGH_END,
             defaultPreloadPages = 4,
             maxPreloadPages = 6,

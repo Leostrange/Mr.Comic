@@ -64,4 +64,31 @@ class EpubFootnoteParserTest {
         assertTrue(items.isEmpty())
         assertFalse(EpubFootnoteParser.hasNotesTitle(raw))
     }
+
+    @Test
+    fun `annotates cross-file epub note references when target exists in footnote map`() {
+        val html = """
+            <html>
+            <body>
+            <p>со страной по Жоанну<a href="ch2.xhtml#id29" class="a">[1]</a>, но приводят в отчаяние.</p>
+            <p><a href="chapter3.xhtml#chapter-title">Обычная глава</a></p>
+            </body>
+            </html>
+        """.trimIndent()
+
+        val annotated = annotateEpubFootnoteReferencesForReader(
+            html = html,
+            currentEntryPath = "OPS/ch1.xhtml",
+            footnotes = mapOf(
+                "id29" to "Жоанн Лоран Адольф",
+                "OPS/ch2.xhtml#id29" to "Жоанн Лоран Адольф",
+                "ch2.xhtml#id29" to "Жоанн Лоран Адольф"
+            )
+        )
+
+        assertTrue(annotated.contains("""data-footnote-id="id29""""))
+        assertTrue(annotated.contains("""class="a fn footnote-ref""""))
+        assertTrue(annotated.contains("""role="doc-noteref""""))
+        assertFalse(annotated.contains("""data-footnote-id="chapter-title""""))
+    }
 }

@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import android.content.Context
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -35,22 +37,31 @@ class PagePreloader @Inject constructor(
         private const val PRELOAD_BEHIND = 1
     }
 
-    private var preloadJob: Job? = null
-    private var activePreloadWindow: PreloadWindow? = null
-    private var activeReaderToken: Int? = null
+    @Volatile private var preloadJob: Job? = null
+    @Volatile private var activePreloadWindow: PreloadWindow? = null
+    @Volatile private var activeReaderToken: Int? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val deviceProfile = context.resolveRenderDeviceProfile()
     private val inFlightMutex = Mutex()
+    private val decodeSemaphore = Semaphore(permits = 2)
     private val inFlightLoads = mutableMapOf<PageCacheKey, Deferred<Bitmap?>>()
 
     // Reactive page cache — UI observes this instead of polling getPage()
     private val _loadedPages = MutableStateFlow<Map<PageCacheKey, Bitmap>>(emptyMap())
 
-    /** Returns a Flow that emits the bitmap for [index] as soon as it becomes available. */
+    /**
+     * Returns a Flow that emits the bitmap for [index] as soon as it becomes available.
+     *
+     * When the entry is absent from [_loadedPages] (evicted from the reactive map after
+     * scrolling away) we fall back to [TieredBitmapCache] before returning null. This
+     * prevents the "already-seen page flashes back to a black placeholder" symptom that
+     * occurs when the retention window is narrower than the visible area after a fling.
+     */
     fun getPageFlow(index: Int, renderQuality: Int = 1): Flow<Bitmap?> =
         _loadedPages.map { map ->
             activeReaderToken?.let { readerToken ->
                 map[PageCacheKey(readerToken, index, renderQuality)]
+                    ?: cache.get(cacheKey(readerToken, index, renderQuality))
             }
         }.distinctUntilChanged()
 
@@ -95,7 +106,8 @@ class PagePreloader @Inject constructor(
             start = start,
             end = end
         )
-        if (activePreloadWindow == requestedWindow) {
+        warmVisiblePages(reader, readerToken, anchorPages)
+        if (activePreloadWindow?.contains(requestedWindow) == true) {
             if (preloadJob?.isActive == true) return
 
             val hasAllBasePages = (start..end).all { cache.get(cacheKey(readerToken, it, 1)) != null }
@@ -113,11 +125,18 @@ class PagePreloader @Inject constructor(
         activePreloadWindow = requestedWindow
         preloadJob = scope.launch {
             val window = start..end
+            val retentionStart = (start - ahead - behind).coerceAtLeast(0)
+            val retentionEnd = (end + ahead).coerceAtMost(totalPages - 1)
+            val retentionWindow = retentionStart..retentionEnd
 
-            // Evict pages outside the new window before loading, preventing unbounded growth.
-            val evictedPages = _loadedPages.value.filterKeys { it.readerToken == readerToken && it.index !in window }
+            // Keep a wider retention window than the active decode queue. Continuous
+            // WEBTOON scrolling updates the visible item often; evicting exactly at
+            // the decode window causes already-seen pages to flash back to loaders.
+            val evictedPages = _loadedPages.value.filterKeys {
+                it.readerToken == readerToken && it.index !in retentionWindow
+            }
             _loadedPages.update { map ->
-                map.filterKeys { key -> key.readerToken != readerToken || key.index in window }
+                map.filterKeys { key -> key.readerToken != readerToken || key.index in retentionWindow }
             }
             evictedPages.forEach { (key, bitmap) ->
                 cache.remove(cacheKey(key.readerToken, key.index, key.renderQuality))
@@ -159,8 +178,10 @@ class PagePreloader @Inject constructor(
         val deferred = inFlightMutex.withLock {
             inFlightLoads[key]?.takeIf { it.isActive } ?: scope.async(start = CoroutineStart.LAZY) {
                 try {
-                    reader.getPage(index, renderQuality)?.also { bitmap ->
-                        putPage(readerToken, index, bitmap, renderQuality)
+                    decodeSemaphore.withPermit {
+                        reader.getPage(index, renderQuality)?.also { bitmap ->
+                            putPage(readerToken, index, bitmap, renderQuality)
+                        }
                     }
                 } finally {
                     inFlightMutex.withLock {
@@ -219,7 +240,7 @@ class PagePreloader @Inject constructor(
         activeReaderToken = null
         cancelInFlightLoads()
         val retained = _loadedPages.value.values.toSet()
-        _loadedPages.value = emptyMap()
+        _loadedPages.update { emptyMap() }
         cache.clear()
         retained.forEach { releaseWithDelay(it) }
     }
@@ -234,15 +255,30 @@ class PagePreloader @Inject constructor(
 
     @Suppress("DEPRECATION")
     fun trimMemory(level: Int) {
-        cancelPreload()
+        if (level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            return
+        }
         when {
-            level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
+            // MODERATE / COMPLETE / near-kill: release everything
+            level >= ComponentCallbacks2.TRIM_MEMORY_MODERATE -> {
+                cancelPreload()
                 activePreloadWindow = null
                 clearPages()
                 bitmapAllocator.trimMemory(level)
             }
 
-            level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW -> {
+            // BACKGROUND: user briefly switched away — cancel speculative preload and
+            // trim to 25 % of budget so we don't hog memory, but keep the current-page
+            // bitmaps so the reader reappears without a blank flash.
+            level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
+                cancelPreload()
+                evictPages { it.renderQuality > 1 }
+                cache.trimToSize(cache.maxBudgetKb() / 4)
+                bitmapAllocator.trimMemory(level)
+            }
+
+            level in ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW..ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL -> {
+                cancelPreload()
                 evictPages { it.renderQuality > 1 }
                 cache.trimToSize(
                     when {
@@ -257,6 +293,32 @@ class PagePreloader @Inject constructor(
 
     private fun cacheKey(readerToken: Int, index: Int, renderQuality: Int): String =
         "reader_${readerToken}_page_${index}_q$renderQuality"
+
+    private fun PreloadWindow.contains(other: PreloadWindow): Boolean =
+        readerToken == other.readerToken && start <= other.start && end >= other.end
+
+    private fun warmVisiblePages(
+        reader: FormatReader,
+        readerToken: Int,
+        visiblePages: List<Int>
+    ) {
+        visiblePages.forEach { pageIndex ->
+            cache.get(cacheKey(readerToken, pageIndex, 1))?.let { bitmap ->
+                val key = PageCacheKey(readerToken, pageIndex, 1)
+                _loadedPages.update { map -> if (key in map) map else map + (key to bitmap) }
+                return@forEach
+            }
+            scope.launch {
+                try {
+                    loadPage(reader, pageIndex, 1)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Visible page warmup failed for page $pageIndex", t)
+                }
+            }
+        }
+    }
 
     /**
      * Releases a bitmap with a grace period delay. This prevents the "trying to use a recycled bitmap"

@@ -2,6 +2,7 @@ package com.example.feature.reader.ui.components
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -17,6 +18,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -91,12 +99,17 @@ fun ImageMessagePopup(
     var dragOffsetX by rememberSaveable(drawableId, config.position, eventToken) { mutableFloatStateOf(0f) }
     var dragOffsetY by rememberSaveable(drawableId, config.position, eventToken) { mutableFloatStateOf(0f) }
     val popupInteractionSource = remember(drawableId, config.position, eventToken) { MutableInteractionSource() }
+    val focusRequester = remember(drawableId, eventToken) { FocusRequester() }
 
     LaunchedEffect(drawableId, popupDurationSeconds, eventToken) {
         if (popupDurationSeconds > 0) {
             delay(popupDurationSeconds * 1_000L)
             onDismiss()
         }
+    }
+
+    LaunchedEffect(drawableId, eventToken) {
+        focusRequester.requestFocus()
     }
 
     Popup(
@@ -112,6 +125,19 @@ fun ImageMessagePopup(
     ) {
         Box(
             modifier = Modifier
+                .focusRequester(focusRequester)
+                .onKeyEvent { event ->
+                    if (
+                        event.type == KeyEventType.KeyUp &&
+                        (event.key == Key.Escape || event.key == Key.Back)
+                    ) {
+                        onDismiss()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .focusable()
                 .padding(12.dp)
                 .then(
                     if (config.allowFreeMove) {

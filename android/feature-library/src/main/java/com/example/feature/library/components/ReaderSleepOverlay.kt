@@ -17,6 +17,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -39,14 +42,6 @@ fun ReaderSleepOverlay(
     onDismiss: () -> Unit,
     onSleepTimeout: () -> Unit
 ) {
-    // Таймер 30 секунд
-    LaunchedEffect(visible) {
-        if (visible) {
-            delay(30_000L)
-            onSleepTimeout()
-        }
-    }
-
     // EnterTransition.None — Box появляется мгновенно с непрозрачным фоном.
     // NightSkyCanvas и элементы внутри имеют собственные отложенные анимации.
     // exit — плавное затухание при закрытии.
@@ -60,6 +55,7 @@ fun ReaderSleepOverlay(
                 .fillMaxSize()
                 .zIndex(200f)
                 .background(Color(0xFF010B1A))
+                .semantics { liveRegion = LiveRegionMode.Polite }
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() }
@@ -104,7 +100,11 @@ fun ReaderSleepOverlay(
                 Spacer(Modifier.height(40.dp))
 
                 // Счётчик обратного отсчёта
-                SleepCountdown(totalSeconds = 30, onFinished = onSleepTimeout)
+                SleepCountdown(
+                    totalSeconds = 30,
+                    active = visible,
+                    onFinished = onSleepTimeout
+                )
             }
         }
     }
@@ -350,14 +350,20 @@ private fun FadingText(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun SleepCountdown(totalSeconds: Int, onFinished: () -> Unit) {
+private fun SleepCountdown(
+    totalSeconds: Int,
+    active: Boolean,
+    onFinished: () -> Unit
+) {
     var secondsLeft by remember { mutableIntStateOf(totalSeconds) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(active, totalSeconds) {
+        secondsLeft = totalSeconds
+        if (!active) return@LaunchedEffect
         while (secondsLeft > 0) {
             delay(1000L)
             secondsLeft--
         }
-        onFinished()
+        if (active) onFinished()
     }
 
     val progress = secondsLeft.toFloat() / totalSeconds.toFloat()

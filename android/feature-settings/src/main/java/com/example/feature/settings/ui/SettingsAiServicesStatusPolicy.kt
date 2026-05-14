@@ -21,6 +21,7 @@ internal enum class SettingsMachineTranslationStatusKind {
 internal enum class SettingsProvidersStatusKind {
     READY,
     NEEDS_NETWORK,
+    NEEDS_VALIDATION,
     NOT_CONFIGURED
 }
 
@@ -68,6 +69,21 @@ internal fun resolveSettingsProvidersStatusKind(
     uiState: SettingsUiState
 ): SettingsProvidersStatusKind = when {
     !uiState.translationAvailability.onlineConfigured -> SettingsProvidersStatusKind.NOT_CONFIGURED
+    uiState.openRouterApiKey.isNotBlank() && !openRouterCredentialsPassLocalValidation(
+        apiKey = uiState.openRouterApiKey,
+        model = uiState.openRouterModel
+    ) -> SettingsProvidersStatusKind.NEEDS_VALIDATION
     !uiState.translationAvailability.networkAvailable -> SettingsProvidersStatusKind.NEEDS_NETWORK
     else -> SettingsProvidersStatusKind.READY
+}
+
+internal fun openRouterCredentialsPassLocalValidation(
+    apiKey: String,
+    model: String
+): Boolean {
+    val normalizedKey = apiKey.trim()
+    val normalizedModel = model.trim()
+    return normalizedModel.isNotEmpty() &&
+        normalizedKey.startsWith("sk-or-", ignoreCase = false) &&
+        normalizedKey.length >= 24
 }

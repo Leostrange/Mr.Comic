@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.example.core.ui.designsystem.MrComicPill
+import com.example.core.ui.designsystem.MrComicProgressLine
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.performance.LocalPerformanceUiHints
 import kotlin.math.*
@@ -328,15 +330,15 @@ fun LibraryAchievementsRow(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
                 )
                 Spacer(Modifier.weight(1f))
-                Surface(
-                    shape = RoundedCornerShape(999.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                MrComicPill(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                    contentColor = MaterialTheme.colorScheme.primary,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                 ) {
                     Text(
                         text = "$unlockedCount / $totalCount",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -539,7 +541,7 @@ private fun AchievementCard(achievement: LibraryAchievement) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            LinearProgressIndicator(
+            MrComicProgressLine(
                 progress = { achievement.progressFraction },
                 modifier = Modifier
                     .fillMaxWidth()

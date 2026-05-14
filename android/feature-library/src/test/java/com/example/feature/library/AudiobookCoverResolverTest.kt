@@ -6,12 +6,15 @@ import androidx.media3.extractor.metadata.id3.ApicFrame
 import com.example.core.model.AudioChapter
 import com.example.core.model.Audiobook
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.File
 
 class AudiobookCoverResolverTest {
 
@@ -37,7 +40,7 @@ class AudiobookCoverResolverTest {
     }
 
     @Test
-    fun folderAudiobookLimitsCoverSamplingToFirstFewChapters() {
+    fun folderAudiobookSamplesMoreChaptersForEmbeddedCovers() {
         val audiobook = Audiobook(
             title = "Long folder book",
             sourcePath = "content://tree/audiobook-folder",
@@ -55,7 +58,10 @@ class AudiobookCoverResolverTest {
             listOf(
                 "content://tree/audiobook-folder/0.mp3",
                 "content://tree/audiobook-folder/1.mp3",
-                "content://tree/audiobook-folder/2.mp3"
+                "content://tree/audiobook-folder/2.mp3",
+                "content://tree/audiobook-folder/3.mp3",
+                "content://tree/audiobook-folder/4.mp3",
+                "content://tree/audiobook-folder/5.mp3"
             ),
             audiobookCoverSourceCandidates(audiobook)
         )
@@ -190,6 +196,23 @@ class AudiobookCoverResolverTest {
     }
 
     @Test
+    fun standaloneAudiobookKeepsEmbeddedCoverSourceAheadOfFolderHeuristics() {
+        val audiobook = Audiobook(
+            title = "Single",
+            sourcePath = "content://provider/single.mp3",
+            sourceIsFolder = false,
+            chapters = listOf(
+                AudioChapter(index = 0, title = "Single", uri = "content://provider/single.mp3")
+            )
+        )
+
+        val candidates = audiobookCoverSourceCandidates(audiobook)
+
+        assertEquals(listOf("content://provider/single.mp3"), candidates)
+        assertFalse(audiobook.sourceIsFolder)
+    }
+
+    @Test
     fun metadataExtractorReturnsApicFrameBytes() {
         val bytes = byteArrayOf(0x01, 0x02, 0x03)
         val metadata = Metadata(
@@ -225,6 +248,66 @@ class AudiobookCoverResolverTest {
     }
 
     @Test
+    fun id3FallbackExtractorReturnsApicArtworkBytes() {
+        val image = byteArrayOf(
+            0xFF.toByte(),
+            0xD8.toByte(),
+            0x11,
+            0x22,
+            0xFF.toByte(),
+            0xD9.toByte()
+        )
+        val framePayload = byteArrayOf(0) +
+            "image/jpeg".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(0, 3, 0) +
+            image
+        val frame = "APIC".toByteArray(Charsets.ISO_8859_1) +
+            int32Bytes(framePayload.size) +
+            byteArrayOf(0, 0) +
+            framePayload
+        val tag = "ID3".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(3, 0, 0) +
+            synchsafeBytes(frame.size) +
+            frame
+
+        assertArrayEquals(image, extractArtworkBytesFromId3v2(ByteArrayInputStream(tag)))
+    }
+
+    @Test
+    fun id3FallbackExtractorAcceptsWebpApicArtworkBytes() {
+        val image = "RIFF".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(0x20, 0x00, 0x00, 0x00) +
+            "WEBP".toByteArray(Charsets.ISO_8859_1) +
+            "VP8 ".toByteArray(Charsets.ISO_8859_1)
+        val framePayload = byteArrayOf(0) +
+            "image/webp".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(0, 3, 0) +
+            image
+        val frame = "APIC".toByteArray(Charsets.ISO_8859_1) +
+            int32Bytes(framePayload.size) +
+            byteArrayOf(0, 0) +
+            framePayload
+        val tag = "ID3".toByteArray(Charsets.ISO_8859_1) +
+            byteArrayOf(3, 0, 0) +
+            synchsafeBytes(frame.size) +
+            frame
+
+        assertArrayEquals(image, extractArtworkBytesFromId3v2(ByteArrayInputStream(tag)))
+    }
+
+    @Test
+    fun realJdRasskazyMp3EmbeddedArtworkIsReadableByFallback() {
+        val sample = File("../../reference/formats/samples/ЖД-рассказы.mp3").canonicalFile
+        assumeTrue("Sample MP3 is not available in this checkout", sample.isFile)
+
+        val artwork = sample.inputStream().use(::extractArtworkBytesFromId3v2)
+
+        assertNotNull(artwork)
+        assertTrue("Expected embedded cover image bytes", artwork!!.size > 100_000)
+        assertTrue("Expected JPEG artwork", artwork[0] == 0xFF.toByte() && artwork[1] == 0xD8.toByte())
+    }
+
+    @Test
     fun folderAudiobooksAllowTempFileFallbackForEmbeddedArtExtraction() {
         val audiobook = Audiobook(
             title = "Folder book",
@@ -233,6 +316,20 @@ class AudiobookCoverResolverTest {
             chapters = listOf(
                 AudioChapter(index = 0, title = "01", uri = "content://tree/folder-book/01.mp3"),
                 AudioChapter(index = 1, title = "02", uri = "content://tree/folder-book/02.mp3")
+            )
+        )
+
+        assertTrue(shouldAllowAudiobookTempCoverFallback(audiobook))
+    }
+
+    @Test
+    fun singleContentUriAudiobookAllowsTempFileFallbackForEmbeddedArtExtraction() {
+        val audiobook = Audiobook(
+            title = "Single content audiobook",
+            sourcePath = "content://provider/JD-rasskazy.mp3",
+            sourceIsFolder = false,
+            chapters = listOf(
+                AudioChapter(index = 0, title = "JD-rasskazy", uri = "content://provider/JD-rasskazy.mp3")
             )
         )
 
@@ -253,4 +350,18 @@ class AudiobookCoverResolverTest {
 
         assertFalse(shouldAllowAudiobookTempCoverFallback(audiobook))
     }
+
+    private fun int32Bytes(value: Int): ByteArray = byteArrayOf(
+        ((value ushr 24) and 0xFF).toByte(),
+        ((value ushr 16) and 0xFF).toByte(),
+        ((value ushr 8) and 0xFF).toByte(),
+        (value and 0xFF).toByte()
+    )
+
+    private fun synchsafeBytes(value: Int): ByteArray = byteArrayOf(
+        ((value ushr 21) and 0x7F).toByte(),
+        ((value ushr 14) and 0x7F).toByte(),
+        ((value ushr 7) and 0x7F).toByte(),
+        (value and 0x7F).toByte()
+    )
 }

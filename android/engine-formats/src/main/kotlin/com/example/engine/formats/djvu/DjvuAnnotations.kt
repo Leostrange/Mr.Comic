@@ -14,10 +14,13 @@ internal fun extractDjvuAnnotations(documentBytes: ByteArray): DjvuAnnotations? 
     var hasCompressed = false
     while (offset + 8 <= documentBytes.size) {
         val chunkId = documentBytes.readAsciiAt(offset, 4) ?: return null
-        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)?.toInt() ?: return null
+        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)
+            ?.takeIf { it <= Int.MAX_VALUE }
+            ?.toInt()
+            ?: return null
         val payloadStart = offset + 8
+        if (chunkSize > documentBytes.size - payloadStart) return null
         val payloadEnd = payloadStart + chunkSize
-        if (payloadEnd > documentBytes.size) return null
 
         when (chunkId) {
             "ANTa" -> {

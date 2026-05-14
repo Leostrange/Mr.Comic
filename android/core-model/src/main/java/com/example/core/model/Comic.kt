@@ -135,6 +135,17 @@ enum class ComicFormat {
     UNKNOWN
 }
 
+/** Formats whose page-count computation may require full document parsing.
+ *  Used by the reader to defer [getPageCount] to a background coroutine and show the UI shell first. */
+fun ComicFormat.isHeavyReflowableFormat(): Boolean = when (this) {
+    ComicFormat.EPUB, ComicFormat.FB2,
+    ComicFormat.TXT, ComicFormat.HTML, ComicFormat.MARKDOWN,
+    ComicFormat.MOBI, ComicFormat.AZW3,
+    ComicFormat.RTF, ComicFormat.DOCX, ComicFormat.ODT,
+    ComicFormat.ZIP, ComicFormat.RAR, ComicFormat.SEVENZ, ComicFormat.TAR -> true
+    else -> false
+}
+
 fun ComicFormat.isTextReadingFormat(): Boolean = when (this) {
     ComicFormat.EPUB,
     ComicFormat.FB2,

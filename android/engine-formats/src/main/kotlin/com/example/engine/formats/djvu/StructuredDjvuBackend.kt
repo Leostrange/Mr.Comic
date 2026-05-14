@@ -23,21 +23,29 @@ class StructuredDjvuBackend @Inject constructor(
     @ApplicationContext private val context: Context
 ) : DjvuBackend {
 
+    private val nativeRenderer = DjvuLibreNativeRenderer()
+
     override val status: DjvuBackendStatus = DjvuBackendStatus.Available(
-        backendName = "structured-iw44-render"
+        backendName = "structured-iw44-render",
+        nativeCompositeRendererAvailable = nativeRenderer.isAvailable
     )
 
     override suspend fun open(path: String): DjvuDocument? {
         val probe = openInputStream(path)?.use(DjvuProbe::probe) ?: return null
         val rangeReader = createRangeReader(path)
+        val nativeDocument = openNativeDocument(path)
         return StructuredDjvuDocument(
             fileName = resolveFileName(path),
             probe = probe,
             backendStatus = status,
+            nativeDocument = nativeDocument.document,
             pageSourceLoader = { page ->
                 loadPageSource(probe, page, rangeReader)
             },
-            closeAction = rangeReader::close
+            closeAction = {
+                rangeReader.close()
+                nativeDocument.cleanup()
+            }
         )
     }
 
@@ -99,32 +107,65 @@ class StructuredDjvuBackend @Inject constructor(
         val descriptor = context.contentResolver.openFileDescriptor(uri, "r") ?: return null
         ContentUriSeekableDjvuRangeReader(descriptor)
     }.getOrNull()
+
+    private fun openNativeDocument(path: String): NativeDjvuOpenResult {
+        nativeRenderer.open(path)?.let { return NativeDjvuOpenResult(it) }
+        if (!path.startsWith("content://")) return NativeDjvuOpenResult(null)
+
+        val tempDir = File(context.cacheDir, "djvu_native").apply { mkdirs() }
+        val tempFile = File(tempDir, "native_${path.hashCode()}_${System.currentTimeMillis()}.djvu")
+        return try {
+            context.contentResolver.openInputStream(Uri.parse(path))?.use { input ->
+                tempFile.outputStream().use { output -> input.copyTo(output) }
+            } ?: return NativeDjvuOpenResult(null)
+            NativeDjvuOpenResult(
+                document = nativeRenderer.open(tempFile.absolutePath),
+                tempFile = tempFile
+            )
+        } catch (_: Exception) {
+            runCatching { tempFile.delete() }
+            NativeDjvuOpenResult(null)
+        }
+    }
+}
+
+private data class NativeDjvuOpenResult(
+    val document: DjvuLibreNativeDocument?,
+    val tempFile: File? = null
+) {
+    fun cleanup() {
+        runCatching { tempFile?.delete() }
+    }
 }
 
 private class StructuredDjvuDocument(
     private val fileName: String,
     private val probe: DjvuProbeResult,
     private val backendStatus: DjvuBackendStatus,
+    private val nativeDocument: DjvuLibreNativeDocument?,
     private val pageSourceLoader: suspend (DjvuPlaceholderPage) -> DjvuPageSource?,
     private val closeAction: () -> Unit = {}
 ) : DjvuDocument {
 
-    // Keep a wider warm window for long DjVu documents so quick browsing
-    // does not immediately evict neighboring page analysis/results.
-    private val pageSourceCache = IntLruCache<DjvuPageSource>(maxEntries = 16)
-    private val renderPlanCache = IntLruCache<DjvuSimpleRenderPlan>(maxEntries = 16)
-    private val renderPlanDecodeInfoCache = IntLruCache<DjvuJpegDecodeInfo>(maxEntries = 16)
-    private val pageAnalysisCache = IntLruCache<DjvuPageAnalysis>(maxEntries = 16)
-    private val iw44BackgroundCache = IntLruCache<Boolean>(maxEntries = 16)
-    private val visualLayerPlanCache = IntLruCache<DjvuVisualLayerPlan>(maxEntries = 16)
-    private val textLayerCache = IntLruCache<DjvuTextLayer>(maxEntries = 16)
-    private val compressedTextLayerCache = IntLruCache<Boolean>(maxEntries = 16)
-    private val annotationsCache = IntLruCache<DjvuAnnotations>(maxEntries = 16)
+    // Page sources and render plans can hold large byte arrays. Keep only the
+    // current page and immediate neighbors warm; analysis caches store light
+    // summaries and do not retain page source bytes.
+    private val pageSourceCache = IntLruCache<DjvuPageSource>(maxEntries = 3)
+    private val renderPlanCache = IntLruCache<DjvuSimpleRenderPlan>(maxEntries = 4)
+    private val renderPlanDecodeInfoCache = IntLruCache<DjvuJpegDecodeInfo>(maxEntries = 8)
+    private val pageAnalysisCache = IntLruCache<DjvuPageAnalysis>(maxEntries = 6)
+    private val iw44BackgroundCache = IntLruCache<Boolean>(maxEntries = 8)
+    private val visualLayerPlanCache = IntLruCache<DjvuVisualLayerPlan>(maxEntries = 6)
+    private val textLayerCache = IntLruCache<DjvuTextLayer>(maxEntries = 6)
+    private val compressedTextLayerCache = IntLruCache<Boolean>(maxEntries = 8)
+    private val annotationsCache = IntLruCache<DjvuAnnotations>(maxEntries = 6)
     private var metadataCache: Map<String, String>? = null
 
     override suspend fun getPageCount(): Int = probe.pageCount.coerceAtLeast(1)
 
     override suspend fun renderPage(index: Int, renderQuality: Int): Bitmap? {
+        nativeDocument?.renderPage(index, renderQuality)?.let { return it }
+
         // ── Path 1: BGjp (JPEG background) — fast, no wavelet needed ─────────
         val bitmapRoute = loadBitmapRoute(index)
         val renderableRenderPlan = bitmapRoute?.renderableRenderPlan
@@ -234,6 +275,13 @@ private class StructuredDjvuDocument(
         val firstUndecodableSimpleBitmapPlan = firstBitmapRoute?.renderPlan != null && firstRenderableRenderPlan == null
 
         val metadata = buildMap {
+            put("engine", "structured-djvu-v1")
+            put("documentKind", "fixed-page")
+            put("pageModel", "raster")
+            put("nativeRenderer", (nativeDocument != null).toString())
+            put("nativeCompositeRendererAvailable", nativeCompositeRendererAvailable().toString())
+            put("nativeRendererBackend", if (nativeDocument != null) "djvulibre" else "none")
+            put("renderBackend", backendStatus.backendName)
             put("djvuFormType", probe.formType)
             put("djvuPageCount", probe.pageCount.toString())
             if (probe.topLevelChunkIds.isNotEmpty()) {
@@ -262,7 +310,28 @@ private class StructuredDjvuDocument(
                     "djvuFirstPageRequiresCompositeDecode",
                     visualLayerPlan.requiresCompositeDecode.toString()
                 )
-            } ?: put("djvuFirstPageHasVisualLayerPlan", false.toString())
+                put(
+                    "djvuFirstPageRequiresNativeCompositeRenderer",
+                    visualLayerPlan.requiresNativeCompositeRenderer.toString()
+                )
+                put(
+                    "nativeRendererRequired",
+                    visualLayerPlan.requiresNativeCompositeRenderer.toString()
+                )
+                if (visualLayerPlan.unsupportedRenderFeatures.isNotEmpty()) {
+                    put(
+                        "djvuFirstPageUnsupportedRenderFeatures",
+                        visualLayerPlan.unsupportedRenderFeatures.joinToString(",")
+                    )
+                    put(
+                        "unsupportedRenderFeatures",
+                        visualLayerPlan.unsupportedRenderFeatures.joinToString(",")
+                    )
+                }
+            } ?: run {
+                put("djvuFirstPageHasVisualLayerPlan", false.toString())
+                put("nativeRendererRequired", false.toString())
+            }
             put("djvuFirstPageHasTextLayer", (firstPageAnalysis.textLayer != null).toString())
             put("djvuFirstPageHasCompressedTextLayer", firstPageAnalysis.hasCompressedTextLayer.toString())
             firstPageAnalysis.annotations?.let { annotations ->
@@ -299,6 +368,7 @@ private class StructuredDjvuDocument(
         compressedTextLayerCache.clear()
         annotationsCache.clear()
         metadataCache = null
+        nativeDocument?.close()
         closeAction()
     }
 
@@ -312,12 +382,14 @@ private class StructuredDjvuDocument(
         return renderPlan
     }
 
+    private fun nativeCompositeRendererAvailable(): Boolean =
+        (backendStatus as? DjvuBackendStatus.Available)?.nativeCompositeRendererAvailable == true
+
     private suspend fun loadPageAnalysis(index: Int): DjvuPageAnalysis {
         pageAnalysisCache[index]?.let { return it }
         // Avoid recursive neighbor warming while we are already in an analysis warm path.
         val source = getPageSourceInternal(index, warmNeighbors = false)
         val analysis = DjvuPageAnalysis(
-            source = source,
             textLayer = source?.let { extractDjvuTextLayer(it.documentBytes) },
             hasCompressedTextLayer = source?.let { hasCompressedDjvuTextLayer(it.documentBytes) } == true,
             annotations = source?.let { extractDjvuAnnotations(it.documentBytes) },
@@ -343,7 +415,9 @@ private class StructuredDjvuDocument(
             if (neighborIndex !in 0 until probe.pageCount) continue
             if (pageSourceCache.containsKey(neighborIndex)) continue
             val neighborPage = probe.pages.getOrNull(neighborIndex) ?: continue
-            pageSourceCache[neighborIndex] = pageSourceLoader(neighborPage)
+            runCatching { pageSourceLoader(neighborPage) }
+                .getOrNull()
+                ?.let { pageSourceCache[neighborIndex] = it }
         }
     }
 
@@ -569,13 +643,28 @@ private class RandomAccessDjvuRangeReader(
 private class IntLruCache<T>(
     private val maxEntries: Int
 ) : LinkedHashMap<Int, T?>(maxEntries + 1, 0.75f, true) {
+    @Synchronized
+    override fun get(key: Int): T? = super.get(key)
+
+    @Synchronized
+    override fun put(key: Int, value: T?): T? = super.put(key, value)
+
+    @Synchronized
+    override fun containsKey(key: Int): Boolean = super.containsKey(key)
+
+    @Synchronized
+    override fun remove(key: Int): T? = super.remove(key)
+
+    @Synchronized
+    override fun clear() = super.clear()
+
+    @Synchronized
     override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, T?>?): Boolean {
         return size > maxEntries
     }
 }
 
 private data class DjvuPageAnalysis(
-    val source: DjvuPageSource?,
     val textLayer: DjvuTextLayer?,
     val hasCompressedTextLayer: Boolean,
     val annotations: DjvuAnnotations?,

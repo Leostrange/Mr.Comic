@@ -29,21 +29,15 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.TaskAlt
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -80,6 +74,13 @@ import com.example.core.domain.analytics.resolveGamificationMetricsSnapshot
 import com.example.core.domain.analytics.resolveMascotStagePreview
 import com.example.core.domain.analytics.resolveMrComicMascotState
 import com.example.core.model.Comic
+import com.example.core.ui.designsystem.MrComicButton
+import com.example.core.ui.designsystem.MrComicButtonVariant
+import com.example.core.ui.designsystem.MrComicCardSurface
+import com.example.core.ui.designsystem.MrComicIconButton
+import com.example.core.ui.designsystem.MrComicIconButtonVariant
+import com.example.core.ui.designsystem.MrComicPill
+import com.example.core.ui.designsystem.MrComicProgressLine
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
@@ -750,26 +751,43 @@ private fun ContinueTopBar(
     title: String,
     onOpenProgressProfile: () -> Unit
 ) {
+    val strings = LocalStrings.current
     RootChromeTopBarHost {
-        TopAppBar(
-            title = {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(rootChromeStableTopBarInsets())
+                .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Mr.Comic",
+                    style = MaterialTheme.typography.displaySmall.copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Black,
+                        letterSpacing = com.example.core.ui.designsystem.MrComicTypographyTokens.LetterSpacing.display
+                    ),
+                    color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            },
-            colors = rootChromeTopBarColors(),
-            windowInsets = WindowInsets(0, 0, 0, 0),
-            actions = {
-                FilledTonalIconButton(onClick = onOpenProgressProfile) {
-                    Icon(
-                        imageVector = Icons.Default.TaskAlt,
-                        contentDescription = null
-                    )
-                }
             }
-        )
+            MrComicIconButton(
+                onClick = onOpenProgressProfile,
+                variant = MrComicIconButtonVariant.Tonal
+            ) {
+                Icon(
+                    imageVector = Icons.Default.TaskAlt,
+                    contentDescription = null
+                )
+            }
+        }
     }
 }
 
@@ -778,9 +796,9 @@ private fun ContinueIntroCard(
     intro: String,
     status: String?
 ) {
-    Surface(
+    MrComicCardSurface(
         shape = RootChromePanelShape,
-        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT),
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT),
         tonalElevation = 1.dp,
         shadowElevation = 4.dp
     ) {
@@ -829,9 +847,9 @@ private fun ContinueReturnCard(
     onOpenTarget: () -> Unit
 ) {
     val supportTone = remember(goalState) { resolveContinueReturnSupportTone(goalState) }
-    Surface(
+    MrComicCardSurface(
         shape = RootChromePanelShape,
-        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.ACCENT)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.ACCENT)
     ) {
         Column(
             modifier = Modifier
@@ -883,7 +901,7 @@ private fun ContinueReturnCard(
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-            Button(onClick = onOpenTarget) {
+            MrComicButton(onClick = onOpenTarget) {
                 Text(text = actionLabel)
             }
         }
@@ -895,9 +913,9 @@ private fun WeeklyReadingPlanChip(
     goalState: DailyReadingGoalState,
     text: ContinueScreenText
 ) {
-    Surface(
+    MrComicCardSurface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f)
+        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f)
     ) {
         Row(
             modifier = Modifier
@@ -1119,11 +1137,9 @@ private fun ReaderCompanionCard(
     actionLabel: String,
     onOpenProgress: () -> Unit
 ) {
-    Card(
+    MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
-        )
+        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
     ) {
         Row(
             modifier = Modifier
@@ -1155,9 +1171,9 @@ private fun ReaderCompanionCard(
                 )
                 if (showProgress) {
                     Spacer(Modifier.height(8.dp))
-                    Surface(
+                    MrComicCardSurface(
                         shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
                     ) {
                         Column(
                             modifier = Modifier
@@ -1181,7 +1197,7 @@ private fun ReaderCompanionCard(
                                     color = MaterialTheme.colorScheme.secondary
                                 )
                             }
-                            androidx.compose.material3.LinearProgressIndicator(
+                            MrComicProgressLine(
                                 progress = { progress.stageProgress },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1214,11 +1230,9 @@ private fun MascotStagePreviewCard(
     showMascot: Boolean,
     onDismiss: () -> Unit
 ) {
-    Card(
+    MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f)
-        )
+        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f)
     ) {
         Row(
             modifier = Modifier
@@ -1246,7 +1260,7 @@ private fun MascotStagePreviewCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+            MrComicIconButton(onClick = onDismiss, modifier = Modifier.size(28.dp), size = 28.dp) {
                 Icon(
                     imageVector = Icons.Filled.Close,
                     contentDescription = null,
@@ -1268,9 +1282,9 @@ private fun CheckpointRecapChip(
     val latestCheckpoint = checkpointTrail.firstOrNull() ?: return
     val secondaryCheckpoints = checkpointTrail.drop(1).take(2)
 
-    Surface(
+    MrComicCardSurface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
     ) {
         Row(
             modifier = Modifier
@@ -1322,7 +1336,7 @@ private fun CheckpointRecapChip(
                             )
                         }
                     }
-                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                    MrComicIconButton(onClick = onDismiss, modifier = Modifier.size(28.dp), size = 28.dp) {
                         Icon(
                             imageVector = Icons.Filled.Close,
                             contentDescription = text.checkpointDismiss,
@@ -1364,9 +1378,9 @@ private fun formatCheckpointTime(reachedAtMillis: Long): String {
 @Composable
 private fun ContinueLoadingState() {
     val language = LocalStrings.current.languageCode
-    Card(
+    MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
@@ -1410,9 +1424,9 @@ private fun EmptyContinueState(
     text: ContinueScreenText,
     showMascot: Boolean
 ) {
-    Card(
+    MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -1431,7 +1445,10 @@ private fun EmptyContinueState(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(onClick = onOpenLibrary) {
+            MrComicButton(
+                onClick = onOpenLibrary,
+                variant = MrComicButtonVariant.Tonal
+            ) {
                 Text(text.openLibrary)
             }
         }
@@ -1444,9 +1461,9 @@ private fun EmptyContinueReadingState(
     text: ContinueScreenText,
     showMascot: Boolean
 ) {
-    Card(
+    MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        containerColor = MaterialTheme.colorScheme.surfaceVariant
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -1465,7 +1482,10 @@ private fun EmptyContinueReadingState(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Button(onClick = onOpenLibrary) {
+            MrComicButton(
+                onClick = onOpenLibrary,
+                variant = MrComicButtonVariant.Tonal
+            ) {
                 Text(text.openLibrary)
             }
         }
@@ -1479,14 +1499,13 @@ private fun ContinueReadingCard(
 ) {
     val strings = LocalStrings.current
     val text = remember(strings.languageCode) { continueScreenText(strings.languageCode) }
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
+    MrComicCardSurface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RootChromePanelShape,
-        colors = CardDefaults.cardColors(
-            containerColor = rootChromePanelColor(MaterialTheme.colorScheme)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme),
+        shadowElevation = 4.dp
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -1516,13 +1535,12 @@ private fun ContinueReadingCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Surface(
-                    shape = RootChromePillShape,
-                    color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
+                MrComicPill(
+                    containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT),
+                    contentColor = MaterialTheme.colorScheme.onSurface
                 ) {
                     Text(
                         text = text.pageProgress(comic.currentPage + 1, (comic.readingProgress * 100).toInt()),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -1533,15 +1551,14 @@ private fun ContinueReadingCard(
 
 @Composable
 private fun ContinueSummaryChip(text: String) {
-    Surface(
-        shape = RootChromePillShape,
-        color = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true)
+    MrComicPill(
+        containerColor = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true),
+        contentColor = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true)
+            style = MaterialTheme.typography.bodySmall
         )
     }
 }

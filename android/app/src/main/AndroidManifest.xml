@@ -42,7 +42,7 @@
 
         <!-- ═══════════════════════════════════════════════════════
              MAIN ACTIVITY — обработка "Open with" intent-фильтров
-             PDF / CBZ / CBR / ZIP / EPUB
+             PDF / CBZ / CBR / ZIP / EPUB / text document formats
              ═══════════════════════════════════════════════════════ -->
         <activity
             android:name=".MainActivity"
@@ -131,6 +131,124 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="file" android:pathPattern=".*\\.epub" />
                 <data android:scheme="file" android:pathPattern=".*\\.EPUB" />
+            </intent-filter>
+
+            <!-- MOBI / AZW -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-mobipocket-ebook" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.amazon.ebook" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:pathPattern=".*\\.mobi" />
+                <data android:scheme="file" android:pathPattern=".*\\.MOBI" />
+                <data android:scheme="file" android:pathPattern=".*\\.azw" />
+                <data android:scheme="file" android:pathPattern=".*\\.AZW" />
+                <data android:scheme="file" android:pathPattern=".*\\.azw3" />
+                <data android:scheme="file" android:pathPattern=".*\\.AZW3" />
+            </intent-filter>
+
+            <!-- FB2 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-fictionbook+xml" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:pathPattern=".*\\.fb2" />
+                <data android:scheme="file" android:pathPattern=".*\\.FB2" />
+                <data android:scheme="file" android:pathPattern=".*\\.fb2\\.zip" />
+                <data android:scheme="file" android:pathPattern=".*\\.FB2\\.ZIP" />
+            </intent-filter>
+
+            <!-- Plain text / HTML -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/html" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:pathPattern=".*\\.txt" />
+                <data android:scheme="file" android:pathPattern=".*\\.TXT" />
+                <data android:scheme="file" android:pathPattern=".*\\.html" />
+                <data android:scheme="file" android:pathPattern=".*\\.HTML" />
+                <data android:scheme="file" android:pathPattern=".*\\.htm" />
+                <data android:scheme="file" android:pathPattern=".*\\.HTM" />
+            </intent-filter>
+
+            <!-- DOC / DOCX / RTF / ODT -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/msword" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/rtf" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/rtf" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.oasis.opendocument.text" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:pathPattern=".*\\.doc" />
+                <data android:scheme="file" android:pathPattern=".*\\.DOC" />
+                <data android:scheme="file" android:pathPattern=".*\\.docx" />
+                <data android:scheme="file" android:pathPattern=".*\\.DOCX" />
+                <data android:scheme="file" android:pathPattern=".*\\.rtf" />
+                <data android:scheme="file" android:pathPattern=".*\\.RTF" />
+                <data android:scheme="file" android:pathPattern=".*\\.odt" />
+                <data android:scheme="file" android:pathPattern=".*\\.ODT" />
+            </intent-filter>
+
+            <!-- DjVu -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/vnd.djvu" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/x-djvu" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="file" android:pathPattern=".*\\.djvu" />
+                <data android:scheme="file" android:pathPattern=".*\\.DJVU" />
+                <data android:scheme="file" android:pathPattern=".*\\.djv" />
+                <data android:scheme="file" android:pathPattern=".*\\.DJV" />
             </intent-filter>
 
             <!-- content:// universal (от файлового менеджера) -->

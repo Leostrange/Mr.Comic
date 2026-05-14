@@ -17,10 +17,14 @@ import com.example.engine.formats.base.decodeBitmapFromByteArray
 import com.example.engine.formats.archive.ArchiveContentKind
 import com.example.engine.formats.archive.ArchiveFormatSupport
 import com.example.engine.formats.epub.EpubFormatReader
+import com.example.engine.formats.fb2.Fb2FormatReader
+import com.example.engine.formats.text.DocxFormatReader
 import com.example.engine.formats.text.HtmlFormatReader
 import com.example.engine.formats.text.MarkdownFormatReader
 import com.example.engine.formats.text.MobiFormatReader
+import com.example.engine.formats.text.OdtFormatReader
 import com.example.engine.formats.text.PlainTextFormatReader
+import com.example.engine.formats.text.RtfFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -54,7 +58,25 @@ class SevenZFormatReader(
     private var szFile: SevenZFile? = null
     private var tempFile: File? = null
     private var tempTextFile: File? = null
-    private val textDelegate: FormatReader? by lazy { createTextDelegateIfPresent() }
+
+    // Lightweight classification — reads 7z headers only, no data extraction.
+    private val archiveContentKind: ArchiveContentKind by lazy { classifyArchiveContent() }
+
+    private fun classifyArchiveContent(): ArchiveContentKind = try {
+        val sz = openSevenZFile() ?: return ArchiveContentKind.UNSUPPORTED
+        val fileNames = sz.entries.toList()
+            .filter { !it.isDirectory && it.name != null }
+            .map { it.name!! }
+        ArchiveFormatSupport.classify(fileNames)
+    } catch (e: Exception) {
+        Log.w(TAG, "Failed to classify archive content", e)
+        ArchiveContentKind.UNSUPPORTED
+    }
+
+    private val textDelegate: FormatReader? by lazy {
+        if (archiveContentKind != ArchiveContentKind.SINGLE_BOOK) null
+        else createTextDelegateIfPresent()
+    }
 
     // Sorted list of image entries — built once via getEntries() (no sequential scan needed)
     private val imageEntries: List<SevenZArchiveEntry> by lazy {
@@ -124,6 +146,9 @@ class SevenZFormatReader(
     override fun getTableOfContents(): List<TocEntry> =
         textDelegate?.getTableOfContents().orEmpty()
 
+    override fun rendersHtmlContent(): Boolean =
+        archiveContentKind == ArchiveContentKind.SINGLE_BOOK
+
     override fun close() {
         synchronized(lock) {
             try { textDelegate?.close() } catch (_: Exception) {}
@@ -131,7 +156,6 @@ class SevenZFormatReader(
             szFile = null
             tempFile?.let { runCatching { it.delete() } }
             tempFile = null
-            tempTextFile?.let { runCatching { it.delete() } }
             tempTextFile = null
         }
     }
@@ -159,9 +183,17 @@ class SevenZFormatReader(
                 }
                 val extracted = File(
                     archiveCacheDir("archive_text_cache"),
-                    "7z_${path.hashCode()}_${System.currentTimeMillis()}_${safeArchiveName(entryName, extension)}"
+                    ArchiveFormatSupport.textCacheFileName(
+                        prefix = "7z",
+                        archiveKey = path,
+                        entryName = entryName,
+                        entrySize = bytes.size.toLong(),
+                        extension = extension
+                    )
                 )
-                extracted.outputStream().use { it.write(bytes) }
+                if (!extracted.exists() || extracted.length() != bytes.size.toLong()) {
+                    extracted.outputStream().use { it.write(bytes) }
+                }
                 tempTextFile = extracted
                 when (textFormat) {
                     ComicFormat.EPUB -> EpubFormatReader(
@@ -175,6 +207,10 @@ class SevenZFormatReader(
                     ComicFormat.TXT -> PlainTextFormatReader(context, extracted.absolutePath)
                     ComicFormat.HTML -> HtmlFormatReader(context, extracted.absolutePath)
                     ComicFormat.MARKDOWN -> MarkdownFormatReader(context, extracted.absolutePath)
+                    ComicFormat.FB2 -> Fb2FormatReader(context, extracted.absolutePath)
+                    ComicFormat.RTF -> RtfFormatReader(context, extracted.absolutePath)
+                    ComicFormat.DOCX -> DocxFormatReader(context, extracted.absolutePath)
+                    ComicFormat.ODT -> OdtFormatReader(context, extracted.absolutePath)
                     else -> TextFormatReader(context, extracted.absolutePath, textFormat)
                 }
             } catch (e: Exception) {
@@ -225,9 +261,6 @@ class SevenZFormatReader(
             ?: File(System.getProperty("java.io.tmpdir"), "mrcomic_engine_formats")
         return File(base, name).apply { mkdirs() }
     }
-
-    private fun safeArchiveName(name: String, extension: String): String =
-        ArchiveFormatSupport.safeArchiveName(name, extension)
 
     private fun isBitmapEntry(sz: SevenZFile, entry: SevenZArchiveEntry): Boolean {
         return sz.getInputStream(entry).use { stream ->

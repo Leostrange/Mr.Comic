@@ -7,7 +7,6 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -31,12 +30,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +46,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.core.data.preferences.PerfProfile
 import com.example.core.data.preferences.PerfRenderQuality
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicPanelCard
+import com.example.core.ui.designsystem.MrComicSliderTile
+import com.example.core.ui.designsystem.MrComicSurfaceCard
+import com.example.core.ui.designsystem.MrComicSwitchRow
+import kotlinx.coroutines.delay
+import java.util.Locale
 
 @Composable
 internal fun DetailedPerformanceSection(
@@ -172,58 +176,22 @@ internal fun DetailedPerformanceSection(
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 4.dp))
                     PerfSwitchRow(
-                        title = when (language) {
-                            "en" -> "Reduce motion globally"
-                            "ja" -> "全体のモーションを減らす"
-                            "zh" -> "全局减少动效"
-                            "ko" -> "전체 모션 줄이기"
-                            else -> "Глобально уменьшить движение"
-                        },
-                        subtitle = when (language) {
-                            "en" -> "A calmer app-wide mode for transitions and motion-heavy UI."
-                            "ja" -> "画面遷移や動きの多い UI を全体的に穏やかにします。"
-                            "zh" -> "让过渡与动态较多的界面整体更平稳。"
-                            "ko" -> "전환과 움직임이 많은 UI를 전체적으로 더 차분하게 만듭니다."
-                            else -> "Более спокойный режим для переходов и подвижного интерфейса во всём приложении."
-                        },
+                        title = t.reducedMotionTitle,
+                        subtitle = t.reducedMotionDesc,
                         checked = uiState.performanceReducedMotion,
                         onCheckedChange = viewModel::setPerformanceReducedMotion
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 4.dp))
                     PerfSwitchRow(
-                        title = when (language) {
-                            "en" -> "Reduce heavy visual effects"
-                            "ja" -> "重い視覚効果を減らす"
-                            "zh" -> "减少重型视觉效果"
-                            "ko" -> "무거운 시각 효과 줄이기"
-                            else -> "Упростить тяжёлые визуальные эффекты"
-                        },
-                        subtitle = when (language) {
-                            "en" -> "Turns down blur and decorative load on weaker devices."
-                            "ja" -> "弱い端末ではブラーや装飾負荷を抑えます。"
-                            "zh" -> "在较弱设备上降低模糊和装饰性负载。"
-                            "ko" -> "성능이 약한 기기에서 블러와 장식 효과를 줄입니다."
-                            else -> "Уменьшает blur и декоративную нагрузку на слабых устройствах."
-                        },
+                        title = t.reducedVisualEffectsTitle,
+                        subtitle = t.reducedVisualEffectsDesc,
                         checked = uiState.performanceReducedVisualEffects,
                         onCheckedChange = viewModel::setPerformanceReducedVisualEffects
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 4.dp))
                     PerfSwitchRow(
-                        title = when (language) {
-                            "en" -> "Video splash"
-                            "ja" -> "ビデオスプラッシュ"
-                            "zh" -> "视频启动页"
-                            "ko" -> "비디오 스플래시"
-                            else -> "Видеозаставка"
-                        },
-                        subtitle = when (language) {
-                            "en" -> "Shows the startup video before the main screen. Disabled by default on E-Ink devices."
-                            "ja" -> "メイン画面の前に起動動画を表示します。E-Ink 端末では既定でオフです。"
-                            "zh" -> "在主界面前显示启动视频。E-Ink 设备默认关闭。"
-                            "ko" -> "메인 화면 전에 시작 비디오를 재생합니다. E-Ink 기기에서는 기본적으로 꺼져 있습니다."
-                            else -> "Показывает стартовую видеозаставку перед главным экраном. На E-Ink устройствах по умолчанию выключена."
-                        },
+                        title = t.videoSplashTitle,
+                        subtitle = t.videoSplashDesc,
                         checked = uiState.appVideoSplashEnabled,
                         onCheckedChange = viewModel::setAppVideoSplashEnabled
                     )
@@ -313,6 +281,12 @@ private data class PerfSettingsText(
     val startupPreloadDesc: String,
     val reducedAnimTitle: String,
     val reducedAnimDesc: String,
+    val reducedMotionTitle: String,
+    val reducedMotionDesc: String,
+    val reducedVisualEffectsTitle: String,
+    val reducedVisualEffectsDesc: String,
+    val videoSplashTitle: String,
+    val videoSplashDesc: String,
     val navTransitionsTitle: String,
     val navTransitionsDesc: String,
     val navAnimNone: String,
@@ -326,10 +300,12 @@ private data class PerfSettingsText(
     val resetDialogBody: String,
     val resetConfirm: String,
     val resetCancel: String,
+    val ramTitle: String,
     val ramUsed: String,
     val ramFree: String,
     val ramTotal: String,
-    val mbSuffix: String
+    val mbSuffix: String,
+    val gbSuffix: String
 )
 
 private fun perfText(language: String): PerfSettingsText = when (language) {
@@ -367,6 +343,12 @@ private fun perfText(language: String): PerfSettingsText = when (language) {
         startupPreloadDesc = "Warm up Continue screen data in background",
         reducedAnimTitle = "Reduce animations",
         reducedAnimDesc = "Calmer transitions for weaker devices",
+        reducedMotionTitle = "Reduce motion globally",
+        reducedMotionDesc = "A calmer app-wide mode for transitions and motion-heavy UI.",
+        reducedVisualEffectsTitle = "Reduce heavy visual effects",
+        reducedVisualEffectsDesc = "Turns down blur and decorative load on weaker devices.",
+        videoSplashTitle = "Video splash",
+        videoSplashDesc = "Shows the startup video before the main screen. Disabled by default on E-Ink devices.",
         navTransitionsTitle = "Screen transitions",
         navTransitionsDesc = "How the app moves between the library, reader, and players.",
         navAnimNone = "None",
@@ -380,10 +362,12 @@ private fun perfText(language: String): PerfSettingsText = when (language) {
         resetDialogBody = "All performance options will be restored to their default values.",
         resetConfirm = "Reset",
         resetCancel = "Cancel",
+        ramTitle = "RAM",
         ramUsed = "Used",
         ramFree = "Free",
         ramTotal = "Total",
-        mbSuffix = "MB"
+        mbSuffix = "MB",
+        gbSuffix = "GB"
     )
     else -> PerfSettingsText(
         pageSubtitle = "Управление памятью, качеством рендера и фоновыми задачами.",
@@ -419,6 +403,12 @@ private fun perfText(language: String): PerfSettingsText = when (language) {
         startupPreloadDesc = "Прогревать данные экрана «Продолжить» в фоне",
         reducedAnimTitle = "Уменьшить анимации",
         reducedAnimDesc = "Более спокойные переходы для слабых устройств",
+        reducedMotionTitle = "Глобально уменьшить движение",
+        reducedMotionDesc = "Более спокойный режим для переходов и подвижного интерфейса во всём приложении.",
+        reducedVisualEffectsTitle = "Упростить тяжёлые визуальные эффекты",
+        reducedVisualEffectsDesc = "Уменьшает blur и декоративную нагрузку на слабых устройствах.",
+        videoSplashTitle = "Видеозаставка",
+        videoSplashDesc = "Показывает стартовую видеозаставку перед главным экраном. На E-Ink устройствах по умолчанию выключена.",
         navTransitionsTitle = "Переходы между экранами",
         navTransitionsDesc = "Как приложение переходит между библиотекой, ридером и плеерами.",
         navAnimNone = "Без анимации",
@@ -432,10 +422,12 @@ private fun perfText(language: String): PerfSettingsText = when (language) {
         resetDialogBody = "Все настройки производительности будут восстановлены до значений по умолчанию.",
         resetConfirm = "Сбросить",
         resetCancel = "Отмена",
+        ramTitle = "Память",
         ramUsed = "Занято",
         ramFree = "Свободно",
         ramTotal = "Всего",
-        mbSuffix = "МБ"
+        mbSuffix = "МБ",
+        gbSuffix = "ГБ"
     )
 }
 
@@ -445,30 +437,8 @@ private fun PerfCard(
     hint: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                if (!hint.isNullOrBlank()) {
-                    Text(
-                        text = hint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                content()
-            }
-        )
+    MrComicPanelCard(title = title, hint = hint) {
+        content()
     }
 }
 
@@ -531,17 +501,12 @@ private fun PerfProfileChip(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Surface(
+    MrComicSurfaceCard(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surface
-        }
+        fillMaxWidth = false,
+        selected = selected
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(
@@ -577,25 +542,15 @@ private fun PerfSliderRow(
     steps: Int,
     onValueChange: (Float) -> Unit
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = title, style = MaterialTheme.typography.titleSmall)
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-        Slider(value = value, onValueChange = onValueChange, valueRange = valueRange, steps = steps)
-    }
+    MrComicSliderTile(
+        title = title,
+        valueLabel = subtitle,
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        modifier = Modifier.padding(vertical = 10.dp)
+    )
 }
 
 @Composable
@@ -621,30 +576,12 @@ private fun PerfSegmentedRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             options.forEach { (label, value) ->
-                Surface(
-                    modifier = Modifier.weight(1f).clickable { onSelect(value) },
-                    shape = RoundedCornerShape(18.dp),
-                    color = if (selected == value) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    }
-                ) {
-                    Box(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (selected == value) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurface
-                            }
-                        )
-                    }
-                }
+                MrComicFilterChip(
+                    selected = selected == value,
+                    onClick = { onSelect(value) },
+                    modifier = Modifier.weight(1f),
+                    label = { Text(text = label, style = MaterialTheme.typography.labelMedium) }
+                )
             }
         }
     }
@@ -657,31 +594,12 @@ private fun PerfSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
-        }
-    }
+    MrComicSwitchRow(
+        title = title,
+        subtitle = subtitle,
+        checked = checked,
+        onCheckedChange = onCheckedChange
+    )
 }
 
 @Composable
@@ -692,13 +610,10 @@ private fun PerfActionRow(
     tint: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface
+    MrComicSurfaceCard(
+        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -721,34 +636,50 @@ private fun PerfRamInfoRow(
     t: PerfSettingsText
 ) {
     val activityManager = remember(context) { context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager }
-    val memoryInfo = remember(activityManager) { ActivityManager.MemoryInfo().also(activityManager::getMemoryInfo) }
+    var memoryInfo by remember(activityManager) {
+        mutableStateOf(ActivityManager.MemoryInfo().also(activityManager::getMemoryInfo))
+    }
+    LaunchedEffect(activityManager) {
+        while (true) {
+            memoryInfo = ActivityManager.MemoryInfo().also(activityManager::getMemoryInfo)
+            delay(5_000L)
+        }
+    }
     val usedBytes = (memoryInfo.totalMem - memoryInfo.availMem).coerceAtLeast(0L)
 
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Text(text = "RAM", style = MaterialTheme.typography.titleSmall)
+        Text(text = t.ramTitle, style = MaterialTheme.typography.titleSmall)
         Text(
-            text = "${t.ramUsed}: ${formatBytes(usedBytes)}",
+            text = "${t.ramUsed}: ${formatBytes(usedBytes, t.mbSuffix, t.gbSuffix)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "${t.ramFree}: ${formatBytes(memoryInfo.availMem)}",
+            text = "${t.ramFree}: ${formatBytes(memoryInfo.availMem, t.mbSuffix, t.gbSuffix)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "${t.ramTotal}: ${formatBytes(memoryInfo.totalMem)}",
+            text = "${t.ramTotal}: ${formatBytes(memoryInfo.totalMem, t.mbSuffix, t.gbSuffix)}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
-private fun formatBytes(bytes: Long): String {
+private fun formatBytes(
+    bytes: Long,
+    mbSuffix: String,
+    gbSuffix: String
+): String {
     val mb = bytes / (1024f * 1024f)
     val gb = mb / 1024f
-    return if (gb >= 1f) String.format("%.1f GB", gb) else String.format("%.0f MB", mb)
+    return if (gb >= 1f) {
+        String.format(Locale.US, "%.1f %s", gb, gbSuffix)
+    } else {
+        String.format(Locale.US, "%.0f %s", mb, mbSuffix)
+    }
 }

@@ -16,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
@@ -26,29 +25,16 @@ import androidx.compose.ui.unit.sp
 import com.example.core.model.Comic
 import com.example.core.model.isReadCompleted
 import com.example.core.model.isReadingInProgress
+import com.example.core.ui.designsystem.MrComicCardSurface
+import com.example.core.ui.designsystem.MrComicPill
+import com.example.core.ui.designsystem.MrComicProgressLine
+import com.example.core.ui.designsystem.MrComicStatusBadge
+import com.example.core.ui.designsystem.MrComicStatusTone
+import com.example.core.ui.designsystem.mrComicCompletedColor
 import com.example.core.ui.library.LibraryShelfBar
 import com.example.core.ui.library.libraryCardElevation
 import com.example.core.ui.locale.AppStrings
 import com.example.core.ui.locale.LocalStrings
-
-/** Semantic color for "completed" status — used in both grid and list cards. */
-private val CompletedGreen = Color(0xFF4CAF50)
-
-private fun bookmarkCd(strings: AppStrings): String = when (strings.languageCode) {
-    "en" -> "Bookmarked"
-    "ja" -> "ブックマーク済み"
-    "zh" -> "已收藏"
-    "ko" -> "북마크됨"
-    else -> "Избранное"
-}
-
-private fun completedCd(strings: AppStrings): String = when (strings.languageCode) {
-    "en" -> "Completed"
-    "ja" -> "読了"
-    "zh" -> "已读完"
-    "ko" -> "완독"
-    else -> "Прочитано"
-}
 
 private fun libraryGridCoverRatio(
     thumbnailMode: String,
@@ -198,14 +184,14 @@ private fun GridCard(
         else -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.92f)
     }
 
-    Card(
+    MrComicCardSurface(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        containerColor = containerColor,
         border = cardBorder,
-        elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+        shadowElevation = libraryCardElevation(cardShadow)
     ) {
         Box(
             modifier = Modifier
@@ -235,7 +221,6 @@ private fun GridCard(
                 titleScale = titleScale,
                 titleLines = titleLines,
                 titlePanelOpacity = titlePanelOpacity,
-                badgeShape = RoundedCornerShape((radiusBase * 0.72f).coerceAtLeast(8.dp)),
                 showProgressIndicators = showProgressIndicators,
                 showCoverTitles = showCoverTitles
             )
@@ -253,117 +238,88 @@ private fun BoxScope.GridCardBadges(
     titleScale: Float,
     titleLines: Int,
     titlePanelOpacity: Float,
-    badgeShape: RoundedCornerShape,
     showProgressIndicators: Boolean,
     showCoverTitles: Boolean
 ) {
     val showProgressChip = showProgressIndicators && comic.isReadingInProgress()
     val showCompletedChip = comic.isReadCompleted()
     val titleBottomPadding = if (showProgressChip || showCompletedChip) 30.dp else 8.dp
+    // Format badge — top-left corner (design system spec)
+    if (formatLabel != null) {
+        FormatBadge(
+            label = formatLabel,
+            isGraphic = isGraphic,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 6.dp, top = 6.dp)
+        )
+    }
     if (showCoverTitles) {
-        Surface(
+        MrComicPill(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 6.dp, end = 10.dp, bottom = titleBottomPadding)
                 .widthIn(max = 160.dp),
-            shape = badgeShape,
-            color = MaterialTheme.colorScheme.surface.copy(
+            containerColor = MaterialTheme.colorScheme.surface.copy(
                 alpha = (0.82f + titlePanelOpacity.coerceIn(0.18f, 0.78f) * 0.12f).coerceIn(0.84f, 0.94f)
             ),
             border = BorderStroke(
                 0.6.dp,
                 MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)
-            )
+            ),
+            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
         ) {
             Text(
                 text = comic.title,
                 style = MaterialTheme.typography.labelMedium.copy(fontSize = (12.sp * titleScale.coerceIn(0.85f, 1.3f))),
                 maxLines = titleLines.coerceIn(1, 3),
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f),
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f)
             )
         }
     }
 
     if (showProgressChip) {
-        Surface(
+        MrComicStatusBadge(
+            text = "${(comic.readingProgress * 100).toInt()}%",
+            tone = MrComicStatusTone.Info,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 6.dp, bottom = 6.dp),
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f))
-        ) {
-            Text(
-                "${(comic.readingProgress * 100).toInt()}%",
-                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-            )
-        }
+                .padding(start = 6.dp, bottom = 6.dp)
+        )
     }
 
     if (showCompletedChip) {
-        Surface(
+        val completedColor = mrComicCompletedColor()
+        MrComicStatusBadge(
+            text = "100%",
+            tone = MrComicStatusTone.Success,
+            leadingIcon = Icons.Filled.CheckCircle,
+            contentDescription = strings.libraryStatusCompleted,
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 6.dp, bottom = 6.dp),
-            shape = RoundedCornerShape(999.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
-            border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f))
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    Icons.Filled.CheckCircle,
-                    contentDescription = completedCd(strings),
-                    modifier = Modifier.size(14.dp),
-                    tint = CompletedGreen
-                )
-                Text(
-                    "100%",
-                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
+            containerColor = completedColor.copy(alpha = 0.18f),
+            contentColor = completedColor
+        )
     }
 
     if (showProgressIndicators && comic.readingProgress > 0f) {
-        Box(
+        val progressColor = when {
+            comic.isReadCompleted() -> mrComicCompletedColor()
+            isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.66f)
+            else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.58f)
+        }
+        MrComicProgressLine(
+            progress = { comic.readingProgress.coerceIn(0f, 1f) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(1.5.dp)
-                .align(Alignment.BottomCenter)
-                .background(Color.Black.copy(alpha = 0.1f))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(comic.readingProgress.coerceIn(0f, 1f))
-                    .background(
-                        if (isGraphic) {
-                            Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.66f),
-                                    MaterialTheme.colorScheme.tertiary.copy(alpha = 0.58f)
-                                )
-                            )
-                        } else {
-                            Brush.horizontalGradient(
-                                listOf(
-                                    MaterialTheme.colorScheme.secondary.copy(alpha = 0.58f),
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
-                                )
-                            )
-                        }
-                    )
-            )
-        }
+                .height(2.dp)
+                .align(Alignment.BottomCenter),
+            color = progressColor,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f)
+        )
     }
 }
 
@@ -447,14 +403,14 @@ private fun ListCard(
     }
     val thumbShape = RoundedCornerShape((radiusBase * 0.52f).coerceAtLeast(4.dp))
 
-    Card(
+    MrComicCardSurface(
         modifier = modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = containerColor),
+        containerColor = containerColor,
         border = cardBorder,
-        elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+        shadowElevation = libraryCardElevation(cardShadow)
     ) {
         Column(modifier = Modifier.padding(contentPadding)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -480,7 +436,7 @@ private fun ListCard(
                     if (comic.isBookmarked) {
                         Icon(
                             Icons.Filled.Bookmark,
-                            contentDescription = null,
+                            contentDescription = strings.readerBookmarked,
                             modifier = Modifier
                                 .padding(2.dp)
                                 .size(14.dp)
@@ -492,6 +448,7 @@ private fun ListCard(
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        val completedColor = mrComicCompletedColor()
                         Text(
                             comic.title,
                             style = MaterialTheme.typography.titleSmall.copy(fontSize = (14.sp * titleScale.coerceIn(0.85f, 1.3f))),
@@ -504,9 +461,9 @@ private fun ListCard(
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 Icons.Filled.CheckCircle,
-                                contentDescription = completedCd(strings),
+                                contentDescription = strings.libraryStatusCompleted,
                                 modifier = Modifier.size(16.dp),
-                                tint = CompletedGreen
+                                tint = completedColor
                             )
                         }
                     }
@@ -523,32 +480,38 @@ private fun ListCard(
                     }
                     Spacer(Modifier.height(4.dp))
                     if (showProgressIndicators && comic.isReadingInProgress()) {
+                        val progressColor = when {
+                            comic.isReadCompleted() -> mrComicCompletedColor()
+                            isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.66f)
+                            else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.58f)
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            LinearProgressIndicator(
+                            MrComicProgressLine(
                                 progress = { comic.readingProgress.coerceIn(0f, 1f) },
-                                modifier = Modifier.weight(1f).height(1.5.dp).clip(RoundedCornerShape(2.dp)),
-                                color = if (isGraphic) MaterialTheme.colorScheme.primary.copy(alpha = 0.66f) else MaterialTheme.colorScheme.secondary.copy(alpha = 0.58f),
+                                modifier = Modifier.weight(1f).height(2.dp).clip(RoundedCornerShape(2.dp)),
+                                color = progressColor,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f)
                             )
                             Text(
-                                if (comic.isReadCompleted()) "100%" else "${(comic.readingProgress * 100).toInt()}%",
+                                "${(comic.readingProgress * 100).toInt()}%",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     } else if (comic.isReadCompleted()) {
+                        val completedColor = mrComicCompletedColor()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(
                                 Icons.Filled.CheckCircle,
-                                contentDescription = completedCd(strings),
+                                contentDescription = strings.libraryStatusCompleted,
                                 modifier = Modifier.size(16.dp),
-                                tint = CompletedGreen
+                                tint = completedColor
                             )
                             Text(
                                 "100%",

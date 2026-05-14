@@ -1,5 +1,8 @@
 package com.example.feature.reader.ui.components
 
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.FlingBehavior
 import androidx.compose.foundation.gestures.ScrollScope
 import androidx.compose.foundation.gestures.ScrollableDefaults
@@ -11,22 +14,25 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.core.model.ReaderImageScaleMode
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.feature.reader.ui.ReaderNavigationProgressSource
 import com.example.feature.reader.ui.ReaderUiState
 import com.example.feature.reader.ui.ReaderViewModel
+import com.example.feature.reader.ui.usesTextReaderContent
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.math.max
@@ -58,8 +64,24 @@ fun WebtoonView(
         )
     }
 
-    val webtoonPreloadBehind = 1
-    val webtoonPreloadAhead = 2
+    val webtoonPreloadBehind = 2
+    // For image-based formats (PDF, DJVU, CBR, CBZ) limit concurrent native decodes to 3.
+    // Setting 6 caused OOM / silent failures for large-page archives.
+    // Text formats are lightweight HTML pages and can safely preload further ahead.
+    val webtoonPreloadAhead = if (uiState.usesTextReaderContent()) 6 else 3
+
+    // Tracks aspect ratio (height/width) from the first successfully decoded page.
+    // Used so placeholders match the real page proportions, preventing layout jumps.
+    var estimatedPageAspect by remember { mutableFloatStateOf(1.45f) }  // default ≈ manga B5
+
+    LaunchedEffect(uiState.comic?.id, uiState.totalPages) {
+        if (uiState.totalPages <= 0 || uiState.usesTextReaderContent()) return@LaunchedEffect
+        val initialWindow = (uiState.currentPage - webtoonPreloadBehind).coerceAtLeast(0)..
+            (uiState.currentPage + webtoonPreloadAhead).coerceAtMost(uiState.totalPages - 1)
+        val pages = initialWindow.toList()
+        pages.forEach { page -> viewModel.loadPage(page) }
+        viewModel.preloadWebtoonWindow(pages)
+    }
 
     // User scrolled the list → update the ViewModel's current page.
     // snapshotFlow + distinctUntilChanged prevents re-entrancy: the emission
@@ -72,7 +94,11 @@ fun WebtoonView(
             .collect { index -> viewModel.navigateTo(index, ReaderNavigationProgressSource.JUMP) }
     }
 
-    // External page change (e.g. bottom bar slider) → scroll the list.
+    // External page change (e.g. bottom bar slider, TOC jump) → scroll the list.
+    // loadPage calls are intentionally omitted here: every visible item has its own
+    // LaunchedEffect that calls loadPage, and the visibleItems snapshotFlow below
+    // drives preloadWebtoonWindow. Adding them here too creates a coroutine storm on
+    // every webtoon scroll step.
     LaunchedEffect(uiState.comic?.id, uiState.currentPage) {
         if (listState.firstVisibleItemIndex != uiState.currentPage) {
             listState.scrollToItem(uiState.currentPage)
@@ -93,6 +119,8 @@ fun WebtoonView(
                 if (uiState.totalPages <= 0 || start > end) emptyList() else (start..end).toList()
             }
             .distinctUntilChanged()
+            // Debounce so fast flings don't cancel and restart the preload job on every frame.
+            .debounce(120L)
             .collect { pages ->
                 viewModel.preloadWebtoonWindow(pages)
             }
@@ -101,7 +129,7 @@ fun WebtoonView(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(),
         userScrollEnabled = zoomedPageIndex == null,
         // On e-ink: disable momentum fling — smooth scrolling causes heavy ghosting.
         // On normal devices: standard fling behavior with momentum.
@@ -110,15 +138,25 @@ fun WebtoonView(
         items(uiState.totalPages) { pageIndex ->
             // Collect from StateFlow — no polling, immediate update when bitmap is ready
             val bitmap by viewModel.getPageFlow(pageIndex).collectAsState(initial = viewModel.getPage(pageIndex))
+            val htmlPage by viewModel.getWebtoonHtmlPageFlow(pageIndex).collectAsState(initial = null)
+            // Text-format pages are NOT covered by preloadWebtoonWindow (which skips text content).
+            // Each visible item must trigger its own load so HTML pages appear when scrolled into view.
             LaunchedEffect(uiState.comic?.id, pageIndex) {
                 viewModel.loadPage(pageIndex)
             }
             Box(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
+                modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
                 val currentBitmap = bitmap
                 if (currentBitmap != null) {
+                    // Update aspect ratio estimate from the first decoded page so that
+                    // subsequent placeholders use the correct proportions.
+                    val bitmapAspect = currentBitmap.height.toFloat() /
+                        currentBitmap.width.coerceAtLeast(1).toFloat()
+                    if (bitmapAspect in 0.5f..3f && bitmapAspect != estimatedPageAspect) {
+                        estimatedPageAspect = bitmapAspect
+                    }
                     ZoomableFillWidthImage(
                         bitmap = currentBitmap,
                         contentDescription = "Page ${pageIndex + 1}",
@@ -137,9 +175,50 @@ fun WebtoonView(
                         crop = imageCrop,
                         modifier = Modifier.fillMaxWidth()
                     )
+                } else if (htmlPage != null) {
+                    // HTML fallback for formats (e.g. DjVu) where bitmap rendering is unavailable.
+                    val html = htmlPage!!
+                    val htmlBaseUrl = uiState.htmlBaseUrl
+                    AndroidView(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f / estimatedPageAspect),
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = false
+                                settings.loadWithOverviewMode = true
+                                settings.useWideViewPort = true
+                                webViewClient = WebViewClient()
+                                isVerticalScrollBarEnabled = false
+                                isHorizontalScrollBarEnabled = false
+                            }
+                        },
+                        update = { webView ->
+                            webView.loadDataWithBaseURL(htmlBaseUrl, html, "text/html", "UTF-8", null)
+                        }
+                    )
                 } else {
-                    Box(modifier = Modifier.fillMaxWidth().height(400.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = Color.White)
+                    // Placeholder sized to match real page proportions so there are no
+                    // layout jumps when the bitmap finishes loading.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f / estimatedPageAspect)
+                            .clipToBounds()
+                            .graphicsLayer {
+                                clip = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .background(MaterialTheme.colorScheme.surface)
+                                .graphicsLayer {
+                                    alpha = 0.96f
+                                }
+                        )
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }

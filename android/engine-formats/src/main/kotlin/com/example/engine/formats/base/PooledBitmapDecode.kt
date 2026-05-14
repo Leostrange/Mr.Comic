@@ -98,7 +98,9 @@ fun decodeBitmapFromByteArray(
     }
 
     return try {
-        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, pooledOptions)
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, pooledOptions).also { decoded ->
+            if (decoded == null) bitmapAllocator.release(candidate)
+        }
     } catch (_: IllegalArgumentException) {
         bitmapAllocator.release(candidate)
         BitmapFactory.decodeByteArray(

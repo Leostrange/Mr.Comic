@@ -82,6 +82,8 @@ data class AppStrings(
     val preview: String,
     val previewButton: String,
     val previewCard: String,
+    val readerTextPreviewTitle: String,
+    val readerTextPreviewDescription: String,
 
     // Font & shape
     val fontScale: String,
@@ -165,6 +167,8 @@ data class AppStrings(
     val libraryDeleteFolderMessage: String,
     val libraryQuotes: String,
     val libraryBookmarks: String,
+    val libraryAchievements: String,
+    val libraryViewStrips: String,
     val libraryQuotesEmptyHint: String,
     val libraryBookmarksEmptyHint: String,
     val libraryDeleteQuoteTitle: String,
@@ -402,6 +406,30 @@ fun AppStrings.libraryBooksSectionLabel(): String = when (languageCode) {
     else -> "Книги"
 }
 
+fun AppStrings.audiobookPlayActionLabel(): String = when (languageCode) {
+    "en" -> "Play"
+    "ja" -> "再生"
+    "zh" -> "播放"
+    "ko" -> "재생"
+    else -> "Воспроизведение"
+}
+
+fun AppStrings.audiobookPauseActionLabel(): String = when (languageCode) {
+    "en" -> "Pause"
+    "ja" -> "一時停止"
+    "zh" -> "暂停"
+    "ko" -> "일시정지"
+    else -> "Пауза"
+}
+
+fun AppStrings.audiobookStopActionLabel(): String = when (languageCode) {
+    "en" -> "Stop"
+    "ja" -> "停止"
+    "zh" -> "停止"
+    "ko" -> "중지"
+    else -> "Остановить"
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Русский
 // ─────────────────────────────────────────────────────────────────────────────
@@ -475,6 +503,8 @@ val Russian = AppStrings(
     preview = "Предпросмотр",
     previewButton = "Кнопка",
     previewCard = "Карточка",
+    readerTextPreviewTitle = "Предпросмотр чтения",
+    readerTextPreviewDescription = "Компактный абзац показывает размер шрифта, межстрочный интервал, насыщенность и выравнивание ещё до открытия книги.",
 
     fontScale = "Масштаб текста",
     fontScaleSmall = "Мал",
@@ -548,6 +578,8 @@ val Russian = AppStrings(
     libraryDeleteFolderMessage = "Папка «%1\$s» и %2\$d элементов внутри неё будут удалены из библиотеки. Файлы на диске не удаляются.",
     libraryQuotes = "Цитатник",
     libraryBookmarks = "Закладки",
+    libraryAchievements = "Достижения",
+    libraryViewStrips = "Вертикальная лента",
     libraryQuotesEmptyHint = "Сохраняйте понравившиеся строки в ридере, и они появятся здесь отдельной коллекцией.",
     libraryBookmarksEmptyHint = "Добавляйте файлы в закладки из карточки библиотеки, и они будут собраны здесь отдельно.",
     libraryDeleteQuoteTitle = "Удалить цитату?",
@@ -723,6 +755,8 @@ val English = AppStrings(
     preview = "Preview",
     previewButton = "Button",
     previewCard = "Card",
+    readerTextPreviewTitle = "Reading preview",
+    readerTextPreviewDescription = "A compact paragraph shows font size, line height, weight, and alignment before you open a book.",
 
     fontScale = "Text Scale",
     fontScaleSmall = "Small",
@@ -796,6 +830,8 @@ val English = AppStrings(
     libraryDeleteFolderMessage = "\"%1\$s\" and %2\$d items inside it will be removed from the library. Files stay on disk.",
     libraryQuotes = "Quotes",
     libraryBookmarks = "Bookmarks",
+    libraryAchievements = "Achievements",
+    libraryViewStrips = "Vertical strips",
     libraryQuotesEmptyHint = "Save a line from the reader and it will appear here as a separate collection.",
     libraryBookmarksEmptyHint = "Bookmark files from the library card and they will appear here as a separate collection.",
     libraryDeleteQuoteTitle = "Delete quote?",
@@ -971,6 +1007,8 @@ val Japanese = AppStrings(
     preview = "プレビュー",
     previewButton = "ボタン",
     previewCard = "カード",
+    readerTextPreviewTitle = "読書プレビュー",
+    readerTextPreviewDescription = "本を開く前に、フォントサイズ、行間、太さ、配置をコンパクトな段落で確認できます。",
 
     fontScale = "テキストサイズ",
     fontScaleSmall = "小",
@@ -1044,6 +1082,8 @@ val Japanese = AppStrings(
     libraryDeleteFolderMessage = "「%1\$s」と中の %2\$d 件はライブラリから削除されます。ファイル自体はディスクに残ります。",
     libraryQuotes = "引用",
     libraryBookmarks = "ブックマーク",
+    libraryAchievements = "実績",
+    libraryViewStrips = "縦リボン",
     libraryQuotesEmptyHint = "リーダーで気に入った一文を保存すると、ここに独立したコレクションとして表示されます。",
     libraryBookmarksEmptyHint = "ライブラリカードからファイルをブックマークすると、ここに独立したコレクションとして表示されます。",
     libraryDeleteQuoteTitle = "引用を削除しますか？",
@@ -1219,6 +1259,8 @@ val ChineseSimplified = AppStrings(
     preview = "预览",
     previewButton = "按钮",
     previewCard = "卡片",
+    readerTextPreviewTitle = "阅读预览",
+    readerTextPreviewDescription = "打开书籍前，用紧凑段落预览字号、行高、字重和对齐方式。",
 
     fontScale = "文字大小",
     fontScaleSmall = "小",
@@ -1292,6 +1334,8 @@ val ChineseSimplified = AppStrings(
     libraryDeleteFolderMessage = "“%1\$s”及其中的 %2\$d 个项目将从书库移除，磁盘上的文件不会删除。",
     libraryQuotes = "摘录",
     libraryBookmarks = "书签",
+    libraryAchievements = "成就",
+    libraryViewStrips = "垂直条带",
     libraryQuotesEmptyHint = "在阅读器里保存喜欢的句子，它就会作为独立收藏出现在这里。",
     libraryBookmarksEmptyHint = "在书库卡片里收藏文件，它们就会在这里单独显示。",
     libraryDeleteQuoteTitle = "删除摘录？",
@@ -1467,6 +1511,8 @@ val Korean = AppStrings(
     preview = "미리보기",
     previewButton = "버튼",
     previewCard = "카드",
+    readerTextPreviewTitle = "읽기 미리보기",
+    readerTextPreviewDescription = "책을 열기 전에 글자 크기, 줄 간격, 굵기, 정렬을 짧은 문단으로 확인합니다.",
 
     fontScale = "텍스트 크기",
     fontScaleSmall = "소",
@@ -1540,6 +1586,8 @@ val Korean = AppStrings(
     libraryDeleteFolderMessage = "\"%1\$s\"와 그 안의 %2\$d개 항목은 라이브러리에서만 제거되며 파일은 디스크에 남습니다.",
     libraryQuotes = "문구",
     libraryBookmarks = "북마크",
+    libraryAchievements = "업적",
+    libraryViewStrips = "세로 스트립",
     libraryQuotesEmptyHint = "리더에서 마음에 드는 문장을 저장하면 여기에서 별도 컬렉션으로 볼 수 있습니다.",
     libraryBookmarksEmptyHint = "라이브러리 카드에서 파일을 북마크하면 여기에서 별도 컬렉션으로 볼 수 있습니다.",
     libraryDeleteQuoteTitle = "문구를 삭제할까요?",

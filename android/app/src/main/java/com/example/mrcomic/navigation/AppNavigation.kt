@@ -1,5 +1,8 @@
 package com.example.mrcomic.navigation
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -12,39 +15,27 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,12 +47,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -81,9 +69,10 @@ import com.example.core.data.preferences.dataStore
 import com.example.core.model.ReaderLocator
 import com.example.core.model.storedReaderLocator
 import com.example.core.ui.locale.AppStrings
+import com.example.core.ui.designsystem.MrComicBottomNavigationBar
+import com.example.core.ui.designsystem.MrComicBottomNavigationItem
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
-import com.example.core.ui.library.RootChromeTone
 import com.example.feature.library.AudiobookPlayerScreen
 import com.example.feature.library.LibraryScreen
 import com.example.feature.library.MiniAudiobookPlayer
@@ -102,7 +91,6 @@ import com.example.feature.settings.ui.SettingsViewModel
 import com.example.mrcomic.home.ContinueLibraryChrome
 import com.example.mrcomic.home.ContinueScreen
 import com.example.mrcomic.icons.AppIconSettingsScreen
-import com.example.core.ui.library.rootChromePanelColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
@@ -456,7 +444,7 @@ fun AppNavHost(
                             )
                         } catch (_: Exception) {}
                         val mimeType = context.contentResolver.getType(uri)
-                        if (mimeType?.startsWith("audio/") == true) {
+                        if (isLikelyAudioDocument(context, uri, mimeType)) {
                             vm.addAudiobookFromUri(uri)
                         } else {
                             vm.addComicFromUri(uri)
@@ -515,9 +503,11 @@ fun AppNavHost(
                                     "application/vnd.rar",
                                     "application/pdf",
                                     "application/epub+zip",
+                                    "application/fb2+xml",
                                     "text/plain",
                                     "text/html",
                                     "text/markdown",
+                                    "application/xhtml+xml",
                                     "application/rtf",
                                     "application/x-mobipocket-ebook",
                                     "application/vnd.amazon.ebook",
@@ -526,7 +516,6 @@ fun AppNavHost(
                                     "image/x-djvu",
                                     "image/vnd.djvu+multipage",
                                     "application/x-djvu",
-                                    "application/xhtml+xml",
                                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                                     "application/vnd.oasis.opendocument.text",
                                     "audio/mpeg",
@@ -534,9 +523,7 @@ fun AppNavHost(
                                     "audio/ogg",
                                     "audio/x-wav",
                                     "audio/flac",
-                                    "audio/aac",
-                                    "audio/*",
-                                    "*/*"
+                                    "audio/aac"
                                 )
                             )
                         },
@@ -702,13 +689,10 @@ fun AppNavHost(
                     val readerContext = LocalContext.current
                     ReaderScreen(
                         onNavigateBack = {
-                            // Restore system bars BEFORE navigating back — use compat API
-                            // so insets animate in smoothly without a bottom bar jump
-                            (readerContext as? android.app.Activity)?.window?.let { window ->
-                                androidx.core.view.WindowInsetsControllerCompat(
-                                    window, window.decorView
-                                ).show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                            }
+                            // Do NOT manually show system bars here before navigating back.
+                            // ReaderScreen's DisposableEffect restores them in onDispose,
+                            // which fires naturally after the transition begins — this avoids
+                            // the "bars instantly appear then screen slides away" jarring jump.
                             navController.navigateUp()
                         },
                         onNavigateToOcr = { request: OcrLaunchRequest ->
@@ -895,86 +879,48 @@ private fun appNavPopExitTransition(
     else -> fadeOut(tween(180))
 }
 
+private fun isLikelyAudioDocument(context: Context, uri: Uri, mimeType: String?): Boolean {
+    if (mimeType?.startsWith("audio/", ignoreCase = true) == true) return true
+    val name = documentDisplayName(context, uri)
+        ?: uri.lastPathSegment
+        ?: return false
+    val extension = name.substringBefore('?')
+        .substringBefore('#')
+        .substringAfterLast('.', "")
+        .lowercase()
+    return extension in setOf(
+        "mp3", "m4a", "m4b", "aac", "ogg", "oga", "opus",
+        "wav", "wave", "flac", "alac", "aiff", "aif", "webm"
+    )
+}
+
+private fun documentDisplayName(context: Context, uri: Uri): String? =
+    runCatching {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null
+        )?.use { cursor ->
+            val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+        }
+    }.getOrNull()?.takeIf { it.isNotBlank() }
+
 @Composable
 private fun AppBottomBar(
     currentRoute: String?,
     menuItems: List<NavItem>,
     onNavigate: (String) -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(0.dp),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            menuItems.forEach { item ->
-                UniversalNavigationBarItem(
-                    icon = item.icon,
-                    label = item.label,
-                    isSelected = currentRoute == item.route,
-                    onClick = { onNavigate(item.destination) }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun RowScope.UniversalNavigationBarItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val contentColor = if (isSelected) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .height(52.dp)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                modifier = Modifier.size(20.dp),
-                tint = contentColor
-            )
-            Text(
-                text = label,
-                maxLines = 1,
-                softWrap = false,
-                overflow = TextOverflow.Clip,
-                textAlign = TextAlign.Center,
-                color = contentColor,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .basicMarquee(),
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    platformStyle = PlatformTextStyle(includeFontPadding = false)
-                )
+    MrComicBottomNavigationBar {
+        menuItems.forEach { item ->
+            MrComicBottomNavigationItem(
+                icon = item.icon,
+                label = item.label,
+                selected = currentRoute == item.route,
+                onClick = { onNavigate(item.destination) }
             )
         }
     }

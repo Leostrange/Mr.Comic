@@ -26,6 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.Canvas
 import coil.compose.AsyncImage
+import com.example.core.ui.designsystem.MrComicElevationTokens
+import com.example.core.ui.designsystem.MrComicLibraryColorTokens
+import com.example.core.ui.designsystem.MrComicLibraryStyleTokens
+import com.example.core.ui.designsystem.MrComicRadiusTokens
 import com.example.core.ui.performance.LocalPerformanceUiHints
 
 data class LibraryBackgroundSpec(
@@ -78,45 +82,47 @@ private fun backdropVariantAlpha(
 }
 
 fun normalizeLibraryBackgroundStyle(raw: String): String = when (raw.uppercase()) {
-    "AURORA" -> "AURORA_MIST"
-    "CINEMA" -> "CINEMA_NOIR"
-    "PAPER" -> "PAPER_GRAIN"
-    "DARK_CABINET" -> "DARK_STUDY"
-    "ORANGERY" -> "LIGHT_GREENHOUSE"
-    "LAB" -> "SCIENCE_LAB"
-    "CITY" -> "CITY_LIBRARY"
-    "GLASS" -> "LIQUID_GLASS"
-    "MICA" -> "MIDNIGHT_MICA"
-    "SUNSET" -> "SUNSET_HAZE"
+    "AURORA" -> MrComicLibraryStyleTokens.BackgroundAuroraMist
+    "CINEMA" -> MrComicLibraryStyleTokens.BackgroundCinemaNoir
+    "PAPER" -> MrComicLibraryStyleTokens.BackgroundPaperGrain
+    "DARK_CABINET" -> MrComicLibraryStyleTokens.BackgroundDarkStudy
+    "ORANGERY" -> MrComicLibraryStyleTokens.BackgroundLightGreenhouse
+    "LAB" -> MrComicLibraryStyleTokens.BackgroundScienceLab
+    "CITY" -> MrComicLibraryStyleTokens.BackgroundCityLibrary
+    "GLASS" -> MrComicLibraryStyleTokens.BackgroundLiquidGlass
+    "MICA" -> MrComicLibraryStyleTokens.BackgroundMidnightMica
+    "SUNSET" -> MrComicLibraryStyleTokens.BackgroundSunsetHaze
     else -> raw.uppercase()
 }
 
 fun normalizeLibraryShelfStyle(raw: String): String = when (raw.uppercase()) {
-    "WOOD" -> "OAK"
-    "MAHOGANY" -> "MAHOGANY"
-    "CHERRY" -> "CHERRY"
-    "MAPLE" -> "MAPLE"
-    "BLACK_METAL" -> "BLACK_METAL"
-    "ALUMINIUM" -> "ALUMINUM"
-    "FROSTED" -> "FROST"
-    "FLOATING" -> "FLOAT"
+    "WOOD" -> MrComicLibraryStyleTokens.ShelfOak
+    "MAHOGANY" -> MrComicLibraryStyleTokens.ShelfMahogany
+    "CHERRY" -> MrComicLibraryStyleTokens.ShelfCherry
+    "MAPLE" -> MrComicLibraryStyleTokens.ShelfMaple
+    "BLACK_METAL" -> MrComicLibraryStyleTokens.ShelfBlackMetal
+    "ALUMINIUM" -> MrComicLibraryStyleTokens.ShelfAluminum
+    "FROSTED" -> MrComicLibraryStyleTokens.ShelfFrost
+    "FLOATING" -> MrComicLibraryStyleTokens.ShelfFloat
     else -> raw.uppercase()
 }
 
 fun normalizeLibraryGraphicCoverStyle(raw: String): String = when (raw) {
-    "CLASSIC" -> "POSTER"
-    "DARK" -> "INK"
+    "CLASSIC" -> MrComicLibraryStyleTokens.CoverPoster
+    "DARK" -> MrComicLibraryStyleTokens.CoverInk
     else -> raw.uppercase()
 }.let {
     when (it) {
-        "POSTER", "INK", "MINIMAL" -> it
+        MrComicLibraryStyleTokens.CoverPoster,
+        MrComicLibraryStyleTokens.CoverInk,
+        MrComicLibraryStyleTokens.CoverMinimal -> it
         else -> DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE
     }
 }
 
-const val DEFAULT_LIBRARY_BACKGROUND_STYLE = "PAPER_GRAIN"
-const val DEFAULT_LIBRARY_SHELF_STYLE = "OAK"
-const val DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE = "MINIMAL"
+const val DEFAULT_LIBRARY_BACKGROUND_STYLE = MrComicLibraryStyleTokens.BackgroundPaperGrain
+const val DEFAULT_LIBRARY_SHELF_STYLE = MrComicLibraryStyleTokens.ShelfOak
+const val DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE = MrComicLibraryStyleTokens.CoverMinimal
 const val DEFAULT_LIBRARY_CARD_STYLE = "BALANCED"
 const val DEFAULT_LIBRARY_THUMBNAIL_MODE = "RECTANGLE"
 const val DEFAULT_LIBRARY_COVER_SCALE = "CROP"
@@ -128,7 +134,7 @@ const val DEFAULT_LIBRARY_CARD_SHADOW = 0.18f
 const val DEFAULT_LIBRARY_TITLE_SCALE = 1.0f
 const val DEFAULT_LIBRARY_TITLE_LINES = 2
 const val DEFAULT_LIBRARY_CARD_STROKE = 0.18f
-const val DEFAULT_LIBRARY_CARD_CORNER_RADIUS = 12
+const val DEFAULT_LIBRARY_CARD_CORNER_RADIUS = MrComicRadiusTokens.DefaultCornerRadius
 const val DEFAULT_LIBRARY_TITLE_PANEL_OPACITY = 0.42f
 
 private fun resolveLibraryBackdropIntensity(
@@ -516,6 +522,34 @@ fun resolveLibraryBackgroundSpec(
             imageVeilColor = backdropVariantColor(variant, Color(0xFFF2F2EE), Color(0xFF171717), Color(0xFF000000))
                 .copy(alpha = backdropVariantAlpha(variant, 0.22f, 0.26f, 0.44f) + veilAmount * 0.22f)
         )
+        "AURORA_MIST" -> LibraryBackgroundSpec(
+            baseColor = backdropVariantColor(
+                variant,
+                light = Color(0xFFEAF0F8),   // --lib-bg-aurora-mist
+                dark = Color(0xFF111A28),
+                amoled = Color(0xFF020508)
+            ),
+            overlayBrushes = listOf(
+                Brush.verticalGradient(
+                    listOf(
+                        backdropVariantColor(variant, Color(0xFFF2F7FE), Color(0xFF16243A), Color(0xFF060B12)),
+                        backdropVariantColor(variant, Color(0xFFDDE8F6), Color(0xFF101A28), Color(0xFF030508)),
+                        backdropVariantColor(variant, Color(0xFFC8D8EE), Color(0xFF0A1018), Color(0xFF010203))
+                    )
+                ),
+                Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF7ABFFF).copy(
+                            alpha = 0.06f + intensity * backdropVariantAlpha(variant, 0.18f, 0.14f, 0.08f)
+                        ),
+                        Color.Transparent
+                    )
+                )
+            ),
+            imageAlpha = backdropVariantAlpha(variant, 0.10f, 0.08f, 0.05f) + intensity * 0.03f,
+            imageVeilColor = backdropVariantColor(variant, Color(0xFFF4F8FF), Color(0xFF090E14), Color(0xFF010203))
+                .copy(alpha = backdropVariantAlpha(variant, 0.16f, 0.22f, 0.34f) + veilAmount * 0.22f)
+        )
         "IMAGE" -> LibraryBackgroundSpec(
             baseColor = background,
             overlayBrushes = listOf(
@@ -585,69 +619,69 @@ fun resolveLibraryShelfSpec(
                 )
             )
         )
-        "OAK" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfOak -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFFA7723C), Color(0xFF7B4A23), Color(0xFF432412))
+                listOf(MrComicLibraryColorTokens.oakTop, MrComicLibraryColorTokens.oakMiddle, MrComicLibraryColorTokens.oakBottom)
             ),
             rimColor = Color(0xFF2A140A),
             highlightColor = Color(0xFFD7B286).copy(alpha = 0.8f)
         )
-        "WALNUT" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfWalnut -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFF71462A), Color(0xFF4D2D1A), Color(0xFF26150D))
+                listOf(MrComicLibraryColorTokens.walnutTop, MrComicLibraryColorTokens.walnutMiddle, MrComicLibraryColorTokens.walnutBottom)
             ),
             rimColor = Color(0xFF160C07),
             highlightColor = Color(0xFFA9744E).copy(alpha = 0.7f)
         )
-        "STEEL" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfSteel -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFFB5BEC8), Color(0xFF7A8793), Color(0xFF48515A))
+                listOf(MrComicLibraryColorTokens.steelTop, MrComicLibraryColorTokens.steelMiddle, MrComicLibraryColorTokens.steelBottom)
             ),
             rimColor = Color(0xFF313840),
             highlightColor = Color.White.copy(alpha = 0.65f)
         )
-        "LACQUER" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfLacquer -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFF2B1B36), Color(0xFF17101F), Color(0xFF0E0A13))
+                listOf(MrComicLibraryColorTokens.lacquerTop, Color(0xFF17101F), Color(0xFF0E0A13))
             ),
             rimColor = Color(0xFF09060D),
             highlightColor = colorScheme.primary.copy(alpha = 0.55f)
         )
-        "NEON" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfNeon -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
                 listOf(Color(0xFF0D2230), Color(0xFF123543), Color(0xFF09141E))
             ),
             rimColor = Color(0xFF4DE4FF).copy(alpha = 0.35f),
-            highlightColor = Color(0xFF7AE7FF).copy(alpha = 0.95f),
+            highlightColor = MrComicLibraryColorTokens.neonGlow.copy(alpha = 0.95f),
             glowBrush = Brush.horizontalGradient(
-                listOf(Color.Transparent, Color(0xFF7AE7FF), Color.Transparent)
+                listOf(Color.Transparent, MrComicLibraryColorTokens.neonGlow, Color.Transparent)
             )
         )
-        "MAHOGANY" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfMahogany -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFF8C3A21), Color(0xFF5D2615), Color(0xFF3E1A0E))
+                listOf(MrComicLibraryColorTokens.mahoganyTop, MrComicLibraryColorTokens.mahoganyMiddle, MrComicLibraryColorTokens.mahoganyBottom)
             ),
             rimColor = Color(0xFF2E120A),
             highlightColor = Color(0xFFD4A574).copy(alpha = 0.8f)
         )
-        "CHERRY" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfCherry -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFF9E1B1B), Color(0xFF6A1212), Color(0xFF460E0E))
+                listOf(MrComicLibraryColorTokens.cherryTop, MrComicLibraryColorTokens.cherryMiddle, MrComicLibraryColorTokens.cherryBottom)
             ),
             rimColor = Color(0xFF260A0A),
             highlightColor = Color(0xFFC78A8A).copy(alpha = 0.7f)
         )
-        "MAPLE" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfMaple -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFFD4AF8C), Color(0xFFB89470), Color(0xFF9C7A58))
+                listOf(MrComicLibraryColorTokens.mapleTop, MrComicLibraryColorTokens.mapleMiddle, MrComicLibraryColorTokens.mapleBottom)
             ),
             rimColor = Color(0xFF4A3A2A),
             highlightColor = Color(0xFFF5E6D3).copy(alpha = 0.8f)
@@ -663,10 +697,10 @@ fun resolveLibraryShelfSpec(
                 listOf(Color.Transparent, Color(0xFF6E6E6E), Color.Transparent)
             )
         )
-        "ALUMINUM" -> LibraryShelfSpec(
+        MrComicLibraryStyleTokens.ShelfAluminum -> LibraryShelfSpec(
             height = height,
             baseBrush = Brush.verticalGradient(
-                listOf(Color(0xFFD5DCE5), Color(0xFFA1ADB9), Color(0xFF6E7782))
+                listOf(MrComicLibraryColorTokens.aluminumTop, MrComicLibraryColorTokens.aluminumMiddle, MrComicLibraryColorTokens.aluminumBottom)
             ),
             rimColor = Color(0xFF545C66),
             highlightColor = Color.White.copy(alpha = 0.72f)
@@ -723,7 +757,8 @@ fun resolveLibraryShelfSpec(
     }
 }
 
-fun libraryCardElevation(shadow: Float): Dp = (1f + shadow.coerceIn(0f, 1f) * 10f).dp
+fun libraryCardElevation(shadow: Float): Dp =
+    MrComicElevationTokens.libraryCardElevation(shadow)
 
 @Composable
 private fun BoxScope.LibraryDecorLayer(

@@ -574,9 +574,58 @@ class EpubCorpusSmokeTest {
     }
 
     @Test
+    fun podSolncemSampleMarksCrossFileFootnoteReferences() = runBlocking {
+        val sample = locateReferenceSample("Под солнцем_868805.epub")
+        assumeTrue("Expected Pod Solncem EPUB sample to exist", sample.exists())
+
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            assertTrue(
+                "Expected id29 footnote text to be available",
+                reader.getFootnoteText("id29").orEmpty().contains("Жоанн Лоран Адольф")
+            )
+            val pageCount = reader.getPageCount()
+            var footnotePageHtml = ""
+            var diagnosticHtml = ""
+            var diagnosticSnippet = ""
+            for (index in 0 until pageCount) {
+                val html = reader.getHtmlPage(index).orEmpty()
+                if (html.contains("data-footnote-id=\"id29\"")) {
+                    footnotePageHtml = html
+                    break
+                }
+                if (diagnosticHtml.isBlank() && (html.contains("Жоанну") || html.contains("id29"))) {
+                    diagnosticHtml = html
+                    val markerIndex = listOf(
+                        html.indexOf("Жоанну"),
+                        html.indexOf("id29"),
+                        html.indexOf("ch2.xhtml")
+                    ).filter { it >= 0 }.minOrNull() ?: -1
+                    if (markerIndex >= 0) {
+                        diagnosticSnippet = html.substring(
+                            (markerIndex - 220).coerceAtLeast(0),
+                            (markerIndex + 520).coerceAtMost(html.length)
+                        )
+                    }
+                }
+            }
+
+            assertTrue(
+                "Expected Жоанну[1] link to be annotated as a clickable footnote; " +
+                    diagnosticSnippet.ifBlank { diagnosticHtml.take(700) },
+                footnotePageHtml.contains("data-footnote-id=\"id29\"") &&
+                    footnotePageHtml.contains("doc-noteref")
+            )
+        } finally {
+            reader.close()
+        }
+    }
+
+
+    @Test
     fun syntheticEpubOversizedSingleChapterSplitsIntoMultipleReaderPages() = runBlocking {
         val repeatedParagraph = buildString {
-            repeat(360) { index ->
+            repeat(2_000) { index ->
                 append("Очень длинная глава EPUB для проверки разбиения страницы номер ")
                 append(index + 1)
                 append(". ")
@@ -629,6 +678,20 @@ class EpubCorpusSmokeTest {
         repeat(6) {
             val candidate = File(current, "samples/format-real-corpus/$name")
             if (candidate.exists()) return candidate
+            current = current.parentFile ?: return@repeat
+        }
+        return File(userDir, name)
+    }
+
+    private fun locateReferenceSample(name: String): File {
+        val userDir = System.getProperty("user.dir") ?: "."
+        var current = File(userDir).absoluteFile
+        repeat(8) {
+            val candidates = listOf(
+                File(current, "reference/formats/samples/$name"),
+                File(current, "Epub bug/$name")
+            )
+            candidates.firstOrNull { it.exists() }?.let { return it }
             current = current.parentFile ?: return@repeat
         }
         return File(userDir, name)

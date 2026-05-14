@@ -63,8 +63,6 @@ import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -73,12 +71,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -88,6 +84,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.example.core.ui.designsystem.MrComicButton
+import com.example.core.ui.designsystem.MrComicButtonVariant
+import com.example.core.ui.designsystem.MrComicCardSurface
+import com.example.core.ui.designsystem.MrComicFilterChip
+import com.example.core.ui.designsystem.MrComicProgressLine
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -198,8 +199,8 @@ fun LibraryScreen(
     onAddFileClick: () -> Unit,
     onAddFolderClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onAudiobookClick: (String) -> Unit,
     onProgressProfileClick: (() -> Unit)? = null,
-    onAudiobookClick: (String) -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -431,22 +432,23 @@ fun LibraryScreen(
         }
     }
 
-    val canNavigateUpWithinLibrary = showMrComicProgress ||
-        uiState.contentSection != LibraryContentSection.FILES ||
-        (uiState.groupByMode == GroupByMode.FOLDER && uiState.currentFolderPath != null) ||
-        uiState.statusFilter != LibraryStatusFilter.ALL ||
-        uiState.formatFilter != LibraryFormatFilter.ALL
+    val navigateUpAction = resolveLibraryNavigateUpAction(
+        showMrComicProgress = showMrComicProgress,
+        contentSection = uiState.contentSection,
+        groupByMode = uiState.groupByMode,
+        currentFolderPath = uiState.currentFolderPath,
+        statusFilter = uiState.statusFilter,
+        formatFilter = uiState.formatFilter
+    )
+    val canNavigateUpWithinLibrary = navigateUpAction != LibraryNavigateUpAction.NONE
     val navigateUpWithinLibrary = {
-        if (showMrComicProgress) {
-            showMrComicProgress = false
-        } else if (uiState.contentSection != LibraryContentSection.FILES) {
-            viewModel.setContentSection(LibraryContentSection.FILES)
-        } else if (uiState.statusFilter != LibraryStatusFilter.ALL) {
-            viewModel.setStatusFilter(LibraryStatusFilter.ALL)
-        } else if (uiState.formatFilter != LibraryFormatFilter.ALL) {
-            viewModel.setFormatFilter(LibraryFormatFilter.ALL)
-        } else {
-            viewModel.navigateUpFromFolder()
+        when (navigateUpAction) {
+            LibraryNavigateUpAction.DISMISS_PROGRESS -> showMrComicProgress = false
+            LibraryNavigateUpAction.SHOW_FILES_SECTION -> viewModel.setContentSection(LibraryContentSection.FILES)
+            LibraryNavigateUpAction.SHOW_ALL_FILES -> viewModel.showAllFiles()
+            LibraryNavigateUpAction.CLEAR_FORMAT_FILTER -> viewModel.setFormatFilter(LibraryFormatFilter.ALL)
+            LibraryNavigateUpAction.EXIT_FOLDER -> viewModel.navigateUpFromFolder()
+            LibraryNavigateUpAction.NONE -> Unit
         }
     }
 
@@ -514,6 +516,7 @@ fun LibraryScreen(
             val readingFilesCount = uiState.readingComicCount +
                 uiState.audiobooks.count { it.lastPositionMs > 0L || it.lastChapterIndex > 0 }
             val completedFilesCount = uiState.completedComicCount
+            val bookmarkedFilesCount = uiState.bookmarkedComicCount
             val isEmptyCurrentSection = when {
                 isQuoteSection -> uiState.totalQuoteCount == 0
                 isBookmarkSection -> uiState.totalBookmarkedCount == 0
@@ -538,6 +541,15 @@ fun LibraryScreen(
                             EmptyBookmarksPlaceholder(
                                 modifier = Modifier.align(Alignment.Center),
                                 showMascot = uiState.mascotUiEnabled
+                            )
+                        }
+                        uiState.contentSection == LibraryContentSection.FILES &&
+                            uiState.statusFilter != LibraryStatusFilter.ALL -> {
+                            EmptyStatusFilterPlaceholder(
+                                statusFilter = uiState.statusFilter,
+                                showMascot = uiState.mascotUiEnabled,
+                                onShowAll = viewModel::showAllFiles,
+                                modifier = Modifier.align(Alignment.Center)
                             )
                         }
                         else -> {
@@ -608,6 +620,7 @@ fun LibraryScreen(
                                     totalFiles = totalFilesCount,
                                     readingFiles = readingFilesCount,
                                     completedFiles = completedFilesCount,
+                                    bookmarkedFiles = bookmarkedFilesCount,
                                     onStatusChange = viewModel::setStatusFilter
                                 )
                             }
@@ -691,13 +704,23 @@ fun LibraryScreen(
                                 )
                             }
                             item(key = "mr_comic_analytics", span = { GridItemSpan(maxLineSpan) }) {
+                                val searchActive = uiState.searchQuery.isNotBlank()
+                                val analyticsComics = if (searchActive) uiState.comics else emptyList()
                                 MrComicAnalyticsCard(
                                     appLanguage = uiState.appLanguage,
-                                    searchActive = uiState.searchQuery.isNotBlank(),
-                                    totalTitles = uiState.allComicsRawCount,
-                                    completedTitles = uiState.completedComicCount,
-                                    bookmarkedTitles = uiState.bookmarkedComicCount,
-                                    quotesCount = uiState.totalQuoteCount,
+                                    searchActive = searchActive,
+                                    totalTitles = if (searchActive) analyticsComics.size else uiState.allComicsRawCount,
+                                    completedTitles = if (searchActive) {
+                                        analyticsComics.count { it.isReadCompleted() }
+                                    } else {
+                                        uiState.completedComicCount
+                                    },
+                                    bookmarkedTitles = if (searchActive) {
+                                        analyticsComics.count { it.isBookmarked }
+                                    } else {
+                                        uiState.bookmarkedComicCount
+                                    },
+                                    quotesCount = if (searchActive) uiState.quotes.size else uiState.totalQuoteCount,
                                     goalState = uiState.dailyReadingGoalState,
                                     onOpenProgress = openProgressProfile,
                                     modifier = Modifier.fillMaxWidth()
@@ -1416,7 +1439,10 @@ private fun QuickControlsPopup(
                     .horizontalScroll(scrollState),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilledTonalButton(onClick = onToggleView) {
+                MrComicButton(
+                    onClick = onToggleView,
+                    variant = MrComicButtonVariant.Tonal
+                ) {
                     Icon(
                         when (nextViewMode) {
                             LibraryViewMode.GRID -> Icons.Default.GridView
@@ -1434,13 +1460,19 @@ private fun QuickControlsPopup(
                         }
                     )
                 }
-                FilledTonalButton(onClick = onOpenFilters) {
+                MrComicButton(
+                    onClick = onOpenFilters,
+                    variant = MrComicButtonVariant.Tonal
+                ) {
                     Icon(Icons.Default.Tune, contentDescription = null)
                     Spacer(Modifier.width(6.dp))
                     Text(strings.actionSort)
                 }
                 Box {
-                    FilledTonalButton(onClick = { thumbnailMenuExpanded = true }) {
+                    MrComicButton(
+                        onClick = { thumbnailMenuExpanded = true },
+                        variant = MrComicButtonVariant.Tonal
+                    ) {
                         Text(
                             if (thumbnailMode == "SQUARE") {
                                 strings.libraryCoversSquare
@@ -1470,7 +1502,10 @@ private fun QuickControlsPopup(
                     }
                 }
                 Box {
-                    FilledTonalButton(onClick = { addMenuExpanded = true }) {
+                    MrComicButton(
+                        onClick = { addMenuExpanded = true },
+                        variant = MrComicButtonVariant.Tonal
+                    ) {
                         Icon(Icons.Default.FolderOpen, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
                         Text(strings.libraryAdd)
@@ -1648,7 +1683,7 @@ private fun FolderCard(
         (rectHeight * 0.7f) to rectHeight
     }
     if (isGrid) {
-        Card(
+        MrComicCardSurface(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
@@ -1656,9 +1691,9 @@ private fun FolderCard(
                     onLongClick = onLongClick
                 ),
             shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = containerColor),
+            containerColor = containerColor,
             border = cardBorder,
-            elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+            shadowElevation = libraryCardElevation(cardShadow)
         ) {
             Column {
                 FolderCover(
@@ -1675,7 +1710,7 @@ private fun FolderCard(
             }
         }
     } else {
-        Card(
+        MrComicCardSurface(
             modifier = Modifier
                 .height(rectHeight)
                 .fillMaxWidth()
@@ -1684,9 +1719,9 @@ private fun FolderCard(
                     onLongClick = onLongClick
                 ),
             shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = containerColor),
+            containerColor = containerColor,
             border = cardBorder,
-            elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+            shadowElevation = libraryCardElevation(cardShadow)
         ) {
             Column(modifier = Modifier.padding(contentPadding + 2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1939,7 +1974,7 @@ private fun FilterSheet(
                     LibraryViewMode.LIST,
                     LibraryViewMode.STRIPS
                 ).forEach { mode ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = viewMode == mode,
                         onClick = { onViewModeChange(mode) },
                         label = { Text(libraryViewModeLabel(mode, strings.languageCode)) },
@@ -1956,7 +1991,7 @@ private fun FilterSheet(
         ) {
             ChipWrap {
                 librarySortOptions(strings).forEach { (order, label) ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = sortOrder == order,
                         onClick = { onSortChange(order) },
                         label = { Text(label) },
@@ -1978,7 +2013,7 @@ private fun FilterSheet(
                     LibraryStatusFilter.IN_PROGRESS to strings.libraryStatusReading,
                     LibraryStatusFilter.COMPLETED to strings.libraryStatusCompleted
                 ).forEach { (filter, label) ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = statusFilter == filter,
                         onClick = { onStatusFilterChange(filter) },
                         label = { Text(label) },
@@ -2000,7 +2035,7 @@ private fun FilterSheet(
                     LibraryFormatFilter.PDF to "PDF",
                     LibraryFormatFilter.TEXT to strings.libraryFormatText
                 ).forEach { (filter, label) ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = formatFilter == filter,
                         onClick = { onFormatFilterChange(filter) },
                         label = { Text(label) },
@@ -2021,7 +2056,7 @@ private fun FilterSheet(
                     GroupByMode.NONE to strings.libraryGroupingNone,
                     GroupByMode.SERIES to strings.libraryGroupingSeries
                 ).forEach { (mode, label) ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = groupByMode == mode,
                         onClick = { onGroupByChange(mode) },
                         label = { Text(label) },
@@ -2041,7 +2076,7 @@ private fun FilterSheet(
                     "RECTANGLE" to strings.actionRectangle,
                     "SQUARE" to strings.actionSquare
                 ).forEach { (mode, label) ->
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = thumbnailMode == mode,
                         onClick = { onThumbnailModeChange(mode) },
                         label = { Text(label) },
@@ -2063,7 +2098,7 @@ private fun FilterSheet(
                     190 to libraryThumbnailSizeLabel(strings.languageCode, "large")
                 ).forEach { (size, label) ->
                     val selected = tileSizeDp in (size - 12)..(size + 12)
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = selected,
                         onClick = { onTileSizeChange(size) },
                         label = { Text(label) },
@@ -2137,16 +2172,225 @@ private fun EmptyLibraryPlaceholder(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onAddFile) {
+        MrComicButton(
+            onClick = onAddFile,
+            variant = MrComicButtonVariant.Filled
+        ) {
             Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(strings.libraryOpenFile)
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onAddFolder) {
+        MrComicButton(
+            onClick = onAddFolder,
+            variant = MrComicButtonVariant.Outlined
+        ) {
             Icon(Icons.Default.FolderOpen, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text(strings.libraryOpenFolder)
+        }
+    }
+}
+
+internal data class LibraryStatusEmptyStateText(
+    val title: String,
+    val message: String,
+    val action: String
+)
+
+internal enum class LibraryNavigateUpAction {
+    DISMISS_PROGRESS,
+    SHOW_FILES_SECTION,
+    SHOW_ALL_FILES,
+    CLEAR_FORMAT_FILTER,
+    EXIT_FOLDER,
+    NONE
+}
+
+internal fun resolveLibraryNavigateUpAction(
+    showMrComicProgress: Boolean,
+    contentSection: LibraryContentSection,
+    groupByMode: GroupByMode,
+    currentFolderPath: String?,
+    statusFilter: LibraryStatusFilter,
+    formatFilter: LibraryFormatFilter
+): LibraryNavigateUpAction = when {
+    showMrComicProgress -> LibraryNavigateUpAction.DISMISS_PROGRESS
+    contentSection != LibraryContentSection.FILES -> LibraryNavigateUpAction.SHOW_FILES_SECTION
+    statusFilter != LibraryStatusFilter.ALL -> LibraryNavigateUpAction.SHOW_ALL_FILES
+    formatFilter != LibraryFormatFilter.ALL -> LibraryNavigateUpAction.CLEAR_FORMAT_FILTER
+    groupByMode == GroupByMode.FOLDER && currentFolderPath != null -> LibraryNavigateUpAction.EXIT_FOLDER
+    else -> LibraryNavigateUpAction.NONE
+}
+
+internal fun libraryStatusEmptyStateText(
+    statusFilter: LibraryStatusFilter,
+    language: String
+): LibraryStatusEmptyStateText {
+    val action = when (language) {
+        "en" -> "Show all"
+        "ja" -> "すべて表示"
+        "zh" -> "显示全部"
+        "ko" -> "전체 보기"
+        else -> "Показать все"
+    }
+    return when (statusFilter) {
+        LibraryStatusFilter.COMPLETED -> when (language) {
+            "en" -> LibraryStatusEmptyStateText(
+                title = "Nothing completed yet",
+                message = "Finished books will appear here.",
+                action = action
+            )
+            "ja" -> LibraryStatusEmptyStateText(
+                title = "完読した本はまだありません",
+                message = "最後まで読んだ本がここに表示されます。",
+                action = action
+            )
+            "zh" -> LibraryStatusEmptyStateText(
+                title = "还没有读完的书",
+                message = "读完的书会显示在这里。",
+                action = action
+            )
+            "ko" -> LibraryStatusEmptyStateText(
+                title = "아직 다 읽은 책이 없습니다",
+                message = "완독한 책이 여기에 표시됩니다.",
+                action = action
+            )
+            else -> LibraryStatusEmptyStateText(
+                title = "Пока ничего не прочитано",
+                message = "Когда книга будет закрыта до конца, она появится здесь.",
+                action = action
+            )
+        }
+        LibraryStatusFilter.IN_PROGRESS -> when (language) {
+            "en" -> LibraryStatusEmptyStateText(
+                title = "Nothing in progress",
+                message = "Books you start reading will appear here.",
+                action = action
+            )
+            "ja" -> LibraryStatusEmptyStateText(
+                title = "読書中の本はありません",
+                message = "読み始めた本がここに表示されます。",
+                action = action
+            )
+            "zh" -> LibraryStatusEmptyStateText(
+                title = "没有正在阅读的书",
+                message = "开始阅读后，书会显示在这里。",
+                action = action
+            )
+            "ko" -> LibraryStatusEmptyStateText(
+                title = "읽는 중인 책이 없습니다",
+                message = "읽기 시작한 책이 여기에 표시됩니다.",
+                action = action
+            )
+            else -> LibraryStatusEmptyStateText(
+                title = "Сейчас ничего не читается",
+                message = "Начните книгу, и она появится в этом разделе.",
+                action = action
+            )
+        }
+        LibraryStatusFilter.BOOKMARKED -> when (language) {
+            "en" -> LibraryStatusEmptyStateText(
+                title = "No favorites yet",
+                message = "Favorite books will appear here.",
+                action = action
+            )
+            "ja" -> LibraryStatusEmptyStateText(
+                title = "お気に入りはまだありません",
+                message = "お気に入りにした本がここに表示されます。",
+                action = action
+            )
+            "zh" -> LibraryStatusEmptyStateText(
+                title = "还没有收藏",
+                message = "收藏的书会显示在这里。",
+                action = action
+            )
+            "ko" -> LibraryStatusEmptyStateText(
+                title = "아직 즐겨찾기가 없습니다",
+                message = "즐겨찾기한 책이 여기에 표시됩니다.",
+                action = action
+            )
+            else -> LibraryStatusEmptyStateText(
+                title = "Пока нет избранного",
+                message = "Добавьте книгу в избранное, чтобы быстро вернуться к ней.",
+                action = action
+            )
+        }
+        LibraryStatusFilter.ALL -> when (language) {
+            "en" -> LibraryStatusEmptyStateText(
+                title = "Nothing here yet",
+                message = "Clear filters to return to the full library.",
+                action = action
+            )
+            "ja" -> LibraryStatusEmptyStateText(
+                title = "ここにはまだありません",
+                message = "フィルターを解除してライブラリ全体に戻ります。",
+                action = action
+            )
+            "zh" -> LibraryStatusEmptyStateText(
+                title = "这里还没有内容",
+                message = "清除筛选以返回完整书库。",
+                action = action
+            )
+            "ko" -> LibraryStatusEmptyStateText(
+                title = "아직 항목이 없습니다",
+                message = "필터를 해제해 전체 라이브러리로 돌아갑니다.",
+                action = action
+            )
+            else -> LibraryStatusEmptyStateText(
+                title = "Здесь пока пусто",
+                message = "Сбросьте фильтр, чтобы увидеть всю библиотеку.",
+                action = action
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyStatusFilterPlaceholder(
+    statusFilter: LibraryStatusFilter,
+    showMascot: Boolean,
+    onShowAll: () -> Unit,
+    modifier: Modifier
+) {
+    val strings = LocalStrings.current
+    val copy = remember(statusFilter, strings.languageCode) {
+        libraryStatusEmptyStateText(statusFilter, strings.languageCode)
+    }
+    val icon = when (statusFilter) {
+        LibraryStatusFilter.COMPLETED -> Icons.Default.CheckCircle
+        LibraryStatusFilter.IN_PROGRESS -> Icons.Default.PlayArrow
+        LibraryStatusFilter.BOOKMARKED -> Icons.Default.BookmarkBorder
+        LibraryStatusFilter.ALL -> Icons.AutoMirrored.Filled.MenuBook
+    }
+
+    Column(modifier = modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        LibraryPlaceholderLeadIcon(
+            showMascot = showMascot,
+            neutralIcon = icon,
+            size = 40.dp
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(
+            copy.title,
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            copy.message,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(24.dp))
+        MrComicButton(
+            onClick = onShowAll,
+            variant = MrComicButtonVariant.Tonal
+        ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(copy.action)
         }
     }
 }
@@ -2294,17 +2538,17 @@ private fun ComicInfoSheet(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = shelfEdit == ComicLibraryShelf.AUTO,
                         onClick = { shelfEdit = ComicLibraryShelf.AUTO },
                         label = { Text("Авто") }
                     )
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = shelfEdit == ComicLibraryShelf.GRAPHIC,
                         onClick = { shelfEdit = ComicLibraryShelf.GRAPHIC },
                         label = { Text("Комикс") }
                     )
-                    FilterChip(
+                    MrComicFilterChip(
                         selected = shelfEdit == ComicLibraryShelf.BOOKS,
                         onClick = { shelfEdit = ComicLibraryShelf.BOOKS },
                         label = { Text("Книга") }
@@ -2332,7 +2576,7 @@ private fun ComicInfoSheet(
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
-                LinearProgressIndicator(
+                MrComicProgressLine(
                     progress = { comic.readingProgress },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -3204,7 +3448,7 @@ private fun MrComicPresenceCard(
                                 color = MaterialTheme.colorScheme.secondary
                             )
                         }
-                        LinearProgressIndicator(
+                        MrComicProgressLine(
                             progress = { mascotProgress.stageProgress },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -3270,7 +3514,7 @@ private fun MrComicPresenceCard(
                             )
                         }
                         if (achievement.progressCurrent != null && achievement.progressTarget != null) {
-                            LinearProgressIndicator(
+                            MrComicProgressLine(
                                 progress = { achievement.progressFraction },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -4189,19 +4433,14 @@ private fun MrComicRecentCard(
                 )
             }
             if (compact) {
-                AssistChip(
+                MrComicFilterChip(
+                    selected = false,
                     onClick = onOpenRecent,
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.9f),
-                        labelColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        leadingIconContentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                    ),
                     label = { Text(mrComicOpenRecentLabel(appLanguage)) },
                     leadingIcon = {
                         Icon(
                             Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer
+                            contentDescription = null
                         )
                     }
                 )
@@ -4308,7 +4547,8 @@ private fun MrComicQuickActionsCard(
                 actionOrder
                     .filter { it != primaryAction }
                     .forEach { action ->
-                        AssistChip(
+                        MrComicFilterChip(
+                            selected = false,
                             onClick = mrComicQuickActionHandler(action, onOpenFiles, onOpenBookmarks, onOpenQuotes),
                             label = {
                                 Text(
@@ -4678,18 +4918,12 @@ private fun LibrarySectionSwitcher(
             onClick = { onSectionChange(LibraryContentSection.BOOKMARKS) }
         )
         LibrarySectionChip(
-            text = when (strings.languageCode) {
-                "en" -> "Quotes"
-                "ja" -> "引用"
-                "zh" -> "摘录"
-                "ko" -> "인용"
-                else -> "Цитаты"
-            },
+            text = strings.libraryQuotes,
             selected = current == LibraryContentSection.QUOTES,
             onClick = { onSectionChange(LibraryContentSection.QUOTES) }
         )
         LibrarySectionChip(
-            text = "Mr.Comic",
+            text = strings.libraryAchievements,
             selected = current == LibraryContentSection.ACHIEVEMENTS,
             onClick = { onSectionChange(LibraryContentSection.ACHIEVEMENTS) }
         )
@@ -4700,20 +4934,29 @@ private fun LibrarySectionSwitcher(
 private fun LibrarySectionChip(
     text: String,
     selected: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
-        modifier = Modifier.clickable(onClick = onClick),
+        modifier = Modifier.clickable(enabled = enabled, onClick = onClick),
         shape = RootChromePillShape,
-        color = rootChromePillContainerColor(colorScheme, selected),
-        border = rootChromePillBorder(colorScheme, selected)
+        color = if (enabled) {
+            rootChromePillContainerColor(colorScheme, selected)
+        } else {
+            colorScheme.surfaceVariant.copy(alpha = 0.34f)
+        },
+        border = if (enabled) rootChromePillBorder(colorScheme, selected) else null
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
             style = MaterialTheme.typography.labelLarge,
-            color = rootChromePillContentColor(colorScheme, selected),
+            color = if (enabled) {
+                rootChromePillContentColor(colorScheme, selected)
+            } else {
+                colorScheme.onSurfaceVariant.copy(alpha = 0.58f)
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -4834,7 +5077,11 @@ private fun libraryViewModeLabel(mode: LibraryViewMode, language: String): Strin
 
 private fun libraryThumbnailSizeSectionLabel(language: String): String = when (language) {
     "en" -> "Thumbnail size"
-    else -> "Размер миниатюр"
+    "ja" -> "サムネイルサイズ"
+    "zh" -> "缩略图大小"
+    "ko" -> "썸네일 크기"
+    "ru" -> "Размер миниатюр"
+    else -> "Thumbnail size"
 }
 
 private fun libraryThumbnailSizeLabel(language: String, size: String): String = when (language) {
@@ -4843,10 +5090,30 @@ private fun libraryThumbnailSizeLabel(language: String, size: String): String = 
         "large" -> "Large"
         else -> "Medium"
     }
-    else -> when (size) {
+    "ja" -> when (size) {
+        "small" -> "小"
+        "large" -> "大"
+        else -> "中"
+    }
+    "zh" -> when (size) {
+        "small" -> "小"
+        "large" -> "大"
+        else -> "中"
+    }
+    "ko" -> when (size) {
+        "small" -> "작게"
+        "large" -> "크게"
+        else -> "보통"
+    }
+    "ru" -> when (size) {
         "small" -> "Меньше"
         "large" -> "Больше"
         else -> "Средний"
+    }
+    else -> when (size) {
+        "small" -> "Small"
+        "large" -> "Large"
+        else -> "Medium"
     }
 }
 
@@ -4882,7 +5149,7 @@ private fun filterAndSortAudiobooks(
 ): List<Audiobook> {
     val filtered = when (statusFilter) {
         LibraryStatusFilter.ALL -> audiobooks
-        LibraryStatusFilter.BOOKMARKED -> audiobooks
+        LibraryStatusFilter.BOOKMARKED -> emptyList()
         LibraryStatusFilter.IN_PROGRESS -> audiobooks.filter {
             it.lastPositionMs > 0L || it.lastChapterIndex > 0
         }
@@ -4893,8 +5160,9 @@ private fun filterAndSortAudiobooks(
         SortOrder.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
         SortOrder.DATE_ADDED_ASC -> filtered.sortedBy { it.addedAt }
         SortOrder.DATE_ADDED_DESC -> filtered.sortedByDescending { it.addedAt }
-        SortOrder.DATE_READ_ASC -> filtered.sortedBy { it.lastPositionMs }
-        SortOrder.DATE_READ_DESC -> filtered.sortedByDescending { it.lastPositionMs }
+        // Audiobook currently has no last-listened timestamp, so keep date-read sort stable.
+        SortOrder.DATE_READ_ASC -> filtered.sortedBy { it.title.lowercase() }
+        SortOrder.DATE_READ_DESC -> filtered.sortedByDescending { it.title.lowercase() }
         SortOrder.PROGRESS_ASC -> filtered.sortedWith(
             compareBy<Audiobook> { it.lastChapterIndex }.thenBy { it.lastPositionMs }
         )
@@ -5075,8 +5343,11 @@ private fun LibraryStatusScopeRow(
     totalFiles: Int,
     readingFiles: Int,
     completedFiles: Int,
+    bookmarkedFiles: Int,
     onStatusChange: (LibraryStatusFilter) -> Unit
 ) {
+    val strings = LocalStrings.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -5086,19 +5357,27 @@ private fun LibraryStatusScopeRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         LibrarySectionChip(
-            text = "Файлы ($totalFiles)",
+            text = strings.libraryFileCountLabel(totalFiles),
             selected = current == LibraryStatusFilter.ALL,
             onClick = { onStatusChange(LibraryStatusFilter.ALL) }
         )
         LibrarySectionChip(
-            text = "Читаю ($readingFiles)",
+            text = "${strings.libraryStatusReading} ($readingFiles)",
             selected = current == LibraryStatusFilter.IN_PROGRESS,
-            onClick = { onStatusChange(LibraryStatusFilter.IN_PROGRESS) }
+            onClick = { onStatusChange(LibraryStatusFilter.IN_PROGRESS) },
+            enabled = readingFiles > 0 || current == LibraryStatusFilter.IN_PROGRESS
         )
         LibrarySectionChip(
-            text = "Прочитано ($completedFiles)",
+            text = "${strings.libraryStatusCompleted} ($completedFiles)",
             selected = current == LibraryStatusFilter.COMPLETED,
-            onClick = { onStatusChange(LibraryStatusFilter.COMPLETED) }
+            onClick = { onStatusChange(LibraryStatusFilter.COMPLETED) },
+            enabled = completedFiles > 0 || current == LibraryStatusFilter.COMPLETED
+        )
+        LibrarySectionChip(
+            text = "${strings.libraryStatusBookmarked} ($bookmarkedFiles)",
+            selected = current == LibraryStatusFilter.BOOKMARKED,
+            onClick = { onStatusChange(LibraryStatusFilter.BOOKMARKED) },
+            enabled = bookmarkedFiles > 0 || current == LibraryStatusFilter.BOOKMARKED
         )
     }
 }
@@ -6099,7 +6378,7 @@ private fun QuoteCard(
 ) {
     val strings = LocalStrings.current
     val onOpenQuote = if (sourceAvailable) onClick else onUnavailableSourceClick
-    Card(
+    MrComicCardSurface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
@@ -6107,10 +6386,9 @@ private fun QuoteCard(
                 onClick = onOpenQuote,
                 onLongClick = onLongClick
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+        cornerRadius = 12.dp,
+        shadowElevation = 4.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -6132,16 +6410,20 @@ private fun QuoteCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                AssistChip(
+                MrComicFilterChip(
+                    selected = false,
                     onClick = onOpenQuote,
                     label = { Text("${quote.comicTitle} · ${strings.libraryQuotePageLabel(quote.page)}") }
                 )
-                AssistChip(
+                MrComicFilterChip(
+                    selected = false,
                     onClick = {},
+                    enabled = false,
                     label = { Text(formatQuoteDate(quote.createdAt, strings.languageCode)) }
                 )
                 if (!sourceAvailable) {
-                    AssistChip(
+                    MrComicFilterChip(
+                        selected = false,
                         onClick = onUnavailableSourceClick,
                         label = { Text(strings.libraryQuoteSourceMissingLabel()) }
                     )
@@ -6236,7 +6518,11 @@ private fun formatQuoteDate(timestamp: Long, language: String): String {
         "ja", "zh", "ko" -> "yyyy-MM-dd"
         else -> "dd.MM.yyyy"
     }
-    return SimpleDateFormat(pattern, Locale.getDefault()).format(Date(timestamp))
+    val locale = when (language) {
+        "ru", "en", "ja", "zh", "ko" -> Locale.forLanguageTag(language)
+        else -> Locale.getDefault()
+    }
+    return SimpleDateFormat(pattern, locale).format(Date(timestamp))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -6312,15 +6598,15 @@ private fun AudiobookGridItem(
     }
 
     if (!isGrid) {
-        Card(
+        MrComicCardSurface(
             modifier = Modifier
                 .height(rectHeight)
                 .fillMaxWidth()
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick),
             shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = containerColor),
+            containerColor = containerColor,
             border = cardBorder,
-            elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+            shadowElevation = libraryCardElevation(cardShadow)
         ) {
             Row(
                 modifier = Modifier
@@ -6347,7 +6633,11 @@ private fun AudiobookGridItem(
                         Icon(
                             Icons.Default.Headphones,
                             contentDescription = null,
-                            modifier = Modifier.size(24.dp),
+                            // Scale icon proportionally to the thumb container (~45% of shorter side).
+                            modifier = Modifier.size(
+                                minOf(thumbSize.first.value, thumbSize.second.value)
+                                    .times(0.45f).coerceIn(20f, 40f).dp
+                            ),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.56f)
                         )
                     }
@@ -6387,14 +6677,14 @@ private fun AudiobookGridItem(
             }
         }
     } else {
-        Card(
+        MrComicCardSurface(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick),
             shape = cardShape,
-            colors = CardDefaults.cardColors(containerColor = containerColor),
+            containerColor = containerColor,
             border = cardBorder,
-            elevation = CardDefaults.cardElevation(defaultElevation = libraryCardElevation(cardShadow))
+            shadowElevation = libraryCardElevation(cardShadow)
         ) {
             Box(
                 modifier = Modifier
@@ -6414,7 +6704,8 @@ private fun AudiobookGridItem(
                     Icon(
                         Icons.Default.Headphones,
                         contentDescription = null,
-                        modifier = Modifier.size(36.dp),
+                        // Scale icon relative to the cover Box so it matches other grid items.
+                        modifier = Modifier.fillMaxSize(0.38f),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }

@@ -13,10 +13,13 @@ internal fun extractDjvuTextLayer(documentBytes: ByteArray): DjvuTextLayer? {
     var offset = 16
     while (offset + 8 <= documentBytes.size) {
         val chunkId = documentBytes.readAsciiAt(offset, 4) ?: return null
-        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)?.toInt() ?: return null
+        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)
+            ?.takeIf { it <= Int.MAX_VALUE }
+            ?.toInt()
+            ?: return null
         val payloadStart = offset + 8
+        if (chunkSize > documentBytes.size - payloadStart) return null
         val payloadEnd = payloadStart + chunkSize
-        if (payloadEnd > documentBytes.size) return null
 
         if (chunkId == "TXTa") {
             val text = parseTxTaPayload(documentBytes.copyOfRange(payloadStart, payloadEnd)) ?: return null
@@ -57,10 +60,13 @@ internal fun hasCompressedDjvuTextLayer(documentBytes: ByteArray): Boolean {
     var offset = 16
     while (offset + 8 <= documentBytes.size) {
         val chunkId = documentBytes.readAsciiAt(offset, 4) ?: return false
-        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)?.toInt() ?: return false
+        val chunkSize = documentBytes.readUnsignedIntAt(offset + 4)
+            ?.takeIf { it <= Int.MAX_VALUE }
+            ?.toInt()
+            ?: return false
         val payloadStart = offset + 8
+        if (chunkSize > documentBytes.size - payloadStart) return false
         val payloadEnd = payloadStart + chunkSize
-        if (payloadEnd > documentBytes.size) return false
         if (chunkId == "TXTz") {
             // Only report "compressed and undecodable" if BZZ decode fails
             val payload = documentBytes.copyOfRange(payloadStart, payloadEnd)
