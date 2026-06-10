@@ -36,6 +36,7 @@ zip4j = "2.11.5"
 junrar = "7.5.5"
 sevenzipjbinding-android = "Release-16.02-2.03"
 commons-compress = "1.27.1"
+xz = "1.9"
 axet-libdjvu = "3.5.27-4"
 pdfium = "2.0.27.0"
 media3 = "1.5.1"
@@ -98,6 +99,7 @@ zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 junrar = { group = "com.github.junrar", name = "junrar", version.ref = "junrar" }
 sevenzipjbinding-android = { group = "com.github.omicronapps", name = "7-Zip-JBinding-4Android", version.ref = "sevenzipjbinding-android" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commons-compress" }
+xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
 axet-libdjvu = { group = "com.github.axet", name = "libdjvu", version.ref = "axet-libdjvu" }
 commonmark = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
 commonmark-ext-autolink = { group = "org.commonmark", name = "commonmark-ext-autolink", version.ref = "commonmark" }

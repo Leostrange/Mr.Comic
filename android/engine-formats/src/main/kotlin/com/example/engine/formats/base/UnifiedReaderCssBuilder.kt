@@ -1,21 +1,10 @@
 package com.example.engine.formats.base
 
 internal const val READER_BASE_DOCUMENT_CSS = """
-    html {
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-      box-sizing: border-box;
-    }
-    *, *::before, *::after { box-sizing: inherit; }
     body {
-      margin: 0;
-      padding: 1.6em 16px 1.6em;
-      padding-block: 1lh;
-      width: 100%;
-      max-width: none;
+      margin: 0 auto;
+      padding: 16px 16px 44px;
+      max-width: 720px;
       box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 18px;
@@ -23,10 +12,12 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       color: inherit;
       background: transparent;
       text-align: justify;
-      overflow-wrap: normal;
+      overflow-wrap: break-word;
       word-break: normal;
-      hyphens: auto;
-      -webkit-hyphens: auto;
+      hyphens: none;
+      -webkit-hyphens: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     p, div.paragraph {
       margin: 0.2em 0;
@@ -48,14 +39,12 @@ internal const val READER_BASE_DOCUMENT_CSS = """
       hyphens: none;
       -webkit-hyphens: none;
     }
-    h1 { font-size: 1.7em; letter-spacing: 0.04em; text-transform: uppercase; }
-    h2 { font-size: 1.35em; letter-spacing: 0.02em; }
-    h3 { font-size: 1.15em; }
+    h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+    h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+    h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
     h4, h5, h6 { font-size: 1em; }
-    font { font-size: 1em !important; font-family: inherit !important; line-height: inherit !important; }
-    big { font-size: 1.08em !important; }
-    small { font-size: 0.92em !important; }
-    img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
+    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; }
+    a[href] { -webkit-user-select: text; user-select: text; }
     figure { margin: 1rem 0; }
     figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
     pre, code { white-space: pre-wrap; word-break: break-word; }
@@ -69,27 +58,14 @@ internal const val READER_BASE_DOCUMENT_CSS = """
     code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
     ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
     li + li { margin-top: 0.25rem; }
-    .mrcomic-table-scroll {
-      overflow-x: auto;
-      max-width: 100%;
-      -webkit-overflow-scrolling: touch;
-    }
-    table {
-      border-collapse: collapse;
-      border-spacing: 0;
-      margin: 1rem 0;
-      table-layout: auto;
-    }
-    caption { caption-side: top; text-align: center; margin-bottom: 0.35rem; font-weight: 600; }
-    th, td {
-      border: 1px solid rgba(120,120,120,0.35);
-      padding: 0.5rem 0.65rem;
-      text-align: left;
-      vertical-align: top;
-    }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
+    th, td { padding: 0.5rem 0.65rem; text-align: left; }
+    table[border] th, table[border] td { border: 1px solid rgba(120,120,120,0.35); }
+    table:not([border]) th, table:not([border]) td { border: none; }
     th { font-weight: 600; }
     hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: 1rem 0; }
     del { opacity: 0.75; }
+    div, section, article, aside, span, main, header, footer { border: none; }
     a[href] {
       color: var(--mrcomic-reader-accent-color, #1a6f9a);
       text-decoration: underline;
@@ -111,26 +87,17 @@ internal const val READER_BASE_DOCUMENT_CSS = """
 """
 
 internal const val READER_MOBI_DOCUMENT_CSS = """
-    html {
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-      box-sizing: border-box;
-    }
-    *, *::before, *::after { box-sizing: inherit; }
     body {
-      margin: 0;
-      padding: 1.6em 16px 1.6em;
-      padding-block: 1lh;
-      width: 100%;
-      max-width: none;
+      margin: 0 auto;
+      padding: 16px 16px 44px;
+      max-width: 680px;
       box-sizing: border-box;
       font-family: Georgia, "Times New Roman", serif;
       font-size: 1.05rem;
       line-height: 1.7;
       color: inherit;
+      -webkit-user-select: none;
+      user-select: none;
     }
     p {
       margin: 0.2em 0;
@@ -168,29 +135,22 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
     .center p {
       margin: 0.9em 0;
     }
-    font {
-      font-size: 1em !important;
-      font-family: inherit !important;
-      line-height: inherit !important;
-    }
-    big { font-size: 1.08em !important; }
-    small { font-size: 0.92em !important; }
     h1, h2, h3 {
       line-height: 1.3;
       margin: 1.6em 0 0.7em;
       font-weight: 700;
     }
     h1 {
-      font-size: 1.7em;
+      font-size: clamp(1.1em, 1.7em, 2rem);
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
     h2 {
-      font-size: 1.35em;
+      font-size: clamp(1.05em, 1.35em, 1.6rem);
       letter-spacing: 0.02em;
     }
     h3 {
-      font-size: 1.15em;
+      font-size: clamp(1em, 1.15em, 1.3rem);
     }
     h4, h5, h6 {
       font-size: 1em;
@@ -202,7 +162,8 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
       page-break-before: always;
       break-before: page;
     }
-    img { max-width: 100%; height: auto; display: block; margin: 0.8rem auto; }
+    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 0.8rem auto; }
+    a[href] { -webkit-user-select: text; user-select: text; }
     hr { border: 0; border-top: 1px solid rgba(120,120,120,0.3); margin: 1.5em 3em; }
     blockquote {
       margin: 1em 1.5em;
@@ -210,6 +171,7 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
       border-left: 3px solid rgba(120,120,120,0.3);
       font-style: italic;
     }
+    div, section, article, aside, span, main, header, footer { border: none; }
     a[href] {
       color: var(--mrcomic-reader-accent-color, #1a6f9a);
       text-decoration: underline;
@@ -219,88 +181,54 @@ internal const val READER_MOBI_DOCUMENT_CSS = """
 """
 
 internal const val READER_PRESERVE_LAYOUT_DOCUMENT_CSS = """
-    html {
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
-      padding: 0;
-      overflow-x: hidden;
-      box-sizing: border-box;
-    }
-    *, *::before, *::after { box-sizing: inherit; }
     body {
       margin: 0;
-      padding: 1.6em 16px 1.6em;
-      padding-block: 1lh;
-      width: 100% !important;
-      max-width: none !important;
-      min-width: 0 !important;
+      padding: 8px 16px 44px;
       box-sizing: border-box;
-      font-size: 20px !important;
-      line-height: 1.5 !important;
-      word-wrap: normal;
-      overflow-wrap: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      -webkit-user-select: none;
+      user-select: none;
     }
-    body > *,
-    main,
-    article,
-    section,
-    div {
-      max-width: 100% !important;
-      min-width: 0 !important;
-      box-sizing: border-box;
-    }
-    img { max-width: 100%; height: auto; }
+    img { width: auto; max-width: 100% !important; height: auto !important; }
     pre, code { white-space: pre-wrap; word-break: break-word; }
-    .mrcomic-table-scroll {
-      overflow-x: auto;
-      max-width: 100%;
-      -webkit-overflow-scrolling: touch;
-    }
-    table {
-      border-collapse: collapse;
-      border-spacing: 0;
-      table-layout: auto;
-      margin: 1rem 0;
-    }
-    caption { caption-side: top; text-align: center; margin-bottom: 0.35rem; font-weight: 600; }
-    th, td {
-      border: 1px solid rgba(120,120,120,0.35);
-      padding: 0.45rem 0.6rem;
-      text-align: left;
-      vertical-align: top;
-    }
+    table { max-width: 100%; border-collapse: collapse; }
+    div, section, article, aside, span, main, header, footer { border: none; }
     a[href] {
       color: var(--mrcomic-reader-accent-color, #1a6f9a);
       text-decoration: underline;
       text-decoration-thickness: 0.08em;
       text-underline-offset: 0.14em;
+      -webkit-user-select: text;
+      user-select: text;
     }
 """
 
 internal const val EPUB_READER_DOCUMENT_CSS = """
-    html{width:100%;max-width:100%;margin:0;padding:0;overflow-x:hidden;box-sizing:border-box}
-    *,*::before,*::after{box-sizing:inherit}
-    body{font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.65;
-         padding:1.65em 16px 1.65em;padding-block:1lh;color:#1a1a1a;background:#fafafa;
-         width:100%;max-width:none;margin:0;box-sizing:border-box;overflow-wrap:normal;word-break:normal;
-         hyphens:auto;-webkit-hyphens:auto;text-align:justify}
+    body{font-family:Georgia,'Times New Roman',serif;font-size:18px;line-height:1.6;
+         padding:16px 16px 44px;color:#1a1a1a;background:#fafafa;
+         max-width:720px;margin:0 auto;box-sizing:border-box;overflow-wrap:break-word;word-break:normal;
+         hyphens:none;-webkit-hyphens:none;text-align:justify;
+         -webkit-user-select:none;user-select:none}
     p,div.paragraph{margin:0.2em 0;text-indent:1.5em}
     p:first-child,div.paragraph:first-child,
     h1+p,h2+p,h3+p,h4+p,h5+p,h6+p,
     h1+div.paragraph,h2+div.paragraph,h3+div.paragraph,h4+div.paragraph,h5+div.paragraph,h6+div.paragraph{text-indent:0}
     h1,h2,h3,h4,h5,h6{text-align:center;text-indent:0;margin:1.2em 0 0.5em;
                        font-weight:bold;hyphens:none;-webkit-hyphens:none}
-    img{max-width:100%;height:auto;display:block;margin:8px auto}
+    img{width:auto;max-width:100%!important;height:auto!important;display:block;margin:8px auto}
     a[href]{color:var(--mrcomic-reader-accent-color,#1a6f9a);text-decoration:underline;
-      text-decoration-thickness:0.08em;text-underline-offset:0.14em}
+      text-decoration-thickness:0.08em;text-underline-offset:0.14em;
+      -webkit-user-select:text;user-select:text}
     blockquote,cite{margin:0.8em 1.5em;padding-left:1em;
                     border-left:3px solid #bbb;font-style:italic;color:#555;
                     hyphens:none;-webkit-hyphens:none}
     cite{display:block;margin-top:0.3em}
-    .mrcomic-table-scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
-    table{border-collapse:collapse;border-spacing:0;table-layout:auto}
-    td,th{padding:4px 8px;border:1px solid #ccc;vertical-align:top}
+    table{width:100%;border-collapse:collapse}
+    td,th{padding:4px 8px}
+    table[border] td,table[border] th{border:1px solid #ccc}
+    table:not([border]) td,table:not([border]) th{border:none}
+    div,section,article,aside,span,main,header,footer{border:none}
     .center,.align-center,[align="center"]{text-align:center !important;text-indent:0}
     .right,.align-right,[align="right"]{text-align:right !important;text-indent:0}
     .left,.align-left,[align="left"]{text-align:left !important}
@@ -353,7 +281,7 @@ private fun buildReaderOverrideCss(
         html, body {
           ${resolvedBackgroundColor?.let { "background: $it !important;" } ?: ""}
         }
-        body,
+        body:not([data-mrcomic-preserve-layout="true"]),
         body:not([data-mrcomic-preserve-layout="true"]) * {
           ${resolvedTextColor?.let { "color: $it !important;" } ?: ""}
         }
@@ -362,13 +290,31 @@ private fun buildReaderOverrideCss(
           background-image: none !important;
           box-shadow: none !important;
         }
-        a, a *, .note-num, .footnote-label {
+        body:not([data-mrcomic-preserve-layout="true"]) a,
+        body:not([data-mrcomic-preserve-layout="true"]) a *,
+        body:not([data-mrcomic-preserve-layout="true"]) .note-num,
+        body:not([data-mrcomic-preserve-layout="true"]) .footnote-label {
           ${resolvedAccentColor?.let { "color: $it !important;" } ?: ""}
         }
-        h1, h2, h3, h4, h5, h6, blockquote, cite, table, td, th {
+        body:not([data-mrcomic-preserve-layout="true"]) h1,
+        body:not([data-mrcomic-preserve-layout="true"]) h2,
+        body:not([data-mrcomic-preserve-layout="true"]) h3,
+        body:not([data-mrcomic-preserve-layout="true"]) h4,
+        body:not([data-mrcomic-preserve-layout="true"]) h5,
+        body:not([data-mrcomic-preserve-layout="true"]) h6,
+        body:not([data-mrcomic-preserve-layout="true"]) blockquote,
+        body:not([data-mrcomic-preserve-layout="true"]) cite,
+        body:not([data-mrcomic-preserve-layout="true"]) table,
+        body:not([data-mrcomic-preserve-layout="true"]) td,
+        body:not([data-mrcomic-preserve-layout="true"]) th {
           ${resolvedTextColor?.let { "color: $it !important;" } ?: ""}
         }
-        h1, h2, h3, h4, h5, h6 {
+        body:not([data-mrcomic-preserve-layout="true"]) h1,
+        body:not([data-mrcomic-preserve-layout="true"]) h2,
+        body:not([data-mrcomic-preserve-layout="true"]) h3,
+        body:not([data-mrcomic-preserve-layout="true"]) h4,
+        body:not([data-mrcomic-preserve-layout="true"]) h5,
+        body:not([data-mrcomic-preserve-layout="true"]) h6 {
           background: transparent !important;
         }
     """.trimIndent()

@@ -13,6 +13,13 @@ enum class ArchiveContentKind {
     UNSUPPORTED
 }
 
+data class ArchiveResolvedEntry(
+    val kind: ArchiveContentKind,
+    val entryName: String? = null,
+    val format: ComicFormat? = null,
+    val cacheHit: Boolean = false
+)
+
 object ArchiveFormatSupport {
     val imageExtensions: Set<String> = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
     val textExtensions: Set<String> = setOf(
@@ -24,11 +31,36 @@ object ArchiveFormatSupport {
         compareNatural(left, right)
     }
 
+    /** Comparator that sorts primary book formats (epub, fb2, mobi, etc.) before plain text. */
+    private val primaryBookFormatComparator = Comparator<String> { left, right ->
+        val leftPrimary = extensionOf(left) in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+        val rightPrimary = extensionOf(right) in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+        when {
+            leftPrimary && !rightPrimary -> -1
+            !leftPrimary && rightPrimary -> 1
+            else -> 0
+        }
+    }
+
+    private val preferredTextEntryComparator = Comparator<String> { left, right ->
+        val primaryOrder = primaryBookFormatComparator.compare(left, right)
+        if (primaryOrder != 0) primaryOrder else naturalPathComparator.compare(left, right)
+    }
+
     fun classify(fileNames: List<String>): ArchiveContentKind {
         val textEntries = fileNames.filter(::isTextEntry)
         val imageEntries = fileNames.filter(::isImageEntry)
+        val hasOnlyTextEntries = textEntries.isNotEmpty() && imageEntries.isEmpty()
+        val hasSingleTextEntry = textEntries.size == 1
+        val hasOnlyCoverImages = imageEntries.isEmpty() || imageEntries.all(::isBookCoverImageEntry)
+        val hasComicPageImageSequence = imageEntries.size >= 2 && imageEntries.all(::isComicPageImageEntry)
+        val hasDominantTextEntry = textEntries.isNotEmpty() &&
+            textEntries.any { isDominantBookEntry(it, textEntries, imageEntries) }
         return when {
-            textEntries.isNotEmpty() && (imageEntries.isEmpty() || imageEntries.all(::isBookCoverImageEntry)) ->
+            hasOnlyTextEntries ||
+                (hasSingleTextEntry && (hasOnlyCoverImages || !hasComicPageImageSequence)) ||
+                (hasSingleTextEntry && textEntryOwnsImageAssets(textEntries.first(), imageEntries)) ||
+                hasDominantTextEntry ->
                 ArchiveContentKind.SINGLE_BOOK
             imageEntries.isNotEmpty() && textEntries.isEmpty() ->
                 ArchiveContentKind.IMAGE_SEQUENCE
@@ -37,6 +69,56 @@ object ArchiveFormatSupport {
             else ->
                 ArchiveContentKind.UNSUPPORTED
         }
+    }
+
+    /**
+     * Returns true if this text entry is a dominant book file (e.g. a large .fb2 or .epub)
+     * accompanied by minor files like readme.txt or images that belong to it.
+     * This prevents MIXED fallback when a book has auxiliary files alongside it.
+     */
+    private fun isDominantBookEntry(
+        entry: String,
+        allTextEntries: List<String>,
+        imageEntries: List<String>
+    ): Boolean {
+        val ext = extensionOf(entry)
+        // Primary book formats that typically own all other content in the archive
+        if (ext !in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")) return false
+        // Non-book text files (readme, license, etc.) shouldn't prevent book detection
+        val nonBookTextEntries = allTextEntries.filter {
+            val e = extensionOf(it)
+            e !in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+        }
+        // If there's only one primary book file, treat it as dominant even if
+        // there are minor text files (readme, license) alongside it
+        val primaryBookCount = allTextEntries.count {
+            val e = extensionOf(it)
+            e in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+        }
+        if (primaryBookCount == 1) return true
+        return false
+    }
+
+    fun resolveSingleBookTextEntry(fileNames: List<String>): ArchiveResolvedEntry {
+        val kind = classify(fileNames)
+        if (kind != ArchiveContentKind.SINGLE_BOOK) {
+            return ArchiveResolvedEntry(kind = kind)
+        }
+        // Prefer primary book formats (epub, fb2, mobi, etc.) over plain text (txt, html)
+        // when multiple text entries exist. This avoids picking readme.txt over book.fb2.
+        val textEntry = fileNames
+            .asSequence()
+            .filter(::isTextEntry)
+            .sortedWith(preferredTextEntryComparator)
+            .firstOrNull()
+            ?: return ArchiveResolvedEntry(kind = kind)
+        val format = textFormatForExtension(extensionOf(textEntry))
+            ?: return ArchiveResolvedEntry(kind = kind, entryName = textEntry)
+        return ArchiveResolvedEntry(
+            kind = kind,
+            entryName = textEntry,
+            format = format
+        )
     }
 
     fun isImageEntry(name: String): Boolean =
@@ -52,6 +134,38 @@ object ArchiveFormatSupport {
         return normalized in setOf("cover", "folder", "front", "обложка") ||
             normalized.contains("cover") ||
             normalized.contains("облож")
+    }
+
+    private fun isComicPageImageEntry(name: String): Boolean {
+        val normalized = name.substringAfterLast('/').substringAfterLast('\\')
+            .substringBeforeLast('.')
+            .lowercase(Locale.US)
+        return normalized.matches(Regex("""(?:page|p|img|image|scan|скан|страница)?[_\-\s]*\d{1,5}""")) ||
+            normalized.matches(Regex("""\d{1,5}"""))
+    }
+
+    private fun textEntryOwnsImageAssets(textEntry: String, imageEntries: List<String>): Boolean {
+        if (imageEntries.isEmpty()) return true
+        val normalizedText = textEntry.replace('\\', '/')
+        val textDir = normalizedText.substringBeforeLast('/', missingDelimiterValue = "")
+            .takeIf { it.isNotBlank() }
+            ?.let { "$it/" }
+        // Same directory as the text entry
+        if (textDir != null && imageEntries.all { it.replace('\\', '/').startsWith(textDir) }) {
+            return true
+        }
+        // Shared root directory: if text is at root level and images are in subdirs,
+        // or if text and images share a common parent directory
+        val textRootDir = normalizedText.substringBefore('/', missingDelimiterValue = "")
+        if (textRootDir.isNotBlank() && imageEntries.all { it.replace('\\', '/').startsWith("$textRootDir/") }) {
+            return true
+        }
+        // Images in standard asset directories
+        val assetDirMarkers = listOf("/images/", "/image/", "/img/", "/assets/", "/media/", "/res/")
+        return imageEntries.all { entry ->
+            val normalized = "/${entry.replace('\\', '/').lowercase(Locale.US)}"
+            assetDirMarkers.any { marker -> marker in normalized }
+        }
     }
 
     fun textFormatForExtension(extension: String): ComicFormat? = when (extension.lowercase(Locale.US)) {
@@ -140,7 +254,9 @@ object ArchiveFormatSupport {
             }
 
     private fun stableDigestInput(vararg parts: String): String =
-        parts.joinToString(separator = "") { part -> "${part.length}:$part;" }
+        parts.joinToString(separator = "|") { part -> 
+            "${part.length}:${part.replace("|", "%7C").replace(":", "%3A")}"
+        }
 
     private val NATURAL_TOKEN_REGEX = Regex("""\d+|\D+""")
 }

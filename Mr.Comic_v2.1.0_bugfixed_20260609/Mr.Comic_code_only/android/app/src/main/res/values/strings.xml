@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mr.Comic</string>
+
+    <!-- Navigation -->
+    <string name="library">Библиотека</string>
+    <string name="translation">Перевод</string>
+    <string name="settings">Настройки</string>
+    <string name="reader">Читать</string>
+
+    <!-- Library -->
+    <string name="add_file">Добавить файл</string>
+    <string name="add_folder">Добавить папку</string>
+    <string name="search_hint">Поиск комиксов…</string>
+    <string name="empty_library">Библиотека пуста</string>
+    <string name="empty_library_hint">Добавьте CBZ, CBR, PDF или EPUB файлы</string>
+
+    <!-- Reader -->
+    <string name="page_indicator">%1$d / %2$d</string>
+    <string name="reading_mode_ltr">Слева направо</string>
+    <string name="reading_mode_rtl">Справа налево (манга)</string>
+    <string name="reading_mode_webtoon">Вертикальная лента</string>
+    <string name="reading_mode_dual">Двойная страница</string>
+
+    <!-- App Icon Settings -->
+    <string name="app_icon_settings">Иконка приложения</string>
+    <string name="app_icon_personalization">Персонализация</string>
+    <string name="app_icon_hint">Выберите иконку для лаунчера. Изменения вступят в силу после перезапуска.</string>
+    <string name="app_icon_changed">Иконка изменена!</string>
+    <string name="app_icon_restart_prompt">Хотите перезапустить приложение для применения?</string>
+    <string name="restart">Перезапустить</string>
+    <string name="later">Позже</string>
+    <string name="icon_classic">Классическая</string>
+    <string name="icon_dark">Тёмная</string>
+    <string name="icon_bright">Яркая</string>
+    <string name="icon_minimal">Минимализм</string>
+    <string name="icon_retro">Ретро</string>
+    <string name="icon_neon">Неон</string>
+    <string name="icon_premium">Премиум</string>
+
+    <!-- Errors -->
+    <string name="error_open">Не удалось открыть файл</string>
+    <string name="error_format">Неподдерживаемый формат</string>
+    <string name="error_permission">Нет доступа к файлу</string>
+    <string name="error_generic">Произошла ошибка</string>
+    <string name="crash_report_title">Предыдущий краш</string>
+    <string name="share_log">Поделиться логом</string>
+    <string name="continue_app">Продолжить</string>
+
+    <!-- Onboarding -->
+    <string name="skip">Пропустить</string>
+    <string name="next">Далее</string>
+    <string name="start">Начать</string>
+
+    <!-- Common -->
+    <string name="ok">ОК</string>
+    <string name="cancel">Отмена</string>
+    <string name="back">Назад</string>
+    <string name="delete">Удалить</string>
+    <string name="share">Поделиться</string>
+
+    <!-- Legacy resource compatibility -->
+    <string name="action_copy">Копировать</string>
+    <string name="action_share">Поделиться</string>
+    <string name="desc_offline_mode">Оффлайн режим</string>
+    <string name="label_error">Ошибка</string>
+    <string name="label_original">Оригинал</string>
+    <string name="label_translation">Перевод</string>
+    <string name="next_button">Следующая</string>
+    <string name="previous_button">Предыдущая</string>
+    <string name="splash_subtitle">Современный ридер комиксов</string>
+    <string name="version_info">Версия %1$s</string>
+
+    <!-- Default values for locale-only strings -->
+    <string name="action_settings">Настройки</string>
+    <string name="analytics_title">Аналитика</string>
+    <string name="app_icon_alt1">Иконка 1</string>
+    <string name="app_icon_alt2">Иконка 2</string>
+    <string name="app_icon_alt3">Иконка 3</string>
+    <string name="app_icon_change_error">Не удалось сменить иконку</string>
+    <string name="app_icon_change_success">Иконка успешно изменена</string>
+    <string name="app_icon_current">Текущая иконка</string>
+    <string name="app_icon_default">Иконка по умолчанию</string>
+    <string name="app_icon_reset">Сбросить иконку</string>
+    <string name="app_icon_settings_description">Настройка иконки приложения</string>
+    <string name="app_icon_unavailable">Смена иконки недоступна</string>
+    <string name="backup">Резервная копия</string>
+    <string name="clear_cache">Очистить кэш</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="customization_settings">Кастомизация</string>
+    <string name="dark_mode">Темная тема</string>
+    <string name="double_page_mode">Двухстраничный режим</string>
+    <string name="error_log">Лог ошибок</string>
+    <string name="export_csv">Экспорт CSV</string>
+    <string name="export_errors">Экспорт ошибок</string>
+    <string name="export_training_data">Экспорт данных обучения</string>
+    <string name="extract_text">Извлечь текст</string>
+    <string name="import_comic">Импорт комикса</string>
+    <string name="import_metadata">Импорт метаданных</string>
+    <string name="import_model">Импорт модели</string>
+    <string name="import_theme">Импорт темы</string>
+    <string name="language_settings">Язык</string>
+    <string name="menu_home">Главная</string>
+    <string name="menu_settings">Настройки</string>
+    <string name="metadata_title">Метаданные</string>
+    <string name="notifications">Уведомления</string>
+    <string name="restore">Восстановить</string>
+    <string name="save_drawing">Сохранить рисунок</string>
+    <string name="select_language">Выбрать язык</string>
+    <string name="start_drawing">Начать рисование</string>
+    <string name="start_training">Начать обучение</string>
+    <string name="stats">Статистика</string>
+    <string name="training_title">Обучение</string>
+    <string name="translation_settings">Настройки перевода</string>
+    <string name="welcome_message">Добро пожаловать</string>
+</resources>

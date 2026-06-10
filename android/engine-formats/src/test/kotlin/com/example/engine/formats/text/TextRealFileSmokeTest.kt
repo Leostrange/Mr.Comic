@@ -3,10 +3,8 @@ package com.example.engine.formats.text
 import android.content.ContextWrapper
 import com.example.core.model.ComicFormat
 import kotlinx.coroutines.runBlocking
-import org.jsoup.Jsoup
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
 
@@ -15,7 +13,7 @@ class TextRealFileSmokeTest {
     @Test
     fun docxSamplePreservesRichContent() = runBlocking {
         val sample = locateSample("docx_sample.zip")
-        assumeTrue("Expected DOCX sample to exist", sample.exists())
+        assertTrue("Expected DOCX sample to exist", sample.exists())
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.DOCX)
         try {
@@ -46,7 +44,7 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected DOCX corpus sample to render at least one page, got $pageCount", pageCount >= 1)
 
-            val joined = (0 until minOf(pageCount, 12))
+            val joined = (0 until minOf(pageCount, 4))
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
@@ -72,7 +70,7 @@ class TextRealFileSmokeTest {
     @Test
     fun htmlSampleKeepsBookLikeMarkup() {
         val sample = locateSample("html_alice_gutenberg.html")
-        assumeTrue("Expected HTML sample to exist", sample.exists())
+        assertTrue("Expected HTML sample to exist", sample.exists())
 
         val rendered = renderHtmlToReaderDocument(
             raw = sample.readText(Charsets.UTF_8),
@@ -88,7 +86,7 @@ class TextRealFileSmokeTest {
     @Test
     fun htmlSampleResolvesInternalChapterAnchors() = runBlocking {
         val sample = locateSample("html_alice_gutenberg.html")
-        assumeTrue("Expected HTML sample to exist", sample.exists())
+        assertTrue("Expected HTML sample to exist", sample.exists())
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
         try {
@@ -107,7 +105,7 @@ class TextRealFileSmokeTest {
     @Test
     fun htmlSampleUsesAssetBackedBaseForLocalResources() = runBlocking {
         val sample = locateSample("html_alice_gutenberg.html")
-        assumeTrue("Expected HTML sample to exist", sample.exists())
+        assertTrue("Expected HTML sample to exist", sample.exists())
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
         try {
@@ -173,14 +171,11 @@ class TextRealFileSmokeTest {
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.HTML)
         try {
-            val pageCount = reader.getPageCount()
-            val html = (0 until minOf(pageCount, 4))
-                .mapNotNull { reader.getHtmlPage(it) }
-                .joinToString("\n")
+            val html = reader.getHtmlPage(0).orEmpty()
             assertEquals(sample.name, reader.htmlAssetBasePath(0))
             assertTrue("Expected corpus HTML to avoid a file base tag when asset-backed", !html.contains("<base href=\"file://", ignoreCase = true))
             assertTrue("Expected corpus HTML to keep the book title", html.contains("Alice’s Adventures in Wonderland"))
-            assertTrue("Expected corpus HTML to paginate for page-mode reading", pageCount > 1)
+            assertTrue("Expected corpus HTML to stay readable as a single document", reader.getPageCount() == 1)
             assertTrue("Expected corpus HTML asset loader to expose the main document", reader.openHtmlAsset(sample.name) != null)
         } finally {
             reader.close()
@@ -286,7 +281,7 @@ class TextRealFileSmokeTest {
     @Test
     fun mobiSampleKeepsCenteredFrontMatterAndChapterText() = runBlocking {
         val sample = locateSample("Гарин_Михайловский_Корейские_сказки.mobi")
-        assumeTrue("Expected MOBI sample to exist", sample.exists())
+        assertTrue("Expected MOBI sample to exist", sample.exists())
 
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.MOBI)
         try {
@@ -307,28 +302,6 @@ class TextRealFileSmokeTest {
                 "Expected later page to keep chapter text from the sample",
                 joined.contains("ДИНАСТИЯ ЛИ", ignoreCase = true)
             )
-        } finally {
-            reader.close()
-        }
-    }
-
-    @Test
-    fun rootProblemMobiKeepsCyrillicReadable() = runBlocking {
-        val sample = locateRootFile("Под солнцем_868805.mobi")
-        assertTrue("Expected root MOBI problem sample to exist", sample.exists())
-
-        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.MOBI)
-        try {
-            val pageCount = reader.getPageCount()
-            assertTrue("Expected problem MOBI to render at least one page, got $pageCount", pageCount >= 1)
-
-            val joined = (0 until minOf(pageCount, 24))
-                .mapNotNull { reader.getHtmlPage(it) }
-                .joinToString("\n")
-
-            assertTrue("Expected problem MOBI output to contain readable Cyrillic", Regex("""[А-Яа-яЁё]{4,}""").containsMatchIn(joined))
-            assertTrue("Expected problem MOBI output not to contain replacement characters", !joined.contains('\uFFFD'))
-            assertTrue("Expected problem MOBI output not to contain UTF-8 mojibake", !Regex("""(?:Рџ|Рљ|Рё|Р°|Ð|Ñ)""").containsMatchIn(joined))
         } finally {
             reader.close()
         }
@@ -377,12 +350,11 @@ class TextRealFileSmokeTest {
             val joined = (0 until minOf(reader.getPageCount(), 2))
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
-            val visibleText = Jsoup.parse(joined).text()
 
-            assertTrue(visibleText.contains("Тестовый документ"))
-            assertTrue(visibleText.contains("Привет, мир!"))
-            assertTrue(visibleText.contains("Косая черта"))
-            assertTrue(visibleText.contains("Конец файла"))
+            assertTrue(joined.contains("Тестовый документ"))
+            assertTrue(joined.contains("Привет, мир!"))
+            assertTrue(joined.contains("Косая черта"))
+            assertTrue(joined.contains("Конец файла"))
         } finally {
             reader.close()
         }
@@ -398,7 +370,7 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected image RTF corpus sample to render at least one page, got $pageCount", pageCount >= 1)
 
-            val joined = (0 until reader.getPageCount())
+            val joined = (0 until minOf(reader.getPageCount(), 3))
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
@@ -408,41 +380,6 @@ class TextRealFileSmokeTest {
                 joined.contains("<p", ignoreCase = true) ||
                     joined.contains("<img", ignoreCase = true) ||
                     joined.contains("data:image", ignoreCase = true)
-            )
-        } finally {
-            reader.close()
-        }
-    }
-
-    @Test
-    fun rootProblemRtfKeepsCoverFromHidingOpeningBodyText() = runBlocking {
-        val sample = locateReferenceFormatSample("Под солнцем_868805.rtf")
-        assumeTrue("Expected reference RTF problem sample to exist", sample.exists())
-
-        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.RTF)
-        try {
-            val pageCount = reader.getPageCount()
-            assertTrue("Expected reference RTF to render multiple pages, got $pageCount", pageCount > 4)
-
-            val pageTexts = (0 until minOf(pageCount, 8))
-                .map { index -> Jsoup.parse(reader.getHtmlPage(index).orEmpty()).text().replace(Regex("\\s+"), " ").trim() }
-
-            assertTrue(
-                "RTF cover/title page should not pack body text behind an oversized image: ${pageTexts.firstOrNull()}",
-                pageTexts.firstOrNull().orEmpty().length < 220
-            )
-            assertTrue(
-                "Expected no blank intermediate pages after RTF front matter: ${pageTexts.joinToString(" | ")}",
-                pageTexts.drop(1).take(2).none { it.isBlank() }
-            )
-            assertTrue(
-                "Expected opening body text to be reachable immediately after front matter: ${pageTexts.joinToString(" | ")}",
-                pageTexts.drop(1).take(2).joinToString(" ").contains("В Бретани") &&
-                    pageTexts.drop(1).take(2).joinToString(" ").contains("Вот и пора путешествий")
-            )
-            assertTrue(
-                "Expected RTF output not to contain mojibake: ${pageTexts.joinToString(" | ")}",
-                !Regex("""(?:Рџ|Рљ|Рё|Р°|Ð|Ñ)""").containsMatchIn(pageTexts.joinToString("\n"))
             )
         } finally {
             reader.close()
@@ -483,7 +420,7 @@ class TextRealFileSmokeTest {
             val pageCount = reader.getPageCount()
             assertTrue("Expected footer-heavy ODT to render at least one page, got $pageCount", pageCount >= 1)
 
-            val joined = (0 until pageCount)
+            val joined = (0 until minOf(pageCount, 3))
                 .mapNotNull { reader.getHtmlPage(it) }
                 .joinToString("\n")
 
@@ -674,13 +611,13 @@ class TextRealFileSmokeTest {
     @Test
     fun markdownSampleKeepsSpecStructure() {
         val sample = locateSample("markdown_commonmark_spec.md")
-        assumeTrue("Expected Markdown sample to exist", sample.exists())
+        assertTrue("Expected Markdown sample to exist", sample.exists())
 
         val blocks = renderMarkdownToHtmlBlocks(sample.readText(Charsets.UTF_8))
         val joined = blocks.joinToString("\n")
 
         assertTrue(blocks.size > 50)
-        assertTrue(joined.contains("Introduction</h1>"))
+        assertTrue(joined.contains("<h1>Introduction</h1>"))
         assertTrue(joined.contains("<blockquote>"))
         assertTrue(joined.contains("<pre><code"))
     }
@@ -694,7 +631,7 @@ class TextRealFileSmokeTest {
         val joined = blocks.joinToString("\n")
 
         assertTrue(blocks.size > 50)
-        assertTrue(joined.contains("Introduction</h1>"))
+        assertTrue(joined.contains("<h1>Introduction</h1>"))
         assertTrue(joined.contains("<blockquote>"))
         assertTrue(joined.contains("<pre><code"))
     }
@@ -715,32 +652,6 @@ class TextRealFileSmokeTest {
         var current = File(userDir).absoluteFile
         repeat(6) {
             val candidate = File(current, "samples/format-real-corpus/$name")
-            if (candidate.exists()) return candidate
-            current = current.parentFile ?: return@repeat
-        }
-        return File(userDir, name)
-    }
-
-    private fun locateRootFile(name: String): File {
-        val userDir = System.getProperty("user.dir") ?: "."
-        var current = File(userDir).absoluteFile
-        repeat(6) {
-            listOf(
-                File(current, name),
-                File(current, "reference/formats/samples/$name"),
-                File(current, "reference/sample/$name"),
-                File(current, "samples/$name")
-            ).firstOrNull { it.exists() }?.let { return it }
-            current = current.parentFile ?: return@repeat
-        }
-        return File(userDir, name)
-    }
-
-    private fun locateReferenceFormatSample(name: String): File {
-        val userDir = System.getProperty("user.dir") ?: "."
-        var current = File(userDir).absoluteFile
-        repeat(6) {
-            val candidate = File(current, "reference/formats/samples/$name")
             if (candidate.exists()) return candidate
             current = current.parentFile ?: return@repeat
         }

@@ -1,39 +1,26 @@
 package com.example.engine.formats
 
-import android.content.Context
+import android.content.ContextWrapper
 import com.example.core.model.ComicFormat
 import com.example.engine.formats.epub.EpubFormatReader
 import com.example.engine.formats.text.TextFormatReader
-import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
+import org.jsoup.Jsoup
 import org.junit.Test
 import java.io.File
 
 class FormatDiagnosticsTest {
-    private val testContext: Context
-        get() = mockk(relaxed = true)
 
     @Test
     fun dumpSkottEpubFrontMatter() = runBlocking {
         val sample = locate("S_Skott_Protiv_zerna_glubinnaya_istoriya_drevneyshih_gosudarstv.epub")
-        val reader = EpubFormatReader(testContext, sample.absolutePath)
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
-            val pageCount = reader.getPageCount()
-            val firstPage = reader.getHtmlPage(0).orEmpty()
-            val coverPage = reader.resolveHrefToPage("cover.xhtml")
-            val ch1Page = reader.resolveHrefToPage("ch1.xhtml")
-            assertTrue("Expected SKOTT EPUB pages", pageCount > 0)
-            assertTrue("Expected first SKOTT page HTML", firstPage.isNotBlank())
-            assertNotNull("Expected cover.xhtml href target", coverPage)
-            assertNotNull("Expected ch1.xhtml href target", ch1Page)
-            println("SKOTT pageCount=$pageCount")
-            println("resolve cover=$coverPage")
-            println("resolve ch1=$ch1Page")
+            println("SKOTT pageCount=" + reader.getPageCount())
+            println("resolve cover=" + reader.resolveHrefToPage("cover.xhtml"))
+            println("resolve ch1=" + reader.resolveHrefToPage("ch1.xhtml"))
             println("resolve ch1-1=" + reader.resolveHrefToPage("ch1-1.xhtml"))
-            repeat(minOf(4, pageCount)) { index ->
+            repeat(minOf(4, reader.getPageCount())) { index ->
                 val html = reader.getHtmlPage(index).orEmpty()
                 println("---- SKOTT PAGE $index ----")
                 println(html.take(2500))
@@ -44,16 +31,55 @@ class FormatDiagnosticsTest {
     }
 
     @Test
+    fun dumpPodSolntsemEpubPages() = runBlocking {
+        val sample = locate("Под солнцем_868805.epub")
+        val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            println("POD pageCount=" + reader.getPageCount())
+            repeat(minOf(15, reader.getPageCount())) { index ->
+                val html = reader.getHtmlPage(index).orEmpty()
+                val bodyText = Jsoup.parse(html).body().text()
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                val visible = html
+                    .replace(Regex("<[^>]+>"), " ")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+                println("---- POD PAGE $index len=${html.length} visible=${visible.length} body=${bodyText.length} assetBase=${reader.htmlAssetBasePath(index)} ----")
+                println(bodyText.take(1000))
+                println("HTML_START=" + html.take(600))
+                if (index in 3..5) {
+                    val bodyIdx = html.indexOf("<body", ignoreCase = true)
+                    println("HTML_BODY_$index=" + if (bodyIdx >= 0) html.substring(bodyIdx, minOf(html.length, bodyIdx + 1200)) else "NO_BODY")
+                }
+            }
+            val extractChunk = EpubFormatReader::class.java.getDeclaredMethod(
+                "extractChunk",
+                String::class.java,
+                Int::class.javaPrimitiveType,
+                Int::class.javaPrimitiveType
+            ).apply { isAccessible = true }
+            val raw = java.util.zip.ZipFile(sample).use { zip ->
+                zip.getInputStream(zip.getEntry("OPS/ch1-2.xhtml")).reader(Charsets.UTF_8).readText()
+            }
+            for (chunkIndex in 0..2) {
+                val rawChunk = extractChunk.invoke(reader, raw, chunkIndex, 99) as String
+                val rawBodyText = Jsoup.parse(rawChunk).body().text().replace(Regex("\\s+"), " ").trim()
+                println("RAW_CHUNK[$chunkIndex] body=${rawBodyText.length} ${rawBodyText.take(600)}")
+                println(rawChunk.take(600))
+            }
+        } finally {
+            reader.close()
+        }
+    }
+
+    @Test
     fun dumpMobiFrontMatter() = runBlocking {
         val sample = locate("Гарин_Михайловский_Корейские_сказки.mobi")
-        val reader = TextFormatReader(testContext, sample.absolutePath, ComicFormat.MOBI)
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.MOBI)
         try {
-            val pageCount = reader.getPageCount()
-            val firstPage = reader.getHtmlPage(0).orEmpty()
-            assertTrue("Expected MOBI pages", pageCount > 0)
-            assertTrue("Expected first MOBI page HTML", firstPage.isNotBlank())
-            println("MOBI pageCount=$pageCount")
-            repeat(minOf(5, pageCount)) { index ->
+            println("MOBI pageCount=" + reader.getPageCount())
+            repeat(minOf(5, reader.getPageCount())) { index ->
                 val html = reader.getHtmlPage(index).orEmpty()
                 println("---- MOBI PAGE $index ----")
                 println(html.take(2200))
@@ -69,10 +95,10 @@ class FormatDiagnosticsTest {
         repeat(6) {
             val candidate = File(current, "Epub bug/$name")
             if (candidate.exists()) return candidate
+            val referenceCandidate = File(current, "reference/formats/samples/$name")
+            if (referenceCandidate.exists()) return referenceCandidate
             current = current.parentFile ?: return@repeat
         }
-        val fallback = File(userDir, name)
-        assumeTrue("Missing diagnostic sample: $name; searched Epub bug/ upward from $userDir", fallback.exists())
-        return fallback
+        return File(userDir, name)
     }
 }

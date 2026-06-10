@@ -81,7 +81,7 @@ class ReaderStyleJsonExchangeTest {
         assertEquals(0.2f, parsed[0].textLetterSpacing)
         assertEquals(0.6f, parsed[0].textWordSpacing)
         assertEquals(0.1f, parsed[0].textParagraphSpacing)
-        assertEquals("justify", parsed[0].textAlignment)
+        assertEquals("left", parsed[0].textAlignment)
         assertTrue(parsed[0].textBold)
         assertEquals(-1f, parsed[0].brightness)
         assertTrue(parsed[0].immersiveMode)

@@ -1,0 +1,138 @@
+[
+  {
+    "pageIndex": 0,
+    "applied": 0,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\34-final-cdp-page-1.png",
+    "state": {
+      "idx": 0,
+      "y": 0,
+      "shiftY": 0,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ]
+    }
+  },
+  {
+    "pageIndex": 1,
+    "applied": 1,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\34-final-cdp-page-2.png",
+    "state": {
+      "idx": 1,
+      "y": 684,
+      "shiftY": 743,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ]
+    }
+  },
+  {
+    "pageIndex": 2,
+    "applied": 2,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\34-final-cdp-page-3.png",
+    "state": {
+      "idx": 2,
+      "y": 1386,
+      "shiftY": 1445,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ]
+    }
+  },
+  {
+    "pageIndex": 3,
+    "applied": 3,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\34-final-cdp-page-4.png",
+    "state": {
+      "idx": 3,
+      "y": 1972,
+      "shiftY": 2031,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ]
+    }
+  }
+]

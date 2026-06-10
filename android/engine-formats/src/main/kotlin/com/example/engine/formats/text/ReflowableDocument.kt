@@ -22,27 +22,23 @@ internal data class ReflowableDocument(
 }
 
 internal object ReflowableDocumentBuilder {
-    // Backend fragments are the stable reader pages for PAGE mode. WebView
-    // column pagination is only a safety net for occasional overflow; if these
-    // fragments span several screens, the last internal column exposes a seam
-    // where the next backend fragment starts from a new paragraph.
-    private const val PAGE_LAYOUT_UNITS = 2_700
+    private const val PAGE_LAYOUT_UNITS = 8000
     private const val LAYOUT_UNITS_PER_LINE = 100
     private const val READER_TEXT_CHARS_PER_LINE = 38
     private const val READER_HEADING_CHARS_PER_LINE = 28
     private const val READER_PARAGRAPH_INDENT_COLUMNS = 4
-    private const val TEXT_CHARS_PER_PAGE = 1_350
+    private const val TEXT_CHARS_PER_PAGE = 4000
     private const val MIN_REMAINDER_LAYOUT_UNITS = 100
     private const val MIN_SPLIT_TEXT_CHARS = 34
+    private const val MIN_SECTION_BREAK_CURRENT_UNITS = PAGE_LAYOUT_UNITS / 3
     private const val MIN_PAGE_FILL_REMAINDER_UNITS = 220
     private const val MIN_PAGE_FILL_TEXT_CHARS = 72
     private const val MIN_ORPHAN_TEXT_CHARS = 80
-    private const val MIN_STANDALONE_PAGE_TEXT_CHARS = 300
-    private const val MIN_SECTION_BREAK_CURRENT_UNITS = PAGE_LAYOUT_UNITS / 3
+    private const val MIN_STANDALONE_PAGE_TEXT_CHARS = 280
     private const val PAGE_FILL_LAYOUT_UNITS = PAGE_LAYOUT_UNITS
-    private const val PAGE_FILL_TEXT_TARGET = 1_050
-    private const val TITLE_PAGE_FILL_TEXT_TARGET = 820
-    private const val MAX_REBALANCED_PAGE_TEXT_CHARS = 2_200
+    private const val PAGE_FILL_TEXT_TARGET = 4000
+    private const val TITLE_PAGE_FILL_TEXT_TARGET = 3200
+    private const val MAX_REBALANCED_PAGE_TEXT_CHARS = 4000
     private const val IMAGE_BLOCK_LAYOUT_UNITS = 2400
     private const val FORCED_PAGEBREAK_MARKER = "<hr data-mrcomic-pagebreak=\"true\"/>"
     private val READER_BLOCK_TAGS = setOf(
@@ -117,7 +113,11 @@ internal object ReflowableDocumentBuilder {
                 startNewSegment()
                 return
             }
-            if (current.isNotEmpty() && block.isReaderSectionStartBlock()) {
+            if (
+                current.isNotEmpty() &&
+                block.isReaderSectionStartBlock() &&
+                currentLength >= MIN_SECTION_BREAK_CURRENT_UNITS
+            ) {
                 flushPage()
                 startNewSegment()
             }
@@ -327,31 +327,35 @@ internal object ReflowableDocumentBuilder {
         if (text.length <= firstChunkSize) return@runCatching null
 
         val tag = root?.normalName()?.takeIf { it.isNotBlank() } ?: "p"
+        // Exclude 'id' from attributes on split chunks to avoid DOM duplication.
+        // Only the first chunk should carry the original id.
         val attrs = root?.attributes()
+            ?.filter { it.key != "id" }
             ?.joinToString(" ") { attr -> """${attr.key}="${escapeHtml(attr.value)}"""" }
             ?.takeIf { it.isNotBlank() }
             ?.let { " $it" }
             .orEmpty()
+        val idAttr = root?.attr("id")?.takeIf { it.isNotBlank() }
+            ?.let { """ id="${escapeHtml(it)}"""" }
+            .orEmpty()
 
-        // Split the child nodes while preserving inline HTML elements (a, strong, em, etc.)
-        val htmlChunks = splitChildNodesToHtmlChunks(
-            parent = root ?: body,
+        val splitRoot = root ?: body
+        val chunks = splitChildNodesToHtmlChunks(
+            parent = splitRoot,
             firstChunkSize = firstChunkSize,
             subsequentChunkSize = subsequentChunkSize
         ) ?: return@runCatching null
 
-        htmlChunks
-            .filter { it.isNotBlank() }
-            .map { htmlChunk -> "<$tag$attrs>$htmlChunk</$tag>" }
+        mergeTrailingOrphanHtmlChunks(chunks)
+            .filter { it.visibleTextLength() > 0 }
+            .mapIndexed { index, chunk ->
+                // Only the first chunk gets the original id attribute
+                val chunkIdAttr = if (index == 0) idAttr else ""
+                "<$tag$attrs$chunkIdAttr>$chunk</$tag>"
+            }
             .takeIf { it.size > 1 }
     }.getOrNull()
 
-    /**
-     * Splits the direct children of [parent] into HTML chunks of approximately
-     * [firstChunkSize] / [subsequentChunkSize] visible text characters each.
-     * Inline elements (a, strong, em, …) are kept whole — never split mid-tag.
-     * Text nodes are split at word boundaries.
-     */
     private fun splitChildNodesToHtmlChunks(
         parent: Element,
         firstChunkSize: Int,
@@ -359,65 +363,73 @@ internal object ReflowableDocumentBuilder {
     ): List<String>? {
         val chunks = mutableListOf<String>()
         val current = StringBuilder()
-        var charCount = 0
-        var budget = firstChunkSize
+        var currentTextLength = 0
+        var budget = firstChunkSize.coerceAtLeast(MIN_SPLIT_TEXT_CHARS)
 
         fun flushChunk() {
-            chunks += current.toString()
+            val html = current.toString().trim()
+            if (html.isNotBlank()) {
+                chunks += html
+            }
             current.clear()
-            charCount = 0
-            budget = subsequentChunkSize
+            currentTextLength = 0
+            budget = subsequentChunkSize.coerceAtLeast(MIN_SPLIT_TEXT_CHARS)
         }
 
-        for (child in parent.childNodes()) {
-            when (child) {
-                is TextNode -> {
-                    var text = child.text()
-                    while (text.isNotEmpty()) {
-                        val available = budget - charCount
-                        if (text.length <= available) {
-                            current.append(escapeHtml(text))
-                            charCount += text.length
-                            break
-                        }
-                        // Find a word boundary within the available window
-                        val boundary = text.lastIndexOf(' ', (available - 1).coerceAtLeast(0))
-                            .let { if (it > 0) it else available.coerceAtMost(text.length) }
-                        current.append(escapeHtml(text.substring(0, boundary).trimEnd()))
-                        flushChunk()
-                        text = text.substring(boundary).trimStart()
-                    }
+        fun appendHtml(html: String, textLength: Int) {
+            if (html.isBlank()) return
+            if (currentTextLength > 0 && currentTextLength + textLength > budget) {
+                flushChunk()
+            }
+            current.append(html)
+            currentTextLength += textLength
+            if (currentTextLength >= budget) {
+                flushChunk()
+            }
+        }
+
+        fun appendText(textNode: TextNode) {
+            var text = textNode.text()
+            while (text.isNotEmpty()) {
+                val available = (budget - currentTextLength).coerceAtLeast(0)
+                if (available <= 0) {
+                    flushChunk()
+                    continue
                 }
-                is Element -> {
-                    val childTextLen = child.text().length
-                    val available = budget - charCount
-                    // If element doesn't fit and we have enough content, flush to a new chunk first
-                    if (charCount > 0 && childTextLen > available && charCount >= budget / 2) {
-                        flushChunk()
+                if (text.length <= available) {
+                    current.append(escapeHtml(text))
+                    currentTextLength += text.length
+                    text = ""
+                } else {
+                    val boundary = text.lastIndexOf(' ', startIndex = (available - 1).coerceAtLeast(0))
+                        .let { if (it > 0) it else available.coerceAtMost(text.length) }
+                    val head = text.substring(0, boundary).trimEnd()
+                    if (head.isNotBlank()) {
+                        current.append(escapeHtml(head))
+                        currentTextLength += head.length
                     }
-                    current.append(child.outerHtml())
-                    charCount += childTextLen
-                    // If this element pushed us over budget, flush
-                    if (charCount >= budget) flushChunk()
+                    flushChunk()
+                    text = text.substring(boundary).trimStart()
                 }
             }
         }
 
-        val remaining = current.toString()
-        if (remaining.isNotBlank()) chunks += remaining
-
-        // Merge trailing orphan chunk using visible text length (not raw string length)
-        val merged = if (chunks.size >= 2) {
-            val last = chunks.last()
-            if (last.visibleTextLength() in 1 until MIN_ORPHAN_TEXT_CHARS) {
-                chunks.toMutableList().also {
-                    it[it.lastIndex - 1] = "${it[it.lastIndex - 1]} ${it.last()}"
-                    it.removeAt(it.lastIndex)
+        parent.childNodes().forEach { node ->
+            when (node) {
+                is TextNode -> appendText(node)
+                is Element -> {
+                    val nodeTextLength = node.text().length
+                    if (nodeTextLength == 0 && !node.outerHtml().contains("<img", ignoreCase = true)) {
+                        current.append(node.outerHtml())
+                    } else {
+                        appendHtml(node.outerHtml(), nodeTextLength.coerceAtLeast(1))
+                    }
                 }
-            } else chunks
-        } else chunks
+            }
+        }
 
-        return merged.takeIf { it.size > 1 }
+        flushChunk()
+        return chunks.takeIf { it.size > 1 }
     }
 
     private fun isSplittableTextBlock(element: Element): Boolean {
@@ -473,6 +485,18 @@ internal object ReflowableDocumentBuilder {
         if (last.length in 1 until MIN_ORPHAN_TEXT_CHARS) {
             val previousIndex = merged.lastIndex - 1
             merged[previousIndex] = listOf(merged[previousIndex], last).joinToString(" ").trim()
+            merged.removeAt(merged.lastIndex)
+        }
+        return merged
+    }
+
+    private fun mergeTrailingOrphanHtmlChunks(chunks: List<String>): List<String> {
+        if (chunks.size < 2) return chunks
+        val merged = chunks.toMutableList()
+        val last = merged.last()
+        if (last.visibleTextLength() in 1 until MIN_ORPHAN_TEXT_CHARS) {
+            val previousIndex = merged.lastIndex - 1
+            merged[previousIndex] = merged[previousIndex] + last
             merged.removeAt(merged.lastIndex)
         }
         return merged
@@ -605,17 +629,8 @@ internal object ReflowableDocumentBuilder {
     private fun String.isReaderSectionStartBlock(): Boolean = runCatching {
         val first = Jsoup.parseBodyFragment(this).body().children().firstOrNull() ?: return@runCatching false
         val tag = first.normalName()
-        val id = first.id().trim()
-        val classes = first.classNames()
-        first.hasClass("chapter") ||
-            first.hasClass("heading") ||
-            first.hasClass("title") ||
-            classes.any { cssClass ->
-                cssClass.equals("section-title", ignoreCase = true) ||
-                    cssClass.equals("chapter-title", ignoreCase = true)
-            } ||
-            id.startsWith("chapter", ignoreCase = true) ||
-            id.startsWith("part", ignoreCase = true) ||
+        tag in setOf("h1", "h2", "h3") ||
+            first.hasClass("chapter") ||
             first.attr("data-mrcomic-section-start").equals("true", ignoreCase = true)
     }.getOrDefault(false)
 
@@ -656,9 +671,8 @@ internal object ReflowableDocumentBuilder {
     private fun List<String>.readerLayoutCost(): Int = sumOf { it.readerLayoutCost() }
 
     private fun String.canRebalanceIntoSinglePage(): Boolean =
-        // Allow pages with images to be rebalanced as long as their layout cost fits one backend page.
-        readerBodyLayoutCost() <= PAGE_LAYOUT_UNITS &&
-            visibleTextLength() <= MAX_REBALANCED_PAGE_TEXT_CHARS
+        visibleTextLength() <= MAX_REBALANCED_PAGE_TEXT_CHARS &&
+            (!contains("<img", ignoreCase = true) || readerBodyLayoutCost() <= PAGE_LAYOUT_UNITS)
 
     private fun List<String>.containsTitleLikeBlock(): Boolean =
         any { block ->
@@ -673,7 +687,8 @@ internal object ReflowableDocumentBuilder {
             ?.getOrNull(1)
             ?.lowercase()
             .orEmpty()
-        return contains("mrcomic-pagebreak", ignoreCase = true)
+        return tag in setOf("h1", "h2", "h3", "h4", "h5", "h6") ||
+            contains("mrcomic-pagebreak", ignoreCase = true)
     }
 
     private fun String.readerTextBudgetForLayoutUnits(layoutUnits: Int): Int {

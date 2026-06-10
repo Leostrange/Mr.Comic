@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "mrcomic-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone"
+      ],
+      "cwd": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone",
+      "startupTimeoutMs": 30000,
+      "toolTimeoutMs": 60000,
+      "disabledTools": [
+        "write_file",
+        "edit_file"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "startupTimeoutMs": 30000,
+      "toolTimeoutMs": 60000
+    }
+  }
+}

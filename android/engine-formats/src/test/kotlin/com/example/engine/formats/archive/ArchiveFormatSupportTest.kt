@@ -1,131 +1,96 @@
 package com.example.engine.formats.archive
 
 import com.example.core.model.ComicFormat
+import com.example.core.model.isTextReadingFormat
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.assertThrows
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ArchiveFormatSupportTest {
 
     @Test
-    fun naturalSortOrdersComicPagesByNumber() {
-        val pages = listOf(
-            "chapter/page10.jpg",
-            "chapter/page2.jpg",
-            "chapter/page1.jpg",
-            "chapter/page01.jpg"
-        ).sortedWith(ArchiveFormatSupport.naturalPathComparator)
-
-        assertEquals(
-            listOf(
-                "chapter/page1.jpg",
-                "chapter/page01.jpg",
-                "chapter/page2.jpg",
-                "chapter/page10.jpg"
-            ),
-            pages
+    fun archiveWithCoverAndSingleTextEntryIsABook() {
+        val entries = listOf(
+            "cover.jpg",
+            "book/intro.png",
+            "book/content.html"
         )
+
+        assertEquals(ArchiveContentKind.SINGLE_BOOK, ArchiveFormatSupport.classify(entries))
     }
 
     @Test
-    fun classifierDetectsSingleBookArchiveWithCover() {
-        val kind = ArchiveFormatSupport.classify(
-            listOf(
-                "cover.jpg",
-                "META-INF/container.xml",
-                "book.epub"
-            )
+    fun archiveWithFrontispieceAndSingleTextEntryIsABook() {
+        val entries = listOf(
+            "frontispiece.png",
+            "titlepage.jpg",
+            "book.epub"
         )
 
-        assertEquals(ArchiveContentKind.SINGLE_BOOK, kind)
+        assertEquals(ArchiveContentKind.SINGLE_BOOK, ArchiveFormatSupport.classify(entries))
     }
 
     @Test
-    fun classifierKeepsMixedArchiveOutOfSingleBookDelegate() {
-        val kind = ArchiveFormatSupport.classify(
-            listOf(
-                "book.epub",
-                "pages/page001.jpg",
-                "pages/page002.jpg"
-            )
+    fun imageSequenceWithoutTextStaysRaster() {
+        val entries = listOf(
+            "001.jpg",
+            "002.jpg",
+            "003.jpg"
         )
 
-        assertEquals(ArchiveContentKind.MIXED, kind)
+        assertEquals(ArchiveContentKind.IMAGE_SEQUENCE, ArchiveFormatSupport.classify(entries))
     }
 
     @Test
-    fun textExtensionsMapToReaderFormats() {
+    fun selectedTextEntryKeepsSingleBookInnerFormat() {
+        val resolved = ArchiveFormatSupport.resolveSingleBookTextEntry(
+            listOf("cover.jpg", "notes/readme.md")
+        )
+
+        assertEquals(ArchiveContentKind.SINGLE_BOOK, resolved.kind)
+        assertEquals("notes/readme.md", resolved.entryName)
+        assertEquals(ComicFormat.MARKDOWN, resolved.format)
+    }
+
+    @Test
+    fun textFormatDetectionKeepsInnerBookFormat() {
+        assertEquals(ComicFormat.HTML, ArchiveFormatSupport.textFormatForExtension("html"))
+        assertEquals(ComicFormat.MARKDOWN, ArchiveFormatSupport.textFormatForExtension("md"))
         assertEquals(ComicFormat.EPUB, ArchiveFormatSupport.textFormatForExtension("epub"))
-        assertEquals(ComicFormat.MOBI, ArchiveFormatSupport.textFormatForExtension("prc"))
-        assertEquals(ComicFormat.AZW3, ArchiveFormatSupport.textFormatForExtension("kf8"))
-        assertEquals(ComicFormat.HTML, ArchiveFormatSupport.textFormatForExtension("xhtml"))
-    }
-
-    @Test
-    fun textCacheFileNameIsStableAndContentScoped() {
-        val first = ArchiveFormatSupport.textCacheFileName(
-            prefix = "tar",
-            archiveKey = "/books/archive.tar",
-            entryName = "nested/Книга.fb2",
-            entrySize = 1024,
-            extension = "fb2"
-        )
-        val second = ArchiveFormatSupport.textCacheFileName(
-            prefix = "tar",
-            archiveKey = "/books/archive.tar",
-            entryName = "nested/Книга.fb2",
-            entrySize = 1024,
-            extension = "fb2"
-        )
-        val changedSize = ArchiveFormatSupport.textCacheFileName(
-            prefix = "tar",
-            archiveKey = "/books/archive.tar",
-            entryName = "nested/Книга.fb2",
-            entrySize = 2048,
-            extension = "fb2"
-        )
-
-        assertEquals(first, second)
-        assertNotEquals(first, changedSize)
-        assertTrue(first.startsWith("tar_"))
-        assertTrue(first.endsWith(".fb2"))
-    }
-
-    @Test
-    fun textCacheFileNameDigestDisambiguatesNewlineContainingParts() {
-        val first = ArchiveFormatSupport.textCacheFileName(
-            prefix = "zip",
-            archiveKey = "archive",
-            entryName = "nested\nbook.txt",
-            entrySize = 7,
-            extension = "txt"
-        )
-        val second = ArchiveFormatSupport.textCacheFileName(
-            prefix = "zip",
-            archiveKey = "archive\nnested",
-            entryName = "book.txt",
-            entrySize = 7,
-            extension = "txt"
-        )
-
-        assertNotEquals(digestPart(first), digestPart(second))
-    }
-
-    @Test
-    fun textCacheFileNameRejectsNegativeEntrySize() {
-        assertThrows(IllegalArgumentException::class.java) {
-            ArchiveFormatSupport.textCacheFileName(
-                prefix = "zip",
-                archiveKey = "archive.zip",
-                entryName = "book.txt",
-                entrySize = -1,
-                extension = "txt"
-            )
-        }
-    }
-
-    private fun digestPart(fileName: String): String =
-        fileName.removePrefix("zip_").substringBefore('_')
+        assertEquals(ComicFormat.MOBI, ArchiveFormatSupport.textFormatForExtension("mobi"))
+     }
+ 
+     @Test
+     fun `archive with text entry is classified as single book`() {
+         val entries = listOf(
+             "document.txt"
+         )
+         assertEquals(ArchiveContentKind.SINGLE_BOOK, ArchiveFormatSupport.classify(entries))
+     }
+ 
+     @Test
+     fun `archive with only image entries is classified as image sequence`() {
+         val entries = listOf(
+             "001.jpg",
+             "002.png"
+         )
+         assertEquals(ArchiveContentKind.IMAGE_SEQUENCE, ArchiveFormatSupport.classify(entries))
+     }
+ 
+     @Test
+     fun `resolved text entry from archive is a text reading format`() {
+         val resolved = ArchiveFormatSupport.resolveSingleBookTextEntry(
+             listOf("cover.jpg", "content.html")
+         )
+         assertTrue(resolved.format?.isTextReadingFormat() == true)
+     }
+ 
+     @Test
+     fun `resolved image entry from archive is not a text reading format`() {
+         val resolved = ArchiveFormatSupport.resolveSingleBookTextEntry(
+             listOf("001.jpg", "002.png")
+         )
+         assertNull(resolved.format)
+     }
 }

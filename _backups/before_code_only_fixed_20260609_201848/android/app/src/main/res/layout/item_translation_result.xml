@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="4dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/textViewLanguages"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary_color"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/imageViewOfflineIndicator"
+            tools:text="ja → en" />
+
+        <ImageView
+            android:id="@+id/imageViewOfflineIndicator"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_offline"
+            android:contentDescription="@string/desc_offline_mode"
+            android:visibility="gone"
+            app:layout_constraintStart_toEndOf="@+id/textViewLanguages"
+            app:layout_constraintTop_toTopOf="@+id/textViewLanguages"
+            app:layout_constraintBottom_toBottomOf="@+id/textViewLanguages" />
+
+        <TextView
+            android:id="@+id/textViewProvider"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:textSize="10sp"
+            android:textColor="@color/secondary_text_color"
+            app:layout_constraintStart_toEndOf="@+id/imageViewOfflineIndicator"
+            app:layout_constraintTop_toTopOf="@+id/textViewLanguages"
+            app:layout_constraintBottom_toBottomOf="@+id/textViewLanguages"
+            app:layout_constraintEnd_toEndOf="parent"
+            tools:text="TensorFlow Lite" />
+
+        <TextView
+            android:id="@+id/labelOriginal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_original"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/secondary_text_color"
+            android:layout_marginTop="12dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textViewLanguages" />
+
+        <TextView
+            android:id="@+id/textViewOriginal"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/primary_text_color"
+            android:background="@color/light_gray"
+            android:padding="8dp"
+            android:layout_marginTop="4dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/labelOriginal"
+            tools:text="こんにちは世界" />
+
+        <TextView
+            android:id="@+id/labelTranslation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_translation"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/secondary_text_color"
+            android:layout_marginTop="12dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textViewOriginal" />
+
+        <TextView
+            android:id="@+id/textViewTranslated"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textColor="@color/primary_text_color"
+            android:background="@color/light_blue"
+            android:padding="8dp"
+            android:layout_marginTop="4dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/labelTranslation"
+            tools:text="Hello World" />
+
+        <TextView
+            android:id="@+id/textViewConfidence"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/secondary_text_color"
+            android:layout_marginTop="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textViewTranslated"
+            tools:text="Confidence: 85%" />
+
+        <LinearLayout
+            android:id="@+id/layoutError"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@color/error_background"
+            android:padding="8dp"
+            android:layout_marginTop="12dp"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textViewConfidence">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_error"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/error_text_color" />
+
+            <TextView
+                android:id="@+id/textViewError"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="@color/error_text_color"
+                android:layout_marginTop="4dp"
+                tools:text="Translation failed" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/buttonShare"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_share"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintEnd_toStartOf="@+id/buttonCopy"
+            app:layout_constraintTop_toBottomOf="@+id/layoutError" />
+
+        <Button
+            android:id="@+id/buttonCopy"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/action_copy"
+            android:textSize="12sp"
+            android:layout_marginStart="8dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/buttonShare" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.cardview.widget.CardView>

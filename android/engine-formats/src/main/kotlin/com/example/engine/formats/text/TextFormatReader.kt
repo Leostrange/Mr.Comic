@@ -31,7 +31,7 @@ import java.nio.charset.Charset
 import java.net.URLDecoder
 import javax.inject.Inject
 
-private const val CHARS_PER_PAGE = 1200
+private const val CHARS_PER_PAGE = 4000
 private const val MAX_TEXT_SOURCE_BYTES = 96 * 1024 * 1024
 private val UTF8_BOM = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 private val MARKDOWN_EXTENSIONS: List<Extension> = listOf(
@@ -61,8 +61,7 @@ private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
     .addAttributes("th", "colspan", "rowspan")
     .addAttributes("td", "colspan", "rowspan")
     .addAttributes("table", "width", "border", "cellpadding", "cellspacing", "align")
-    .addAttributes("colgroup", "span", "width")
-    .addAttributes("col", "span", "width")
+    .addAttributes("col", "span")
     .addProtocols("a", "href", "http", "https", "mailto", "tel", "file", "content")
     .addProtocols("img", "src", "http", "https", "file", "content", "data")
     .preserveRelativeLinks(true)
@@ -268,22 +267,76 @@ private fun textReaderMimeTypeFor(extension: String): String = when (extension.l
 
 internal fun decodeTextBytes(bytes: ByteArray): String {
     if (bytes.isEmpty()) return ""
-    if (bytes.startsWith(UTF8_BOM)) return bytes.copyOfRange(3, bytes.size).toString(Charsets.UTF_8)
+    if (bytes.startsWith(UTF8_BOM)) {
+        return repairCommonTextMojibake(bytes.copyOfRange(3, bytes.size).toString(Charsets.UTF_8))
+    }
     if (bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xFE.toByte()))) {
-        return bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16LE)
+        return repairCommonTextMojibake(bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16LE))
     }
     if (bytes.startsWith(byteArrayOf(0xFE.toByte(), 0xFF.toByte()))) {
-        return bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16BE)
+        return repairCommonTextMojibake(bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16BE))
     }
 
-    if (looksLikeUtf16(bytes, littleEndian = true)) return bytes.toString(Charsets.UTF_16LE)
-    if (looksLikeUtf16(bytes, littleEndian = false)) return bytes.toString(Charsets.UTF_16BE)
-    if (isValidUtf8(bytes)) return bytes.toString(Charsets.UTF_8)
+    if (looksLikeUtf16(bytes, littleEndian = true)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_16LE))
+    if (looksLikeUtf16(bytes, littleEndian = false)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_16BE))
+    if (isValidUtf8(bytes)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
 
-    return SINGLE_BYTE_TEXT_CHARSETS
-        .maxByOrNull { scoreDecodedText(bytes.toString(it), it) }
-        ?.let(bytes::toString)
-        ?: bytes.toString(Charsets.UTF_8)
+    val bestResult = SINGLE_BYTE_TEXT_CHARSETS
+        .map { charset ->
+            val text = bytes.toString(charset)
+            val score = scoreDecodedText(text, charset)
+            Triple(charset, text, score)
+        }
+        .maxByOrNull { it.third }
+    
+    val decoded = bestResult?.let { (charset, text, score) ->
+        if (score >= 50) {
+            repairCommonTextMojibake(text)
+        } else {
+            bytes.toString(Charsets.UTF_8)
+        }
+    } ?: bytes.toString(Charsets.UTF_8)
+    return repairCommonTextMojibake(decoded)
+}
+
+private fun repairCommonTextMojibake(text: String): String {
+    if (!looksLikeCommonMojibake(text)) return text
+    // Also attempt repair for valid UTF-8 that may be double-encoded
+    val candidates = buildList {
+        add(text)
+        listOf("windows-1252", "windows-1251", "ISO-8859-1", "ISO-8859-5", "KOI8-R").forEach { charsetName ->
+            val repaired = runCatching {
+                text.toByteArray(Charset.forName(charsetName)).toString(Charsets.UTF_8)
+            }.getOrNull()
+            if (!repaired.isNullOrBlank() && '\uFFFD' !in repaired) add(repaired)
+        }
+    }
+    val originalScore = scoreDecodedText(text, Charsets.UTF_8)
+    // Lower threshold for short texts: minimum 30, scale up for longer texts
+    val threshold = if (text.length < 500) 30 else 80
+    return candidates
+        .maxByOrNull { candidate -> scoreDecodedText(candidate, Charsets.UTF_8) }
+        ?.takeIf { scoreDecodedText(it, Charsets.UTF_8) > originalScore + threshold }
+        ?: text
+}
+
+private fun looksLikeCommonMojibake(text: String): Boolean {
+    if (text.length < 4) return false
+    // Cyrillic mojibake patterns (UTF-8 read as windows-1252)
+    val suspiciousMarkers = listOf("Ð", "Ñ", "Рџ", "Рђ", "СЂ", "СЃ", "Рё", "Рµ")
+    val markerHits = suspiciousMarkers.count { it in text }
+    if (markerHits >= 2) return true
+    val cyrillicLetters = text.count { it in '\u0400'..'\u04FF' }
+    val mojibakePairs = Regex("""[РС][\u0400-\u04FF]""").findAll(text).count()
+    if (cyrillicLetters > 0 && mojibakePairs >= 3) return true
+    // Double-encoding detection: UTF-8 bytes that were decoded as latin-1 and re-encoded
+    // Pattern: \xC3\x90\xC2 or \xC3\x91\xC2 (common in double-encoded Cyrillic)
+    if (text.contains("\u00C3\u0090") || text.contains("\u00C3\u0091") ||
+        text.contains("\u00C3\u00C2")) return true
+    // Latin supplement characters that shouldn't appear in normal text
+    val latinSupplement = text.count { it in '\u0080'..'\u00FF' }
+    if (latinSupplement > text.length / 4 && latinSupplement >= 3) return true
+    return false
 }
 
 private fun ByteArray.startsWith(prefix: ByteArray): Boolean {
@@ -364,6 +417,7 @@ private fun scoreDecodedText(text: String, charset: Charset): Int {
                 score += 6
                 if (ch in '\u0041'..'\u024F') latinLetters++
                 if (ch in '\u0400'..'\u04FF') cyrillicLetters++
+                if (ch in "аеинorstклмп".toSet()) score += 2
             }
             ch.isDigit() -> {
                 printable++
@@ -374,10 +428,11 @@ private fun scoreDecodedText(text: String, charset: Charset): Int {
                 controls++
                 score -= 40
             }
-            ch in setOf('?', '�', '¤', '¦', '¨', '¬', '¯') -> {
+            ch in setOf('\u003F', '\uFFFD', '\u00A4', '\u00A6', '\u00A8', '\u00AC', '\u00AF') -> {
                 suspicious++
                 score -= 8
             }
+            ch in setOf('.', ',', ':', ';', '!', '?') -> score += 1
             else -> {
                 printable++
                 score += 2
@@ -387,9 +442,9 @@ private fun scoreDecodedText(text: String, charset: Charset): Int {
 
     if (cyrillicLetters > latinLetters * 2) {
         score += cyrillicLetters * 3
-        if (charset.name().equals("windows-1251", ignoreCase = true)) score += 40
-        if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 10
-        if (charset.name().equals("IBM866", ignoreCase = true)) score += 10
+        if (charset.name().equals("windows-1251", ignoreCase = true)) score += 60
+        if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 40
+        if (charset.name().equals("IBM866", ignoreCase = true)) score += 30
     } else if (latinLetters >= cyrillicLetters) {
         if (charset.name().equals("windows-1252", ignoreCase = true)) score += 20
         if (charset == Charsets.ISO_8859_1) score += 10
@@ -405,57 +460,15 @@ internal fun renderMarkdownToHtmlBlocks(raw: String): List<String> {
     val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
     val document = MARKDOWN_PARSER.parse(normalized)
     val blocks = mutableListOf<String>()
-    val usedSlugs = mutableMapOf<String, Int>()
     var node: Node? = document.firstChild
     while (node != null) {
-        var rendered = MARKDOWN_RENDERER.render(node).trim()
+        val rendered = MARKDOWN_RENDERER.render(node).trim()
         if (rendered.isNotBlank()) {
-            rendered = postProcessMarkdownBlock(rendered, usedSlugs)
             blocks += rendered
         }
         node = node.next
     }
     return blocks
-}
-
-private val MARKDOWN_HEADING_RE = Regex("""(?i)<h[1-6]\b""")
-
-/**
- * Post-processes a single rendered CommonMark block:
- *  - Wraps bare `<table>` in a scrollable container so wide tables don't clip off-screen.
- *  - Adds `id` attributes to heading elements for anchor navigation and TOC linking.
- */
-private fun postProcessMarkdownBlock(rendered: String, usedSlugs: MutableMap<String, Int>): String {
-    val trimmed = rendered.trimStart()
-    // Wrap top-level tables in a horizontally-scrollable container.
-    if (trimmed.startsWith("<table")) {
-        return """<div class="mrcomic-table-scroll">$rendered</div>"""
-    }
-    // Add slug IDs to headings that lack them, so anchor links (#section) resolve.
-    if (MARKDOWN_HEADING_RE.containsMatchIn(trimmed)) {
-        val frag = Jsoup.parseBodyFragment(rendered)
-        frag.select("h1, h2, h3, h4, h5, h6").forEach { el ->
-            if (el.id().isBlank()) {
-                val slug = markdownHeadingSlug(el.text(), usedSlugs)
-                if (slug.isNotBlank()) el.attr("id", slug)
-            }
-        }
-        return frag.body().html()
-    }
-    return rendered
-}
-
-private fun markdownHeadingSlug(text: String, used: MutableMap<String, Int>): String {
-    val base = text.lowercase()
-        .replace(Regex("[^\\p{L}\\p{N}\\s-]"), "")
-        .trim()
-        .replace(Regex("\\s+"), "-")
-        .take(60)
-        .trimEnd('-')
-    if (base.isBlank()) return ""
-    val count = used.getOrDefault(base, 0)
-    used[base] = count + 1
-    return if (count == 0) base else "$base-$count"
 }
 
 internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): String {
@@ -537,6 +550,8 @@ class TextFormatReader @Inject constructor(
     private val htmlPages: List<String> get() = documentData.pages
     private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex() }
     private val tocEntries: List<TocEntry> by lazy { buildTableOfContents() }
+
+    override fun rendersHtmlContent(): Boolean = true
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
         htmlPages.size.coerceAtLeast(1)
@@ -715,7 +730,7 @@ class TextFormatReader @Inject constructor(
                                 baseUrl = readerBaseUrl,
                                 preservePublisherLayout = true,
                                 baseCss = PRESERVE_LAYOUT_HTML_CSS,
-                                keepWholeDocument = false
+                                keepWholeDocument = true
                             )
                         } else {
                             paginateHtmlDocument(
@@ -727,7 +742,7 @@ class TextFormatReader @Inject constructor(
                                 } else {
                                     DEFAULT_READER_HTML_CSS
                                 },
-                                keepWholeDocument = false
+                                keepWholeDocument = true
                             )
                         }
                         val anchored = addHtmlHeadingAnchorsToPages(pages)
@@ -788,9 +803,7 @@ class TextFormatReader @Inject constructor(
             .replace('\r', '\n')
             .split(Regex("\n\\s*\n"))
             .mapNotNull { part ->
-                val trimmed = part.trim()
-                if (trimmed.isBlank()) null
-                else "<p>${escapeHtml(trimmed).replace("\n", "<br/>")}</p>"
+                renderTxtParagraphBlock(part)
             }
             .ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
     }
@@ -821,13 +834,106 @@ class TextFormatReader @Inject constructor(
                 chapterAnchors += anchor
                 blocks += """<h2 id="${anchor.id}" class="chapter">${escapeHtml(anchor.title)}</h2>"""
             } else {
-                blocks += "<p>${escapeHtml(trimmed).replace("\n", "<br/>")}</p>"
+                renderTxtParagraphBlock(trimmed)?.let(blocks::add)
             }
         }
 
         val safeBlocks = blocks.ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
         return safeBlocks to chapterAnchors
     }
+
+    private fun renderTxtParagraphBlock(paragraph: String): String? {
+        val lines = paragraph.lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+        if (lines.isEmpty()) return null
+
+        val body = if (shouldPreserveTxtLineBreaks(lines)) {
+            lines.joinToString("<br/>") { renderPlainTextInlineMarkup(escapeHtml(it)) }
+        } else {
+            renderPlainTextInlineMarkup(escapeHtml(joinTxtProseLines(lines)))
+        }
+        return "<p>$body</p>"
+    }
+
+    private fun joinTxtProseLines(lines: List<String>): String {
+        if (lines.isEmpty()) return ""
+        val builder = StringBuilder(lines.first())
+        // Strip soft hyphens (\u00AD) from the first line — they should not be visible
+        while (builder.indexOf("\u00AD") >= 0) {
+            builder.deleteCharAt(builder.indexOf("\u00AD"))
+        }
+        lines.drop(1).forEach { nextLine ->
+            val previousLast = builder.lastOrNull()
+            val nextFirst = nextLine.firstOrNull()
+            // Handle multiple hyphen types: ASCII hyphen, soft hyphen, non-breaking hyphen, en-dash
+            val isPrintedHyphenation =
+                previousLast != null && isHyphenChar(previousLast) &&
+                    nextFirst != null &&
+                    nextFirst.isLetter() &&
+                    !isEmDashContext(builder)
+            if (isPrintedHyphenation) {
+                builder.deleteCharAt(builder.lastIndex)
+                builder.append(nextLine)
+            } else {
+                builder.append(' ')
+                builder.append(nextLine)
+            }
+            // Strip soft hyphens from the joined line
+            while (builder.indexOf("\u00AD") >= 0) {
+                builder.deleteCharAt(builder.indexOf("\u00AD"))
+            }
+        }
+        return builder.toString()
+    }
+
+    /** Checks if the character is a hyphen that should be rejoined at line breaks. */
+    private fun isHyphenChar(ch: Char): Boolean =
+        ch == '-' || ch == '\u00AD' || ch == '\u2011' || ch == '\u2013'
+
+    /** Returns true if the last char is an em-dash (dialogue marker), not a hyphenation. */
+    private fun isEmDashContext(builder: StringBuilder): Boolean {
+        val lastTwo = builder.takeLast(2)
+        // "—" (em-dash) used as dialogue marker — don't rejoin
+        // " -" (space + hyphen) used as bullet — don't rejoin
+        return lastTwo == " —" || lastTwo == " -" ||
+            builder.lastOrNull() == '\u2014' ||
+            (builder.length >= 2 && builder[builder.lastIndex - 1] == ' ' && builder[builder.lastIndex] == '-')
+    }
+
+    private fun renderPlainTextInlineMarkup(escaped: String): String {
+        var rendered = escaped
+        rendered = rendered.replace(Regex("""(?<!\w)\*\*(.+?)\*\*(?!\w)""")) {
+            "<strong>${it.groupValues[1]}</strong>"
+        }
+        rendered = rendered.replace(Regex("""(?<!\w)__(.+?)__(?!\w)""")) {
+            "<strong>${it.groupValues[1]}</strong>"
+        }
+        rendered = rendered.replace(Regex("""(?<![A-Za-z0-9])_([^_\n]+?)_(?![A-Za-z0-9])""")) {
+            "<em>${it.groupValues[1]}</em>"
+        }
+        rendered = rendered.replace(Regex("""(?<!\w)\*([^*\n]+?)\*(?!\w)""")) {
+            "<em>${it.groupValues[1]}</em>"
+        }
+        return rendered
+    }
+
+    private fun shouldPreserveTxtLineBreaks(lines: List<String>): Boolean {
+        if (lines.size <= 1) return false
+        val proseLineCount = lines.count { line ->
+            line.length >= 48 && !line.endsWithPunctuation()
+        }
+        if (proseLineCount >= lines.size / 2) return false
+
+        val shortLineCount = lines.count { it.length <= 42 }
+        val listLikeCount = lines.count { line ->
+            line.matches(Regex("""(?:[-*•]|\d+[.)])\s+.+"""))
+        }
+        return shortLineCount >= lines.size / 2 || listLikeCount >= 2
+    }
+
+    private fun String.endsWithPunctuation(): Boolean =
+        lastOrNull() in setOf('.', '!', '?', ':', ';', ',', '\u2026', '\u2014', '-')
 
     private fun detectTxtChapterHeading(text: String): String? {
         val singleLine = text.lines()
@@ -1396,8 +1502,9 @@ class TextFormatReader @Inject constructor(
             val targetEnd = (start + charsPerChunk).coerceAtMost(text.length)
             var boundary = targetEnd
             if (targetEnd < text.length) {
-                val whitespaceBoundary = text.lastIndexOf(' ', startIndex = targetEnd - 1)
-                if (whitespaceBoundary > start + charsPerChunk / 3) {
+                val whitespaceBoundary = text.lastIndexOf(' ', startIndex = targetEnd)
+                    .takeIf { it >= start + charsPerChunk / 3 } ?: -1
+                if (whitespaceBoundary >= 0) {
                     boundary = whitespaceBoundary
                 }
             }

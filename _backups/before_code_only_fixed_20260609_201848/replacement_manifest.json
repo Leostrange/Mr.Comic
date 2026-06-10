@@ -1,0 +1,1617 @@
+[
+  {
+    "relativePath": "EXCLUDED_NON_CODE_BUILD_ASSETS.json",
+    "existed": false,
+    "bytes": 63280
+  },
+  {
+    "relativePath": "SOURCE_ARCHIVE_MANIFEST.txt",
+    "existed": false,
+    "bytes": 40504
+  },
+  {
+    "relativePath": "����⮢� ���㬥��.txt",
+    "existed": false,
+    "bytes": 5318
+  },
+  {
+    "relativePath": "android\\app\\build.gradle.kts",
+    "existed": true,
+    "bytes": 5848
+  },
+  {
+    "relativePath": "android\\app\\proguard-rules.pro",
+    "existed": true,
+    "bytes": 1902
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\AndroidManifest.xml",
+    "existed": true,
+    "bytes": 21460
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\com\\tom_roush\\fontbox\\resources\\unicode\\Scripts.txt",
+    "existed": true,
+    "bytes": 166719
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\com\\tom_roush\\pdfbox\\resources\\glyphlist\\additional.txt",
+    "existed": true,
+    "bytes": 3624
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\com\\tom_roush\\pdfbox\\resources\\glyphlist\\glyphlist.txt",
+    "existed": true,
+    "bytes": 82438
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\com\\tom_roush\\pdfbox\\resources\\glyphlist\\zapfdingbats.txt",
+    "existed": true,
+    "bytes": 4171
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\com\\tom_roush\\pdfbox\\resources\\text\\BidiMirroring.txt",
+    "existed": true,
+    "bytes": 25295
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\dictionaries\\glossary.json",
+    "existed": true,
+    "bytes": 628
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\dictionaries\\ocr_corrections.json",
+    "existed": true,
+    "bytes": 912
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\dictionaries\\post_processing.json",
+    "existed": true,
+    "bytes": 659
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\dictionaries\\pre_processing.json",
+    "existed": true,
+    "bytes": 598
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\licenses\\LGPL-3.0.txt",
+    "existed": true,
+    "bytes": 7424
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\assets\\tokenizers\\tokenizer_config.json",
+    "existed": true,
+    "bytes": 631
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\ComicApplication.kt",
+    "existed": true,
+    "bytes": 2729
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\MainActivity.kt",
+    "existed": true,
+    "bytes": 24925
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\backup\\AutoBackupManager.kt",
+    "existed": true,
+    "bytes": 3958
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\crash\\CrashLogger.kt",
+    "existed": true,
+    "bytes": 1355
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\di\\AppModule.kt",
+    "existed": true,
+    "bytes": 524
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\di\\OnlineTranslationModule.kt",
+    "existed": true,
+    "bytes": 518
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\home\\ContinueScreen.kt",
+    "existed": true,
+    "bytes": 78930
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\home\\ContinueStartupWarmStore.kt",
+    "existed": true,
+    "bytes": 2429
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\icons\\AppIconManager.kt",
+    "existed": true,
+    "bytes": 5546
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\icons\\AppIconSettingsScreen.kt",
+    "existed": true,
+    "bytes": 8026
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\icons\\AppIconSettingsViewModel.kt",
+    "existed": true,
+    "bytes": 2584
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\media\\AudiobookPlaybackService.kt",
+    "existed": true,
+    "bytes": 3393
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\navigation\\AppNavigation.kt",
+    "existed": true,
+    "bytes": 41512
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\splash\\ModernSplashActivity.kt",
+    "existed": true,
+    "bytes": 2642
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\splash\\OptimizedVideoPlayer.kt",
+    "existed": true,
+    "bytes": 3526
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\splash\\SplashPreferences.kt",
+    "existed": true,
+    "bytes": 970
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\splash\\VideoSplashActivity.kt",
+    "existed": true,
+    "bytes": 3676
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\translation\\OpenRouterOnlineTranslationEngine.kt",
+    "existed": true,
+    "bytes": 7313
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\ui\\AppModuleText.kt",
+    "existed": true,
+    "bytes": 25508
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\java\\com\\example\\mrcomic\\ui\\CrashReportScreen.kt",
+    "existed": true,
+    "bytes": 2660
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\drawable\\ic_launcher_background.xml",
+    "existed": true,
+    "bytes": 340
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\drawable\\ic_launcher_foreground.xml",
+    "existed": true,
+    "bytes": 887
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\drawable\\ic_offline.xml",
+    "existed": true,
+    "bytes": 362
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\drawable\\ic_placeholder_cover.xml",
+    "existed": true,
+    "bytes": 786
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\activity_comic_reader.xml",
+    "existed": true,
+    "bytes": 5264
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\activity_main.xml",
+    "existed": true,
+    "bytes": 1806
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\activity_splash.xml",
+    "existed": true,
+    "bytes": 3525
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\activity_translation.xml",
+    "existed": true,
+    "bytes": 10041
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\fragment_comic_library.xml",
+    "existed": true,
+    "bytes": 1698
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\item_comic_page.xml",
+    "existed": true,
+    "bytes": 313
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\item_comic.xml",
+    "existed": true,
+    "bytes": 1705
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\item_translation_result.xml",
+    "existed": true,
+    "bytes": 7625
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\list_item_comic.xml",
+    "existed": true,
+    "bytes": 3239
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\layout\\widget_layout.xml",
+    "existed": true,
+    "bytes": 1235
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_1.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_2.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_3.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_4.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_5.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_6.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_7.xml",
+    "existed": true,
+    "bytes": 270
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher_round.xml",
+    "existed": true,
+    "bytes": 278
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\mipmap-anydpi-v26\\ic_launcher.xml",
+    "existed": true,
+    "bytes": 278
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\values\\colors.xml",
+    "existed": true,
+    "bytes": 907
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\values\\strings.xml",
+    "existed": true,
+    "bytes": 6946
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\values\\themes.xml",
+    "existed": true,
+    "bytes": 1176
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\values-ru\\strings.xml",
+    "existed": true,
+    "bytes": 3667
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\values-v31\\themes.xml",
+    "existed": true,
+    "bytes": 816
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\xml\\app_icon_config_icon2.xml",
+    "existed": true,
+    "bytes": 276
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\xml\\app_icon_config.xml",
+    "existed": true,
+    "bytes": 276
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\xml\\backup_rules.xml",
+    "existed": true,
+    "bytes": 214
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\xml\\comic_widget_info.xml",
+    "existed": true,
+    "bytes": 363
+  },
+  {
+    "relativePath": "android\\app\\src\\main\\res\\xml\\data_extraction_rules.xml",
+    "existed": true,
+    "bytes": 457
+  },
+  {
+    "relativePath": "android\\core-data\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1515
+  },
+  {
+    "relativePath": "android\\core-data\\schemas\\com.example.core.data.dictionary.DictionaryDatabase\\1.json",
+    "existed": true,
+    "bytes": 11965
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\AppDatabase.kt",
+    "existed": true,
+    "bytes": 852
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\AppDatabaseMigrations.kt",
+    "existed": true,
+    "bytes": 3979
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\AudiobookDao.kt",
+    "existed": true,
+    "bytes": 1343
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\AudiobookEntity.kt",
+    "existed": true,
+    "bytes": 558
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\ComicDao.kt",
+    "existed": true,
+    "bytes": 1953
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\EpubManifestCacheDao.kt",
+    "existed": true,
+    "bytes": 608
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\EpubManifestCacheEntity.kt",
+    "existed": true,
+    "bytes": 415
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\EpubStructureCacheDao.kt",
+    "existed": true,
+    "bytes": 615
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\EpubStructureCacheEntity.kt",
+    "existed": true,
+    "bytes": 417
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\db\\QuoteDao.kt",
+    "existed": true,
+    "bytes": 1959
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\di\\AudiobookModule.kt",
+    "existed": true,
+    "bytes": 694
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\di\\DatabaseModule.kt",
+    "existed": true,
+    "bytes": 1787
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryAssetCatalog.kt",
+    "existed": true,
+    "bytes": 1906
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryAssetExtractor.kt",
+    "existed": true,
+    "bytes": 1218
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryDao.kt",
+    "existed": true,
+    "bytes": 2377
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryDatabase.kt",
+    "existed": true,
+    "bytes": 2137
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryEntities.kt",
+    "existed": true,
+    "bytes": 3679
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryNormalizer.kt",
+    "existed": true,
+    "bytes": 605
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryRelations.kt",
+    "existed": true,
+    "bytes": 656
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\DictionaryRepository.kt",
+    "existed": true,
+    "bytes": 8235
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\dictionary\\LookupModels.kt",
+    "existed": true,
+    "bytes": 576
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\preferences\\AppIconPreferences.kt",
+    "existed": true,
+    "bytes": 526
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\preferences\\PerformancePreferencesKeys.kt",
+    "existed": true,
+    "bytes": 1665
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\preferences\\PreferencesKeys.kt",
+    "existed": true,
+    "bytes": 17708
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\preferences\\UserPreferences.kt",
+    "existed": true,
+    "bytes": 1209
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\repository\\AudiobookRepository.kt",
+    "existed": true,
+    "bytes": 3502
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\repository\\ComicRepository.kt",
+    "existed": true,
+    "bytes": 78489
+  },
+  {
+    "relativePath": "android\\core-data\\src\\main\\java\\com\\example\\core\\data\\repository\\QuoteRepository.kt",
+    "existed": true,
+    "bytes": 4386
+  },
+  {
+    "relativePath": "android\\core-domain\\build.gradle.kts",
+    "existed": true,
+    "bytes": 954
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\assets\\dictionaries\\freedict\\ATTRIBUTION.md",
+    "existed": true,
+    "bytes": 2119
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\assets\\dictionaries\\freedict\\COPYING-FreeDict-CC-BY-SA-3.0.txt",
+    "existed": true,
+    "bytes": 22840
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\assets\\dictionaries\\freedict\\manifest.json",
+    "existed": true,
+    "bytes": 2104
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\DailyReadingGoalStore.kt",
+    "existed": true,
+    "bytes": 30351
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\GamificationMetricsSnapshot.kt",
+    "existed": true,
+    "bytes": 5696
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\LogcatReadingAnalyticsTracker.kt",
+    "existed": true,
+    "bytes": 4305
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\MascotProgressCalculator.kt",
+    "existed": true,
+    "bytes": 5721
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\MrComicMascotState.kt",
+    "existed": true,
+    "bytes": 18788
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\ReaderCheckpointStore.kt",
+    "existed": true,
+    "bytes": 7912
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\ReadingAnalyticsModule.kt",
+    "existed": true,
+    "bytes": 400
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\analytics\\ReadingAnalyticsTracker.kt",
+    "existed": true,
+    "bytes": 3661
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\ComicTextDetector.kt",
+    "existed": true,
+    "bytes": 311
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\ComicTranslationEngine.kt",
+    "existed": true,
+    "bytes": 544
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\DefaultLookupRouter.kt",
+    "existed": true,
+    "bytes": 8908
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\DictionaryEngine.kt",
+    "existed": true,
+    "bytes": 448
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\LanguageDetector.kt",
+    "existed": true,
+    "bytes": 319
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\LlmExplainEngine.kt",
+    "existed": true,
+    "bytes": 341
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\LookupRouter.kt",
+    "existed": true,
+    "bytes": 332
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\OfflineTranslationEngine.kt",
+    "existed": true,
+    "bytes": 711
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\OnlineTranslationEngine.kt",
+    "existed": true,
+    "bytes": 382
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\QuickDictionaryEngine.kt",
+    "existed": true,
+    "bytes": 16322
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\RoomDictionaryEngine.kt",
+    "existed": true,
+    "bytes": 13112
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\SafeLlmExplainEngine.kt",
+    "existed": true,
+    "bytes": 15824
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\SafeOnlineTranslationEngine.kt",
+    "existed": true,
+    "bytes": 1799
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\SingleWordDictionaryResolver.kt",
+    "existed": true,
+    "bytes": 5087
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\TranslationErrors.kt",
+    "existed": true,
+    "bytes": 299
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\translation\\TranslationModule.kt",
+    "existed": true,
+    "bytes": 596
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\usecase\\AddComicUseCase.kt",
+    "existed": true,
+    "bytes": 584
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\usecase\\GetComicPagesUseCase.kt",
+    "existed": true,
+    "bytes": 1370
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\usecase\\SaveReadingProgressUseCase.kt",
+    "existed": true,
+    "bytes": 651
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\usecase\\ScanFolderUseCase.kt",
+    "existed": true,
+    "bytes": 628
+  },
+  {
+    "relativePath": "android\\core-domain\\src\\main\\java\\com\\example\\core\\domain\\util\\Result.kt",
+    "existed": true,
+    "bytes": 915
+  },
+  {
+    "relativePath": "android\\core-model\\build.gradle.kts",
+    "existed": true,
+    "bytes": 674
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\Audiobook.kt",
+    "existed": true,
+    "bytes": 710
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\BookEngineModels.kt",
+    "existed": true,
+    "bytes": 1931
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\Comic.kt",
+    "existed": true,
+    "bytes": 5944
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\Converters.kt",
+    "existed": true,
+    "bytes": 305
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\Enums.kt",
+    "existed": true,
+    "bytes": 415
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ReaderImageScaleMode.kt",
+    "existed": true,
+    "bytes": 439
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ReaderInteractionConfig.kt",
+    "existed": true,
+    "bytes": 2422
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ReaderScreenTimeoutMode.kt",
+    "existed": true,
+    "bytes": 592
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ReaderTtsProviderType.kt",
+    "existed": true,
+    "bytes": 389
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ReaderTtsSleepTimerMode.kt",
+    "existed": true,
+    "bytes": 463
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\SavedQuote.kt",
+    "existed": true,
+    "bytes": 815
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ServiceBoundarySnapshots.kt",
+    "existed": true,
+    "bytes": 1959
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\ServiceConfigModels.kt",
+    "existed": true,
+    "bytes": 2538
+  },
+  {
+    "relativePath": "android\\core-model\\src\\main\\java\\com\\example\\core\\model\\TranslationModels.kt",
+    "existed": true,
+    "bytes": 5149
+  },
+  {
+    "relativePath": "android\\core-ui\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1353
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\designsystem\\MrComicDesignTokens.kt",
+    "existed": true,
+    "bytes": 13177
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\designsystem\\MrComicPrimitives.kt",
+    "existed": true,
+    "bytes": 36882
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\eink\\EInkUtils.kt",
+    "existed": true,
+    "bytes": 1700
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\library\\LibraryVisualPresets.kt",
+    "existed": true,
+    "bytes": 12567
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\library\\LibraryVisualStyle.kt",
+    "existed": true,
+    "bytes": 64099
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\library\\RootChrome.kt",
+    "existed": true,
+    "bytes": 5567
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\locale\\AppStrings.kt",
+    "existed": true,
+    "bytes": 70195
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\locale\\TranslationLanguageCatalog.kt",
+    "existed": true,
+    "bytes": 4195
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\mascot\\MascotBadge.kt",
+    "existed": true,
+    "bytes": 2775
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\mascot\\MrComicMascotCopy.kt",
+    "existed": true,
+    "bytes": 10716
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\performance\\PerformanceLocals.kt",
+    "existed": true,
+    "bytes": 352
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\sound\\UIFeedback.kt",
+    "existed": true,
+    "bytes": 5334
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\sound\\UiSoundPlayer.kt",
+    "existed": true,
+    "bytes": 4928
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\splash\\VideoSplashScreen.kt",
+    "existed": true,
+    "bytes": 4877
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\theme\\MrComicTypography.kt",
+    "existed": true,
+    "bytes": 4045
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\theme\\ReadingPreset.kt",
+    "existed": true,
+    "bytes": 6975
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\theme\\Theme.kt",
+    "existed": true,
+    "bytes": 11616
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\theme\\ThemePreferencesRepository.kt",
+    "existed": true,
+    "bytes": 4785
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\theme\\ThemePreset.kt",
+    "existed": true,
+    "bytes": 5969
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\core\\ui\\tts\\SystemTtsSupport.kt",
+    "existed": true,
+    "bytes": 2487
+  },
+  {
+    "relativePath": "android\\core-ui\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderTextFontCatalog.kt",
+    "existed": true,
+    "bytes": 7362
+  },
+  {
+    "relativePath": "android\\engine-api\\build.gradle.kts",
+    "existed": true,
+    "bytes": 629
+  },
+  {
+    "relativePath": "android\\engine-api\\src\\main\\java\\com\\example\\engine\\api\\BookEngine.kt",
+    "existed": true,
+    "bytes": 255
+  },
+  {
+    "relativePath": "android\\engine-api\\src\\main\\java\\com\\example\\engine\\api\\BookSession.kt",
+    "existed": true,
+    "bytes": 888
+  },
+  {
+    "relativePath": "android\\engine-api\\src\\main\\java\\com\\example\\engine\\api\\OpenBookRequest.kt",
+    "existed": true,
+    "bytes": 460
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1100
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumAssetFactory.kt",
+    "existed": true,
+    "bytes": 3372
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumEpubEngine.kt",
+    "existed": true,
+    "bytes": 12862
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumNavigatorBridge.kt",
+    "existed": true,
+    "bytes": 17175
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumPublicationFactory.kt",
+    "existed": true,
+    "bytes": 1816
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumPublicationMappers.kt",
+    "existed": true,
+    "bytes": 3025
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumPublicationSessionAccess.kt",
+    "existed": true,
+    "bytes": 760
+  },
+  {
+    "relativePath": "android\\engine-epub-readium\\src\\main\\java\\com\\example\\engine\\epub\\readium\\ReadiumSessionPageCount.kt",
+    "existed": true,
+    "bytes": 1922
+  },
+  {
+    "relativePath": "android\\engine-formats\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1881
+  },
+  {
+    "relativePath": "android\\engine-formats\\.qa_run\\epub_skott_page0_debug.txt",
+    "existed": true,
+    "bytes": 892
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\cpp\\CMakeLists.txt",
+    "existed": true,
+    "bytes": 276
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\cpp\\native_djvu_bridge.cpp",
+    "existed": true,
+    "bytes": 13173
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\archive\\ArchiveDelegatingFormatReader.kt",
+    "existed": true,
+    "bytes": 15701
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\archive\\ArchiveFormatSupport.kt",
+    "existed": true,
+    "bytes": 11244
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\BitmapAllocator.kt",
+    "existed": true,
+    "bytes": 344
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\DocumentEngine.kt",
+    "existed": true,
+    "bytes": 4335
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\FormatDetector.kt",
+    "existed": true,
+    "bytes": 4448
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\FormatFactory.kt",
+    "existed": true,
+    "bytes": 4128
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\FormatReader.kt",
+    "existed": true,
+    "bytes": 3283
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\ImageDecodePolicy.kt",
+    "existed": true,
+    "bytes": 2461
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\LegacyFormatBookEngine.kt",
+    "existed": true,
+    "bytes": 4755
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\PooledBitmapDecode.kt",
+    "existed": true,
+    "bytes": 4119
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\RenderDeviceProfile.kt",
+    "existed": true,
+    "bytes": 5817
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\base\\UnifiedReaderCssBuilder.kt",
+    "existed": true,
+    "bytes": 14905
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\di\\EngineFormatsModule.kt",
+    "existed": true,
+    "bytes": 480
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuAnnotations.kt",
+    "existed": true,
+    "bytes": 2856
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuAnnotationsHtml.kt",
+    "existed": true,
+    "bytes": 2827
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuBackend.kt",
+    "existed": true,
+    "bytes": 1127
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuBzzDecoder.kt",
+    "existed": true,
+    "bytes": 6682
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuCompressedLayerHtml.kt",
+    "existed": true,
+    "bytes": 3500
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuFormatReader.kt",
+    "existed": true,
+    "bytes": 5251
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuIw44Decoder.kt",
+    "existed": true,
+    "bytes": 16042
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuIw44RenderPlan.kt",
+    "existed": true,
+    "bytes": 4045
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuPageDocumentBuilder.kt",
+    "existed": true,
+    "bytes": 1156
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuPlaceholderHtml.kt",
+    "existed": true,
+    "bytes": 6160
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuProbe.kt",
+    "existed": true,
+    "bytes": 9062
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuSimpleRenderPlan.kt",
+    "existed": true,
+    "bytes": 2243
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuTextLayer.kt",
+    "existed": true,
+    "bytes": 5653
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuTextLayerHtml.kt",
+    "existed": true,
+    "bytes": 3356
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuVisualLayerHtml.kt",
+    "existed": true,
+    "bytes": 5414
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuVisualLayerPlan.kt",
+    "existed": true,
+    "bytes": 3977
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\DjvuZpDecoder.kt",
+    "existed": true,
+    "bytes": 16015
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\NativeDjvuBridge.kt",
+    "existed": true,
+    "bytes": 3696
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\StructuredDjvuBackend.kt",
+    "existed": true,
+    "bytes": 29860
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\djvu\\UnavailableDjvuBackend.kt",
+    "existed": true,
+    "bytes": 584
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\epub\\EpubFootnoteParser.kt",
+    "existed": true,
+    "bytes": 10186
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\epub\\EpubFormatReader.kt",
+    "existed": true,
+    "bytes": 117846
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\fb2\\Fb2FormatReader.kt",
+    "existed": true,
+    "bytes": 37535
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\folder\\FolderFormatReader.kt",
+    "existed": true,
+    "bytes": 3741
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\pdf\\PdfFormatReader.kt",
+    "existed": true,
+    "bytes": 5678
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\rar\\RarFormatReader.kt",
+    "existed": true,
+    "bytes": 7275
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\sevenz\\SevenZFormatReader.kt",
+    "existed": true,
+    "bytes": 5486
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\tar\\TarFormatReader.kt",
+    "existed": true,
+    "bytes": 4121
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\DocxArchiveSupport.kt",
+    "existed": true,
+    "bytes": 17564
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\DocxRenderSupport.kt",
+    "existed": true,
+    "bytes": 13435
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\DocxTextSupport.kt",
+    "existed": true,
+    "bytes": 4694
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\MobiFormatReader.kt",
+    "existed": true,
+    "bytes": 20736
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\MobiTextSupport.kt",
+    "existed": true,
+    "bytes": 42392
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\ReaderMarkupSupport.kt",
+    "existed": true,
+    "bytes": 1671
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\ReflowableDocument.kt",
+    "existed": true,
+    "bytes": 31837
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\ReflowableDocumentMemoryCache.kt",
+    "existed": true,
+    "bytes": 1526
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\ReflowableFormatReaders.kt",
+    "existed": true,
+    "bytes": 14144
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\RichTextFormatReaders.kt",
+    "existed": true,
+    "bytes": 20674
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\RtfHtmlSupport.kt",
+    "existed": true,
+    "bytes": 34396
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\text\\TextFormatReader.kt",
+    "existed": true,
+    "bytes": 68263
+  },
+  {
+    "relativePath": "android\\engine-formats\\src\\main\\kotlin\\com\\example\\engine\\formats\\zip\\ZipFormatReader.kt",
+    "existed": true,
+    "bytes": 5000
+  },
+  {
+    "relativePath": "android\\engine-registry\\build.gradle.kts",
+    "existed": true,
+    "bytes": 783
+  },
+  {
+    "relativePath": "android\\engine-registry\\src\\main\\java\\com\\example\\engine\\registry\\BookEngineRegistry.kt",
+    "existed": true,
+    "bytes": 509
+  },
+  {
+    "relativePath": "android\\engine-rendering\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1068
+  },
+  {
+    "relativePath": "android\\engine-rendering\\src\\main\\kotlin\\com\\example\\engine\\rendering\\cache\\TieredBitmapCache.kt",
+    "existed": true,
+    "bytes": 2140
+  },
+  {
+    "relativePath": "android\\engine-rendering\\src\\main\\kotlin\\com\\example\\engine\\rendering\\di\\EngineRenderingModule.kt",
+    "existed": true,
+    "bytes": 453
+  },
+  {
+    "relativePath": "android\\engine-rendering\\src\\main\\kotlin\\com\\example\\engine\\rendering\\pool\\BitmapPool.kt",
+    "existed": true,
+    "bytes": 2199
+  },
+  {
+    "relativePath": "android\\engine-rendering\\src\\main\\kotlin\\com\\example\\engine\\rendering\\preload\\PagePreloader.kt",
+    "existed": true,
+    "bytes": 14728
+  },
+  {
+    "relativePath": "android\\engine-rendering\\src\\main\\kotlin\\com\\example\\engine\\rendering\\startup\\StartupOptimizer.kt",
+    "existed": true,
+    "bytes": 585
+  },
+  {
+    "relativePath": "android\\feature-library\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1689
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\AudiobookCoverResolver.kt",
+    "existed": true,
+    "bytes": 22802
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\AudiobookFolderImportPolicy.kt",
+    "existed": true,
+    "bytes": 4675
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\AudiobookImportPolicy.kt",
+    "existed": true,
+    "bytes": 2378
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\AudiobookPlayerScreen.kt",
+    "existed": true,
+    "bytes": 24505
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\AudiobookPlayerViewModel.kt",
+    "existed": true,
+    "bytes": 13481
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\LibraryScreen.kt",
+    "existed": true,
+    "bytes": 328673
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\LibraryViewModel.kt",
+    "existed": true,
+    "bytes": 63353
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\MiniAudiobookPlayer.kt",
+    "existed": true,
+    "bytes": 7485
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\MrComicProfileConsistency.kt",
+    "existed": true,
+    "bytes": 1728
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\MrComicProgressCopy.kt",
+    "existed": true,
+    "bytes": 4233
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\MrComicProgressScreen.kt",
+    "existed": true,
+    "bytes": 85385
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\MrComicSeasonalLayer.kt",
+    "existed": true,
+    "bytes": 18948
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\components\\ComicGridItem.kt",
+    "existed": true,
+    "bytes": 22664
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\components\\LibraryAchievements.kt",
+    "existed": true,
+    "bytes": 40731
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\components\\LibraryContentDecor.kt",
+    "existed": true,
+    "bytes": 25394
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\components\\LibraryTopBar.kt",
+    "existed": true,
+    "bytes": 12841
+  },
+  {
+    "relativePath": "android\\feature-library\\src\\main\\java\\com\\example\\feature\\library\\components\\ReaderSleepOverlay.kt",
+    "existed": true,
+    "bytes": 16711
+  },
+  {
+    "relativePath": "android\\feature-ocr\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1711
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\BubbleReplacementPreviewPlanner.kt",
+    "existed": true,
+    "bytes": 3061
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\ComicBlockClassifier.kt",
+    "existed": true,
+    "bytes": 2677
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\DefaultComicTranslationEngine.kt",
+    "existed": true,
+    "bytes": 9657
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\MlKitComicTextDetector.kt",
+    "existed": true,
+    "bytes": 5576
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\MlKitLanguageDetector.kt",
+    "existed": true,
+    "bytes": 2978
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\MlKitOfflineTranslationEngine.kt",
+    "existed": true,
+    "bytes": 4155
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\MlKitTranslationSupport.kt",
+    "existed": true,
+    "bytes": 1084
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\OcrPageCache.kt",
+    "existed": true,
+    "bytes": 15838
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\OcrRepository.kt",
+    "existed": true,
+    "bytes": 627
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\data\\OcrTranslationFallbackPolicy.kt",
+    "existed": true,
+    "bytes": 3145
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\di\\OcrModule.kt",
+    "existed": true,
+    "bytes": 2096
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\ui\\OcrRuntimeText.kt",
+    "existed": true,
+    "bytes": 25706
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\ui\\OcrScreen.kt",
+    "existed": true,
+    "bytes": 85352
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\ui\\OcrTranslationAvailabilityPolicy.kt",
+    "existed": true,
+    "bytes": 4140
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\ui\\OcrUiText.kt",
+    "existed": true,
+    "bytes": 34926
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\ui\\OcrViewModel.kt",
+    "existed": true,
+    "bytes": 89116
+  },
+  {
+    "relativePath": "android\\feature-ocr\\src\\main\\java\\com\\example\\feature\\ocr\\ui\\OverlayRenderer.kt",
+    "existed": true,
+    "bytes": 13908
+  },
+  {
+    "relativePath": "android\\feature-onboarding\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1269
+  },
+  {
+    "relativePath": "android\\feature-onboarding\\src\\main\\java\\com\\example\\feature\\onboarding\\OnboardingScreen.kt",
+    "existed": true,
+    "bytes": 21110
+  },
+  {
+    "relativePath": "android\\feature-onboarding\\src\\main\\java\\com\\example\\feature\\onboarding\\OnboardingViewModel.kt",
+    "existed": true,
+    "bytes": 2386
+  },
+  {
+    "relativePath": "android\\feature-reader\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1783
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\di\\ReaderModule.kt",
+    "existed": true,
+    "bytes": 214
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\PageSoundPlayer.kt",
+    "existed": true,
+    "bytes": 2203
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderAudioSheet.kt",
+    "existed": true,
+    "bytes": 31507
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderChromeButton.kt",
+    "existed": true,
+    "bytes": 1964
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderChromeComponents.kt",
+    "existed": true,
+    "bytes": 27892
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderControlCenterSheet.kt",
+    "existed": true,
+    "bytes": 91713
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderHardwareKeyHost.kt",
+    "existed": true,
+    "bytes": 183
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderHeaderFooterUi.kt",
+    "existed": true,
+    "bytes": 12494
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderInteractionPolicy.kt",
+    "existed": true,
+    "bytes": 5037
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderPanelSurface.kt",
+    "existed": true,
+    "bytes": 2958
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderSavedStyleUiText.kt",
+    "existed": true,
+    "bytes": 6330
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderScreen.kt",
+    "existed": true,
+    "bytes": 248519
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderStyleJsonExchange.kt",
+    "existed": true,
+    "bytes": 1856
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderStylePresetStorage.kt",
+    "existed": true,
+    "bytes": 8345
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderTextToSpeechController.kt",
+    "existed": true,
+    "bytes": 25602
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderTranslationAvailabilityPolicy.kt",
+    "existed": true,
+    "bytes": 347
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderTranslationRouteMessagePolicy.kt",
+    "existed": true,
+    "bytes": 11095
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderTtsPlaybackService.kt",
+    "existed": true,
+    "bytes": 3343
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderTtsPolicy.kt",
+    "existed": true,
+    "bytes": 3902
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderUiText.kt",
+    "existed": true,
+    "bytes": 45810
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\ReaderViewModel.kt",
+    "existed": true,
+    "bytes": 189850
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\components\\ImageMessagePopup.kt",
+    "existed": true,
+    "bytes": 7079
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\components\\PageView.kt",
+    "existed": true,
+    "bytes": 15398
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\components\\ReaderBottomBar.kt",
+    "existed": true,
+    "bytes": 4949
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\components\\ReaderImageCrop.kt",
+    "existed": true,
+    "bytes": 3754
+  },
+  {
+    "relativePath": "android\\feature-reader\\src\\main\\java\\com\\example\\feature\\reader\\ui\\components\\WebtoonView.kt",
+    "existed": true,
+    "bytes": 17712
+  },
+  {
+    "relativePath": "android\\feature-settings\\build.gradle.kts",
+    "existed": true,
+    "bytes": 1460
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\PerformanceDetailSection.kt",
+    "existed": true,
+    "bytes": 28253
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsAiServicesStatusPolicy.kt",
+    "existed": true,
+    "bytes": 3849
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsImportErrorPresentation.kt",
+    "existed": true,
+    "bytes": 460
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsImportValidation.kt",
+    "existed": true,
+    "bytes": 3792
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsPopupPreferences.kt",
+    "existed": true,
+    "bytes": 1708
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsScreen.kt",
+    "existed": true,
+    "bytes": 537680
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsTextToSpeechPreviewController.kt",
+    "existed": true,
+    "bytes": 4783
+  },
+  {
+    "relativePath": "android\\feature-settings\\src\\main\\java\\com\\example\\feature\\settings\\ui\\SettingsViewModel.kt",
+    "existed": true,
+    "bytes": 181056
+  }
+]

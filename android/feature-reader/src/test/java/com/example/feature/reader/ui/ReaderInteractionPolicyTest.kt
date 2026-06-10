@@ -2,6 +2,7 @@ package com.example.feature.reader.ui
 
 import android.view.KeyEvent
 import com.example.core.model.ReadingMode
+import com.example.core.ui.theme.ReadingPreset
 import com.example.engine.formats.base.TocEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -60,5 +61,174 @@ class ReaderInteractionPolicyTest {
     fun webtoonModeUsesVerticalFeedOnly() {
         assertFalse(readerModeAllowsHorizontalPageTurn(ReadingMode.WEBTOON))
         assertFalse(readerModeLocksHtmlVerticalScroll(ReadingMode.WEBTOON))
+    }
+
+    @Test
+    fun textWebtoonOrdinaryScrollDoesNotRequestPageNavigation() {
+        assertNull(
+            readerTextWebtoonBoundaryNavigationStep(
+                startedAtTopBoundary = false,
+                startedAtBottomBoundary = false,
+                dragDeltaY = -88f,
+                dragDeltaX = 6f
+            )
+        )
+        assertNull(
+            readerTextWebtoonBoundaryNavigationStep(
+                startedAtTopBoundary = false,
+                startedAtBottomBoundary = false,
+                dragDeltaY = 88f,
+                dragDeltaX = 6f
+            )
+        )
+        assertNull(
+            readerTextWebtoonBoundaryNavigationStep(
+                startedAtTopBoundary = true,
+                startedAtBottomBoundary = false,
+                dragDeltaY = 88f,
+                dragDeltaX = 96f
+            )
+        )
+    }
+
+    @Test
+    fun textWebtoonBoundaryPullRequestsAdjacentBackendPage() {
+        assertEquals(
+            1,
+            readerTextWebtoonBoundaryNavigationStep(
+                startedAtTopBoundary = false,
+                startedAtBottomBoundary = true,
+                dragDeltaY = -88f,
+                dragDeltaX = 6f
+            )
+        )
+        assertEquals(
+            -1,
+            readerTextWebtoonBoundaryNavigationStep(
+                startedAtTopBoundary = true,
+                startedAtBottomBoundary = false,
+                dragDeltaY = 88f,
+                dragDeltaX = 6f
+            )
+        )
+    }
+
+    @Test
+    fun htmlSelectionActionsRemainEnabledInPagedMode() {
+        assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
+        assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = false))
+    }
+
+    @Test
+    fun chromeRequiresOpaqueSurfaceOnlyForEinkPreset() {
+        assertFalse(
+            readerChromeRequiresOpaqueSurface(
+                preset = ReadingPreset.CUSTOM,
+                isTextReader = true
+            )
+        )
+        assertTrue(
+            readerChromeRequiresOpaqueSurface(
+                preset = ReadingPreset.EINK,
+                isTextReader = true
+            )
+        )
+    }
+
+    @Test
+    fun defaultTextAlignmentDoesNotJustifyMobileReaderText() {
+        assertEquals("left", ReaderUiState().textAlignment)
+    }
+
+    @Test
+    fun pagedHtmlViewportHeightPrefersRealCssViewportOverLargerNativeHeight() {
+        assertEquals(
+            756,
+            readerResolvedPagedCssViewportHeight(
+                nativeViewportHeight = 784,
+                visualViewportHeight = 756,
+                windowInnerHeight = 756,
+                rootClientHeight = 756
+            )
+        )
+    }
+
+    @Test
+    fun pagedHtmlViewportHeightFallsBackToNativeWhenCssViewportIsUnknown() {
+        assertEquals(
+            784,
+            readerResolvedPagedCssViewportHeight(
+                nativeViewportHeight = 784,
+                visualViewportHeight = 0,
+                windowInnerHeight = 0,
+                rootClientHeight = 0
+            )
+        )
+    }
+
+    @Test
+    fun pagedHtmlVisibleViewportKeepsFullReaderSurface() {
+        val visibleHeight = readerPagedVisibleViewportHeight(
+            contentViewportTopOffset = 58,
+            pageStart = 0,
+            pageEnd = 690,
+            clipHeight = 842
+        )
+
+        assertEquals(842, visibleHeight)
+    }
+
+    @Test
+    fun pagedHtmlNextPagesKeepTopInsetWithoutSkippingContent() {
+        val visibleHeight = readerPagedVisibleViewportHeight(
+            contentViewportTopOffset = 58,
+            pageStart = 684,
+            pageEnd = 1386,
+            clipHeight = 842
+        )
+
+        assertEquals(842, visibleHeight)
+        assertEquals(684, readerPagedContentShiftY(pageStart = 684, contentViewportTopOffset = 58))
+    }
+
+    @Test
+    fun pagedHtmlNextPageStartsAfterLastFittedLineBottom() {
+        assertEquals(
+            1986,
+            readerPagedNextStartAfterFittedLine(
+                currentStart = 1392,
+                lineHeight = 29,
+                lastFittedBottom = 1972,
+                contentHeight = 2462
+            )
+        )
+    }
+
+    @Test
+    fun textWebtoonReloadResetsScrollButPagedModeDoesNot() {
+        assertTrue(readerHtmlReloadResetsScroll(pagedModeScrollLock = false))
+        assertFalse(readerHtmlReloadResetsScroll(pagedModeScrollLock = true))
+    }
+
+    @Test
+    fun leavingPagedHtmlModeRequiresLayoutTeardown() {
+        assertTrue(
+            readerHtmlModeChangeRequiresPagedLayoutTeardown(
+                previousPagedModeScrollLock = true,
+                nextPagedModeScrollLock = false
+            )
+        )
+        assertFalse(
+            readerHtmlModeChangeRequiresPagedLayoutTeardown(
+                previousPagedModeScrollLock = false,
+                nextPagedModeScrollLock = true
+            )
+        )
+        assertFalse(
+            readerHtmlModeChangeRequiresPagedLayoutTeardown(
+                previousPagedModeScrollLock = false,
+                nextPagedModeScrollLock = false
+            )
+        )
     }
 }
