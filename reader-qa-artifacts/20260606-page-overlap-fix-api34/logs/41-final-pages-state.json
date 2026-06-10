@@ -1,0 +1,170 @@
+[
+  {
+    "pageIndex": 0,
+    "applied": 0,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\41-final-page-1.png",
+    "state": {
+      "idx": 0,
+      "pageCount": 4,
+      "y": 0,
+      "shiftY": 0,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ],
+      "htmlHasUnderscoreVery": false,
+      "htmlHasEmVery": true,
+      "htmlHasUnderscoreNever": false,
+      "htmlHasEmNever": true,
+      "textHasChapter": true,
+      "textHasSister": true,
+      "textHead": "CHAPTER I. Down the Rabbit-Hole\n\nAlice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, “and what is the use of a book,” thought Alice “without pictures or conversations?”\n\nSo she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.\n\nThere was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, “Oh dear! Oh dear! I shall be late!” (when she thought it over afterwards, it occurred to her that she ought to have wondered at this, but at"
+    }
+  },
+  {
+    "pageIndex": 1,
+    "applied": 1,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\41-final-page-2.png",
+    "state": {
+      "idx": 1,
+      "pageCount": 4,
+      "y": 684,
+      "shiftY": 743,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ],
+      "htmlHasUnderscoreVery": false,
+      "htmlHasEmVery": true,
+      "htmlHasUnderscoreNever": false,
+      "htmlHasEmNever": true,
+      "textHasChapter": true,
+      "textHasSister": true,
+      "textHead": "CHAPTER I. Down the Rabbit-Hole\n\nAlice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, “and what is the use of a book,” thought Alice “without pictures or conversations?”\n\nSo she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.\n\nThere was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, “Oh dear! Oh dear! I shall be late!” (when she thought it over afterwards, it occurred to her that she ought to have wondered at this, but at"
+    }
+  },
+  {
+    "pageIndex": 2,
+    "applied": 2,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\41-final-page-3.png",
+    "state": {
+      "idx": 2,
+      "pageCount": 4,
+      "y": 1386,
+      "shiftY": 1445,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ],
+      "htmlHasUnderscoreVery": false,
+      "htmlHasEmVery": true,
+      "htmlHasUnderscoreNever": false,
+      "htmlHasEmNever": true,
+      "textHasChapter": true,
+      "textHasSister": true,
+      "textHead": "CHAPTER I. Down the Rabbit-Hole\n\nAlice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, “and what is the use of a book,” thought Alice “without pictures or conversations?”\n\nSo she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.\n\nThere was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, “Oh dear! Oh dear! I shall be late!” (when she thought it over afterwards, it occurred to her that she ought to have wondered at this, but at"
+    }
+  },
+  {
+    "pageIndex": 3,
+    "applied": 3,
+    "file": "C:\\Users\\xmeta\\projects\\Mr.Comic_fresh_clone\\reader-qa-artifacts\\20260606-page-overlap-fix-api34\\screens\\41-final-page-4.png",
+    "state": {
+      "idx": 3,
+      "pageCount": 4,
+      "y": 1972,
+      "shiftY": 2031,
+      "topOffset": 59,
+      "appliedTopOffset": 59,
+      "layouts": [
+        {
+          "start": 0,
+          "end": 684,
+          "visibleHeight": 744
+        },
+        {
+          "start": 684,
+          "end": 1386,
+          "visibleHeight": 703
+        },
+        {
+          "start": 1386,
+          "end": 1972,
+          "visibleHeight": 587
+        },
+        {
+          "start": 1972,
+          "end": 2462,
+          "visibleHeight": 491
+        }
+      ],
+      "htmlHasUnderscoreVery": false,
+      "htmlHasEmVery": true,
+      "htmlHasUnderscoreNever": false,
+      "htmlHasEmNever": true,
+      "textHasChapter": true,
+      "textHasSister": true,
+      "textHead": "CHAPTER I. Down the Rabbit-Hole\n\nAlice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, “and what is the use of a book,” thought Alice “without pictures or conversations?”\n\nSo she was considering in her own mind (as well as she could, for the hot day made her feel very sleepy and stupid), whether the pleasure of making a daisy-chain would be worth the trouble of getting up and picking the daisies, when suddenly a White Rabbit with pink eyes ran close by her.\n\nThere was nothing so very remarkable in that; nor did Alice think it so very much out of the way to hear the Rabbit say to itself, “Oh dear! Oh dear! I shall be late!” (when she thought it over afterwards, it occurred to her that she ought to have wondered at this, but at"
+    }
+  }
+]

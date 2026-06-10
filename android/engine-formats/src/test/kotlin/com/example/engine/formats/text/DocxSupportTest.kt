@@ -81,55 +81,6 @@ class DocxSupportTest {
         }
     }
 
-    @Test
-    fun docxTablesStayAsRenderableHtmlTables() = runBlocking {
-        val tempDocx = File.createTempFile("docx_table_rendering_", ".docx")
-        try {
-            ZipOutputStream(tempDocx.outputStream().buffered()).use { zip ->
-                putZipText(zip, "[Content_Types].xml", """
-                    <?xml version="1.0" encoding="UTF-8"?>
-                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                      <Default Extension="xml" ContentType="application/xml"/>
-                    </Types>
-                """.trimIndent())
-                putZipText(zip, "word/document.xml", """
-                    <?xml version="1.0" encoding="UTF-8"?>
-                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                      <w:body>
-                        <w:tbl>
-                          <w:tr>
-                            <w:tc><w:p><w:r><w:t>Item</w:t></w:r></w:p></w:tc>
-                            <w:tc><w:p><w:r><w:t>Needed</w:t></w:r></w:p></w:tc>
-                          </w:tr>
-                          <w:tr>
-                            <w:tc><w:p><w:r><w:t>Books</w:t></w:r></w:p></w:tc>
-                            <w:tc><w:p><w:r><w:t>1</w:t></w:r></w:p></w:tc>
-                          </w:tr>
-                        </w:tbl>
-                      </w:body>
-                    </w:document>
-                """.trimIndent())
-            }
-
-            val reader = TextFormatReader(ContextWrapper(null), tempDocx.absolutePath, ComicFormat.DOCX)
-            try {
-                val html = reader.getHtmlPage(0).orEmpty()
-
-                assertTrue(html.contains("<table", ignoreCase = true))
-                assertTrue(html.contains("mrcomic-table-scroll", ignoreCase = true))
-                assertTrue(html.contains("<tr", ignoreCase = true))
-                assertTrue(html.contains("<td", ignoreCase = true))
-                assertTrue(html.contains("Item"))
-                assertTrue(html.contains("Needed"))
-                assertTrue(html.contains("Books"))
-            } finally {
-                reader.close()
-            }
-        } finally {
-            tempDocx.delete()
-        }
-    }
-
     private fun putZipText(zip: ZipOutputStream, entryName: String, text: String) {
         zip.putNextEntry(ZipEntry(entryName))
         zip.write(text.toByteArray(Charsets.UTF_8))

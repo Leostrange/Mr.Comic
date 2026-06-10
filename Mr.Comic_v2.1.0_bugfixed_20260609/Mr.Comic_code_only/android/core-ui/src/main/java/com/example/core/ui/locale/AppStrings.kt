@@ -1,0 +1,1691 @@
+package com.example.core.ui.locale
+
+import androidx.compose.runtime.staticCompositionLocalOf
+
+// ─────────────────────────────────────────────────────────────────────────────
+// All UI strings for Mr.Comic.
+// Add a new field here, then fill it in all 5 language objects below.
+// ─────────────────────────────────────────────────────────────────────────────
+
+data class AppStrings(
+    // Common
+    val languageCode: String,
+    val back: String,
+    val ok: String,
+    val cancel: String,
+    val navContinue: String,
+    val navLibrary: String,
+    val navTranslation: String,
+    val navSettings: String,
+    val controlsShow: String,
+    val controlsHide: String,
+    val actionSort: String,
+    val actionRectangle: String,
+    val actionSquare: String,
+    val actionFile: String,
+    val actionFolder: String,
+    val readerPages: String,
+    val readerBookmark: String,
+    val readerBookmarked: String,
+    val readerToc: String,
+    val readerTextStyle: String,
+    val readerBrightness: String,
+    val readerReadingPresets: String,
+
+    // Navigation / main settings menu
+    val settings: String,
+    val sectionAppearance: String,
+    val sectionAppearanceDesc: String,
+    val sectionReader: String,
+    val sectionReaderDesc: String,
+    val sectionLibrary: String,
+    val sectionLibraryDesc: String,
+    val sectionTranslation: String,
+    val sectionTranslationDesc: String,
+    val sectionBackup: String,
+    val sectionBackupDesc: String,
+    val sectionAbout: String,
+    val sectionAboutDesc: String,
+
+    // Language picker
+    val appLanguage: String,
+    val langRu: String,
+    val langEn: String,
+    val langJa: String,
+    val langZh: String,
+    val langKo: String,
+
+    // Theme
+    val themeCard: String,
+    val colorTheme: String,
+    val themeSystem: String,
+    val themeLight: String,
+    val themeDark: String,
+    val themeDynamic: String,
+    val dynamicColor: String,
+    val dynamicColorSubtitle: String,
+    val amoledDark: String,
+    val amoledDarkSubtitle: String,
+
+    // Theme presets
+    val themePresets: String,
+    val themePresetCustom: String,
+    val themePresetPaper: String,
+    val themePresetGlass: String,
+    val themePresetAmoled: String,
+    val themePresetNeon: String,
+    val themePresetGray: String,
+    val themePresetSepia: String,
+    val themePresetEink: String,
+
+    // Live preview
+    val preview: String,
+    val previewButton: String,
+    val previewCard: String,
+    val readerTextPreviewTitle: String,
+    val readerTextPreviewDescription: String,
+
+    // Font & shape
+    val fontScale: String,
+    val fontScaleSmall: String,
+    val fontScaleNormal: String,
+    val fontScaleLarge: String,
+    val fontScaleXL: String,
+    val cornerRadius: String,
+
+    // Element colors
+    val elementColors: String,
+    val elementColorsHint: String,
+    val colorPrimary: String,
+    val colorSecondary: String,
+    val colorBackground: String,
+
+    // UI sounds
+    val uiSoundsCard: String,
+    val uiSoundsTitle: String,
+    val uiSoundsSubtitle: String,
+
+    // App icon
+    val appIconCard: String,
+    val appIconTitle: String,
+    val appIconDesc: String,
+    val appIconButton: String,
+
+    // Reader — mode
+    val readingModeCard: String,
+    val readingModeDual: String,
+    val readingModeLtr: String,
+    val readingModeRtl: String,
+    val readingModeWebtoon: String,
+
+    // Reader presets
+    val readerPresetsCard: String,
+    val readerPresetCustom: String,
+    val readerPresetNovel: String,
+    val readerPresetManga: String,
+    val readerPresetNight: String,
+    val readerPresetStudy: String,
+
+    // Reader — screen
+    val readerScreenCard: String,
+    val brightnessLabel: String,
+    val keepScreenOn: String,
+    val keepScreenOnSubtitle: String,
+    val fullscreenMode: String,
+    val fullscreenModeSubtitle: String,
+
+    // Reader — animation & sound
+    val animSoundCard: String,
+    val pageAnimLabel: String,
+    val animNone: String,
+    val animSlide: String,
+    val animFade: String,
+    val pageFlipSound: String,
+    val pageFlipSoundSubtitle: String,
+    val soundStyleLabel: String,
+    val soundPaper: String,
+    val soundCrisp: String,
+    val soundSoft: String,
+
+    // Reader — preload
+    val preloadCard: String,
+    val preloadLabel: String,
+    val preloadHint: String,
+
+    // Library
+    val libraryDisplayCard: String,
+    val libraryDefaultView: String,
+    val libraryViewGrid: String,
+    val libraryViewList: String,
+    val libraryGridColumns: String,
+    val libraryTileSize: String,
+    val libraryContinueReading: String,
+    val libraryComicFallback: String,
+    val libraryDeleteComicTitle: String,
+    val libraryDeleteComicMessage: String,
+    val libraryDeleteFolderTitle: String,
+    val libraryDeleteFolderMessage: String,
+    val libraryQuotes: String,
+    val libraryBookmarks: String,
+    val libraryAchievements: String,
+    val libraryViewStrips: String,
+    val libraryQuotesEmptyHint: String,
+    val libraryBookmarksEmptyHint: String,
+    val libraryDeleteQuoteTitle: String,
+    val libraryDeleteAction: String,
+    val libraryViewAsList: String,
+    val libraryViewAsGrid: String,
+    val libraryCoversSquare: String,
+    val libraryCoversRectangle: String,
+    val libraryAdd: String,
+    val libraryOrderAndFilters: String,
+    val libraryReset: String,
+    val librarySortSection: String,
+    val librarySortNewest: String,
+    val librarySortRecent: String,
+    val librarySortProgress: String,
+    val librarySortFolderAz: String,
+    val libraryStatusSection: String,
+    val libraryStatusAll: String,
+    val libraryStatusBookmarked: String,
+    val libraryStatusNew: String,
+    val libraryStatusReading: String,
+    val libraryStatusCompleted: String,
+    val libraryFormatSection: String,
+    val libraryFormatAll: String,
+    val libraryFormatImages: String,
+    val libraryFormatText: String,
+    val libraryGroupingSection: String,
+    val libraryGroupingFolder: String,
+    val libraryGroupingNone: String,
+    val libraryGroupingSeries: String,
+    val libraryThumbnailsSection: String,
+    val libraryEmptyTitle: String,
+    val libraryEmptyHint: String,
+    val libraryOpenFile: String,
+    val libraryOpenFolder: String,
+    val libraryEmptyFolderTitle: String,
+    val libraryEmptyFolderHint: String,
+    val libraryCollectionLabel: String,
+    val librarySave: String,
+    val libraryEdit: String,
+    val libraryTitle: String,
+    val libraryTagsComma: String,
+    val libraryProgress: String,
+    val libraryProgressTemplate: String,
+    val libraryGenre: String,
+    val libraryPublisher: String,
+    val libraryYear: String,
+    val libraryTags: String,
+    val libraryFormatLabel: String,
+    val librarySize: String,
+    val libraryOpen: String,
+    val libraryRemove: String,
+    val libraryDelete: String,
+    val libraryStatsCompleted: String,
+    val libraryStatsReading: String,
+
+    // Translation
+    val translationCard: String,
+    val translationHint: String,
+    val transOff: String,
+    val transOcr: String,
+    val transDict: String,
+    val ocrLanguageCard: String,
+    val ocrLanguageHint: String,
+    val ocrNote: String,
+
+    // Backup
+    val progressCard: String,
+    val progressHint: String,
+    val exportBtn: String,
+    val exportingBtn: String,
+    val importBtn: String,
+    val importingBtn: String,
+    val autoBackup: String,
+    val autoBackupSubtitle: String,
+    val cacheCard: String,
+    val imageCacheTitle: String,
+    val imageCacheHint: String,
+    val clearCacheBtn: String,
+    val clearingBtn: String,
+
+    // About
+    val version: String,
+
+    // Достижения
+    val achFirstBook: String,
+    val achFirstBookDesc: String,
+    val achReader: String,
+    val achReaderDesc: String,
+    val achCollector: String,
+    val achCollectorDesc: String,
+    val achFirstComplete: String,
+    val achFirstCompleteDesc: String,
+    val achMarathon: String,
+    val achMarathonDesc: String,
+    val achAuthorFan: String,
+    val achAuthorFanDesc: String,
+    val achGenreGourmet: String,
+    val achGenreGourmetDesc: String,
+    val achBookmarker: String,
+    val achBookmarkerDesc: String,
+    val achSecretCat: String,
+    val achSecretCatDesc: String,
+    val achSecretHint: String
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CompositionLocal
+// ─────────────────────────────────────────────────────────────────────────────
+
+val LocalStrings = staticCompositionLocalOf<AppStrings> { Russian }
+
+fun normalizeAppLanguageCode(code: String?): String {
+    val normalized = code
+        ?.trim()
+        ?.lowercase()
+        ?.substringBefore('-')
+        ?.ifBlank { null }
+
+    return when (normalized) {
+        "en", "ja", "zh", "ko", "ru" -> normalized
+        else -> "ru"
+    }
+}
+
+fun appStringsForCode(code: String): AppStrings = when (normalizeAppLanguageCode(code)) {
+    "en" -> English
+    "ja" -> Japanese
+    "zh" -> ChineseSimplified
+    "ko" -> Korean
+    else -> Russian
+}
+
+fun AppStrings.libraryFileCountLabel(fileCount: Int): String = when (languageCode) {
+    "en" -> if (fileCount == 1) "1 file" else "$fileCount files"
+    "ja" -> "${fileCount}ファイル"
+    "zh" -> "${fileCount}个文件"
+    "ko" -> "파일 ${fileCount}개"
+    else -> when {
+        fileCount == 1 -> "1 файл"
+        fileCount % 10 in 2..4 && fileCount % 100 !in 12..14 -> "$fileCount файла"
+        else -> "$fileCount файлов"
+    }
+}
+
+fun AppStrings.libraryFolderCountLabel(folderCount: Int): String = when (languageCode) {
+    "en" -> if (folderCount == 1) "1 folder" else "$folderCount folders"
+    "ja" -> "${folderCount}フォルダ"
+    "zh" -> "${folderCount}个文件夹"
+    "ko" -> "폴더 ${folderCount}개"
+    else -> when {
+        folderCount == 1 -> "1 папка"
+        folderCount % 10 in 2..4 && folderCount % 100 !in 12..14 -> "$folderCount папки"
+        else -> "$folderCount папок"
+    }
+}
+
+fun AppStrings.libraryVolumeCountLabel(volumeCount: Int): String = when (languageCode) {
+    "en" -> if (volumeCount == 1) "1 vol." else "$volumeCount vols."
+    "ja" -> "${volumeCount}巻"
+    "zh" -> "${volumeCount}卷"
+    "ko" -> "${volumeCount}권"
+    else -> when {
+        volumeCount == 1 -> "1 том"
+        volumeCount % 10 in 2..4 && volumeCount % 100 !in 12..14 -> "$volumeCount тома"
+        else -> "$volumeCount томов"
+    }
+}
+
+fun AppStrings.librarySetCountLabel(setCount: Int): String = when (languageCode) {
+    "en" -> if (setCount == 1) "1 set" else "$setCount sets"
+    "ja" -> "${setCount}セット"
+    "zh" -> "${setCount}组"
+    "ko" -> "${setCount}세트"
+    else -> when {
+        setCount == 1 -> "1 набор"
+        setCount % 10 in 2..4 && setCount % 100 !in 12..14 -> "$setCount набора"
+        else -> "$setCount наборов"
+    }
+}
+
+fun AppStrings.libraryQuotePageLabel(page: Int): String = when (languageCode) {
+    "en" -> "Page ${page + 1}"
+    "ja" -> "${page + 1}ページ"
+    "zh" -> "第 ${page + 1} 页"
+    "ko" -> "${page + 1}페이지"
+    else -> "Страница ${page + 1}"
+}
+
+fun AppStrings.libraryQuoteSourceMissingLabel(): String = when (languageCode) {
+    "en" -> "Source unavailable"
+    "ja" -> "元の本が利用できません"
+    "zh" -> "原始书籍不可用"
+    "ko" -> "원본 책을 사용할 수 없습니다"
+    else -> "Источник книги недоступен"
+}
+
+fun AppStrings.libraryQuoteCountLabel(quoteCount: Int): String = when (languageCode) {
+    "en" -> if (quoteCount == 1) "1 quote" else "$quoteCount quotes"
+    "ja" -> "${quoteCount}件の引用"
+    "zh" -> "${quoteCount}条摘录"
+    "ko" -> "문구 ${quoteCount}개"
+    else -> when {
+        quoteCount % 10 == 1 && quoteCount % 100 != 11 -> "$quoteCount цитата"
+        quoteCount % 10 in 2..4 && quoteCount % 100 !in 12..14 -> "$quoteCount цитаты"
+        else -> "$quoteCount цитат"
+    }
+}
+
+fun AppStrings.libraryQuoteSourceCountLabel(sourceCount: Int): String = when (languageCode) {
+    "en" -> if (sourceCount == 1) "1 source" else "$sourceCount sources"
+    "ja" -> "出典 ${sourceCount}件"
+    "zh" -> "${sourceCount}个来源"
+    "ko" -> "출처 ${sourceCount}개"
+    else -> when {
+        sourceCount % 10 == 1 && sourceCount % 100 != 11 -> "$sourceCount источник"
+        sourceCount % 10 in 2..4 && sourceCount % 100 !in 12..14 -> "$sourceCount источника"
+        else -> "$sourceCount источников"
+    }
+}
+
+fun AppStrings.libraryGraphicSectionLabel(): String = when (languageCode) {
+    "en" -> "Comics, manga, and webtoons"
+    "ja" -> "コミック・マンガ・ウェブトゥーン"
+    "zh" -> "漫画、日漫与条漫"
+    "ko" -> "코믹, 만화, 웹툰"
+    else -> "Комиксы, манга и вебтун"
+}
+
+fun AppStrings.libraryBooksSectionLabel(): String = when (languageCode) {
+    "en" -> "Books"
+    "ja" -> "書籍"
+    "zh" -> "书籍"
+    "ko" -> "책"
+    else -> "Книги"
+}
+
+fun AppStrings.audiobookPlayActionLabel(): String = when (languageCode) {
+    "en" -> "Play"
+    "ja" -> "再生"
+    "zh" -> "播放"
+    "ko" -> "재생"
+    else -> "Воспроизведение"
+}
+
+fun AppStrings.audiobookPauseActionLabel(): String = when (languageCode) {
+    "en" -> "Pause"
+    "ja" -> "一時停止"
+    "zh" -> "暂停"
+    "ko" -> "일시정지"
+    else -> "Пауза"
+}
+
+fun AppStrings.audiobookStopActionLabel(): String = when (languageCode) {
+    "en" -> "Stop"
+    "ja" -> "停止"
+    "zh" -> "停止"
+    "ko" -> "중지"
+    else -> "Остановить"
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Русский
+// ─────────────────────────────────────────────────────────────────────────────
+
+val Russian = AppStrings(
+    languageCode = "ru",
+    back = "Назад",
+    ok = "ОК",
+    cancel = "Отмена",
+    navContinue = "Продолжить",
+    navLibrary = "Библиотека",
+    navTranslation = "Перевод",
+    navSettings = "Настройки",
+    controlsShow = "Показать панель управления",
+    controlsHide = "Скрыть панель управления",
+    actionSort = "Сортировка",
+    actionRectangle = "Прямоугольник",
+    actionSquare = "Квадрат",
+    actionFile = "Файл",
+    actionFolder = "Папка",
+    readerPages = "Страницы",
+    readerBookmark = "Закладка",
+    readerBookmarked = "В закладках",
+    readerToc = "Оглавление",
+    readerTextStyle = "Стиль текста",
+    readerBrightness = "Яркость",
+    readerReadingPresets = "Пресеты чтения",
+
+    settings = "Настройки",
+    sectionAppearance = "Кастомизация",
+    sectionAppearanceDesc = "Тема, цвета, шрифт, иконка приложения",
+    sectionReader = "Ридер",
+    sectionReaderDesc = "Режим чтения, анимация, звук, яркость",
+    sectionLibrary = "Библиотека",
+    sectionLibraryDesc = "Вид по умолчанию, колонки сетки",
+    sectionTranslation = "Перевод",
+    sectionTranslationDesc = "OCR, словарь, язык исходника",
+    sectionBackup = "Бэкап",
+    sectionBackupDesc = "Прогресс чтения, кэш, авто-сохранение",
+    sectionAbout = "О приложении",
+    sectionAboutDesc = "Описание, функции, библиотеки, лицензии и контакты",
+
+    appLanguage = "Язык интерфейса",
+    langRu = "Русский",
+    langEn = "English",
+    langJa = "日本語",
+    langZh = "中文",
+    langKo = "한국어",
+
+    themeCard = "Тема",
+    colorTheme = "Цветовая тема",
+    themeSystem = "Системная",
+    themeLight = "Светлая",
+    themeDark = "Тёмная",
+    themeDynamic = "Динамическая",
+    dynamicColor = "Dynamic Color (Material You)",
+    dynamicColorSubtitle = "Автопалитра на основе обоев Android 12+",
+    amoledDark = "AMOLED тёмная",
+    amoledDarkSubtitle = "Чисто чёрный фон (#000) в тёмном режиме",
+
+    themePresets = "Пресеты темы",
+    themePresetCustom = "Своя",
+    themePresetPaper = "Бумага",
+    themePresetGlass = "Стекло",
+    themePresetAmoled = "AMOLED",
+    themePresetNeon = "Неон",
+    themePresetGray = "Серая",
+    themePresetSepia = "Сепия",
+    themePresetEink = "E-Ink",
+
+    preview = "Предпросмотр",
+    previewButton = "Кнопка",
+    previewCard = "Карточка",
+    readerTextPreviewTitle = "Предпросмотр чтения",
+    readerTextPreviewDescription = "Компактный абзац показывает размер шрифта, межстрочный интервал, насыщенность и выравнивание ещё до открытия книги.",
+
+    fontScale = "Масштаб текста",
+    fontScaleSmall = "Мал",
+    fontScaleNormal = "Норм",
+    fontScaleLarge = "Крупный",
+    fontScaleXL = "XL",
+    cornerRadius = "Скругление карточек",
+
+    elementColors = "Цвет элементов",
+    elementColorsHint = "Акцентный цвет для каждого элемента. «✕» — возврат к теме.",
+    colorPrimary = "Основной (кнопки, иконки)",
+    colorSecondary = "Дополнительный (чипсы, переключатели)",
+    colorBackground = "Фон экрана",
+
+    uiSoundsCard = "Звуки интерфейса",
+    uiSoundsTitle = "Звуки интерфейса",
+    uiSoundsSubtitle = "Аудиообратная связь для кнопок и переходов",
+
+    appIconCard = "Иконка приложения",
+    appIconTitle = "Иконка лаунчера",
+    appIconDesc = "Выберите один из 7 вариантов дизайна",
+    appIconButton = "Открыть выбор иконки",
+
+    readingModeCard = "Режим чтения",
+    readingModeDual = "2 страницы",
+    readingModeLtr = "Страницы →",
+    readingModeRtl = "← Страницы",
+    readingModeWebtoon = "Вертикальная лента",
+
+    readerPresetsCard = "Пресет ридера",
+    readerPresetCustom = "Своя",
+    readerPresetNovel = "Роман",
+    readerPresetManga = "Манга",
+    readerPresetNight = "Ночная",
+    readerPresetStudy = "Учёба",
+
+    readerScreenCard = "Экран ридера",
+    brightnessLabel = "Яркость по умолчанию",
+    keepScreenOn = "Не гасить экран",
+    keepScreenOnSubtitle = "FLAG_KEEP_SCREEN_ON во время чтения",
+    fullscreenMode = "Полноэкранный режим",
+    fullscreenModeSubtitle = "Скрыть статусную строку и навигацию",
+
+    animSoundCard = "Анимация и звук",
+    pageAnimLabel = "Анимация перелистывания",
+    animNone = "Без анимации",
+    animSlide = "Слайд",
+    animFade = "Угасание",
+    pageFlipSound = "Звук перелистывания",
+    pageFlipSoundSubtitle = "Короткий звук при смене страницы",
+    soundStyleLabel = "Стиль звука",
+    soundPaper = "Бумага",
+    soundCrisp = "Чёткий",
+    soundSoft = "Мягкий",
+
+    preloadCard = "Предзагрузка",
+    preloadLabel = "Страниц вперёд",
+    preloadHint = "Больше → меньше задержки при листании, но выше расход памяти",
+
+    libraryDisplayCard = "Отображение",
+    libraryDefaultView = "Вид по умолчанию",
+    libraryViewGrid = "Сетка",
+    libraryViewList = "Список",
+    libraryGridColumns = "Колонок в сетке",
+    libraryTileSize = "Размер плиток",
+    libraryContinueReading = "Продолжить чтение",
+    libraryComicFallback = "комикс",
+    libraryDeleteComicTitle = "Удалить комикс?",
+    libraryDeleteComicMessage = "«%s» будет удален из библиотеки. Файл на диске не удаляется.",
+    libraryDeleteFolderTitle = "Удалить папку?",
+    libraryDeleteFolderMessage = "Папка «%1\$s» и %2\$d элементов внутри неё будут удалены из библиотеки. Файлы на диске не удаляются.",
+    libraryQuotes = "Цитатник",
+    libraryBookmarks = "Закладки",
+    libraryAchievements = "Достижения",
+    libraryViewStrips = "Вертикальная лента",
+    libraryQuotesEmptyHint = "Сохраняйте понравившиеся строки в ридере, и они появятся здесь отдельной коллекцией.",
+    libraryBookmarksEmptyHint = "Добавляйте файлы в закладки из карточки библиотеки, и они будут собраны здесь отдельно.",
+    libraryDeleteQuoteTitle = "Удалить цитату?",
+    libraryDeleteAction = "Удалить",
+    libraryViewAsList = "Вид: список",
+    libraryViewAsGrid = "Вид: сетка",
+    libraryCoversSquare = "Обложки: квадрат",
+    libraryCoversRectangle = "Обложки: прямоугольник",
+    libraryAdd = "Добавить",
+    libraryOrderAndFilters = "Порядок и фильтры",
+    libraryReset = "Сбросить",
+    librarySortSection = "Сортировка",
+    librarySortNewest = "Новые",
+    librarySortRecent = "Недавние",
+    librarySortProgress = "Прогресс",
+    librarySortFolderAz = "Папка A-Z",
+    libraryStatusSection = "Статус",
+    libraryStatusAll = "Все",
+    libraryStatusBookmarked = "Избранное",
+    libraryStatusNew = "Новое",
+    libraryStatusReading = "Читаю",
+    libraryStatusCompleted = "Прочитано",
+    libraryFormatSection = "Формат",
+    libraryFormatAll = "Все",
+    libraryFormatImages = "Изображения",
+    libraryFormatText = "Текст",
+    libraryGroupingSection = "Разделение",
+    libraryGroupingFolder = "По папке",
+    libraryGroupingNone = "Нет",
+    libraryGroupingSeries = "По серии",
+    libraryThumbnailsSection = "Миниатюры",
+    libraryEmptyTitle = "Библиотека пуста",
+    libraryEmptyHint = "Добавьте CBZ, CBR, PDF, EPUB или FB2 файлы",
+    libraryOpenFile = "Открыть файл",
+    libraryOpenFolder = "Открыть папку",
+    libraryEmptyFolderTitle = "В папке «%s» пока нет файлов",
+    libraryEmptyFolderHint = "Добавьте файлы в эту папку или перейдите на уровень выше.",
+    libraryCollectionLabel = "Коллекция",
+    librarySave = "Сохранить",
+    libraryEdit = "Редактировать",
+    libraryTitle = "Название",
+    libraryTagsComma = "Теги (через запятую)",
+    libraryProgress = "Прогресс",
+    libraryProgressTemplate = "Стр. %1\$d / %2\$d  (%3\$d%%)",
+    libraryGenre = "Жанр",
+    libraryPublisher = "Издатель",
+    libraryYear = "Год",
+    libraryTags = "Теги",
+    libraryFormatLabel = "Формат",
+    librarySize = "Размер",
+    libraryOpen = "Открыть",
+    libraryRemove = "Убрать",
+    libraryDelete = "Удалить",
+    libraryStatsCompleted = "прочитано",
+    libraryStatsReading = "читается",
+
+    translationCard = "Режим перевода манги",
+    translationHint = "Автоматический перевод текста на страницах (OCR + MT)",
+    transOff = "Выкл",
+    transOcr = "OCR + Перевод",
+    transDict = "Словарь",
+    ocrLanguageCard = "Язык OCR",
+    ocrLanguageHint = "Исходный язык текста в манге",
+    ocrNote = "Включите режим перевода выше для активации OCR",
+
+    progressCard = "Прогресс чтения",
+    progressHint = "Экспорт и импорт сохранённого прогресса, закладок и статистики",
+    exportBtn = "Экспорт",
+    exportingBtn = "Экспорт...",
+    importBtn = "Импорт",
+    importingBtn = "Импорт...",
+    autoBackup = "Авто-бэкап",
+        autoBackupSubtitle = "Сохранять настройки и прогресс автоматически раз в день",
+    cacheCard = "Кэш и данные",
+    imageCacheTitle = "Кэш изображений",
+    imageCacheHint = "Обложки и временные файлы ридера",
+    clearCacheBtn = "Очистить",
+    clearingBtn = "Очистка...",
+
+    version = "Версия 2.0.0 · Сборка 200",
+
+    achFirstBook = "Первая книга",
+    achFirstBookDesc = "Добавь 1 комикс в библиотеку",
+    achReader = "Книгочей",
+    achReaderDesc = "10 комиксов в библиотеке",
+    achCollector = "Коллекционер",
+    achCollectorDesc = "25 комиксов — серьёзная коллекция!",
+    achFirstComplete = "Первое прочтение",
+    achFirstCompleteDesc = "Дочитай первый комикс до конца",
+    achMarathon = "Марафонец",
+    achMarathonDesc = "20 прочитанных комиксов — это подвиг",
+    achAuthorFan = "Фанат автора",
+    achAuthorFanDesc = "5 книг одного автора в коллекции",
+    achGenreGourmet = "Жанровый гурман",
+    achGenreGourmetDesc = "3 и более разных жанра",
+    achBookmarker = "Закладочник",
+    achBookmarkerDesc = "Добавь комикс в избранное",
+    achSecretCat = "Читатель-мастер",
+    achSecretCatDesc = "Ты нашёл скрытого Котика-читателя! 🐱",
+    achSecretHint = "Секретное достижение. Попробуй найти!"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// English
+// ─────────────────────────────────────────────────────────────────────────────
+
+val English = AppStrings(
+    languageCode = "en",
+    back = "Back",
+    ok = "OK",
+    cancel = "Cancel",
+    navContinue = "Continue",
+    navLibrary = "Library",
+    navTranslation = "Translate",
+    navSettings = "Settings",
+    controlsShow = "Show controls",
+    controlsHide = "Hide controls",
+    actionSort = "Sort",
+    actionRectangle = "Rectangle",
+    actionSquare = "Square",
+    actionFile = "File",
+    actionFolder = "Folder",
+    readerPages = "Pages",
+    readerBookmark = "Bookmark",
+    readerBookmarked = "Bookmarked",
+    readerToc = "Table of contents",
+    readerTextStyle = "Text style",
+    readerBrightness = "Brightness",
+    readerReadingPresets = "Reading presets",
+
+    settings = "Settings",
+    sectionAppearance = "Customization",
+    sectionAppearanceDesc = "Theme, colors, font, app icon",
+    sectionReader = "Reader",
+    sectionReaderDesc = "Reading mode, animation, sound, brightness",
+    sectionLibrary = "Library",
+    sectionLibraryDesc = "Default view, grid columns",
+    sectionTranslation = "Translation",
+    sectionTranslationDesc = "OCR, dictionary, source language",
+    sectionBackup = "Backup",
+    sectionBackupDesc = "Reading progress, cache, auto-save",
+    sectionAbout = "About",
+    sectionAboutDesc = "Description, features, libraries, licenses, and contacts",
+
+    appLanguage = "App Language",
+    langRu = "Русский",
+    langEn = "English",
+    langJa = "日本語",
+    langZh = "中文",
+    langKo = "한국어",
+
+    themeCard = "Theme",
+    colorTheme = "Color Theme",
+    themeSystem = "System",
+    themeLight = "Light",
+    themeDark = "Dark",
+    themeDynamic = "Dynamic",
+    dynamicColor = "Dynamic Color (Material You)",
+    dynamicColorSubtitle = "Auto-palette from Android 12+ wallpaper",
+    amoledDark = "AMOLED Dark",
+    amoledDarkSubtitle = "Pure black background (#000) in dark mode",
+
+    themePresets = "Theme Presets",
+    themePresetCustom = "Custom",
+    themePresetPaper = "Paper",
+    themePresetGlass = "Glass",
+    themePresetAmoled = "AMOLED",
+    themePresetNeon = "Neon",
+    themePresetGray = "Gray",
+    themePresetSepia = "Sepia",
+    themePresetEink = "E-Ink",
+
+    preview = "Preview",
+    previewButton = "Button",
+    previewCard = "Card",
+    readerTextPreviewTitle = "Reading preview",
+    readerTextPreviewDescription = "A compact paragraph shows font size, line height, weight, and alignment before you open a book.",
+
+    fontScale = "Text Scale",
+    fontScaleSmall = "Small",
+    fontScaleNormal = "Normal",
+    fontScaleLarge = "Large",
+    fontScaleXL = "XL",
+    cornerRadius = "Card Corner Radius",
+
+    elementColors = "Element Colors",
+    elementColorsHint = "Pick an accent color for each element. '✕' resets to theme default.",
+    colorPrimary = "Primary (buttons, icons)",
+    colorSecondary = "Secondary (chips, toggles)",
+    colorBackground = "Background",
+
+    uiSoundsCard = "UI Sounds",
+    uiSoundsTitle = "UI Sounds",
+    uiSoundsSubtitle = "Tactile audio feedback for buttons and transitions",
+
+    appIconCard = "App Icon",
+    appIconTitle = "Launcher Icon",
+    appIconDesc = "Choose from 7 design variants",
+    appIconButton = "Open Icon Selector",
+
+    readingModeCard = "Reading mode",
+    readingModeDual = "2 pages",
+    readingModeLtr = "Pages →",
+    readingModeRtl = "← Pages",
+    readingModeWebtoon = "Vertical Scroll",
+
+    readerPresetsCard = "Reader Preset",
+    readerPresetCustom = "Custom",
+    readerPresetNovel = "Novel",
+    readerPresetManga = "Manga",
+    readerPresetNight = "Night",
+    readerPresetStudy = "Study",
+
+    readerScreenCard = "Display",
+    brightnessLabel = "Default Brightness",
+    keepScreenOn = "Keep Screen On",
+    keepScreenOnSubtitle = "FLAG_KEEP_SCREEN_ON while reading",
+    fullscreenMode = "Fullscreen Mode",
+    fullscreenModeSubtitle = "Hide status bar and navigation",
+
+    animSoundCard = "Animation & Sound",
+    pageAnimLabel = "Page Turn Animation",
+    animNone = "None",
+    animSlide = "Slide",
+    animFade = "Fade",
+    pageFlipSound = "Page Flip Sound",
+    pageFlipSoundSubtitle = "Short sound when turning a page",
+    soundStyleLabel = "Sound Style",
+    soundPaper = "Paper",
+    soundCrisp = "Crisp",
+    soundSoft = "Soft",
+
+    preloadCard = "Preload",
+    preloadLabel = "Pages ahead",
+    preloadHint = "More → less paging delay, but higher memory usage",
+
+    libraryDisplayCard = "Display",
+    libraryDefaultView = "Default View",
+    libraryViewGrid = "Grid",
+    libraryViewList = "List",
+    libraryGridColumns = "Grid Columns",
+    libraryTileSize = "Tile Size",
+    libraryContinueReading = "Continue reading",
+    libraryComicFallback = "comic",
+    libraryDeleteComicTitle = "Delete comic?",
+    libraryDeleteComicMessage = "\"%s\" will be removed from the library. The file stays on disk.",
+    libraryDeleteFolderTitle = "Delete folder?",
+    libraryDeleteFolderMessage = "\"%1\$s\" and %2\$d items inside it will be removed from the library. Files stay on disk.",
+    libraryQuotes = "Quotes",
+    libraryBookmarks = "Bookmarks",
+    libraryAchievements = "Achievements",
+    libraryViewStrips = "Vertical strips",
+    libraryQuotesEmptyHint = "Save a line from the reader and it will appear here as a separate collection.",
+    libraryBookmarksEmptyHint = "Bookmark files from the library card and they will appear here as a separate collection.",
+    libraryDeleteQuoteTitle = "Delete quote?",
+    libraryDeleteAction = "Delete",
+    libraryViewAsList = "View: list",
+    libraryViewAsGrid = "View: grid",
+    libraryCoversSquare = "Covers: square",
+    libraryCoversRectangle = "Covers: rectangle",
+    libraryAdd = "Add",
+    libraryOrderAndFilters = "Order and filters",
+    libraryReset = "Reset",
+    librarySortSection = "Sorting",
+    librarySortNewest = "Newest",
+    librarySortRecent = "Recently read",
+    librarySortProgress = "Progress",
+    librarySortFolderAz = "Folder A-Z",
+    libraryStatusSection = "Status",
+    libraryStatusAll = "All",
+    libraryStatusBookmarked = "Bookmarked",
+    libraryStatusNew = "New",
+    libraryStatusReading = "Reading",
+    libraryStatusCompleted = "Completed",
+    libraryFormatSection = "Format",
+    libraryFormatAll = "All",
+    libraryFormatImages = "Images",
+    libraryFormatText = "Text",
+    libraryGroupingSection = "Grouping",
+    libraryGroupingFolder = "By folder",
+    libraryGroupingNone = "None",
+    libraryGroupingSeries = "By series",
+    libraryThumbnailsSection = "Thumbnails",
+    libraryEmptyTitle = "Library is empty",
+    libraryEmptyHint = "Add CBZ, CBR, PDF, EPUB, or FB2 files",
+    libraryOpenFile = "Open file",
+    libraryOpenFolder = "Open folder",
+    libraryEmptyFolderTitle = "Folder \"%s\" has no files yet",
+    libraryEmptyFolderHint = "Add files to this folder or go one level up.",
+    libraryCollectionLabel = "Collection",
+    librarySave = "Save",
+    libraryEdit = "Edit",
+    libraryTitle = "Title",
+    libraryTagsComma = "Tags (comma-separated)",
+    libraryProgress = "Progress",
+    libraryProgressTemplate = "Pg. %1\$d / %2\$d  (%3\$d%%)",
+    libraryGenre = "Genre",
+    libraryPublisher = "Publisher",
+    libraryYear = "Year",
+    libraryTags = "Tags",
+    libraryFormatLabel = "Format",
+    librarySize = "Size",
+    libraryOpen = "Open",
+    libraryRemove = "Remove",
+    libraryDelete = "Delete",
+    libraryStatsCompleted = "completed",
+    libraryStatsReading = "reading",
+
+    translationCard = "Manga Translation",
+    translationHint = "Automatic text translation on pages (OCR + MT)",
+    transOff = "Off",
+    transOcr = "OCR + Translate",
+    transDict = "Dictionary",
+    ocrLanguageCard = "OCR Language",
+    ocrLanguageHint = "Source language of text in manga",
+    ocrNote = "Enable translation mode above to activate OCR",
+
+    progressCard = "Reading Progress",
+    progressHint = "Export and import saved progress, bookmarks and stats",
+    exportBtn = "Export",
+    exportingBtn = "Exporting...",
+    importBtn = "Import",
+    importingBtn = "Importing...",
+    autoBackup = "Auto-Backup",
+        autoBackupSubtitle = "Save settings and progress automatically once a day",
+    cacheCard = "Cache & Data",
+    imageCacheTitle = "Image Cache",
+    imageCacheHint = "Covers and temporary reader files",
+    clearCacheBtn = "Clear",
+    clearingBtn = "Clearing...",
+
+    version = "Version 2.0.0 · Build 200",
+
+    achFirstBook = "First Book",
+    achFirstBookDesc = "Add 1 comic to your library",
+    achReader = "Bookworm",
+    achReaderDesc = "10 comics in the library",
+    achCollector = "Collector",
+    achCollectorDesc = "25 comics — serious collection!",
+    achFirstComplete = "First Read",
+    achFirstCompleteDesc = "Finish your first comic",
+    achMarathon = "Marathon Reader",
+    achMarathonDesc = "20 comics read — that's dedication",
+    achAuthorFan = "Author Fan",
+    achAuthorFanDesc = "5 books by the same author",
+    achGenreGourmet = "Genre Gourmet",
+    achGenreGourmetDesc = "3 or more different genres",
+    achBookmarker = "Bookmarker",
+    achBookmarkerDesc = "Add a comic to favourites",
+    achSecretCat = "Master Reader",
+    achSecretCatDesc = "You found the hidden Reading Cat! 🐱",
+    achSecretHint = "Secret achievement. Try to find it!"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 日本語
+// ─────────────────────────────────────────────────────────────────────────────
+
+val Japanese = AppStrings(
+    languageCode = "ja",
+    back = "戻る",
+    ok = "OK",
+    cancel = "キャンセル",
+    navContinue = "続き",
+    navLibrary = "ライブラリ",
+    navTranslation = "翻訳",
+    navSettings = "設定",
+    controlsShow = "操作パネルを表示",
+    controlsHide = "操作パネルを隠す",
+    actionSort = "並び替え",
+    actionRectangle = "長方形",
+    actionSquare = "正方形",
+    actionFile = "ファイル",
+    actionFolder = "フォルダ",
+    readerPages = "ページ",
+    readerBookmark = "しおり",
+    readerBookmarked = "しおり済み",
+    readerToc = "目次",
+    readerTextStyle = "文字スタイル",
+    readerBrightness = "明るさ",
+    readerReadingPresets = "読書プリセット",
+
+    settings = "設定",
+    sectionAppearance = "カスタマイズ",
+    sectionAppearanceDesc = "テーマ、色、フォント、アイコン",
+    sectionReader = "リーダー",
+    sectionReaderDesc = "読書モード、アニメーション、音、輝度",
+    sectionLibrary = "ライブラリ",
+    sectionLibraryDesc = "デフォルト表示、グリッド列数",
+    sectionTranslation = "翻訳",
+    sectionTranslationDesc = "OCR、辞書、元言語",
+    sectionBackup = "バックアップ",
+    sectionBackupDesc = "読書進捗、キャッシュ、自動保存",
+    sectionAbout = "このアプリについて",
+    sectionAboutDesc = "説明、機能、ライブラリ、ライセンス、連絡先",
+
+    appLanguage = "表示言語",
+    langRu = "Русский",
+    langEn = "English",
+    langJa = "日本語",
+    langZh = "中文",
+    langKo = "한국어",
+
+    themeCard = "テーマ",
+    colorTheme = "カラーテーマ",
+    themeSystem = "システム",
+    themeLight = "ライト",
+    themeDark = "ダーク",
+    themeDynamic = "ダイナミック",
+    dynamicColor = "ダイナミックカラー (Material You)",
+    dynamicColorSubtitle = "Android 12+の壁紙に基づく自動パレット",
+    amoledDark = "AMOLEDダーク",
+    amoledDarkSubtitle = "ダークモードで純粋な黒背景 (#000)",
+
+    themePresets = "テーマプリセット",
+    themePresetCustom = "カスタム",
+    themePresetPaper = "紙",
+    themePresetGlass = "ガラス",
+    themePresetAmoled = "AMOLED",
+    themePresetNeon = "ネオン",
+    themePresetGray = "グレー",
+    themePresetSepia = "セピア",
+    themePresetEink = "電子ペーパー",
+
+    preview = "プレビュー",
+    previewButton = "ボタン",
+    previewCard = "カード",
+    readerTextPreviewTitle = "読書プレビュー",
+    readerTextPreviewDescription = "本を開く前に、フォントサイズ、行間、太さ、配置をコンパクトな段落で確認できます。",
+
+    fontScale = "テキストサイズ",
+    fontScaleSmall = "小",
+    fontScaleNormal = "標準",
+    fontScaleLarge = "大",
+    fontScaleXL = "特大",
+    cornerRadius = "角丸",
+
+    elementColors = "UI要素カラー",
+    elementColorsHint = "各要素のアクセントカラーを選択。「✕」でテーマデフォルトに戻す。",
+    colorPrimary = "メインカラー（ボタン、アイコン）",
+    colorSecondary = "サブカラー（チップ、スイッチ）",
+    colorBackground = "背景色",
+
+    uiSoundsCard = "UIサウンド",
+    uiSoundsTitle = "UIサウンド",
+    uiSoundsSubtitle = "ボタンや遷移の効果音フィードバック",
+
+    appIconCard = "アプリアイコン",
+    appIconTitle = "ランチャーアイコン",
+    appIconDesc = "7種類のデザインから選択",
+    appIconButton = "アイコン選択を開く",
+
+    readingModeCard = "読書モード",
+    readingModeDual = "2ページ",
+    readingModeLtr = "ページ →",
+    readingModeRtl = "← ページ",
+    readingModeWebtoon = "縦スクロール",
+
+    readerPresetsCard = "リーダープリセット",
+    readerPresetCustom = "カスタム",
+    readerPresetNovel = "小説",
+    readerPresetManga = "マンガ",
+    readerPresetNight = "夜間",
+    readerPresetStudy = "勉強",
+
+    readerScreenCard = "画面設定",
+    brightnessLabel = "デフォルト輝度",
+    keepScreenOn = "画面を消さない",
+    keepScreenOnSubtitle = "読書中はFLAG_KEEP_SCREEN_ON",
+    fullscreenMode = "全画面モード",
+    fullscreenModeSubtitle = "ステータスバーとナビゲーションを非表示",
+
+    animSoundCard = "アニメーションとサウンド",
+    pageAnimLabel = "ページめくりアニメーション",
+    animNone = "なし",
+    animSlide = "スライド",
+    animFade = "フェード",
+    pageFlipSound = "ページめくり音",
+    pageFlipSoundSubtitle = "ページ切り替え時の短い効果音",
+    soundStyleLabel = "サウンドスタイル",
+    soundPaper = "紙",
+    soundCrisp = "クリア",
+    soundSoft = "ソフト",
+
+    preloadCard = "プリロード",
+    preloadLabel = "先読みページ数",
+    preloadHint = "多い → ページングの遅延が減る。メモリ使用量が増える。",
+
+    libraryDisplayCard = "表示設定",
+    libraryDefaultView = "デフォルト表示",
+    libraryViewGrid = "グリッド",
+    libraryViewList = "リスト",
+    libraryGridColumns = "列数",
+    libraryTileSize = "タイルサイズ",
+    libraryContinueReading = "続きを読む",
+    libraryComicFallback = "コミック",
+    libraryDeleteComicTitle = "コミックを削除しますか？",
+    libraryDeleteComicMessage = "「%s」はライブラリから削除されます。ファイル自体はディスクに残ります。",
+    libraryDeleteFolderTitle = "フォルダを削除しますか？",
+    libraryDeleteFolderMessage = "「%1\$s」と中の %2\$d 件はライブラリから削除されます。ファイル自体はディスクに残ります。",
+    libraryQuotes = "引用",
+    libraryBookmarks = "ブックマーク",
+    libraryAchievements = "実績",
+    libraryViewStrips = "縦リボン",
+    libraryQuotesEmptyHint = "リーダーで気に入った一文を保存すると、ここに独立したコレクションとして表示されます。",
+    libraryBookmarksEmptyHint = "ライブラリカードからファイルをブックマークすると、ここに独立したコレクションとして表示されます。",
+    libraryDeleteQuoteTitle = "引用を削除しますか？",
+    libraryDeleteAction = "削除",
+    libraryViewAsList = "表示: リスト",
+    libraryViewAsGrid = "表示: グリッド",
+    libraryCoversSquare = "表紙: 正方形",
+    libraryCoversRectangle = "表紙: 長方形",
+    libraryAdd = "追加",
+    libraryOrderAndFilters = "並び順とフィルター",
+    libraryReset = "リセット",
+    librarySortSection = "並び替え",
+    librarySortNewest = "新しい順",
+    librarySortRecent = "最近読んだ順",
+    librarySortProgress = "進捗",
+    librarySortFolderAz = "フォルダ A-Z",
+    libraryStatusSection = "ステータス",
+    libraryStatusAll = "すべて",
+    libraryStatusBookmarked = "ブックマーク",
+    libraryStatusNew = "新規",
+    libraryStatusReading = "読書中",
+    libraryStatusCompleted = "読了",
+    libraryFormatSection = "形式",
+    libraryFormatAll = "すべて",
+    libraryFormatImages = "画像",
+    libraryFormatText = "テキスト",
+    libraryGroupingSection = "グループ化",
+    libraryGroupingFolder = "フォルダ別",
+    libraryGroupingNone = "なし",
+    libraryGroupingSeries = "シリーズ別",
+    libraryThumbnailsSection = "サムネイル",
+    libraryEmptyTitle = "ライブラリは空です",
+    libraryEmptyHint = "CBZ / CBR / PDF / EPUB / FB2 を追加してください",
+    libraryOpenFile = "ファイルを開く",
+    libraryOpenFolder = "フォルダを開く",
+    libraryEmptyFolderTitle = "フォルダ「%s」にはまだファイルがありません",
+    libraryEmptyFolderHint = "このフォルダにファイルを追加するか、1つ上の階層へ移動してください。",
+    libraryCollectionLabel = "コレクション",
+    librarySave = "保存",
+    libraryEdit = "編集",
+    libraryTitle = "タイトル",
+    libraryTagsComma = "タグ（カンマ区切り）",
+    libraryProgress = "進捗",
+    libraryProgressTemplate = "ページ %1\$d / %2\$d  (%3\$d%%)",
+    libraryGenre = "ジャンル",
+    libraryPublisher = "出版社",
+    libraryYear = "年",
+    libraryTags = "タグ",
+    libraryFormatLabel = "形式",
+    librarySize = "サイズ",
+    libraryOpen = "開く",
+    libraryRemove = "解除",
+    libraryDelete = "削除",
+    libraryStatsCompleted = "完読",
+    libraryStatsReading = "読書中",
+
+    translationCard = "マンガ翻訳モード",
+    translationHint = "ページのテキストを自動翻訳（OCR + MT）",
+    transOff = "オフ",
+    transOcr = "OCR + 翻訳",
+    transDict = "辞書",
+    ocrLanguageCard = "OCR言語",
+    ocrLanguageHint = "マンガのテキストの元言語",
+    ocrNote = "OCRを有効にするには上の翻訳モードをオンにしてください",
+
+    progressCard = "読書進捗",
+    progressHint = "保存した進捗・しおり・統計のエクスポート／インポート",
+    exportBtn = "エクスポート",
+    exportingBtn = "エクスポート中...",
+    importBtn = "インポート",
+    importingBtn = "インポート中...",
+    autoBackup = "自動バックアップ",
+        autoBackupSubtitle = "1日1回自動的に設定と進捗を保存",
+    cacheCard = "キャッシュとデータ",
+    imageCacheTitle = "画像キャッシュ",
+    imageCacheHint = "カバーとリーダーの一時ファイル",
+    clearCacheBtn = "クリア",
+    clearingBtn = "クリア中...",
+
+    version = "バージョン 2.0.0 · ビルド 200",
+
+    achFirstBook = "初めての本",
+    achFirstBookDesc = "ライブラリに1冊追加する",
+    achReader = "本の虫",
+    achReaderDesc = "ライブラリに10冊",
+    achCollector = "コレクター",
+    achCollectorDesc = "25冊 — 本格的なコレクション！",
+    achFirstComplete = "初読了",
+    achFirstCompleteDesc = "最初のコミックを最後まで読む",
+    achMarathon = "マラソン読者",
+    achMarathonDesc = "20冊読了 — 素晴らしい！",
+    achAuthorFan = "作者ファン",
+    achAuthorFanDesc = "同じ作者の本5冊を所持",
+    achGenreGourmet = "ジャンル通",
+    achGenreGourmetDesc = "3つ以上の異なるジャンル",
+    achBookmarker = "しおり収集家",
+    achBookmarkerDesc = "コミックをお気に入りに追加",
+    achSecretCat = "読書マスター",
+    achSecretCatDesc = "隠れた読書猫を発見した！🐱",
+    achSecretHint = "秘密の実績。探してみよう！"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 中文 (简体)
+// ─────────────────────────────────────────────────────────────────────────────
+
+val ChineseSimplified = AppStrings(
+    languageCode = "zh",
+    back = "返回",
+    ok = "确定",
+    cancel = "取消",
+    navContinue = "继续",
+    navLibrary = "图书馆",
+    navTranslation = "翻译",
+    navSettings = "设置",
+    controlsShow = "显示控制面板",
+    controlsHide = "隐藏控制面板",
+    actionSort = "排序",
+    actionRectangle = "矩形",
+    actionSquare = "方形",
+    actionFile = "文件",
+    actionFolder = "文件夹",
+    readerPages = "分页",
+    readerBookmark = "书签",
+    readerBookmarked = "已加书签",
+    readerToc = "目录",
+    readerTextStyle = "文字样式",
+    readerBrightness = "亮度",
+    readerReadingPresets = "阅读预设",
+
+    settings = "设置",
+    sectionAppearance = "个性化",
+    sectionAppearanceDesc = "主题、颜色、字体、应用图标",
+    sectionReader = "阅读器",
+    sectionReaderDesc = "阅读模式、动画、声音、亮度",
+    sectionLibrary = "图书馆",
+    sectionLibraryDesc = "默认视图、网格列数",
+    sectionTranslation = "翻译",
+    sectionTranslationDesc = "OCR、词典、原文语言",
+    sectionBackup = "备份",
+    sectionBackupDesc = "阅读进度、缓存、自动保存",
+    sectionAbout = "关于",
+    sectionAboutDesc = "说明、功能、库、许可证与联系方式",
+
+    appLanguage = "界面语言",
+    langRu = "Русский",
+    langEn = "English",
+    langJa = "日本語",
+    langZh = "中文",
+    langKo = "한국어",
+
+    themeCard = "主题",
+    colorTheme = "颜色主题",
+    themeSystem = "跟随系统",
+    themeLight = "浅色",
+    themeDark = "深色",
+    themeDynamic = "动态",
+    dynamicColor = "动态颜色 (Material You)",
+    dynamicColorSubtitle = "基于 Android 12+ 壁纸自动配色",
+    amoledDark = "AMOLED 深色",
+    amoledDarkSubtitle = "深色模式使用纯黑背景 (#000)",
+
+    themePresets = "主题预设",
+    themePresetCustom = "自定义",
+    themePresetPaper = "纸质",
+    themePresetGlass = "玻璃",
+    themePresetAmoled = "AMOLED",
+    themePresetNeon = "霓虹",
+    themePresetGray = "灰色",
+    themePresetSepia = "棕褐色",
+    themePresetEink = "电子墨水",
+
+    preview = "预览",
+    previewButton = "按钮",
+    previewCard = "卡片",
+    readerTextPreviewTitle = "阅读预览",
+    readerTextPreviewDescription = "打开书籍前，用紧凑段落预览字号、行高、字重和对齐方式。",
+
+    fontScale = "文字大小",
+    fontScaleSmall = "小",
+    fontScaleNormal = "标准",
+    fontScaleLarge = "大",
+    fontScaleXL = "超大",
+    cornerRadius = "卡片圆角",
+
+    elementColors = "界面颜色",
+    elementColorsHint = "为每个元素选择强调色。「✕」恢复主题默认。",
+    colorPrimary = "主色（按钮、图标）",
+    colorSecondary = "辅色（标签、开关）",
+    colorBackground = "背景色",
+
+    uiSoundsCard = "界面音效",
+    uiSoundsTitle = "界面音效",
+    uiSoundsSubtitle = "按钮和切换的触觉音频反馈",
+
+    appIconCard = "应用图标",
+    appIconTitle = "启动图标",
+    appIconDesc = "从 7 种设计中选择",
+    appIconButton = "打开图标选择",
+
+    readingModeCard = "阅读模式",
+    readingModeDual = "双页",
+    readingModeLtr = "页面 →",
+    readingModeRtl = "← 页面",
+    readingModeWebtoon = "垂直滚动",
+
+    readerPresetsCard = "阅读器预设",
+    readerPresetCustom = "自定义",
+    readerPresetNovel = "小说",
+    readerPresetManga = "漫画",
+    readerPresetNight = "夜间",
+    readerPresetStudy = "学习",
+
+    readerScreenCard = "显示设置",
+    brightnessLabel = "默认亮度",
+    keepScreenOn = "保持屏幕常亮",
+    keepScreenOnSubtitle = "阅读时 FLAG_KEEP_SCREEN_ON",
+    fullscreenMode = "全屏模式",
+    fullscreenModeSubtitle = "隐藏状态栏和导航栏",
+
+    animSoundCard = "动画和声音",
+    pageAnimLabel = "翻页动画",
+    animNone = "无",
+    animSlide = "滑动",
+    animFade = "淡入淡出",
+    pageFlipSound = "翻页声音",
+    pageFlipSoundSubtitle = "翻页时的短促声音",
+    soundStyleLabel = "声音风格",
+    soundPaper = "纸声",
+    soundCrisp = "清脆",
+    soundSoft = "柔和",
+
+    preloadCard = "预加载",
+    preloadLabel = "预读页数",
+    preloadHint = "更多 → 翻页延迟减少，内存使用增加",
+
+    libraryDisplayCard = "显示",
+    libraryDefaultView = "默认视图",
+    libraryViewGrid = "网格",
+    libraryViewList = "列表",
+    libraryGridColumns = "网格列数",
+    libraryTileSize = "磁贴大小",
+    libraryContinueReading = "继续阅读",
+    libraryComicFallback = "漫画",
+    libraryDeleteComicTitle = "删除漫画？",
+    libraryDeleteComicMessage = "“%s”将从书库移除，磁盘上的文件不会删除。",
+    libraryDeleteFolderTitle = "删除文件夹？",
+    libraryDeleteFolderMessage = "“%1\$s”及其中的 %2\$d 个项目将从书库移除，磁盘上的文件不会删除。",
+    libraryQuotes = "摘录",
+    libraryBookmarks = "书签",
+    libraryAchievements = "成就",
+    libraryViewStrips = "垂直条带",
+    libraryQuotesEmptyHint = "在阅读器里保存喜欢的句子，它就会作为独立收藏出现在这里。",
+    libraryBookmarksEmptyHint = "在书库卡片里收藏文件，它们就会在这里单独显示。",
+    libraryDeleteQuoteTitle = "删除摘录？",
+    libraryDeleteAction = "删除",
+    libraryViewAsList = "视图：列表",
+    libraryViewAsGrid = "视图：网格",
+    libraryCoversSquare = "封面：方形",
+    libraryCoversRectangle = "封面：矩形",
+    libraryAdd = "添加",
+    libraryOrderAndFilters = "排序和筛选",
+    libraryReset = "重置",
+    librarySortSection = "排序",
+    librarySortNewest = "最新",
+    librarySortRecent = "最近阅读",
+    librarySortProgress = "进度",
+    librarySortFolderAz = "文件夹 A-Z",
+    libraryStatusSection = "状态",
+    libraryStatusAll = "全部",
+    libraryStatusBookmarked = "已收藏",
+    libraryStatusNew = "新的",
+    libraryStatusReading = "阅读中",
+    libraryStatusCompleted = "已读完",
+    libraryFormatSection = "格式",
+    libraryFormatAll = "全部",
+    libraryFormatImages = "图像",
+    libraryFormatText = "文本",
+    libraryGroupingSection = "分组",
+    libraryGroupingFolder = "按文件夹",
+    libraryGroupingNone = "无",
+    libraryGroupingSeries = "按系列",
+    libraryThumbnailsSection = "缩略图",
+    libraryEmptyTitle = "书库为空",
+    libraryEmptyHint = "请添加 CBZ、CBR、PDF、EPUB 或 FB2 文件",
+    libraryOpenFile = "打开文件",
+    libraryOpenFolder = "打开文件夹",
+    libraryEmptyFolderTitle = "文件夹“%s”中还没有文件",
+    libraryEmptyFolderHint = "请将文件添加到此文件夹，或返回上一级。",
+    libraryCollectionLabel = "合集",
+    librarySave = "保存",
+    libraryEdit = "编辑",
+    libraryTitle = "标题",
+    libraryTagsComma = "标签（逗号分隔）",
+    libraryProgress = "进度",
+    libraryProgressTemplate = "第 %1\$d / %2\$d 页  (%3\$d%%)",
+    libraryGenre = "类型",
+    libraryPublisher = "出版社",
+    libraryYear = "年份",
+    libraryTags = "标签",
+    libraryFormatLabel = "格式",
+    librarySize = "大小",
+    libraryOpen = "打开",
+    libraryRemove = "移除",
+    libraryDelete = "删除",
+    libraryStatsCompleted = "已读完",
+    libraryStatsReading = "阅读中",
+
+    translationCard = "漫画翻译模式",
+    translationHint = "自动翻译页面文字（OCR + MT）",
+    transOff = "关闭",
+    transOcr = "OCR + 翻译",
+    transDict = "词典",
+    ocrLanguageCard = "OCR 语言",
+    ocrLanguageHint = "漫画文字的原始语言",
+    ocrNote = "启用上方的翻译模式以激活 OCR",
+
+    progressCard = "阅读进度",
+    progressHint = "导出和导入已保存的进度、书签和统计",
+    exportBtn = "导出",
+    exportingBtn = "导出中...",
+    importBtn = "导入",
+    importingBtn = "导入中...",
+    autoBackup = "自动备份",
+        autoBackupSubtitle = "每天自动保存一次设置和进度",
+    cacheCard = "缓存和数据",
+    imageCacheTitle = "图像缓存",
+    imageCacheHint = "封面和阅读器临时文件",
+    clearCacheBtn = "清除",
+    clearingBtn = "清除中...",
+
+    version = "版本 2.0.0 · 构建 200",
+
+    achFirstBook = "第一本书",
+    achFirstBookDesc = "向书库添加1部漫画",
+    achReader = "书虫",
+    achReaderDesc = "书库中有10部漫画",
+    achCollector = "收藏家",
+    achCollectorDesc = "25部漫画 — 名副其实的收藏！",
+    achFirstComplete = "首次读完",
+    achFirstCompleteDesc = "读完第一部漫画",
+    achMarathon = "马拉松读者",
+    achMarathonDesc = "读完20部 — 太厉害了！",
+    achAuthorFan = "作者粉丝",
+    achAuthorFanDesc = "收藏同一作者5部作品",
+    achGenreGourmet = "类型达人",
+    achGenreGourmetDesc = "拥有3种以上不同类型",
+    achBookmarker = "书签收集者",
+    achBookmarkerDesc = "将漫画添加到收藏夹",
+    achSecretCat = "阅读大师",
+    achSecretCatDesc = "找到了隐藏的阅读猫！🐱",
+    achSecretHint = "隐藏成就。试着找找吧！"
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 한국어
+// ─────────────────────────────────────────────────────────────────────────────
+
+val Korean = AppStrings(
+    languageCode = "ko",
+    back = "뒤로",
+    ok = "확인",
+    cancel = "취소",
+    navContinue = "계속",
+    navLibrary = "라이브러리",
+    navTranslation = "번역",
+    navSettings = "설정",
+    controlsShow = "컨트롤 패널 표시",
+    controlsHide = "컨트롤 패널 숨기기",
+    actionSort = "정렬",
+    actionRectangle = "직사각형",
+    actionSquare = "정사각형",
+    actionFile = "파일",
+    actionFolder = "폴더",
+    readerPages = "페이지",
+    readerBookmark = "북마크",
+    readerBookmarked = "북마크됨",
+    readerToc = "목차",
+    readerTextStyle = "텍스트 스타일",
+    readerBrightness = "밝기",
+    readerReadingPresets = "읽기 프리셋",
+
+    settings = "설정",
+    sectionAppearance = "커스터마이즈",
+    sectionAppearanceDesc = "테마, 색상, 글꼴, 앱 아이콘",
+    sectionReader = "리더",
+    sectionReaderDesc = "읽기 모드, 애니메이션, 소리, 밝기",
+    sectionLibrary = "라이브러리",
+    sectionLibraryDesc = "기본 보기, 그리드 열",
+    sectionTranslation = "번역",
+    sectionTranslationDesc = "OCR, 사전, 원본 언어",
+    sectionBackup = "백업",
+    sectionBackupDesc = "읽기 진도, 캐시, 자동 저장",
+    sectionAbout = "앱 정보",
+    sectionAboutDesc = "설명, 기능, 라이브러리, 라이선스, 연락처",
+
+    appLanguage = "앱 언어",
+    langRu = "Русский",
+    langEn = "English",
+    langJa = "日本語",
+    langZh = "中文",
+    langKo = "한국어",
+
+    themeCard = "테마",
+    colorTheme = "색상 테마",
+    themeSystem = "시스템",
+    themeLight = "밝게",
+    themeDark = "어둡게",
+    themeDynamic = "다이나믹",
+    dynamicColor = "다이나믹 컬러 (Material You)",
+    dynamicColorSubtitle = "Android 12+ 배경화면 기반 자동 팔레트",
+    amoledDark = "AMOLED 다크",
+    amoledDarkSubtitle = "다크 모드에서 순수 검정 배경 (#000)",
+
+    themePresets = "테마 프리셋",
+    themePresetCustom = "사용자 지정",
+    themePresetPaper = "종이",
+    themePresetGlass = "글래스",
+    themePresetAmoled = "AMOLED",
+    themePresetNeon = "네온",
+    themePresetGray = "회색",
+    themePresetSepia = "세피아",
+    themePresetEink = "전자잉크",
+
+    preview = "미리보기",
+    previewButton = "버튼",
+    previewCard = "카드",
+    readerTextPreviewTitle = "읽기 미리보기",
+    readerTextPreviewDescription = "책을 열기 전에 글자 크기, 줄 간격, 굵기, 정렬을 짧은 문단으로 확인합니다.",
+
+    fontScale = "텍스트 크기",
+    fontScaleSmall = "소",
+    fontScaleNormal = "기본",
+    fontScaleLarge = "대",
+    fontScaleXL = "특대",
+    cornerRadius = "카드 모서리",
+
+    elementColors = "UI 색상",
+    elementColorsHint = "각 요소의 강조색을 선택하세요. '✕'는 테마 기본값으로 재설정합니다.",
+    colorPrimary = "기본 색상 (버튼, 아이콘)",
+    colorSecondary = "보조 색상 (칩, 스위치)",
+    colorBackground = "배경 색상",
+
+    uiSoundsCard = "UI 소리",
+    uiSoundsTitle = "UI 소리",
+    uiSoundsSubtitle = "버튼 및 전환의 청각적 피드백",
+
+    appIconCard = "앱 아이콘",
+    appIconTitle = "런처 아이콘",
+    appIconDesc = "7가지 디자인 중 선택",
+    appIconButton = "아이콘 선택 열기",
+
+    readingModeCard = "읽기 모드",
+    readingModeDual = "2페이지",
+    readingModeLtr = "페이지 →",
+    readingModeRtl = "← 페이지",
+    readingModeWebtoon = "세로 스크롤",
+
+    readerPresetsCard = "리더 프리셋",
+    readerPresetCustom = "사용자 지정",
+    readerPresetNovel = "소설",
+    readerPresetManga = "만화",
+    readerPresetNight = "야간",
+    readerPresetStudy = "학습",
+
+    readerScreenCard = "화면 설정",
+    brightnessLabel = "기본 밝기",
+    keepScreenOn = "화면 켜기 유지",
+    keepScreenOnSubtitle = "읽는 동안 FLAG_KEEP_SCREEN_ON",
+    fullscreenMode = "전체 화면 모드",
+    fullscreenModeSubtitle = "상태 표시줄 및 탐색 숨기기",
+
+    animSoundCard = "애니메이션 및 소리",
+    pageAnimLabel = "페이지 넘기기 애니메이션",
+    animNone = "없음",
+    animSlide = "슬라이드",
+    animFade = "페이드",
+    pageFlipSound = "페이지 넘기기 소리",
+    pageFlipSoundSubtitle = "페이지 전환 시 짧은 소리",
+    soundStyleLabel = "소리 스타일",
+    soundPaper = "종이",
+    soundCrisp = "선명",
+    soundSoft = "부드러운",
+
+    preloadCard = "미리 로드",
+    preloadLabel = "앞 페이지 수",
+    preloadHint = "많을수록 페이지 지연 감소, 메모리 사용 증가",
+
+    libraryDisplayCard = "표시",
+    libraryDefaultView = "기본 보기",
+    libraryViewGrid = "그리드",
+    libraryViewList = "목록",
+    libraryGridColumns = "그리드 열",
+    libraryTileSize = "타일 크기",
+    libraryContinueReading = "이어 읽기",
+    libraryComicFallback = "코믹",
+    libraryDeleteComicTitle = "코믹을 삭제할까요?",
+    libraryDeleteComicMessage = "\"%s\"는 라이브러리에서만 제거되며 파일은 디스크에 남습니다.",
+    libraryDeleteFolderTitle = "폴더를 삭제할까요?",
+    libraryDeleteFolderMessage = "\"%1\$s\"와 그 안의 %2\$d개 항목은 라이브러리에서만 제거되며 파일은 디스크에 남습니다.",
+    libraryQuotes = "문구",
+    libraryBookmarks = "북마크",
+    libraryAchievements = "업적",
+    libraryViewStrips = "세로 스트립",
+    libraryQuotesEmptyHint = "리더에서 마음에 드는 문장을 저장하면 여기에서 별도 컬렉션으로 볼 수 있습니다.",
+    libraryBookmarksEmptyHint = "라이브러리 카드에서 파일을 북마크하면 여기에서 별도 컬렉션으로 볼 수 있습니다.",
+    libraryDeleteQuoteTitle = "문구를 삭제할까요?",
+    libraryDeleteAction = "삭제",
+    libraryViewAsList = "보기: 목록",
+    libraryViewAsGrid = "보기: 그리드",
+    libraryCoversSquare = "표지: 정사각형",
+    libraryCoversRectangle = "표지: 직사각형",
+    libraryAdd = "추가",
+    libraryOrderAndFilters = "정렬과 필터",
+    libraryReset = "초기화",
+    librarySortSection = "정렬",
+    librarySortNewest = "최신순",
+    librarySortRecent = "최근 읽음",
+    librarySortProgress = "진행률",
+    librarySortFolderAz = "폴더 A-Z",
+    libraryStatusSection = "상태",
+    libraryStatusAll = "전체",
+    libraryStatusBookmarked = "북마크",
+    libraryStatusNew = "새 항목",
+    libraryStatusReading = "읽는 중",
+    libraryStatusCompleted = "완독",
+    libraryFormatSection = "형식",
+    libraryFormatAll = "전체",
+    libraryFormatImages = "이미지",
+    libraryFormatText = "텍스트",
+    libraryGroupingSection = "그룹화",
+    libraryGroupingFolder = "폴더별",
+    libraryGroupingNone = "없음",
+    libraryGroupingSeries = "시리즈별",
+    libraryThumbnailsSection = "썸네일",
+    libraryEmptyTitle = "라이브러리가 비어 있습니다",
+    libraryEmptyHint = "CBZ, CBR, PDF, EPUB 또는 FB2 파일을 추가하세요",
+    libraryOpenFile = "파일 열기",
+    libraryOpenFolder = "폴더 열기",
+    libraryEmptyFolderTitle = "\"%s\" 폴더에 파일이 아직 없습니다",
+    libraryEmptyFolderHint = "이 폴더에 파일을 추가하거나 한 단계 위로 이동하세요.",
+    libraryCollectionLabel = "컬렉션",
+    librarySave = "저장",
+    libraryEdit = "편집",
+    libraryTitle = "제목",
+    libraryTagsComma = "태그(쉼표로 구분)",
+    libraryProgress = "진행률",
+    libraryProgressTemplate = "페이지 %1\$d / %2\$d  (%3\$d%%)",
+    libraryGenre = "장르",
+    libraryPublisher = "출판사",
+    libraryYear = "연도",
+    libraryTags = "태그",
+    libraryFormatLabel = "형식",
+    librarySize = "크기",
+    libraryOpen = "열기",
+    libraryRemove = "해제",
+    libraryDelete = "삭제",
+    libraryStatsCompleted = "완독",
+    libraryStatsReading = "읽는 중",
+
+    translationCard = "만화 번역 모드",
+    translationHint = "페이지의 텍스트를 자동 번역 (OCR + MT)",
+    transOff = "끄기",
+    transOcr = "OCR + 번역",
+    transDict = "사전",
+    ocrLanguageCard = "OCR 언어",
+    ocrLanguageHint = "만화 텍스트의 원본 언어",
+    ocrNote = "OCR을 활성화하려면 위의 번역 모드를 활성화하세요",
+
+    progressCard = "읽기 진도",
+    progressHint = "저장된 진도, 북마크 및 통계 내보내기/가져오기",
+    exportBtn = "내보내기",
+    exportingBtn = "내보내는 중...",
+    importBtn = "가져오기",
+    importingBtn = "가져오는 중...",
+    autoBackup = "자동 백업",
+        autoBackupSubtitle = "하루에 한 번 설정과 진행 상황을 자동 저장",
+    cacheCard = "캐시 및 데이터",
+    imageCacheTitle = "이미지 캐시",
+    imageCacheHint = "표지 및 리더 임시 파일",
+    clearCacheBtn = "지우기",
+    clearingBtn = "지우는 중...",
+
+    version = "버전 2.0.0 · 빌드 200",
+
+    achFirstBook = "첫 번째 책",
+    achFirstBookDesc = "라이브러리에 만화 1권 추가",
+    achReader = "독서광",
+    achReaderDesc = "라이브러리에 만화 10권",
+    achCollector = "수집가",
+    achCollectorDesc = "만화 25권 — 진지한 컬렉션!",
+    achFirstComplete = "첫 완독",
+    achFirstCompleteDesc = "만화 한 권을 끝까지 읽기",
+    achMarathon = "마라톤 독자",
+    achMarathonDesc = "만화 20권 완독 — 대단해요!",
+    achAuthorFan = "작가 팬",
+    achAuthorFanDesc = "같은 작가의 책 5권 보유",
+    achGenreGourmet = "장르 미식가",
+    achGenreGourmetDesc = "3가지 이상의 다른 장르",
+    achBookmarker = "책갈피 수집가",
+    achBookmarkerDesc = "만화를 즐겨찾기에 추가",
+    achSecretCat = "독서 마스터",
+    achSecretCatDesc = "숨겨진 독서 고양이를 찾았어요! 🐱",
+    achSecretHint = "숨겨진 업적. 찾아보세요!"
+)

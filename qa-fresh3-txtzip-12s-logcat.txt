@@ -1,0 +1,725 @@
+--------- beginning of main
+06-07 06:33:20.702  5592  5824 I acky    : dispose()
+--------- beginning of system
+06-07 06:33:20.730   717   836 D ActivityManager: freezing 5592 com.google.android.googlequicksearchbox:search
+06-07 06:33:21.266  5641  5641 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+06-07 06:33:21.266  5641  5641 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+06-07 06:33:21.513   717   764 I ActivityManager: Test idle passed
+06-07 06:33:21.936   717   886 D WifiClientModeImpl[90525:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-07 06:33:21.937   717   886 D WifiDataStall: tx tput in kbps: 11000
+06-07 06:33:21.938   717   886 D WifiDataStall: rx tput in kbps: 11000
+06-07 06:33:21.939   717   886 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-07 06:33:21.940   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:21.944   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:21.945   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:21.945   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:21.946   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:21.946   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:21.946   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:21.947   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:21.949   717   886 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1865132161 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-07 06:33:21.949   717   886 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-07 06:33:21.949   717   886 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 1209185209 RSSI -50 txSpeed -1
+06-07 06:33:21.950   717   886 D WifiClientModeImpl[90525:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3026] from screen [on:0 period:-1597425890] score=60
+06-07 06:33:21.996  5641  5641 D nativeloader: Load /data/app/~~iG2ufI3_vi53ECOAPaS35g==/com.example.mrcomic.debug-kiw3695QiT-IMpx9N1M8Yw==/base.apk!/lib/x86_64/libdjvu.so using class loader ns clns-9 (caller=/data/app/~~iG2ufI3_vi53ECOAPaS35g==/com.example.mrcomic.debug-kiw3695QiT-IMpx9N1M8Yw==/base.apk!classes3.dex): ok
+06-07 06:33:22.026  5641  5641 D nativeloader: Load /data/app/~~iG2ufI3_vi53ECOAPaS35g==/com.example.mrcomic.debug-kiw3695QiT-IMpx9N1M8Yw==/base.apk!/lib/x86_64/libmrcomic_djvu.so using class loader ns clns-9 (caller=/data/app/~~iG2ufI3_vi53ECOAPaS35g==/com.example.mrcomic.debug-kiw3695QiT-IMpx9N1M8Yw==/base.apk!classes3.dex): ok
+06-07 06:33:22.540  5641  5652 W e.mrcomic.debug: Suspending all threads took: 10.300ms
+06-07 06:33:22.597  5641  5652 W e.mrcomic.debug: Cleared Reference was only reachable from finalizer (only reported once)
+06-07 06:33:22.961   717  1864 I MediaSessionStack: addSession to bottom of stack | record: com.example.mrcomic.debug/MrComicReaderTts/8 (userId=0)
+06-07 06:33:23.004  1116  1116 I PlayerSettingsManager: getPlayerRepeatMode: no active player
+06-07 06:33:23.005  1116  1116 I PlayerSettingsManager: getPlayerShuffleMode: no active player
+06-07 06:33:23.007  1116  1116 I PlayerSettingsManager: updateRemoteDevice: STATE_REPEAT_OFF, STATE_SHUFFLE_OFF
+06-07 06:33:23.088   989  1049 W Looper  : Slow dispatch took 67ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=android.media.session.MediaSessionManager$SessionsChangedWrapper$1$$ExternalSyntheticLambda0@fdc17ff m=0
+06-07 06:33:23.113  1116  1116 I bluetooth: system/btif/avrcp/avrcp_service.cc:582 SendPlayerSettingsChanged: {attribute=PlayerAttribute::REPEAT : value=PlayerRepeatValue::OFF}, {attribute=PlayerAttribute::SHUFFLE : value=PlayerShuffleValue::OFF}
+06-07 06:33:23.252  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b1865de78) locale list changing from [] to [en-US]
+06-07 06:33:23.349  5641  5652 I e.mrcomic.debug: Background concurrent mark compact GC freed 4951KB AllocSpace bytes, 61(4020KB) LOS objects, 49% free, 8412KB/16MB, paused 30.406ms,4.522ms total 1.292s
+06-07 06:33:23.354   717  1863 D TextToSpeechManagerPerUserService: Trying to start connection to TTS engine: com.google.android.tts
+06-07 06:33:23.355  5641  5641 I TextToSpeech: Sucessfully bound to com.google.android.tts
+06-07 06:33:23.387   717   717 D ActivityManager: sync unfroze 2912 com.google.android.tts for 6
+06-07 06:33:23.428   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:23.435   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:23.440   486   522 I netd    : tetherGetStats() -> {[]} <3.08ms>
+06-07 06:33:23.615  2912  2912 I GoogleTtsServicePeer: Creating Google TTS service, version googletts.google-speech-apk_20241125.02_p2.702443970
+06-07 06:33:23.632  2912  2912 I ExoPlayerImpl: Init 22d2e02 [AndroidXMedia3/1.5.0] [emu64xa, sdk_gphone64_x86_64, Google, 36]
+06-07 06:33:23.709  2912  2912 I ExoPlayerImpl: Init 8cd6313 [AndroidXMedia3/1.5.0] [emu64xa, sdk_gphone64_x86_64, Google, 36]
+06-07 06:33:23.801   717  1864 W OptProp : Cannot read opt property android.window.PROPERTY_COMPAT_IGNORE_REQUESTED_ORIENTATION
+06-07 06:33:23.802   717  1864 W OptProp : Cannot read opt property android.window.PROPERTY_COMPAT_ALLOW_IGNORING_ORIENTATION_REQUEST_WHEN_LOOP_DETECTED
+06-07 06:33:24.024  2912  2912 I PipelineReaderImpl: Initializing en-us-x-iog-lstm-embedded from disk
+06-07 06:33:24.081   717  1869 D MediaSessionService: onSessionPlaybackStateChanged: record=com.example.mrcomic.debug/MrComicReaderTts/8 (userId=0) playbackState=PlaybackState {state=STOPPED(1), position=0, buffered position=0, speed=0.0, updated=4612282, actions=567, custom actions=[], active item id=-1, error=null}
+06-07 06:33:24.102  5641  5641 I Choreographer: Skipped 166 frames!  The application may be doing too much work on its main thread.
+06-07 06:33:24.317   717  1869 D CompatChangeReporter: Compat change id reported: 311208749; UID 10216; state: ENABLED
+06-07 06:33:24.320   717  1869 D CompatChangeReporter: Compat change id reported: 296558535; UID 10216; state: ENABLED
+06-07 06:33:24.322   717  1869 D CompatChangeReporter: Compat change id reported: 317799821; UID 10216; state: ENABLED
+06-07 06:33:24.324   717  1869 D CompatChangeReporter: Compat change id reported: 313677553; UID 10216; state: ENABLED
+06-07 06:33:24.325   717  1869 I ActivityManager: Background started FGS: Allowed [callingPackage: com.example.mrcomic.debug; callingUid: 10216; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { act=com.example.mrcomic.reader.tts.service.STOP xflg=0x4 cmp=com.example.mrcomic.debug/com.example.feature.reader.ui.ReaderTtsPlaybackService }; code:PROC_STATE_TOP; tempAllowListReason:<null>; allowWiu:12; targetSdkVersion:35; callerTargetSdkVersion:35; startForegroundCount:0; bindFromPackage:null: isBindService:false]
+06-07 06:33:24.327   717  1869 D CompatChangeReporter: Compat change id reported: 311208629; UID 10216; state: ENABLED
+06-07 06:33:24.349   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:24.374   717  1869 W ForegroundServiceTypeLoggerModule: Logger should be tracking FGS types correctly for UID 10216 in package com.example.mrcomic.debug
+06-07 06:33:24.374   717  1869 W ForegroundServiceTypeLoggerModule: Logger should be tracking FGS types correctly for UID 10216 in package com.example.mrcomic.debug
+06-07 06:33:24.397   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:24.403  5641  5658 I HWUI    : Davey! duration=3059ms; Flags=0, FrameTimelineVsyncId=54895, IntendedVsync=4609531029534, Vsync=4612297696090, InputEventId=0, HandleInputStart=4612310255300, AnimationStart=4612310302700, PerformTraversalsStart=4612396810300, DrawStart=4612397037700, FrameDeadline=4612431029418, FrameStartTime=4612307948300, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=4612459448300, SyncStart=4612463954600, IssueDrawCommandsStart=4612464196000, SwapBuffers=4612528190400, FrameCompleted=4612595382900, DequeueBufferDuration=58300, QueueBufferDuration=52223600, GpuCompleted=4612559581200, SwapBuffersCompleted=4612595382900, DisplayPresentTime=0, CommandSubmissionCompleted=4612528190400, 
+06-07 06:33:24.560  2912  2916 W gle.android.tts: Suspending all threads took: 8.429ms
+06-07 06:33:24.592  2912  2916 W gle.android.tts: Reducing the number of considered missed Gc histogram windows from 199 to 100
+06-07 06:33:24.754   717   717 I NotificationService: Cannot find enqueued record for key: 0|com.example.mrcomic.debug|3107|null|10216
+06-07 06:33:24.812  5641  5905 D CompatChangeReporter: Compat change id reported: 312399441; UID 10216; state: ENABLED
+06-07 06:33:24.956   717   886 D WifiClientModeImpl[90525:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-07 06:33:24.957   717   886 D WifiDataStall: tx tput in kbps: 11000
+06-07 06:33:24.957   717   886 D WifiDataStall: rx tput in kbps: 11000
+06-07 06:33:24.957   717   886 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-07 06:33:24.957   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:24.958   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:24.959   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:24.960   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:24.960   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:24.961   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:24.961   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:24.961   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:24.962   717   886 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1865132161 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-07 06:33:24.963   717   886 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-07 06:33:24.964   717   886 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 1209185209 RSSI -50 txSpeed -1
+06-07 06:33:24.965   717   886 D WifiClientModeImpl[90525:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3014] from screen [on:0 period:-1597422875] score=60
+06-07 06:33:26.520   717   764 I ActivityManager: Test idle passed
+06-07 06:33:26.938  1490  1499 W hbox:interactor: Reducing the number of considered missed Gc histogram windows from 437 to 100
+06-07 06:33:27.381  2912  2912 E tflite  : third_party/tensorflow/lite/core/subgraph.cc:1062 tensor.data.raw != nullptr was not true.
+06-07 06:33:27.702   973   973 D wpa_supplicant: nl80211: Drv Event 64 (NL80211_CMD_NOTIFY_CQM) received for wlan0
+06-07 06:33:27.702   973   973 D wpa_supplicant: nl80211: Beacon loss event
+06-07 06:33:27.702   973   973 D wpa_supplicant: wlan0: Event BEACON_LOSS (53) received
+06-07 06:33:27.702   973   973 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS 
+06-07 06:33:27.958  5641  5652 I e.mrcomic.debug: Background concurrent mark compact GC freed 6673KB AllocSpace bytes, 7(1072KB) LOS objects, 49% free, 9684KB/18MB, paused 3.309ms,9.220ms total 688.617ms
+06-07 06:33:27.976   717   886 D WifiClientModeImpl[90525:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-07 06:33:27.977   717   886 D WifiDataStall: tx tput in kbps: 11000
+06-07 06:33:27.977   717   886 D WifiDataStall: rx tput in kbps: 11000
+06-07 06:33:27.978   717   886 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-07 06:33:27.986   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:27.986   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:27.986   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:27.987   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:27.987   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:27.992   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:27.992   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:27.992   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:27.994   717   886 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1865132161 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-07 06:33:28.013   717   886 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-07 06:33:28.013   717   886 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 1209185209 RSSI -50 txSpeed -1
+06-07 06:33:28.039   717   886 D WifiClientModeImpl[90525:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3073] from screen [on:0 period:-1597419801] score=60
+06-07 06:33:28.319  2912  2912 I ComposerWrapperImpl: Done initializing en-us-x-iog-lstm-embedded
+06-07 06:33:28.327   717   717 D TextToSpeechManagerPerUserService: Connected successfully to TTS engine: com.google.android.tts
+06-07 06:33:28.329   717  1869 W ProcessStats: Tracking association SourceState{c07079f system/1000 BFgs #3344} whose proc state 4 is better than process ProcessState{7c6a5b6 com.google.android.tts/10150 pkg=com.google.android.tts} proc state 15 (45 skipped)
+06-07 06:33:28.333  5641  5660 I TextToSpeech: Connected to TTS engine
+06-07 06:33:28.593  2912  5983 I GoogleTTSServiceImpl: currentLocale = en-US
+06-07 06:33:28.717  2912  5983 I GoogleTTSServiceImpl: For default lang en-us is name en-US-language (en-us-x-iog-server)
+06-07 06:33:28.718  5641  5991 I TextToSpeech: Setting up the connection to TTS engine...
+06-07 06:33:28.757   717   836 D ActivityManager: freezing 5572 com.google.android.gms
+06-07 06:33:29.210  1490  1870 I bbax    : (REDACTED) getHotwordActive::active query: %s, watch: %s, devices connected: %s
+06-07 06:33:29.348  5641  5652 I e.mrcomic.debug: Background concurrent mark compact GC freed 10MB AllocSpace bytes, 1(284KB) LOS objects, 49% free, 9916KB/19MB, paused 3.641ms,5.808ms total 178.414ms
+06-07 06:33:29.986  2912  5983 I GoogleTTSServiceImpl: currentLocale = en-US
+06-07 06:33:29.989  2912  5983 I GoogleTTSServiceImpl: currentLocale = en-US
+06-07 06:33:29.994  2912  5983 I GoogleTTSServiceImpl: For default lang en-us is name en-US-language (en-us-x-iog-server)
+06-07 06:33:30.118  2912  5983 I GoogleTTSServiceImpl: currentLocale = en-US
+06-07 06:33:30.123  5641  5641 I Choreographer: Skipped 82 frames!  The application may be doing too much work on its main thread.
+06-07 06:33:30.170  5641  5657 I HWUI    : Davey! duration=1403ms; Flags=0, FrameTimelineVsyncId=56627, IntendedVsync=4616947695904, Vsync=4618314362516, InputEventId=0, HandleInputStart=4618330562200, AnimationStart=4618330686300, PerformTraversalsStart=4618333933000, DrawStart=4618334082200, FrameDeadline=4616997695902, FrameStartTime=4618328720600, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=4618335137500, SyncStart=4618335242200, IssueDrawCommandsStart=4618335306600, SwapBuffers=4618337623800, FrameCompleted=4618351560700, DequeueBufferDuration=45200, QueueBufferDuration=395200, GpuCompleted=4618351560700, SwapBuffersCompleted=4618339087500, DisplayPresentTime=0, CommandSubmissionCompleted=4618337623800, 
+06-07 06:33:31.037   717   886 D WifiClientModeImpl[90525:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-07 06:33:31.038   717   886 D WifiDataStall: tx tput in kbps: 11000
+06-07 06:33:31.038   717   886 D WifiDataStall: rx tput in kbps: 11000
+06-07 06:33:31.039   717   886 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-07 06:33:31.040   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:31.042   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:31.047   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:31.048   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:31.050   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:31.052   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:31.056   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:31.057   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:31.058   717   886 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1865132161 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-07 06:33:31.061   717   886 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-07 06:33:31.061   717   886 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 1209185209 RSSI -50 txSpeed -1
+06-07 06:33:31.062   717   886 D WifiClientModeImpl[90525:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3021] from screen [on:0 period:-1597416778] score=60
+06-07 06:33:31.204  5641  5652 I e.mrcomic.debug: Background concurrent mark compact GC freed 10MB AllocSpace bytes, 47(888KB) LOS objects, 49% free, 9504KB/18MB, paused 6.402ms,10.676ms total 401.185ms
+06-07 06:33:31.540   717   764 I ActivityManager: Test idle passed
+06-07 06:33:32.381  5641  5641 D ReadingAnalytics: reader_opened comicId=ad1ba245-99f3-4391-9a14-03cc3aa42e57 format=TXT totalPages=1 startPage=0 mode=PAGE_LTR startedAt=1780814012378 resumed=true
+06-07 06:33:32.536  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b18691db8) locale list changing from [] to [en-US]
+06-07 06:33:32.536  5641  5641 I WebViewFactory: Loading com.google.android.webview version 133.0.6943.137 (code 694313738)
+06-07 06:33:32.537  5641  5641 W ResourcesManager: Found a null ResourcesImpl, skipped.
+06-07 06:33:32.537  5641  5641 W ResourcesManager: Found a null ResourcesImpl, skipped.
+06-07 06:33:32.537  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b18670a78) locale list changing from [] to [en-US]
+06-07 06:33:32.539  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b18675258) locale list changing from [] to [en-US]
+06-07 06:33:32.543  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b18672378) locale list changing from [] to [en-US]
+06-07 06:33:32.546  5641  5641 V ResourcesManager: The following library key has been added: ResourcesKey{ mHash=dd2cb1b6 mResDir=null mSplitDirs=[] mOverlayDirs=[] mLibDirs=[/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk,/data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk,/system_ext/framework/androidx.window.extensions.jar] mDisplayId=0 mOverrideConfig=v36 mCompatInfo={420dpi always-compat} mLoaders=[]}
+06-07 06:33:32.558  5641  5641 W e.mrcomic.debug: Failed to find entry 'classes.dex': Entry not found
+06-07 06:33:32.573  5641  5641 D nativeloader: Configuring clns-10 for other apk /data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk. target_sdk_version=34, uses_libraries=ALL, library_path=/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/lib/x86_64:/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk!/lib/x86_64:/data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+06-07 06:33:32.582  5641  5641 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+06-07 06:33:32.600  5641  5641 D nativeloader: Configuring clns-11 for other apk /data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/lib/x86_64:/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk!/lib/x86_64:/data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk!/lib/x86_64, permitted_path=/data:/mnt/expand
+06-07 06:33:32.831  5641  5641 I cr_WVCFactoryProvider: version=133.0.6943.137 (694313738) minSdkVersion=29 isBundle=false multiprocess=true packageId=2
+06-07 06:33:32.863  5641  5641 D nativeloader: Load /data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk!/lib/x86_64/libmonochrome_64.so using class loader ns clns-11 (caller=/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk): ok
+06-07 06:33:32.882  5641  5641 D nativeloader: Load /system/lib64/libwebviewchromium_plat_support.so using class loader ns clns-11 (caller=/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk): ok
+06-07 06:33:32.917  5641  5999 E chromium: [0607/063332.912667:ERROR:variations_seed_loader.cc(39)] Seed missing signature.
+06-07 06:33:32.924  5641  5999 I cr_VariationsUtils: Failed reading seed file "/data/user/0/com.example.mrcomic.debug/app_webview/variations_seed_new"
+06-07 06:33:32.944  5641  5999 I chromium: [0607/063332.936780:INFO:variations_seed_loader.cc(67)] Failed to open file for reading.: No such file or directory (2)
+06-07 06:33:32.945  5641  5999 I cr_VariationsUtils: Failed reading seed file "/data/user/0/com.example.mrcomic.debug/app_webview/variations_seed"
+06-07 06:33:32.950  5641  5999 I cr_VariationsUtils: Requesting new seed from IVariationsSeedServer
+06-07 06:33:32.961   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:32.961  5641  5641 I cr_LibraryLoader: Successfully loaded native library
+06-07 06:33:32.962   717  1869 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 10165, packageName = null, attributionTag = null, token = android.os.Binder@409e679, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+06-07 06:33:32.974   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:32.982   489   489 D Zygote  : Forked child process 6001
+06-07 06:33:32.984   717   765 I ActivityManager: Start proc 6001:com.google.android.webview:webview_service/u0a165 for service {com.google.android.webview/org.chromium.android_webview.services.VariationsSeedServer}
+06-07 06:33:32.985   717   765 I ActivityManager: ProcessObserver broadcast disabled
+06-07 06:33:32.985   486   522 I netd    : tetherGetStats() -> {[]} <0.77ms>
+06-07 06:33:32.996  5641  5641 I cr_CachingUmaRecorder: Flushed 6 samples from 6 histograms, 0 samples were dropped.
+06-07 06:33:33.029  5641  5641 I cr_CombinedPProvider: #registerProvider() provider:WV.C8@b3af205 isPolicyCacheEnabled:false policyProvidersSize:0
+06-07 06:33:33.034  5641  5641 I cr_PolicyProvider: #setManagerAndSource() 0
+06-07 06:33:33.058  6001  6001 I webview_service: Using CollectorTypeCMC GC.
+06-07 06:33:33.075  6001  6001 W webview_service: Unexpected CPU variant for x86: x86_64.
+06-07 06:33:33.075  6001  6001 W webview_service: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+06-07 06:33:33.105   717  1863 V GrammaticalInflectionUtils: AttributionSource: AttributionSource { uid = 99002, packageName = null, attributionTag = null, token = android.os.Binder@409e679, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+06-07 06:33:33.112  6001  6001 E webview_service: Not starting debugger since process cannot load the jdwp agent.
+06-07 06:33:33.134  6001  6001 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-07 06:33:33.159  1059  1059 D Zygote  : Forked child process 6013
+06-07 06:33:33.197   717   765 W ActivityManager: Slow operation: 89ms so far, now at startProcess: returned from zygote!
+06-07 06:33:33.197  6013  6013 I ocessService0:0: Using CollectorTypeCMC GC.
+06-07 06:33:33.200   717   765 W ActivityManager: Slow operation: 92ms so far, now at startProcess: done updating battery stats
+06-07 06:33:33.201   717   765 W ActivityManager: Slow operation: 93ms so far, now at startProcess: building log message
+06-07 06:33:33.201   717   765 I ActivityManager: Start proc 6013:com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0/u0i2 for  {com.example.mrcomic.debug/org.chromium.content.app.SandboxedProcessService0:0}
+06-07 06:33:33.201   717   765 W ActivityManager: Slow operation: 93ms so far, now at startProcess: starting to update pids map
+06-07 06:33:33.203   717   765 I ActivityManager: ProcessObserver broadcast disabled
+06-07 06:33:33.203   717   765 W ActivityManager: Slow operation: 95ms so far, now at startProcess: done updating pids map
+06-07 06:33:33.206  6013  6013 W ocessService0:0: Unexpected CPU variant for x86: x86_64.
+06-07 06:33:33.206  6013  6013 W ocessService0:0: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+06-07 06:33:33.219  6013  6013 E ocessService0:0: Not starting debugger since process cannot load the jdwp agent.
+06-07 06:33:33.239  6001  6001 D CompatChangeReporter: Compat change id reported: 242716250; UID 10165; state: ENABLED
+06-07 06:33:33.242   717  1869 D ActivityManager: sync unfroze 5572 com.google.android.gms for 6
+06-07 06:33:33.245  6013  6013 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-07 06:33:33.270   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:33.271   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:33.283  5641  5641 I cr_CombinedPProvider: #linkNativeInternal() 1
+06-07 06:33:33.296  6013  6013 D CompatChangeReporter: Compat change id reported: 242716250; UID 99002; state: ENABLED
+06-07 06:33:33.300  5641  5641 I cr_AppResProvider: #getApplicationRestrictionsFromUserManager() Bundle[EMPTY_PARCEL]
+06-07 06:33:33.300  5641  5641 I cr_PolicyProvider: #notifySettingsAvailable() 0
+06-07 06:33:33.300  5641  5641 I cr_CombinedPProvider: #onSettingsAvailable() 0
+06-07 06:33:33.300  5641  5641 I cr_CombinedPProvider: #flushPolicies()
+06-07 06:33:33.374  6001  6001 W webview_service: Failed to find entry 'classes.dex': Entry not found
+06-07 06:33:33.382  6001  6001 D nativeloader: Configuring clns-9 for other apk /data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk. target_sdk_version=34, uses_libraries=ALL, library_path=/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/lib/x86_64:/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk!/lib/x86_64:/data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.google.android.webview
+--------- beginning of kernel
+06-07 06:33:33.336     0     0 W servicemanager: Isolated app with UID 99002 requested 'network_management', but the service is not allowed for isolated apps.
+06-07 06:33:33.389  6001  6001 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+06-07 06:33:33.393  6013  6013 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+06-07 06:33:33.434  6013  6013 I ocessService0:0: AssetManager2(0x755b18657118) locale list changing from [] to [en-US]
+06-07 06:33:33.410     0     0 W servicemanager: Isolated app with UID 99002 requested 'connectivity', but the service is not allowed for isolated apps.
+06-07 06:33:33.457  6013  6013 I LoadedApk: No resource references to update in package com.google.android.trichromelibrary
+06-07 06:33:33.472  6013  6013 I cr_WebViewApkApp: version=133.0.6943.137 (694313738) minSdkVersion=29 isBundle=false processName=com.google.android.webview:sandboxed_process0:org.chromium.content.app.SandboxedProcessService0:0
+06-07 06:33:33.477  6001  6001 D nativeloader: Configuring clns-10 for other apk /data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk. target_sdk_version=34, uses_libraries=, library_path=/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/lib/x86_64:/data/app/~~z82aD-9IAb-4SYQOkcg78w==/com.google.android.webview-O2A3qHtA8Fzi6-jx-hUQuQ==/WebViewGoogle.apk!/lib/x86_64:/data/app/~~ZTpOcjvcduUaHbydtFwkCw==/com.google.android.trichromelibrary_694313738-JJ0mg2mOaEdXXrPonxCEIA==/TrichromeLibrary.apk!/lib/x86_64, permitted_path=/data:/mnt/expand:/data/user/0/com.google.android.webview
+06-07 06:33:33.486  5572  5572 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.safetynet.service.START xflg=0x4 pkg=com.google.android.gms }
+06-07 06:33:33.486  5572  5572 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.safetynet.service.START xflg=0x4 pkg=com.google.android.gms }
+06-07 06:33:33.504   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:33.512  6020  6020 W screencap: Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: SurfaceFlingerAIDL
+06-07 06:33:33.513  6020  6020 W BpBinder: Linking to death on android.gui.ISurfaceComposer but there are no threads (yet?) listening to incoming transactions. See ProcessState::startThreadPool and ProcessState::setThreadPoolMaxThreadCount. Generally you should setup the binder threadpool before other initialization steps.
+06-07 06:33:33.472     0     0 W servicemanager: Isolated app with UID 99002 requested 'content_capture', but the service is not allowed for isolated apps.
+06-07 06:33:33.516  6020  6020 W ProcessState: Extra binder thread started, but 0 threads requested. Do not use *startThreadPool when zero threads are requested.
+06-07 06:33:33.530  6001  6001 I webview_service: AssetManager2(0x755b18657a78) locale list changing from [] to [en-US]
+06-07 06:33:33.534  6013  6013 I cr_ChildProcessService: Creating new ChildProcessService pid=6013
+06-07 06:33:33.555   562   573 E HwcComposer: getLuts failed Status(-8, EX_SERVICE_SPECIFIC): '8: '
+06-07 06:33:33.556   562   573 E HWComposer: getLuts: getLuts failed for display 4619827259835644672: UNSUPPORTED (8)
+06-07 06:33:33.534     0     0 I servicemanager: Caller(pid=6020,uid=2000,sid=u:r:shell:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+06-07 06:33:33.547     0     0 I servicemanager: Caller(pid=6020,uid=2000,sid=u:r:shell:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+06-07 06:33:33.560     0     0 I servicemanager: Caller(pid=6020,uid=2000,sid=u:r:shell:s0) Found mapper/ranchu in device VINTF manifest.
+06-07 06:33:33.721  6001  6001 V GraphicsEnvironment: Currently set values for:
+06-07 06:33:33.722  6001  6001 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[]
+06-07 06:33:33.722  6001  6001 V GraphicsEnvironment:   angle_gl_driver_selection_values=[]
+06-07 06:33:33.723  6001  6001 V GraphicsEnvironment: com.google.android.webview is not listed in per-application setting
+06-07 06:33:33.725  6001  6001 V GraphicsEnvironment: ANGLE allowlist from config: com.dreamgames.royalmatch com.dts.freefiremax com.dxx.firenow com.gramgames.mergedragons com.ludo.king com.mojang.minecraftpe com.my.defense com.nintendo.zaka com.os.airforce com.playrix.fishdomdd.gplay io.teslatech.callbreak jp.konami.prospia net.peakgames.toonblast
+06-07 06:33:33.726  6001  6001 V GraphicsEnvironment: com.google.android.webview is not listed in ANGLE allowlist or settings, returning default
+06-07 06:33:33.726  6001  6001 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+06-07 06:33:33.750  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b186745d8) locale list changing from [] to [en-US]
+06-07 06:33:33.756  5641  5641 I e.mrcomic.debug: AssetManager2(0x755b18691138) locale list changing from [] to [en-US]
+06-07 06:33:33.774  6001  6001 I LoadedApk: No resource references to update in package com.google.android.trichromelibrary
+06-07 06:33:33.785  6001  6001 I cr_WebViewApkApp: version=133.0.6943.137 (694313738) minSdkVersion=29 isBundle=false processName=com.google.android.webview:webview_service
+06-07 06:33:33.878   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:33.995   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:34.000   717  1863 D CompatChangeReporter: Compat change id reported: 261072174; UID 10165; state: ENABLED
+06-07 06:33:34.070   717   886 D WifiClientModeImpl[90525:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-07 06:33:34.074   717   886 D WifiDataStall: tx tput in kbps: 11000
+06-07 06:33:34.074   717   886 D WifiDataStall: rx tput in kbps: 11000
+06-07 06:33:34.074   717   886 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-07 06:33:34.081   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:34.082   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:34.084   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:34.085   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:34.089   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:34.089   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:34.090   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:34.090   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:34.091   717   886 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1865132161 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-07 06:33:34.092   717   886 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-07 06:33:34.097   717   886 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 1209185209 RSSI -50 txSpeed -1
+06-07 06:33:34.101   717   886 D WifiClientModeImpl[90525:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3039] from screen [on:0 period:-1597413739] score=60
+06-07 06:33:34.170   717  1863 D ConnectivityService: requestNetwork for uid/pid:10216/5641 activeRequest: null callbackRequest: 215 [NetworkRequest [ REQUEST id=216, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10216 RequestorUid: 10216 RequestorPkg: com.example.mrcomic.debug UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC|LP
+06-07 06:33:34.173   717   892 D ConnectivityService: NetReassign [216 : null → 100] [c 1] [a 0] [i 1]
+06-07 06:33:34.174   717   886 D WifiNetworkFactory: got request NetworkRequest [ REQUEST id=216, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10216 RequestorUid: 10216 RequestorPkg: com.example.mrcomic.debug UnderlyingNetworks: Null] ]
+06-07 06:33:34.174   717   886 V WifiNetworkFactory: Accepted network request NetworkRequest [ REQUEST id=216, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10216 RequestorUid: 10216 RequestorPkg: com.example.mrcomic.debug UnderlyingNetworks: Null] ]
+06-07 06:33:34.177   717   886 D UntrustedWifiNetworkFactory: got request NetworkRequest [ REQUEST id=216, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10216 RequestorUid: 10216 RequestorPkg: com.example.mrcomic.debug UnderlyingNetworks: Null] ]
+06-07 06:33:34.178   717   886 D OemPaidWifiNetworkFactory: got request NetworkRequest [ REQUEST id=216, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10216 RequestorUid: 10216 RequestorPkg: com.example.mrcomic.debug UnderlyingNetworks: Null] ]
+06-07 06:33:34.178   717   886 D MultiInternetWifiNetworkFactory: got request NetworkRequest [ REQUEST id=216, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10216 RequestorUid: 10216 RequestorPkg: com.example.mrcomic.debug UnderlyingNetworks: Null] ]
+06-07 06:33:34.182   717   892 D ConnectivityService: NetReassign [no changes] [c 0] [a 1] [i 1]
+06-07 06:33:34.191   717   740 W system_server: Missing inline cache for void android.net.LinkProperties.writeToParcel(android.os.Parcel, int)
+06-07 06:33:34.409  5641  5641 W libc    : Access denied finding property "vendor.mesa.log"
+06-07 06:33:34.409  5641  5641 W libc    : Access denied finding property "vendor.mesa.log.file"
+06-07 06:33:34.409  5641  5641 E MESA    : Failed to open rendernode: No such file or directory
+06-07 06:33:34.435  5641  5641 D vulkan  : searching for layers in '/data/app/~~iG2ufI3_vi53ECOAPaS35g==/com.example.mrcomic.debug-kiw3695QiT-IMpx9N1M8Yw==/lib/x86_64'
+06-07 06:33:34.438  5641  5641 D vulkan  : searching for layers in '/data/app/~~iG2ufI3_vi53ECOAPaS35g==/com.example.mrcomic.debug-kiw3695QiT-IMpx9N1M8Yw==/base.apk!/lib/x86_64'
+06-07 06:33:34.477  5641  5641 W libc    : Access denied finding property "vendor.mesa.vk.trace.per.submit"
+06-07 06:33:34.478  5641  5641 W libc    : Access denied finding property "vendor.mesa.gallium.print.optio"
+06-07 06:33:34.478  5641  5641 W libc    : Access denied finding property "vendor.mesa.vk.trace.frame"
+06-07 06:33:34.497  5641  5641 W libc    : Access denied finding property "vendor.mesa.vk.wsi.headless.swa"
+06-07 06:33:34.560  6057  6057 D AndroidRuntime: >>>>>> START com.android.internal.os.RuntimeInit uid 2000 <<<<<<
+06-07 06:33:34.583  6057  6057 I AndroidRuntime: Using default boot image
+06-07 06:33:34.584  6057  6057 I AndroidRuntime: Leaving lock profiling enabled
+06-07 06:33:34.590  6057  6057 I app_process: Core platform API reporting enabled, enforcing=false
+06-07 06:33:34.593  6057  6057 I app_process: Using CollectorTypeCMC GC.
+06-07 06:33:34.648  5641  5802 I HWUI    : Davey! duration=2240ms; Flags=0, FrameTimelineVsyncId=57524, IntendedVsync=4620597695758, Vsync=4620681029088, InputEventId=0, HandleInputStart=4620686947600, AnimationStart=4620686982000, PerformTraversalsStart=4622522023800, DrawStart=4622522922100, FrameDeadline=4620697695754, FrameStartTime=4620686925700, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=4622813719900, SyncStart=4622814990500, IssueDrawCommandsStart=4622818123400, SwapBuffers=4622821630300, FrameCompleted=4622839118300, DequeueBufferDuration=68300, QueueBufferDuration=7004900, GpuCompleted=4622833462600, SwapBuffersCompleted=4622839118300, DisplayPresentTime=0, CommandSubmissionCompleted=4622821630300, 
+06-07 06:33:34.681  5641  6058 I CameraManagerGlobal: Connecting to camera service
+06-07 06:33:34.698   717  1863 D MediaSessionService: onSessionPlaybackStateChanged: record=com.example.mrcomic.debug/MrComicReaderTts/8 (userId=0) playbackState=PlaybackState {state=STOPPED(1), position=0, buffered position=0, speed=0.0, updated=4622902, actions=567, custom actions=[], active item id=-1, error=null}
+06-07 06:33:34.721  5641  5641 I Choreographer: Skipped 133 frames!  The application may be doing too much work on its main thread.
+06-07 06:33:34.723   642  4135 I AttributionAndPermissionUtils: checkPermission (forDataDelivery 0 startDataDelivery 0): Permission hard denied for client attribution [uid 10216, pid 5641, packageName "<unknown>"]
+06-07 06:33:34.841  5641  6038 W cr_media: BLUETOOTH_CONNECT permission is missing.
+06-07 06:33:34.881  5641  6060 W chromium: [WARNING:viz_main_impl.cc(85)] VizNullHypothesis is disabled (not a warning)
+06-07 06:33:34.885  5641  6038 W cr_media: getBluetoothAdapter() requires BLUETOOTH permission
+06-07 06:33:34.885  5641  6038 W cr_media: registerBluetoothIntentsIfNeeded: Requires BLUETOOTH permission
+06-07 06:33:34.928  6013  6037 I cr_LibraryLoader: Successfully loaded native library
+06-07 06:33:34.929  6013  6037 I cr_CachingUmaRecorder: Flushed 2 samples from 2 histograms, 0 samples were dropped.
+06-07 06:33:34.961  5641  5658 I HWUI    : Davey! duration=2445ms; Flags=0, FrameTimelineVsyncId=57532, IntendedVsync=4620697695754, Vsync=4622914362332, InputEventId=0, HandleInputStart=4622936044100, AnimationStart=4622936787100, PerformTraversalsStart=4623134278100, DrawStart=4623135076400, FrameDeadline=4622864362334, FrameStartTime=4622926264700, FrameInterval=16666666, WorkloadTarget=16666666, SyncQueued=4623135717500, SyncStart=4623142729100, IssueDrawCommandsStart=4623143134200, SwapBuffers=4623145755800, FrameCompleted=4623150287100, DequeueBufferDuration=37400, QueueBufferDuration=514200, GpuCompleted=4623150287100, SwapBuffersCompleted=4623147349100, DisplayPresentTime=0, CommandSubmissionCompleted=4623145755800, 
+06-07 06:33:34.951     0     0 W servicemanager: Isolated app with UID 99002 requested 'uimode', but the service is not allowed for isolated apps.
+06-07 06:33:34.989  6013  6037 W SystemServiceRegistry: No service published for: uimode
+06-07 06:33:35.013  6013  6037 W chromium: [WARNING:runtime_features.cc(560)] Fenced frames cannot be enabled in this configuration. Use --enable-features=FencedFrames instead.
+06-07 06:33:35.013  6013  6037 W chromium: [WARNING:runtime_features.cc(585)] Topics cannot be enabled in this configuration. Use --enable-features=BrowsingTopics in addition.
+06-07 06:33:35.014  6013  6037 W chromium: [WARNING:runtime_features.cc(606)] SharedStorage cannot be enabled in this configuration. Use --enable-features=SharedStorageAPI in addition.
+06-07 06:33:35.057  6001  6070 I cr_VariationsUtils: Seed download job already scheduled
+06-07 06:33:35.060   717  1826 I ActivityManager: Background started FGS: Allowed [callingPackage: com.example.mrcomic.debug; callingUid: 10216; uidState: TOP ; uidBFSL: [BFSL]; intent: Intent { act=com.example.mrcomic.reader.tts.service.STOP xflg=0x4 cmp=com.example.mrcomic.debug/com.example.feature.reader.ui.ReaderTtsPlaybackService }; code:PROC_STATE_TOP; tempAllowListReason:<null>; allowWiu:12; targetSdkVersion:35; callerTargetSdkVersion:35; startForegroundCount:0; bindFromPackage:null: isBindService:false]
+06-07 06:33:35.078   717  1826 W ForegroundServiceTypeLoggerModule: Logger should be tracking FGS types correctly for UID 10216 in package com.example.mrcomic.debug
+06-07 06:33:35.079   717  1826 W ForegroundServiceTypeLoggerModule: Logger should be tracking FGS types correctly for UID 10216 in package com.example.mrcomic.debug
+06-07 06:33:35.082   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:35.085   717   944 D BackgroundInstallControlService: Package event received: 0
+06-07 06:33:35.130  6057  6057 D nativeloader: InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+06-07 06:33:35.232  6057  6057 D nativeloader: Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-07 06:33:35.232  6057  6057 D app_process: u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/9/icu") succeeded. 
+06-07 06:33:35.233  6057  6057 D app_process: I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt76l.dat
+06-07 06:33:35.240  6057  6057 D nativeloader: Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-07 06:33:35.245  6057  6057 D nativeloader: Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+06-07 06:33:35.246  6057  6057 W app_process: Unexpected CPU variant for x86: x86_64.
+06-07 06:33:35.246  6057  6057 W app_process: Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, default
+06-07 06:33:35.252  6057  6057 W app_process: ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*2789897741]#PCL[/system/framework/android.test.mock.jar*3361312393]} | PCL[])
+06-07 06:33:35.253  6057  6057 W app_process: ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[]{PCL[/system/framework/android.test.runner.jar*895143020]#PCL[/system/framework/android.test.base.jar*2789897741]} | PCL[/system/framework/android.test.runner.jar*895143020])
+06-07 06:33:35.310   717   717 I NotificationService: Cannot find enqueued record for key: 0|com.example.mrcomic.debug|3107|null|10216
+06-07 06:33:35.317  1309  2132 I FontLog : Received query name=Google Sans&weight=700&besteffort=false, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+06-07 06:33:35.326   486   522 I netd    : tetherGetStats() -> {[]} <5.28ms>
+06-07 06:33:35.329  1309  2132 I FontLog : Query [name=Google Sans&weight=700&besteffort=false] resolved to {Google Sans, wdth 100.0, wght 700, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.330  6057  6057 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+06-07 06:33:35.332  1309  2132 I FontLog : Font PFD returned from cache for {Google Sans, wdth 100.0, wght 700, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.336  1309  2132 I FontLog : Fetch {Google Sans, wdth 100.0, wght 700, ital 0.0, bestEffort false}, isVf false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+06-07 06:33:35.338  6057  6057 D AndroidRuntime: Calling main entry com.android.commands.uiautomator.Launcher
+06-07 06:33:35.348  6057  6057 I AconfigPackage: android.media.swcodec.flags is mapped to com.android.media.swcodec
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.google.android.settings.simplemode.flags is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.google.android.systemui is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.google.android.apps.nexuslauncher is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.android.settings.accessibility is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.android.settings.flags is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.google.android.apps.miphone.aiai.matchmaker.overview.ui is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.google.android.settings.flags is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.android.launcher3 is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.android.wallpaper is mapped to system_ext
+06-07 06:33:35.352  6057  6057 I AconfigPackage: com.android.settings.media_drm is mapped to system_ext
+06-07 06:33:35.353  6057  6057 I AconfigPackage: com.android.systemui.accessibility.accessibilitymenu is mapped to system_ext
+06-07 06:33:35.353  6057  6057 I AconfigPackage: com.android.settings.keyboard is mapped to system_ext
+06-07 06:33:35.354  6057  6057 I AconfigPackage: com.android.server.policy.feature.flags is mapped to system_ext
+06-07 06:33:35.355  6057  6057 I AconfigPackage: com.android.settings.factory_reset is mapped to system_ext
+06-07 06:33:35.355  6057  6057 I AconfigPackage: com.google.android.haptics.flags is mapped to system_ext
+06-07 06:33:35.355  6057  6057 I AconfigPackage: com.android.permission.flags is mapped to com.android.permission
+06-07 06:33:35.359  6057  6057 I AconfigPackage: com.android.icu is mapped to com.android.i18n
+06-07 06:33:35.362  6057  6057 I AconfigPackage: com.android.appsearch.flags is mapped to com.android.appsearch
+06-07 06:33:35.364  1309  2132 I FontLog : Pulling font file for id = 30, cache size = 6 [CONTEXT service_id=132 ]
+06-07 06:33:35.366  6057  6057 I AconfigPackage: android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+06-07 06:33:35.368  6057  6057 I AconfigPackage: android.provider.flags is mapped to com.android.configinfrastructure
+06-07 06:33:35.369  6057  6057 I AconfigPackage: com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+06-07 06:33:35.369  6057  6057 I AconfigPackage: com.android.nfc.flags is mapped to system
+06-07 06:33:35.369  6057  6057 I AconfigPackage: android.app.admin.flags is mapped to system
+06-07 06:33:35.370  6057  6057 I AconfigPackage: android.database.sqlite is mapped to system
+06-07 06:33:35.370  6057  6057 I AconfigPackage: com.android.providers.calendar is mapped to system
+06-07 06:33:35.370  6057  6057 I AconfigPackage: com.android.server.power.feature.flags is mapped to system
+06-07 06:33:35.370  6057  6057 I AconfigPackage: com.android.media.performance.flags is mapped to system
+06-07 06:33:35.371  6057  6057 I AconfigPackage: android.app.contextualsearch.flags is mapped to system
+06-07 06:33:35.371  6057  6057 I AconfigPackage: android.app.ondeviceintelligence.flags is mapped to system
+06-07 06:33:35.373  6057  6057 I AconfigPackage: com.android.media.projection.flags is mapped to system
+06-07 06:33:35.373  6057  6057 I AconfigPackage: android.companion is mapped to system
+06-07 06:33:35.373  6057  6057 I AconfigPackage: android.service.controls.flags is mapped to system
+06-07 06:33:35.373  6057  6057 I AconfigPackage: com.android.text.flags is mapped to system
+06-07 06:33:35.374  6057  6057 I AconfigPackage: com.android.providers.contactkeys.flags is mapped to system
+06-07 06:33:35.374  6057  6057 I AconfigPackage: com.android.intentresolver is mapped to system
+06-07 06:33:35.374  6057  6057 I AconfigPackage: android.companion.virtualdevice.flags is mapped to system
+06-07 06:33:35.375  6057  6057 I AconfigPackage: android.uprobestats.flags is mapped to system
+06-07 06:33:35.375  6057  6057 I AconfigPackage: com.android.net.thread.platform.flags is mapped to system
+06-07 06:33:35.375  6057  6057 I AconfigPackage: android.view.contentprotection.flags is mapped to system
+06-07 06:33:35.375  6057  6057 I AconfigPackage: com.android.server.dreams is mapped to system
+06-07 06:33:35.375  6057  6057 I AconfigPackage: com.android.graphics.surfaceflinger.flags is mapped to system
+06-07 06:33:35.375  6057  6057 I AconfigPackage: com.android.hardware.input is mapped to system
+06-07 06:33:35.376  6057  6057 I AconfigPackage: android.sdk is mapped to system
+06-07 06:33:35.377  6057  6057 I AconfigPackage: com.android.input.flags is mapped to system
+06-07 06:33:35.378  6057  6057 I AconfigPackage: android.tracing is mapped to system
+06-07 06:33:35.379  6057  6057 I AconfigPackage: com.android.server.biometrics is mapped to system
+06-07 06:33:35.379  6057  6057 I AconfigPackage: android.view.contentcapture.flags is mapped to system
+06-07 06:33:35.379  6057  6057 I AconfigPackage: android.app.job is mapped to system
+06-07 06:33:35.379  6057  6057 I AconfigPackage: android.content.res is mapped to system
+06-07 06:33:35.379  6057  6057 I AconfigPackage: android.net.platform.flags is mapped to system
+06-07 06:33:35.379  6057  6057 I AconfigPackage: com.android.aconfig.flags is mapped to system
+06-07 06:33:35.380  6057  6057 I AconfigPackage: com.android.graphics.flags is mapped to system
+06-07 06:33:35.380  6057  6057 I AconfigPackage: android.server.app is mapped to system
+06-07 06:33:35.381  6057  6057 I AconfigPackage: android.speech.flags is mapped to system
+06-07 06:33:35.381  6057  6057 I AconfigPackage: com.android.server.stats is mapped to system
+06-07 06:33:35.383  6057  6057 I AconfigPackage: android.hardware.biometrics is mapped to system
+06-07 06:33:35.383  6057  6057 I AconfigPackage: android.car.feature is mapped to system
+06-07 06:33:35.383  6057  6057 I AconfigPackage: android.adpf is mapped to system
+06-07 06:33:35.384  6057  6057 I AconfigPackage: android.location.flags is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: com.android.settingslib.flags is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: com.android.managedprovisioning.flags is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: android.app.assist.flags is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: com.android.server.net is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: com.android.settingslib.widget.flags is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: com.android.internal.camera.flags is mapped to system
+06-07 06:33:35.385  6057  6057 I AconfigPackage: com.android.hardware.libsensor.flags is mapped to system
+06-07 06:33:35.386  6057  6057 I AconfigPackage: com.android.internal.jank is mapped to system
+06-07 06:33:35.386  1309  2132 I FontLog : Received query name=Noto Color Emoji Compat&weight=400&besteffort=false, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+06-07 06:33:35.386  6057  6057 I AconfigPackage: com.android.providers.settings is mapped to system
+06-07 06:33:35.386  6057  6057 I AconfigPackage: android.multiuser is mapped to system
+06-07 06:33:35.386  1309  2132 I FontLog : Query [name=Noto Color Emoji Compat&weight=400&besteffort=false] resolved to {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.386  6057  6057 I AconfigPackage: com.android.server.power.optimization is mapped to system
+06-07 06:33:35.386  6057  6057 I AconfigPackage: com.android.calllogbackup is mapped to system
+06-07 06:33:35.386  6057  6057 I AconfigPackage: com.android.media.flags is mapped to system
+06-07 06:33:35.386  6057  6057 I AconfigPackage: com.android.server.flags is mapped to system
+06-07 06:33:35.388  6057  6057 I AconfigPackage: com.android.graphics.libvulkan.flags is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: android.app.appfunctions.flags is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: android.app.smartspace.flags is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: com.android.providers.contacts.flags is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: com.android.shell.flags is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: com.android.media.aaudio is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: android.hardware.radio is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: com.google.wear.services.infra.flags is mapped to system
+06-07 06:33:35.389  6057  6057 I AconfigPackage: suspend_service.flags is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: android.media.midi is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: com.android.libcore.readonly is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: com.android.settingslib.widget.selectorwithwidgetpreference.flags is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: android.service.notification is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: com.android.systemui.shared is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: android.app.jank is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: android.app.wearable is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: com.android.media.audio is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: android.service.chooser is mapped to system
+06-07 06:33:35.390  6057  6057 I AconfigPackage: com.android.server.compat is mapped to system
+06-07 06:33:35.391  6057  6057 I AconfigPackage: com.android.server.alarm is mapped to system
+06-07 06:33:35.391  6057  6057 I AconfigPackage: com.android.apex.flags is mapped to system
+06-07 06:33:35.391  6057  6057 I AconfigPackage: android.service.quickaccesswallet is mapped to system
+06-07 06:33:35.391  6057  6057 I AconfigPackage: android.app.usage is mapped to system
+06-07 06:33:35.391  6057  6057 I AconfigPackage: com.android.server.accessibility is mapped to system
+06-07 06:33:35.391  6057  6057 I AconfigPackage: android.app.supervision.flags is mapped to system
+06-07 06:33:35.392  6057  6057 I AconfigPackage: com.android.server.utils is mapped to system
+06-07 06:33:35.392  6057  6057 I AconfigPackage: android.chre.flags is mapped to system
+06-07 06:33:35.392  6057  6057 I AconfigPackage: android.content.flags is mapped to system
+06-07 06:33:35.392  6057  6057 I AconfigPackage: android.media.codec is mapped to system
+06-07 06:33:35.393  6057  6057 I AconfigPackage: com.android.internal.os is mapped to system
+06-07 06:33:35.393  6057  6057 I AconfigPackage: com.android.nfc.nci.flags is mapped to system
+06-07 06:33:35.393  6057  6057 I AconfigPackage: android.app is mapped to system
+06-07 06:33:35.393  6057  6057 I AconfigPackage: android.security.keystore2 is mapped to system
+06-07 06:33:35.393  6057  6057 I AconfigPackage: android.crashrecovery.flags is mapped to system
+06-07 06:33:35.394  6057  6057 I AconfigPackage: com.android.tradeinmode.flags is mapped to system
+06-07 06:33:35.394  6057  6057 I AconfigPackage: android.hardware.flags is mapped to system
+06-07 06:33:35.394  6057  6057 I AconfigPackage: com.android.server.telecom.flags is mapped to system
+06-07 06:33:35.394  6057  6057 I AconfigPackage: com.android.settingslib.media.flags is mapped to system
+06-07 06:33:35.394  6057  6057 I AconfigPackage: com.android.server.policy is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: android.media.audiopolicy is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: com.android.egg.flags is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: com.android.internal.compat.flags is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: android.security is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: android.service.autofill is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: com.example.android.aconfig.demo.flags is mapped to system
+06-07 06:33:35.395  6057  6057 I AconfigPackage: android.view.flags is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: android.companion.virtual.flags is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.aconfig_new_storage is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.server.feature.flags is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.systemui is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.server.power.batterysaver is mapped to system
+06-07 06:33:35.396  1309  2132 I FontLog : Fetch {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+06-07 06:33:35.396  6057  6057 I AconfigPackage: android.widget.flags is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.media.editing.flags is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.media.codec.flags is mapped to system
+06-07 06:33:35.396  6057  6057 I AconfigPackage: com.android.server.powerstats is mapped to system
+06-07 06:33:35.397  6057  6057 I AconfigPackage: com.android.graphics.egl.flags is mapped to system
+06-07 06:33:35.397  6057  6057 I AconfigPackage: com.android.media.audioserver is mapped to system
+06-07 06:33:35.401  6057  6057 I AconfigPackage: com.android.server.deviceidle is mapped to system
+06-07 06:33:35.401  6057  6057 I AconfigPackage: android.nfc is mapped to system
+06-07 06:33:35.401  6057  6057 I AconfigPackage: android.permission.flags is mapped to system
+06-07 06:33:35.402  6057  6057 I AconfigPackage: android.service.voice.flags is mapped to system
+06-07 06:33:35.402  6057  6057 I AconfigPackage: android.content.pm is mapped to system
+06-07 06:33:35.403  6057  6057 I AconfigPackage: com.android.server.power.hint is mapped to system
+06-07 06:33:35.403  6057  6057 I AconfigPackage: android.os is mapped to system
+06-07 06:33:35.403  6057  6057 I AconfigPackage: android.service.dreams is mapped to system
+06-07 06:33:35.403  6057  6057 I AconfigPackage: com.android.graphics.libgui.flags is mapped to system
+06-07 06:33:35.404  6057  6057 I AconfigPackage: android.hardware.usb.flags is mapped to system
+06-07 06:33:35.404  6057  6057 I AconfigPackage: android.provider is mapped to system
+06-07 06:33:35.404  6057  6057 I AconfigPackage: com.android.server.job is mapped to system
+06-07 06:33:35.405  6057  6057 I AconfigPackage: com.android.internal.foldables.flags is mapped to system
+06-07 06:33:35.405  6057  6057 I AconfigPackage: com.android.internal.telephony.flags is mapped to system
+06-07 06:33:35.405  6057  6057 I AconfigPackage: android.webkit is mapped to system
+06-07 06:33:35.405  6057  6057 I AconfigPackage: android.credentials.flags is mapped to system
+06-07 06:33:35.405  6057  6057 I AconfigPackage: com.android.server.display.feature.flags is mapped to system
+06-07 06:33:35.405  6057  6057 I AconfigPackage: com.android.server.notification is mapped to system
+06-07 06:33:35.406  6057  6057 I AconfigPackage: android.appwidget.flags is mapped to system
+06-07 06:33:35.406  6057  6057 I AconfigPackage: com.android.frameworks.sensorservice.flags is mapped to system
+06-07 06:33:35.406  6057  6057 I AconfigPackage: com.android.printspooler.flags is mapped to system
+06-07 06:33:35.406  6057  6057 I AconfigPackage: com.android.window.flags is mapped to system
+06-07 06:33:35.406  6057  6057 I AconfigPackage: android.adaptiveauth is mapped to system
+06-07 06:33:35.406  6057  6057 I AconfigPackage: android.net.wifi.flags is mapped to system
+06-07 06:33:35.407  6057  6057 I AconfigPackage: android.media.tv.flags is mapped to system
+06-07 06:33:35.407  6057  6057 I AconfigPackage: com.android.server.usb.flags is mapped to system
+06-07 06:33:35.407  6057  6057 I AconfigPackage: android.os.vibrator is mapped to system
+06-07 06:33:35.407  6057  6057 I AconfigPackage: android.hardware.devicestate.feature.flags is mapped to system
+06-07 06:33:35.408  6057  6057 I AconfigPackage: com.android.server.usage is mapped to system
+06-07 06:33:35.408  6057  6057 I AconfigPackage: android.server is mapped to system
+06-07 06:33:35.408  6057  6057 I AconfigPackage: com.android.wm.shell is mapped to system
+06-07 06:33:35.409  6057  6057 I AconfigPackage: android.view.inputmethod is mapped to system
+06-07 06:33:35.409  6057  6057 I AconfigPackage: com.android.graphics.hwui.flags is mapped to system
+06-07 06:33:35.409  6057  6057 I AconfigPackage: com.android.server.backup is mapped to system
+06-07 06:33:35.409  6057  6057 I AconfigPackage: com.android.internal.pm.pkg.component.flags is mapped to system
+06-07 06:33:35.410  6057  6057 I AconfigPackage: android.view.accessibility is mapped to system
+06-07 06:33:35.410  6057  6057 I AconfigPackage: com.google.wear.sdk is mapped to system
+06-07 06:33:35.410  6057  6057 I AconfigPackage: android.media.audio is mapped to system
+06-07 06:33:35.410  6057  6057 I AconfigPackage: com.android.server.am is mapped to system
+06-07 06:33:35.410  6057  6057 I AconfigPackage: com.android.media.playback.flags is mapped to system
+06-07 06:33:35.414  6057  6057 I AconfigPackage: com.android.art.flags is mapped to com.android.art
+06-07 06:33:35.415  6057  6057 I AconfigPackage: com.android.libcore is mapped to com.android.art
+06-07 06:33:35.416  1309  2132 I FontLog : Pulling font file for id = 31, cache size = 5 [CONTEXT service_id=132 ]
+06-07 06:33:35.419  6057  6057 I AconfigPackage: com.android.media.extractor.flags is mapped to com.android.media
+06-07 06:33:35.420  6057  6057 I AconfigPackage: com.android.media.mainline.flags is mapped to com.android.media
+06-07 06:33:35.423  6057  6057 I AconfigPackage: com.android.wifi.flags is mapped to com.android.wifi
+06-07 06:33:35.426  6057  6057 I AconfigPackage: com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+06-07 06:33:35.432  6057  6057 I AconfigPackage: com.android.healthfitness.flags is mapped to com.android.healthfitness
+06-07 06:33:35.441  6057  6057 I AconfigPackage: com.google.android.input.twoshay.flags is mapped to vendor
+06-07 06:33:35.441  6057  6057 I AconfigPackage: libgooglecamerahal.flags is mapped to vendor
+06-07 06:33:35.447  6057  6057 I AconfigPackage: com.android.ipsec.flags is mapped to com.android.ipsec
+06-07 06:33:35.452  6057  6057 I AconfigPackage: com.android.nfc.module.flags is mapped to com.android.nfcservices
+06-07 06:33:35.461  6057  6057 I AconfigPackage: com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+06-07 06:33:35.467  6057  6057 I AconfigPackage: com.android.bluetooth.flags is mapped to com.android.bt
+06-07 06:33:35.472  1309  2132 I FontLog : Received query name=Google Sans Flex&weight=400&besteffort=false, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+06-07 06:33:35.473  6057  6057 I AconfigPackage: com.android.devicelock.flags is mapped to com.android.devicelock
+06-07 06:33:35.473  1309  2132 I FontLog : Query [name=Google Sans Flex&weight=400&besteffort=false] resolved to {Google Sans Flex, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.482  6057  6057 I AconfigPackage: android.os.profiling is mapped to com.android.profiling
+06-07 06:33:35.483  1309  2132 I FontLog : Font PFD returned from cache for {Google Sans Flex, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.483  1309  2132 I FontLog : Fetch {Google Sans Flex, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+06-07 06:33:35.488  6057  6057 I AconfigPackage: com.android.os.statsd.flags is mapped to com.android.os.statsd
+06-07 06:33:35.494  1309  2269 I FontLog : Pulling font file for id = 32, cache size = 5 [CONTEXT service_id=132 ]
+06-07 06:33:35.498  6057  6057 I AconfigPackage: com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+06-07 06:33:35.506  6057  6057 I AconfigPackage: com.android.adservices.flags is mapped to com.android.adservices
+06-07 06:33:35.507  6057  6057 I AconfigPackage: com.android.sdksandbox.flags is mapped to com.android.adservices
+06-07 06:33:35.516  6057  6057 I AconfigPackage: com.android.uwb.flags is mapped to com.android.uwb
+06-07 06:33:35.517  6057  6057 I AconfigPackage: com.android.ranging.flags is mapped to com.android.uwb
+06-07 06:33:35.526  6057  6057 I AconfigPackage: android.graphics.pdf.flags is mapped to com.android.mediaprovider
+06-07 06:33:35.526  6057  6057 I AconfigPackage: com.android.providers.media.flags is mapped to com.android.mediaprovider
+06-07 06:33:35.526  6057  6057 I AconfigPackage: android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+06-07 06:33:35.529  6057  6057 I AconfigPackage: com.android.net.ct.flags is mapped to com.android.tethering
+06-07 06:33:35.529  6057  6057 I AconfigPackage: com.android.net.flags is mapped to com.android.tethering
+06-07 06:33:35.529  6057  6057 I AconfigPackage: android.net.vcn is mapped to com.android.tethering
+06-07 06:33:35.529  6057  6057 I AconfigPackage: com.android.nearby.flags is mapped to com.android.tethering
+06-07 06:33:35.530  6057  6057 I AconfigPackage: android.net.http is mapped to com.android.tethering
+06-07 06:33:35.530  6057  6057 I AconfigPackage: com.android.net.thread.flags is mapped to com.android.tethering
+06-07 06:33:35.537  6057  6057 I AconfigPackage: com.android.system.virtualmachine.flags is mapped to com.android.virt
+06-07 06:33:35.538  1309  2269 I FontLog : Received query name=Google Sans&weight=400&besteffort=false, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+06-07 06:33:35.541  1309  2269 I FontLog : Query [name=Google Sans&weight=400&besteffort=false] resolved to {Google Sans, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.546  6057  6057 E FeatureFlagsImplExport: android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+06-07 06:33:35.552  1309  2269 I FontLog : Font PFD returned from cache for {Google Sans, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.552  1309  2269 I FontLog : Fetch {Google Sans, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+06-07 06:33:35.564  6057  6057 D UiAutomationConnection: Created on user UserHandle{0}
+06-07 06:33:35.565  6057  6057 I UiAutomation: Initialized for user 0 on display 0
+06-07 06:33:35.566  6057  6057 W UiAutomation: Created with deprecatead constructor, assumes DEFAULT_DISPLAY
+06-07 06:33:35.569  1309  2269 I FontLog : Pulling font file for id = 33, cache size = 6 [CONTEXT service_id=132 ]
+06-07 06:33:35.580   717  1863 D AccessibilityManagerService: changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+06-07 06:33:35.581   717  1863 I UiAutomationManager: Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation, flags=0x0) when called by user 0
+06-07 06:33:35.584   717  1863 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+06-07 06:33:35.597   717  1863 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+06-07 06:33:35.605  1309  2269 I FontLog : Received query name=Google Sans&weight=500&besteffort=false, URI content://com.google.android.gms.fonts [CONTEXT service_id=132 ]
+06-07 06:33:35.606  1309  2269 I FontLog : Query [name=Google Sans&weight=500&besteffort=false] resolved to {Google Sans, wdth 100.0, wght 500, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.609  1309  2269 I FontLog : Font PFD returned from cache for {Google Sans, wdth 100.0, wght 500, ital 0.0, bestEffort false}, isVf false} [CONTEXT service_id=132 ]
+06-07 06:33:35.610  1309  2269 I FontLog : Fetch {Google Sans, wdth 100.0, wght 500, ital 0.0, bestEffort false}, isVf false} end status Status{statusCode=SUCCESS, resolution=null} [CONTEXT service_id=132 ]
+06-07 06:33:35.623  1441  1898 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+06-07 06:33:35.632   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.633   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.634  6057  6086 V UiAutomation: Init UiAutomation@8931e1a[id=8, displayId=0, flags=0]
+06-07 06:33:35.637   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.637   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.653   973   973 D wpa_supplicant: nl80211: Drv Event 64 (NL80211_CMD_NOTIFY_CQM) received for wlan0
+06-07 06:33:35.653   973   973 D wpa_supplicant: nl80211: Beacon loss event
+06-07 06:33:35.653   973   973 D wpa_supplicant: wlan0: Event BEACON_LOSS (53) received
+06-07 06:33:35.654   973   973 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS 
+06-07 06:33:35.656  1309  2269 I FontLog : Pulling font file for id = 34, cache size = 7 [CONTEXT service_id=132 ]
+06-07 06:33:35.662   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.664   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.669   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.672   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.696   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.717   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.725   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.738   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.745   717   717 D BatterySaverPolicy: accessibility changed to true, updating policy.
+06-07 06:33:35.755   717  1869 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+06-07 06:33:35.758  1441  1704 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-07 06:33:35.765  1441  1704 I AiAiEcho: EchoTargets: 
+06-07 06:33:35.765  1441  1704 I AiAiEcho: Filtered by AiAi flag check: 
+06-07 06:33:35.765  1441  1704 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-07 06:33:35.770   717  1869 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+06-07 06:33:35.793  1441  2686 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+06-07 06:33:35.858  5641  5641 W ReaderHtmlView: WebView file load did not commit in time, retrying inline: inline:-1786957767
+06-07 06:33:35.897   717  1074 W system_server: Long monitor contention with owner binder:717_13 (1869) at void com.android.server.accessibility.AbstractAccessibilityServiceConnection.setServiceInfo(android.accessibilityservice.AccessibilityServiceInfo)(AbstractAccessibilityServiceConnection.java:554) waiters=5 in int com.android.server.accessibility.AccessibilityWindowManager.addAccessibilityInteractionConnection(android.view.IWindow, android.os.IBinder, android.view.accessibility.IAccessibilityInteractionConnection, java.lang.String, int) for 103ms
+06-07 06:33:35.905   717   717 W Looper  : Slow dispatch took 145ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@3e11893> m=0
+06-07 06:33:35.906   989  1049 W Looper  : Slow dispatch took 177ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@6c3632a m=0
+06-07 06:33:35.938   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.938   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.938   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.940   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.942   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.942   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.948   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:35.950   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:36.006  1441  1704 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-07 06:33:36.025  1441  1704 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-07 06:33:36.037  1441  1704 I AiAiEcho: EchoTargets: 
+06-07 06:33:36.037  1441  1704 I AiAiEcho: Filtered by AiAi flag check: 
+06-07 06:33:36.037  1441  1704 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-07 06:33:36.046  1441  1704 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-07 06:33:36.047  1441  1704 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-07 06:33:36.062  1441  1704 I AiAiEcho: EchoTargets: 
+06-07 06:33:36.062  1441  1704 I AiAiEcho: Filtered by AiAi flag check: 
+06-07 06:33:36.062  1441  1704 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-07 06:33:36.063  1441  1704 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-07 06:33:36.073  1441  1704 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-07 06:33:36.083  1441  1704 I AiAiEcho: EchoTargets: 
+06-07 06:33:36.083  1441  1704 I AiAiEcho: Filtered by AiAi flag check: 
+06-07 06:33:36.083  1441  1704 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-07 06:33:36.097  1441  1704 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-07 06:33:36.181  1441  1704 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+06-07 06:33:36.192  5641  5641 D ReaderHtmlView: WebView page started: file:///data/data/com.example.mrcomic.debug/cache/archive_text_cache/zip_74d21a6471b085021ec91017_txt_alice_gutenberg/
+06-07 06:33:36.197  1441  1704 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+06-07 06:33:36.202  1157  1157 D SsBaseTemplateCard: No text view can be set up
+06-07 06:33:36.212  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:36.217   989   989 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+06-07 06:33:36.219  1441  1704 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+06-07 06:33:36.251  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:36.251  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:36.251  1157  1157 I SsBaseTemplateCard: Secondary card pane is null
+06-07 06:33:36.254  1157  1157 D SsBaseTemplateCard: No text view can be set up
+06-07 06:33:36.254  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:36.255  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:36.257  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:36.257  1157  1157 I SsBaseTemplateCard: Secondary card pane is null
+06-07 06:33:36.284  1441  1704 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+06-07 06:33:36.307   989   989 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+06-07 06:33:36.421  5641  5652 W e.mrcomic.debug: Suspending all threads took: 48.143ms
+06-07 06:33:36.592  5641  5641 D ReaderHtmlView: WebView page started: file:///data/data/com.example.mrcomic.debug/cache/archive_text_cache/zip_74d21a6471b085021ec91017_txt_alice_gutenberg/
+06-07 06:33:36.969  1490  1771 E fcqb    : (REDACTED) Trace %s timed out after %d ms. Complete trace: %s
+06-07 06:33:36.969  1490  1771 E fcqb    : fcrl: 
+06-07 06:33:36.969  1490  1771 E fcqb    : 	at tk_trace.handleBroadcast(Started After:0)
+06-07 06:33:36.969  1490  1771 E fcqb    : 	at tk_trace.Broadcast to com.google.android.apps.search.assistant.surfaces.bisto.interactor.broadcasts.BistoInternalIntentReceiver_Receiver com.google.android.apps.gsa.broadcastreceiver.SETTINGS_CHANGED(Started After:0)
+06-07 06:33:36.971  1490  1682 E fcqb    : (REDACTED) Trace %s timed out after %d ms. Complete trace: %s
+06-07 06:33:36.971  1490  1682 E fcqb    : fcrl: 
+06-07 06:33:36.971  1490  1682 E fcqb    : 	at tk_trace.RxThreadPoolStartupListener(Started After:9)
+06-07 06:33:36.971  1490  1682 E fcqb    : 	at tk_trace.Startup Listeners(Started After:9)
+06-07 06:33:36.971  1490  1682 E fcqb    : 	at tk_trace.Application.onCreate(Started After:8)
+06-07 06:33:36.971  1490  1682 E fcqb    : 	at tk_trace.Application creation(Started After:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : (REDACTED) Trace %s timed out after %d ms. Complete trace: %s
+06-07 06:33:36.990  1490  1682 E fcqb    : fcrl: 
+06-07 06:33:36.990  1490  1682 E fcqb    : 	at tk_trace.java.com.google.android.libraries.search.assistant.invocation.triggering.api.ApaTriggeringService/Connect-response(Started After:93)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	at tk_trace.java.com.google.android.libraries.search.assistant.invocation.triggering.api.ApaTriggeringService/Connect (Timed Out)(Started After:40)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	at tk_trace.VoiceAssistantPinnedClient#onCreate(Started After:34)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	at tk_trace.PropagatingContext(Started After:15)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	at tk_trace.VoiceInteractionServiceLifecycleCallbacks#onReady(Started After:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	at tk_trace.ApaVoiceInteractionService#onReady(Started After:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	Suppressed: fcrk: 
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.java.com.google.android.libraries.search.assistant.invocation.invocationstate.InvocationStateServiceObserve(unfinished)(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.VoiceAssistantPinnedClientonCreate 33743 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.PropagatingContext 52357 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.VoiceInteractionServiceLifecycleCallbacksonReady 19292 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.ApaVoiceInteractionServiceonReady 0 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	Suppressed: fcrk: 
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.java.com.google.android.libraries.search.assistant.invocation.triggering.api.ApaTriggeringServiceConnect(unfinished)(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.VoiceAssistantPinnedClientonCreate 33743 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.PropagatingContext 52357 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.VoiceInteractionServiceLifecycleCallbacksonReady 19292 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.ApaVoiceInteractionServiceonReady 0 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 	Suppressed: fcrk: 
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.java.com.google.android.libraries.search.assistant.invocation.triggering.oracle.InvocationOracleServiceOnPreferredClientMappingChanged(unfinished)(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.VoiceInteractionServiceLifecycleCallbacksonReady 19292 ms(Unknown Source:0)
+06-07 06:33:36.990  1490  1682 E fcqb    : 		at tk_trace.ApaVoiceInteractionServiceonReady 0 ms(Unknown Source:0)
+06-07 06:33:37.068  5641  5652 I e.mrcomic.debug: Background concurrent mark compact GC freed 7975KB AllocSpace bytes, 63(1508KB) LOS objects, 49% free, 10MB/20MB, paused 105.669ms,16.106ms total 1.836s
+06-07 06:33:37.110  5641  5641 I cr_A11yState: Enabled accessibility services list updated. []
+06-07 06:33:37.115  5641  5641 D AutofillManager: Fill dialog is enabled:false, hints=[]
+06-07 06:33:37.132  5641  5641 I cr_A11yState: Informing listeners of changes.
+06-07 06:33:37.132  5641  5641 I cr_A11yState: New AccessibilityState: State{isScreenReaderEnabled=false, isTouchExplorationEnabled=false, isPerformGesturesEnabled=false, isAnyAccessibilityServiceEnabled=false, isAccessibilityToolPresent=false, isSpokenFeedbackServicePresent=false, isTextShowPasswordEnabled=true, isOnlyPasswordManagersEnabled=false}
+06-07 06:33:37.133   717   886 D WifiClientModeImpl[90525:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+06-07 06:33:37.140   717   886 D WifiDataStall: tx tput in kbps: 11000
+06-07 06:33:37.140   717   886 D WifiDataStall: rx tput in kbps: 11000
+06-07 06:33:37.140   717   886 V WifiConfigManager: Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+06-07 06:33:37.141   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:37.141   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:37.141   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:37.153   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:37.153   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:37.161   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:37.161   717   886 D WifiThroughputPredictor:  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+06-07 06:33:37.162   717   886 D WifiThroughputPredictor:  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+06-07 06:33:37.162  6057  6057 I AccessibilityNodeInfoDumper: Skipping invisible child: android.view.accessibility.AccessibilityNodeInfo@15203; boundsInParent: Rect(0, 0 - 1080, 2209); boundsInScreen: Rect(0, 128 - 1080, 2337); boundsInWindow: Rect(0, 128 - 1080, 2337); packageName: com.example.mrcomic.debug; className: android.webkit.WebView; text: null; error: null; maxTextLength: -1; stateDescription: null; contentDescription: null; tooltipText: null; containerTitle: null; viewIdResName: null; uniqueId: null; checkable: false; checked: false; focusable: true; focused: false; selected: false; clickable: true; longClickable: true; contextClickable: false; enabled: true; password: false; scrollable: false; granularScrollingSupported: false; importantForAccessibility: true; visible: false; actions: [AccessibilityAction: ACTION_FOCUS - null, AccessibilityAction: ACTION_SELECT - null, AccessibilityAction: ACTION_CLEAR_SELECTION - null, AccessibilityAction: ACTION_CLICK - null, AccessibilityAction: ACTION_LONG_CLICK - null, AccessibilityAction: ACTION_ACCESSIBILITY_FOCUS - null, AccessibilityAction: ACTION_SHOW_ON_SCREEN - null]; isTextSelectable: false
+06-07 06:33:37.163  6057  6057 W AccessibilityNodeInfoDumper: Fetch time: 301ms
+06-07 06:33:37.175   717   886 D WifiScoreCard: BSSID update SIGNAL_POLL ID: 1865132161 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+06-07 06:33:37.185   717   886 D WifiScoreCard: txRate: 1 txSpeed: 1
+06-07 06:33:37.186   717  1864 V AccessibilityManagerService: onUserStateChangedLocked for userId: 0, forceUpdate: false
+06-07 06:33:37.194   717   886 D WifiScoreCard: network update SIGNAL_POLL "AndroidWifi" ID: 1209185209 RSSI -50 txSpeed -1
+06-07 06:33:37.208   717   886 D WifiClientModeImpl[90525:wlan0]:  ClientModeImpl$L2ConnectedState screen=on 1 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=60 link=1 tx=0.0, 0.0, 0.0 rx=0.0 bcn=0 [on:0 tx:0 rx:0 period:3107] from screen [on:0 period:-1597410632] score=60
+06-07 06:33:37.220   717  1864 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+06-07 06:33:37.221   717  1864 D AccessibilityManagerService: restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+06-07 06:33:37.224   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.225   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.308   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.308   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.311   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.317  1441  2686 I AiAiEcho: Settings changed for uri: content://settings/secure/accessibility_enabled
+06-07 06:33:37.329  1441  1704 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-07 06:33:37.334  1441  1704 I AiAiEcho: EchoTargets: 
+06-07 06:33:37.334  1441  1704 I AiAiEcho: Filtered by AiAi flag check: 
+06-07 06:33:37.334  1441  1704 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-07 06:33:37.392   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.413  1441  1704 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-07 06:33:37.416  1441  1704 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+06-07 06:33:37.419  1441  1704 I AiAiEcho: EchoTargets: 
+06-07 06:33:37.419  1441  1704 I AiAiEcho: Filtered by AiAi flag check: 
+06-07 06:33:37.419  1441  1704 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+06-07 06:33:37.434  1441  1704 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+06-07 06:33:37.436  1441  1704 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+06-07 06:33:37.437  6057  6082 W IPCThreadState: call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+06-07 06:33:37.439  6057  6088 W IPCThreadState: call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+06-07 06:33:37.459   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.463  6057  6084 W IPCThreadState: call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+06-07 06:33:37.465  1441  1704 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+06-07 06:33:37.469  6057  6057 D AndroidRuntime: Shutting down VM
+06-07 06:33:37.486  1157  1157 D SsBaseTemplateCard: No text view can be set up
+06-07 06:33:37.490  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:37.490  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:37.491  1157  1157 D SsBaseTemplateCard: Passed-in item info is null
+06-07 06:33:37.491  1157  1157 I SsBaseTemplateCard: Secondary card pane is null
+06-07 06:33:37.513   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.514   717   717 W Looper  : Slow dispatch took 204ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@c6ce4e3> m=0
+06-07 06:33:37.533   989   989 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+06-07 06:33:37.635   717   717 W Looper  : Slow delivery took 293ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@3e11893> m=0
+06-07 06:33:37.635   717   717 W Looper  : Slow dispatch took 120ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@3e11893> m=0
+06-07 06:33:37.636   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.636   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.637   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.637   717   717 W IPCThreadState: Sending oneway calls to frozen process.
+06-07 06:33:37.728   717   717 D BatterySaverPolicy: accessibility changed to false, updating policy.
+06-07 06:33:37.912   717   717 W Looper  : Drained
+06-07 06:33:37.914  5641  5641 D ReaderHtmlView: WebView page finished: file:///data/data/com.example.mrcomic.debug/cache/archive_text_cache/zip_74d21a6471b085021ec91017_txt_alice_gutenberg/
+06-07 06:33:38.070  5641  5641 D ReaderHtmlView: WebView page commit visible: file:///data/data/com.example.mrcomic.debug/cache/archive_text_cache/zip_74d21a6471b085021ec91017_txt_alice_gutenberg/
+06-07 06:33:38.071  5641  5641 D ReaderHtmlView: WebView page commit visible: file:///data/data/com.example.mrcomic.debug/cache/archive_text_cache/zip_74d21a6471b085021ec91017_txt_alice_gutenberg/
+06-07 06:33:39.818     0     0 I logd    : logdr: UID=2000 GID=2000 PID=6090 n tail=0 logMask=99 pid=0 start=0ns deadline=0ns

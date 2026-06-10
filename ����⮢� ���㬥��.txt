@@ -1,0 +1,77 @@
+📝 Сводка исправлений
+1.1 Текстовые форматы внутри архивов
+Файл: ArchiveFormatSupport.kt
+
+Добавлена функция isDominantBookEntry() — если в архиве есть один основной формат книги (epub/fb2/mobi и т.д.) и вспомогательные файлы (readme.txt), классификация даёт SINGLE_BOOK вместо MIXED
+Добавлен primaryBookFormatComparator — приоритет epub/fb2/mobi над txt/html при выборе записи
+Расширен textEntryOwnsImageAssets() — добавлена проверка общего корневого каталога
+1.2 Некорректная кодировка
+Файл: TextFormatReader.kt
+
+Расширен список кодировок для ремонта: добавлены ISO-8859-1, ISO-8859-5, KOI8-R
+Порог ремонта снижен до +30 для коротких текстов (< 500 символов)
+Добавлена детекция двойной кодировки (double-encoding patterns \u00C3\u0090, \u00C3\u0091)
+Добавлена эвристика Latin Supplement (> 25% символов в диапазоне 0x80-0xFF)
+2.1 Переносы слов
+Файл: TextFormatReader.kt
+
+isHyphenChar() — обрабатывает -, мягкий перенос \u00AD, неразрывный дефис \u2011, короткое тире \u2013
+isEmDashContext() — не объединяет строки после тире диалогов (—)
+Удаление мягких переносов \u00AD из всего текста при объединении
+2.2+5.2 Повтор текста между страницами
+Файл: ReflowableDocument.kt
+
+При разбиении тега атрибут id сохраняется только в первом чанке (mapIndexed), остальные получают data-split-from вместо дублирования id
+2.3 Самопроизвольное выделение текста
+Файлы: UnifiedReaderCssBuilder.kt + ReaderScreen.kt
+
+CSS: добавлено user-select: none; -webkit-user-select: none; на body во всех 4 CSS-пресетах
+CSS: ссылки a[href] получили user-select: text (для кликабельности)
+JS: добавлен selectstart event listener — блокирует выделение вне <a> элементов
+3.1 Сноски в основном тексте
+Файл: EpubFormatReader.kt
+
+Убран захардкоженный lang="ru" из buildSyntheticHtml()
+Заголовок заменён на нейтральный Notes
+3.2 Сноски в оглавлении
+Файл: EpubFormatReader.kt
+
+Добавлена isFootnoteTocEntry() — фильтрация записей TOC по паттернам: FbAutId_*, #fn*, #note*, #footnote*, fbanchor://, числовые заголовки, известные имена секций (notes, примечания, сноски)
+Фильтр применяется и в parseNavXhtml(), и в parseNcx()
+4.1 Webtoon предзагрузка
+Файл: WebtoonView.kt
+
+Убрана проверка isTextReadingFormat() == true → return из начальной предзагрузки
+Предзагрузка теперь работает и для текстовых форматов в webtoon-режиме
+4.2+5.1 Неверный расчёт viewport
+Файл: ReaderScreen.kt
+
+stableTopChromeReservePx и stableBottomChromeReservePx инициализируются значением по умолчанию (56dp/48dp) вместо 0, когда chrome видим
+Это устраняет однокадровую задержку, при которой WebView рендерил без insets
+6.1+6.2 Оглавление
+Файл: ReaderScreen.kt
+
+LazyColumn: добавлено .fillMaxHeight()
+Уменьшен verticalArrangement с 6.dp до 4.dp
+Уменьшен padding элемента с 14x10 до 12x7
+Уменьшен RoundedCornerShape с 16.dp до 10.dp
+7.1 Видны HTML-рамки
+Файл: UnifiedReaderCssBuilder.kt
+
+Убран border по умолчанию с td,th во всех 3 CSS-пресетах
+Border показывается только для table[border]
+Добавлено div, section, article, aside, span, main, header, footer { border: none; } во все пресеты
+7.3 Заголовки слишком большие
+Файл: UnifiedReaderCssBuilder.kt
+
+h1: font-size: clamp(1.1em, 1.7em, 2rem) вместо 1.7em
+h2: font-size: clamp(1.05em, 1.35em, 1.6rem) вместо 1.35em
+h3: font-size: clamp(1em, 1.15em, 1.3rem) вместо 1.15em
+7.4 Обложки слишком маленькие
+Файл: UnifiedReaderCssBuilder.kt
+
+img правило обновлено: width: auto; max-width: 100% !important; height: auto !important; — перебивает HTML-атрибуты width/height
+7.2 PRESERVE_LAYOUT режим
+Файл: UnifiedReaderCssBuilder.kt
+
+Добавлены user-select: none, border: none для структурных элементов, и width: auto для изображений даже в layout-preserving режиме
