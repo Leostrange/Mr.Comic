@@ -55,12 +55,30 @@ Packt.Mastering.Kotlin.for.Android.14.1837631719.pdf
 old_ComicGridItem.kt
 test.diff
 .qa_run/
+_backups/
 Incorrect display/
 Mr.Comic Design System-handoff/
 mr-comic-design-system/
 offline-translation/
 PLAN.md
 photo_*.jpg
+*.log
+build_output*.txt
+build_debug.txt
+full_build.log
+restore_compile.log
+test_output.txt
+uidump.xml
+screen.png
+qa-*
+mrcomic-*
+reader-qa-artifacts/
+Mr.Comic_v2.1.0_bugfixed_20260609/
+SOURCE_ARCHIVE_MANIFEST*.txt
 
-# Design/media source dumps that are not runtime assets
-media/
+# Design/media source dumps that are not runtime assets.
+# Keep only the public README demo assets.
+/media/*
+!/media/
+!/media/demo.gif
+!/media/video_2025-09-22_00-33-37.mp4

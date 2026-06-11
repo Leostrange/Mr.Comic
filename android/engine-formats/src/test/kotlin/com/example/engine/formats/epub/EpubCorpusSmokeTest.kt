@@ -583,12 +583,32 @@ class EpubCorpusSmokeTest {
 
     private fun locateSample(name: String): File {
         val userDir = System.getProperty("user.dir") ?: "."
+        val aliases = when (name) {
+            "6177.zip" -> listOf("6177.epub", "6177 (2).epub", "6177 (3).epub")
+            "vibe.coding.the.future.of.programming.epub" -> listOf(
+                "vibe.coding.the.future.of.programming.epub",
+                "vibe.coding.the.future.of.programming (2).epub",
+                "vibe.coding.the.future.of.programming (3).epub"
+            )
+            else -> emptyList()
+        }
         var current = File(userDir).absoluteFile
         repeat(6) {
             val candidate = File(current, "Epub bug/$name")
             if (candidate.exists()) return candidate
             val referenceCandidate = File(current, "reference/formats/samples/$name")
             if (referenceCandidate.exists()) return referenceCandidate
+            aliases.forEach { alias ->
+                val aliasBugCandidate = File(current, "Epub bug/$alias")
+                if (aliasBugCandidate.exists()) return aliasBugCandidate
+                val aliasReferenceCandidate = File(current, "reference/formats/samples/$alias")
+                if (aliasReferenceCandidate.exists()) return aliasReferenceCandidate
+                val telegramCandidate = File(
+                    System.getProperty("user.home") ?: "",
+                    "Downloads/Telegram Desktop/$alias"
+                )
+                if (telegramCandidate.exists()) return telegramCandidate
+            }
             current = current.parentFile ?: return@repeat
         }
         return File(userDir, name)

@@ -58,8 +58,7 @@ fun WebtoonView(
     // Key listState on comic id so that chapter changes reset the scroll position
     // instead of retaining the stale position from the previous chapter.
     val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = uiState.currentPage,
-        key1 = uiState.comic?.id
+        initialFirstVisibleItemIndex = uiState.currentPage
     )
     var zoomedPageIndex by remember { mutableStateOf<Int?>(null) }
     val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
@@ -185,8 +184,7 @@ fun WebtoonView(
                     AndroidView(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight()
-                            .minimumSize(1.dp, 1.dp),
+                            .wrapContentHeight(),
                         factory = { ctx ->
                             WebView(ctx).apply {
                                 settings.javaScriptEnabled = true

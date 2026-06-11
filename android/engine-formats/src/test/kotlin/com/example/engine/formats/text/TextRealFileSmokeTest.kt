@@ -638,10 +638,22 @@ class TextRealFileSmokeTest {
 
     private fun locateSample(name: String): File {
         val userDir = System.getProperty("user.dir") ?: "."
+        val aliases = when (name) {
+            "docx_sample.zip" -> listOf("docx_sample.docx")
+            else -> emptyList()
+        }
         var current = File(userDir).absoluteFile
         repeat(6) {
             val candidate = File(current, "Epub bug/$name")
             if (candidate.exists()) return candidate
+            val referenceCandidate = File(current, "reference/formats/samples/$name")
+            if (referenceCandidate.exists()) return referenceCandidate
+            aliases.forEach { alias ->
+                val aliasBugCandidate = File(current, "Epub bug/$alias")
+                if (aliasBugCandidate.exists()) return aliasBugCandidate
+                val aliasReferenceCandidate = File(current, "reference/formats/samples/$alias")
+                if (aliasReferenceCandidate.exists()) return aliasReferenceCandidate
+            }
             current = current.parentFile ?: return@repeat
         }
         return File(userDir, name)
