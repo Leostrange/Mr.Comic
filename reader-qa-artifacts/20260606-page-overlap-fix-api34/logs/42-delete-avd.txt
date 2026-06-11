@@ -1,2 +1,0 @@
-
-AVD 'MrComic_QA_API34' deleted.

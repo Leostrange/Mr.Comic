@@ -1056,17 +1056,22 @@ private fun textSettingsJs(
         });
         mrcomicPagedViewport.style.boxSizing='border-box';
         mrcomicPagedViewport.style.position='relative';
+        mrcomicPagedViewport.style.left='0';
+        mrcomicPagedViewport.style.top='0';
         mrcomicPagedViewport.style.width='100%';
         mrcomicPagedViewport.style.maxWidth='100%';
         mrcomicPagedViewport.style.overflow='hidden';
         mrcomicPagedViewport.style.visibility='hidden';
-        mrcomicPagedViewport.style.paddingTop=mrcomicPageInsetTop+'px';
-        mrcomicPagedViewport.style.paddingBottom=mrcomicPageInsetBottom+'px';
-        mrcomicPagedViewport.style.setProperty('height',mrcomicVisibleHeight+'px','important');
-        mrcomicPagedViewport.style.setProperty('min-height',mrcomicVisibleHeight+'px','important');
-        mrcomicPagedViewport.style.setProperty('max-height',mrcomicVisibleHeight+'px','important');
+        mrcomicPagedViewport.style.paddingTop='0px';
+        mrcomicPagedViewport.style.paddingBottom='0px';
+        mrcomicPagedViewport.style.setProperty('height',mrcomicViewportHeight+'px','important');
+        mrcomicPagedViewport.style.setProperty('min-height',mrcomicViewportHeight+'px','important');
+        mrcomicPagedViewport.style.setProperty('max-height',mrcomicViewportHeight+'px','important');
         mrcomicPagedContent.style.boxSizing='border-box';
-        mrcomicPagedContent.style.position='relative';
+        mrcomicPagedContent.style.position='absolute';
+        mrcomicPagedContent.style.left='0';
+        mrcomicPagedContent.style.right='0';
+        mrcomicPagedContent.style.top=mrcomicPageInsetTop+'px';
         mrcomicPagedContent.style.width='100%';
         mrcomicPagedContent.style.maxWidth='100%';
         mrcomicPagedContent.style.transformOrigin='0 0';
@@ -1847,7 +1852,15 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         val target = targetPage ?: -1
         pendingPagedLayoutTarget = null
         evaluateJavascript(readerPagedLayoutJs(target)) { rawValue ->
-            decodePagedLayoutMetrics(rawValue)?.let { metrics ->
+            val metrics = decodePagedLayoutMetrics(rawValue)
+            if (metrics == null) {
+                Log.w(HTML_READER_TAG, "Paged layout did not return metrics: $rawValue")
+                pagedLayoutReady = true
+                alpha = 1f
+                return@evaluateJavascript
+            }
+            Log.d(HTML_READER_TAG, "Paged layout metrics: $rawValue")
+            metrics.let {
                 pagedLayoutReady = true
                 alpha = 1f
             }
@@ -1985,12 +1998,14 @@ private fun readerPagedCoreJs(
     if(!lineHeight||isNaN(lineHeight))lineHeight=Math.max(18,(parseFloat(cs&&cs.fontSize)||18)*1.5);
     var pageInsetTop=Math.max(0,parseFloat(window.__mrcomicPageInsetTop||0)||0);
     var pageInsetBottom=Math.max(0,parseFloat(window.__mrcomicPageInsetBottom||0)||0);
-    var firstPageOffset=pageInsetTop;
+    var firstPageOffset=0;
     var bodyPaddingBottom=Math.max(0,parseFloat(cs&&cs.paddingBottom)||0);
     var clipHeight=Math.max(lineHeight*3,pageHeight);
     var viewport=document.getElementById('__mrcomic_paged_viewport')||body;
     viewport.style.boxSizing='border-box';
     viewport.style.position='relative';
+    viewport.style.left='0';
+    viewport.style.top='0';
     viewport.style.width='100%';
     viewport.style.maxWidth='100%';
     viewport.style.overflow='hidden';
@@ -1998,21 +2013,24 @@ private fun readerPagedCoreJs(
     viewport.style.setProperty('min-height',clipHeight+'px','important');
     viewport.style.setProperty('max-height',clipHeight+'px','important');
     var content=document.getElementById('__mrcomic_paged_content')||body;
-    content.style.position='relative';
+    content.style.position='absolute';
+    content.style.left='0';
+    content.style.right='0';
+    content.style.top=Math.ceil(pageInsetTop)+'px';
     content.style.width='100%';
     content.style.maxWidth='100%';
     content.style.transformOrigin='0 0';
     content.style.webkitTransformOrigin='0 0';
     content.style.willChange='transform';
-    var viewportBottomSafety=Math.max(8,lineHeight);
-    var pageFitSafety=Math.max(lineHeight,lineHeight*1.65);
+    var viewportBottomSafety=0;
+    var pageFitSafety=0;
     viewport.style.boxSizing='border-box';
-    viewport.style.paddingTop=Math.ceil(pageInsetTop)+'px';
-    viewport.style.paddingBottom=Math.ceil(pageInsetBottom+viewportBottomSafety)+'px';
-    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-bodyPaddingBottom-viewportBottomSafety-pageFitSafety-Math.max(2,lineHeight*0.12));
+    viewport.style.paddingTop='0px';
+    viewport.style.paddingBottom='0px';
+    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
     var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
     var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
-    var contentViewportTopOffset=Math.max(0,pageInsetTop);
+    var contentViewportTopOffset=0;
     window.__mrcomicPageStep=usableHeight;
     window.__mrcomicFirstPageOffset=firstPageOffset;
     window.__mrcomicBaseClipHeight=clipHeight;
@@ -2224,7 +2242,7 @@ private fun readerPagedCoreJs(
       while(current<contentHeight&&guard++<2000){
         var pageTopInset=pageInsetTop;
         var pageBottomInset=pageInsetBottom;
-        var pageBudget=Math.max(lineHeight*3,clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom-viewportBottomSafety-pageFitSafety-Math.max(2,lineHeight*0.12));
+        var pageBudget=Math.max(lineHeight*3,clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
         if(pages.length===0&&current<=firstPageOffset+1&&mediaFirstPageBottom>current+lineHeight*2){
           var nextStartAfterMedia=contentHeight;
           for(var frontIdx=0;frontIdx<blockStarts.length;frontIdx++){
@@ -2275,8 +2293,12 @@ private fun readerPagedCoreJs(
 
         var endBottom=Math.max(current+lineHeight,Math.min(contentHeight,Number(unique[lastFitIndex].bottom||limit)));
         var nextFragmentTop=overflowIndex<unique.length?firstFragmentTopAfter(endBottom):-1;
+        var overlapGuardPx=Math.max(1,Math.ceil(lineHeight*0.5));
         var nextStart=nextFragmentTop>=0
-          ? Math.max(current+lineHeight,Math.ceil(nextFragmentTop))
+          ? Math.min(
+              Math.ceil(nextFragmentTop),
+              Math.max(current+lineHeight,Math.ceil(endBottom+overlapGuardPx))
+            )
           : contentHeight;
 
         var orphanGuardStart=0;
@@ -2300,8 +2322,8 @@ private fun readerPagedCoreJs(
           }
         }
 
-        if(nextStart<endBottom+1){
-          nextStart=Math.ceil(endBottom+Math.max(1,lineHeight*0.5));
+        if(nextStart<endBottom+overlapGuardPx){
+          nextStart=Math.ceil(endBottom+overlapGuardPx);
         }
 
         if(nextStart<=current+lineHeight*0.5){
@@ -2392,6 +2414,22 @@ private fun readerPagedCoreJs(
         solidReaderBackground(bodyBg)||
         solidReaderBackground(htmlBg)||
         '#ffffff';
+      var topShield=document.getElementById('__mrcomic_page_top_shield');
+      if(!topShield){
+        topShield=document.createElement('div');
+        topShield.id='__mrcomic_page_top_shield';
+      }
+      if(topShield.parentNode!==viewport){
+        viewport.appendChild(topShield);
+      }
+      topShield.style.position='absolute';
+      topShield.style.left='0';
+      topShield.style.right='0';
+      topShield.style.top='0';
+      topShield.style.height=Math.ceil(Math.max(0,pageInsetTop))+'px';
+      topShield.style.zIndex='2147483000';
+      topShield.style.pointerEvents='none';
+      topShield.style.background=shieldBg;
       shield.style.position='absolute';
       shield.style.left='0';
       shield.style.right='0';
@@ -2427,7 +2465,17 @@ private fun readerPagedCoreJs(
     $targetJs
     target=Math.max(0,Math.min(pageCount-1,target||0));
     applyPage(target,pages);
-    return JSON.stringify({handled:true,pageIndex:target,pageCount:pageCount});
+    return JSON.stringify({
+      handled:true,
+      pageIndex:target,
+      pageCount:pageCount,
+      insetTop:pageInsetTop,
+      insetBottom:pageInsetBottom,
+      clipHeight:clipHeight,
+      usableHeight:usableHeight,
+      contentOffset:window.__mrcomicContentViewportTopOffset||0,
+      layouts:pages.slice(0,6).map(function(p){return [Math.round(p.start||0),Math.round(p.end||0),Math.round(p.visibleHeight||0)];})
+    });
   }catch(e){
     return JSON.stringify({handled:$failureHandled,pageIndex:0,pageCount:1,error:String(e)});
   }
@@ -2709,6 +2757,7 @@ private fun HtmlPageView(
                         val runtimeFg = normalizeReaderOverrideColor(overrideTextColor) ?: themeFg
                         val runtimeAccent = normalizeReaderOverrideColor(overrideAccentColor)
                             ?: defaultReaderAccentColor(runtimeBg)
+                        val readerView = view as? ReaderWebView
                         view.evaluateJavascript(
                             textSettingsJs(
                                 currentFs.value,
@@ -2732,10 +2781,13 @@ private fun HtmlPageView(
                                 nativeViewportHeightPx = view.readerCssViewportHeightPxOrNull()
                             )
                         ) {
-                            val readerView = view as? ReaderWebView
                             readerView?.applyPagedLayout()
                             readerView?.schedulePagedLayoutSettle()
                             readerView?.resetFreeScrollAfterLoadIfNeeded()
+                        }
+                        if (currentPagedMode.value) {
+                            readerView?.postDelayed({ readerView.applyPagedLayout() }, 80L)
+                            readerView?.postDelayed({ readerView.applyPagedLayout() }, 320L)
                         }
                         view.post {
                             view.requestLayout()
@@ -3294,16 +3346,14 @@ fun ReaderScreen(
         if (chromeIsVisible || measuredBottomReservePx == 0) stableBottomChromeReservePx else 0,
         measuredBottomReservePx
     )
-    // PAGE text reserves system bars at the Compose layer so WebView cannot paint under
-    // the status bar/cutout. CSS insets below are only the reader text gutter plus
-    // optional chrome reserve; this avoids double-counting system bars during JS layout.
-    val textContentTopInsetPx = textSentenceInsetPx + topChromeReservePx
-    val textContentBottomInsetPx = textSentenceInsetPx + bottomChromeReservePx
+    // Text WebView owns the whole reader viewport. Keep all text safe-area and chrome
+    // reserves in the HTML contract, otherwise PAGE and WEBTOON end up measuring
+    // different heights and the same document jumps, clips, or leaves half-screen gaps.
+    val textContentTopInsetPx = systemTopInsetPx + textSentenceInsetPx + topChromeReservePx
+    val textContentBottomInsetPx = systemBottomInsetPx + textSentenceInsetPx + bottomChromeReservePx
     val densityScale = density.density.takeIf { it > 0f } ?: 1f
     val textContentTopInsetCssPx = (textContentTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
     val textContentBottomInsetCssPx = (textContentBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
-    val textReaderSystemTopInsetDp = with(density) { systemTopInsetPx.toDp() }
-    val textReaderSystemBottomInsetDp = with(density) { systemBottomInsetPx.toDp() }
     val textWebtoonTopInsetPx = systemTopInsetPx + textSentenceInsetPx + if (uiState.chromeAutoHideEnabled) {
         0
     } else {
@@ -3316,8 +3366,8 @@ fun ReaderScreen(
     } else {
         if (chromeIsVisible || measuredBottomReservePx == 0) maxOf(stableBottomChromeReservePx, measuredBottomReservePx) else 0
     }
-    val textWebtoonTopInsetDp = with(density) { textWebtoonTopInsetPx.toDp() }
-    val textWebtoonBottomInsetDp = with(density) { textWebtoonBottomInsetPx.toDp() }
+    val textWebtoonTopInsetCssPx = (textWebtoonTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
+    val textWebtoonBottomInsetCssPx = (textWebtoonBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
 
     val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
         tapZoneLayout,
@@ -3523,18 +3573,8 @@ fun ReaderScreen(
                     val htmlContent = uiState.currentHtmlContent
                     val textWebtoonHtmlContent = uiState.textWebtoonHtmlContent ?: htmlContent
                     val textWebtoonAssetBasePath = uiState.textWebtoonHtmlAssetBasePath ?: uiState.htmlAssetBasePath
-                    val textReaderModifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = textReaderSystemTopInsetDp,
-                            bottom = textReaderSystemBottomInsetDp
-                        )
-                    val textWebtoonModifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = textWebtoonTopInsetDp,
-                            bottom = textWebtoonBottomInsetDp
-                        )
+                    val textReaderModifier = Modifier.fillMaxSize()
+                    val textWebtoonModifier = Modifier.fillMaxSize()
                     val imageReaderModifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -3621,8 +3661,8 @@ fun ReaderScreen(
                                 textWebtoonAssetBasePath,
                                 ReadingMode.WEBTOON,
                                 textWebtoonModifier,
-                                0,
-                                0
+                                textWebtoonTopInsetCssPx,
+                                textWebtoonBottomInsetCssPx
                             )
                         }
                         htmlContent != null -> {
@@ -4595,8 +4635,6 @@ private fun TocBottomSheet(
         contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = readerPanelTonalElevation(effectiveToolbarBlur, base = 0f, extra = 1f),
         scrimColor = readerPanelScrimColor(MaterialTheme.colorScheme.onSurface, effectiveToolbarBlur),
-        // Skip the half-expanded state to avoid empty space at the bottom
-        sheetGesturesEnabled = true,
         dragHandle = {
             BottomSheetDefaults.DragHandle(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
@@ -5146,4 +5184,3 @@ private fun TextSettingsSheet(
         }
     }
 }
-

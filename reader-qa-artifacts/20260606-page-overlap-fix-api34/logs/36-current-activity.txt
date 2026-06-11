@@ -1,3 +1,0 @@
-
-    topResumedActivity=ActivityRecord{e7d8119 u0 com.example.mrcomic.debug/com.example.mrcomic.MainActivity t16}
-

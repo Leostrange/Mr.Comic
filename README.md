@@ -1,147 +1,160 @@
 # Mr.Comic
 
-`Mr.Comic` — Android-приложение для чтения комиксов, манги, вебтунов, книг и аудиокниг с единым ридером, библиотекой, TTS-озвучиванием, OCR/переводом и расширяемой системой оформления.
+Mr.Comic is an Android reader for comics, manga, webtoons, books, audiobooks, OCR-assisted translation, dictionaries, and a customizable library UI. The project is built with Kotlin, Jetpack Compose, Material 3, Hilt, Room, DataStore, Media3, and modular Android feature/engine layers.
 
-## Что Уже Есть
+## Demo
 
-- единая библиотека для графических и текстовых форматов
-- ридер на Jetpack Compose с настройками типографики, темами и пресетами чтения
-- TTS-озвучивание текста, аудиоплеер и аудиокниги
-- OCR и переводческие сценарии
-- `WebViewAssetLoader` для HTML/EPUB-ридера
-- кэши структуры `EPUB`, lazy-open путь и regression-покрытие реальными корпусами
-- пользовательские шрифты, импорт/экспорт стилей чтения и сохранённые пресеты
-- поддержка фоновых библиотечных пресетов и рабочая документация под генерацию background-артов
+![Mr.Comic demo](media/demo.gif)
 
-## Поддерживаемые Форматы
+[Watch the video splash screen](media/video_2025-09-22_00-33-37.mp4)
 
-### Графика и документы
+GitHub may show repository videos as a downloadable media link instead of an inline player. The GIF above is the lightweight preview; the MP4 is the original video splash screen.
 
-- `CBZ`, `CBR`, `ZIP`, `RAR`
-- `PDF`
-- `DJVU`
-- папки с изображениями
+## Purpose
 
-### Текстовые форматы
+Mr.Comic is designed as one app for several reading workflows:
 
-- `EPUB`
-- `FB2`
-- `TXT`
-- `HTML`
-- `Markdown`
-- `RTF`
-- `MOBI`, `AZW3`
-- `DOCX`
-- `ODT`
+- reading comics, manga, webtoons, PDF, DJVU, CBR, CBZ, and image folders;
+- reading reflowable books such as EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX, and ODT;
+- OCR for page images and scanned content;
+- offline translation and dictionary lookup;
+- text-to-speech and audiobook playback;
+- customizable library views, reader themes, typography, and visual presets.
 
-## Ключевые Возможности
+## Main Features
 
-### Reader
+- Unified library for image-based and text-based books.
+- Four reader container paths: raster page, raster vertical feed, text page, and text vertical feed.
+- Reader chrome, table of contents, bookmarks, progress, pop-up footnotes, quote saving, translation, dictionary lookup, and explanation actions.
+- Reading presets: paper, sepia, newspaper, night ink, OLED black, and e-ink oriented styles.
+- Typography controls for text readers: font family, font size, line height, letter spacing, paragraph spacing, alignment, and custom fonts.
+- OCR and translation flows for comics and scanned documents.
+- Offline dictionaries and local lookup routing.
+- TTS, page-turn sounds, media session support, mini player, and audiobook UI.
+- Library layout presets, progress surfaces, seasonal/decorative layers, and customizable visual styling.
 
-- темы чтения: `Paper`, `Sepia Book`, `Newspaper`, `Night Ink`, `OLED Black`, `E-Ink`
-- управление шрифтом, размером, интервалами, выравниванием и анимацией страниц
-- сохранённые стили чтения, JSON import/export, пользовательские шрифты
-- popup-сноски, TOC, перевод, OCR и режим озвучивания текста
-- `margin crop` для `PDF/DJVU`
+## Supported Formats
 
-### Library
+### Image and Document Formats
 
-- несколько режимов отображения
-- аудиокниги и полноэкранный плеер
-- библиотечные визуальные пресеты и фоновые стили
+- CBR, CBZ, ZIP, RAR, 7Z, TAR image archives
+- PDF
+- DJVU
+- Image folders
 
-### Audio
+### Text Formats
 
-- системный `TTS`
-- page flip sound presets: `Paper`, `Crisp`, `Soft`
-- медиа-сессии и миниплеер Android для аудио-сценариев
+- EPUB
+- FB2
+- TXT
+- HTML
+- Markdown
+- RTF
+- MOBI and AZW3
+- DOCX
+- ODT
 
-## Технологический Стек
+### Archive Behavior
 
-- Kotlin
-- Jetpack Compose + Material 3
-- Hilt
-- Room + DataStore
-- Media3 / ExoPlayer
-- Coil
-- Retrofit / OkHttp
-- `WebViewAssetLoader`
+Archives are expected to be classified before rendering. Image sequences should use raster containers. Single-book text archives should delegate to the matching text reader instead of going through the raster page loader.
 
-## Структура Проекта
+## Build And Run
 
-```text
-android/
-  app/                  Точка входа, навигация, сборка APK
-  core-model/           Доменные модели
-  core-data/            Room, DataStore, репозитории, миграции
-  core-domain/          Общая доменная логика
-  core-ui/              Темы, chrome, общие UI-компоненты
-  engine-formats/       Движки форматов и regression-тесты
-  engine-rendering/     Общий рендеринг страниц
-  feature-library/      Библиотека и аудиоплеер
-  feature-reader/       Экран чтения, TTS, типографика, звуки
-  feature-settings/     Настройки приложения
-  feature-ocr/          OCR и связанные сценарии
-  feature-onboarding/   Первичная настройка и стартовые сценарии
-docs/
-  active/               Активные рабочие ТЗ, пакеты промптов, карты задач
-samples/
-  format-real-corpus/   Реальные файлы для smoke/regression-проверок форматов
-```
+### Requirements
 
-## Сборка
+- Windows, macOS, or Linux with Android development tools
+- Android Studio
+- Android SDK
+- JDK 17
+- Gradle wrapper from this repository
 
-### Требования
+On Windows in this repository use `.\gradlew.bat`, not `./gradlew`.
 
-- Android Studio / Android SDK
-- Java 17
-- Windows-путь сборки в этом репозитории: `.\gradlew.bat`
-
-### Debug APK
+### Build Debug APK
 
 ```powershell
 .\gradlew.bat --no-daemon --console=plain :app:assembleDebug
 ```
 
-Готовый APK:
+Output APK:
 
 ```text
 android/app/build/outputs/apk/debug/Mr.Comic-debug.apk
 ```
 
-### Полезные команды
+### Useful Checks
 
 ```powershell
-.\gradlew.bat --no-daemon --console=plain :app:assembleDebug
-.\gradlew.bat --no-daemon --console=plain :engine-formats:testDebugUnitTest
 .\gradlew.bat --no-daemon --console=plain :feature-reader:testDebugUnitTest
+.\gradlew.bat --no-daemon --console=plain :engine-formats:testDebugUnitTest
+.\gradlew.bat --no-daemon --console=plain :feature-library:testDebugUnitTest
 ```
 
-## Документация
+## Project Structure
 
-- [Docs Map](docs/README.md)
-- [Project Context Handoff](PROJECT_CONTEXT_HANDOFF.md)
-- [Reader Settings Snapshot](READER_SETTINGS_SNAPSHOT_2026-03-25.md)
-- [Tasklist 00: Master Structure](TASKLIST_00_MASTER_STRUCTURE.md)
-- [Tasklist 01: Reader Experience](TASKLIST_01_READER_EXPERIENCE.md)
-- [Tasklist 02: Library Gamification](TASKLIST_02_LIBRARY_GAMIFICATION.md)
-- [Tasklist 03: Translation AI TTS](TASKLIST_03_TRANSLATION_AI_TTS.md)
-- [Tasklist 04: Settings IA Localization](TASKLIST_04_SETTINGS_IA_LOCALIZATION.md)
-- [Tasklist 05: Platform Foundation](TASKLIST_05_PLATFORM_FOUNDATION.md)
-- [Library Background Generation TZ](docs/active/LIBRARY_BACKGROUND_GENERATION_TZ.md)
-- [Library Background Prompt Pack](docs/active/LIBRARY_BACKGROUND_PROMPT_PACK.md)
+```text
+android/
+  app/                  Application entry point, navigation, DI root, APK build
+  core-model/           Shared models and enums
+  core-data/            Room, DataStore, repositories, migrations
+  core-domain/          Domain logic, translation, dictionary, analytics
+  core-ui/              Theme, design system primitives, chrome, shared UI
+  engine-api/           Reader engine boundary interfaces
+  engine-formats/       Format readers: archives, EPUB, FB2, text, PDF, DJVU, images
+  engine-rendering/     Bitmap cache, preloading, page rendering infrastructure
+  engine-registry/      Engine registration
+  feature-library/      Library, import flows, audiobook player, progress UI
+  feature-reader/       Reader screen, text/raster containers, TTS, controls
+  feature-settings/     Settings and customization screens
+  feature-ocr/          OCR feature module
+  feature-onboarding/   Onboarding and startup flows
+docs/
+  README.md             Documentation map
+  active/               Active technical notes and task plans
+  archive/              Historical checkpoints and roadmaps
+  reference/            Reference notes and format research
+samples/
+  format-real-corpus/   Real sample files for smoke and regression testing
+media/
+  demo.gif              README preview
+  video_2025-09-22_00-33-37.mp4
+```
 
-## Текущее Состояние
+## Documentation
 
-Проект активно развивается. Сейчас особенно сильно прокачаны:
+- [Documentation map](docs/README.md)
+- [Reader QA checklist](docs/active/QA_REGRESSION_CHECKLIST.md)
+- [Format support audit](docs/active/FORMAT_SUPPORT_AUDIT_2026-03-27.md)
+- [DJVU renderer research](docs/active/DJVU_RENDERER_RESEARCH.md)
+- [Readium EPUB/DJVU migration plan](docs/active/READIUM_EPUB_DJVU_MIGRATION_PLAN.md)
+- [Third-party dictionaries](docs/active/THIRD_PARTY_DICTIONARIES.md)
+- [Reader test progress](docs/reader_test_progress.md)
 
-- текстовый ридер и типографика
-- `EPUB/HTML/DOCX/MOBI/FB2/TXT` путь
-- `DJVU` backend и regression-покрытие
-- библиотека, аудио и TTS UX
+## Media And Demo Assets
 
-## Примечания Для Разработки
+The repository keeps only public demo media under `media/`:
 
-- часть regression-тестов опирается на корпус файлов из `samples/format-real-corpus`
-- локальные исследовательские материалы вроде `Epub bug/`, временных фото и sandbox-папок не являются частью production-кода
-- при работе в Windows в этом репозитории используем `.\gradlew.bat`, а не `./gradlew`
+- `media/demo.gif` for a lightweight README preview.
+- `media/video_2025-09-22_00-33-37.mp4` for the video splash screen.
+
+Large design dumps, local mockups, exported screenshots, emulator captures, and test logs should stay outside Git.
+
+## Current Status
+
+Mr.Comic is under active development. Current high-priority areas are reader stability, text/raster container separation, text pagination, archive text handling, EPUB/HTML/DOCX formatting, DJVU rendering, OCR/translation polish, and library customization.
+
+The project contains experimental and legacy paths while the reader architecture is being stabilized. See the documentation map and active task plans for the current engineering focus.
+
+## Repository Hygiene
+
+Before committing, exclude:
+
+- `android/**/build/`, `.gradle/`, `.kotlin/`, `.cxx/`, and generated sources;
+- Android Studio workspace files;
+- emulator screenshots, `qa-*`, `mrcomic-*`, UI dumps, and log files;
+- local test databases and private sample books;
+- signing keys, keystores, tokens, local API keys, and machine-specific settings.
+
+## License
+
+No explicit project license file is currently present in the repository. Third-party assets and bundled dictionaries may have their own licenses or attribution files in the relevant asset folders.
