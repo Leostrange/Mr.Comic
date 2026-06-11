@@ -843,9 +843,16 @@ class TextFormatReader @Inject constructor(
     }
 
     private fun renderTxtParagraphBlock(paragraph: String): String? {
-        val lines = paragraph.lines()
+        val rawLines = paragraph.lines()
             .map { it.trim() }
             .filter { it.isNotBlank() }
+        if (rawLines.isEmpty()) return null
+
+        // Rejoin words split by printed line-break hyphenation (and drop invisible soft
+        // hyphens) before choosing a layout. Scanned/OCR books use narrow columns, so they
+        // fall into the line-break-preserving branch below; without this pass the trailing
+        // hyphens ("таинствен-" + "ные") would stay visible mid-word.
+        val lines = mergeHyphenatedLineBreaks(rawLines)
         if (lines.isEmpty()) return null
 
         val body = if (shouldPreserveTxtLineBreaks(lines)) {
@@ -855,6 +862,39 @@ class TextFormatReader @Inject constructor(
         }
         return "<p>$body</p>"
     }
+
+    /**
+     * Collapses words broken across printed lines by trailing hyphenation into whole words,
+     * regardless of whether the surrounding block keeps its line breaks. A line is treated as
+     * hyphenated when it ends with a hyphen character and the following line starts with a
+     * letter; dialogue/bullet dashes (see [isEmDashContext]) are left untouched. Soft hyphens
+     * (U+00AD) are always removed because they are invisible layout hints, not real characters.
+     */
+    private fun mergeHyphenatedLineBreaks(lines: List<String>): List<String> {
+        val cleaned = lines.map { it.stripSoftHyphens() }
+        if (cleaned.size <= 1) return cleaned
+        val merged = mutableListOf<String>()
+        val current = StringBuilder()
+        cleaned.forEachIndexed { index, line ->
+            current.append(line)
+            val nextFirst = cleaned.getOrNull(index + 1)?.firstOrNull()
+            val last = current.lastOrNull()
+            val isPrintedHyphenation = last != null && isHyphenChar(last) &&
+                nextFirst != null && nextFirst.isLetter() &&
+                !isEmDashContext(current)
+            if (isPrintedHyphenation) {
+                current.deleteCharAt(current.lastIndex)
+            } else {
+                merged += current.toString()
+                current.setLength(0)
+            }
+        }
+        if (current.isNotEmpty()) merged += current.toString()
+        return merged
+    }
+
+    private fun String.stripSoftHyphens(): String =
+        if (indexOf('\u00AD') >= 0) replace("\u00AD", "") else this
 
     private fun joinTxtProseLines(lines: List<String>): String {
         if (lines.isEmpty()) return ""
