@@ -21,17 +21,6 @@ This folder contains the working documentation for the Mr.Comic Android reader p
 - [Library background generation task](active/LIBRARY_BACKGROUND_GENERATION_TZ.md)
 - [Library background prompt pack](active/LIBRARY_BACKGROUND_PROMPT_PACK.md)
 
-## Format References
-
-- [Comic archives](reference/format-references/01-comic-archives.md)
-- [PDF](reference/format-references/02-pdf.md)
-- [DJVU](reference/format-references/03-djvu.md)
-- [EPUB](reference/format-references/04-epub.md)
-- [FB2](reference/format-references/05-fb2.md)
-- [MOBI/AZW3](reference/format-references/06-mobi-azw3.md)
-- [DOCX/ODT/RTF](reference/format-references/07-docx-odt-rtf.md)
-- [TXT/HTML/Markdown](reference/format-references/08-txt-html-md.md)
-
 ## Feature Areas Covered
 
 - Reader architecture and text/raster container separation.
@@ -41,12 +30,3 @@ This folder contains the working documentation for the Mr.Comic Android reader p
 - OCR and scanned page workflows.
 - Offline translation, online translation boundaries, and dictionaries.
 - Library customization, visual presets, and settings organization.
-
-## Archive
-
-Historical checkpoints and older plans live under:
-
-- `archive/checkpoints/`
-- `archive/roadmaps/`
-
-These files are kept for project history. Current work should be driven by the root README, this documentation map, and the active docs above.

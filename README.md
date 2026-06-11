@@ -111,8 +111,6 @@ android/
 docs/
   README.md             Documentation map
   active/               Active technical notes and task plans
-  archive/              Historical checkpoints and roadmaps
-  reference/            Reference notes and format research
 samples/
   format-real-corpus/   Real sample files for smoke and regression testing
 media/
