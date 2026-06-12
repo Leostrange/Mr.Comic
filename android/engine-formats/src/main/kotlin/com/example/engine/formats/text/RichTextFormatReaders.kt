@@ -174,7 +174,7 @@ internal fun readRtfReflowableDocument(context: Context, path: String): Reflowab
         !(isCp1251 && hasRtfMojibake(renderedText))
 
     if (fastPathOk) {
-        return ReflowableDocumentBuilder.fromHtmlBlocks(blocks)
+        return reflowableDocumentFromHtmlBlocks(blocks)
     }
 
     // Fast path failed or looks suspicious.
@@ -197,11 +197,11 @@ internal fun readRtfReflowableDocument(context: Context, path: String): Reflowab
     }
 
     return if (shouldFallbackToLegacy && legacyText.isNotBlank()) {
-        ReflowableDocumentBuilder.fromPlainText(legacyText)
+        reflowableDocumentFromPlainText(legacyText)
     } else if (blocks.isEmpty() || blocks.all { Jsoup.parse(it).text().isBlank() }) {
         ReflowableDocumentBuilder.error("Unable to extract readable text from RTF.")
     } else {
-        ReflowableDocumentBuilder.fromHtmlBlocks(blocks)
+        reflowableDocumentFromHtmlBlocks(blocks)
     }
 }
 
@@ -228,7 +228,17 @@ internal fun readOdtReflowableDocument(context: Context, path: String): Reflowab
     val bytes = readRichTextBytes(context, path)
         ?: return ReflowableDocumentBuilder.error("Unable to read file.")
     val blocks = OdtTextSupport.extractBlocks(bytes)
-    return ReflowableDocumentBuilder.fromHtmlBlocks(blocks)
+    return reflowableDocumentFromHtmlBlocks(blocks)
+}
+
+private fun reflowableDocumentFromHtmlBlocks(blocks: List<String>): ReflowableDocument {
+    val sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(blocks)
+    return ReflowableDocument(pages = sections.map { it.html })
+}
+
+private fun reflowableDocumentFromPlainText(text: String): ReflowableDocument {
+    val sections = ReflowableDocumentBuilder.sectionsFromPlainText(text)
+    return ReflowableDocument(pages = sections.map { it.html })
 }
 
 internal fun readDocxReflowableDocument(context: Context, path: String): ReflowableDocument {

@@ -33,7 +33,11 @@ data class ReaderLocator(
     val position: Int? = null,
     val title: String? = null,
     val fragment: String? = null,
-    val pageIndex: Int? = null
+    val pageIndex: Int? = null,
+    /** Logical HTML split inside a chapter (Moon+ lastSplitIndex). Persisted in Phase 3. */
+    val splitIndex: Int? = null,
+    /** Screen page index inside the current split (Moon+ page within split). */
+    val pageInSplit: Int? = null
 )
 
 data class BookTocItem(

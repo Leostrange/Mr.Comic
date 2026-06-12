@@ -191,3 +191,13 @@ fun ComicFormat.supportsAdaptiveLandscapeSpread(): Boolean =
 
 fun ComicFormat.supportsDocumentMarginCrop(): Boolean =
     this == ComicFormat.PDF || this == ComicFormat.DJVU
+
+/** Graphic formats that must never enter the text/WebView reader route, even with HTML fallbacks. */
+fun ComicFormat.isGraphicReaderFormat(): Boolean = when (this) {
+    ComicFormat.CBZ,
+    ComicFormat.CBR,
+    ComicFormat.PDF,
+    ComicFormat.DJVU,
+    ComicFormat.FOLDER -> true
+    else -> false
+}

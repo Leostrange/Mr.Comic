@@ -1,4 +1,4 @@
-﻿package com.example.feature.reader.ui
+package com.example.feature.reader.ui
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -22,6 +22,8 @@ import com.example.core.data.repository.ComicRepository
 import com.example.core.data.repository.QuoteRepository
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
+import com.example.core.model.BookSource
+import com.example.core.model.storedReaderLocator
 import com.example.core.model.DictionaryEntry
 import com.example.core.model.ExplainRequest
 import com.example.core.model.ReadingMode
@@ -65,6 +67,11 @@ import com.example.core.domain.util.Result
 import com.example.engine.formats.base.FormatFactory
 import com.example.engine.formats.base.FormatDetector
 import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.epub.EpubReadablePath
+import com.example.engine.formats.base.LegacyFormatSessionAccess
+import com.example.engine.api.BookSession
+import com.example.engine.api.OpenBookRequest
+import com.example.engine.registry.BookEngineRegistry
 import com.example.engine.formats.base.RenderDeviceTier
 import com.example.engine.formats.base.resolveRenderDeviceProfile
 import com.example.engine.formats.base.TocEntry
@@ -108,7 +115,7 @@ private const val DEFAULT_TEXT_ALIGNMENT = "left"
 private const val DEFAULT_TEXT_BOLD = false
 private const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
 private const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
-private const val TEXT_WEBTOON_DOCUMENT_BATCH_SIZE = 12
+private const val TAG = "ReaderViewModel"
 private val FOOTNOTE_MARKER_RE = Regex("""\b(footnote|note|notebody|rearnote|endnote|fnote|noteref)\b""", RegexOption.IGNORE_CASE)
 
 private fun normalizeTapZoneActionName(value: String?): String {
@@ -193,6 +200,8 @@ data class ReaderUiState(
     val currentHtmlContent: String? = null,
     /** True when the active reader is routed through text/HTML containers. */
     val readerRendersHtmlContent: Boolean = false,
+    /** Resolved visual container for the active format + reading mode pair. */
+    val readerContainerKind: ReaderContainerKind = ReaderContainerKind.RASTER_PAGE,
     /** Base URL for resolving relative resources inside [currentHtmlContent]. */
     val htmlBaseUrl: String? = null,
     /** Asset-backed document path for WebViewAssetLoader resources of the current HTML page. */
@@ -404,6 +413,7 @@ class ReaderViewModel @Inject constructor(
     private val comicRepository: ComicRepository,
     private val quoteRepository: QuoteRepository,
     private val formatFactory: FormatFactory,
+    private val bookEngineRegistry: BookEngineRegistry,
     private val pagePreloader: PagePreloader,
     private val languageDetector: LanguageDetector,
     private val dictionaryEngine: DictionaryEngine,
@@ -433,6 +443,11 @@ class ReaderViewModel @Inject constructor(
     private val readerPreferences = UserPreferences(context.dataStore)
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
+    private var activeBookSession: BookSession? = null
+    private val textWebtoonSessionController = TextWebtoonSessionController(viewModelScope)
+    private val textReaderOrchestrator = TextReaderOrchestrator(
+        TextReaderController(textWebtoonSessionController)
+    )
 
     /**
      * Per-page HTML cache for WEBTOON mode — used for formats (DjVu) where some pages
@@ -448,8 +463,6 @@ class ReaderViewModel @Inject constructor(
     private var deferredPageCountJob: Job? = null
     private var eyeRestJob: Job? = null
     private var highQualityWarmupJob: Job? = null
-    private var htmlPrewarmJob: Job? = null
-    private var textWebtoonDocumentJob: Job? = null
     private var progressSaveJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
     private var pendingProgressSave: PendingProgressSave? = null
@@ -463,17 +476,6 @@ class ReaderViewModel @Inject constructor(
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
     private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
-    private data class CachedHtmlPage(
-        val html: String,
-        val assetBasePath: String?
-    )
-    private data class TextWebtoonCachedDocument(
-        val html: String,
-        val assetBasePath: String?
-    )
-    private val htmlPageCache = object : LinkedHashMap<Int, CachedHtmlPage>(12, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 10
-    }
 
     /**
      * The reading mode to restore when rotating back to portrait.
@@ -539,6 +541,7 @@ class ReaderViewModel @Inject constructor(
                     error = null,
                     currentHtmlContent = null,
                     readerRendersHtmlContent = false,
+                    readerContainerKind = ReaderContainerKind.RASTER_PAGE,
                     previousHtmlContent = null,
                     previousHtmlAssetBasePath = null,
                     nextHtmlContent = null,
@@ -556,12 +559,12 @@ class ReaderViewModel @Inject constructor(
             }
             eyeRestJob?.cancel()
             highQualityWarmupJob?.cancel()
-            htmlPrewarmJob?.cancel()
+            textReaderOrchestrator.cancelPrewarmJob()
             if (!isOpenRequestCurrent(requestToken)) return
             lastRetainedHighQualityPages = emptySet()
             pagePreloader.clearPages()
             clearHtmlPageCache()
-            formatReader?.close()
+            closeReaderResources()
 
             if (!isOpenRequestCurrent(requestToken)) return
             val prepared = withContext(Dispatchers.IO) {
@@ -575,7 +578,11 @@ class ReaderViewModel @Inject constructor(
                     }
                     else -> comic.format
                 }
-                val newReader = formatFactory.createReader(resolvedPath, detectedFormat)
+                val newReader = if (detectedFormat.isTextReadingFormat()) {
+                    openTextFormatReader(comic, resolvedPath, detectedFormat)
+                } else {
+                    formatFactory.createReader(resolvedPath, detectedFormat)
+                }
                 val readerRendersHtmlContent =
                     newReader?.rendersHtmlContent() == true || detectedFormat.isTextReadingFormat()
                 val pages = try {
@@ -620,8 +627,9 @@ class ReaderViewModel @Inject constructor(
             val readerRendersHtmlContent = prepared.readerRendersHtmlContent
             val openingMode = effectiveOpeningModeFor(detectedFormat, readerRendersHtmlContent)
             val requestedPage = pendingRequestedPage
-            val shouldDeferCount = detectedFormat.isHeavyReflowableFormat()
-            val initialPages = if (shouldDeferCount) 1 else prepared.pages
+            val shouldDeferCount = detectedFormat.isHeavyReflowableFormat() &&
+                detectedFormat != ComicFormat.EPUB
+            val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
             val startPage = normalizePageForMode(
                 page = requestedPage ?: comic.currentPage,
                 mode = openingMode,
@@ -648,6 +656,11 @@ class ReaderViewModel @Inject constructor(
                     comic = comic,
                     totalPages = initialPages,
                     readerRendersHtmlContent = readerRendersHtmlContent,
+                    readerContainerKind = resolveReaderContainerKind(
+                        format = detectedFormat,
+                        readingMode = openingMode,
+                        readerRendersHtmlContent = readerRendersHtmlContent
+                    ),
                     readingMode = openingMode,
                     currentPage = startPage,
                     isLoading = false,
@@ -689,6 +702,11 @@ class ReaderViewModel @Inject constructor(
                 )
             )
             if (!isOpenRequestCurrent(requestToken)) return
+            formatReader?.let { reader ->
+                if (readerRendersHtmlContent) {
+                    syncBookEngineTextLayer(reader)
+                }
+            }
             val visiblePages = visiblePagesFor(startPage, openingMode)
             if (!shouldDeferCount) {
                 formatReader?.takeUnless { readerRendersHtmlContent }?.let { reader ->
@@ -699,6 +717,9 @@ class ReaderViewModel @Inject constructor(
                 }
                 if (readerRendersHtmlContent) {
                     prewarmHtmlPagesAround(startPage, delayMillis = 180L)
+                    if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
+                        scheduleTextPagePaginationBuild()
+                    }
                 }
             } else {
                 // For heavy reflowable formats, load the first page immediately so the UI
@@ -708,6 +729,9 @@ class ReaderViewModel @Inject constructor(
                 }
                 if (readerRendersHtmlContent) {
                     prewarmHtmlPagesAround(startPage, delayMillis = 180L)
+                    if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
+                        scheduleTextPagePaginationBuild()
+                    }
                 }
                 scheduleDeferredPageCountResolution(
                     comic = comic,
@@ -777,7 +801,7 @@ class ReaderViewModel @Inject constructor(
                     Log.e("ReaderViewModel", "Failed to load HTML page $index", error)
                     if (_uiState.value.currentPage == index) {
                         CachedHtmlPage(
-                            html = textReaderLoadErrorHtml(index, error),
+                            html = textReaderOrchestrator.loadErrorHtml(index, error),
                             assetBasePath = null
                         )
                     } else {
@@ -814,6 +838,18 @@ class ReaderViewModel @Inject constructor(
                         refreshAdjacentHtmlPages(index)
                     }
                     return@launch
+                }
+                if (_uiState.value.currentPage == index && formatReader === reader && comicId != null) {
+                    Log.w("ReaderViewModel", "Empty HTML for page $index; showing error surface")
+                    _uiState.update {
+                        it.copy(
+                            currentHtmlContent = textReaderOrchestrator.loadErrorHtml(
+                                index,
+                                IllegalStateException("Empty HTML page")
+                            ),
+                            htmlAssetBasePath = null
+                        )
+                    }
                 }
                 return@launch
             }
@@ -885,56 +921,45 @@ class ReaderViewModel @Inject constructor(
         val reader = formatReader ?: return
         val state = _uiState.value
         val comic = state.comic ?: return
-        val comicId = comic.id
-        if (!state.readerRendersHtmlContent) return
-        val totalPages = state.totalPages
-        if (totalPages <= 0) return
-        if (state.textWebtoonHtmlContent != null && state.textWebtoonHtmlPageCount >= totalPages) return
-
-        textWebtoonDocumentJob?.cancel()
-        textWebtoonDocumentJob = viewModelScope.launch {
-            val loadedPages = ArrayList<CachedHtmlPage>(totalPages.coerceAtMost(256))
-            suspend fun publishLoadedDocument(force: Boolean = false) {
-                if (loadedPages.isEmpty()) return
-                if (!force && loadedPages.size % TEXT_WEBTOON_DOCUMENT_BATCH_SIZE != 0) return
-                if (formatReader !== reader || _uiState.value.comic?.id != comicId) return
-                val document = buildTextWebtoonDocument(loadedPages)
+        if (state.readerContainerKind != ReaderContainerKind.TEXT_WEBTOON) return
+        textReaderOrchestrator.controller.ensureTextWebtoonDocumentLoaded(
+            scope = viewModelScope,
+            reader = reader,
+            comic = comic,
+            state = state,
+            isSessionActive = { activeReader, comicId ->
+                formatReader === activeReader && _uiState.value.comic?.id == comicId
+            },
+            loadPage = { activeReader, pageIndex -> getOrLoadHtmlPage(activeReader, pageIndex) },
+            buildDocument = TextWebtoonDocumentBuilder::build,
+            publish = { document, loadedCount ->
                 _uiState.update { current ->
-                    if (current.comic?.id != comicId || formatReader !== reader) {
+                    if (current.comic?.id != comic.id || formatReader !== reader) {
                         current
                     } else if (
                         current.textWebtoonHtmlContent != null &&
-                        current.textWebtoonHtmlPageCount >= loadedPages.size
+                        current.textWebtoonHtmlPageCount >= loadedCount
                     ) {
                         current
                     } else {
                         current.copy(
                             textWebtoonHtmlContent = document.html,
                             textWebtoonHtmlAssetBasePath = document.assetBasePath,
-                            textWebtoonHtmlPageCount = loadedPages.size
+                            textWebtoonHtmlPageCount = loadedCount
                         )
                     }
                 }
             }
-
-            for (pageIndex in 0 until totalPages) {
-                if (formatReader !== reader || _uiState.value.comic?.id != comicId) return@launch
-                val page = getOrLoadHtmlPage(reader, pageIndex) ?: continue
-                loadedPages += page
-                publishLoadedDocument()
-            }
-            if (loadedPages.isEmpty()) return@launch
-            if (formatReader !== reader || _uiState.value.comic?.id != comicId) return@launch
-            publishLoadedDocument(force = true)
-        }
+        )
     }
 
     fun navigateTo(
         page: Int,
         progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING
     ) {
+        val resolvedPage = resolveNavigationPage(page, progressSource)
         val clamped = normalizePageForMode(
-            page = page,
+            page = resolvedPage,
             mode = _uiState.value.readingMode,
             totalPages = _uiState.value.totalPages
         )
@@ -1884,9 +1909,18 @@ class ReaderViewModel @Inject constructor(
          // For bare "#fragment" links inside the current page we avoid reloading the same
          // page so the WebView can keep its native in-page scroll behaviour.
          if ((filePart.isNotBlank() && filePart.contains('.')) || cleanHref.startsWith("#") || cleanHref.contains("#")) {
+             if (shouldBlockInlineHtmlChapterNavigation(
+                     containerKind = _uiState.value.readerContainerKind,
+                     readingMode = _uiState.value.readingMode,
+                     hrefFilePart = filePart,
+                     currentAssetBasePath = _uiState.value.htmlAssetBasePath
+                 )
+             ) {
+                 return
+             }
              val pageIdx = formatReader?.resolveHrefToPage(cleanHref)
              if (pageIdx != null && pageIdx >= 0) {
-                 if (pageIdx != _uiState.value.currentPage) {
+                 if (pageIdx != enginePageForUiPage(_uiState.value.currentPage)) {
                      navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
                  }
                  return
@@ -2493,13 +2527,16 @@ class ReaderViewModel @Inject constructor(
                 }
                 if (_uiState.value.readerRendersHtmlContent) {
                     prewarmHtmlPagesAround(normalizedStartPage, delayMillis = 0L)
+                    if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
+                        scheduleTextPagePaginationBuild()
+                    }
                 }
                 loadBookmarks(comic.id, realPages)
             }
         }
     }
 
-    /** Loads the TOC from the current format reader (IO-bound, runs on Dispatchers.IO). */
+    /** Loads the TOC from BookEngine (Readium) or the legacy format reader. */
     private fun loadToc(force: Boolean = false) {
         val reader = formatReader ?: run {
             _uiState.update { it.copy(tableOfContents = emptyList()) }
@@ -2508,68 +2545,25 @@ class ReaderViewModel @Inject constructor(
         if (!force && _uiState.value.tableOfContents.isNotEmpty()) return
         tocLoadJob?.cancel()
         tocLoadJob = viewModelScope.launch(Dispatchers.IO) {
-            val toc = sanitizeReaderTableOfContents(reader.getTableOfContents())
+            val bookSession = activeBookSession
+            val toc = textReaderOrchestrator.resolveTableOfContents(reader, bookSession)
             if (formatReader !== reader) return@launch
             _uiState.update { it.copy(tableOfContents = toc) }
             rememberChapterMilestoneAnchor()
         }
     }
 
-    private fun sanitizeReaderTableOfContents(entries: List<TocEntry>): List<TocEntry> {
-        if (entries.isEmpty()) return entries
-        val sanitized = ArrayList<TocEntry>(entries.size)
-        var insideNotesSection = false
-        var notesSectionAdded = false
-
-        entries.forEach { entry ->
-            val title = entry.title.trim()
-            if (title.isBlank()) return@forEach
-            val isNotesSection = isReaderNotesTocTitle(title)
-            val isFootnoteChild = insideNotesSection && isReaderFootnoteTocChildTitle(title)
-
-            when {
-                isNotesSection -> {
-                    if (!notesSectionAdded) {
-                        sanitized += entry.copy(title = "Примечания")
-                        notesSectionAdded = true
-                    }
-                    insideNotesSection = true
-                }
-                isFootnoteChild -> Unit
-                else -> {
-                    sanitized += entry
-                    if (!isReaderFootnoteTocChildTitle(title)) {
-                        insideNotesSection = false
-                    }
-                }
+    private fun syncBookEngineTextLayer(reader: FormatReader) {
+        textReaderOrchestrator.syncBookEngineTextLayer(
+            scope = viewModelScope,
+            reader = reader,
+            bookSession = activeBookSession,
+            isStillActive = { formatReader === reader },
+            onTocUpdated = { entries ->
+                _uiState.update { it.copy(tableOfContents = entries) }
+                rememberChapterMilestoneAnchor()
             }
-        }
-        return sanitized.distinctBy { it.title.trim().lowercase(Locale.ROOT) to it.pageIndex }
-    }
-
-    private fun isReaderNotesTocTitle(title: String): Boolean {
-        val normalized = title.trim().lowercase(Locale.ROOT)
-            .replace("ё", "е")
-            .replace(Regex("""[\s._\-]+"""), " ")
-        return normalized in setOf(
-            "notes",
-            "note",
-            "footnotes",
-            "footnote",
-            "endnotes",
-            "endnote",
-            "примечания",
-            "примечание",
-            "сноски",
-            "сноска"
         )
-    }
-
-    private fun isReaderFootnoteTocChildTitle(title: String): Boolean {
-        val normalized = title.trim()
-        return normalized.matches(Regex("""^[\[\(]?\d{1,4}[\]\)]?$""")) ||
-            normalized.matches(Regex("""^\*{1,4}$""")) ||
-            normalized.matches(Regex("""^(?:fn|note|footnote)[-_]?\d{1,4}$""", RegexOption.IGNORE_CASE))
     }
 
     fun setReadingMode(mode: ReadingMode) {
@@ -2630,8 +2624,19 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(
                 readingMode = mode,
-                currentPage = alignedPage
+                currentPage = alignedPage,
+                readerContainerKind = resolveReaderContainerKind(
+                    format = state.comic?.format,
+                    readingMode = mode,
+                    readerRendersHtmlContent = state.readerRendersHtmlContent
+                )
             )
+        }
+        if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
+            textReaderOrchestrator.clearTextPagePagination()
+            textReaderOrchestrator.cancelPaginationJob()
+        } else if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
+            scheduleTextPagePaginationBuild()
         }
         syncReaderPosition(
             page = alignedPage,
@@ -3188,10 +3193,28 @@ class ReaderViewModel @Inject constructor(
     private fun currentChapterFor(page: Int): TocEntry? {
         val toc = _uiState.value.tableOfContents
         if (toc.isEmpty()) return null
+        val tocPage = enginePageForUiPage(page)
         return toc.asSequence()
             .sortedBy { it.pageIndex }
-            .lastOrNull { it.pageIndex <= page }
+            .lastOrNull { it.pageIndex <= tocPage }
     }
+
+    private fun enginePageForUiPage(page: Int): Int =
+        TextReaderNavigation.enginePageForUiPage(
+            state = _uiState.value,
+            controller = textReaderOrchestrator.controller,
+            page = page
+        )
+
+    private fun resolveNavigationPage(
+        page: Int,
+        progressSource: ReaderNavigationProgressSource
+    ): Int = TextReaderNavigation.resolveNavigationPage(
+        state = _uiState.value,
+        controller = textReaderOrchestrator.controller,
+        page = page,
+        progressSource = progressSource
+    )
 
     private fun normalizePageForMode(
         page: Int,
@@ -3255,19 +3278,108 @@ class ReaderViewModel @Inject constructor(
         !_uiState.value.readerRendersHtmlContent
 
     private fun clearHtmlPageCache() {
-        synchronized(htmlPageCache) {
-            htmlPageCache.clear()
+        textReaderOrchestrator.resetSessionAndCaches {
+            _webtoonHtmlCache.value = emptyMap()
+            _uiState.update {
+                it.copy(
+                    textWebtoonHtmlContent = null,
+                    textWebtoonHtmlAssetBasePath = null,
+                    textWebtoonHtmlPageCount = 0
+                )
+            }
         }
-        _webtoonHtmlCache.value = emptyMap()
-        textWebtoonDocumentJob?.cancel()
-        textWebtoonDocumentJob = null
-        _uiState.update {
-            it.copy(
-                textWebtoonHtmlContent = null,
-                textWebtoonHtmlAssetBasePath = null,
-                textWebtoonHtmlPageCount = 0
+    }
+
+    fun tocDisplayPage(enginePageIndex: Int): Int =
+        TextReaderNavigation.tocDisplayPage(
+            state = _uiState.value,
+            controller = textReaderOrchestrator.controller,
+            enginePageIndex = enginePageIndex
+        )
+
+    private fun scheduleTextPagePaginationBuild() {
+        val state = _uiState.value
+        if (formatReader is com.example.engine.formats.epub.EpubFormatReader) {
+            textReaderOrchestrator.controller.clearTextPagePagination()
+            return
+        }
+        if (!shouldUseKotlinTextPagePagination(state.readerContainerKind, state.comic?.format)) {
+            textReaderOrchestrator.controller.clearTextPagePagination()
+            return
+        }
+        val reader = formatReader ?: return
+        val comicId = state.comic?.id ?: return
+        textReaderOrchestrator.scheduleTextPagePaginationBuild(
+            scope = viewModelScope,
+            context = context,
+            reader = reader,
+            comicId = comicId,
+            getUiState = { _uiState.value },
+            getBookSession = { activeBookSession },
+            isStillActive = { formatReader === reader && _uiState.value.comic?.id == comicId },
+            onComplete = { result ->
+                _uiState.update {
+                    it.copy(
+                        totalPages = result.displayCount,
+                        currentPage = result.displayStart
+                    )
+                }
+                activeReaderSession = activeReaderSession?.copy(totalPages = result.displayCount)
+                loadPage(result.displayStart)
+                prewarmHtmlPagesAround(result.displayStart, delayMillis = 0L)
+            }
+        )
+    }
+
+    private suspend fun openTextFormatReader(
+        comic: Comic,
+        resolvedPath: String,
+        detectedFormat: ComicFormat
+    ): FormatReader? {
+        closeActiveBookSession()
+        return runCatching {
+            val engine = bookEngineRegistry.resolve(detectedFormat)
+            val bookSource = if (resolvedPath.startsWith("content://")) {
+                BookSource.ContentUri(resolvedPath)
+            } else {
+                BookSource.FilePath(resolvedPath)
+            }
+            val session = engine.open(
+                OpenBookRequest(
+                    bookId = comic.id,
+                    format = detectedFormat,
+                    source = bookSource,
+                    initialLocator = comic.storedReaderLocator()
+                )
             )
+            activeBookSession = session
+            when (session) {
+                is LegacyFormatSessionAccess -> session.loadLegacyReader()
+                else -> formatFactory.createReader(resolvedPath, detectedFormat)
+            }
+        }.getOrElse { error ->
+            Log.w(TAG, "BookEngine open failed for $detectedFormat; falling back to FormatFactory", error)
+            activeBookSession = null
+            formatFactory.createReader(resolvedPath, detectedFormat)
         }
+    }
+
+    private suspend fun closeActiveBookSession() {
+        val session = activeBookSession ?: return
+        activeBookSession = null
+        textReaderOrchestrator.activeSession = null
+        runCatching {
+            bookEngineRegistry.resolve(session.format).close(session.sessionId)
+        }.onFailure { error ->
+            Log.w(TAG, "Failed to close BookEngine session ${session.sessionId}", error)
+        }
+    }
+
+    private fun closeReaderResources() {
+        textReaderOrchestrator.cancelWebtoonLoad()
+        runCatching { formatReader?.close() }
+        formatReader = null
+        viewModelScope.launch { closeActiveBookSession() }
     }
 
     private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
@@ -3288,124 +3400,33 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun getCachedHtmlPage(index: Int): CachedHtmlPage? =
-        synchronized(htmlPageCache) { htmlPageCache[index] }
+        textReaderOrchestrator.controller.cachedHtmlPage(index)
 
-    private fun storeCachedHtmlPage(index: Int, page: CachedHtmlPage) {
-        synchronized(htmlPageCache) {
-            htmlPageCache[index] = page
-        }
-    }
-
-    private suspend fun getOrLoadHtmlPage(reader: FormatReader, index: Int): CachedHtmlPage? {
-        getCachedHtmlPage(index)?.let { return it }
-        val html = withContext(Dispatchers.IO) { reader.getHtmlPage(index) } ?: return null
-        val cached = CachedHtmlPage(
-            html = html,
-            assetBasePath = reader.htmlAssetBasePath(index)
+    private suspend fun getOrLoadHtmlPage(reader: FormatReader, index: Int): CachedHtmlPage? =
+        textReaderOrchestrator.loadHtmlPage(
+            reader = reader,
+            index = index,
+            containerKind = _uiState.value.readerContainerKind,
+            onWebtoonPageCached = { pageIndex, html ->
+                _webtoonHtmlCache.update { it + (pageIndex to html) }
+            }
         )
-        storeCachedHtmlPage(index, cached)
-        _webtoonHtmlCache.update { it + (index to html) }
-        return cached
-    }
-
-    private fun textReaderLoadErrorHtml(index: Int, error: Throwable): String {
-        val message = error.message
-            ?.takeIf { it.isNotBlank() }
-            ?: error::class.java.simpleName
-            ?: "Unknown reader error"
-        val safeMessage = message
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-        return """
-            <!doctype html>
-            <html>
-            <head>
-              <meta name="viewport" content="width=device-width,initial-scale=1">
-            </head>
-            <body>
-              <p>Не удалось загрузить текстовую страницу ${index + 1}.</p>
-              <p>$safeMessage</p>
-            </body>
-            </html>
-        """.trimIndent()
-    }
-
-    private fun buildTextWebtoonDocument(pages: List<CachedHtmlPage>): TextWebtoonCachedDocument {
-        val first = pages.first()
-        val head = extractHtmlTagContents(first.html, "head").orEmpty()
-        val sections = pages.mapIndexed { index, page ->
-            val body = extractHtmlTagContents(page.html, "body") ?: page.html
-            """<section class="mrcomic-text-webtoon-section" data-mrcomic-page-index="$index">$body</section>"""
-        }.joinToString(separator = "\n")
-        val html = """
-            <!doctype html>
-            <html>
-            <head>
-            <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-            $head
-            <style>
-              html,body{width:100%;max-width:100%;overflow-x:hidden;}
-              body{margin:0;box-sizing:border-box;}
-              .mrcomic-text-webtoon-section{display:block;width:100%;max-width:100%;box-sizing:border-box;}
-              .mrcomic-text-webtoon-section + .mrcomic-text-webtoon-section{margin-top:0;}
-            </style>
-            </head>
-            <body data-mrcomic-text-webtoon-document="true">
-            $sections
-            </body>
-            </html>
-        """.trimIndent()
-        return TextWebtoonCachedDocument(
-            html = html,
-            assetBasePath = first.assetBasePath
-        )
-    }
-
-    private fun extractHtmlTagContents(html: String, tagName: String): String? {
-        val regex = Regex(
-            pattern = "(?is)<$tagName\\b[^>]*>(.*?)</$tagName>",
-            options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        )
-        return regex.find(html)?.groupValues?.getOrNull(1)
-    }
 
     private fun prewarmHtmlPagesAround(centerPage: Int, delayMillis: Long = 0L) {
         val reader = formatReader ?: return
         val comicId = _uiState.value.comic?.id ?: return
-        val totalPages = _uiState.value.totalPages
-        if (totalPages <= 0) return
-        val preloadDistance = _uiState.value.preloadPages.coerceIn(1, 8)
-        val visiblePages = visiblePagesFor(centerPage, _uiState.value.readingMode)
-        val minVisible = visiblePages.minOrNull() ?: centerPage
-        val maxVisible = visiblePages.maxOrNull() ?: centerPage
-        val pagesToPrewarm = buildList {
-            for (offset in 1..preloadDistance) {
-                val left = minVisible - offset
-                if (left >= 0) add(left)
-                val right = maxVisible + offset
-                if (right < totalPages) add(right)
-            }
-        }.distinct()
-        if (pagesToPrewarm.isEmpty()) return
-
-        htmlPrewarmJob?.cancel()
-        htmlPrewarmJob = viewModelScope.launch {
-            if (delayMillis > 0L) delay(delayMillis)
-            for (pageIndex in pagesToPrewarm) {
-                if (formatReader !== reader || _uiState.value.comic?.id != comicId) return@launch
-                if (getCachedHtmlPage(pageIndex) != null) continue
-                runCatching {
-                    getOrLoadHtmlPage(reader, pageIndex)
-                }.onFailure { error ->
-                    Log.w("ReaderViewModel", "Failed to prewarm HTML page $pageIndex", error)
-                }.onSuccess {
-                    if (formatReader === reader && _uiState.value.comic?.id == comicId) {
-                        refreshAdjacentHtmlPages()
-                    }
-                }
-            }
-        }
+        textReaderOrchestrator.prewarmHtmlPagesAround(
+            scope = viewModelScope,
+            reader = reader,
+            comicId = comicId,
+            centerPage = centerPage,
+            getUiState = { _uiState.value },
+            visiblePagesFor = ::visiblePagesFor,
+            isStillActive = { formatReader === reader && _uiState.value.comic?.id == comicId },
+            loadPage = { pageIndex -> getOrLoadHtmlPage(reader, pageIndex) },
+            onPagePrewarmed = { refreshAdjacentHtmlPages() },
+            delayMillis = delayMillis
+        )
     }
 
     private fun activeComicSupportsHighResZoom(): Boolean =
@@ -3519,10 +3540,12 @@ class ReaderViewModel @Inject constructor(
         deferredTocWarmupJob?.cancel()
         eyeRestJob?.cancel()
         highQualityWarmupJob?.cancel()
-        htmlPrewarmJob?.cancel()
+        textReaderOrchestrator.cancelAllJobs()
         progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
-        formatReader?.close()
+        runCatching { formatReader?.close() }
+        formatReader = null
+        runCatching { kotlinx.coroutines.runBlocking { closeActiveBookSession() } }
         pagePreloader.cancelPreload()
         pagePreloader.clearPages()
         clearHtmlPageCache()
@@ -3860,15 +3883,22 @@ class ReaderViewModel @Inject constructor(
     private fun resolveReadablePath(comic: Comic, fallbackPath: String): String? {
         val treeUri = comic.treeUri
         val documentId = comic.documentId
-        if (!treeUri.isNullOrBlank() && !documentId.isNullOrBlank() && DocumentsContract.isTreeUri(Uri.parse(treeUri))) {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                return null
+        if (!treeUri.isNullOrBlank() && !documentId.isNullOrBlank() &&
+            DocumentsContract.isTreeUri(Uri.parse(treeUri))
+        ) {
+            runCatching {
+                DocumentsContract.buildDocumentUriUsingTree(Uri.parse(treeUri), documentId).toString()
+            }.getOrNull()?.takeIf(::hasReadAccess)?.let { resolvedUri ->
+                cacheContentUriForEpub(comic, resolvedUri)?.let { return it }
+                return resolvedUri
             }
         }
 
         if (!fallbackPath.startsWith("content://")) {
-            val filePath = java.io.File(fallbackPath)
-            if (filePath.exists()) return fallbackPath
+            val normalizedPath = fallbackPath.removePrefix("file://")
+            EpubReadablePath.ensureLocal(context, normalizedPath)?.let { return it }
+            val filePath = java.io.File(normalizedPath)
+            if (filePath.exists()) return filePath.absolutePath
             val sourceUri = comic.treeUri
             if (!sourceUri.isNullOrBlank() && !DocumentsContract.isTreeUri(Uri.parse(sourceUri)) && hasReadAccess(sourceUri)) {
                 return sourceUri
@@ -3876,7 +3906,10 @@ class ReaderViewModel @Inject constructor(
             resolveReadablePathFromPersistedPermissions(comic)?.let { return it }
             return fallbackPath
         }
-        if (hasReadAccess(fallbackPath)) return fallbackPath
+        if (hasReadAccess(fallbackPath)) {
+            cacheContentUriForEpub(comic, fallbackPath)?.let { return it }
+            return fallbackPath
+        }
 
         val sourceUri = comic.treeUri
         if (!sourceUri.isNullOrBlank() && !DocumentsContract.isTreeUri(Uri.parse(sourceUri)) && hasReadAccess(sourceUri)) {
@@ -3895,6 +3928,13 @@ class ReaderViewModel @Inject constructor(
         }.let { resolved ->
             if (resolved != fallbackPath) resolved else resolveReadablePathFromPersistedPermissions(comic) ?: fallbackPath
         }
+    }
+
+    private fun cacheContentUriForEpub(comic: Comic, contentUri: String): String? {
+        if (!contentUri.startsWith("content://")) return null
+        val format = comic.format
+        if (format != ComicFormat.EPUB && format != ComicFormat.UNKNOWN) return null
+        return EpubReadablePath.ensureLocalFromContentUri(context, contentUri)
     }
 
     private fun resolveReadablePathFromPersistedPermissions(comic: Comic): String? {

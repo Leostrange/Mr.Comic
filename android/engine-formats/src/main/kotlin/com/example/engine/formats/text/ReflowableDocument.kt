@@ -634,6 +634,12 @@ internal object ReflowableDocumentBuilder {
             first.attr("data-mrcomic-section-start").equals("true", ignoreCase = true)
     }.getOrDefault(false)
 
+    private fun String.isPlainTextChapterStartBlock(): Boolean {
+        val text = visibleTextForLayout()
+        if (text.length > 80) return false
+        return Regex("""(?i)^(chapter|part|book|section|глава|часть)\b""").containsMatchIn(text)
+    }
+
     private fun wrapBody(body: String, baseCss: String): String =
         buildUnifiedReaderHtmlDocument(
             body = body,
@@ -795,4 +801,119 @@ internal object ReflowableDocumentBuilder {
         .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
+
+    internal fun sectionsFromPlainText(
+        text: String,
+        baseCss: String = READER_MOBI_DOCUMENT_CSS
+    ): List<TextDocumentSection> =
+        sectionizeBlocks(textBlocks(text), baseCss)
+
+    internal fun sectionsFromHtmlBlocks(
+        blocks: List<String>,
+        baseCss: String = READER_MOBI_DOCUMENT_CSS,
+        baseUrl: String? = null
+    ): List<TextDocumentSection> =
+        sectionizeBlocks(blocks, baseCss, baseUrl)
+
+    internal fun sectionsFromMarkup(
+        markup: String,
+        baseUrl: String?,
+        baseCss: String = READER_MOBI_DOCUMENT_CSS
+    ): List<TextDocumentSection> {
+        val normalized = renderHtmlToReaderDocument(markup, baseUrl)
+        val blocks = extractReaderBlocks(normalized)
+        return if (blocks.isEmpty()) {
+            listOf(
+                TextDocumentSection(
+                    index = 0,
+                    html = normalized,
+                    baseUrl = baseUrl
+                )
+            )
+        } else {
+            sectionizeBlocks(blocks, baseCss, baseUrl)
+        }
+    }
+
+    private fun sectionizeBlocks(
+        blocks: List<String>,
+        baseCss: String,
+        baseUrl: String? = null
+    ): List<TextDocumentSection> {
+        val sectionBodies = mutableListOf<List<String>>()
+        val current = mutableListOf<String>()
+
+        fun flush() {
+            if (current.isNotEmpty()) {
+                sectionBodies += current.toList()
+                current.clear()
+            }
+        }
+
+        blocks.forEach { block ->
+            if (block == FORCED_PAGEBREAK_MARKER) {
+                flush()
+                return@forEach
+            }
+            if (current.isNotEmpty() && block.isReaderSectionStartBlock()) {
+                flush()
+            }
+            if (current.isNotEmpty() && block.isPlainTextChapterStartBlock()) {
+                flush()
+            }
+            current += block
+        }
+        flush()
+
+        return sectionBodies.mapIndexed { index, bodyBlocks ->
+            TextDocumentSection(
+                index = index,
+                id = sectionIdFromBlocks(bodyBlocks),
+                title = sectionTitleFromBlocks(bodyBlocks),
+                html = wrapBody(bodyBlocks.joinToString(""), baseCss),
+                baseUrl = baseUrl
+            )
+        }.ifEmpty {
+            listOf(
+                TextDocumentSection(
+                    index = 0,
+                    html = wrapBody("<p></p>", baseCss),
+                    baseUrl = baseUrl
+                )
+            )
+        }
+    }
+
+    private fun sectionTitleFromBlocks(blocks: List<String>): String? {
+        blocks.asSequence()
+            .mapNotNull { block ->
+                runCatching {
+                    Jsoup.parseBodyFragment(block).body().children().firstOrNull()
+                }.getOrNull()
+            }
+            .firstOrNull { element ->
+                element.normalName() in setOf("h1", "h2", "h3")
+            }
+            ?.let { heading ->
+                heading.text().trim().takeIf { it.isNotBlank() }
+            }
+            ?.let { return it }
+
+        return blocks.joinToString(" ") { it.visibleTextForLayout() }
+            .trim()
+            .take(120)
+            .takeIf { it.isNotBlank() }
+    }
+
+    private fun sectionIdFromBlocks(blocks: List<String>): String? {
+        return blocks.asSequence()
+            .mapNotNull { block ->
+                runCatching {
+                    Jsoup.parseBodyFragment(block).body().children().firstOrNull()
+                }.getOrNull()
+            }
+            .firstNotNullOfOrNull { element ->
+                element.attr("id").trim().takeIf { it.isNotBlank() }
+            }
+    }
 }

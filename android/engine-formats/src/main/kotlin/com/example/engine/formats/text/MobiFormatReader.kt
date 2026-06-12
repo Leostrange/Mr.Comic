@@ -21,7 +21,7 @@ class MobiFormatReader(
     private val context: Context,
     private val path: String,
     private val format: ComicFormat
-) : FormatReader {
+) : FormatReader, ReflowableTextFormatReader {
 
     private val payload: MobiReaderPayload by lazy { readMobiReflowablePayload(context, path) }
     private val document: ReflowableDocument get() = payload.document
@@ -36,6 +36,12 @@ class MobiFormatReader(
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
         document.pageAt(index)
+    }
+
+    override suspend fun getTextDocumentSections(): List<TextDocumentSection> = withContext(Dispatchers.IO) {
+        document.pages.mapIndexed { index, html ->
+            TextDocumentSection(index = index, html = html, baseUrl = htmlBaseUrl())
+        }
     }
 
     override fun getTableOfContents(): List<TocEntry> = document.toc
@@ -118,14 +124,19 @@ internal fun readMobiReflowablePayload(context: Context, path: String): MobiRead
     }
     return when (val extracted = MobiTextSupport.extract(bytes)) {
         is MobiExtractionResult.Success -> {
-            val document = if (extracted.isMarkup) {
-                buildMobiMarkupDocument(
+            val sections = if (extracted.isMarkup) {
+                buildMobiSections(
                     markup = extracted.content,
                     baseUrl = baseUrl
                 )
             } else {
-                ReflowableDocumentBuilder.fromPlainText(extracted.content)
+                ReflowableDocumentBuilder.sectionsFromPlainText(extracted.content)
+                    .withSequentialIndices()
             }
+            val document = enrichMobiDocument(
+                ReflowableDocument(pages = sections.map { it.html }),
+                if (extracted.isMarkup) extracted.content else ""
+            )
             MobiReaderPayload(
                 document = document,
                 diagnostics = extracted.diagnostics,
@@ -156,33 +167,45 @@ private fun InputStream.readMobiBytesBounded(maxBytes: Int): ByteArray? {
     return output.toByteArray()
 }
 
-private fun buildMobiMarkupDocument(markup: String, baseUrl: String?): ReflowableDocument {
+private fun buildMobiSections(markup: String, baseUrl: String?): List<TextDocumentSection> {
     if (!MOBI_HEAVY_MARKUP_RE.containsMatchIn(markup)) {
-        buildMobiFastBlockDocument(markup)?.let { doc -> return enrichMobiDocument(doc, markup) }
+        buildMobiFastBlockDocument(markup)?.pages?.mapIndexed { index, html ->
+            TextDocumentSection(index = index, html = html, baseUrl = baseUrl)
+        }?.let { return it.withSequentialIndices() }
     }
 
     val normalized = normalizeMobiMarkup(markup)
-
     val segments = splitMobiMarkupSegments(normalized).let { segments ->
         if (segments.size <= 2) segments else listOf(stripMobiSoftPageBreaks(normalized))
     }
     if (segments.size <= 1) {
-        return enrichMobiDocument(
-            ReflowableDocumentBuilder.fromMarkup(segments.firstOrNull() ?: normalized, baseUrl),
-            normalized
-        )
+        return ReflowableDocumentBuilder.sectionsFromMarkup(
+            markup = segments.firstOrNull() ?: normalized,
+            baseUrl = baseUrl
+        ).withSequentialIndices()
     }
 
-    val pages = segments.flatMap { segment ->
-        ReflowableDocumentBuilder.fromMarkup(segment, baseUrl).pages
-    }.filter { html ->
-        html.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim().isNotBlank()
-    }
+    return segments
+        .flatMap { segment ->
+            ReflowableDocumentBuilder.sectionsFromMarkup(segment, baseUrl)
+        }
+        .filter { section ->
+            section.html.replace(Regex("<[^>]+>"), " ")
+                .replace(Regex("\\s+"), " ")
+                .trim()
+                .isNotBlank()
+        }
+        .withSequentialIndices()
+        .ifEmpty {
+            ReflowableDocumentBuilder.sectionsFromMarkup(normalized, baseUrl).withSequentialIndices()
+        }
+}
 
-    val pageList = pages.ifEmpty { ReflowableDocumentBuilder.fromMarkup(normalized, baseUrl).pages }
+private fun buildMobiMarkupDocument(markup: String, baseUrl: String?): ReflowableDocument {
+    val sections = buildMobiSections(markup, baseUrl)
     return enrichMobiDocument(
-        ReflowableDocument(pages = pageList),
-        normalized
+        ReflowableDocument(pages = sections.map { it.html }),
+        normalizeMobiMarkup(markup)
     )
 }
 
