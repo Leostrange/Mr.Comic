@@ -13,21 +13,31 @@ internal object DocxTextSupport {
     fun render(bytes: ByteArray, baseUrl: String?): ReflowableDocument {
         val rendered = renderDocument(bytes, baseUrl)
         safeLogD("render: blocks=${rendered.blocks.size} toc=${rendered.toc.size}")
-        val reflowed = ReflowableDocumentBuilder.fromHtmlBlocks(
+        val sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(
             blocks = rendered.blocks,
-            baseCss = READER_BASE_DOCUMENT_CSS + "\n" + rendered.extraCss
+            baseCss = READER_BASE_DOCUMENT_CSS + "\n" + rendered.extraCss,
+            baseUrl = baseUrl
         )
-        safeLogD("render: pageCount=${reflowed.pageCount}")
-        // Build TOC from the *paginated* pages so page indices are correct.
-        // rendered.toc was built from raw blocks (pre-pagination) and has pageIndex=0 for all
-        // entries, making every TOC tap land on page 1. buildTocFromPages iterates the final
-        // page list and records the actual page index for each heading it finds.
-        val toc = buildTocFromPages(reflowed.pages)
-        return reflowed.copy(
+        val pages = sections.map { it.html }
+        safeLogD("render: sectionCount=${sections.size}")
+        val toc = buildTocFromSections(sections)
+        return ReflowableDocument(
+            pages = pages,
             toc = toc.ifEmpty { rendered.toc },
             footnoteMap = rendered.footnoteMap
         )
     }
+
+    private fun buildTocFromSections(sections: List<TextDocumentSection>): List<TocEntry> =
+        sections.flatMap { section ->
+            Regex("""<h([1-6])\b[^>]*>(.*?)</h\1>""", RegexOption.IGNORE_CASE)
+                .findAll(section.html)
+                .mapNotNull { match ->
+                    val title = xmlTextToPlain(match.groupValues[2]).ifBlank { return@mapNotNull null }
+                    TocEntry(title = title, pageIndex = section.index)
+                }
+                .toList()
+        }
 
     private fun safeLogD(message: String) {
         runCatching { Log.d(TAG, message) }

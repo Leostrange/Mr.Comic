@@ -18,61 +18,82 @@ import java.net.URLDecoder
 class PlainTextFormatReader(
     private val context: Context,
     private val path: String
-) : FormatReader {
+) : FormatReader, ReflowableTextFormatReader {
 
-    private val document: ReflowableDocument by lazy { parseDocument() }
-    private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(document.pages) }
+    private val sections: List<TextDocumentSection> by lazy { parseSections() }
+    private val documentPages: List<String> by lazy { sections.map { it.html } }
+    private val chapterAnchors: List<ChapterAnchor> by lazy { parseChapterAnchors() }
+    private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(documentPages) }
+    private val tocEntries: List<TocEntry> by lazy {
+        chapterAnchors.mapNotNull { anchor ->
+            anchorPageIndex[anchor.id]?.let { pageIndex -> TocEntry(anchor.title, pageIndex) }
+        }
+    }
 
     override fun rendersHtmlContent(): Boolean = true
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
-        document.pageCount
+        documentPages.size.coerceAtLeast(1)
     }
 
     override suspend fun getPage(index: Int): Bitmap? = null
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
-        document.pageAt(index)
+        documentPages.getOrNull(index.coerceIn(0, (documentPages.size - 1).coerceAtLeast(0)))
     }
 
-    override fun getTableOfContents(): List<TocEntry> = document.toc
+    override suspend fun getTextDocumentSections(): List<TextDocumentSection> = withContext(Dispatchers.IO) {
+        sections
+    }
+
+    override fun getTableOfContents(): List<TocEntry> = tocEntries
 
     override fun resolveHrefToPage(href: String): Int? =
         resolveLocalHref(path, href, anchorPageIndex)
 
     override fun close() = Unit
 
-    private fun parseDocument(): ReflowableDocument {
+    private fun parseChapterAnchors(): List<ChapterAnchor> {
+        val raw = readSourceText(context, path) ?: return emptyList()
+        return textBlocksWithChapterAnchors(raw).second
+    }
+
+    private fun parseSections(): List<TextDocumentSection> {
         val raw = readSourceText(context, path)
-            ?: return ReflowableDocumentBuilder.error("Unable to read file.")
-        val (blocks, anchors) = textBlocksWithChapterAnchors(raw)
-        val pages = paginateReaderBlocks(blocks)
-        val pageIndex = buildAnchorPageIndex(pages)
-        val toc = anchors.mapNotNull { anchor ->
-            pageIndex[anchor.id]?.let { TocEntry(anchor.title, it) }
-        }
-        return ReflowableDocument(pages = pages, toc = toc)
+            ?: return listOf(
+                TextDocumentSection(
+                    index = 0,
+                    html = ReflowableDocumentBuilder.error("Unable to read file.").pageAt(0).orEmpty()
+                )
+            )
+        val (blocks, _) = textBlocksWithChapterAnchors(raw)
+        return ReflowableDocumentBuilder.sectionsFromHtmlBlocks(blocks).withSequentialIndices()
     }
 }
 
 class MarkdownFormatReader(
     private val context: Context,
     private val path: String
-) : FormatReader {
+) : FormatReader, ReflowableTextFormatReader {
 
-    private val document: ReflowableDocument by lazy { parseDocument() }
-    private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(document.pages) }
+    private val sections: List<TextDocumentSection> by lazy { parseSections() }
+    private val documentPages: List<String> by lazy { sections.map { it.html } }
+    private val anchorPageIndex: Map<String, Int> by lazy { buildAnchorPageIndex(documentPages) }
 
     override fun rendersHtmlContent(): Boolean = true
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
-        document.pageCount
+        documentPages.size.coerceAtLeast(1)
     }
 
     override suspend fun getPage(index: Int): Bitmap? = null
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
-        document.pageAt(index)
+        documentPages.getOrNull(index.coerceIn(0, (documentPages.size - 1).coerceAtLeast(0)))
+    }
+
+    override suspend fun getTextDocumentSections(): List<TextDocumentSection> = withContext(Dispatchers.IO) {
+        sections
     }
 
     override fun resolveHrefToPage(href: String): Int? =
@@ -80,12 +101,16 @@ class MarkdownFormatReader(
 
     override fun close() = Unit
 
-    private fun parseDocument(): ReflowableDocument {
+    private fun parseSections(): List<TextDocumentSection> {
         val raw = readSourceText(context, path)
-            ?: return ReflowableDocumentBuilder.error("Unable to read file.")
-        return ReflowableDocument(
-            pages = paginateReaderBlocks(renderMarkdownToHtmlBlocks(raw))
-        )
+            ?: return listOf(
+                TextDocumentSection(
+                    index = 0,
+                    html = ReflowableDocumentBuilder.error("Unable to read file.").pageAt(0).orEmpty()
+                )
+            )
+        return ReflowableDocumentBuilder.sectionsFromHtmlBlocks(renderMarkdownToHtmlBlocks(raw))
+            .withSequentialIndices()
     }
 }
 

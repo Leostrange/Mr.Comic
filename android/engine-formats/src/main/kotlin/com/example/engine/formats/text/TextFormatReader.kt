@@ -84,10 +84,12 @@ private data class TxtChapterAnchor(
 )
 
 private data class TextDocumentData(
-    val pages: List<String>,
+    val sections: List<TextDocumentSection>,
     val chapterAnchors: List<TxtChapterAnchor> = emptyList(),
     val footnoteMap: Map<String, String> = emptyMap()
-)
+) {
+    val pages: List<String> get() = sections.map { it.html }
+}
 
 private data class MarkdownDocumentBlocks(
     val blocks: List<String>,
@@ -537,7 +539,7 @@ class TextFormatReader @Inject constructor(
     @ApplicationContext private val context: Context,
     private val path: String,
     private val format: ComicFormat
-) : FormatReader {
+) : FormatReader, ReflowableTextFormatReader {
 
     private val mobiPayload: MobiReaderPayload? by lazy {
         when (format) {
@@ -561,6 +563,10 @@ class TextFormatReader @Inject constructor(
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
         htmlPages.getOrNull(index.coerceIn(0, (htmlPages.size - 1).coerceAtLeast(0)))
+    }
+
+    override suspend fun getTextDocumentSections(): List<TextDocumentSection> = withContext(Dispatchers.IO) {
+        documentData.sections
     }
 
     override fun getTableOfContents(): List<TocEntry> = tocEntries
@@ -688,81 +694,109 @@ class TextFormatReader @Inject constructor(
         return when (format) {
             ComicFormat.MOBI,
             ComicFormat.AZW3 -> {
-                val document = mobiDocument ?: ReflowableDocumentBuilder.error("Unable to read file.")
+                val sections = mobiDocumentSections()
                 TextDocumentData(
-                    pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) },
-                    footnoteMap = document.footnoteMap
+                    sections = sections,
+                    footnoteMap = mobiPayload?.footnoteMap.orEmpty()
                 )
             }
             ComicFormat.RTF -> {
                 val document = readRtfReflowableDocument(context, path)
                 TextDocumentData(
-                    pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) }
+                    sections = reflowableDocumentSections(document)
                 )
             }
             ComicFormat.DOCX -> {
                 val document = readDocxReflowableDocument(context, path)
                 TextDocumentData(
-                    pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) },
+                    sections = reflowableDocumentSections(document),
                     footnoteMap = document.footnoteMap
                 )
             }
             ComicFormat.ODT -> {
                 val document = readOdtReflowableDocument(context, path)
                 TextDocumentData(
-                    pages = (0 until document.pageCount).mapNotNull(document::pageAt)
-                        .ifEmpty { listOf(wrapHtml("<p>Unable to read file.</p>")) },
+                    sections = reflowableDocumentSections(document),
                     footnoteMap = document.footnoteMap
                 )
             }
             else -> {
-                val raw = readSourceText() ?: return TextDocumentData(listOf(wrapHtml("<p>Unable to read file.</p>")))
+                val raw = readSourceText()
+                    ?: return TextDocumentData(singleSection(wrapHtml("<p>Unable to read file.</p>")))
                 when (format) {
-                    ComicFormat.HTML -> {
-                        val readerBaseUrl = htmlBaseUrl()
-                        val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
-                        val pages = if (isGutenbergHtml(raw)) {
-                            paginateHtmlDocument(
-                                raw = raw,
-                                baseUrl = readerBaseUrl,
-                                preservePublisherLayout = true,
-                                baseCss = PRESERVE_LAYOUT_HTML_CSS,
-                                keepWholeDocument = true
-                            )
-                        } else {
-                            paginateHtmlDocument(
-                                raw = raw,
-                                baseUrl = readerBaseUrl,
-                                preservePublisherLayout = preservePublisherLayout,
-                                baseCss = if (preservePublisherLayout) {
-                                    PRESERVE_LAYOUT_HTML_CSS
-                                } else {
-                                    DEFAULT_READER_HTML_CSS
-                                },
-                                keepWholeDocument = true
-                            )
-                        }
-                        val anchored = addHtmlHeadingAnchorsToPages(pages)
-                        TextDocumentData(
-                            pages = anchored.pages,
-                            chapterAnchors = anchored.anchors
-                        )
-                    }
-                    ComicFormat.MARKDOWN -> {
-                        val markdown = markdownDocumentBlocks(raw)
-                        TextDocumentData(
-                            pages = paginateBlocks(markdown.blocks),
-                            chapterAnchors = markdown.anchors
-                        )
-                    }
-                    ComicFormat.TXT -> paginateTxtDocument(raw)
-                    else -> TextDocumentData(paginateBlocks(textBlocks(raw)))
+                    ComicFormat.HTML -> sectionHtmlDocument(raw)
+                    ComicFormat.MARKDOWN -> sectionMarkdownDocument(raw)
+                    ComicFormat.TXT -> sectionTxtDocument(raw)
+                    else -> TextDocumentData(
+                        sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(textBlocks(raw))
+                            .withSequentialIndices()
+                    )
                 }
             }
         }
+    }
+
+    private fun reflowableDocumentSections(document: ReflowableDocument): List<TextDocumentSection> {
+        val baseUrl = htmlBaseUrl()
+        return (0 until document.pageCount)
+            .mapNotNull { index -> document.pageAt(index) }
+            .mapIndexed { index, html ->
+                TextDocumentSection(index = index, html = html, baseUrl = baseUrl)
+            }
+            .ifEmpty { singleSection(wrapHtml("<p>Unable to read file.</p>"), baseUrl) }
+    }
+
+    private fun mobiDocumentSections(): List<TextDocumentSection> =
+        reflowableDocumentSections(mobiDocument ?: ReflowableDocumentBuilder.error("Unable to read file."))
+
+    private fun singleSection(html: String, baseUrl: String? = htmlBaseUrl()): List<TextDocumentSection> =
+        listOf(TextDocumentSection(index = 0, html = html, baseUrl = baseUrl))
+
+    private fun sectionHtmlDocument(raw: String): TextDocumentData {
+        val readerBaseUrl = htmlBaseUrl()
+        val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
+        val pages = if (isGutenbergHtml(raw)) {
+            paginateHtmlDocument(
+                raw = raw,
+                baseUrl = readerBaseUrl,
+                preservePublisherLayout = true,
+                baseCss = PRESERVE_LAYOUT_HTML_CSS,
+                keepWholeDocument = true
+            )
+        } else {
+            paginateHtmlDocument(
+                raw = raw,
+                baseUrl = readerBaseUrl,
+                preservePublisherLayout = preservePublisherLayout,
+                baseCss = if (preservePublisherLayout) {
+                    PRESERVE_LAYOUT_HTML_CSS
+                } else {
+                    DEFAULT_READER_HTML_CSS
+                },
+                keepWholeDocument = true
+            )
+        }
+        val anchored = addHtmlHeadingAnchorsToPages(pages)
+        val sections = if (preservePublisherLayout || isGutenbergHtml(raw)) {
+            anchored.pages.mapIndexed { index, html ->
+                TextDocumentSection(index = index, html = html, baseUrl = readerBaseUrl)
+            }
+        } else {
+            ReflowableDocumentBuilder.sectionsFromMarkup(raw, readerBaseUrl)
+        }
+        return TextDocumentData(
+            sections = sections.withSequentialIndices(),
+            chapterAnchors = anchored.anchors
+        )
+    }
+
+    private fun sectionMarkdownDocument(raw: String): TextDocumentData {
+        val markdown = markdownDocumentBlocks(raw)
+        return TextDocumentData(
+            sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(markdown.blocks)
+                .withSequentialIndices(),
+            chapterAnchors = markdown.anchors
+        )
     }
 
     private fun readSourceText(): String? {
@@ -808,10 +842,11 @@ class TextFormatReader @Inject constructor(
             .ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
     }
 
-    private fun paginateTxtDocument(raw: String): TextDocumentData {
+    private fun sectionTxtDocument(raw: String): TextDocumentData {
         val (blocks, chapterAnchors) = textBlocksWithChapterAnchors(raw)
         return TextDocumentData(
-            pages = paginateBlocks(blocks),
+            sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(blocks)
+                .withSequentialIndices(),
             chapterAnchors = chapterAnchors
         )
     }

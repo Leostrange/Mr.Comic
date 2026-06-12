@@ -1,4 +1,4 @@
-﻿package com.example.feature.reader.ui
+package com.example.feature.reader.ui
 
 import android.app.Activity
 import android.content.Context
@@ -98,6 +98,8 @@ import com.example.feature.reader.R
 import com.example.feature.reader.ui.components.ImageMessagePopup
 import com.example.feature.reader.ui.components.ImageMessagePopupConfig
 import com.example.feature.reader.ui.components.PageView
+import com.example.feature.reader.ui.components.TextPageContainer
+import com.example.feature.reader.ui.components.TextWebtoonContainer
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
 import kotlinx.coroutines.Dispatchers
@@ -125,6 +127,52 @@ import kotlin.math.roundToInt
 private const val JS_TAP_HANDLER = """(function(){
   if(window.__tapAdded)return;
   window.__tapAdded=true;
+  function hasActivePagedLayout(){
+    return !!(window.__mrcomicPageLayouts&&window.__mrcomicPageLayouts.length)||!!window.__mrcomicPageStep;
+  }
+  function isPagedEdgeTap(clientX){
+    var winW=window.innerWidth||document.documentElement.clientWidth||360;
+    if(!winW)return false;
+    var ratio=(Number(clientX)||0)/winW;
+    return ratio<0.28||ratio>0.72;
+  }
+  function routePagedTapFromLink(e,forceForward){
+    e.preventDefault();
+    e.stopPropagation();
+    var x=forceForward?0.85:((Number(e.clientX)||0)/(window.innerWidth||document.documentElement.clientWidth||360));
+    if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
+  }
+  function isInlineSpineChapterLink(href,linkEl){
+    if(!href||href.indexOf('://')>=0)return false;
+    if(!/\.(?:xhtml|html|htm)(?:#|$)/i.test(href))return false;
+    if(linkEl){
+      var cls=linkEl.getAttribute('class')||'';
+      if(/\bpginternal\b/i.test(cls))return true;
+      try{
+        if(linkEl.closest&&linkEl.closest('table'))return true;
+        if(document.getElementById('pgepubid00002')&&linkEl.closest&&linkEl.closest('#pgepubid00002'))return true;
+      }catch(err){}
+    }
+    return true;
+  }
+  function shouldRouteLinkAsPagedTap(href,linkEl){
+    if(!isInlineSpineChapterLink(href,linkEl))return false;
+    return !!(window.__mrcomicPagedModeScrollLock||hasActivePagedLayout());
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    while(t&&t.tagName){
+      if(t.tagName==='A'){
+        var href=t.getAttribute('href')||'';
+        if(shouldRouteLinkAsPagedTap(href,t)){
+          routePagedTapFromLink(e,true);
+          return;
+        }
+        break;
+      }
+      t=t.parentNode;
+    }
+  },true);
   window.__readerTouchStartTs=0;
   window.__readerTouchStartX=0;
   window.__readerTouchStartY=0;
@@ -335,6 +383,10 @@ private const val JS_TAP_HANDLER = """(function(){
           if(footnoteHref&&typeof _NativeReader!='undefined')_NativeReader.onAnchorClick('noteref://'+encodeURIComponent(footnoteHref));
           return;
         }
+        if(shouldRouteLinkAsPagedTap(href,t)||(hasActivePagedLayout()&&isPagedEdgeTap(e.clientX))){
+          routePagedTapFromLink(e,shouldRouteLinkAsPagedTap(href,t));
+          return;
+        }
         if(href.indexOf('fbanchor://')===0){
           e.preventDefault();
           var id=href.slice(11);
@@ -382,6 +434,10 @@ private const val JS_TAP_HANDLER = """(function(){
           e.preventDefault();
           if(title&&typeof _NativeReader!='undefined'){
             _NativeReader.onInlineFootnote(title);
+            return;
+          }
+          if(shouldRouteLinkAsPagedTap(href,t)){
+            routePagedTapFromLink(e,true);
             return;
           }
           if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
@@ -894,6 +950,11 @@ private fun textSettingsJs(
         else -> "#808080"
     }
     val quoteColor = if (isNightTheme) "#c9c9c9" else "#555555"
+    val pagedTocLinkCss = if (pagedMode) {
+        "body a.pginternal,body table a[href],body table[summary] a[href],body #pgepubid00002 a[href]{pointer-events:none !important;cursor:default !important;-webkit-tap-highlight-color:transparent !important;text-decoration:none !important;color:inherit !important;}"
+    } else {
+        ""
+    }
     val selectionBackgroundColor = readerSelectionOverlayColor(
         color = resolvedAccentColor,
         alpha = if (isNightTheme) 0.38f else 0.28f
@@ -936,7 +997,8 @@ private fun textSettingsJs(
           "body *::selection{background:$selectionBackgroundColor !important;color:$selectionForegroundColor !important;}"+
           "a.fn,a[epub\\\\:type~='noteref'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
           "a.fn *,a[epub\\\\:type~='noteref'] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[title][href*='#'] *{color:$noteColor !important;}"+
-          ".note-num,.footnote-label{color:$noteColor !important;}";
+          ".note-num,.footnote-label{color:$noteColor !important;}"+
+          "$pagedTocLinkCss";
         if(!themeStyle.parentNode){(__mrcomicHead||document.head||document.documentElement).appendChild(themeStyle);}
     """.trimIndent()
     // Direct DOM coloring of footnote anchors вЂ” robust fallback for cases where
@@ -988,6 +1050,7 @@ private fun textSettingsJs(
     """.trimIndent()
     val pageLockJs = if (pagedMode) {
         """
+        window.__mrcomicPagedModeScrollLock=true;
         document.documentElement.style.overflowY='hidden';
         document.body.style.overflowY='visible';
         document.documentElement.style.overflowX='hidden';
@@ -1091,6 +1154,7 @@ private fun textSettingsJs(
         """.trimIndent()
     } else {
         """
+        window.__mrcomicPagedModeScrollLock=false;
         document.documentElement.style.removeProperty('overflow-y');
         document.documentElement.style.removeProperty('overflow-x');
         document.documentElement.style.removeProperty('height');
@@ -1305,6 +1369,9 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     private var activeSelectionActionMode: ActionMode? = null
     var activeLoadToken: String? = null
         private set
+    /** Base URL of the spine document currently shown (used when [getUrl] is blank/file). */
+    var activeDocumentBaseUrl: String? = null
+        private set
     private var committedLoadToken: String? = null
     private var lastReaderTextSettingsSignature: String? = null
     private var inlineFallback: PendingInlineFallback? = null
@@ -1321,6 +1388,8 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     private var touchStartedAtTopBoundary: Boolean = false
     private var touchStartedAtBottomBoundary: Boolean = false
     private var pagedLayoutReady: Boolean = false
+    private var pagedLayoutRetryCount: Int = 0
+    private var pagedLayoutRetryRunnable: Runnable? = null
 
     private data class PendingInlineFallback(
         val loadToken: String,
@@ -1424,6 +1493,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
                         if (elapsed <= 600L && abs(dx) < 32f && abs(dy) < 32f) {
                             clearReaderSelection()
                             restorePagedDragSelection()
+                            suppressNextReaderClick()
                             onNativePagedTapRequest?.invoke(if (startXPercent < 0.5f) 0.1f else 0.9f)
                             return true
                         }
@@ -1431,6 +1501,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
                     if (elapsed < 900L && abs(dx) > 64f && abs(dx) > abs(dy) * 1.35f) {
                         clearReaderSelection()
                         restorePagedDragSelection()
+                        suppressNextReaderClick()
                         onNativePagedTapRequest?.invoke(if (dx < 0f) 0.9f else 0.1f)
                         return true
                     }
@@ -1439,6 +1510,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
                     if (elapsed <= 320L && abs(dx) < 18f && abs(dy) < 18f && (xPercent < 0.16f || xPercent > 0.84f)) {
                         clearReaderSelection()
                         restorePagedDragSelection()
+                        suppressNextReaderClick()
                         onNativePagedTapRequest?.invoke(if (xPercent < 0.5f) 0.1f else 0.9f)
                         return true
                     }
@@ -1515,7 +1587,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         }
     }
 
-    private fun suppressNextReaderClick() {
+    fun suppressNextReaderClick() {
         evaluateJavascript(
             "try{window.__readerNativeSuppressClickUntil=Date.now()+900;}catch(e){}",
             null
@@ -1661,8 +1733,9 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         }
     }
 
-    fun markLoadRequested(loadToken: String) {
+    fun markLoadRequested(loadToken: String, documentBaseUrl: String? = null) {
         activeLoadToken = loadToken
+        activeDocumentBaseUrl = documentBaseUrl?.substringBefore('#')?.trim()?.takeIf { it.isNotBlank() }
         committedLoadToken = null
         lastReaderTextSettingsSignature = null
         pagedLayoutReady = !pagedModeScrollLock
@@ -1680,8 +1753,17 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         }
         cancelInlineFallback()
         cancelPagedLayoutSettle()
+        cancelPagedLayoutRetry()
+        pagedLayoutRetryCount = 0
         inlineFallback = null
         inlineFallbackAttempts = 0
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (pagedModeScrollLock && !pagedLayoutReady && h >= 400) {
+            applyPagedLayout()
+        }
     }
 
     fun markLoadCommitted() {
@@ -1849,22 +1931,71 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             alpha = 1f
             return
         }
+        val cssHeight = readerCssViewportHeightPxOrNull()
+        val cssWidth = readerCssViewportWidthPxOrNull()
+        if (cssHeight == null || cssWidth == null || cssHeight < 400 || cssWidth < 200) {
+            schedulePagedLayoutRetry("viewport not ready (${cssWidth}x$cssHeight)")
+            return
+        }
         val target = targetPage ?: -1
         pendingPagedLayoutTarget = null
         evaluateJavascript(readerPagedLayoutJs(target)) { rawValue ->
             val metrics = decodePagedLayoutMetrics(rawValue)
-            if (metrics == null) {
-                Log.w(HTML_READER_TAG, "Paged layout did not return metrics: $rawValue")
-                pagedLayoutReady = true
-                alpha = 1f
+            if (metrics == null || !metrics.isUsable()) {
+                Log.w(
+                    HTML_READER_TAG,
+                    "Paged layout not ready yet: raw=$rawValue metrics=$metrics"
+                )
+                schedulePagedLayoutRetry("invalid metrics")
                 return@evaluateJavascript
             }
-            Log.d(HTML_READER_TAG, "Paged layout metrics: $rawValue")
-            metrics.let {
-                pagedLayoutReady = true
-                alpha = 1f
-            }
+            cancelPagedLayoutRetry()
+            pagedLayoutRetryCount = 0
+            Log.d(
+                HTML_READER_TAG,
+                "Paged layout ready: page=${metrics.pageIndex + 1}/${metrics.pageCount} " +
+                    "clip=${metrics.clipHeight} usable=${metrics.usableHeight}"
+            )
+            pagedLayoutReady = true
+            alpha = 1f
         }
+    }
+
+    private fun schedulePagedLayoutRetry(reason: String) {
+        if (!pagedModeScrollLock || pagedLayoutReady) return
+        if (pagedLayoutRetryCount >= 10) {
+            Log.e(HTML_READER_TAG, "Paged layout retries exhausted ($reason)")
+            revealPagedContentFallback("retries exhausted: $reason")
+            return
+        }
+        pagedLayoutRetryCount++
+        val delayMs = when (pagedLayoutRetryCount) {
+            1 -> 60L
+            2 -> 120L
+            3 -> 240L
+            else -> 320L
+        }
+        cancelPagedLayoutRetry()
+        val runnable = Runnable {
+            if (!pagedModeScrollLock || pagedLayoutReady) return@Runnable
+            applyPagedLayout()
+        }
+        pagedLayoutRetryRunnable = runnable
+        postDelayed(runnable, delayMs)
+    }
+
+    private fun cancelPagedLayoutRetry() {
+        pagedLayoutRetryRunnable?.let(::removeCallbacks)
+        pagedLayoutRetryRunnable = null
+    }
+
+    /** Moon+ hides loading only after first paint; never leave WebView at alpha=0 forever. */
+    private fun revealPagedContentFallback(reason: String) {
+        if (pagedLayoutReady) return
+        Log.w(HTML_READER_TAG, "Paged layout fallback reveal: $reason")
+        cancelPagedLayoutRetry()
+        pagedLayoutReady = true
+        alpha = 1f
     }
 
     fun turnPagedColumn(delta: Int, onBoundary: () -> Unit) {
@@ -1885,16 +2016,26 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
 private data class ReaderPagedLayoutMetrics(
     val handled: Boolean,
     val pageIndex: Int,
-    val pageCount: Int
-)
+    val pageCount: Int,
+    val clipHeight: Int,
+    val usableHeight: Int
+) {
+    fun isUsable(): Boolean =
+        handled &&
+            pageCount >= 1 &&
+            clipHeight >= 320 &&
+            usableHeight >= 72
+}
 
 private fun decodePagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetrics? = runCatching {
     val decoded = JSONTokener(rawValue ?: return null).nextValue()?.toString().orEmpty()
     val json = JSONTokener(decoded).nextValue() as? org.json.JSONObject ?: return null
     ReaderPagedLayoutMetrics(
-        handled = json.optBoolean("handled", true),
+        handled = json.optBoolean("handled", false),
         pageIndex = json.optInt("pageIndex", 0).coerceAtLeast(0),
-        pageCount = json.optInt("pageCount", 1).coerceAtLeast(1)
+        pageCount = json.optInt("pageCount", 1).coerceAtLeast(1),
+        clipHeight = json.optInt("clipHeight", 0).coerceAtLeast(0),
+        usableHeight = json.optInt("usableHeight", 0).coerceAtLeast(0)
     )
 }.getOrNull()
 
@@ -2042,7 +2183,7 @@ private fun readerPagedCoreJs(
       }
       var contentRect=content.getBoundingClientRect();
       var contentHeight=Math.ceil(Math.max(content.scrollHeight||0,content.offsetHeight||0,contentRect.height||0,clipHeight));
-      var sig=['text-page-no-overlap-v3',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign].join('|');
+      var sig=['text-page-no-overlap-v6',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign].join('|');
       if(existingLayouts&&window.__mrcomicPageBreakSig===sig){
         return existingLayouts;
       }
@@ -2291,16 +2432,25 @@ private fun readerPagedCoreJs(
           }
         }
 
+        // endBottom = clean bottom edge of the last line that fully fit on this page.
         var endBottom=Math.max(current+lineHeight,Math.min(contentHeight,Number(unique[lastFitIndex].bottom||limit)));
-        var nextFragmentTop=overflowIndex<unique.length?firstFragmentTopAfter(endBottom):-1;
-        var overlapGuardPx=Math.max(1,Math.ceil(lineHeight*0.5));
-        var nextStart=nextFragmentTop>=0
-          ? Math.min(
-              Math.ceil(nextFragmentTop),
-              Math.max(current+lineHeight,Math.ceil(endBottom+overlapGuardPx))
-            )
-          : contentHeight;
+        // The next page must begin exactly at the TOP of the first line that did not
+        // fully fit. Using the overflow fragment's own top (not endBottom + a guard)
+        // guarantees: (1) no line is cut horizontally, (2) no line is repeated across
+        // the page boundary, (3) the whole inter-line gap stays on one side only.
+        var nextStart;
+        if(overflowIndex<unique.length){
+          var overflowTop=Math.floor(Number(unique[overflowIndex].top)||0);
+          // Clamp so a line whose box overlaps the current page (top before endBottom)
+          // still advances; never let nextStart fall at or before the last fit line.
+          nextStart=Math.max(endBottom,overflowTop);
+        }else{
+          nextStart=contentHeight;
+        }
 
+        // Orphan guard: if a new block (paragraph/heading) starts within the last
+        // ~1.35 lines of this page, push that block wholly to the next page so a
+        // heading is never left dangling at the very bottom edge.
         var orphanGuardStart=0;
         for(var m=0;m<blockStarts.length;m++){
           var blockTop=blockStarts[m];
@@ -2322,15 +2472,12 @@ private fun readerPagedCoreJs(
           }
         }
 
-        if(nextStart<endBottom+overlapGuardPx){
-          nextStart=Math.ceil(endBottom+overlapGuardPx);
-        }
-
+        // Forward-progress guard only: never go backwards or stall. We intentionally
+        // do NOT add any overlap padding here, otherwise the boundary line repeats.
         if(nextStart<=current+lineHeight*0.5){
           nextStart=Math.min(contentHeight,Math.max(endBottom,current+lineHeight));
         }
 
-        var pageExtraPixel=pageTopInset>0?0:1;
         pages.push({
           start:Math.round(current),
           end:Math.round(nextStart),
@@ -2343,6 +2490,53 @@ private fun readerPagedCoreJs(
         current=nextStart;
       }
       pages=rebalanceTrailingPages(pages);
+      pages=(function compactHeadingAndBlankPages(pages){
+        if(!pages||!pages.length)return pages;
+        var out=[];
+        var idx=0;
+        while(idx<pages.length){
+          var pg=pages[idx];
+          var span=Math.max(0,Number(pg.end||0)-Number(pg.start||0));
+          if(span<lineHeight*0.45){idx++;continue;}
+          if(idx+1<pages.length&&span<=lineHeight*5.5){
+            var nextPg=pages[idx+1];
+            var budgetEnd=Math.min(contentHeight,Number(pg.start||0)+pageBudget);
+            pg.end=Math.min(Math.max(Number(pg.end||0),Number(nextPg.end||0)),budgetEnd);
+            pg.visibleHeight=makeVisibleHeight(pg.start,pg.end,pageInsetTop,pageInsetBottom);
+            nextPg.start=Math.round(Number(pg.end||0));
+            if(Number(nextPg.end||0)-Number(nextPg.start||0)<lineHeight*0.45){
+              pg.end=Number(nextPg.end||0);
+              pg.visibleHeight=makeVisibleHeight(pg.start,pg.end,pageInsetTop,pageInsetBottom);
+              out.push(pg);
+              idx+=2;
+              continue;
+            }
+          }
+          out.push(pg);
+          idx++;
+        }
+        return out.length?out:pages;
+      })(pages);
+      pages=(function keepHeadingsWithFollowingBody(pages){
+        if(!pages||pages.length<2)return pages;
+        for(var hi=0;hi<pages.length-1;hi++){
+          var headPage=pages[hi];
+          var bodyPage=pages[hi+1];
+          var headSpan=Math.max(0,Number(headPage.end||0)-Number(headPage.start||0));
+          if(headSpan>lineHeight*7)continue;
+          var budgetEnd=Math.min(contentHeight,Number(headPage.start||0)+pageBudget);
+          var mergedEnd=Math.min(budgetEnd,Number(bodyPage.end||0));
+          if(mergedEnd<=Number(headPage.end||0)+lineHeight)continue;
+          headPage.end=Math.round(mergedEnd);
+          headPage.visibleHeight=makeVisibleHeight(headPage.start,headPage.end,pageInsetTop,pageInsetBottom);
+          bodyPage.start=Math.round(mergedEnd);
+          if(Number(bodyPage.end||0)-Number(bodyPage.start||0)<lineHeight*0.45){
+            pages.splice(hi+1,1);
+            hi--;
+          }
+        }
+        return pages;
+      })(pages);
       // If the entire section fits on a single page and uses less than 35% of the viewport
       // height, expand it to clipHeight so the page fills the screen (avoids the "short
       // content + huge blank" look for title/heading-only sections like EPUB frontmatter).
@@ -2494,7 +2688,7 @@ private fun readerPagedCoreJs(
  * [onCenterTap] вЂ” called when user taps the middle 40 %
  */
 @Composable
-private fun HtmlPageView(
+internal fun HtmlPageView(
     html: String,
     baseUrl: String?,
     assetDocumentPath: String?,
@@ -2611,6 +2805,9 @@ private fun HtmlPageView(
                 // JavascriptInterface вЂ” called from JS on a background thread;
                 // WebView.post() dispatches back to the main thread safely.
                 fun dispatchReaderTap(xPercent: Float) {
+                    if (readerWebView.pagedModeScrollLock) {
+                        readerWebView.suppressNextReaderClick()
+                    }
                     when {
                         xPercent < 0.3f -> {
                             if (readerWebView.pagedModeScrollLock) {
@@ -2713,6 +2910,22 @@ private fun HtmlPageView(
                         view: WebView, request: WebResourceRequest
                     ): Boolean {
                         val uri = request.url
+                        val readerView = view as? ReaderWebView
+                        val currentDocumentUrl = readerView?.activeDocumentBaseUrl ?: view.url
+                        if (
+                            request.isForMainFrame &&
+                            shouldBlockReaderAssetSpineNavigation(
+                                pagedModeScrollLock = readerView?.pagedModeScrollLock == true,
+                                currentUrl = currentDocumentUrl,
+                                targetUri = uri
+                            )
+                        ) {
+                            Log.d(
+                                HTML_READER_TAG,
+                                "Blocked inline spine navigation in paged mode: $currentDocumentUrl -> $uri"
+                            )
+                            return true
+                        }
                         val currentBaseUrl = view.url?.substringBefore('#')
                         val requestedBaseUrl = uri.toString().substringBefore('#')
                         if (
@@ -2734,6 +2947,21 @@ private fun HtmlPageView(
                                     uri.scheme?.equals("https", ignoreCase = true) == true &&
                                         uri.host?.equals("appassets.androidplatform.net", ignoreCase = true) == true
                                 if (isReaderAssetUrl) {
+                                    if (
+                                        request.isForMainFrame &&
+                                        readerView?.pagedModeScrollLock == true &&
+                                        shouldBlockReaderAssetSpineNavigation(
+                                            pagedModeScrollLock = true,
+                                            currentUrl = currentDocumentUrl,
+                                            targetUri = uri
+                                        )
+                                    ) {
+                                        Log.d(
+                                            HTML_READER_TAG,
+                                            "Blocked reader asset spine jump: $currentDocumentUrl -> $uri"
+                                        )
+                                        return true
+                                    }
                                     return false
                                 }
                                 try {
@@ -2857,7 +3085,13 @@ private fun HtmlPageView(
                 ) {
                     webView.prepareFreeScrollReloadPreservingPosition()
                 }
-                webView.markLoadRequested(currentSource.loadToken)
+                webView.markLoadRequested(
+                    loadToken = currentSource.loadToken,
+                    documentBaseUrl = when (currentSource) {
+                        is ReaderHtmlPageSource.FileUrl -> currentSource.fallbackBaseUrl
+                        is ReaderHtmlPageSource.Inline -> currentSource.baseUrl
+                    }
+                )
                 when (currentSource) {
                     is ReaderHtmlPageSource.FileUrl -> {
                         webView.loadUrl(currentSource.url)
@@ -2990,7 +3224,7 @@ fun ReaderScreen(
     val ttsController = remember { ReaderTextToSpeechControllerStore.get(context) }
     val ttsRuntimeState by ttsController.state.collectAsState()
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    val isTextReader = uiState.currentHtmlContent != null || uiState.readerRendersHtmlContent
+    val isTextReader = uiState.readerContainerKind.isTextContainer()
     val supportsDocumentMarginCrop = uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU
     val effectiveMarginCropHorizontal = if (supportsDocumentMarginCrop) uiState.imageMarginCropHorizontal else 0f
     val effectiveMarginCropVertical = if (supportsDocumentMarginCrop) uiState.imageMarginCropVertical else 0f
@@ -3262,11 +3496,11 @@ fun ReaderScreen(
     // one-frame viewport miscalculation when chrome is visible on first render.
     val defaultTopChromeReservePx = with(density) { 56.dp.roundToPx() }
     val defaultBottomChromeReservePx = with(density) { 48.dp.roundToPx() }
-    var stableTopChromeReservePx by remember(uiState.chromeAutoHideEnabled) {
-        mutableIntStateOf(if (!uiState.chromeAutoHideEnabled) defaultTopChromeReservePx else 0)
+    var stableTopChromeReservePx by remember {
+        mutableIntStateOf(defaultTopChromeReservePx)
     }
-    var stableBottomChromeReservePx by remember(uiState.chromeAutoHideEnabled) {
-        mutableIntStateOf(if (!uiState.chromeAutoHideEnabled) defaultBottomChromeReservePx else 0)
+    var stableBottomChromeReservePx by remember {
+        mutableIntStateOf(defaultBottomChromeReservePx)
     }
     // Baseline reserves persist regardless of auto-hide mode. WEBTOON text mode needs these
     // even when chrome is hidden so content keeps a safe bottom gutter instead of sticking to
@@ -3289,6 +3523,13 @@ fun ReaderScreen(
     }
     val maxStableTopChromeReservePx = with(density) { 96.dp.roundToPx() }
     val maxStableBottomChromeReservePx = with(density) { 128.dp.roundToPx() }
+    val estimatedHeaderOverlayContentPx = with(density) {
+        readerHeaderFooterReservedHeightDp(
+            fontSizeSp = uiState.headerFooterFontSize,
+            verticalPaddingDp = uiState.headerFooterVerticalPadding
+        ).roundToPx()
+    }
+    val estimatedFooterOverlayContentPx = estimatedHeaderOverlayContentPx
     val chromeIsVisible = !uiState.chromeAutoHideEnabled &&
         uiState.chromeState != ReaderChromeState.HIDDEN
     // When chrome is visible: include measured toolbar height in the reserve.
@@ -3297,20 +3538,24 @@ fun ReaderScreen(
     // in memory even after the toolbar Box is removed from composition, causing the text
     // viewport to be permanently shrunk even in full-screen reading mode.
     val measuredTopReservePx = when {
-        uiState.chromeAutoHideEnabled -> 0
         chromeIsVisible -> maxOf(
             (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0),
             (measuredTopChromePx - systemTopInsetPx).coerceAtLeast(0)
         ).coerceAtMost(maxStableTopChromeReservePx)
-        else -> (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0)
+        else -> maxOf(
+            (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0),
+            estimatedHeaderOverlayContentPx
+        )
     }
     val measuredBottomReservePx = when {
-        uiState.chromeAutoHideEnabled -> 0
         chromeIsVisible -> maxOf(
             (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
             (measuredBottomChromePx - systemBottomInsetPx).coerceAtLeast(0)
         ).coerceAtMost(maxStableBottomChromeReservePx)
-        else -> (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
+        else -> maxOf(
+            (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
+            estimatedFooterOverlayContentPx
+        )
     }
     SideEffect {
         if (measuredTopReservePx > baselineTopChromeReservePx) {
@@ -3320,8 +3565,20 @@ fun ReaderScreen(
             baselineBottomChromeReservePx = measuredBottomReservePx
         }
         if (uiState.chromeAutoHideEnabled) {
-            if (stableTopChromeReservePx != 0) stableTopChromeReservePx = 0
-            if (stableBottomChromeReservePx != 0) stableBottomChromeReservePx = 0
+            val overlayTop = maxOf(
+                estimatedHeaderOverlayContentPx,
+                (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0)
+            )
+            val overlayBottom = maxOf(
+                estimatedFooterOverlayContentPx,
+                (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
+            )
+            if (overlayTop > stableTopChromeReservePx) {
+                stableTopChromeReservePx = overlayTop
+            }
+            if (overlayBottom > stableBottomChromeReservePx) {
+                stableBottomChromeReservePx = overlayBottom
+            }
         } else if (chromeIsVisible) {
             // Only grow the stable reserve when the chrome is actually visible;
             // never let a stale EXPANDED measurement inflate the HIDDEN viewport.
@@ -3338,14 +3595,32 @@ fun ReaderScreen(
     // as a floor so text is never drawn at y=0 behind the overlay.  Once
     // measuredTopReservePx has a real value it wins via maxOf, so the over-reserve
     // (toolbar height vs strip height) is automatically corrected within one frame.
-    val topChromeReservePx = if (uiState.chromeAutoHideEnabled) 0 else maxOf(
-        if (chromeIsVisible || measuredTopReservePx == 0) stableTopChromeReservePx else 0,
-        measuredTopReservePx
+    val autoHideTopChromeReservePx = maxOf(
+        estimatedHeaderOverlayContentPx,
+        stableTopChromeReservePx,
+        (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0)
     )
-    val bottomChromeReservePx = if (uiState.chromeAutoHideEnabled) 0 else maxOf(
-        if (chromeIsVisible || measuredBottomReservePx == 0) stableBottomChromeReservePx else 0,
-        measuredBottomReservePx
+    val autoHideBottomChromeReservePx = maxOf(
+        estimatedFooterOverlayContentPx,
+        stableBottomChromeReservePx,
+        (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
     )
+    val topChromeReservePx = if (uiState.chromeAutoHideEnabled) {
+        autoHideTopChromeReservePx
+    } else {
+        maxOf(
+            if (chromeIsVisible || measuredTopReservePx == 0) stableTopChromeReservePx else 0,
+            measuredTopReservePx
+        )
+    }
+    val bottomChromeReservePx = if (uiState.chromeAutoHideEnabled) {
+        autoHideBottomChromeReservePx
+    } else {
+        maxOf(
+            if (chromeIsVisible || measuredBottomReservePx == 0) stableBottomChromeReservePx else 0,
+            measuredBottomReservePx
+        )
+    }
     // Text WebView owns the whole reader viewport. Keep all text safe-area and chrome
     // reserves in the HTML contract, otherwise PAGE and WEBTOON end up measuring
     // different heights and the same document jumps, clips, or leaves half-screen gaps.
@@ -3354,20 +3629,9 @@ fun ReaderScreen(
     val densityScale = density.density.takeIf { it > 0f } ?: 1f
     val textContentTopInsetCssPx = (textContentTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
     val textContentBottomInsetCssPx = (textContentBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
-    val textWebtoonTopInsetPx = systemTopInsetPx + textSentenceInsetPx + if (uiState.chromeAutoHideEnabled) {
-        0
-    } else {
-        // Use the same chromeIsVisible guard as PAGE mode to avoid over-reserving
-        // when chrome is hidden but auto-hide is off.
-        if (chromeIsVisible || measuredTopReservePx == 0) maxOf(stableTopChromeReservePx, measuredTopReservePx) else 0
-    }
-    val textWebtoonBottomInsetPx = systemBottomInsetPx + textSentenceInsetPx + if (uiState.chromeAutoHideEnabled) {
-        0
-    } else {
-        if (chromeIsVisible || measuredBottomReservePx == 0) maxOf(stableBottomChromeReservePx, measuredBottomReservePx) else 0
-    }
-    val textWebtoonTopInsetCssPx = (textWebtoonTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
-    val textWebtoonBottomInsetCssPx = (textWebtoonBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
+    // PAGE and WEBTOON share the same inset contract to avoid jumps when switching modes.
+    val textWebtoonTopInsetCssPx = textContentTopInsetCssPx
+    val textWebtoonBottomInsetCssPx = textContentBottomInsetCssPx
 
     val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
         tapZoneLayout,
@@ -3453,11 +3717,13 @@ fun ReaderScreen(
 
     LaunchedEffect(
         uiState.comic?.id,
-        uiState.readingMode,
+        uiState.readerContainerKind,
         uiState.totalPages,
         uiState.currentHtmlContent
     ) {
-        if (uiState.readingMode == ReadingMode.WEBTOON && uiState.currentHtmlContent != null) {
+        if (uiState.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON &&
+            uiState.currentHtmlContent != null
+        ) {
             viewModel.ensureTextWebtoonDocumentLoaded()
         }
     }
@@ -3587,96 +3853,126 @@ fun ReaderScreen(
                                     .navigationBarsPadding()
                             }
                         )
-                    val renderTextHtmlContainer: @Composable (String, String?, ReadingMode, Modifier, Int, Int) -> Unit = {
-                        textHtml,
-                        textAssetBasePath,
-                        textReadingMode,
-                        textModifier,
-                        textTopInsetPx,
-                        textBottomInsetPx ->
-                        HtmlPageView(
-                            html = textHtml,
-                            baseUrl = uiState.htmlBaseUrl,
-                            assetDocumentPath = textAssetBasePath,
-                            assetLoader = readerAssetLoader,
-                            onLeftTap = {
-                                if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
-                                    handleTapZoneAction(tapZoneLayout.left)
-                                }
-                            },
-                            onRightTap = {
-                                if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
-                                    handleTapZoneAction(tapZoneLayout.right)
-                                }
-                            },
-                            onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                            onAnchorClick = viewModel::onAnchorClick,
-                            onInlineFootnote = viewModel::showInlineFootnote,
-                            onVerticalBoundaryNavigation = { pageStep ->
-                                when {
-                                    pageStep < 0 -> viewModel.prevPage()
-                                    pageStep > 0 -> viewModel.nextPage()
-                                }
-                            },
-                            readingMode = textReadingMode,
-                            onTranslateSelection = { selectedText ->
-                                viewModel.translateSelectedText(
-                                    selectedText = selectedText,
-                                    preferDictionary = false
-                                )
-                            },
-                            onDictionarySelection = { selectedText ->
-                                viewModel.translateSelectedText(
-                                    selectedText = selectedText,
-                                    preferDictionary = true
-                                )
-                            },
-                            onExplainSelection = viewModel::explainSelectedTextDirect,
-                            onSaveQuoteSelection = viewModel::saveQuoteDirectly,
-                            fontSize     = uiState.textFontSize,
-                            colorScheme  = uiState.textColorScheme,
-                            readerPreset = activeReaderPreset,
-                            fontFamily   = resolvedTextFont.familyName,
-                            fontSourceUrl = resolvedTextFont.sourceUrl,
-                            lineHeight   = uiState.textLineHeight,
-                            letterSpacing = uiState.textLetterSpacing,
-                            wordSpacing = uiState.textWordSpacing,
-                            paragraphSpacing = uiState.textParagraphSpacing,
-                            textAlign    = uiState.textAlignment,
-                            bold         = uiState.textBold,
-                            translateActionLabel = readerText.selectionTranslateAction,
-                            dictionaryActionLabel = readerText.openDictionary,
-                            explainActionLabel = readerText.selectionExplainAction,
-                            saveQuoteActionLabel = readerText.saveQuote,
-                            contentTopInsetPx = textTopInsetPx,
-                            contentBottomInsetPx = textBottomInsetPx,
-                            modifier = textModifier
-                        )
-                    }
-                    when {
-                        htmlContent != null && uiState.readingMode == ReadingMode.WEBTOON -> {
-                            // Text WEBTOON container.
-                            renderTextHtmlContainer(
-                                textWebtoonHtmlContent ?: "",
-                                textWebtoonAssetBasePath,
-                                ReadingMode.WEBTOON,
-                                textWebtoonModifier,
-                                textWebtoonTopInsetCssPx,
-                                textWebtoonBottomInsetCssPx
+                    when (uiState.readerContainerKind) {
+                        ReaderContainerKind.TEXT_WEBTOON -> {
+                            TextWebtoonContainer(
+                                html = textWebtoonHtmlContent ?: htmlContent.orEmpty(),
+                                baseUrl = uiState.htmlBaseUrl,
+                                assetDocumentPath = textWebtoonAssetBasePath,
+                                assetLoader = readerAssetLoader,
+                                onLeftTap = {},
+                                onRightTap = {},
+                                onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
+                                onAnchorClick = viewModel::onAnchorClick,
+                                onInlineFootnote = viewModel::showInlineFootnote,
+                                onVerticalBoundaryNavigation = { pageStep ->
+                                    when {
+                                        pageStep < 0 -> viewModel.prevPage()
+                                        pageStep > 0 -> viewModel.nextPage()
+                                    }
+                                },
+                                onTranslateSelection = { selectedText ->
+                                    viewModel.translateSelectedText(
+                                        selectedText = selectedText,
+                                        preferDictionary = false
+                                    )
+                                },
+                                onDictionarySelection = { selectedText ->
+                                    viewModel.translateSelectedText(
+                                        selectedText = selectedText,
+                                        preferDictionary = true
+                                    )
+                                },
+                                onExplainSelection = viewModel::explainSelectedTextDirect,
+                                onSaveQuoteSelection = viewModel::saveQuoteDirectly,
+                                fontSize = uiState.textFontSize,
+                                colorScheme = uiState.textColorScheme,
+                                readerPreset = activeReaderPreset,
+                                fontFamily = resolvedTextFont.familyName,
+                                fontSourceUrl = resolvedTextFont.sourceUrl,
+                                lineHeight = uiState.textLineHeight,
+                                letterSpacing = uiState.textLetterSpacing,
+                                wordSpacing = uiState.textWordSpacing,
+                                paragraphSpacing = uiState.textParagraphSpacing,
+                                textAlign = uiState.textAlignment,
+                                bold = uiState.textBold,
+                                translateActionLabel = readerText.selectionTranslateAction,
+                                dictionaryActionLabel = readerText.openDictionary,
+                                explainActionLabel = readerText.selectionExplainAction,
+                                saveQuoteActionLabel = readerText.saveQuote,
+                                contentTopInsetPx = textWebtoonTopInsetCssPx,
+                                contentBottomInsetPx = textWebtoonBottomInsetCssPx,
+                                modifier = textWebtoonModifier
                             )
                         }
-                        htmlContent != null -> {
-                            // Text PAGE container.
-                            renderTextHtmlContainer(
-                                htmlContent,
-                                uiState.htmlAssetBasePath,
-                                uiState.readingMode,
-                                textReaderModifier,
-                                textContentTopInsetCssPx,
-                                textContentBottomInsetCssPx
-                            )
+                        ReaderContainerKind.TEXT_PAGE -> {
+                            if (htmlContent == null) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.align(Alignment.Center),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                TextPageContainer(
+                                    html = htmlContent,
+                                    baseUrl = uiState.htmlBaseUrl,
+                                    assetDocumentPath = uiState.htmlAssetBasePath,
+                                    assetLoader = readerAssetLoader,
+                                    readingMode = uiState.readingMode,
+                                    onLeftTap = {
+                                        if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
+                                            handleTapZoneAction(tapZoneLayout.left)
+                                        }
+                                    },
+                                    onRightTap = {
+                                        if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
+                                            handleTapZoneAction(tapZoneLayout.right)
+                                        }
+                                    },
+                                    onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
+                                    onAnchorClick = viewModel::onAnchorClick,
+                                    onInlineFootnote = viewModel::showInlineFootnote,
+                                    onVerticalBoundaryNavigation = { pageStep ->
+                                        when {
+                                            pageStep < 0 -> viewModel.prevPage()
+                                            pageStep > 0 -> viewModel.nextPage()
+                                        }
+                                    },
+                                    onTranslateSelection = { selectedText ->
+                                        viewModel.translateSelectedText(
+                                            selectedText = selectedText,
+                                            preferDictionary = false
+                                        )
+                                    },
+                                    onDictionarySelection = { selectedText ->
+                                        viewModel.translateSelectedText(
+                                            selectedText = selectedText,
+                                            preferDictionary = true
+                                        )
+                                    },
+                                    onExplainSelection = viewModel::explainSelectedTextDirect,
+                                    onSaveQuoteSelection = viewModel::saveQuoteDirectly,
+                                    fontSize = uiState.textFontSize,
+                                    colorScheme = uiState.textColorScheme,
+                                    readerPreset = activeReaderPreset,
+                                    fontFamily = resolvedTextFont.familyName,
+                                    fontSourceUrl = resolvedTextFont.sourceUrl,
+                                    lineHeight = uiState.textLineHeight,
+                                    letterSpacing = uiState.textLetterSpacing,
+                                    wordSpacing = uiState.textWordSpacing,
+                                    paragraphSpacing = uiState.textParagraphSpacing,
+                                    textAlign = uiState.textAlignment,
+                                    bold = uiState.textBold,
+                                    translateActionLabel = readerText.selectionTranslateAction,
+                                    dictionaryActionLabel = readerText.openDictionary,
+                                    explainActionLabel = readerText.selectionExplainAction,
+                                    saveQuoteActionLabel = readerText.saveQuote,
+                                    contentTopInsetPx = textContentTopInsetCssPx,
+                                    contentBottomInsetPx = textContentBottomInsetCssPx,
+                                    modifier = textReaderModifier
+                                )
+                            }
                         }
-                        uiState.readingMode == ReadingMode.WEBTOON -> {
+                        ReaderContainerKind.RASTER_WEBTOON -> {
                             // Graphic WEBTOON container.
                             WebtoonView(
                                 viewModel = viewModel,
@@ -3692,8 +3988,7 @@ fun ReaderScreen(
                                 modifier = imageReaderModifier
                             )
                         }
-                        else -> {
-                            // Graphic PAGE container.
+                        ReaderContainerKind.RASTER_PAGE -> {
                             PageView(
                                 viewModel = viewModel,
                                 uiState = uiState,
@@ -3952,8 +4247,9 @@ fun ReaderScreen(
             readerPreset = activeReaderPreset,
             toolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f),
             toolbarBlur = uiState.toolbarBlur,
+            resolveDisplayPage = viewModel::tocDisplayPage,
             onNavigate = { page ->
-                viewModel.navigateTo(page)
+                viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
                 viewModel.toggleTocSheet()
             },
             onRemoveBookmark = viewModel::removeBookmark,
@@ -3999,7 +4295,7 @@ fun ReaderScreen(
                 } else {
                     pendingTtsRestartTargetPage = page
                     ttsController.stop()
-                    viewModel.navigateTo(page)
+                    viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
                 }
             },
             onVoiceNameChange = { value ->
@@ -4587,6 +4883,7 @@ private fun TocBottomSheet(
     readerPreset: ReadingPreset,
     toolbarOpacity: Float,
     toolbarBlur: Float,
+    resolveDisplayPage: (enginePageIndex: Int) -> Int = { it },
     onNavigate: (Int) -> Unit,
     onRemoveBookmark: (Int) -> Unit,
     onDismiss: () -> Unit
@@ -4692,8 +4989,12 @@ private fun TocBottomSheet(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         itemsIndexed(entries) { idx, entry ->
-                            val nextPageIndex = entries.getOrNull(idx + 1)?.pageIndex ?: Int.MAX_VALUE
-                            val isCurrentChapter = currentPage >= entry.pageIndex && currentPage < nextPageIndex
+                            val entryDisplayPage = resolveDisplayPage(entry.pageIndex)
+                            val nextDisplayPage = entries.getOrNull(idx + 1)
+                                ?.let { resolveDisplayPage(it.pageIndex) }
+                                ?: Int.MAX_VALUE
+                            val isCurrentChapter = currentPage >= entryDisplayPage &&
+                                currentPage < nextDisplayPage
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(10.dp),
@@ -4728,7 +5029,7 @@ private fun TocBottomSheet(
                                         }
                                     ) {
                                         Text(
-                                            text = "${entry.pageIndex + 1}",
+                                            text = "${entryDisplayPage + 1}",
                                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = if (isCurrentChapter)
