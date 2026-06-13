@@ -27,7 +27,9 @@ object ReaderTextFontCatalog {
         "Open Sans" to "OpenSans-Regular.ttf",
         "Roboto Slab" to "RobotoSlab-Regular.ttf",
         "PT Serif" to "PTSerif-Regular.ttf",
-        "Literata" to "Literata-Regular.ttf"
+        "Literata" to "Literata-Regular.ttf",
+        "Lora" to "Lora-Regular.ttf",
+        "Source Serif 4" to "SourceSerif4-Regular.ttf"
     )
 
     private val supportedFontMimeTypes = mapOf(

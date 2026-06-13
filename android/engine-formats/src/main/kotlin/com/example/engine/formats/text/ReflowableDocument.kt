@@ -88,73 +88,8 @@ internal object ReflowableDocumentBuilder {
             .ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
     }
 
-    private fun paginateBlocks(blocks: List<String>, baseCss: String): List<String> {
-        val pageBodySegments = mutableListOf<MutableList<String>>(mutableListOf())
-        val current = StringBuilder()
-        var currentLength = 0
-
-        fun flushPage() {
-            if (current.isNotEmpty()) {
-                pageBodySegments.last() += current.toString()
-                current.clear()
-                currentLength = 0
-            }
-        }
-
-        fun startNewSegment() {
-            if (pageBodySegments.last().isNotEmpty()) {
-                pageBodySegments.add(mutableListOf())
-            }
-        }
-
-        fun appendBlock(block: String) {
-            if (block == FORCED_PAGEBREAK_MARKER) {
-                flushPage()
-                startNewSegment()
-                return
-            }
-            if (
-                current.isNotEmpty() &&
-                block.isReaderSectionStartBlock() &&
-                currentLength >= MIN_SECTION_BREAK_CURRENT_UNITS
-            ) {
-                flushPage()
-                startNewSegment()
-            }
-            val blockLayoutCost = block.readerLayoutCost()
-            if (current.isNotEmpty() && currentLength + blockLayoutCost > PAGE_LAYOUT_UNITS) {
-                flushPage()
-            }
-            current.append(block)
-            currentLength += blockLayoutCost
-        }
-
-        blocks.flatMap(::splitOversizedMarkupBlock).forEach { block ->
-            val blockTextLength = block.visibleTextLength()
-            val remaining = PAGE_LAYOUT_UNITS - currentLength
-            val firstChunkTextBudget = block.readerTextBudgetForLayoutUnits(remaining)
-            val splitForRemainder = if (
-                current.isNotEmpty() &&
-                remaining >= MIN_REMAINDER_LAYOUT_UNITS &&
-                firstChunkTextBudget >= MIN_SPLIT_TEXT_CHARS &&
-                blockTextLength > firstChunkTextBudget
-            ) {
-                splitTextMarkupBlock(block, firstChunkTextBudget, TEXT_CHARS_PER_PAGE)
-            } else {
-                null
-            }
-
-            if (splitForRemainder != null) {
-                splitForRemainder.forEach(::appendBlock)
-            } else {
-                appendBlock(block)
-            }
-        }
-        flushPage()
-        return normalizePageBodySegments(pageBodySegments)
-            .map { wrapBody(it, baseCss) }
-            .ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
-    }
+    private fun paginateBlocks(blocks: List<String>, baseCss: String): List<String> =
+        paginateInternal(blocks, baseCss, requireMinContentBeforeSectionBreak = true)
 
     private fun splitReaderDocument(html: String, baseCss: String): List<String> {
         val blocks = extractReaderBlocks(html)
@@ -214,7 +149,14 @@ internal object ReflowableDocumentBuilder {
         return blocks
     }
 
-    private fun paginateMarkupBlocks(blocks: List<String>, baseCss: String): List<String> {
+    private fun paginateMarkupBlocks(blocks: List<String>, baseCss: String): List<String> =
+        paginateInternal(blocks, baseCss, requireMinContentBeforeSectionBreak = false)
+
+    private fun paginateInternal(
+        blocks: List<String>,
+        baseCss: String,
+        requireMinContentBeforeSectionBreak: Boolean
+    ): List<String> {
         val pageBodySegments = mutableListOf<MutableList<String>>(mutableListOf())
         val current = StringBuilder()
         var currentLength = 0
@@ -240,8 +182,10 @@ internal object ReflowableDocumentBuilder {
                 return
             }
             if (current.isNotEmpty() && block.isReaderSectionStartBlock()) {
-                flushPage()
-                startNewSegment()
+                if (!requireMinContentBeforeSectionBreak || currentLength >= MIN_SECTION_BREAK_CURRENT_UNITS) {
+                    flushPage()
+                    startNewSegment()
+                }
             }
             val blockLayoutCost = block.readerLayoutCost()
             if (current.isNotEmpty() && currentLength + blockLayoutCost > PAGE_LAYOUT_UNITS) {
@@ -252,18 +196,14 @@ internal object ReflowableDocumentBuilder {
         }
 
         blocks.flatMap(::splitOversizedMarkupBlock).forEach { block ->
-            if (block == FORCED_PAGEBREAK_MARKER) {
-                appendBlock(block)
-                return@forEach
-            }
-            val blockLength = block.visibleTextLength().coerceAtLeast(1)
+            val blockTextLength = block.visibleTextLength()
             val remaining = PAGE_LAYOUT_UNITS - currentLength
             val firstChunkTextBudget = block.readerTextBudgetForLayoutUnits(remaining)
             val splitForRemainder = if (
                 current.isNotEmpty() &&
                 remaining >= MIN_REMAINDER_LAYOUT_UNITS &&
                 firstChunkTextBudget >= MIN_SPLIT_TEXT_CHARS &&
-                blockLength > firstChunkTextBudget
+                blockTextLength > firstChunkTextBudget
             ) {
                 splitTextMarkupBlock(block, firstChunkTextBudget, TEXT_CHARS_PER_PAGE)
             } else {
@@ -276,7 +216,6 @@ internal object ReflowableDocumentBuilder {
                 appendBlock(block)
             }
         }
-
         flushPage()
         return normalizePageBodySegments(pageBodySegments)
             .map { wrapBody(it, baseCss) }

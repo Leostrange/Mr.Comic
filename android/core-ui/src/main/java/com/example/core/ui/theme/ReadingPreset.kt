@@ -49,7 +49,11 @@ data class ReadingPresetStyle(
     val useAmoledDark: Boolean,
     val primaryColor: Long?,
     val secondaryColor: Long?,
-    val backgroundColor: Long?
+    val backgroundColor: Long?,
+    val contentTopPaddingDp: Float = 16f,
+    val contentBottomPaddingDp: Float = 44f,
+    val contentHorizontalPaddingDp: Float = 16f,
+    val maxWidthDp: Float = 720f
 )
 
 fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
@@ -69,7 +73,11 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = false,
         primaryColor = null,
         secondaryColor = null,
-        backgroundColor = null
+        backgroundColor = null,
+        contentTopPaddingDp = 16f,
+        contentBottomPaddingDp = 44f,
+        contentHorizontalPaddingDp = 16f,
+        maxWidthDp = 720f
     )
     ReadingPreset.PAPER -> ReadingPresetStyle(
         textColorScheme = MrComicReadingPresetTokens.paper.textColorScheme,
@@ -87,7 +95,11 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = false,
         primaryColor = MrComicReadingPresetTokens.paper.primaryArgb,
         secondaryColor = MrComicReadingPresetTokens.paper.secondaryArgb,
-        backgroundColor = MrComicReadingPresetTokens.paper.backgroundArgb
+        backgroundColor = MrComicReadingPresetTokens.paper.backgroundArgb,
+        contentTopPaddingDp = 20f,
+        contentBottomPaddingDp = 48f,
+        contentHorizontalPaddingDp = 24f,
+        maxWidthDp = 680f
     )
     ReadingPreset.SEPIA_BOOK -> ReadingPresetStyle(
         textColorScheme = MrComicReadingPresetTokens.sepiaBook.textColorScheme,
@@ -105,7 +117,11 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = false,
         primaryColor = MrComicReadingPresetTokens.sepiaBook.primaryArgb,
         secondaryColor = MrComicReadingPresetTokens.sepiaBook.secondaryArgb,
-        backgroundColor = MrComicReadingPresetTokens.sepiaBook.backgroundArgb
+        backgroundColor = MrComicReadingPresetTokens.sepiaBook.backgroundArgb,
+        contentTopPaddingDp = 24f,
+        contentBottomPaddingDp = 52f,
+        contentHorizontalPaddingDp = 28f,
+        maxWidthDp = 640f
     )
     ReadingPreset.NEWSPAPER -> ReadingPresetStyle(
         textColorScheme = MrComicReadingPresetTokens.newspaper.textColorScheme,
@@ -123,7 +139,11 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = false,
         primaryColor = MrComicReadingPresetTokens.newspaper.primaryArgb,
         secondaryColor = MrComicReadingPresetTokens.newspaper.secondaryArgb,
-        backgroundColor = MrComicReadingPresetTokens.newspaper.backgroundArgb
+        backgroundColor = MrComicReadingPresetTokens.newspaper.backgroundArgb,
+        contentTopPaddingDp = 12f,
+        contentBottomPaddingDp = 36f,
+        contentHorizontalPaddingDp = 12f,
+        maxWidthDp = 760f
     )
     ReadingPreset.NIGHT_INK -> ReadingPresetStyle(
         textColorScheme = MrComicReadingPresetTokens.nightInk.textColorScheme,
@@ -141,7 +161,11 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = false,
         primaryColor = MrComicReadingPresetTokens.nightInk.primaryArgb,
         secondaryColor = MrComicReadingPresetTokens.nightInk.secondaryArgb,
-        backgroundColor = MrComicReadingPresetTokens.nightInk.backgroundArgb
+        backgroundColor = MrComicReadingPresetTokens.nightInk.backgroundArgb,
+        contentTopPaddingDp = 18f,
+        contentBottomPaddingDp = 42f,
+        contentHorizontalPaddingDp = 20f,
+        maxWidthDp = 700f
     )
     ReadingPreset.OLED_BLACK -> ReadingPresetStyle(
         textColorScheme = MrComicReadingPresetTokens.oledBlack.textColorScheme,
@@ -159,7 +183,11 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = true,
         primaryColor = MrComicReadingPresetTokens.oledBlack.primaryArgb,
         secondaryColor = MrComicReadingPresetTokens.oledBlack.secondaryArgb,
-        backgroundColor = MrComicReadingPresetTokens.oledBlack.backgroundArgb
+        backgroundColor = MrComicReadingPresetTokens.oledBlack.backgroundArgb,
+        contentTopPaddingDp = 14f,
+        contentBottomPaddingDp = 38f,
+        contentHorizontalPaddingDp = 16f,
+        maxWidthDp = 720f
     )
     ReadingPreset.EINK -> ReadingPresetStyle(
         textColorScheme = MrComicReadingPresetTokens.eink.textColorScheme,
@@ -177,6 +205,10 @@ fun ReadingPreset.style(): ReadingPresetStyle = when (this) {
         useAmoledDark = false,
         primaryColor = MrComicReadingPresetTokens.eink.primaryArgb,
         secondaryColor = MrComicReadingPresetTokens.eink.secondaryArgb,
-        backgroundColor = MrComicReadingPresetTokens.eink.backgroundArgb
+        backgroundColor = MrComicReadingPresetTokens.eink.backgroundArgb,
+        contentTopPaddingDp = 22f,
+        contentBottomPaddingDp = 50f,
+        contentHorizontalPaddingDp = 26f,
+        maxWidthDp = 660f
     )
 }
