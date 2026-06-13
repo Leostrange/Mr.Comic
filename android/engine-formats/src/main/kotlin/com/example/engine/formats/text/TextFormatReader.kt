@@ -224,8 +224,8 @@ private fun normalizeReaderHtmlFragment(html: String): String = runCatching {
     document.body().html().trim().ifBlank { trimmed }
 }.getOrElse { html }
 
-private const val DEFAULT_READER_HTML_CSS = READER_BASE_DOCUMENT_CSS
-private const val PRESERVE_LAYOUT_HTML_CSS = READER_PRESERVE_LAYOUT_DOCUMENT_CSS
+private val DEFAULT_READER_HTML_CSS = READER_BASE_DOCUMENT_CSS
+private val PRESERVE_LAYOUT_HTML_CSS = READER_PRESERVE_LAYOUT_DOCUMENT_CSS
 
 private fun buildReaderHtmlDocument(
     body: String,
@@ -684,11 +684,44 @@ class TextFormatReader @Inject constructor(
     override fun getFootnoteText(anchorId: String): String? {
         val map = documentData.footnoteMap
         if (map.isEmpty()) return null
-        val normalized = anchorId.trimStart('#').trim()
-        return map[normalized] ?: map["#$normalized"] ?: map[anchorId.trim()]
+        return textFootnoteLookupCandidates(anchorId).firstNotNullOfOrNull { candidate ->
+            map[candidate]
+        }
     }
 
     override fun close() = Unit
+
+    private fun textFootnoteLookupCandidates(anchorId: String): List<String> {
+        val raw = anchorId.trim()
+        if (raw.isBlank()) return emptyList()
+        val withoutScheme = raw
+            .removePrefix("noteref://")
+            .removePrefix("noteref:")
+            .removePrefix("fbanchor://")
+            .removePrefix("fbanchor:")
+        val decoded = runCatching { URLDecoder.decode(withoutScheme, Charsets.UTF_8.name()) }
+            .getOrDefault(withoutScheme)
+            .trim()
+        val fragment = decoded
+            .substringAfter('#', decoded)
+            .substringAfterLast('/')
+            .trim()
+            .trimStart('#')
+        val fileAndFragment = decoded.trimStart('/')
+        return listOf(
+            raw,
+            decoded,
+            fileAndFragment,
+            fragment,
+            "#$fragment",
+            "fn$fragment",
+            "note$fragment",
+            "footnote$fragment",
+            "docx-footnote-$fragment"
+        ).map { it.trim() }
+            .filter { it.isNotEmpty() && it != "#" }
+            .distinct()
+    }
 
     private fun parseDocument(): TextDocumentData {
         return when (format) {
