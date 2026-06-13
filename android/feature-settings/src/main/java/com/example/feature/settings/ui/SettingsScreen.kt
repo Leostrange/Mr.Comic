@@ -9610,7 +9610,12 @@ private fun AiServicesSection(
             AiServiceLocalExplainCard(overviewText = overviewText)
         }
         item {
-            AiServiceAdvancedExplainCard(uiState = uiState, strings = strings, overviewText = overviewText)
+            AiServiceAdvancedExplainCard(
+                uiState = uiState,
+                strings = strings,
+                overviewText = overviewText,
+                onExplainProviderChange = { viewModel.setTranslationExplainProvider(it) }
+            )
         }
         item {
             AiServiceSummaryOverviewCard(overviewText = overviewText)
@@ -9674,7 +9679,8 @@ private fun AiServiceLocalExplainCard(
 private fun AiServiceAdvancedExplainCard(
     uiState: SettingsUiState,
     strings: AppStrings,
-    overviewText: AiServicesOverviewText
+    overviewText: AiServicesOverviewText,
+    onExplainProviderChange: (String) -> Unit = {}
 ) {
     SettingsCard(title = overviewText.advancedExplainTitle) {
         Text(
@@ -9685,6 +9691,27 @@ private fun AiServiceAdvancedExplainCard(
         Spacer(Modifier.height(8.dp))
         LabelText("${overviewText.providerLabel}: ${aiProvidersValue(uiState, strings.languageCode)}")
         LabelText("${overviewText.expandedExplainLabel}: ${compactToggleLabel(strings.languageCode, uiState.translationExplainEnabled)}")
+        Spacer(Modifier.height(8.dp))
+        val currentProvider = uiState.translationConfig.explainProvider
+        Text(
+            text = "Explain provider:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = currentProvider == "LOCAL",
+                onClick = { onExplainProviderChange("LOCAL") },
+                label = { Text("Local dictionary") }
+            )
+            FilterChip(
+                selected = currentProvider == "ONLINE",
+                onClick = { onExplainProviderChange("ONLINE") },
+                label = { Text("Online (internet)") }
+            )
+        }
+        Spacer(Modifier.height(4.dp))
         LabelText("${overviewText.statusLabel}: ${aiAdvancedExplainStatus(uiState, strings.languageCode)}")
     }
 }
