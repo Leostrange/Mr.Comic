@@ -16,6 +16,7 @@ import org.jsoup.parser.Parser
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
+import java.net.URLDecoder
 import java.nio.charset.Charset
 
 /**
@@ -193,7 +194,12 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
     override fun getTableOfContents(): List<TocEntry> = data.tocEntries
 
-    override fun getFootnoteText(anchorId: String): String? = data.footnoteMap[anchorId]
+    override fun getFootnoteText(anchorId: String): String? {
+        if (data.footnoteMap.isEmpty()) return null
+        return fb2FootnoteLookupCandidates(anchorId).firstNotNullOfOrNull { candidate ->
+            data.footnoteMap[candidate]
+        }
+    }
 
     override suspend fun getMetadata(): Map<String, String> = withContext(Dispatchers.IO) {
         buildMap {
@@ -204,6 +210,30 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     }
 
     override fun close() { /* no persistent resources */ }
+
+    private fun fb2FootnoteLookupCandidates(anchorId: String): List<String> {
+        val raw = anchorId.trim()
+        if (raw.isBlank()) return emptyList()
+        val withoutScheme = raw
+            .removePrefix("noteref://")
+            .removePrefix("noteref:")
+            .removePrefix("fbanchor://")
+        val decoded = runCatching { URLDecoder.decode(withoutScheme, "UTF-8") }
+            .getOrDefault(withoutScheme)
+            .trim()
+        val fragment = decoded.substringAfter('#', decoded)
+            .substringAfterLast('/')
+            .trim()
+            .trimStart('#')
+        return listOf(
+            raw,
+            decoded,
+            fragment,
+            "#$fragment"
+        ).map { it.trim() }
+            .filter { it.isNotEmpty() && it != "#" }
+            .distinct()
+    }
 
     // ── Parser ────────────────────────────────────────────────────────────────
 

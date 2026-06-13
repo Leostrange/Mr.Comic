@@ -148,10 +148,10 @@ class ArchiveDelegatingFormatReader(
         runCatching { cacheRoot.deleteRecursively() }
         cacheRoot.mkdirs()
         val extracted = when (archivePrefix()) {
-            "zip" -> extractZipEntries(cacheRoot)
-            "rar" -> extractRarEntries(cacheRoot)
-            "7z" -> extractSevenZEntries(cacheRoot)
-            "tar" -> extractTarEntries(cacheRoot)
+            "zip" -> extractSingleZipEntry(cacheRoot, entryName)
+            "rar" -> extractSingleRarEntry(cacheRoot, entryName)
+            "7z" -> extractSingleSevenZEntry(cacheRoot, entryName)
+            "tar" -> extractSingleTarEntry(cacheRoot, entryName)
             else -> false
         }
         return if (extracted && target.isFile && target.length() > 0L) target else null
@@ -313,6 +313,99 @@ class ArchiveDelegatingFormatReader(
         true
     }.getOrElse {
         Log.w(TAG, "Failed to extract TAR text archive: $path", it)
+        false
+    }
+
+    private fun extractSingleZipEntry(root: File, entryName: String): Boolean = runCatching {
+        val sourceFile = archiveSourceFile()
+        if (!sourceFile.canRead()) {
+            Log.w(TAG, "ZIP file not readable for single extraction: ${sourceFile.absolutePath}")
+            return@runCatching false
+        }
+        val zip = ZipFile(sourceFile)
+        val header = zip.getFileHeader(entryName) ?: zip.fileHeaders
+            .firstOrNull { it.fileName.equals(entryName, ignoreCase = true) }
+            ?: return@runCatching false
+        val target = safeEntryFile(root, header.fileName) ?: return@runCatching false
+        target.parentFile?.mkdirs()
+        zip.getInputStream(header).use { input ->
+            target.outputStream().use { output -> input.copyTo(output) }
+        }
+        true
+    }.getOrElse {
+        Log.w(TAG, "Failed to extract single ZIP entry: $path ($entryName)", it)
+        false
+    }
+
+    private fun extractSingleRarEntry(root: File, entryName: String): Boolean = withRarArchive { archive ->
+        val index = findRarEntryIndex(archive, entryName) ?: return@withRarArchive false
+        val target = safeEntryFile(root, entryName) ?: return@withRarArchive false
+        target.parentFile?.mkdirs()
+        val result = target.outputStream().use { output ->
+            archive.extractSlow(index, object : ISequentialOutStream {
+                override fun write(data: ByteArray?): Int {
+                    if (data == null || data.isEmpty()) return 0
+                    output.write(data)
+                    return data.size
+                }
+            })
+        }
+        result == ExtractOperationResult.OK
+    } ?: false
+
+    private fun findRarEntryIndex(archive: IInArchive, entryName: String): Int? {
+        (0 until archive.numberOfItems).forEach { index ->
+            val name = archive.getStringProperty(index, PropID.PATH)?.trim().orEmpty()
+            if (name.equals(entryName, ignoreCase = true) || name.replace('\\', '/').equals(entryName.replace('\\', '/'), ignoreCase = true)) {
+                return index
+            }
+        }
+        return null
+    }
+
+    private fun extractSingleSevenZEntry(root: File, entryName: String): Boolean = runCatching {
+        SevenZFile(archiveSourceFile()).use { sevenZ ->
+            val entry = sevenZ.entries.firstOrNull { e ->
+                !e.isDirectory && (e.name.equals(entryName, ignoreCase = true) ||
+                    e.name?.replace('\\', '/')?.equals(entryName.replace('\\', '/'), ignoreCase = true) == true)
+            } ?: return@use false
+            val target = safeEntryFile(root, entry.name ?: return@use false) ?: return@use false
+            target.parentFile?.mkdirs()
+            sevenZ.getInputStream(entry).use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
+            true
+        }
+    }.getOrElse {
+        Log.w(TAG, "Failed to extract single 7z entry: $path ($entryName)", it)
+        false
+    }
+
+    private fun extractSingleTarEntry(root: File, entryName: String): Boolean = runCatching {
+        openArchiveInput().use { input ->
+            TarArchiveInputStream(input).use { tar ->
+                var entry = tar.nextEntry
+                while (entry != null) {
+                    if (!entry.isDirectory) {
+                        val name = entry.name.orEmpty()
+                        if (name.equals(entryName, ignoreCase = true) || name.replace('\\', '/').equals(entryName.replace('\\', '/'), ignoreCase = true)) {
+                            val target = safeEntryFile(root, name)
+                            if (target != null) {
+                                target.parentFile?.mkdirs()
+                                target.outputStream().use { output ->
+                                    tar.copyTo(output, bufferSize = entry.size.toInt().coerceAtMost(8192))
+                                }
+                                return@runCatching true
+                            }
+                        }
+                    }
+                    entry = tar.nextEntry
+                }
+            }
+        }
+        false
+    }.getOrElse {
+        Log.w(TAG, "Failed to extract single TAR entry: $path ($entryName)", it)
         false
     }
 

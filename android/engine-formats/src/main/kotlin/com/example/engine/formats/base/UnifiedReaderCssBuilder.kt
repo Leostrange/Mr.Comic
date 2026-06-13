@@ -2,7 +2,7 @@ package com.example.engine.formats.base
 
 internal fun buildReaderDocumentCss(
     maxWidth: String = "720px",
-    padding: String = "16px 16px 44px",
+    padding: String = "0 1.5em",
     bodyMargin: String = "0 auto",
     fontSize: String = "18px",
     lineHeight: String = "1.6",
@@ -36,8 +36,6 @@ internal fun buildReaderDocumentCss(
       overflow-wrap: break-word;
       word-break: normal;
       $hyphenDecl
-      -webkit-user-select: none;
-      user-select: none;
     }
     """.trimIndent())
 
@@ -70,7 +68,7 @@ internal fun buildReaderDocumentCss(
     }
 
     append("""
-    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: $imgMargin; }
+    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: $imgMargin; page-break-inside: avoid; break-inside: avoid; }
     a[href] { -webkit-user-select: text; user-select: text; }
     """.trimIndent())
 

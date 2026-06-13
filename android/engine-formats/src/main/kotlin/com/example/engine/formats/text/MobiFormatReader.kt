@@ -14,6 +14,7 @@ import org.jsoup.parser.Parser
 import java.io.File
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
+import java.net.URLDecoder
 
 private const val MAX_MOBI_SOURCE_BYTES = 128 * 1024 * 1024
 
@@ -47,13 +48,10 @@ class MobiFormatReader(
     override fun getTableOfContents(): List<TocEntry> = document.toc
 
     override fun getFootnoteText(anchorId: String): String? {
-        val normalized = anchorId.trim()
-            .removePrefix("#")
-            .substringAfterLast('#')
-            .trim()
-        if (normalized.isBlank()) return null
-        return payload.footnoteMap[normalized]
-            ?: payload.footnoteMap["#$normalized"]
+        if (payload.footnoteMap.isEmpty()) return null
+        return mobiFootnoteLookupCandidates(anchorId).firstNotNullOfOrNull { candidate ->
+            payload.footnoteMap[candidate]
+        }
     }
 
     override fun resolveHrefToPage(href: String): Int? {
@@ -93,6 +91,36 @@ class MobiFormatReader(
                 put("containsHuffCdicTables", details.containsHuffCdicTables.toString())
             }
         }
+    }
+
+    private fun mobiFootnoteLookupCandidates(anchorId: String): List<String> {
+        val raw = anchorId.trim()
+        if (raw.isBlank()) return emptyList()
+        val withoutScheme = raw
+            .removePrefix("noteref://")
+            .removePrefix("noteref:")
+            .removePrefix("fbanchor://")
+            .removePrefix("fbanchor:")
+        val decoded = runCatching { URLDecoder.decode(withoutScheme, Charsets.UTF_8.name()) }
+            .getOrDefault(withoutScheme)
+            .trim()
+        val fragment = decoded
+            .substringAfter('#', decoded)
+            .substringAfterLast('/')
+            .trim()
+            .trimStart('#')
+        return listOf(
+            raw,
+            decoded,
+            decoded.trimStart('/'),
+            fragment,
+            "#$fragment",
+            "fn$fragment",
+            "note$fragment",
+            "footnote$fragment"
+        ).map { it.trim() }
+            .filter { it.isNotEmpty() && it != "#" }
+            .distinct()
     }
 
     override fun close() = Unit

@@ -93,6 +93,7 @@ import com.example.core.model.resolveReaderTapZoneLayout
 import com.example.core.ui.eink.LocalEInkMode
 import com.example.core.ui.locale.LocalStrings
 import com.example.core.ui.theme.ReadingPreset
+import com.example.core.ui.theme.style
 import com.example.engine.formats.base.TocEntry
 import com.example.feature.reader.R
 import com.example.feature.reader.ui.components.ImageMessagePopup
@@ -144,8 +145,24 @@ private const val JS_TAP_HANDLER = """(function(){
   function isInlineSpineChapterLink(href,linkEl){
     if(!href||href.indexOf('://')>=0)return false;
     if(!/\.(?:xhtml|html|htm)(?:#|$)/i.test(href))return false;
+    var filePart=href.split('#')[0];
+    if(filePart.indexOf('/')>=0){
+      var curPath=(window.location.pathname||'').split('/');
+      var curFile=curPath[curPath.length-1]||'';
+      var targetFile=filePart.split('/').pop()||'';
+      if(curFile&&targetFile&&curFile.toLowerCase()!==targetFile.toLowerCase())return false;
+    }
     if(linkEl){
       var cls=linkEl.getAttribute('class')||'';
+      var epubType=linkEl.getAttribute('epub:type')||linkEl.getAttribute('type')||'';
+      var title=linkEl.getAttribute('title')||'';
+      var linkText=(linkEl.textContent||'').trim();
+      var isNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
+      if(/\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls))return false;
+      if(/(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType))return false;
+      if(href.indexOf('fbanchor://')===0||href.indexOf('FbAutId_')>=0)return false;
+      if(title&&href.indexOf('#')>=0)return false;
+      if(isNoteRef)return false;
       if(/\bpginternal\b/i.test(cls))return true;
       try{
         if(linkEl.closest&&linkEl.closest('table'))return true;
@@ -309,11 +326,14 @@ private const val JS_TAP_HANDLER = """(function(){
       var cls=(link&&link.getAttribute&&link.getAttribute('class'))||'';
       var title=(link&&link.getAttribute&&link.getAttribute('title'))||'';
       var epubType=(link&&link.getAttribute&&(link.getAttribute('epub:type')||link.getAttribute('type')||''))||'';
+      var role=(link&&link.getAttribute&&(link.getAttribute('role')||link.getAttribute('data-type')||link.getAttribute('data-footnote-id')||''))||'';
       var linkText=((link&&link.textContent)||'').trim();
       return href.indexOf('FbAutId_')>=0||
         href.indexOf('fbanchor://')===0||
+        /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(role)||
+        /#(?:fn|note|footnote|endnote|rearnote)[-_]?\w+/i.test(href)||
         /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType)||
-        /\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls)||
+        /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b/i.test(cls)||
         (!!title&&href.indexOf('#')>=0)||
         /^[\[\(]?\d+[\]\)]?$/.test(linkText);
     }catch(err){
@@ -350,13 +370,16 @@ private const val JS_TAP_HANDLER = """(function(){
         var href=t.getAttribute('href')||'';
         var title=t.getAttribute('title')||'';
         var epubType=t.getAttribute('epub:type')||t.getAttribute('type')||'';
+        var role=t.getAttribute('role')||t.getAttribute('data-type')||t.getAttribute('data-footnote-id')||'';
         var cls=t.getAttribute('class')||'';
         var linkText=(t.textContent||'').trim();
         var isLinkTextNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
         var isFootnoteLink=(/\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls))||
+          /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(role)||
           /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType)||
           href.indexOf('fbanchor://')===0||
           href.indexOf('FbAutId_')>=0||
+          /#(?:fn|note|footnote|endnote|rearnote)[-_]?\w+/i.test(href)||
           (title&&href.indexOf('#')>=0)||
           isLinkTextNoteRef;
         if(isFootnoteLink){
@@ -997,8 +1020,8 @@ internal fun textSettingsJs(
           "body:not([data-mrcomic-preserve-layout='true']) blockquote,body:not([data-mrcomic-preserve-layout='true']) cite,body:not([data-mrcomic-preserve-layout='true']) .epigraph{color:$quoteColor !important;border-left-color:$headingBorder !important;}"+
           "::selection{background:$selectionBackgroundColor !important;color:$selectionForegroundColor !important;}"+
           "body *::selection{background:$selectionBackgroundColor !important;color:$selectionForegroundColor !important;}"+
-          "a.fn,a[epub\\\\:type~='noteref'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
-          "a.fn *,a[epub\\\\:type~='noteref'] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[title][href*='#'] *{color:$noteColor !important;}"+
+          "a.fn,a.footnote-ref,a.noteref,a[role='doc-noteref'],a[epub\\\\:type~='noteref'],a[data-footnote-id],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[href^='#fn'],a[href^='#note'],a[href^='#footnote'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
+          "a.fn *,a.footnote-ref *,a.noteref *,a[role='doc-noteref'] *,a[epub\\\\:type~='noteref'] *,a[data-footnote-id] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[href^='#fn'] *,a[href^='#note'] *,a[href^='#footnote'] *,a[title][href*='#'] *{color:$noteColor !important;}"+
           ".note-num,.footnote-label{color:$noteColor !important;}"+
           "$pagedTocLinkCss";
         if(!themeStyle.parentNode){(__mrcomicHead||document.head||document.documentElement).appendChild(themeStyle);}
@@ -1008,7 +1031,7 @@ internal fun textSettingsJs(
     val colorNotesDom = """
         (function(){
           var nc='$noteColor';
-          var sel='a.fn,a[href*="fbanchor://"],a[href*="FbAutId_"],a[epub\\:type~="noteref"],a[title][href*="#"]';
+          var sel='a.fn,a.footnote-ref,a.noteref,a[role="doc-noteref"],a[data-footnote-id],a[href*="fbanchor://"],a[href*="FbAutId_"],a[href^="#fn"],a[href^="#note"],a[href^="#footnote"],a[epub\\:type~="noteref"],a[title][href*="#"]';
           try{document.querySelectorAll(sel).forEach(function(a){
             a.style.setProperty('color',nc,'important');
             a.querySelectorAll('*').forEach(function(c){c.style.setProperty('color',nc,'important');});
@@ -1072,6 +1095,9 @@ internal fun textSettingsJs(
         var mrcomicPageInsetBottom=${bottomPaddingPx};
         var mrcomicColumnWidth=Math.max(1,mrcomicViewportWidth-mrcomicHorizontalPadding);
         var mrcomicVisibleHeight=Math.max(240,mrcomicViewportHeight-mrcomicPageInsetTop-mrcomicPageInsetBottom);
+        document.documentElement.style.setProperty('--mrcomic-page-visible-height',mrcomicVisibleHeight+'px');
+        document.documentElement.style.setProperty('--mrcomic-page-inset-top',mrcomicPageInsetTop+'px');
+        document.documentElement.style.setProperty('--mrcomic-page-inset-bottom',mrcomicPageInsetBottom+'px');
         window.__mrcomicPageWidth=mrcomicViewportWidth;
         window.__mrcomicPageHeight=mrcomicViewportHeight;
         window.__mrcomicColumnWidth=mrcomicColumnWidth;
@@ -1255,13 +1281,13 @@ internal fun textSettingsJs(
         """document.body.style.textAlign='$effectiveAlign';""" +
         """document.body.style.hyphens='none';""" +
         """document.body.style.webkitHyphens='none';""" +
-        """document.body.style.paddingLeft='16px';""" +
-        """document.body.style.paddingRight='16px';""" +
+        """document.body.style.paddingLeft='${horizontalPaddingPx}px';""" +
+        """document.body.style.paddingRight='${horizontalPaddingPx}px';""" +
         """document.body.style.paddingTop='${initialBodyTopPaddingPx}px';""" +
         """document.body.style.paddingBottom='${initialBodyBottomPaddingPx}px';""" +
         """}else{""" +
-        """document.body.style.paddingLeft='16px';""" +
-        """document.body.style.paddingRight='16px';""" +
+        """document.body.style.paddingLeft='${horizontalPaddingPx}px';""" +
+        """document.body.style.paddingRight='${horizontalPaddingPx}px';""" +
         """document.body.style.paddingTop='${initialBodyTopPaddingPx}px';""" +
         """document.body.style.paddingBottom='${initialBodyBottomPaddingPx}px';""" +
         """document.body.style.width='100%';""" +
@@ -1345,6 +1371,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     var onSelectionActionRequest: ((ReaderSelectionAction, String) -> Unit)? = null
     var onVerticalBoundaryNavigationRequest: ((Int) -> Unit)? = null
     var onNativePagedTapRequest: ((Float) -> Unit)? = null
+    var onPagedLayoutPageCountChanged: ((Int) -> Unit)? = null
     var pagedModeScrollLock: Boolean = false
         set(value) {
             val changed = field != value
@@ -1423,12 +1450,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             super.performLongClick()
         }
 
-    override fun performHapticFeedback(feedbackConstant: Int): Boolean =
-        if (!readerHtmlSelectionActionsEnabled(pagedModeScrollLock)) {
-            false
-        } else {
-            super.performHapticFeedback(feedbackConstant)
-        }
+    override fun performHapticFeedback(feedbackConstant: Int): Boolean = false
 
     override fun onScrollChanged(l: Int, t: Int, oldl: Int, oldt: Int) {
         super.onScrollChanged(l, t, oldl, oldt)
@@ -1960,6 +1982,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             )
             pagedLayoutReady = true
             alpha = 1f
+            onPagedLayoutPageCountChanged?.invoke(metrics.pageCount)
         }
     }
 
@@ -2173,6 +2196,9 @@ private fun readerPagedCoreJs(
     var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
     var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
     var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
+    root.style.setProperty('--mrcomic-page-visible-height',usableHeight+'px');
+    root.style.setProperty('--mrcomic-page-inset-top',pageInsetTop+'px');
+    root.style.setProperty('--mrcomic-page-inset-bottom',pageInsetBottom+'px');
     var contentViewportTopOffset=0;
     window.__mrcomicPageStep=usableHeight;
     window.__mrcomicFirstPageOffset=firstPageOffset;
@@ -2443,9 +2469,11 @@ private fun readerPagedCoreJs(
         var nextStart;
         if(overflowIndex<unique.length){
           var overflowTop=Math.floor(Number(unique[overflowIndex].top)||0);
-          // Clamp so a line whose box overlaps the current page (top before endBottom)
-          // still advances; never let nextStart fall at or before the last fit line.
-          nextStart=Math.max(endBottom,overflowTop);
+          // The next page must start at the top of the first fragment that did
+          // not fully fit. Starting at endBottom can bisect the next line when
+          // WebView reports overlapping text rects, which shows up as repeated
+          // sentence tails or clipped first lines after a page turn.
+          nextStart=overflowTop>current+lineHeight*0.5?overflowTop:endBottom;
         }else{
           nextStart=contentHeight;
         }
@@ -2483,7 +2511,7 @@ private fun readerPagedCoreJs(
         pages.push({
           start:Math.round(current),
           end:Math.round(nextStart),
-          visibleHeight:makeVisibleHeight(current,endBottom,pageTopInset,pageBottomInset)
+          visibleHeight:makeVisibleHeight(current,nextStart,pageTopInset,pageBottomInset)
         });
 
         if(nextStart>=contentHeight||nextStart<=current){
@@ -2705,6 +2733,7 @@ internal fun HtmlPageView(
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
     onVerticalBoundaryNavigation: (Int) -> Unit = {},
+    onPagedLayoutPageCountChanged: (Int) -> Unit = {},
     readingMode: ReadingMode,
     fontSize: Int    = 18,
     colorScheme: String = "DAY",
@@ -2734,8 +2763,12 @@ internal fun HtmlPageView(
     val presetStyle = remember(readerPreset) { readerPreset.style() }
     val topPaddingPx = contentTopInsetPx.coerceAtLeast(0)
     val bottomPaddingPx = contentBottomInsetPx.coerceAtLeast(0)
-    val horizontalPaddingPx = with(density) { presetStyle.contentHorizontalPaddingDp.dp.roundToPx() }
-    val maxWidthPx = with(density) { presetStyle.maxWidthDp.dp.roundToPx() }
+    val horizontalPaddingPx = presetStyle.contentHorizontalPaddingDp
+        .roundToInt()
+        .coerceIn(12, 24)
+    val maxWidthPx = presetStyle.maxWidthDp
+        .roundToInt()
+        .coerceAtLeast(280)
     val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
     val resolvedBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
     val resolvedFg = normalizeReaderOverrideColor(overrideTextColor) ?: fg
@@ -3067,6 +3100,7 @@ internal fun HtmlPageView(
             // Enable chapter-transition fade for WEBTOON text mode (free-scroll, non-paged).
             webView.webtoonFadeEnabled = !pagedMode
             webView.onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
+            webView.onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged
             webView.translateSelectionLabel = translateActionLabel
             webView.dictionarySelectionLabel = dictionaryActionLabel
             webView.explainSelectionLabel = explainActionLabel
@@ -3533,7 +3567,7 @@ fun ReaderScreen(
     val textSentenceInsetPx = with(density) {
         (uiState.textFontSize.sp.toPx() * uiState.textLineHeight)
             .roundToInt()
-            .coerceAtLeast(18)
+            .coerceAtLeast(8)
     }
     val maxStableTopChromeReservePx = with(density) { 96.dp.roundToPx() }
     val maxStableBottomChromeReservePx = with(density) { 128.dp.roundToPx() }
@@ -3619,27 +3653,24 @@ fun ReaderScreen(
         stableBottomChromeReservePx,
         (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
     )
-    val topChromeReservePx = if (uiState.chromeAutoHideEnabled) {
-        autoHideTopChromeReservePx
+    val topChromeReservePx = if (!uiState.chromeAutoHideEnabled && chromeIsVisible) {
+        maxOf(stableTopChromeReservePx, measuredTopReservePx)
     } else {
-        maxOf(
-            if (chromeIsVisible || measuredTopReservePx == 0) stableTopChromeReservePx else 0,
-            measuredTopReservePx
-        )
+        0
     }
-    val bottomChromeReservePx = if (uiState.chromeAutoHideEnabled) {
-        autoHideBottomChromeReservePx
+    val bottomChromeReservePx = if (!uiState.chromeAutoHideEnabled && chromeIsVisible) {
+        maxOf(stableBottomChromeReservePx, measuredBottomReservePx)
     } else {
-        maxOf(
-            if (chromeIsVisible || measuredBottomReservePx == 0) stableBottomChromeReservePx else 0,
-            measuredBottomReservePx
-        )
+        0
     }
-    // Text WebView owns the whole reader viewport. Keep all text safe-area and chrome
-    // reserves in the HTML contract, otherwise PAGE and WEBTOON end up measuring
-    // different heights and the same document jumps, clips, or leaves half-screen gaps.
-    val textContentTopInsetPx = systemTopInsetPx + textSentenceInsetPx + topChromeReservePx
-    val textContentBottomInsetPx = systemBottomInsetPx + textSentenceInsetPx + bottomChromeReservePx
+    // Text WebView owns the whole reader viewport. If chrome is visible and not
+    // auto-hidden, the toolbar itself is the reserve: do not add an extra sentence
+    // gutter on top of it. If chrome is hidden/overlayed, keep exactly one line
+    // below the system bars so text never sits under the status/nav areas.
+    val textContentTopInsetPx = systemTopInsetPx + topChromeReservePx +
+        if (topChromeReservePx == 0) textSentenceInsetPx else 0
+    val textContentBottomInsetPx = systemBottomInsetPx + bottomChromeReservePx +
+        if (bottomChromeReservePx == 0) textSentenceInsetPx else 0
     val densityScale = density.density.takeIf { it > 0f } ?: 1f
     val textContentTopInsetCssPx = (textContentTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
     val textContentBottomInsetCssPx = (textContentBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
@@ -3951,6 +3982,9 @@ fun ReaderScreen(
                                             pageStep < 0 -> viewModel.prevPage()
                                             pageStep > 0 -> viewModel.nextPage()
                                         }
+                                    },
+                                    onPagedLayoutPageCountChanged = { pageCount ->
+                                        viewModel.onPagedLayoutPageCountChanged(pageCount)
                                     },
                                     onTranslateSelection = { selectedText ->
                                         viewModel.translateSelectedText(
