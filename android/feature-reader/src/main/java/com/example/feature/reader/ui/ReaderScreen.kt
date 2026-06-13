@@ -98,8 +98,7 @@ import com.example.feature.reader.R
 import com.example.feature.reader.ui.components.ImageMessagePopup
 import com.example.feature.reader.ui.components.ImageMessagePopupConfig
 import com.example.feature.reader.ui.components.PageView
-import com.example.feature.reader.ui.components.TextPageContainer
-import com.example.feature.reader.ui.components.TextWebtoonContainer
+import com.example.feature.reader.ui.components.TextContainer
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
 import kotlinx.coroutines.Dispatchers
@@ -665,7 +664,7 @@ private enum class ReaderSelectionAction {
     SAVE_QUOTE
 }
 
-private fun colorSchemePalette(scheme: String): Pair<String, String> = when (scheme) {
+internal fun colorSchemePalette(scheme: String): Pair<String, String> = when (scheme) {
     "SEPIA" -> "#f4ecd8" to "#3b2a1a"
     "NIGHT" -> "#1a1a1a" to "#e8e8e8"
     else    -> "#fafafa"  to "#1a1a1a"
@@ -680,7 +679,7 @@ private fun readerHeaderFooterReservedHeightDp(
     return (safeFont + safePadding * 2f + 10f).dp
 }
 
-private fun colorSchemePaletteForPreset(
+internal fun colorSchemePaletteForPreset(
     scheme: String,
     readerPreset: ReadingPreset
 ): Pair<String, String> = when {
@@ -694,18 +693,18 @@ private fun colorSchemePaletteForPreset(
 
 private val MANUAL_READER_COLOR_REGEX = Regex("^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
-private fun normalizeReaderOverrideColor(value: String?): String? {
+internal fun normalizeReaderOverrideColor(value: String?): String? {
     val normalized = value?.trim().orEmpty()
     return normalized.takeIf { it.isNotEmpty() && MANUAL_READER_COLOR_REGEX.matches(it) }
 }
 
-private fun defaultReaderAccentColor(backgroundColor: String): String = when {
+internal fun defaultReaderAccentColor(backgroundColor: String): String = when {
     backgroundColor.equals("#1a1a1a", ignoreCase = true) -> "#5ab4dc"
     backgroundColor.equals("#000000", ignoreCase = true) -> "#5ab4dc"
     else -> "#1a6f9a"
 }
 
-private fun readerSelectionOverlayColor(color: String, alpha: Float): String {
+internal fun readerSelectionOverlayColor(color: String, alpha: Float): String {
     val clampedAlpha = alpha.coerceIn(0f, 1f)
     return runCatching {
         val parsed = android.graphics.Color.parseColor(color)
@@ -914,7 +913,7 @@ private tailrec fun findReaderHardwareKeyHost(context: Context): ReaderHardwareK
     else -> null
 }
 
-private fun textSettingsJs(
+internal fun textSettingsJs(
     fontSize: Int,
     bg: String,
     fg: String,
@@ -931,6 +930,8 @@ private fun textSettingsJs(
     bold: Boolean      = false,
     topPaddingPx: Int  = 16,
     bottomPaddingPx: Int = 24,
+    horizontalPaddingPx: Int = 16,
+    maxWidthPx: Int = 0,
     pagedMode: Boolean = false,
     nativeViewportWidthPx: Int? = null,
     nativeViewportHeightPx: Int? = null
@@ -978,7 +979,8 @@ private fun textSettingsJs(
           "html,body{background-color:$resolvedBackgroundColor !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']){color:$resolvedTextColor !important;}"+
           "html,body{width:100% !important;max-width:100% !important;min-width:0 !important;overflow-x:hidden !important;-webkit-text-size-adjust:100% !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']){padding-left:16px !important;padding-right:16px !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']){padding-left:${horizontalPaddingPx}px !important;padding-right:${horizontalPaddingPx}px !important;}"+
+          ${if (maxWidthPx > 0) "\"body:not([data-mrcomic-preserve-layout='true']){max-width:${maxWidthPx}px !important;margin-left:auto !important;margin-right:auto !important;}\"+" else ""}
           "body:not([data-mrcomic-preserve-layout='true']),body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:normal !important;word-break:normal !important;hyphens:none !important;-webkit-hyphens:none !important;max-width:100% !important;min-width:0 !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) li{width:auto !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) span{display:inline !important;}"+
@@ -1065,7 +1067,7 @@ private fun textSettingsJs(
           mrcomicViewportHeight=Math.max(320,Math.min(mrcomicActualViewportHeight,nativeViewportHeight));
         }
         var mrcomicViewportWidth=Math.max(1,nativeViewportWidth||document.documentElement.clientWidth||window.innerWidth||360);
-        var mrcomicHorizontalPadding=32;
+        var mrcomicHorizontalPadding=${horizontalPaddingPx * 2};
         var mrcomicPageInsetTop=${topPaddingPx};
         var mrcomicPageInsetBottom=${bottomPaddingPx};
         var mrcomicColumnWidth=Math.max(1,mrcomicViewportWidth-mrcomicHorizontalPadding);
@@ -1275,7 +1277,7 @@ private fun textSettingsJs(
         """}$pageLockJs}$colorNotesDom})();"""
 }
 
-private fun buildThemedHtmlDocument(
+internal fun buildThemedHtmlDocument(
     html: String,
     bg: String,
     fg: String
@@ -2044,7 +2046,7 @@ private fun decodePagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetric
  * Called at load time so the first WebView paint already has the right padding, eliminating
  * the brief flash where text renders under the status bar / toolbars before JS fires.
  */
-private fun injectBodyInsetCss(html: String, topPx: Int, bottomPx: Int): String {
+internal fun injectBodyInsetCss(html: String, topPx: Int, bottomPx: Int): String {
     val style = "<style id='__mrcomic_body_inset'>" +
         "body{padding-top:${topPx}px!important;padding-bottom:${bottomPx}px!important}" +
         "</style>"
@@ -2727,9 +2729,13 @@ internal fun HtmlPageView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
     val pagedMode = readerModeLocksHtmlVerticalScroll(readingMode)
+    val presetStyle = remember(readerPreset) { readerPreset.style() }
     val topPaddingPx = contentTopInsetPx.coerceAtLeast(0)
     val bottomPaddingPx = contentBottomInsetPx.coerceAtLeast(0)
+    val horizontalPaddingPx = with(density) { presetStyle.contentHorizontalPaddingDp.dp.roundToPx() }
+    val maxWidthPx = with(density) { presetStyle.maxWidthDp.dp.roundToPx() }
     val (bg, fg) = colorSchemePaletteForPreset(colorScheme, readerPreset)
     val resolvedBg = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
     val resolvedFg = normalizeReaderOverrideColor(overrideTextColor) ?: fg
@@ -2770,6 +2776,8 @@ internal fun HtmlPageView(
     val currentPagedMode = rememberUpdatedState(pagedMode)
     val currentTopPaddingPx = rememberUpdatedState(topPaddingPx)
     val currentBottomPaddingPx = rememberUpdatedState(bottomPaddingPx)
+    val currentHorizontalPaddingPx = rememberUpdatedState(horizontalPaddingPx)
+    val currentMaxWidthPx = rememberUpdatedState(maxWidthPx)
 
     AndroidView(
         modifier = modifier,
@@ -3004,6 +3012,8 @@ internal fun HtmlPageView(
                                 bold = currentBold.value,
                                 topPaddingPx = currentTopPaddingPx.value,
                                 bottomPaddingPx = currentBottomPaddingPx.value,
+                                horizontalPaddingPx = currentHorizontalPaddingPx.value,
+                                maxWidthPx = currentMaxWidthPx.value,
                                 pagedMode = currentPagedMode.value,
                                 nativeViewportWidthPx = view.readerCssViewportWidthPxOrNull(),
                                 nativeViewportHeightPx = view.readerCssViewportHeightPxOrNull()
@@ -3160,6 +3170,8 @@ internal fun HtmlPageView(
                 bold,
                 topPaddingPx,
                 bottomPaddingPx,
+                horizontalPaddingPx,
+                maxWidthPx,
                 pagedMode,
                 viewportWidthPx ?: -1,
                 viewportHeightPx ?: -1
@@ -3183,6 +3195,8 @@ internal fun HtmlPageView(
                     bold = bold,
                     topPaddingPx = topPaddingPx,
                     bottomPaddingPx = bottomPaddingPx,
+                    horizontalPaddingPx = horizontalPaddingPx,
+                    maxWidthPx = maxWidthPx,
                     pagedMode = pagedMode,
                     nativeViewportWidthPx = viewportWidthPx,
                     nativeViewportHeightPx = viewportHeightPx
@@ -3855,11 +3869,12 @@ fun ReaderScreen(
                         )
                     when (uiState.readerContainerKind) {
                         ReaderContainerKind.TEXT_WEBTOON -> {
-                            TextWebtoonContainer(
+                            TextContainer(
                                 html = textWebtoonHtmlContent ?: htmlContent.orEmpty(),
                                 baseUrl = uiState.htmlBaseUrl,
                                 assetDocumentPath = textWebtoonAssetBasePath,
                                 assetLoader = readerAssetLoader,
+                                readingMode = ReadingMode.WEBTOON,
                                 onLeftTap = {},
                                 onRightTap = {},
                                 onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
@@ -3912,7 +3927,7 @@ fun ReaderScreen(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             } else {
-                                TextPageContainer(
+                                TextContainer(
                                     html = htmlContent,
                                     baseUrl = uiState.htmlBaseUrl,
                                     assetDocumentPath = uiState.htmlAssetBasePath,
