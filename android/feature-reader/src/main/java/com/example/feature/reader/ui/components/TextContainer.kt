@@ -8,11 +8,12 @@ import com.example.core.ui.theme.ReadingPreset
 import com.example.feature.reader.ui.HtmlPageView
 
 @Composable
-fun TextWebtoonContainer(
+fun TextContainer(
     html: String,
     baseUrl: String?,
     assetDocumentPath: String?,
     assetLoader: WebViewAssetLoader?,
+    readingMode: ReadingMode,
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
@@ -60,7 +61,7 @@ fun TextWebtoonContainer(
         onAnchorClick = onAnchorClick,
         onInlineFootnote = onInlineFootnote,
         onVerticalBoundaryNavigation = onVerticalBoundaryNavigation,
-        readingMode = ReadingMode.WEBTOON,
+        readingMode = readingMode,
         fontSize = fontSize,
         colorScheme = colorScheme,
         readerPreset = readerPreset,
