@@ -811,14 +811,16 @@ class SettingsViewModel @Inject constructor(
         preferences.get(PreferencesKeys.TRANSLATION_SOURCE_LANGUAGE, "AUTO"),
         preferences.get(PreferencesKeys.TRANSLATION_TARGET_LANGUAGE, "APP"),
         preferences.get(PreferencesKeys.TRANSLATION_TRANSPORT, TranslationTransportPreference.AUTO.name),
-        preferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, false)
-    ) { translationMode, sourceLanguage, targetLanguage, transport, explainEnabled ->
+        preferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, false),
+        preferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_PROVIDER, "LOCAL")
+    ) { values: Array<Any> ->
         TranslationServiceConfig.fromStored(
-            mode = translationMode,
-            sourceLanguage = sourceLanguage,
-            targetLanguage = targetLanguage,
-            preferredTransport = transport,
-            explainEnabled = explainEnabled
+            mode = values[0] as String,
+            sourceLanguage = values[1] as String,
+            targetLanguage = values[2] as String,
+            preferredTransport = values[3] as String,
+            explainEnabled = values[4] as Boolean,
+            explainProvider = values[5] as String
         )
     }
 
@@ -2280,6 +2282,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setTranslationExplainEnabled(enabled: Boolean) {
         viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, enabled) }
+    }
+
+    fun setTranslationExplainProvider(provider: String) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_EXPLAIN_PROVIDER, provider.uppercase()) }
     }
 
     fun saveEncryptedOpenRouterApiKey(value: String) {

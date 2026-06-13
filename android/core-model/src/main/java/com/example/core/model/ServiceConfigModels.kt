@@ -5,7 +5,8 @@ data class TranslationServiceConfig(
     val sourceLanguage: String = "AUTO",
     val targetLanguage: String = "APP",
     val preferredTransport: TranslationTransportPreference = TranslationTransportPreference.AUTO,
-    val explainEnabled: Boolean = false
+    val explainEnabled: Boolean = false,
+    val explainProvider: String = "LOCAL" // LOCAL or ONLINE
 ) {
     val storedTransport: String
         get() = preferredTransport.name
@@ -16,7 +17,8 @@ data class TranslationServiceConfig(
             sourceLanguage: String?,
             targetLanguage: String?,
             preferredTransport: String?,
-            explainEnabled: Boolean
+            explainEnabled: Boolean,
+            explainProvider: String? = null
         ): TranslationServiceConfig {
             val normalizedTransport = runCatching {
                 TranslationTransportPreference.valueOf(
@@ -29,7 +31,8 @@ data class TranslationServiceConfig(
                 sourceLanguage = sourceLanguage?.ifBlank { "AUTO" }?.uppercase() ?: "AUTO",
                 targetLanguage = targetLanguage?.ifBlank { "APP" }?.uppercase() ?: "APP",
                 preferredTransport = normalizedTransport,
-                explainEnabled = explainEnabled
+                explainEnabled = explainEnabled,
+                explainProvider = explainProvider?.ifBlank { "LOCAL" }?.uppercase() ?: "LOCAL"
             )
         }
     }
