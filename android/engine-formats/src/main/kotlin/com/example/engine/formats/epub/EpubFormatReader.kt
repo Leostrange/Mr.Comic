@@ -1060,9 +1060,9 @@ class EpubFormatReader(
         val html = prepareAssetBackedEpubDocument(
             html = body,
             readerCss = CSS_INJECT + """
-                body[data-mrcomic-preserve-layout='true']{margin:0;padding:0;display:flex;align-items:center;justify-content:center;min-height:100vh;}
-                .mrcomic-image-page{display:flex;align-items:center;justify-content:center;width:100%;}
-                .mrcomic-image-page img{max-width:100%;max-height:100vh;width:auto;height:auto;object-fit:contain;}
+                body[data-mrcomic-preserve-layout='true']{margin:0;padding:0;display:flex;align-items:center;justify-content:center;min-height:var(--mrcomic-page-visible-height,100vh);}
+                .mrcomic-image-page{display:flex;align-items:center;justify-content:center;width:100%;min-height:var(--mrcomic-page-visible-height,100vh);}
+                .mrcomic-image-page img{max-width:100%;max-height:var(--mrcomic-page-visible-height,100vh);width:auto;height:auto;object-fit:contain;}
             """.trimIndent(),
             xhtmlEntryPath = entry,
             assetExists = { candidate -> findHeader(zip, candidate) != null }
@@ -1194,7 +1194,12 @@ class EpubFormatReader(
 
     override fun getTableOfContents(): List<TocEntry> = lazyTocEntries
 
-    override fun getFootnoteText(anchorId: String): String? = footnoteMap[anchorId]
+    override fun getFootnoteText(anchorId: String): String? {
+        if (footnoteMap.isEmpty()) return null
+        return epubFootnoteLookupCandidates(anchorId).firstNotNullOfOrNull { candidate ->
+            footnoteMap[candidate]
+        }
+    }
 
     /**
      * Resolves a relative EPUB href like `chapter2.xhtml` or `chapter2.xhtml#anchor`
@@ -2256,6 +2261,32 @@ class EpubFormatReader(
             }
         }
         return result
+    }
+
+    private fun epubFootnoteLookupCandidates(anchorId: String): List<String> {
+        val raw = anchorId.trim()
+        if (raw.isBlank()) return emptyList()
+        val withoutScheme = raw
+            .removePrefix("noteref://")
+            .removePrefix("noteref:")
+            .removePrefix("fbanchor://")
+        val decoded = runCatching { URLDecoder.decode(withoutScheme, "UTF-8") }
+            .getOrDefault(withoutScheme)
+            .trim()
+        val fragment = decoded.substringAfter('#', decoded)
+            .substringAfterLast('/')
+            .trim()
+            .trimStart('#')
+        val fileAndFragment = decoded.trimStart('/')
+        return listOf(
+            raw,
+            decoded,
+            fileAndFragment,
+            fragment,
+            "#$fragment"
+        ).map { it.trim() }
+            .filter { it.isNotEmpty() && it != "#" }
+            .distinct()
     }
 
     private fun extractFootnoteItems(zip: ZipFile, entry: String): List<EpubFootnoteItem> {

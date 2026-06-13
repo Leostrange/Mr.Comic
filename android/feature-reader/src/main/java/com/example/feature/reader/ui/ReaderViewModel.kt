@@ -2017,6 +2017,14 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun onPagedLayoutPageCountChanged(pageCount: Int) {
+        // This callback reports visual subpages inside the currently loaded HTML
+        // section. It must not replace the document-level page count: doing so
+        // makes long reflowable books look complete (100%) in the middle of the
+        // text when a section happens to have only a few visual pages.
+        if (pageCount <= 0) return
+    }
+
     /** Dismisses the footnote popup without navigating anywhere. */
     fun dismissFootnote() = _uiState.update {
         it.copy(footnotePopup = null, footnotePresentation = FootnotePresentation.PEEK)
