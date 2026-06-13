@@ -4,6 +4,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import javax.inject.Named
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -20,8 +21,14 @@ abstract class TranslationModule {
     ): LookupRouter
 
     @Binds
-    abstract fun bindLlmExplainEngine(
+    @Named("local_explain_engine")
+    abstract fun bindLocalLlmExplainEngine(
         impl: SafeLlmExplainEngine
+    ): LlmExplainEngine
+
+    @Binds
+    abstract fun bindLlmExplainEngine(
+        impl: DelegatingLlmExplainEngine
     ): LlmExplainEngine
 
 }
