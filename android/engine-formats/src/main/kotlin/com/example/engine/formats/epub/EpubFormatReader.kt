@@ -1245,15 +1245,20 @@ class EpubFormatReader(
     }
 
     override fun close() {
+        // IMPORTANT: cache clearing happens OUTSIDE synchronized(lock). Holding `lock`
+        // (the ZipFile lifecycle guard) while also acquiring the htmlCache/textEntryCache/
+        // pageHtmlCache monitors creates an AB-BA lock-order inversion with the read path,
+        // which acquires a cache monitor and then `lock` (e.g. to load a page). Two threads
+        // doing close() vs. read() could deadlock. Clear caches after releasing `lock`.
         synchronized(lock) {
             try { zipFile?.close() } catch (_: Exception) {}
             zipFile = null
-            synchronized(htmlCache) { htmlCache.clear() }
-            synchronized(textEntryCache) { textEntryCache.clear() }
-            synchronized(pageHtmlCache) { pageHtmlCache.clear() }
             tempFile?.let { runCatching { it.delete() } }
             tempFile = null
         }
+        synchronized(htmlCache) { htmlCache.clear() }
+        synchronized(textEntryCache) { textEntryCache.clear() }
+        synchronized(pageHtmlCache) { pageHtmlCache.clear() }
     }
 
     private fun buildPagesFromBlueprint(blueprint: ManifestBlueprint, zip: ZipFile): List<EpubPage> {
@@ -1291,7 +1296,14 @@ class EpubFormatReader(
     }
 
     private fun currentCacheKey(): EpubCacheKey? {
-        if (path.startsWith("content://")) return null
+        if (path.isBlank()) return null
+        if (path.startsWith("content://")) {
+            return EpubCacheKey(
+                filePath = path,
+                fileSize = path.hashCode().toLong(),
+                lastModified = 0L
+            )
+        }
         val file = runCatching { File(path).canonicalFile }.getOrElse { File(path).absoluteFile }
         if (!file.isFile) return null
         return EpubCacheKey(
@@ -1310,7 +1322,8 @@ class EpubFormatReader(
             safeLogW(TAG, "Failed to load EPUB manifest cache", error)
             null
         } ?: return null
-        if (cachedEntry.fileSize != cacheKey.fileSize || cachedEntry.lastModified != cacheKey.lastModified) {
+        val isContentUri = cacheKey.filePath.startsWith("content://")
+        if (!isContentUri && (cachedEntry.fileSize != cacheKey.fileSize || cachedEntry.lastModified != cacheKey.lastModified)) {
             return null
         }
         return deserializeManifestBlueprint(cachedEntry.payloadJson)
@@ -2283,7 +2296,11 @@ class EpubFormatReader(
             decoded,
             fileAndFragment,
             fragment,
-            "#$fragment"
+            "#$fragment",
+            "fn$fragment",
+            "note$fragment",
+            "footnote$fragment",
+            "docx-footnote-$fragment"
         ).map { it.trim() }
             .filter { it.isNotEmpty() && it != "#" }
             .distinct()

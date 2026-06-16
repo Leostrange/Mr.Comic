@@ -33,6 +33,7 @@ import javax.inject.Inject
 
 private const val CHARS_PER_PAGE = 4000
 private const val MAX_TEXT_SOURCE_BYTES = 96 * 1024 * 1024
+private const val MAX_SECTION_CHARS = 100_000
 private val UTF8_BOM = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 private val MARKDOWN_EXTENSIONS: List<Extension> = listOf(
     AutolinkExtension.create(),
@@ -54,7 +55,7 @@ private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
         "figure", "figcaption", "hr", "table", "thead", "tbody", "tfoot", "tr", "th", "td",
         "caption", "colgroup", "col", "sup", "sub", "center", "font", "big", "small"
     )
-    .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align")
+    .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align", "data-mrcomic-pagebreak")
     .addAttributes("img", "src", "alt", "title", "width", "height", "loading", "align")
     .addAttributes("a", "href", "name", "target")
     .addAttributes("font", "size", "face", "color")
@@ -283,6 +284,9 @@ internal fun decodeTextBytes(bytes: ByteArray): String {
     if (looksLikeUtf16(bytes, littleEndian = false)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_16BE))
     if (isValidUtf8(bytes)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
 
+    // Single-byte-charset fallback. Apply repairCommonTextMojibake EXACTLY ONCE per
+    // branch: a second unconditional pass over already-repaired text used to risk
+    // picking a different candidate and corrupting valid text.
     val bestResult = SINGLE_BYTE_TEXT_CHARSETS
         .map { charset ->
             val text = bytes.toString(charset)
@@ -290,15 +294,14 @@ internal fun decodeTextBytes(bytes: ByteArray): String {
             Triple(charset, text, score)
         }
         .maxByOrNull { it.third }
-    
-    val decoded = bestResult?.let { (charset, text, score) ->
+
+    return bestResult?.let { (charset, text, score) ->
         if (score >= 50) {
             repairCommonTextMojibake(text)
         } else {
-            bytes.toString(Charsets.UTF_8)
+            repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
         }
-    } ?: bytes.toString(Charsets.UTF_8)
-    return repairCommonTextMojibake(decoded)
+    } ?: repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
 }
 
 private fun repairCommonTextMojibake(text: String): String {
@@ -316,10 +319,34 @@ private fun repairCommonTextMojibake(text: String): String {
     val originalScore = scoreDecodedText(text, Charsets.UTF_8)
     // Lower threshold for short texts: minimum 30, scale up for longer texts
     val threshold = if (text.length < 500) 30 else 80
-    return candidates
-        .maxByOrNull { candidate -> scoreDecodedText(candidate, Charsets.UTF_8) }
-        ?.takeIf { scoreDecodedText(it, Charsets.UTF_8) > originalScore + threshold }
-        ?: text
+    // Pick the best candidate.  Tie-breaking rule: when two candidates score
+    // equally the one that is NOT mojibake wins.  This matters for double-encoded
+    // Cyrillic (UTF-8 → misread as windows-1252 → re-encoded UTF-8) where the
+    // mojibake "ÐŸÑ€Ð¸Ð²ÐµÑ‚" and the clean recovery "Привет" score identically
+    // (the Latin letters Ð/Ñ count as valid), and the original text won — recovery
+    // never happened.
+    var best = candidates.firstOrNull() ?: return text
+    var bestScore = scoreDecodedText(best, Charsets.UTF_8)
+    var bestIsMojibake = looksLikeCommonMojibake(best)
+    for (i in 1 until candidates.size) {
+        val c = candidates[i]
+        val s = scoreDecodedText(c, Charsets.UTF_8)
+        val m = looksLikeCommonMojibake(c)
+        if (s > bestScore || (s == bestScore && !m && bestIsMojibake)) {
+            best = c; bestScore = s; bestIsMojibake = m
+        }
+    }
+    if (best == text) return text
+    // Standard improvement-based acceptance.
+    if (bestScore > originalScore + threshold) return best
+    // looksLikeCommonMojibake already proved the text is corrupted, and the candidate
+    // decoded cleanly without replacement glyphs (filtered above). For the common
+    // UTF-8-as-windows-1252 Cyrillic case the mojibake scores deceptively high (Latin
+    // letters Ð/Ñ each count as valid), so a tiny gap can still mean real recovery.
+    // Trust a clean (non-mojibake) candidate when it is at least as good as the
+    // mojibake; the tie-break above already preferred it over the input.
+    if ('\uFFFD' !in best && !bestIsMojibake && bestScore >= originalScore) return best
+    return text
 }
 
 private fun looksLikeCommonMojibake(text: String): Boolean {
@@ -815,10 +842,12 @@ class TextFormatReader @Inject constructor(
                 TextDocumentSection(index = index, html = html, baseUrl = readerBaseUrl)
             }
         } else {
-            ReflowableDocumentBuilder.sectionsFromMarkup(raw, readerBaseUrl)
+            val reflowSections = ReflowableDocumentBuilder.sectionsFromMarkup(raw, readerBaseUrl)
+            injectHeadingIdsFromAnchoredPages(reflowSections, anchored.pages)
         }
+        val splitSections = splitLargeSections(sections.withSequentialIndices())
         return TextDocumentData(
-            sections = sections.withSequentialIndices(),
+            sections = splitSections,
             chapterAnchors = anchored.anchors
         )
     }
@@ -1106,6 +1135,81 @@ class TextFormatReader @Inject constructor(
             index += 1
         }
         return candidate
+    }
+
+    private fun injectHeadingIdsFromAnchoredPages(
+        sections: List<TextDocumentSection>,
+        anchoredPages: List<String>
+    ): List<TextDocumentSection> {
+        val headingIdMap = linkedMapOf<String, String>()
+        for (page in anchoredPages) {
+            runCatching {
+                val doc = Jsoup.parse(page)
+                doc.select("h1, h2, h3, h4, h5, h6").forEach { heading ->
+                    val id = heading.id().trim()
+                    if (id.isNotBlank()) {
+                        val title = heading.text().replace(Regex("\\s+"), " ").trim()
+                        if (title.isNotBlank()) headingIdMap[title] = id
+                    }
+                }
+            }
+        }
+        if (headingIdMap.isEmpty()) return sections
+        return sections.map { section ->
+            runCatching {
+                val doc = Jsoup.parse(section.html)
+                doc.select("h1, h2, h3, h4, h5, h6").forEach { heading ->
+                    if (heading.id().isBlank()) {
+                        val title = heading.text().replace(Regex("\\s+"), " ").trim()
+                        headingIdMap[title]?.let { heading.attr("id", it) }
+                    }
+                }
+                section.copy(html = doc.outerHtml())
+            }.getOrElse { section }
+        }
+    }
+
+    private fun splitLargeSections(sections: List<TextDocumentSection>): List<TextDocumentSection> {
+        val maxChars = MAX_SECTION_CHARS
+        val result = mutableListOf<TextDocumentSection>()
+        var globalIndex = 0
+        for (section in sections) {
+            if (section.html.length <= maxChars) {
+                result.add(section.copy(index = globalIndex++))
+                continue
+            }
+            val splits = splitHtmlAtBoundaries(section.html, maxChars)
+            for (splitHtml in splits) {
+                result.add(TextDocumentSection(
+                    index = globalIndex++,
+                    id = section.id,
+                    title = section.title,
+                    html = splitHtml,
+                    baseUrl = section.baseUrl,
+                    isFrontMatter = section.isFrontMatter
+                ))
+            }
+        }
+        return result
+    }
+
+    private fun splitHtmlAtBoundaries(html: String, maxChars: Int): List<String> {
+        if (html.length <= maxChars) return listOf(html)
+        val chunks = mutableListOf<String>()
+        var start = 0
+        while (start < html.length) {
+            var end = (start + maxChars).coerceAtMost(html.length)
+            if (end < html.length) {
+                val lastBlockClose = html.lastIndexOf("</p>", end)
+                    .coerceAtLeast(html.lastIndexOf("</div>", end))
+                    .coerceAtLeast(html.lastIndexOf("</h", end))
+                    .coerceAtLeast(html.lastIndexOf("</li>", end))
+                if (lastBlockClose > start + maxChars / 2) end = lastBlockClose + 4
+            }
+            chunks.add(html.substring(start, end))
+            start = end
+        }
+        return chunks
     }
 
     private fun markdownAnchorSlug(title: String): String {
@@ -1610,10 +1714,25 @@ class TextFormatReader @Inject constructor(
 
     private fun buildTableOfContents(): List<TocEntry> {
         return documentData.chapterAnchors.mapNotNull { anchor ->
-            anchorPageIndex[anchor.id]?.let { pageIndex ->
-                TocEntry(title = anchor.title, pageIndex = pageIndex)
-            }
+            val pageIndex = anchorPageIndex[anchor.id] ?: return@mapNotNull null
+            val charOffset = findAnchorCharOffset(htmlPages.getOrNull(pageIndex), anchor.id)
+            TocEntry(
+                title = anchor.title,
+                pageIndex = pageIndex,
+                anchorId = anchor.id,
+                sectionIndex = pageIndex,
+                charOffset = charOffset
+            )
         }
+    }
+
+    private fun findAnchorCharOffset(html: String?, anchorId: String): Int {
+        if (html.isNullOrBlank() || anchorId.isBlank()) return -1
+        return runCatching {
+            val doc = Jsoup.parse(html)
+            val element = doc.select("#${anchorId}, [name=$anchorId]").firstOrNull()
+            element?.let { html.indexOf("<${it.tagName()}") } ?: -1
+        }.getOrDefault(-1)
     }
 
     /**
