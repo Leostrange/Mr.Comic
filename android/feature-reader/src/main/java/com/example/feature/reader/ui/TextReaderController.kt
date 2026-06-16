@@ -16,12 +16,18 @@ internal class TextReaderController(
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 10
     }
 
+    // htmlPageCache uses accessOrder=true, so even a get() mutates the internal LRU linked
+    // list. cacheHtmlPage()/cachedHtmlPage() are called concurrently from prewarm coroutines
+    // (Dispatchers.IO) and from the main thread (refreshAdjacentHtmlPages, clearHtmlPageCache).
+    // Without synchronization this is a data race: ConcurrentModificationException or a
+    // corrupted linked list (NPE / infinite loop / lost pages). Every access is serialized
+    // on the cache monitor itself (not `this`) so the lock is colocated with the data.
     fun clearHtmlPageCache() {
-        htmlPageCache.clear()
+        synchronized(htmlPageCache) { htmlPageCache.clear() }
     }
 
     fun clearCaches() {
-        htmlPageCache.clear()
+        synchronized(htmlPageCache) { htmlPageCache.clear() }
         textPagePaginationController.clear()
         textWebtoonSessionController.cancel()
     }
@@ -61,10 +67,10 @@ internal class TextReaderController(
     }
 
     fun cacheHtmlPage(index: Int, page: CachedHtmlPage) {
-        htmlPageCache[index] = page
+        synchronized(htmlPageCache) { htmlPageCache[index] = page }
     }
 
-    fun cachedHtmlPage(index: Int): CachedHtmlPage? = htmlPageCache[index]
+    fun cachedHtmlPage(index: Int): CachedHtmlPage? = synchronized(htmlPageCache) { htmlPageCache[index] }
 
     fun ensureTextWebtoonDocumentLoaded(
         scope: kotlinx.coroutines.CoroutineScope,
