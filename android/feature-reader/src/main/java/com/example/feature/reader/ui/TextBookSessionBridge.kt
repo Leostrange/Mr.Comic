@@ -72,7 +72,7 @@ internal object TextBookSessionBridge {
         if (href.isNotBlank()) {
             reader.resolveHrefToPage(href)?.let { legacyPage ->
                 if (reader is ReflowableTextFormatReader) {
-                    return mapLegacyPageToSectionIndex(reader, legacyPage)
+                    return mapLegacyPageToSectionIndex(reader, legacyPage, href)
                 }
                 return legacyPage
             }
@@ -82,10 +82,19 @@ internal object TextBookSessionBridge {
 
     private suspend fun mapLegacyPageToSectionIndex(
         reader: ReflowableTextFormatReader,
-        legacyPage: Int
+        legacyPage: Int,
+        href: String
     ): Int {
         val sections = reader.getTextDocumentSections()
         if (sections.isEmpty()) return legacyPage
+        val filePart = href.substringBefore('#').trim().trimStart('/')
+        if (filePart.isNotBlank()) {
+            val matched = sections.indexOfFirst { section ->
+                val sectionId = section.id ?: return@indexOfFirst false
+                hrefMatchesSpineEntry(filePart, sectionId)
+            }
+            if (matched >= 0) return matched
+        }
         return legacyPage.coerceIn(0, sections.lastIndex)
     }
 

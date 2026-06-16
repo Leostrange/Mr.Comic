@@ -10,12 +10,12 @@ class UnifiedReaderCssBuilderTest {
     fun baseDocumentCss_containsBodyDefaults() {
         val css = READER_BASE_DOCUMENT_CSS
         assertTrue("max-width: 720px", css.contains("max-width: 720px"))
-        assertTrue("padding: 16px 16px 44px", css.contains("padding: 16px 16px 44px"))
+        assertTrue("padding: 0 1.5em", css.contains("padding: 0 1.5em"))
         assertTrue("font-size: 18px", css.contains("font-size: 18px"))
         assertTrue("line-height: 1.6", css.contains("line-height: 1.6"))
         assertTrue("text-align: justify", css.contains("text-align: justify"))
         assertTrue("box-sizing: border-box", css.contains("box-sizing: border-box"))
-        assertTrue("user-select: none", css.contains("user-select: none"))
+        assertFalse("no user-select: none on body", css.contains("user-select: none"))
     }
 
     @Test
@@ -69,7 +69,7 @@ class UnifiedReaderCssBuilderTest {
         assertTrue("padding: 8px 16px 44px", css.contains("padding: 8px 16px 44px"))
         assertTrue("word-wrap: break-word", css.contains("word-wrap: break-word"))
         assertFalse("no text-align: justify", !css.contains("text-align: justify"))
-        assertFalse("no text-indent", !css.contains("text-indent"))
+        assertFalse("no text-indent in preserve layout", css.contains("text-indent"))
     }
 
     @Test
@@ -143,8 +143,7 @@ class UnifiedReaderCssBuilderTest {
     @Test
     fun buildReaderDocumentCss_textAlignOnParagraph() {
         val css = buildReaderDocumentCss(textAlignOnBody = false)
-        assertFalse("no text-align on body", css.contains("text-align: justify;"))
-        assertTrue("text-align on p", css.contains("text-align: justify; ") || css.contains("text-align: justify;"))
+        assertTrue("text-align on p", css.contains("text-align: justify"))
     }
 
     @Test

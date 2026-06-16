@@ -163,7 +163,6 @@ private const val JS_TAP_HANDLER = """(function(){
       if(href.indexOf('fbanchor://')===0||href.indexOf('FbAutId_')>=0)return false;
       if(title&&href.indexOf('#')>=0)return false;
       if(isNoteRef)return false;
-      if(/\bpginternal\b/i.test(cls))return true;
       try{
         if(linkEl.closest&&linkEl.closest('table'))return true;
         if(document.getElementById('pgepubid00002')&&linkEl.closest&&linkEl.closest('#pgepubid00002'))return true;
@@ -975,7 +974,7 @@ internal fun textSettingsJs(
     }
     val quoteColor = if (isNightTheme) "#c9c9c9" else "#555555"
     val pagedTocLinkCss = if (pagedMode) {
-        "body a.pginternal,body table a[href],body table[summary] a[href],body #pgepubid00002 a[href]{pointer-events:none !important;cursor:default !important;-webkit-tap-highlight-color:transparent !important;text-decoration:none !important;color:inherit !important;}"
+        "body table a[href],body table[summary] a[href],body #pgepubid00002 a[href]{pointer-events:none !important;cursor:default !important;-webkit-tap-highlight-color:transparent !important;text-decoration:none !important;color:inherit !important;}"
     } else {
         ""
     }
@@ -1371,7 +1370,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     var onSelectionActionRequest: ((ReaderSelectionAction, String) -> Unit)? = null
     var onVerticalBoundaryNavigationRequest: ((Int) -> Unit)? = null
     var onNativePagedTapRequest: ((Float) -> Unit)? = null
-    var onPagedLayoutPageCountChanged: ((Int) -> Unit)? = null
+    var onPagedLayoutPageCountChanged: ((pageCount: Int, pageIndex: Int) -> Unit)? = null
     var pagedModeScrollLock: Boolean = false
         set(value) {
             val changed = field != value
@@ -1763,6 +1762,12 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         committedLoadToken = null
         lastReaderTextSettingsSignature = null
         pagedLayoutReady = !pagedModeScrollLock
+        if (pagedModeScrollLock) {
+            evaluateJavascript(
+                "window.__mrcomicPagedIndex=0;window.__mrcomicPageBreaks=null;window.__mrcomicPageBreakSig='';",
+                null
+            )
+        }
         if (readerHtmlReloadResetsScroll(pagedModeScrollLock) && pendingFreeScrollRestoreY == null) {
             scrollTo(0, 0)
         }
@@ -1982,7 +1987,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             )
             pagedLayoutReady = true
             alpha = 1f
-            onPagedLayoutPageCountChanged?.invoke(metrics.pageCount)
+            onPagedLayoutPageCountChanged?.invoke(metrics.pageCount, metrics.pageIndex)
         }
     }
 
@@ -2023,7 +2028,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         alpha = 1f
     }
 
-    fun turnPagedColumn(delta: Int, onBoundary: () -> Unit) {
+    fun turnPagedColumn(delta: Int, onBoundary: () -> Unit, onPageMetricsChanged: ((pageCount: Int, pageIndex: Int) -> Unit)? = null) {
         if (!pagedModeScrollLock) {
             onBoundary()
             return
@@ -2033,6 +2038,8 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             if (metrics == null || !metrics.handled) {
                 pendingPagedLayoutTarget = if (delta < 0) Int.MAX_VALUE else 0
                 post { onBoundary() }
+            } else {
+                onPageMetricsChanged?.invoke(metrics.pageCount, metrics.pageIndex)
             }
         }
     }
@@ -2553,17 +2560,36 @@ private fun readerPagedCoreJs(
           var headPage=pages[hi];
           var bodyPage=pages[hi+1];
           var headSpan=Math.max(0,Number(headPage.end||0)-Number(headPage.start||0));
-          if(headSpan>lineHeight*7)continue;
+          if(headSpan>lineHeight*10)continue;
           var budgetEnd=Math.min(contentHeight,Number(headPage.start||0)+pageBudget);
           var mergedEnd=Math.min(budgetEnd,Number(bodyPage.end||0));
-          if(mergedEnd<=Number(headPage.end||0)+lineHeight)continue;
+          if(mergedEnd<=Number(headPage.end||0)+lineHeight*0.5)continue;
           headPage.end=Math.round(mergedEnd);
           headPage.visibleHeight=makeVisibleHeight(headPage.start,headPage.end,pageInsetTop,pageInsetBottom);
           bodyPage.start=Math.round(mergedEnd);
-          if(Number(bodyPage.end||0)-Number(bodyPage.start||0)<lineHeight*0.45){
+          if(Number(bodyPage.end||0)-Number(bodyPage.start||0)<lineHeight*0.35){
             pages.splice(hi+1,1);
             hi--;
           }
+        }
+        var idx=0;
+        while(idx<pages.length-1){
+          var cur=pages[idx];
+          var curH=Math.max(0,Number(cur.visibleHeight||0)-pageInsetTop-pageInsetBottom);
+          if(curH<clipHeight*0.4&&idx<pages.length-1){
+            var nxt=pages[idx+1];
+            var extendTo=Math.min(contentHeight,Number(cur.start||0)+pageBudget);
+            if(extendTo>Number(cur.end||0)+lineHeight*0.5){
+              cur.end=Math.round(Math.min(extendTo,Number(nxt.end||0)));
+              cur.visibleHeight=makeVisibleHeight(cur.start,cur.end,pageInsetTop,pageInsetBottom);
+              nxt.start=Math.round(cur.end);
+              if(Number(nxt.end||0)-Number(nxt.start||0)<lineHeight*0.35){
+                pages.splice(idx+1,1);
+                continue;
+              }
+            }
+          }
+          idx++;
         }
         return pages;
       })(pages);
@@ -2733,7 +2759,9 @@ internal fun HtmlPageView(
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
     onVerticalBoundaryNavigation: (Int) -> Unit = {},
-    onPagedLayoutPageCountChanged: (Int) -> Unit = {},
+    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int) -> Unit = { _, _ -> },
+    pendingScrollToAnchor: String? = null,
+    onConsumeScrollToAnchor: () -> Unit = {},
     readingMode: ReadingMode,
     fontSize: Int    = 18,
     colorScheme: String = "DAY",
@@ -2795,6 +2823,8 @@ internal fun HtmlPageView(
     val onSaveQuote      = rememberUpdatedState(onSaveQuoteSelection)
     val onAnchor         = rememberUpdatedState(onAnchorClick)
     val onInlineNote     = rememberUpdatedState(onInlineFootnote)
+    val currentPendingAnchor = rememberUpdatedState(pendingScrollToAnchor)
+    val onConsumeAnchor  = rememberUpdatedState(onConsumeScrollToAnchor)
     val currentFs        = rememberUpdatedState(fontSize)
     val currentScheme    = rememberUpdatedState(colorScheme)
     val currentPreset    = rememberUpdatedState(readerPreset)
@@ -2852,14 +2882,14 @@ internal fun HtmlPageView(
                     when {
                         xPercent < 0.3f -> {
                             if (readerWebView.pagedModeScrollLock) {
-                                readerWebView.turnPagedColumn(-1) { onLeft.value() }
+                                readerWebView.turnPagedColumn(-1, { onLeft.value() }, onPagedLayoutPageCountChanged)
                             } else {
                                 onLeft.value()
                             }
                         }
                         xPercent > 0.7f -> {
                             if (readerWebView.pagedModeScrollLock) {
-                                readerWebView.turnPagedColumn(1) { onRight.value() }
+                                readerWebView.turnPagedColumn(1, { onRight.value() }, onPagedLayoutPageCountChanged)
                             } else {
                                 onRight.value()
                             }
@@ -2870,9 +2900,9 @@ internal fun HtmlPageView(
                 fun dispatchReaderSwipe(direction: Int) {
                     val pageDirection = if (direction < 0) -1 else 1
                     if (readerWebView.pagedModeScrollLock) {
-                        readerWebView.turnPagedColumn(pageDirection) {
+                        readerWebView.turnPagedColumn(pageDirection, {
                             if (pageDirection < 0) onLeft.value() else onRight.value()
-                        }
+                        }, onPagedLayoutPageCountChanged)
                     }
                 }
                 onNativePagedTapRequest = { xPercent ->
@@ -3059,6 +3089,14 @@ internal fun HtmlPageView(
                         if (currentPagedMode.value) {
                             readerView?.postDelayed({ readerView.applyPagedLayout() }, 80L)
                             readerView?.postDelayed({ readerView.applyPagedLayout() }, 320L)
+                        }
+                        currentPendingAnchor.value?.let { anchor ->
+                            val safeAnchor = anchor.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"")
+                            view.evaluateJavascript(
+                                "try{var t=document.getElementById('$safeAnchor')||document.querySelector('[name=\"$safeAnchor\"]');if(t&&window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(t);}else if(t){t.scrollIntoView({block:'start'});}}catch(e){}",
+                                null
+                            )
+                            onConsumeAnchor.value()
                         }
                         view.post {
                             view.requestLayout()
@@ -3948,6 +3986,8 @@ fun ReaderScreen(
                                 saveQuoteActionLabel = readerText.saveQuote,
                                 contentTopInsetPx = textWebtoonTopInsetCssPx,
                                 contentBottomInsetPx = textWebtoonBottomInsetCssPx,
+                                pendingScrollToAnchor = uiState.pendingScrollToAnchor,
+                                onConsumeScrollToAnchor = viewModel::consumePendingScrollToAnchor,
                                 modifier = textWebtoonModifier
                             )
                         }
@@ -3983,8 +4023,8 @@ fun ReaderScreen(
                                             pageStep > 0 -> viewModel.nextPage()
                                         }
                                     },
-                                    onPagedLayoutPageCountChanged = { pageCount ->
-                                        viewModel.onPagedLayoutPageCountChanged(pageCount)
+                                    onPagedLayoutPageCountChanged = { pageCount, pageIndex ->
+                                        viewModel.onPagedLayoutPageCountChanged(pageCount, pageIndex)
                                     },
                                     onTranslateSelection = { selectedText ->
                                         viewModel.translateSelectedText(
@@ -4017,6 +4057,8 @@ fun ReaderScreen(
                                     saveQuoteActionLabel = readerText.saveQuote,
                                     contentTopInsetPx = textContentTopInsetCssPx,
                                     contentBottomInsetPx = textContentBottomInsetCssPx,
+                                    pendingScrollToAnchor = uiState.pendingScrollToAnchor,
+                                    onConsumeScrollToAnchor = viewModel::consumePendingScrollToAnchor,
                                     modifier = textReaderModifier
                                 )
                             }
@@ -4296,11 +4338,16 @@ fun ReaderScreen(
             readerPreset = activeReaderPreset,
             toolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f),
             toolbarBlur = uiState.toolbarBlur,
-            resolveDisplayPage = viewModel::tocDisplayPage,
-            onNavigate = { page ->
-                viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
-                viewModel.toggleTocSheet()
-            },
+    resolveDisplayPage = viewModel::tocDisplayPage,
+    onNavigate = { entry ->
+        viewModel.navigateToTocEntry(
+            page = entry.pageIndex,
+            anchorId = entry.anchorId ?: "",
+            sectionIndex = entry.sectionIndex,
+            charOffset = entry.charOffset
+        )
+        viewModel.toggleTocSheet()
+    },
             onRemoveBookmark = viewModel::removeBookmark,
             onDismiss = viewModel::toggleTocSheet
         )
@@ -4933,7 +4980,7 @@ private fun TocBottomSheet(
     toolbarOpacity: Float,
     toolbarBlur: Float,
     resolveDisplayPage: (enginePageIndex: Int) -> Int = { it },
-    onNavigate: (Int) -> Unit,
+    onNavigate: (TocEntry) -> Unit,
     onRemoveBookmark: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -5052,7 +5099,7 @@ private fun TocBottomSheet(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { onNavigate(entry.pageIndex) }
+                                        .clickable { onNavigate(entry) }
                                         .padding(horizontal = 12.dp, vertical = 7.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
@@ -5143,7 +5190,7 @@ private fun TocBottomSheet(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { onNavigate(page) }
+                                            .clickable { onNavigate(TocEntry(title = "", pageIndex = page)) }
                                             .padding(start = 14.dp, end = 6.dp, top = 9.dp, bottom = 9.dp),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically

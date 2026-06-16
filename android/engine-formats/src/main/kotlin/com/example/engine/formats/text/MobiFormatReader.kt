@@ -117,7 +117,8 @@ class MobiFormatReader(
             "#$fragment",
             "fn$fragment",
             "note$fragment",
-            "footnote$fragment"
+            "footnote$fragment",
+            "docx-footnote-$fragment"
         ).map { it.trim() }
             .filter { it.isNotEmpty() && it != "#" }
             .distinct()

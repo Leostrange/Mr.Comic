@@ -229,7 +229,11 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             raw,
             decoded,
             fragment,
-            "#$fragment"
+            "#$fragment",
+            "fn$fragment",
+            "note$fragment",
+            "footnote$fragment",
+            "docx-footnote-$fragment"
         ).map { it.trim() }
             .filter { it.isNotEmpty() && it != "#" }
             .distinct()

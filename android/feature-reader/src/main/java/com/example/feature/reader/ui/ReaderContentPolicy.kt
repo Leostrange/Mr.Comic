@@ -55,7 +55,7 @@ fun shouldUseKotlinTextPagePagination(
 
 /**
  * Moon+ PAGE mode: inline HTML chapter links (Gutenberg Contents table, pginternal)
- * must not jump spine during tap-to-turn. Chapter jumps belong in the app TOC sheet.
+ * should navigate to the target chapter. Only block bare spine jumps without anchors.
  */
 fun shouldBlockInlineHtmlChapterNavigation(
     containerKind: ReaderContainerKind,
@@ -79,6 +79,8 @@ fun shouldBlockInlineHtmlChapterNavigation(
     if (currentName.isNotBlank() && targetName.equals(currentName, ignoreCase = true)) {
         return false
     }
+    val hasFragment = hrefFilePart.contains('#')
+    if (hasFragment) return false
     return true
 }
 

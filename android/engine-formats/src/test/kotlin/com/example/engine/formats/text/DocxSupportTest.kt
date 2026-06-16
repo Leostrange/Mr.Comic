@@ -66,7 +66,10 @@ class DocxSupportTest {
 
             val reader = TextFormatReader(ContextWrapper(null), tempDocx.absolutePath, ComicFormat.DOCX)
             try {
-                val html = reader.getHtmlPage(0).orEmpty()
+                val pageCount = reader.getPageCount()
+                val html = (0 until pageCount)
+                    .mapNotNull { reader.getHtmlPage(it) }
+                    .joinToString("\n")
 
                 assertTrue(html.contains("Body paragraph text"))
                 assertTrue(html.contains("Heading paragraph text"))
