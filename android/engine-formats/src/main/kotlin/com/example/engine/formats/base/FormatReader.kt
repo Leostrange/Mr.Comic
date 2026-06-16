@@ -3,7 +3,13 @@ package com.example.engine.formats.base
 import android.graphics.Bitmap
 
 /** One entry in the book's table of contents. */
-data class TocEntry(val title: String, val pageIndex: Int)
+data class TocEntry(
+    val title: String,
+    val pageIndex: Int,
+    val anchorId: String? = null,
+    val sectionIndex: Int = -1,
+    val charOffset: Int = -1
+)
 
 /** Binary web resource used by HTML-based readers through WebViewAssetLoader. */
 data class FormatReaderWebResource(

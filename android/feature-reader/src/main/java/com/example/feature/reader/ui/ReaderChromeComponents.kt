@@ -517,6 +517,14 @@ fun ReaderExpandedBottomPanel(
             readingMode = uiState.readingMode,
             isLandscape = isLandscape,
             isTextBook = uiState.currentHtmlContent != null,
+            sectionPageCount = uiState.sectionPageCount,
+            sectionCurrentPage = uiState.sectionCurrentPage,
+            chapterTitle = uiState.tableOfContents
+                .sortedBy { it.pageIndex }
+                .lastOrNull { it.pageIndex <= uiState.currentPage }
+                ?.title,
+            epubAccumulatedTotalPages = uiState.epubAccumulatedTotalPages,
+            epubAccumulatedCurrentPage = uiState.epubAccumulatedCurrentPage,
             onReadingModeChange = onReadingModeChange,
             onPageChange = onPageChange
         )

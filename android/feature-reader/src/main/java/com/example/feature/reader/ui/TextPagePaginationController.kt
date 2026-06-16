@@ -19,8 +19,13 @@ internal data class TextPagePaginationSnapshot(
 internal class TextPagePaginationController(
     private val documentPaginator: DocumentTextPaginator = DocumentTextPaginator()
 ) {
-    private var snapshot: TextPagePaginationSnapshot? = null
-    private var cacheKey: String? = null
+    // @Volatile: ensureBuilt() runs on Dispatchers.IO while isReady()/getDisplayPage()/
+    // displayPageForEngine() read these from the main thread. Without @Volatile the JVM
+    // memory model lets the main thread observe a stale or partially-published snapshot
+    // (null when non-null on the writer thread, or an inconsistent snapshot/cacheKey pair),
+    // which manifests as NPEs or wrong page-index mapping right after a pagination build.
+    @Volatile private var snapshot: TextPagePaginationSnapshot? = null
+    @Volatile private var cacheKey: String? = null
 
     fun clear() {
         snapshot = null
@@ -65,8 +70,12 @@ internal class TextPagePaginationController(
         val displayPages = result.pages.mapIndexed { displayIndex, subPage ->
             engineByDisplay[displayIndex] = subPage.sectionIndex
             val section = sections.getOrNull(subPage.sectionIndex)
-            val assetBasePath = section?.id?.takeIf { it.contains('/') }
-                ?: reader.htmlAssetBasePath(subPage.sectionIndex)
+            // The section's `id` is the authoritative asset base (XHTML entry / file name).
+            // Do NOT fall back to reader.htmlAssetBasePath(sectionIndex): that method is
+            // index-semantics-sensitive and, for EPUB, mixing a section index with a
+            // page-index lookup can resolve a different page's entry, breaking relative
+            // CSS/image resolution for flat-layout books (entries without a '/').
+            val assetBasePath = section?.id?.takeIf { it.isNotBlank() }
             CachedHtmlPage(
                 html = subPage.html,
                 assetBasePath = assetBasePath

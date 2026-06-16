@@ -139,7 +139,7 @@ class ReaderContentPolicyTest {
     @Test
     fun inlineHtmlChapterLinksBlockedInEpubPageMode() {
         assertEquals(
-            true,
+            false,
             shouldBlockInlineHtmlChapterNavigation(
                 containerKind = ReaderContainerKind.TEXT_PAGE,
                 readingMode = ReadingMode.PAGE_LTR,

@@ -27,6 +27,11 @@ fun ReaderBottomBar(
     readingMode: ReadingMode,
     isLandscape: Boolean,
     isTextBook: Boolean = false,
+    sectionPageCount: Int = 0,
+    sectionCurrentPage: Int = 0,
+    chapterTitle: String? = null,
+    epubAccumulatedTotalPages: Int = 0,
+    epubAccumulatedCurrentPage: Int = 0,
     onReadingModeChange: (ReadingMode) -> Unit,
     onPageChange: (Int) -> Unit,
     modifier: Modifier = Modifier
@@ -34,6 +39,10 @@ fun ReaderBottomBar(
     val strings = LocalStrings.current
     val compactImageLayout = isLandscape && !isTextBook
     val showPageCountText = true
+    val showSectionPage = sectionPageCount > 1 && isTextBook
+    val effectiveTotalPages = if (epubAccumulatedTotalPages > 0) epubAccumulatedTotalPages else totalPages
+    val effectiveCurrentPage = if (epubAccumulatedTotalPages > 0) epubAccumulatedCurrentPage else currentPage
+    val bookProgress = if (effectiveTotalPages > 0) ((effectiveCurrentPage + 1) * 100f / effectiveTotalPages).toInt() else 0
 
     Column(
         modifier = modifier
@@ -58,7 +67,7 @@ fun ReaderBottomBar(
                     style = MaterialTheme.typography.labelMedium
                 )
                 Text(
-                    text = "${currentPage + 1} / $totalPages",
+                    text = if (showSectionPage) "${sectionCurrentPage + 1}/$sectionPageCount" else "${currentPage + 1} / $totalPages",
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -91,11 +100,30 @@ fun ReaderBottomBar(
 
             Spacer(Modifier.height(12.dp))
             if (showPageCountText) {
+                val counterText = if (epubAccumulatedTotalPages > 0 && chapterTitle != null) {
+                    "$chapterTitle (${epubAccumulatedCurrentPage + 1}/$epubAccumulatedTotalPages)"
+                } else if (epubAccumulatedTotalPages > 0) {
+                    "${epubAccumulatedCurrentPage + 1} / $epubAccumulatedTotalPages"
+                } else if (showSectionPage && chapterTitle != null) {
+                    "$chapterTitle (${sectionCurrentPage + 1}/$sectionPageCount)"
+                } else if (showSectionPage) {
+                    "${currentPage + 1} / $totalPages (${sectionCurrentPage + 1}/$sectionPageCount)"
+                } else {
+                    "${currentPage + 1} / $totalPages"
+                }
                 Text(
-                    text = "${currentPage + 1} / $totalPages",
+                    text = counterText,
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelMedium
                 )
+                if (isTextBook && totalPages > 0) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "$bookProgress%",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
                 Spacer(Modifier.height(8.dp))
             } else {
                 Spacer(Modifier.height(4.dp))

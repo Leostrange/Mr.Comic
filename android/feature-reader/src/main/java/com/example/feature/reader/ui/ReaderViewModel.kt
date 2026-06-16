@@ -263,6 +263,16 @@ data class ReaderUiState(
     val tapZoneMode: String = ReaderTapZoneMode.SIMPLE.name,
     /** Whether the simple three-zone layout should swap left/right actions. */
     val tapZoneSwap: Boolean = false,
+    /** Fragment to scroll to after the next page load completes (TOC jump with anchor). */
+    val pendingScrollToAnchor: String? = null,
+    /** Number of visual JS pages in the current spine section (paged mode). */
+    val sectionPageCount: Int = 0,
+    /** Current visual page index within the current spine section (0-based). */
+    val sectionCurrentPage: Int = 0,
+    /** Accumulated total visual pages across all visited EPUB sections (0 when not EPUB or no data). */
+    val epubAccumulatedTotalPages: Int = 0,
+    /** Accumulated current visual page position across all visited EPUB sections. */
+    val epubAccumulatedCurrentPage: Int = 0,
     /** Whether hardware volume buttons should turn pages inside the reader. */
     val volumeKeysPagingEnabled: Boolean = false,
     /** System TTS defaults used by the reader services tab. */
@@ -473,6 +483,21 @@ class ReaderViewModel @Inject constructor(
     private var sessionChapterTransitions: Int = 0
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private var currentOpenRequestToken: Long = 0L
+    /**
+     * Accumulated visual page counts per spine section for EPUB (sectionIndex → pageCount).
+     *
+     * Accessed concurrently: written from [onPagedLayoutPageCountChanged] (WebView callback,
+     * main thread) and iterated from [calculateAccuratePage]/[accumulatedTotalPagesForEpub]
+     * (coroutine progress-save + main). [ConcurrentHashMap] makes individual reads/writes
+     * atomic; iterations use a stable snapshot copy via [snapshotSectionPageCounts] so
+     * accumulation never races with a concurrent put (no ConcurrentModificationException,
+     * no missed pages).
+     */
+    private val sectionPageCounts = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+
+    /** Returns a stable snapshot copy for accumulation; never expose the live map. */
+    private fun snapshotSectionPageCounts(): Map<Int, Int> =
+        synchronized(sectionPageCounts) { sectionPageCounts.toMap() }
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
     private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
@@ -606,6 +631,7 @@ class ReaderViewModel @Inject constructor(
             val detectedFormat = prepared.detectedFormat
             val newReader = prepared.reader
             formatReader = newReader
+            sectionPageCounts.clear()
 
             if (formatReader == null) {
                 val errorMessage = localizedReaderError { language ->
@@ -993,6 +1019,21 @@ class ReaderViewModel @Inject constructor(
             persistProgress = true,
             progressSource = progressSource
         )
+    }
+
+    fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1, charOffset: Int = -1) {
+        val current = _uiState.value.currentPage
+        if (sectionIndex >= 0 && sectionIndex != current) {
+            _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
+            navigateTo(sectionIndex, progressSource = ReaderNavigationProgressSource.JUMP)
+            return
+        }
+        if (page == current) {
+            _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
+            return
+        }
+        _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
+        navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
     }
 
     fun setHighQualityFocusPages(indices: Set<Int>?) {
@@ -1918,13 +1959,16 @@ class ReaderViewModel @Inject constructor(
              ) {
                  return
              }
-             val pageIdx = formatReader?.resolveHrefToPage(cleanHref)
-             if (pageIdx != null && pageIdx >= 0) {
-                 if (pageIdx != enginePageForUiPage(_uiState.value.currentPage)) {
-                     navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
-                 }
-                 return
-             }
+              val pageIdx = formatReader?.resolveHrefToPage(cleanHref)
+              if (pageIdx != null && pageIdx >= 0) {
+                  if (pageIdx != enginePageForUiPage(_uiState.value.currentPage)) {
+                      if (fragPart.isNotBlank()) {
+                          _uiState.update { it.copy(pendingScrollToAnchor = fragPart) }
+                      }
+                      navigateTo(pageIdx, progressSource = ReaderNavigationProgressSource.JUMP)
+                  }
+                  return
+              }
          }
 
          // 3. Last-resort HTML fallback: look for the anchor inside the current page HTML.
@@ -2017,12 +2061,41 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun onPagedLayoutPageCountChanged(pageCount: Int) {
+    fun onPagedLayoutPageCountChanged(pageCount: Int, pageIndex: Int = 0) {
         // This callback reports visual subpages inside the currently loaded HTML
         // section. It must not replace the document-level page count: doing so
         // makes long reflowable books look complete (100%) in the middle of the
         // text when a section happens to have only a few visual pages.
         if (pageCount <= 0) return
+        val sectionIndex = _uiState.value.currentPage
+        val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
+        if (formatReader is com.example.engine.formats.epub.EpubFormatReader) {
+            sectionPageCounts[sectionIndex] = pageCount
+            val progress = EpubProgressCalculator.accumulate(
+                sectionPageCounts = snapshotSectionPageCounts(),
+                sectionIndex = sectionIndex,
+                sectionPageIndex = safePageIndex
+            )
+            _uiState.update {
+                it.copy(
+                    sectionPageCount = pageCount,
+                    sectionCurrentPage = safePageIndex,
+                    epubAccumulatedTotalPages = progress.accumulatedTotalPages,
+                    epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
+                )
+            }
+        } else {
+            _uiState.update {
+                it.copy(
+                    sectionPageCount = pageCount,
+                    sectionCurrentPage = safePageIndex
+                )
+            }
+        }
+    }
+
+    fun consumePendingScrollToAnchor() = _uiState.update {
+        it.copy(pendingScrollToAnchor = null)
     }
 
     /** Dismisses the footnote popup without navigating anywhere. */
@@ -2519,6 +2592,8 @@ class ReaderViewModel @Inject constructor(
             withContext(Dispatchers.Main) {
                 if (!isOpenRequestCurrent(requestToken)) return@withContext
                 if (formatReader !== reader) return@withContext
+                val currentTotal = _uiState.value.totalPages
+                if (currentTotal > 1 && currentTotal != initialPages) return@withContext
                 _uiState.update {
                     it.copy(
                         totalPages = realPages,
@@ -3032,10 +3107,14 @@ class ReaderViewModel @Inject constructor(
         progressSource: ReaderNavigationProgressSource
     ) {
         val comic = _uiState.value.comic ?: return
+        val epubAccumulated = accumulatedTotalPagesForEpub()
+        val totalPages = if (epubAccumulated > 0) epubAccumulated else _uiState.value.totalPages
+        if (totalPages <= 1 && comic.format.isHeavyReflowableFormat()) return
+        val accuratePage = calculateAccuratePage(page)
         val pending = PendingProgressSave(
             comicId = comic.id,
-            page = page,
-            totalPages = _uiState.value.totalPages,
+            page = accuratePage,
+            totalPages = totalPages,
             countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
         )
         if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, page)) return
@@ -3440,6 +3519,28 @@ class ReaderViewModel @Inject constructor(
     private fun activeComicSupportsHighResZoom(): Boolean =
         _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
 
+    private fun calculateAccuratePage(sectionIndex: Int): Int {
+        val state = _uiState.value
+        val snapshot = snapshotSectionPageCounts()
+        if (formatReader is com.example.engine.formats.epub.EpubFormatReader && snapshot.isNotEmpty()) {
+            return EpubProgressCalculator.absolutePage(
+                sectionPageCounts = snapshot,
+                sectionIndex = sectionIndex,
+                sectionPageIndex = state.sectionCurrentPage
+            )
+        }
+        if (state.sectionPageCount <= 1) return sectionIndex
+        val pagesPerSection = state.sectionPageCount
+        return sectionIndex * pagesPerSection + state.sectionCurrentPage
+    }
+
+    private fun accumulatedTotalPagesForEpub(): Int {
+        if (formatReader !is com.example.engine.formats.epub.EpubFormatReader) return 0
+        val snapshot = snapshotSectionPageCounts()
+        if (snapshot.isEmpty()) return 0
+        return snapshot.values.sum()
+    }
+
     private fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
         comicId != null && lastPersistedProgress == PersistedProgressMarker(comicId = comicId, page = page)
 
@@ -3450,10 +3551,12 @@ class ReaderViewModel @Inject constructor(
             val previousPersistedPage = lastPersistedProgress
                 ?.takeIf { it.comicId == pending.comicId }
                 ?.page
+            val storedPageCount = comicRepository.getComicById(pending.comicId)?.pageCount ?: 0
+            val safeTotalPages = maxOf(pending.totalPages, storedPageCount).coerceAtLeast(1)
             comicRepository.updateProgress(
                 comicId = pending.comicId,
                 currentPage = pending.page,
-                totalPages = pending.totalPages
+                totalPages = safeTotalPages
             )
             val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
             val goalProgressDelta = navigationProgressDelta(
@@ -3488,10 +3591,11 @@ class ReaderViewModel @Inject constructor(
                 comicId = pending.comicId,
                 page = pending.page
             )
-            val reachedLastPage = pending.totalPages > 0 && pending.page >= pending.totalPages - 1
             val currentComic = _uiState.value.comic ?: return
+            val authoritativeTotal = maxOf(pending.totalPages, storedPageCount)
+            val reachedLastPageSafe = authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1
             val titleCompletionPolicy = resolveTitleCompletionPolicy(
-                reachedLastPage = reachedLastPage,
+                reachedLastPage = reachedLastPageSafe,
                 currentComicIdMatches = currentComic.id == pending.comicId,
                 alreadyCompleted = currentComic.isCompleted,
                 countsTowardReadingProgress = pending.countsTowardReadingProgress,
@@ -3947,7 +4051,7 @@ class ReaderViewModel @Inject constructor(
 
     private fun resolveReadablePathFromPersistedPermissions(comic: Comic): String? {
         val documentId = comic.documentId?.trim().orEmpty()
-        if (documentId.isBlank()) return documentIdToExternalPath(documentId)?.takeIf(::isLocalFileReadable)
+        if (documentId.isBlank()) return null
 
         context.contentResolver.persistedUriPermissions
             .asSequence()

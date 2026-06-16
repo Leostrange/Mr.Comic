@@ -46,14 +46,15 @@ private val MARKDOWN_PARSER: Parser = Parser.builder()
     .build()
 private val MARKDOWN_RENDERER: HtmlRenderer = HtmlRenderer.builder()
     .extensions(MARKDOWN_EXTENSIONS)
-    .escapeHtml(true)
+    .escapeHtml(false)
     .sanitizeUrls(true)
     .build()
 private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
     .addTags(
         "html", "head", "body", "main", "article", "section", "aside", "header", "footer",
         "figure", "figcaption", "hr", "table", "thead", "tbody", "tfoot", "tr", "th", "td",
-        "caption", "colgroup", "col", "sup", "sub", "center", "font", "big", "small"
+        "caption", "colgroup", "col", "sup", "sub", "center", "font", "big", "small",
+        "kbd", "details", "summary", "mark", "abbr", "del", "s", "em", "strong"
     )
     .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align", "data-mrcomic-pagebreak")
     .addAttributes("img", "src", "alt", "title", "width", "height", "loading", "align")
@@ -493,7 +494,9 @@ internal fun renderMarkdownToHtmlBlocks(raw: String): List<String> {
     while (node != null) {
         val rendered = MARKDOWN_RENDERER.render(node).trim()
         if (rendered.isNotBlank()) {
-            blocks += rendered
+            // Sanitize rendered HTML through Jsoup so that escapeHtml(false) does not
+            // let dangerous tags (<script>, <iframe>, etc.) through.
+            blocks += Jsoup.clean(rendered, HTML_READER_SAFE_LIST)
         }
         node = node.next
     }
