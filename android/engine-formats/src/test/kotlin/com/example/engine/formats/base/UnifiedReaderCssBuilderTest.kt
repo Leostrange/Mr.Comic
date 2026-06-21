@@ -129,8 +129,15 @@ class UnifiedReaderCssBuilderTest {
     @Test
     fun buildReaderDocumentCss_noHyphens() {
         val css = buildReaderDocumentCss(includeHyphens = false)
-        assertFalse("no hyphens", css.contains("hyphens: none"))
-        assertFalse("no webkit-hyphens", css.contains("-webkit-hyphens: none"))
+        assertFalse("no hyphens", css.contains("hyphens: auto"))
+        assertFalse("no webkit-hyphens", css.contains("-webkit-hyphens: auto"))
+    }
+
+    @Test
+    fun buildReaderDocumentCss_hyphensAutoByDefault() {
+        val css = buildReaderDocumentCss()
+        assertTrue("hyphens: auto", css.contains("hyphens: auto"))
+        assertTrue("-webkit-hyphens: auto", css.contains("-webkit-hyphens: auto"))
     }
 
     @Test
