@@ -316,7 +316,7 @@ private const val JS_TAP_HANDLER = """(function(){
         ))||'';
         var probeName=(probe.getAttribute&&probe.getAttribute('name'))||'';
         var marker=[probeId,probeClass,probeType,probeRole,probeName].join(' ');
-        if(/\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid)\b/i.test(marker)){
+        if(/\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b/i.test(marker)){
           return true;
         }
         probe=probe.parentNode;
@@ -329,10 +329,10 @@ private const val JS_TAP_HANDLER = """(function(){
       var linkText=((link&&link.textContent)||'').trim();
       return href.indexOf('FbAutId_')>=0||
         href.indexOf('fbanchor://')===0||
-        /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(role)||
-        /#(?:fn|note|footnote|endnote|rearnote)[-_]?\w+/i.test(href)||
-        /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType)||
-        /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b/i.test(cls)||
+        /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i.test(role)||
+        /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i.test(href)||
+        /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i.test(epubType)||
+        /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i.test(cls)||
         (!!title&&href.indexOf('#')>=0)||
         /^[\[\(]?\d+[\]\)]?$/.test(linkText);
     }catch(err){
@@ -373,12 +373,12 @@ private const val JS_TAP_HANDLER = """(function(){
         var cls=t.getAttribute('class')||'';
         var linkText=(t.textContent||'').trim();
         var isLinkTextNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
-        var isFootnoteLink=(/\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls))||
-          /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(role)||
-          /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType)||
+        var isFootnoteLink=(/\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i.test(cls))||
+          /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i.test(role)||
+          /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i.test(epubType)||
           href.indexOf('fbanchor://')===0||
           href.indexOf('FbAutId_')>=0||
-          /#(?:fn|note|footnote|endnote|rearnote)[-_]?\w+/i.test(href)||
+          /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i.test(href)||
           (title&&href.indexOf('#')>=0)||
           isLinkTextNoteRef;
         if(isFootnoteLink){
@@ -2076,9 +2076,21 @@ private fun decodePagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetric
  * Called at load time so the first WebView paint already has the right padding, eliminating
  * the brief flash where text renders under the status bar / toolbars before JS fires.
  */
-internal fun injectBodyInsetCss(html: String, topPx: Int, bottomPx: Int): String {
+internal fun injectBodyInsetCss(
+    html: String,
+    topPx: Int,
+    bottomPx: Int,
+    horizontalPx: Int = 0,
+    maxWidthPx: Int = 0
+): String {
+    val horizontalCss = if (horizontalPx > 0) {
+        "padding-left:${horizontalPx}px!important;padding-right:${horizontalPx}px!important;"
+    } else ""
+    val maxWidthCss = if (maxWidthPx > 0) {
+        "max-width:${maxWidthPx}px!important;margin-left:auto!important;margin-right:auto!important;"
+    } else ""
     val style = "<style id='__mrcomic_body_inset'>" +
-        "body{padding-top:${topPx}px!important;padding-bottom:${bottomPx}px!important}" +
+        "body{padding-top:${topPx}px!important;padding-bottom:${bottomPx}px!important;$horizontalCss$maxWidthCss}" +
         "</style>"
     val headCloseIdx = html.indexOf("</head>").takeIf { it >= 0 }
         ?: html.indexOf("</HEAD>").takeIf { it >= 0 }
@@ -3121,6 +3133,9 @@ internal fun HtmlPageView(
                         request: WebResourceRequest,
                         error: WebResourceError
                     ) {
+                        // Ignore favicon.ico requests — browsers auto-request it but
+                        // our local asset server doesn't serve it. No user impact.
+                        if (request.url.lastPathSegment == "favicon.ico") return
                         Log.w(
                             HTML_READER_TAG,
                             "WebView error for ${request.url}: ${error.description} (${error.errorCode})"
@@ -3130,6 +3145,19 @@ internal fun HtmlPageView(
                         }
                         super.onReceivedError(view, request, error)
                     }
+
+                    override fun onRenderProcessGone(
+                        view: WebView,
+                        detail: android.webkit.RenderProcessGoneDetail
+                    ): Boolean {
+                        Log.e(
+                            HTML_READER_TAG,
+                            "Renderer process gone: didCrash=${detail.didCrash()}, rendererPriorityAtExit=${detail.rendererPriorityAtExit()}"
+                        )
+                        // Don't destroy the WebView — let the reader framework handle recovery.
+                        // Return true to indicate we handled it (prevents default destroy behavior).
+                        return true
+                    }
                 }
             }
         },
@@ -3137,6 +3165,11 @@ internal fun HtmlPageView(
             webView.pagedModeScrollLock = pagedMode
             // Enable chapter-transition fade for WEBTOON text mode (free-scroll, non-paged).
             webView.webtoonFadeEnabled = !pagedMode
+            // WEBTOON mode: enable wide viewport so text renders at proper width
+            // instead of being squeezed to a narrow column. PAGE mode keeps these
+            // off for accurate page-break measurement.
+            webView.settings.useWideViewPort = !pagedMode
+            webView.settings.loadWithOverviewMode = !pagedMode
             webView.onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
             webView.onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged
             webView.translateSelectionLabel = translateActionLabel
@@ -3184,7 +3217,9 @@ internal fun HtmlPageView(
                         // в†’ text gets clipped at the bottom of each page.
                         val injectBottom = if (pagedMode) 0 else bottomPaddingPx
                         val fallbackWithInset = injectBodyInsetCss(
-                            currentSource.fallbackHtml, topPaddingPx, injectBottom
+                            currentSource.fallbackHtml, topPaddingPx, injectBottom,
+                            horizontalPx = horizontalPaddingPx,
+                            maxWidthPx = maxWidthPx
                         )
                         webView.scheduleInlineFallback(
                             loadToken = currentSource.loadToken,
@@ -3201,8 +3236,12 @@ internal fun HtmlPageView(
                         // body padding changes measured content height and can create skips.
                         val injectTop = if (pagedMode) 0 else topPaddingPx
                         val injectBottom = if (pagedMode) 0 else bottomPaddingPx
+                        // Inject horizontal padding immediately so text never renders
+                        // at full width before async textSettingsJs fires.
                         val htmlWithInset = injectBodyInsetCss(
-                            currentSource.html, injectTop, injectBottom
+                            currentSource.html, injectTop, injectBottom,
+                            horizontalPx = horizontalPaddingPx,
+                            maxWidthPx = maxWidthPx
                         )
                         webView.loadDataWithBaseURL(
                             currentSource.baseUrl,
@@ -4290,9 +4329,11 @@ fun ReaderScreen(
                                     showBrightnessRow = showBrightnessRow,
                                     useDirectActions = isTextReader,
                                     chromeIconOrder = uiState.chromeIconOrder,
-                                    showTocIcon = uiState.chromeShowTocIcon,
+                                    // Raster containers: hide TOC and AUDIO icons —
+                                    // they have no meaning for image-only formats.
+                                    showTocIcon = uiState.chromeShowTocIcon && isTextReader,
                                     showTextSettingsIcon = uiState.chromeShowStyleIcon,
-                                    showAudioIcon = uiState.chromeShowAudioIcon,
+                                    showAudioIcon = uiState.chromeShowAudioIcon && isTextReader,
                                     showDirectionIcon = uiState.chromeShowDirectionIcon,
                                     showTranslateIcon = uiState.chromeShowTranslateIcon,
                                     showBrightnessIcon = uiState.chromeShowBrightnessIcon,

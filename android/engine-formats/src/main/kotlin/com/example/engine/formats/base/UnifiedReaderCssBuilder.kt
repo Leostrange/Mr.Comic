@@ -20,7 +20,7 @@ internal fun buildReaderDocumentCss(
     blockquoteStyle: String = "",
     extraCss: String = ""
 ): String = buildString {
-    val hyphenDecl = if (includeHyphens) "hyphens: none; -webkit-hyphens: none;" else ""
+    val hyphenDecl = if (includeHyphens) "hyphens: auto; -webkit-hyphens: auto; word-break: normal;" else ""
     append("""
     body {
       margin: $bodyMargin;
@@ -87,8 +87,10 @@ internal fun buildReaderDocumentCss(
     code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
     ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
     li + li { margin-top: 0.25rem; }
-    table { width: 100%; border-collapse: collapse; margin: 1rem 0; display: block; overflow-x: auto; }
-    th, td { padding: 0.5rem 0.65rem; text-align: left; }
+    table { width: 100%; max-width: 100%; border-collapse: collapse; margin: 1rem 0; table-layout: fixed; }
+    table.auto-layout { table-layout: auto; }
+    .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    th, td { padding: 0.5rem 0.65rem; text-align: left; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; }
     table[border] th, table[border] td { border: 1px solid rgba(120,120,120,0.35); }
     table:not([border]) th, table:not([border]) td { border: none; }
     th { font-weight: 600; }
@@ -303,7 +305,8 @@ internal fun buildUnifiedReaderHtmlDocument(
     preservePublisherLayout: Boolean = false,
     textColorOverride: String? = null,
     backgroundColorOverride: String? = null,
-    accentColorOverride: String? = null
+    accentColorOverride: String? = null,
+    lang: String = ""
 ): String {
     val baseTag = baseUrl?.let { """  <base href="${it.replace("\"", "%22")}">""" }.orEmpty()
     val headHtml = buildReaderDocumentHead(
@@ -316,9 +319,10 @@ internal fun buildUnifiedReaderHtmlDocument(
         accentColorOverride = accentColorOverride
     )
     val preserveLayoutAttr = if (preservePublisherLayout) """ data-mrcomic-preserve-layout="true"""" else ""
+    val langAttr = if (lang.isNotBlank()) """ lang="$lang"""" else ""
     return """
         <!DOCTYPE html>
-        <html>
+        <html$langAttr>
         <head>
           <meta charset="UTF-8">
           $baseTag
