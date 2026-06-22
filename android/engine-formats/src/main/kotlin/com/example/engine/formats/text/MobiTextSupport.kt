@@ -400,7 +400,14 @@ internal object MobiTextSupport {
             encodingName = Charsets.UTF_8.name(),
             score = scoreDecodedText(bytes.toString(Charsets.UTF_8), Charsets.UTF_8)
         )
-        if (encoding == 65001 && utf8Lenient.text.count { it == '\uFFFD' } <= (bytes.size / 512).coerceAtLeast(8)) {
+        // Check if UTF-8 decoding produces cyrillic-looking text with many U+FFFD replacements.
+        // If so, the file likely uses a single-byte Cyrillic encoding (Windows-1251) despite
+        // declaring UTF-8. Skip the early return and let the charset candidate logic pick the
+        // best encoding.
+        val utf8ReplacementCount = utf8Lenient.text.count { it == '\uFFFD' }
+        val utf8CyrillicCount = utf8Lenient.text.count { it in '\u0400'..'\u04FF' }
+        val hasCyrillicMojibake = utf8CyrillicCount > 10 && utf8ReplacementCount > utf8CyrillicCount / 2
+        if (encoding == 65001 && !hasCyrillicMojibake && utf8ReplacementCount <= (bytes.size / 512).coerceAtLeast(8)) {
             return utf8Lenient
         }
 
@@ -699,9 +706,11 @@ internal object MobiTextSupport {
 
         if (cyrillicLetters > (basicLatinLetters + extendedLatinLetters) * 2) {
             score += cyrillicLetters * 3
-            if (charset.name().equals("windows-1251", ignoreCase = true)) score += 40
-            if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 10
-            if (charset.name().equals("IBM866", ignoreCase = true)) score += 10
+            if (charset.name().equals("windows-1251", ignoreCase = true)) score += 100
+            if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 50
+            if (charset.name().equals("IBM866", ignoreCase = true)) score += 50
+            // Penalize UTF-8 for Cyrillic text — it produces mojibake when real encoding is single-byte
+            if (charset.name().equals("UTF-8", ignoreCase = true)) score -= 80
         } else if (basicLatinLetters + extendedLatinLetters >= cyrillicLetters) {
             if (charset.name().equals("windows-1252", ignoreCase = true)) score += 20
             if (charset == Charsets.ISO_8859_1) score += 10

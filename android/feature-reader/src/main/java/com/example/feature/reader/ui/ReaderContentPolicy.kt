@@ -2,6 +2,7 @@ package com.example.feature.reader.ui
 
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReadingMode
+import com.example.core.model.isArchiveFormat
 import com.example.core.model.isGraphicReaderFormat
 import com.example.core.model.isTextReadingFormat
 
@@ -19,10 +20,16 @@ fun resolveReaderContainerKind(
 ): ReaderContainerKind {
     val resolvedFormat = format ?: ComicFormat.UNKNOWN
     val isTextRoute = when {
+        // Text formats always go to TEXT containers — no exceptions.
         resolvedFormat.isTextReadingFormat() -> true
-        readerRendersHtmlContent && resolvedFormat.isGraphicReaderFormat() -> false
-        readerRendersHtmlContent -> true
-        else -> false
+        // Graphic formats NEVER go to TEXT, even if they produce HTML fallbacks.
+        resolvedFormat.isGraphicReaderFormat() -> false
+        // Archive containers route by their inner content: if the archive delegates
+        // to a text reader (e.g. ZIP containing EPUB), use TEXT; otherwise RASTER.
+        resolvedFormat.isArchiveFormat() -> readerRendersHtmlContent
+        // Fallback for UNKNOWN: trust the reader's HTML flag, but only if the
+        // format is not a known graphic format (already handled above).
+        else -> readerRendersHtmlContent
     }
     return when {
         isTextRoute && readingMode == ReadingMode.WEBTOON -> ReaderContainerKind.TEXT_WEBTOON

@@ -420,13 +420,21 @@ class ArchiveDelegatingFormatReader(
     private fun archiveSourceFile(): File {
         if (!path.startsWith("content://")) {
             val file = File(path)
-            if (!file.canRead()) {
-                Log.w(TAG, "No read access for archive file: $path")
+            if (file.isFile && file.canRead() && file.length() > 0L) {
+                return file
             }
-            return file
+            // File path is not readable — try to copy to cache as a fallback.
+            // This handles cases where the file is on external storage with
+            // restricted access, or the path points to a renamed/moved file.
+            Log.w(TAG, "Archive file not readable at path: $path, attempting cache copy")
         }
         val cacheDir = File(context.cacheDir, "archive_source_cache").apply { mkdirs() }
-        val file = File(cacheDir, "${archivePrefix()}_${path.hashCode().toString(16)}.${archivePrefix()}")
+        // Include file size and mtime in cache key to detect stale caches.
+        val identitySuffix = if (!path.startsWith("content://")) {
+            val f = File(path)
+            if (f.exists()) "_${f.length()}_${f.lastModified()}" else ""
+        } else ""
+        val file = File(cacheDir, "${archivePrefix()}_${path.hashCode().toString(16)}$identitySuffix.${archivePrefix()}")
         if (file.isFile && file.length() > 0L && file.canRead()) {
             return file
         }
@@ -435,8 +443,10 @@ class ArchiveDelegatingFormatReader(
             requireNotNull(input) { "Cannot open archive URI: $path" }
             file.outputStream().use { output -> input.copyTo(output) }
         }
-        if (!file.canRead()) {
-            Log.w(TAG, "Created archive file is not readable: ${file.absolutePath}")
+        if (!file.canRead() || file.length() == 0L) {
+            Log.e(TAG, "Failed to cache archive source: ${file.absolutePath}")
+            // Return the original path as last resort — may fail downstream
+            return File(path)
         }
         return file
     }

@@ -116,7 +116,10 @@ private const val DEFAULT_TEXT_BOLD = false
 private const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
 private const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
 private const val TAG = "ReaderViewModel"
-private val FOOTNOTE_MARKER_RE = Regex("""\b(footnote|note|notebody|rearnote|endnote|fnote|noteref)\b""", RegexOption.IGNORE_CASE)
+private val FOOTNOTE_MARKER_RE = Regex(
+    """\b(footnote|note|notebody|rearnote|endnote|fnote|noteref|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b""",
+    RegexOption.IGNORE_CASE
+)
 
 private fun normalizeTapZoneActionName(value: String?): String {
     val action = ReaderTapZoneAction.fromStored(value)
@@ -1999,7 +2002,12 @@ class ReaderViewModel @Inject constructor(
         val value = anchor.trim().trimStart('#')
         if (value.isBlank()) return false
         if (FOOTNOTE_MARKER_RE.containsMatchIn(value)) return true
-        return value.matches(Regex("""^(?:fn|note|footnote|endnote|FbAutId|id)[-_]?\d+$""", RegexOption.IGNORE_CASE))
+        // Match common footnote ID patterns: fn1, fnt-1, note-1, endnote1,
+        // back1, sup1, text-fn1, pn1, ann1, annotation1, FbAutId_*
+        return value.matches(Regex(
+            """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id)[-_]?\d+$""",
+            RegexOption.IGNORE_CASE
+        ))
     }
 
     private fun extractCurrentHtmlFootnote(anchorId: String, href: String): String? {
@@ -2086,9 +2094,13 @@ class ReaderViewModel @Inject constructor(
             }
         } else {
             _uiState.update {
+                // For non-EPUB formats (MOBI, FB2, etc.), update totalPages from the
+                // JS pagination result. The Kotlin pagination may estimate only 1 page
+                // while the WebView correctly calculates multiple pages.
                 it.copy(
                     sectionPageCount = pageCount,
-                    sectionCurrentPage = safePageIndex
+                    sectionCurrentPage = safePageIndex,
+                    totalPages = if (it.totalPages <= 1 && pageCount > 1) pageCount else it.totalPages
                 )
             }
         }
@@ -2580,10 +2592,14 @@ class ReaderViewModel @Inject constructor(
         deferredPageCountJob?.cancel()
         deferredPageCountJob = viewModelScope.launch(Dispatchers.IO) {
             val realPages = runCatching { reader.getPageCount() }.getOrNull() ?: initialPages
+            Log.d("ReaderVM", "scheduleDeferredPageCountResolution: initial=$initialPages, real=$realPages, format=${_uiState.value.comic?.format}")
             if (!isOpenRequestCurrent(requestToken)) return@launch
             if (formatReader !== reader) return@launch
             if (realPages <= 0) return@launch
-            if (realPages == initialPages) return@launch
+            if (realPages == initialPages) {
+                Log.d("ReaderVM", "realPages == initialPages ($realPages), skipping update")
+                return@launch
+            }
             val normalizedStartPage = normalizePageForMode(
                 page = startPage,
                 mode = openingMode,
