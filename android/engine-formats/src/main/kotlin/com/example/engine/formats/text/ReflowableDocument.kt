@@ -7,6 +7,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
+import android.util.Log
 
 internal data class ReflowableDocument(
     val pages: List<String>,
@@ -217,9 +218,15 @@ internal object ReflowableDocumentBuilder {
             }
         }
         flushPage()
-        return normalizePageBodySegments(pageBodySegments)
+        val result = normalizePageBodySegments(pageBodySegments)
             .map { wrapBody(it, baseCss) }
             .ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
+        Log.d("ReflowDoc", "paginateInternal: blocks=${blocks.size}, pageBodySegments=${pageBodySegments.size}, result=${result.size}")
+        result.forEachIndexed { i, p ->
+            val visible = p.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
+            Log.d("ReflowDoc", "  page[$i]: ${p.length} chars, visible=${visible.take(60)}...")
+        }
+        return result
     }
 
     private fun normalizePageBodySegments(pageBodySegments: List<List<String>>): List<String> =

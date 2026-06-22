@@ -117,6 +117,58 @@ class ReaderContentPolicyTest {
     }
 
     @Test
+    fun graphicFormatsNeverRouteToTextEvenWithHtmlFlag() {
+        // Graphic formats must NEVER enter TEXT containers, even if the reader
+        // produces HTML fallback content. This is the strict container contract.
+        listOf(ComicFormat.CBZ, ComicFormat.CBR, ComicFormat.PDF, ComicFormat.DJVU).forEach { format ->
+            listOf(ReadingMode.PAGE_LTR, ReadingMode.PAGE_RTL, ReadingMode.WEBTOON).forEach { mode ->
+                val result = resolveReaderContainerKind(format, mode, readerRendersHtmlContent = true)
+                val expected = if (mode == ReadingMode.WEBTOON)
+                    ReaderContainerKind.RASTER_WEBTOON else ReaderContainerKind.RASTER_PAGE
+                assertEquals(
+                    "Graphic format $format with mode=$mode must stay RASTER, got $result",
+                    expected,
+                    result
+                )
+            }
+        }
+    }
+
+    @Test
+    fun archiveWithTextContentRoutesToText() {
+        // ZIP containing EPUB/MOBI/etc → readerRendersHtmlContent=true → TEXT
+        listOf(ComicFormat.ZIP, ComicFormat.RAR, ComicFormat.SEVENZ, ComicFormat.TAR).forEach { format ->
+            assertEquals(
+                "Archive $format with HTML content must route to TEXT_PAGE",
+                ReaderContainerKind.TEXT_PAGE,
+                resolveReaderContainerKind(format, ReadingMode.PAGE_LTR, readerRendersHtmlContent = true)
+            )
+            assertEquals(
+                "Archive $format with HTML content must route to TEXT_WEBTOON",
+                ReaderContainerKind.TEXT_WEBTOON,
+                resolveReaderContainerKind(format, ReadingMode.WEBTOON, readerRendersHtmlContent = true)
+            )
+        }
+    }
+
+    @Test
+    fun archiveWithImageContentRoutesToRaster() {
+        // ZIP containing images (no text reader) → readerRendersHtmlContent=false → RASTER
+        listOf(ComicFormat.ZIP, ComicFormat.RAR, ComicFormat.SEVENZ, ComicFormat.TAR).forEach { format ->
+            assertEquals(
+                "Archive $format without HTML content must route to RASTER_PAGE",
+                ReaderContainerKind.RASTER_PAGE,
+                resolveReaderContainerKind(format, ReadingMode.PAGE_LTR, readerRendersHtmlContent = false)
+            )
+            assertEquals(
+                "Archive $format without HTML content must route to RASTER_WEBTOON",
+                ReaderContainerKind.RASTER_WEBTOON,
+                resolveReaderContainerKind(format, ReadingMode.WEBTOON, readerRendersHtmlContent = false)
+            )
+        }
+    }
+
+    @Test
     fun epubUsesJsPaginationOnlyInTextPageMode() {
         assertEquals(
             false,

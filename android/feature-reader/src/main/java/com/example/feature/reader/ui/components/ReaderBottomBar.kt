@@ -100,16 +100,15 @@ fun ReaderBottomBar(
 
             Spacer(Modifier.height(12.dp))
             if (showPageCountText) {
-                val counterText = if (epubAccumulatedTotalPages > 0 && chapterTitle != null) {
-                    "$chapterTitle (${epubAccumulatedCurrentPage + 1}/$epubAccumulatedTotalPages)"
-                } else if (epubAccumulatedTotalPages > 0) {
-                    "${epubAccumulatedCurrentPage + 1} / $epubAccumulatedTotalPages"
-                } else if (showSectionPage && chapterTitle != null) {
-                    "$chapterTitle (${sectionCurrentPage + 1}/$sectionPageCount)"
-                } else if (showSectionPage) {
-                    "${currentPage + 1} / $totalPages (${sectionCurrentPage + 1}/$sectionPageCount)"
-                } else {
-                    "${currentPage + 1} / $totalPages"
+                val counterText = when {
+                    epubAccumulatedTotalPages > 0 && chapterTitle != null ->
+                        "$chapterTitle (${epubAccumulatedCurrentPage + 1}/$epubAccumulatedTotalPages)"
+                    epubAccumulatedTotalPages > 0 ->
+                        "${epubAccumulatedCurrentPage + 1} / $epubAccumulatedTotalPages"
+                    chapterTitle != null ->
+                        "$chapterTitle (${currentPage + 1}/$totalPages)"
+                    else ->
+                        "${currentPage + 1} / $totalPages"
                 }
                 Text(
                     text = counterText,

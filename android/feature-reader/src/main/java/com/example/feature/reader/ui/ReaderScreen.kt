@@ -127,6 +127,17 @@ import kotlin.math.roundToInt
 private const val JS_TAP_HANDLER = """(function(){
   if(window.__tapAdded)return;
   window.__tapAdded=true;
+
+  // Hoisted footnote patterns — compiled once, reused on every tap.
+  var _fn = {
+    marker: /\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b/i,
+    role:   /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i,
+    href:   /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i,
+    epubType: /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i,
+    cls:    /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i,
+    noteRefText: /^[\[\(]?\d{1,4}[\]\)]?$/,
+    starRefText: /^\*{1,4}$/
+  };
   function hasActivePagedLayout(){
     return !!(window.__mrcomicPageLayouts&&window.__mrcomicPageLayouts.length)||!!window.__mrcomicPageStep;
   }
@@ -157,7 +168,7 @@ private const val JS_TAP_HANDLER = """(function(){
       var epubType=linkEl.getAttribute('epub:type')||linkEl.getAttribute('type')||'';
       var title=linkEl.getAttribute('title')||'';
       var linkText=(linkEl.textContent||'').trim();
-      var isNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
+      var isNoteRef=_fn.noteRefText.test(linkText)||_fn.starRefText.test(linkText);
       if(/\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls))return false;
       if(/(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType))return false;
       if(href.indexOf('fbanchor://')===0||href.indexOf('FbAutId_')>=0)return false;
@@ -316,7 +327,7 @@ private const val JS_TAP_HANDLER = """(function(){
         ))||'';
         var probeName=(probe.getAttribute&&probe.getAttribute('name'))||'';
         var marker=[probeId,probeClass,probeType,probeRole,probeName].join(' ');
-        if(/\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b/i.test(marker)){
+        if(_fn.marker.test(marker)){
           return true;
         }
         probe=probe.parentNode;
@@ -329,12 +340,12 @@ private const val JS_TAP_HANDLER = """(function(){
       var linkText=((link&&link.textContent)||'').trim();
       return href.indexOf('FbAutId_')>=0||
         href.indexOf('fbanchor://')===0||
-        /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i.test(role)||
-        /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i.test(href)||
-        /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i.test(epubType)||
-        /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i.test(cls)||
+        _fn.role.test(role)||
+        _fn.href.test(href)||
+        _fn.epubType.test(epubType)||
+        _fn.cls.test(cls)||
         (!!title&&href.indexOf('#')>=0)||
-        /^[\[\(]?\d+[\]\)]?$/.test(linkText);
+        _fn.noteRefText.test(linkText);
     }catch(err){
       return false;
     }
@@ -372,13 +383,13 @@ private const val JS_TAP_HANDLER = """(function(){
         var role=t.getAttribute('role')||t.getAttribute('data-type')||t.getAttribute('data-footnote-id')||'';
         var cls=t.getAttribute('class')||'';
         var linkText=(t.textContent||'').trim();
-        var isLinkTextNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
-        var isFootnoteLink=(/\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i.test(cls))||
-          /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i.test(role)||
-          /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i.test(epubType)||
+        var isLinkTextNoteRef=_fn.noteRefText.test(linkText)||_fn.starRefText.test(linkText);
+        var isFootnoteLink=_fn.cls.test(cls)||
+          _fn.role.test(role)||
+          _fn.epubType.test(epubType)||
           href.indexOf('fbanchor://')===0||
           href.indexOf('FbAutId_')>=0||
-          /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i.test(href)||
+          _fn.href.test(href)||
           (title&&href.indexOf('#')>=0)||
           isLinkTextNoteRef;
         if(isFootnoteLink){
@@ -2184,7 +2195,11 @@ private fun readerPagedCoreJs(
     var pageInsetTop=Math.max(0,parseFloat(window.__mrcomicPageInsetTop||0)||0);
     var pageInsetBottom=Math.max(0,parseFloat(window.__mrcomicPageInsetBottom||0)||0);
     var firstPageOffset=0;
-    var bodyPaddingBottom=Math.max(0,parseFloat(cs&&cs.paddingBottom)||0);
+    // In paged mode, body padding is already accounted for by pageInsetTop/Bottom,
+    // so clear it from the DOM to avoid double-subtraction. The raw body padding
+    // value is only useful for scroll mode where it genuinely eats into content area.
+    body.style.paddingBottom='0px';
+    var bodyPaddingBottom=0;
     var clipHeight=Math.max(lineHeight*3,pageHeight);
     var viewport=document.getElementById('__mrcomic_paged_viewport')||body;
     viewport.style.boxSizing='border-box';
@@ -2212,7 +2227,7 @@ private fun readerPagedCoreJs(
     viewport.style.boxSizing='border-box';
     viewport.style.paddingTop='0px';
     viewport.style.paddingBottom='0px';
-    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
+    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-Math.max(2,lineHeight*0.12));
     var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
     var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
     root.style.setProperty('--mrcomic-page-visible-height',usableHeight+'px');
@@ -3154,9 +3169,12 @@ internal fun HtmlPageView(
                             HTML_READER_TAG,
                             "Renderer process gone: didCrash=${detail.didCrash()}, rendererPriorityAtExit=${detail.rendererPriorityAtExit()}"
                         )
-                        // Don't destroy the WebView — let the reader framework handle recovery.
-                        // Return true to indicate we handled it (prevents default destroy behavior).
-                        return true
+                        // Destroy the dead renderer and remove the WebView so the outer
+                        // DisposableEffect/AndroidView lifecycle creates a fresh one.
+                        view.stopLoading()
+                        (view.parent as? android.view.ViewGroup)?.removeView(view)
+                        view.destroy()
+                        return true // we handled it; prevent framework default destroy
                     }
                 }
             }
@@ -3165,11 +3183,13 @@ internal fun HtmlPageView(
             webView.pagedModeScrollLock = pagedMode
             // Enable chapter-transition fade for WEBTOON text mode (free-scroll, non-paged).
             webView.webtoonFadeEnabled = !pagedMode
-            // WEBTOON mode: enable wide viewport so text renders at proper width
-            // instead of being squeezed to a narrow column. PAGE mode keeps these
-            // off for accurate page-break measurement.
-            webView.settings.useWideViewPort = !pagedMode
-            webView.settings.loadWithOverviewMode = !pagedMode
+            // Wide viewport / overview — set once per pagedMode transition, not every recompose.
+            if (webView.settings.useWideViewPort != !pagedMode) {
+                webView.settings.useWideViewPort = !pagedMode
+            }
+            if (webView.settings.loadWithOverviewMode != !pagedMode) {
+                webView.settings.loadWithOverviewMode = !pagedMode
+            }
             webView.onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
             webView.onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged
             webView.translateSelectionLabel = translateActionLabel

@@ -306,7 +306,7 @@ internal fun buildUnifiedReaderHtmlDocument(
     textColorOverride: String? = null,
     backgroundColorOverride: String? = null,
     accentColorOverride: String? = null,
-    lang: String = ""
+    lang: String? = null
 ): String {
     val baseTag = baseUrl?.let { """  <base href="${it.replace("\"", "%22")}">""" }.orEmpty()
     val headHtml = buildReaderDocumentHead(
@@ -319,7 +319,7 @@ internal fun buildUnifiedReaderHtmlDocument(
         accentColorOverride = accentColorOverride
     )
     val preserveLayoutAttr = if (preservePublisherLayout) """ data-mrcomic-preserve-layout="true"""" else ""
-    val langAttr = if (lang.isNotBlank()) """ lang="$lang"""" else ""
+    val langAttr = if (!lang.isNullOrBlank()) """ lang="$lang"""" else ""
     return """
         <!DOCTYPE html>
         <html$langAttr>

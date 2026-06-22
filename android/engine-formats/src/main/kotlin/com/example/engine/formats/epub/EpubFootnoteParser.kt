@@ -23,7 +23,7 @@ internal object EpubFootnoteParser {
     private val headingRe = Regex("""(?is)<h[1-6][^>]*>(.*?)</h[1-6]>""")
     private val legacyNoteIdRe = Regex("""^FbAutId_\d+$""", RegexOption.IGNORE_CASE)
     private val noteIdRe = Regex(
-        """^(?:FbAutId_\d+|id\d+|fn\d+|note[-_]*\d+|footnote[-_]*\d+)$""",
+        """^(?:FbAutId_\d+|id\d+|fn\d+|fnt[-_]*\d+|note[-_]*\d+|footnote[-_]*\d+|back[-_]*\d+|sup[-_]*\d+|text-fn[-_]*\d+|pn[-_]*\d+|ann[-_]*\d+|annotation[-_]*\d+)$""",
         RegexOption.IGNORE_CASE
     )
     private val noteLabelRe = Regex("""^[\[(]?\d+[\]).]?$|^[IVXLCDM]+[.).]?$""", RegexOption.IGNORE_CASE)
@@ -31,7 +31,7 @@ internal object EpubFootnoteParser {
     private val emptyAnchorRe = Regex("""(?is)<a\b[^>]*></a>""")
     private val blockTagRe = Regex("""(?is)</?(?:div|p|section|article|aside|blockquote|ul|ol|li)[^>]*>""")
     private val spanNoteRe = Regex(
-        """(?is)<span\b[^>]*\bid\s*=\s*["']((?:FbAutId_\d+|id\d+|fn\d+|note[-_]*\d+|footnote[-_]*\d+))["'][^>]*>(.*?)</span>""",
+        """(?is)<span\b[^>]*\bid\s*=\s*["']((?:FbAutId_\d+|id\d+|fn\d+|fnt[-_]*\d+|note[-_]*\d+|footnote[-_]*\d+|back[-_]*\d+|sup[-_]*\d+|text-fn[-_]*\d+|pn[-_]*\d+|ann[-_]*\d+|annotation[-_]*\d+))["'][^>]*>(.*?)</span>""",
         RegexOption.IGNORE_CASE
     )
     private val firstBlockRe = Regex(

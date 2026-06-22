@@ -12,8 +12,8 @@ internal class TextReaderController(
     private val textWebtoonSessionController: TextWebtoonSessionController,
     private val textPagePaginationController: TextPagePaginationController = TextPagePaginationController()
 ) {
-    private val htmlPageCache = object : LinkedHashMap<Int, CachedHtmlPage>(12, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 10
+    private val htmlPageCache = object : LinkedHashMap<Int, CachedHtmlPage>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 20
     }
 
     // htmlPageCache uses accessOrder=true, so even a get() mutates the internal LRU linked

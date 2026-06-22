@@ -745,8 +745,15 @@ class TextFormatReader @Inject constructor(
             fragment,
             "#$fragment",
             "fn$fragment",
+            "fnt$fragment",
             "note$fragment",
             "footnote$fragment",
+            "back$fragment",
+            "sup$fragment",
+            "text-fn$fragment",
+            "pn$fragment",
+            "ann$fragment",
+            "annotation$fragment",
             "docx-footnote-$fragment"
         ).map { it.trim() }
             .filter { it.isNotEmpty() && it != "#" }

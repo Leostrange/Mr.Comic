@@ -201,3 +201,12 @@ fun ComicFormat.isGraphicReaderFormat(): Boolean = when (this) {
     ComicFormat.FOLDER -> true
     else -> false
 }
+
+/** Archive container formats whose content is determined at runtime by delegation. */
+fun ComicFormat.isArchiveFormat(): Boolean = when (this) {
+    ComicFormat.ZIP,
+    ComicFormat.RAR,
+    ComicFormat.SEVENZ,
+    ComicFormat.TAR -> true
+    else -> false
+}

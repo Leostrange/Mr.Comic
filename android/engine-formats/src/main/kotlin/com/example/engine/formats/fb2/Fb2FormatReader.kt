@@ -564,7 +564,8 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         if (pendingMerge.isNotEmpty()) mergedSections.add(pendingMerge.toString())
 
         // Now binaries is fully populated — build HTML pages with images resolved.
-        val mainPages = mergedSections.map { buildHtmlPage(it, binaries) }
+        val fb2Lang = metadata["language"]
+        val mainPages = mergedSections.map { buildHtmlPage(it, binaries, fb2Lang) }
 
         // Build final TOC: map rawSectionIdx → mergedPage index
         val tocEntries = tocRaw.mapNotNull { (title, rawSectionIdx) ->
@@ -606,7 +607,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
             val notesPages = notesSections.mapIndexed { idx, section ->
                 val heading = if (idx == 0) "<h2>Примечания</h2>" else ""
-                buildHtmlPage(heading + section, binaries)
+                buildHtmlPage(heading + section, binaries, fb2Lang)
             }
             pages = mainPages + notesPages
             tocEntries.add(TocEntry("Примечания", mainPages.size))
@@ -629,7 +630,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         )
     }
 
-    private fun buildHtmlPage(body: String, binaries: Map<String, ByteArray>): String {
+    private fun buildHtmlPage(body: String, binaries: Map<String, ByteArray>, lang: String? = null): String {
         val resolved = Regex("""<img data-id="([^"]+)"/>""").replace(body) { m ->
             val ref = m.groupValues[1]
             val noExt = ref.substringBeforeLast('.', ref)
@@ -649,7 +650,8 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         }
         return buildUnifiedReaderHtmlDocument(
             body = resolved,
-            extraCss = FB2_READER_CSS
+            extraCss = FB2_READER_CSS,
+            lang = lang
         )
     }
 
