@@ -56,6 +56,13 @@ old_ComicGridItem.kt
 test.diff
 .qa_run/
 .supergoal/
+.codex/
+.mimocode/
+.re-out/
+.codegraph/
+.kilo/
+.kimi-code/
+.agents/
 _backups/
 Incorrect display/
 Mr.Comic Design System-handoff/
@@ -76,6 +83,17 @@ mrcomic-*
 reader-qa-artifacts/
 Mr.Comic_v2.1.0_bugfixed_20260609/
 SOURCE_ARCHIVE_MANIFEST*.txt
+EXCLUDED_NON_CODE_BUILD_ASSETS.json
+session-*.md
+mimo.exe
+nul
+anx-reader-analyzed/
+anx-reader-*.zip
+test_files/
+Screenshots/
+re-out/
+null/
+PowerShell*/
 
 # Design/media source dumps that are not runtime assets.
 # Keep only the public README demo assets.
