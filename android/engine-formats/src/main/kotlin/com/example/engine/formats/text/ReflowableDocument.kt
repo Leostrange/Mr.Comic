@@ -7,6 +7,7 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
+import android.util.Log
 
 internal data class ReflowableDocument(
     val pages: List<String>,
@@ -30,7 +31,8 @@ internal object ReflowableDocumentBuilder {
     private const val TEXT_CHARS_PER_PAGE = 4000
     private const val MIN_REMAINDER_LAYOUT_UNITS = 100
     private const val MIN_SPLIT_TEXT_CHARS = 34
-    private const val MIN_SECTION_BREAK_CURRENT_UNITS = PAGE_LAYOUT_UNITS / 3
+    private const val MIN_SECTION_BREAK_CURRENT_UNITS = (PAGE_LAYOUT_UNITS * 6) / 10
+    private const val MIN_SECTION_VISIBLE_CHARS = 600
     private const val MIN_PAGE_FILL_REMAINDER_UNITS = 220
     private const val MIN_PAGE_FILL_TEXT_CHARS = 72
     private const val MIN_ORPHAN_TEXT_CHARS = 80
@@ -217,9 +219,15 @@ internal object ReflowableDocumentBuilder {
             }
         }
         flushPage()
-        return normalizePageBodySegments(pageBodySegments)
+        val result = normalizePageBodySegments(pageBodySegments)
             .map { wrapBody(it, baseCss) }
             .ifEmpty { listOf(wrapBody("<p></p>", baseCss)) }
+        Log.d("ReflowDoc", "paginateInternal: blocks=${blocks.size}, pageBodySegments=${pageBodySegments.size}, result=${result.size}")
+        result.forEachIndexed { i, p ->
+            val visible = p.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim()
+            Log.d("ReflowDoc", "  page[$i]: ${p.length} chars, visible=${visible.take(60)}...")
+        }
+        return result
     }
 
     private fun normalizePageBodySegments(pageBodySegments: List<List<String>>): List<String> =
@@ -804,7 +812,10 @@ internal object ReflowableDocumentBuilder {
         }
         flush()
 
-        return sectionBodies.mapIndexed { index, bodyBlocks ->
+        // Merge short sections to avoid half-empty pages.
+        val mergedBodies = mergeShortSections(sectionBodies, MIN_SECTION_VISIBLE_CHARS)
+
+        return mergedBodies.mapIndexed { index, bodyBlocks ->
             TextDocumentSection(
                 index = index,
                 id = sectionIdFromBlocks(bodyBlocks),
@@ -821,6 +832,29 @@ internal object ReflowableDocumentBuilder {
                 )
             )
         }
+    }
+
+    /**
+     * Merge adjacent sections that are shorter than [minChars] visible characters.
+     * Short sections are appended to the preceding section so they don't produce
+     * half-empty reader pages.
+     */
+    private fun mergeShortSections(
+        sections: List<List<String>>,
+        minChars: Int
+    ): List<List<String>> {
+        if (sections.size <= 1) return sections
+        val merged = mutableListOf<MutableList<String>>()
+        for (blocks in sections) {
+            val visibleLen = blocks.sumOf { it.visibleTextForLayout().length }
+            if (merged.isNotEmpty() && visibleLen < minChars) {
+                // Append short section to previous
+                merged.last() += blocks
+            } else {
+                merged.add(blocks.toMutableList())
+            }
+        }
+        return merged
     }
 
     private fun sectionTitleFromBlocks(blocks: List<String>): String? {

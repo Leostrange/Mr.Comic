@@ -127,6 +127,17 @@ import kotlin.math.roundToInt
 private const val JS_TAP_HANDLER = """(function(){
   if(window.__tapAdded)return;
   window.__tapAdded=true;
+
+  // Hoisted footnote patterns — compiled once, reused on every tap.
+  var _fn = {
+    marker: /\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b/i,
+    role:   /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i,
+    href:   /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i,
+    epubType: /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i,
+    cls:    /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i,
+    noteRefText: /^[\[\(]?\d{1,4}[\]\)]?$/,
+    starRefText: /^\*{1,4}$/
+  };
   function hasActivePagedLayout(){
     return !!(window.__mrcomicPageLayouts&&window.__mrcomicPageLayouts.length)||!!window.__mrcomicPageStep;
   }
@@ -157,7 +168,7 @@ private const val JS_TAP_HANDLER = """(function(){
       var epubType=linkEl.getAttribute('epub:type')||linkEl.getAttribute('type')||'';
       var title=linkEl.getAttribute('title')||'';
       var linkText=(linkEl.textContent||'').trim();
-      var isNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
+      var isNoteRef=_fn.noteRefText.test(linkText)||_fn.starRefText.test(linkText);
       if(/\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls))return false;
       if(/(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType))return false;
       if(href.indexOf('fbanchor://')===0||href.indexOf('FbAutId_')>=0)return false;
@@ -316,7 +327,7 @@ private const val JS_TAP_HANDLER = """(function(){
         ))||'';
         var probeName=(probe.getAttribute&&probe.getAttribute('name'))||'';
         var marker=[probeId,probeClass,probeType,probeRole,probeName].join(' ');
-        if(/\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b/i.test(marker)){
+        if(_fn.marker.test(marker)){
           return true;
         }
         probe=probe.parentNode;
@@ -329,12 +340,12 @@ private const val JS_TAP_HANDLER = """(function(){
       var linkText=((link&&link.textContent)||'').trim();
       return href.indexOf('FbAutId_')>=0||
         href.indexOf('fbanchor://')===0||
-        /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i.test(role)||
-        /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i.test(href)||
-        /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i.test(epubType)||
-        /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i.test(cls)||
+        _fn.role.test(role)||
+        _fn.href.test(href)||
+        _fn.epubType.test(epubType)||
+        _fn.cls.test(cls)||
         (!!title&&href.indexOf('#')>=0)||
-        /^[\[\(]?\d+[\]\)]?$/.test(linkText);
+        _fn.noteRefText.test(linkText);
     }catch(err){
       return false;
     }
@@ -372,13 +383,13 @@ private const val JS_TAP_HANDLER = """(function(){
         var role=t.getAttribute('role')||t.getAttribute('data-type')||t.getAttribute('data-footnote-id')||'';
         var cls=t.getAttribute('class')||'';
         var linkText=(t.textContent||'').trim();
-        var isLinkTextNoteRef=/^[\[\(]?\d{1,4}[\]\)]?$/.test(linkText)||/^\*{1,4}$/.test(linkText);
-        var isFootnoteLink=(/\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i.test(cls))||
-          /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i.test(role)||
-          /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i.test(epubType)||
+        var isLinkTextNoteRef=_fn.noteRefText.test(linkText)||_fn.starRefText.test(linkText);
+        var isFootnoteLink=_fn.cls.test(cls)||
+          _fn.role.test(role)||
+          _fn.epubType.test(epubType)||
           href.indexOf('fbanchor://')===0||
           href.indexOf('FbAutId_')>=0||
-          /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i.test(href)||
+          _fn.href.test(href)||
           (title&&href.indexOf('#')>=0)||
           isLinkTextNoteRef;
         if(isFootnoteLink){
@@ -677,13 +688,19 @@ private const val TRANSLATE_SELECTION_MENU_ID = 0x6F4352
 private const val DICTIONARY_SELECTION_MENU_ID = 0x6F4353
 private const val EXPLAIN_SELECTION_MENU_ID = 0x6F4354
 private const val SAVE_QUOTE_SELECTION_MENU_ID = 0x6F4355
+private const val HIGHLIGHT_SELECTION_MENU_ID = 0x6F4356
+private const val TRANSLATE_CHAPTER_MENU_ID = 0x6F4357
+private const val COMPARE_TRANSLATIONS_MENU_ID = 0x6F4358
 private const val MAX_INLINE_HTML_SOURCE_LENGTH = 6_000_000
 
 private enum class ReaderSelectionAction {
     TRANSLATE,
     DICTIONARY,
     EXPLAIN,
-    SAVE_QUOTE
+    SAVE_QUOTE,
+    HIGHLIGHT,
+    TRANSLATE_CHAPTER,
+    COMPARE_TRANSLATIONS
 }
 
 internal fun colorSchemePalette(scheme: String): Pair<String, String> = when (scheme) {
@@ -1003,7 +1020,7 @@ internal fun textSettingsJs(
           "html,body{width:100% !important;max-width:100% !important;min-width:0 !important;overflow-x:hidden !important;-webkit-text-size-adjust:100% !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']){padding-left:${horizontalPaddingPx}px !important;padding-right:${horizontalPaddingPx}px !important;}"+
           ${if (maxWidthPx > 0) "\"body:not([data-mrcomic-preserve-layout='true']){max-width:${maxWidthPx}px !important;margin-left:auto !important;margin-right:auto !important;}\"+" else ""}
-          "body:not([data-mrcomic-preserve-layout='true']),body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:normal !important;word-break:normal !important;hyphens:none !important;-webkit-hyphens:none !important;max-width:100% !important;min-width:0 !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']),body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:normal !important;word-break:normal !important;hyphens:auto !important;-webkit-hyphens:auto !important;max-width:100% !important;min-width:0 !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) li{width:auto !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) span{display:inline !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) pre,body:not([data-mrcomic-preserve-layout='true']) code{white-space:pre-wrap !important;overflow-wrap:break-word !important;word-break:break-word !important;}"+
@@ -1278,8 +1295,8 @@ internal fun textSettingsJs(
         """document.body.style.fontFamily="$fontStack";""" +
         """document.body.style.lineHeight='$lineHeight';""" +
         """document.body.style.textAlign='$effectiveAlign';""" +
-        """document.body.style.hyphens='none';""" +
-        """document.body.style.webkitHyphens='none';""" +
+        """document.body.style.hyphens='auto';""" +
+        """document.body.style.webkitHyphens='auto';""" +
         """document.body.style.paddingLeft='${horizontalPaddingPx}px';""" +
         """document.body.style.paddingRight='${horizontalPaddingPx}px';""" +
         """document.body.style.paddingTop='${initialBodyTopPaddingPx}px';""" +
@@ -1294,9 +1311,9 @@ internal fun textSettingsJs(
         """document.body.style.minWidth='0';""" +
         """document.body.style.overflowWrap='normal';""" +
         """document.body.style.wordBreak='normal';""" +
-        """document.body.style.hyphens='none';""" +
-        """document.body.style.webkitHyphens='none';""" +
-        """try{var pcs=window.getComputedStyle(document.body);var pfs=parseFloat(pcs&&pcs.fontSize)||0;var plh=parseFloat(pcs&&pcs.lineHeight)||0;var minReadableFs=Math.max(14,${fontSize}*0.78);if(!pfs||pfs<minReadableFs){document.body.style.setProperty('font-size','${fontSize}px','important');}if(!plh||plh<Math.max(18,${fontSize}*1.2)){document.body.style.setProperty('line-height','${lineHeight.coerceAtLeast(1.35f)}','important');}Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,li,td,th,span'),function(el){var fs=parseFloat(window.getComputedStyle(el).fontSize)||0;if(fs>0&&fs<12){el.style.setProperty('font-size','1em','important');}});}catch(e){}""" +
+        """document.body.style.hyphens='auto';""" +
+        """document.body.style.webkitHyphens='auto';""" +
+        """try{var pcs=window.getComputedStyle(document.body);var pfs=parseFloat(pcs&&pcs.fontSize)||0;var plh=parseFloat(pcs&&pcs.lineHeight)||0;if(!pfs||pfs<${fontSize}*0.78){document.body.style.setProperty('font-size','${fontSize}px','important');}if(!plh||plh<${lineHeight}*0.9){document.body.style.setProperty('line-height','${lineHeight}','important');}Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,li,td,th'),function(el){var cls=(el.className||'').toLowerCase();var tag=el.tagName.toLowerCase();if(tag==='sup'||tag==='sub'||tag==='small'||tag==='abbr'||cls.indexOf('note')>=0||cls.indexOf('footnote')>=0||cls.indexOf('fn-')>=0||cls.indexOf('endnote')>=0)return;var fs=parseFloat(window.getComputedStyle(el).fontSize)||0;if(fs>0&&fs<12){el.style.setProperty('font-size','1em','important');}});}catch(e){}""" +
         """Array.prototype.forEach.call(document.body.children,function(el){el.style.maxWidth='100%';el.style.minWidth='0';el.style.boxSizing='border-box';});""" +
         """Array.prototype.forEach.call(document.body.querySelectorAll('img,svg,video,canvas,figure,table'),function(el){el.style.maxWidth='100%';el.style.boxSizing='border-box';});""" +
         """}$pageLockJs}$colorNotesDom})();"""
@@ -1654,6 +1671,9 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
                     DICTIONARY_SELECTION_MENU_ID -> ReaderSelectionAction.DICTIONARY
                     EXPLAIN_SELECTION_MENU_ID -> ReaderSelectionAction.EXPLAIN
                     SAVE_QUOTE_SELECTION_MENU_ID -> ReaderSelectionAction.SAVE_QUOTE
+                    HIGHLIGHT_SELECTION_MENU_ID -> ReaderSelectionAction.HIGHLIGHT
+                    TRANSLATE_CHAPTER_MENU_ID -> ReaderSelectionAction.TRANSLATE_CHAPTER
+                    COMPARE_TRANSLATIONS_MENU_ID -> ReaderSelectionAction.COMPARE_TRANSLATIONS
                     else -> null
                 }
                 if (selectionAction != null) {
@@ -1704,6 +1724,27 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             itemId = SAVE_QUOTE_SELECTION_MENU_ID,
             order = 3,
             title = saveQuoteSelectionLabel,
+            showAsAction = MenuItem.SHOW_AS_ACTION_NEVER
+        )
+        addOrUpdateSelectionItem(
+            menu = menu,
+            itemId = HIGHLIGHT_SELECTION_MENU_ID,
+            order = 4,
+            title = "✦ Highlight",
+            showAsAction = MenuItem.SHOW_AS_ACTION_NEVER
+        )
+        addOrUpdateSelectionItem(
+            menu = menu,
+            itemId = TRANSLATE_CHAPTER_MENU_ID,
+            order = 5,
+            title = "📖 Translate Chapter",
+            showAsAction = MenuItem.SHOW_AS_ACTION_NEVER
+        )
+        addOrUpdateSelectionItem(
+            menu = menu,
+            itemId = COMPARE_TRANSLATIONS_MENU_ID,
+            order = 6,
+            title = "⚖ Compare Translations",
             showAsAction = MenuItem.SHOW_AS_ACTION_NEVER
         )
     }
@@ -2184,7 +2225,11 @@ private fun readerPagedCoreJs(
     var pageInsetTop=Math.max(0,parseFloat(window.__mrcomicPageInsetTop||0)||0);
     var pageInsetBottom=Math.max(0,parseFloat(window.__mrcomicPageInsetBottom||0)||0);
     var firstPageOffset=0;
-    var bodyPaddingBottom=Math.max(0,parseFloat(cs&&cs.paddingBottom)||0);
+    // In paged mode, body padding is already accounted for by pageInsetTop/Bottom,
+    // so clear it from the DOM to avoid double-subtraction. The raw body padding
+    // value is only useful for scroll mode where it genuinely eats into content area.
+    body.style.paddingBottom='0px';
+    var bodyPaddingBottom=0;
     var clipHeight=Math.max(lineHeight*3,pageHeight);
     var viewport=document.getElementById('__mrcomic_paged_viewport')||body;
     viewport.style.boxSizing='border-box';
@@ -2212,7 +2257,7 @@ private fun readerPagedCoreJs(
     viewport.style.boxSizing='border-box';
     viewport.style.paddingTop='0px';
     viewport.style.paddingBottom='0px';
-    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
+    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-Math.max(2,lineHeight*0.12));
     var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
     var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
     root.style.setProperty('--mrcomic-page-visible-height',usableHeight+'px');
@@ -2768,6 +2813,9 @@ internal fun HtmlPageView(
     onDictionarySelection: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
     onSaveQuoteSelection: (String) -> Unit,
+    onHighlightSelection: (String) -> Unit = {},
+    onTranslateChapter: () -> Unit = {},
+    onCompareTranslations: (String) -> Unit = {},
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
     onVerticalBoundaryNavigation: (Int) -> Unit = {},
@@ -2795,6 +2843,7 @@ internal fun HtmlPageView(
     dictionaryActionLabel: String,
     explainActionLabel: String,
     saveQuoteActionLabel: String,
+    highlightsJs: String = "",
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -2833,6 +2882,9 @@ internal fun HtmlPageView(
     val onDictionary     = rememberUpdatedState(onDictionarySelection)
     val onExplain        = rememberUpdatedState(onExplainSelection)
     val onSaveQuote      = rememberUpdatedState(onSaveQuoteSelection)
+    val onHighlight      = rememberUpdatedState(onHighlightSelection)
+    val onTranslateChapter = rememberUpdatedState(onTranslateChapter)
+    val onCompareTranslations = rememberUpdatedState(onCompareTranslations)
     val onAnchor         = rememberUpdatedState(onAnchorClick)
     val onInlineNote     = rememberUpdatedState(onInlineFootnote)
     val currentPendingAnchor = rememberUpdatedState(pendingScrollToAnchor)
@@ -2850,6 +2902,7 @@ internal fun HtmlPageView(
     val currentBold      = rememberUpdatedState(bold)
     val currentPagedMode = rememberUpdatedState(pagedMode)
     val currentTopPaddingPx = rememberUpdatedState(topPaddingPx)
+    val currentHighlightsJs = rememberUpdatedState(highlightsJs)
     val currentBottomPaddingPx = rememberUpdatedState(bottomPaddingPx)
     val currentHorizontalPaddingPx = rememberUpdatedState(horizontalPaddingPx)
     val currentMaxWidthPx = rememberUpdatedState(maxWidthPx)
@@ -2967,6 +3020,9 @@ internal fun HtmlPageView(
                         ReaderSelectionAction.DICTIONARY -> onDictionary.value(selectedText.trim())
                         ReaderSelectionAction.EXPLAIN -> onExplain.value(selectedText.trim())
                         ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selectedText.trim())
+                        ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selectedText.trim())
+                        ReaderSelectionAction.TRANSLATE_CHAPTER -> onTranslateChapter.value()
+                        ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
                     }
                 }
 
@@ -3102,6 +3158,13 @@ internal fun HtmlPageView(
                             readerView?.postDelayed({ readerView.applyPagedLayout() }, 80L)
                             readerView?.postDelayed({ readerView.applyPagedLayout() }, 320L)
                         }
+                        // Inject text highlights overlay after page layout is ready.
+                        val highlightsJs = currentHighlightsJs.value
+                        if (highlightsJs.isNotBlank()) {
+                            readerView?.postDelayed({
+                                view.evaluateJavascript(highlightsJs, null)
+                            }, 500L)
+                        }
                         currentPendingAnchor.value?.let { anchor ->
                             val safeAnchor = anchor.replace("\\", "\\\\").replace("'", "\\'").replace("\"", "\\\"")
                             view.evaluateJavascript(
@@ -3154,9 +3217,12 @@ internal fun HtmlPageView(
                             HTML_READER_TAG,
                             "Renderer process gone: didCrash=${detail.didCrash()}, rendererPriorityAtExit=${detail.rendererPriorityAtExit()}"
                         )
-                        // Don't destroy the WebView — let the reader framework handle recovery.
-                        // Return true to indicate we handled it (prevents default destroy behavior).
-                        return true
+                        // Destroy the dead renderer and remove the WebView so the outer
+                        // DisposableEffect/AndroidView lifecycle creates a fresh one.
+                        view.stopLoading()
+                        (view.parent as? android.view.ViewGroup)?.removeView(view)
+                        view.destroy()
+                        return true // we handled it; prevent framework default destroy
                     }
                 }
             }
@@ -3165,11 +3231,13 @@ internal fun HtmlPageView(
             webView.pagedModeScrollLock = pagedMode
             // Enable chapter-transition fade for WEBTOON text mode (free-scroll, non-paged).
             webView.webtoonFadeEnabled = !pagedMode
-            // WEBTOON mode: enable wide viewport so text renders at proper width
-            // instead of being squeezed to a narrow column. PAGE mode keeps these
-            // off for accurate page-break measurement.
-            webView.settings.useWideViewPort = !pagedMode
-            webView.settings.loadWithOverviewMode = !pagedMode
+            // Wide viewport / overview — set once per pagedMode transition, not every recompose.
+            if (webView.settings.useWideViewPort != !pagedMode) {
+                webView.settings.useWideViewPort = !pagedMode
+            }
+            if (webView.settings.loadWithOverviewMode != !pagedMode) {
+                webView.settings.loadWithOverviewMode = !pagedMode
+            }
             webView.onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
             webView.onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged
             webView.translateSelectionLabel = translateActionLabel
@@ -3182,6 +3250,9 @@ internal fun HtmlPageView(
                     ReaderSelectionAction.DICTIONARY -> onDictionary.value(selectedText.trim())
                     ReaderSelectionAction.EXPLAIN -> onExplain.value(selectedText.trim())
                     ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selectedText.trim())
+                    ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selectedText.trim())
+                    ReaderSelectionAction.TRANSLATE_CHAPTER -> onTranslateChapter.value()
+                    ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
                 }
             }
             // Apply text settings immediately when any setting changes (no page reload).
@@ -4008,8 +4079,11 @@ fun ReaderScreen(
                                 },
                                 onExplainSelection = viewModel::explainSelectedTextDirect,
                                 onSaveQuoteSelection = viewModel::saveQuoteDirectly,
+                                onHighlightSelection = { selectedText -> viewModel.highlightSelectedText(selectedText) },
+                                onTranslateChapter = { viewModel.translateCurrentChapter() },
+                                onCompareTranslations = { text -> viewModel.compareTranslations(text) },
+                                highlightsJs = viewModel.injectHighlightsJs(),
                                 fontSize = uiState.textFontSize,
-                                colorScheme = uiState.textColorScheme,
                                 readerPreset = activeReaderPreset,
                                 fontFamily = resolvedTextFont.familyName,
                                 fontSourceUrl = resolvedTextFont.sourceUrl,
@@ -4079,6 +4153,10 @@ fun ReaderScreen(
                                     },
                                     onExplainSelection = viewModel::explainSelectedTextDirect,
                                     onSaveQuoteSelection = viewModel::saveQuoteDirectly,
+                                    onHighlightSelection = { selectedText -> viewModel.highlightSelectedText(selectedText) },
+                                onTranslateChapter = { viewModel.translateCurrentChapter() },
+                                onCompareTranslations = { text -> viewModel.compareTranslations(text) },
+                                    highlightsJs = viewModel.injectHighlightsJs(),
                                     fontSize = uiState.textFontSize,
                                     colorScheme = uiState.textColorScheme,
                                     readerPreset = activeReaderPreset,
@@ -4559,6 +4637,22 @@ fun ReaderScreen(
             onSaveQuote = viewModel::saveQuoteFromSelectedTextActions
         )
     }
+    uiState.pendingHighlightText?.let { highlightText ->
+        HighlightColorPickerSheet(
+            text = highlightText,
+            onColorSelected = { color -> viewModel.confirmHighlight(color) },
+            onDismiss = viewModel::dismissHighlight
+        )
+    }
+    uiState.chapterTranslationProgress?.let { progress ->
+        ChapterTranslationProgressBar(progress = progress)
+    }
+    uiState.translationComparison?.let { comparison ->
+        TranslationComparisonSheet(
+            comparison = comparison,
+            onDismiss = viewModel::dismissTranslationComparison
+        )
+    }
     uiState.selectedTextTranslation?.let { translationState ->
         SelectedTextTranslationSheet(
             state = translationState,
@@ -4678,6 +4772,210 @@ private fun SelectedTextActionSheet(
                     Text(readerText.close)
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HighlightColorPickerSheet(
+    text: String,
+    onColorSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val colors = listOf(
+        0x50FFEB3B.toInt() to "Yellow",
+        0x504CAF50 to "Green",
+        0x502196F3 to "Blue",
+        0x50E91E63 to "Pink",
+        0x50FF9800 to "Orange"
+    )
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = "Highlight text",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                text = "\"${text.take(80)}${if (text.length > 80) "…" else ""}\"",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                colors.forEach { (colorArgb, label) ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clickable { onColorSelected(colorArgb) }
+                            .padding(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    Color(colorArgb),
+                                    RoundedCornerShape(12.dp)
+                                )
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun ChapterTranslationProgressBar(
+    progress: ChapterTranslationProgressUi
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = 2.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Translating chapter…",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = "${progress.percent}%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { progress.completedParagraphs.toFloat() / progress.totalParagraphs.coerceAtLeast(1) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+            progress.currentPreview?.let { preview ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "“$preview…”",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TranslationComparisonSheet(
+    comparison: TranslationComparisonUi,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+        ) {
+            Text(
+                text = "Compare Translations",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+            Text(
+                text = "\"${comparison.originalText.take(80)}${if (comparison.originalText.length > 80) "…" else ""}\"",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            if (comparison.isLoading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
+                )
+                Text(
+                    text = "Translating with multiple engines…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+            } else {
+                comparison.results.forEach { result ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 1.dp
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = result.engineName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            if (result.success) {
+                                Text(
+                                    text = result.translatedText,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            } else {
+                                Text(
+                                    text = "Error: ${result.error ?: "Unknown"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
