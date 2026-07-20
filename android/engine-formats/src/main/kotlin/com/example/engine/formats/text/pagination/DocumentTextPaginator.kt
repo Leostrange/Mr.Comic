@@ -2,6 +2,7 @@ package com.example.engine.formats.text.pagination
 
 import com.example.engine.formats.text.TextDocumentSection
 import com.example.engine.formats.text.TextSectionBuilder
+import org.jsoup.Jsoup
 
 /**
  * Section-first pagination pipeline: split by chapter/spine boundaries, then layout units per section.
@@ -31,10 +32,29 @@ class DocumentTextPaginator(
         constraints: TextPaginationConstraints
     ): DocumentTextPaginationResult {
         val pages = mutableListOf<TextPaginationSubPage>()
-        sections.forEach { section ->
+        var sectionIndex = 0
+        while (sectionIndex < sections.size) {
+            val section = sections[sectionIndex]
             val sectionPages = sectionPaginator.paginate(section.html, constraints).subPages
-            sectionPages.forEach { subPage ->
-                pages += subPage.copy(index = pages.size, sectionIndex = section.index)
+            val shortStandaloneSection = sectionPages.size == 1 &&
+                sectionIndex + 1 < sections.size &&
+                readableTextLength(sectionPages[0].html) <= SHORT_SECTION_TEXT_LIMIT &&
+                isTitleOnlySection(sectionPages[0].html)
+            if (shortStandaloneSection) {
+                val nextSection = sections[sectionIndex + 1]
+                // Re-paginate the combined source rather than appending the title to
+                // an already full page from the next section.
+                val mergedPages = sectionPaginator.paginate(
+                    section.html + nextSection.html,
+                    constraints
+                ).subPages
+                if (mergedPages.isNotEmpty()) {
+                    mergedPages.forEach { subPage ->
+                        pages += subPage.copy(index = pages.size, sectionIndex = nextSection.index)
+                    }
+                    sectionIndex += 2
+                    continue
+                }
             }
             if (sectionPages.isEmpty()) {
                 pages += TextPaginationSubPage(
@@ -42,7 +62,12 @@ class DocumentTextPaginator(
                     index = pages.size,
                     sectionIndex = section.index
                 )
+            } else {
+                sectionPages.forEach { subPage ->
+                    pages += subPage.copy(index = pages.size, sectionIndex = section.index)
+                }
             }
+            sectionIndex++
         }
         return DocumentTextPaginationResult(
             sections = sections,
@@ -50,6 +75,23 @@ class DocumentTextPaginator(
                 listOf(TextPaginationSubPage(html = sections.firstOrNull()?.html.orEmpty(), index = 0))
             }
         )
+    }
+
+    private fun readableTextLength(html: String): Int = runCatching {
+        Jsoup.parse(html).text().trim().length
+    }.getOrDefault(html.trim().length)
+
+    private fun isTitleOnlySection(html: String): Boolean = runCatching {
+        val body = Jsoup.parseBodyFragment(html).body()
+        body.children().isNotEmpty() && body.children().all {
+            it.normalName() in setOf("h1", "h2", "h3", "h4", "h5", "h6")
+        }
+    }.getOrDefault(false)
+
+    private companion object {
+        // A title-only EPUB spine item should share the following page instead of
+        // producing a mostly empty page between the title and its first paragraph.
+        const val SHORT_SECTION_TEXT_LIMIT = 220
     }
 }
 

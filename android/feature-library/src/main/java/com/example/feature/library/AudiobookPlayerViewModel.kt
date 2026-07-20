@@ -21,6 +21,7 @@ import java.util.concurrent.Executor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import javax.inject.Inject
 
@@ -129,7 +131,8 @@ class AudiobookPlayerViewModel @Inject constructor(
             }
             val ctrl = controller ?: return@launch
             val items = buildMediaItems(displayAudiobook)
-            ctrl.setMediaItems(items, displayAudiobook.lastChapterIndex, displayAudiobook.lastPositionMs)
+            val startIndex = displayAudiobook.lastChapterIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+            ctrl.setMediaItems(items, startIndex, displayAudiobook.lastPositionMs)
             ctrl.setPlaybackSpeed(displayAudiobook.speed.coerceIn(0.75f, 2.5f))
             ctrl.prepare()
             ctrl.play()
@@ -222,6 +225,25 @@ class AudiobookPlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Close the mini-player: persist progress, stop playback and clear the loaded audiobook so the
+     * strip (shown while `uiState.audiobook != null`) actually disappears. Previously the X button
+     * only paused, leaving the strip stuck on screen with no way to dismiss it.
+     */
+    fun dismiss() {
+        saveProgress()
+        stopPositionPolling()
+        controller?.stop()
+        controller?.clearMediaItems()
+        _uiState.value = _uiState.value.copy(
+            audiobook = null,
+            isPlaying = false,
+            positionMs = 0L,
+            durationMs = 0L,
+            currentChapterIndex = 0
+        )
+    }
+
     fun saveBookmark() {
         val state = _uiState.value
         val audiobookId = state.audiobook?.id ?: return
@@ -291,13 +313,15 @@ class AudiobookPlayerViewModel @Inject constructor(
         )
     }
 
-    private suspend fun resolveAudiobookCover(audiobook: Audiobook): Audiobook {
+    private suspend fun resolveAudiobookCover(audiobook: Audiobook): Audiobook = withContext(Dispatchers.IO) {
+        // Cover resolution uses MediaMetadataRetriever + file copy; must stay off the main thread.
+        // The caller's launch runs on Main.immediate because it drives the MediaController afterwards.
         val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
-            ?: return audiobook
-        if (resolvedCover == audiobook.coverUri) return audiobook
+            ?: return@withContext audiobook
+        if (resolvedCover == audiobook.coverUri) return@withContext audiobook
         val updated = audiobook.copy(coverUri = resolvedCover)
         audiobookRepository.upsert(updated)
-        return updated
+        updated
     }
 
     private fun persistProgress(force: Boolean = false) {

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-07-20T03:38:54.258Z" hostname="LEOSTRANGE" time="0.006">
+  <properties/>
+  <testcase name="paletteForPreset_newspaperOverridesDay" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="normalizeOverrideColor_invalidFormatReturnsNull" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.001"/>
+  <testcase name="normalizeOverrideColor_validHex" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="paletteForPreset_fallsBackToBaseScheme" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.001"/>
+  <testcase name="palette_dayReturnsLightColors" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="palette_nightReturnsDarkColors" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.001"/>
+  <testcase name="normalizeOverrideColor_nullReturnsNull" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="overrideHex_validColorReturnsFormattedHex" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.001"/>
+  <testcase name="palette_sepiaReturnsWarmColors" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="defaultAccentColor_darkBackgroundReturnsLightAccent" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="paletteForPreset_oledBlackOverridesNight" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.001"/>
+  <testcase name="overrideHex_nullReturnsNull" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="defaultAccentColor_lightBackgroundReturnsDarkAccent" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.001"/>
+  <testcase name="palette_unknownSchemeReturnsDayColors" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <testcase name="normalizeOverrideColor_blankReturnsNull" classname="com.example.feature.reader.ui.gesture.ReaderColorSchemeTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -12,6 +12,7 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
@@ -29,7 +30,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.core.model.ReaderImageScaleMode
 import com.example.core.model.isTextReadingFormat
 import com.example.core.ui.eink.LocalEInkMode
-import com.example.feature.reader.ui.ReaderNavigationProgressSource
+import com.example.feature.reader.domain.enums.ReaderNavigationProgressSource
 import com.example.feature.reader.ui.ReaderUiState
 import com.example.feature.reader.ui.ReaderViewModel
 import kotlinx.coroutines.flow.debounce
@@ -57,9 +58,13 @@ fun WebtoonView(
     val isEInk = LocalEInkMode.current
     // Key listState on comic id so that chapter changes reset the scroll position
     // instead of retaining the stale position from the previous chapter.
+    val comicId = uiState.comic?.id
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = uiState.currentPage
     )
+    LaunchedEffect(comicId) {
+        listState.scrollToItem(uiState.currentPage)
+    }
     var zoomedPageIndex by remember { mutableStateOf<Int?>(null) }
     val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
         ReaderImageCrop(
@@ -133,7 +138,10 @@ fun WebtoonView(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp),
+        contentPadding = PaddingValues(
+            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+            bottom = 16.dp
+        ),
         userScrollEnabled = zoomedPageIndex == null,
         // On e-ink: disable momentum fling вЂ” smooth scrolling causes heavy ghosting.
         // On normal devices: standard fling behavior with momentum.
@@ -215,6 +223,14 @@ fun WebtoonView(
                                     webView.requestLayout()
                                 }
                             }
+                        },
+                        onRelease = { webView ->
+                            // This AndroidView lives inside a scrolling list item; without teardown
+                            // every recycled row leaks a WebView + renderer as the user scrolls.
+                            (webView.parent as? ViewGroup)?.removeView(webView)
+                            webView.stopLoading()
+                            webView.loadUrl("about:blank")
+                            webView.destroy()
                         }
                     )
                 } else {

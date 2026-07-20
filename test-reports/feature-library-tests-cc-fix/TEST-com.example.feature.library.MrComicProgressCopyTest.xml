@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.library.MrComicProgressCopyTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-07-20T02:03:42.333Z" hostname="LEOSTRANGE" time="0.04">
+  <properties/>
+  <testcase name="progressRecentEmptyText_prioritizesEmptyLibraryBeforeSearchSlice" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.01"/>
+  <testcase name="sharedStageArchiveSummary_reportsReachedAndHighestStage" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.012"/>
+  <testcase name="progressRecentEmptyText_usesSearchSpecificCopyForSearchSlice" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.0"/>
+  <testcase name="sharedStageArchiveStatus_distinguishesCurrentAndHighestReached" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.001"/>
+  <testcase name="sharedStageRunway_usesNextStageNumberWhenNotMaxed" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.007"/>
+  <testcase name="sharedStageShortLabel_usesCompactVariantForArchiveStrip" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.004"/>
+  <testcase name="sharedStageHint_reportsFinalStageConsistently" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.003"/>
+  <testcase name="progressRecentEmptyText_fallsBackToGenericEmptyCopy" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.0"/>
+  <testcase name="sharedStageLabel_usesStableStageNumbering" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.001"/>
+  <testcase name="sharedStageRunway_reportsFinalStageAsStableSnapshot" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.0"/>
+  <testcase name="sharedStageHint_keepsRemainingXpAndTrackedPagesTogether" classname="com.example.feature.library.MrComicProgressCopyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

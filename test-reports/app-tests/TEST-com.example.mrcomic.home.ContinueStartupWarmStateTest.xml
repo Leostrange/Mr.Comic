@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.mrcomic.home.ContinueStartupWarmStateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-12T18:59:57.792Z" hostname="LEOSTRANGE" time="0.008">
+  <properties/>
+  <testcase name="usesWarmSnapshotBeforeLiveLibraryFlowCatchesUp" classname="com.example.mrcomic.home.ContinueStartupWarmStateTest" time="0.005"/>
+  <testcase name="keepsLoadingWhileWarmSnapshotIsStillPendingAndLibraryIsEmpty" classname="com.example.mrcomic.home.ContinueStartupWarmStateTest" time="0.001"/>
+  <testcase name="prefersLiveLibraryDataOverWarmSnapshot" classname="com.example.mrcomic.home.ContinueStartupWarmStateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

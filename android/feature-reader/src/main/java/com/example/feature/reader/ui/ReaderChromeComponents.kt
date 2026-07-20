@@ -1,5 +1,7 @@
 package com.example.feature.reader.ui
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,8 +13,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.Notes
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.BrightnessHigh
@@ -46,10 +51,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.model.ReadingMode
@@ -152,13 +160,16 @@ fun ReaderExpandedBar(
     showDirectionIcon: Boolean = true,
     showTranslateIcon: Boolean = true,
     showBrightnessIcon: Boolean = true,
+    showAutoScrollIcon: Boolean = true,
+    autoScrollActive: Boolean = false,
     onNavigateBack: () -> Unit,
     onToggleToc: () -> Unit,
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
     onRequestOcr: () -> Unit,
     onToggleBrightness: () -> Unit,
-    onToggleTtsControls: () -> Unit = {}
+    onToggleTtsControls: () -> Unit = {},
+    onAutoScrollToggle: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     val chromeIconTint = MaterialTheme.colorScheme.onSurface
@@ -204,13 +215,16 @@ fun ReaderExpandedBar(
                     showDirectionIcon = showDirectionIcon,
                     showTranslateIcon = showTranslateIcon,
                     showBrightnessIcon = showBrightnessIcon,
+                    showAutoScrollIcon = showAutoScrollIcon,
+                    autoScrollActive = autoScrollActive,
                     chromeIconTint = chromeIconTint,
                     onToggleToc = onToggleToc,
                     onToggleTextSettings = onToggleTextSettings,
                     onSwapDirection = onSwapDirection,
                     onRequestOcr = onRequestOcr,
                     onToggleBrightness = onToggleBrightness,
-                    onToggleTtsControls = onToggleTtsControls
+                    onToggleTtsControls = onToggleTtsControls,
+                    onAutoScrollToggle = onAutoScrollToggle
                 )
             }
         }
@@ -234,13 +248,16 @@ private fun ReaderExpandedActionButtons(
     showDirectionIcon: Boolean,
     showTranslateIcon: Boolean,
     showBrightnessIcon: Boolean,
+    showAutoScrollIcon: Boolean = true,
+    autoScrollActive: Boolean = false,
     chromeIconTint: Color,
     onToggleToc: () -> Unit,
     onToggleTextSettings: () -> Unit,
     onSwapDirection: () -> Unit,
     onRequestOcr: () -> Unit,
     onToggleBrightness: () -> Unit,
-    onToggleTtsControls: () -> Unit = {}
+    onToggleTtsControls: () -> Unit = {},
+    onAutoScrollToggle: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
@@ -311,6 +328,26 @@ private fun ReaderExpandedActionButtons(
                                     Icons.Default.SwapHoriz,
                                     contentDescription = readerText.directionToggle,
                                     tint = if (directionShortcutActive) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            }
+                        }
+                    )
+                } else null
+
+            ReaderChromeButton.AUTO_SCROLL ->
+                if (showAutoScrollIcon) {
+                    ReaderChromeActionSpec(
+                        key = action.storedValue,
+                        content = {
+                            ReaderChromeIconButton(onClick = onAutoScrollToggle) {
+                                Icon(
+                                    Icons.Default.PlayArrow,
+                                    contentDescription = "Auto-scroll",
+                                    tint = if (autoScrollActive) {
                                         MaterialTheme.colorScheme.primary
                                     } else {
                                         MaterialTheme.colorScheme.onSurface
@@ -654,21 +691,42 @@ fun SavedPageNoteCard(
     }
 }
 
+internal fun readerNotePanelMaxHeightDp(
+      screenHeightDp: Int,
+      expanded: Boolean
+  ): Dp = ReaderNotePanelHeightPolicy.maxContentHeightDp(
+      screenHeightDp = screenHeightDp,
+      topInsetDp = 0,
+      bottomInsetDp = 0,
+      chromeReservedDp = 0,
+      expanded = expanded
+  ).dp
+
 @Composable
 fun ReaderNotePanel(
     text: String,
     colorScheme: String,
     expanded: Boolean,
     onDismiss: () -> Unit,
-    onExpand: () -> Unit,
-    onCollapse: () -> Unit,
-    modifier: Modifier = Modifier,
-    palette: (String) -> Pair<String, String>
-) {
+      onExpand: () -> Unit,
+      onCollapse: () -> Unit,
+      chromeReservedDp: Int,
+      modifier: Modifier = Modifier,
+      palette: (String) -> Pair<String, String>
+  ) {
     val readerText = readerUiText(LocalStrings.current.languageCode)
+      val configuration = LocalConfiguration.current
+      val density = LocalDensity.current
     val fgColor = MaterialTheme.colorScheme.onSurface
     val accentColor = MaterialTheme.colorScheme.primary
     val panelColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f)
+      val maxPanelHeight = ReaderNotePanelHeightPolicy.maxContentHeightDp(
+          screenHeightDp = configuration.screenHeightDp,
+          topInsetDp = with(density) { WindowInsets.statusBars.getTop(this).toDp().value.toInt() },
+          bottomInsetDp = with(density) { WindowInsets.navigationBars.getBottom(this).toDp().value.toInt() },
+          chromeReservedDp = chromeReservedDp,
+          expanded = expanded
+      ).dp
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -704,14 +762,20 @@ fun ReaderNotePanel(
                 }
             }
             Spacer(Modifier.size(4.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.None),
-                color = fgColor,
-                lineHeight = 20.sp,
-                maxLines = if (expanded) Int.MAX_VALUE else 4,
-                overflow = TextOverflow.Ellipsis
-            )
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = maxPanelHeight)
+                    .verticalScroll(scrollState)
+            ) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.None),
+                    color = fgColor,
+                    lineHeight = 20.sp
+                )
+            }
         }
     }
 }

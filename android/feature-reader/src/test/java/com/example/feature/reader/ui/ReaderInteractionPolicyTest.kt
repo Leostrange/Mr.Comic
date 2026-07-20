@@ -114,8 +114,8 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
-    fun htmlSelectionActionsRemainEnabledInPagedMode() {
-        assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
+    fun htmlSelectionActionsAreDisabledInPagedModeToPreventSwipeSelection() {
+        assertFalse(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
         assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = false))
     }
 
@@ -141,14 +141,27 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
-    fun pagedHtmlViewportHeightPrefersRealCssViewportOverLargerNativeHeight() {
+    fun pagedHtmlViewportHeightPrefersStableNativeHeightOverTransientCssViewport() {
         assertEquals(
-            756,
+            784,
             readerResolvedPagedCssViewportHeight(
                 nativeViewportHeight = 784,
                 visualViewportHeight = 756,
                 windowInnerHeight = 756,
                 rootClientHeight = 756
+            )
+        )
+    }
+
+    @Test
+    fun pagedHtmlViewportHeightFallsBackToLayoutViewportWhenNativeHeightIsUnknown() {
+        assertEquals(
+            756,
+            readerResolvedPagedCssViewportHeight(
+                nativeViewportHeight = 0,
+                visualViewportHeight = 700,
+                windowInnerHeight = 756,
+                rootClientHeight = 744
             )
         )
     }

@@ -169,7 +169,10 @@ class ReaderContentPolicyTest {
     }
 
     @Test
-    fun epubUsesJsPaginationOnlyInTextPageMode() {
+    fun allTextFormatsUseWebViewJsPagination() {
+        // All text formats (EPUB, TXT, FB2, etc.) now use WebView JS pagination.
+        // The Kotlin char-split paginator is retired in favour of pixel-precise
+        // TreeWalker + getClientRects() page breaks inside the WebView.
         assertEquals(
             false,
             shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.EPUB)
@@ -183,8 +186,53 @@ class ReaderContentPolicyTest {
             shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.UNKNOWN)
         )
         assertEquals(
-            true,
+            false,
             shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.TXT)
+        )
+        assertEquals(
+            false,
+            shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.FB2)
+        )
+        assertEquals(
+            false,
+            shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.DOCX)
+        )
+        // Non-text containers should also return false.
+        assertEquals(
+            false,
+            shouldUseKotlinTextPagePagination(ReaderContainerKind.RASTER_PAGE, ComicFormat.TXT)
+        )
+    }
+
+    @Test
+    fun heavyTextFormatsDeferReaderPageCount() {
+        listOf(ComicFormat.TXT, ComicFormat.MOBI, ComicFormat.AZW3, ComicFormat.DOCX, ComicFormat.ODT).forEach { format ->
+            assertEquals(
+                "format=$format",
+                true,
+                shouldDeferReaderPageCount(
+                    readerRendersHtmlContent = true,
+                    contentFormat = format
+                )
+            )
+        }
+    }
+
+    @Test
+    fun reflowableEpubDefersReaderPageCountUntilAfterFirstPage() {
+        assertEquals(
+            true,
+            shouldDeferReaderPageCount(
+                readerRendersHtmlContent = true,
+                contentFormat = ComicFormat.EPUB
+            )
+        )
+        assertEquals(
+            false,
+            shouldDeferReaderPageCount(
+                readerRendersHtmlContent = false,
+                contentFormat = ComicFormat.ZIP
+            )
         )
     }
 

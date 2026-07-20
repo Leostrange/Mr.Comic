@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.domain.util.ResultTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:02:13.330Z" hostname="LEOSTRANGE" time="0.01">
+  <properties/>
+  <testcase name="runCatchingResult_success_returnsSuccess" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_isErrorTrue" classname="com.example.core.domain.util.ResultTest" time="0.002"/>
+  <testcase name="success_chainedOnSuccess_returnsSelf" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_message_canBeOverridden" classname="com.example.core.domain.util.ResultTest" time="0.001"/>
+  <testcase name="success_isSuccessTrue" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="success_onError_doesNotExecute" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_getOrNull_returnsNull" classname="com.example.core.domain.util.ResultTest" time="0.001"/>
+  <testcase name="loading_getOrNull_returnsNull" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_message_defaultsToExceptionMessage" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_onError_executesAction" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="loading_isLoadingTrue" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_chainedOnError_returnsSelf" classname="com.example.core.domain.util.ResultTest" time="0.001"/>
+  <testcase name="runCatchingResult_exception_returnsError" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="error_onSuccess_doesNotExecute" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="runCatchingResult_runtimeException_returnsError" classname="com.example.core.domain.util.ResultTest" time="0.0"/>
+  <testcase name="success_onSuccess_executesAction" classname="com.example.core.domain.util.ResultTest" time="0.001"/>
+  <testcase name="success_dataAccessible" classname="com.example.core.domain.util.ResultTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

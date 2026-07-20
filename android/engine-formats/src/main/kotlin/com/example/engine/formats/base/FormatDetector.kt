@@ -50,6 +50,8 @@ object FormatDetector {
             "azw", "azw3", "kf8" -> ComicFormat.AZW3
             "docx" -> ComicFormat.DOCX
             "odt" -> ComicFormat.ODT
+            "chm" -> ComicFormat.CHM
+            "xps" -> ComicFormat.XPS
             "djvu", "djv" -> ComicFormat.DJVU
             else         -> ComicFormat.UNKNOWN
         }

@@ -66,6 +66,7 @@ import com.example.core.data.preferences.PerformancePreferencesKeys
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
+import com.example.core.model.ReaderFormatCatalog
 import com.example.core.model.ReaderLocator
 import com.example.core.model.storedReaderLocator
 import com.example.core.ui.locale.AppStrings
@@ -113,6 +114,8 @@ sealed class Screen(val route: String) {
             return if (params.isEmpty()) "translation" else "translation?${params.joinToString("&")}"
         }
     }
+
+    data object OpdsCatalog : Screen("opds_catalog")
 
     data object AudiobookPlayer : Screen("audiobook_player/{audiobookId}") {
         fun create(audiobookId: String) = "audiobook_player/$audiobookId"
@@ -493,38 +496,11 @@ fun AppNavHost(
                         },
                         onAddFileClick = {
                             filePicker.launch(
-                                arrayOf(
-                                    "application/zip",
-                                    "application/x-cbz",
-                                    "application/x-cbr",
-                                    "application/vnd.comicbook-rar",
-                                    "application/x-rar-compressed",
-                                    "application/x-rar",
-                                    "application/vnd.rar",
-                                    "application/pdf",
-                                    "application/epub+zip",
-                                    "application/fb2+xml",
-                                    "text/plain",
-                                    "text/html",
-                                    "text/markdown",
-                                    "application/xhtml+xml",
-                                    "application/rtf",
-                                    "application/x-mobipocket-ebook",
-                                    "application/vnd.amazon.ebook",
-                                    "application/vnd.amazon.mobi8-ebook",
-                                    "image/vnd.djvu",
-                                    "image/x-djvu",
-                                    "image/vnd.djvu+multipage",
-                                    "application/x-djvu",
-                                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                    "application/vnd.oasis.opendocument.text",
-                                    "audio/mpeg",
-                                    "audio/mp4",
-                                    "audio/ogg",
-                                    "audio/x-wav",
-                                    "audio/flac",
-                                    "audio/aac"
-                                )
+                                // Single-sourced from the format catalog (core-model) plus audio
+                                // types — the previous hardcoded list had drifted and omitted
+                                // 7z/tar/comicbook+zip/fictionbook/chm/xps, making them unselectable.
+                                ReaderFormatCatalog.readerOpenDocumentMimeTypes +
+                                    ReaderFormatCatalog.audioMimeTypes
                             )
                         },
                         onAddFolderClick = { folderPicker.launch(null) },
@@ -533,6 +509,9 @@ fun AppNavHost(
                             navController.navigate(Screen.ProgressProfile.route) {
                                 launchSingleTop = true
                             }
+                        },
+                        onOpdsCatalogClick = {
+                            navController.navigate(Screen.OpdsCatalog.route)
                         }
                     )
                 }
@@ -541,6 +520,17 @@ fun AppNavHost(
                     SettingsScreen(
                         onAppIconSettingsClick = { navController.navigate(Screen.AppIconSettings.route) },
                         onProgressProfileClick = { navController.navigate(Screen.ProgressProfile.route) }
+                    )
+                }
+
+                composable(Screen.OpdsCatalog.route) {
+                    val libraryVm: LibraryViewModel = hiltViewModel()
+                    com.example.feature.library.opds.OpdsCatalogScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onBookDownloaded = { file ->
+                            libraryVm.addComicFromUri(android.net.Uri.fromFile(file))
+                            navController.popBackStack()
+                        }
                     )
                 }
 

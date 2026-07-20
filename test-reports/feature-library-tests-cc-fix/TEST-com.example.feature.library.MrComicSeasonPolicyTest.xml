@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.library.MrComicSeasonPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-20T02:03:42.431Z" hostname="LEOSTRANGE" time="0.016">
+  <properties/>
+  <testcase name="resolveMrComicSeasonWindow_keepsOnlyLastTwentyEightDaysAndMergesDuplicates" classname="com.example.feature.library.MrComicSeasonPolicyTest" time="0.007"/>
+  <testcase name="shouldShowMrComicSeasonAction_hidesSeasonRouteDuringSearch" classname="com.example.feature.library.MrComicSeasonPolicyTest" time="0.001"/>
+  <testcase name="resolveMrComicSeasonSnapshot_prioritizesCollectionThenSeriesThenFiles" classname="com.example.feature.library.MrComicSeasonPolicyTest" time="0.007"/>
+  <testcase name="resolveMrComicSeasonSnapshot_buildsQuietFourWeekProgress" classname="com.example.feature.library.MrComicSeasonPolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

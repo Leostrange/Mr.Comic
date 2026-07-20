@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.domain.analytics.MrComicMascotStateTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:02:06.002Z" hostname="LEOSTRANGE" time="0.011">
+  <properties/>
+  <testcase name="returns showcase when achievement shelf is already weighted" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.006"/>
+  <testcase name="returns standby when library is empty" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.0"/>
+  <testcase name="context becomes idle when library is empty even outside home" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.0"/>
+  <testcase name="returns locked in when recent title is actively being read" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.001"/>
+  <testcase name="context becomes return on home surface without active read" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.001"/>
+  <testcase name="returns rhythm locked when weekly rhythm is established" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.0"/>
+  <testcase name="context becomes level up when stage preview is pending" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.001"/>
+  <testcase name="context does not become level up when preview is disabled" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.0"/>
+  <testcase name="returns archivist when bookmark or quote trail is strong" classname="com.example.core.domain.analytics.MrComicMascotStateTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

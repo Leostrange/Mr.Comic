@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.epub.EpubCloseDeadlockTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-20T03:39:03.965Z" hostname="LEOSTRANGE" time="0.967">
+  <properties/>
+  <testcase name="concurrentCloseAndReadDoesNotDeadlock" classname="com.example.engine.formats.epub.EpubCloseDeadlockTest" time="0.967"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

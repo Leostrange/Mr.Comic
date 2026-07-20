@@ -27,6 +27,14 @@ object ArchiveFormatSupport {
         "rtf", "mobi", "prc", "azw", "azw3", "kf8", "docx", "odt"
     )
 
+    /**
+     * "Real" e-book formats that own an archive's content — distinct from auxiliary plain-text
+     * files (txt/html/md) that may merely accompany a comic page sequence (readme, about, notes).
+     * A comic page sequence yields to these but not to auxiliary text.
+     */
+    private val bookPrimaryFormats: Set<String> =
+        setOf("epub", "fb2", "mobi", "prc", "azw", "azw3", "kf8", "docx", "odt", "rtf")
+
     val naturalPathComparator: Comparator<String> = Comparator { left, right ->
         compareNatural(left, right)
     }
@@ -56,7 +64,15 @@ object ArchiveFormatSupport {
         val hasComicPageImageSequence = imageEntries.size >= 2 && imageEntries.all(::isComicPageImageEntry)
         val hasDominantTextEntry = textEntries.isNotEmpty() &&
             textEntries.any { isDominantBookEntry(it, textEntries, imageEntries) }
+        // A genuine comic page sequence (≥2 sequentially-numbered images) must not be reclassified
+        // as a book just because an auxiliary text file (readme.txt, about.html, notes.md) sits
+        // alongside it — otherwise every comic page is dropped and only the readme is rendered.
+        // Real e-book formats (epub/fb2/mobi/…) still win, since numbered plates can belong to a book.
+        val hasBookFormatTextEntry = textEntries.any { extensionOf(it) in bookPrimaryFormats }
+        val comicSequenceDominates = hasComicPageImageSequence && !hasBookFormatTextEntry
         return when {
+            comicSequenceDominates ->
+                ArchiveContentKind.IMAGE_SEQUENCE
             hasOnlyTextEntries ||
                 (hasSingleTextEntry && (hasOnlyCoverImages || !hasComicPageImageSequence)) ||
                 (hasSingleTextEntry && textEntryOwnsImageAssets(textEntries.first(), imageEntries)) ||
@@ -82,18 +98,19 @@ object ArchiveFormatSupport {
         imageEntries: List<String>
     ): Boolean {
         val ext = extensionOf(entry)
+        val primaryFormats = setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf", "txt", "html", "htm", "xhtml", "md", "markdown")
         // Primary book formats that typically own all other content in the archive
-        if (ext !in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")) return false
+        if (ext !in primaryFormats) return false
         // Non-book text files (readme, license, etc.) shouldn't prevent book detection
         val nonBookTextEntries = allTextEntries.filter {
             val e = extensionOf(it)
-            e !in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+            e !in primaryFormats
         }
         // If there's only one primary book file, treat it as dominant even if
         // there are minor text files (readme, license) alongside it
         val primaryBookCount = allTextEntries.count {
             val e = extensionOf(it)
-            e in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+            e in primaryFormats
         }
         if (primaryBookCount == 1) return true
         return false

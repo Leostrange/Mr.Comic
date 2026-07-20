@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Crop169
 import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material.icons.filled.FolderOpen
@@ -73,6 +74,7 @@ fun LibraryTopBar(
     onThumbnailModeChange: (String) -> Unit,
     onAddFileClick: () -> Unit,
     onAddFolderClick: () -> Unit,
+    onOpdsCatalogClick: (() -> Unit)? = null,
     canNavigateUp: Boolean,
     onNavigateUp: () -> Unit,
     onSettingsClick: () -> Unit
@@ -226,6 +228,18 @@ fun LibraryTopBar(
                                             onAddFolderClick()
                                         }
                                     )
+                                    if (onOpdsCatalogClick != null) {
+                                        DropdownMenuItem(
+                                            text = { Text("OPDS Catalog") },
+                                            leadingIcon = {
+                                                Icon(Icons.Default.CloudDownload, contentDescription = null)
+                                            },
+                                            onClick = {
+                                                addMenuExpanded = false
+                                                onOpdsCatalogClick()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }

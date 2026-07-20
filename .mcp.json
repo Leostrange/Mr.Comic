@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "socraticode": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "socraticode"
+      ]
+    },
+    "tavily-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "tavily-mcp"
+      ],
+      "env": {
+        "TAVILY_API_KEY": "TAVILY_KEY_REMOVED"
+      }
+    }
+  }
+}

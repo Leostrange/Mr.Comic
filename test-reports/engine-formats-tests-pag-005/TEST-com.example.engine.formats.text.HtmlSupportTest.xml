@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.HtmlSupportTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-18T18:40:39.842Z" hostname="LEOSTRANGE" time="0.146">
+  <properties/>
+  <testcase name="extractsSemanticFootnoteBodiesWithoutRemovingReferences" classname="com.example.engine.formats.text.HtmlSupportTest" time="0.003"/>
+  <testcase name="complexHtmlKeepsPreserveLayoutMode" classname="com.example.engine.formats.text.HtmlSupportTest" time="0.009"/>
+  <testcase name="dropsScriptHeavyPreambleFromRealHtml" classname="com.example.engine.formats.text.HtmlSupportTest" time="0.125"/>
+  <testcase name="preservesRelativeLinksAndImages" classname="com.example.engine.formats.text.HtmlSupportTest" time="0.003"/>
+  <testcase name="simpleHtmlUsesUnifiedBookTypography" classname="com.example.engine.formats.text.HtmlSupportTest" time="0.002"/>
+  <testcase name="rendersUtf8HtmlCorpusSample" classname="com.example.engine.formats.text.HtmlSupportTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

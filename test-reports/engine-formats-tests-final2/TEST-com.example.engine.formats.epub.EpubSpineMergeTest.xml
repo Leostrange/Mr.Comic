@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.epub.EpubSpineMergeTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-19T06:23:19.410Z" hostname="LEOSTRANGE" time="0.93">
+  <properties/>
+  <testcase name="titleOnlyWrappedInSpanStillMergesWithBody" classname="com.example.engine.formats.epub.EpubSpineMergeTest" time="0.045"/>
+  <testcase name="titleOnlySpinePageMergesFollowingChapterBody" classname="com.example.engine.formats.epub.EpubSpineMergeTest" time="0.046"/>
+  <testcase name="aliceUsesSpineSectionsNotCharChunks" classname="com.example.engine.formats.epub.EpubSpineMergeTest" time="0.227"/>
+  <testcase name="emptySpinePageIsSkipped" classname="com.example.engine.formats.epub.EpubSpineMergeTest" time="0.032"/>
+  <testcase name="aliceSpineOrderKeepsChapterOneBeforeTwelve" classname="com.example.engine.formats.epub.EpubSpineMergeTest" time="0.579"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[[Fatal Error] :1:31: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :1:31: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :1:31: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :1:31: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+[Fatal Error] :2:10: DOCTYPE is disallowed when the feature "http://apache.org/xml/features/disallow-doctype-decl" set to true.
+]]></system-err>
+</testsuite>

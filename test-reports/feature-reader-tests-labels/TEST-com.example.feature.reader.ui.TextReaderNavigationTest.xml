@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.TextReaderNavigationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-19T23:44:28.376Z" hostname="LEOSTRANGE" time="0.003">
+  <properties/>
+  <testcase name="enginePageForUiPagePassthroughWhenPaginationNotReady" classname="com.example.feature.reader.ui.TextReaderNavigationTest" time="0.002"/>
+  <testcase name="resolveNavigationPagePassthroughWhenPaginationNotReady" classname="com.example.feature.reader.ui.TextReaderNavigationTest" time="0.0"/>
+  <testcase name="resolveTextPosition_clampsNegativeValues" classname="com.example.feature.reader.ui.TextReaderNavigationTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

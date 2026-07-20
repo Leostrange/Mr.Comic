@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.ui.theme.ThemeColorIsolationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:06:31.002Z" hostname="LEOSTRANGE" time="0.133">
+  <properties/>
+  <testcase name="designSystemArgbLongTokensResolveToOpaqueColors" classname="com.example.core.ui.theme.ThemeColorIsolationTest" time="0.066"/>
+  <testcase name="customBackgroundDoesNotMutateSurfaceOrControlColors" classname="com.example.core.ui.theme.ThemeColorIsolationTest" time="0.025"/>
+  <testcase name="rgbOnlyCustomBackgroundIsTreatedAsOpaque" classname="com.example.core.ui.theme.ThemeColorIsolationTest" time="0.001"/>
+  <testcase name="themePresetPreviewUsesArgbLongsAsColors" classname="com.example.core.ui.theme.ThemeColorIsolationTest" time="0.005"/>
+  <testcase name="surfaceOpacityDoesNotRecalculateSurfaceFamilyFromCustomBackground" classname="com.example.core.ui.theme.ThemeColorIsolationTest" time="0.023"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

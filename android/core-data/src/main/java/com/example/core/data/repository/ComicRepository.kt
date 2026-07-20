@@ -23,6 +23,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.example.core.data.db.AppDatabase
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
+import com.example.core.model.readingProgressForPage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -298,9 +299,14 @@ class ComicRepository @Inject constructor(
     }
 
     suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int) {
+        // Guard: totalPages <= 1 means the book hasn't been properly paginated yet.
+        // Saving progress here would produce 100% (page 0 of 1 = 100%).
+        // This applies to all reflowable formats during initial load before
+        // deferred page count resolution completes.
+        if (totalPages <= 1) return
         val maxPage = (totalPages - 1).coerceAtLeast(0)
         val safePage = currentPage.coerceIn(0, maxPage)
-        val progress = if (totalPages <= 0) 0f else ((safePage + 1).toFloat() / totalPages.toFloat())
+        val progress = readingProgressForPage(safePage, totalPages)
         comicDao.updateProgress(comicId, safePage, progress.coerceIn(0f, 1f), System.currentTimeMillis(), totalPages.coerceAtLeast(0))
     }
 
@@ -652,7 +658,13 @@ class ComicRepository @Inject constructor(
             comic.currentPage.coerceAtLeast(0)
         }
         val normalizedProgress = when {
-            normalizedPageCount > 0 -> ((normalizedCurrentPage + 1).toFloat() / normalizedPageCount.toFloat()).coerceIn(0f, 1f)
+            comic.isCompleted -> 1f
+            comic.lastReadDate != null || comic.readingProgress > 0f || normalizedCurrentPage > 0 ->
+                if (normalizedPageCount > 0) {
+                    readingProgressForPage(normalizedCurrentPage, normalizedPageCount)
+                } else {
+                    comic.readingProgress.coerceIn(0f, 1f)
+                }
             else -> comic.readingProgress.coerceIn(0f, 1f)
         }
         val normalizedTitle = comic.title.trim().ifBlank { deriveTitleFromPath(normalizedPath) }
@@ -678,7 +690,13 @@ class ComicRepository @Inject constructor(
             backup.currentPage.coerceAtLeast(0)
         }
         val mergedProgress = when {
-            effectivePageCount > 0 -> ((mergedCurrentPage + 1).toFloat() / effectivePageCount.toFloat()).coerceIn(0f, 1f)
+            backup.isCompleted -> 1f
+            backup.lastReadDate != null || backup.readingProgress > 0f || mergedCurrentPage > 0 ->
+                if (effectivePageCount > 0) {
+                    readingProgressForPage(mergedCurrentPage, effectivePageCount)
+                } else {
+                    backup.readingProgress.coerceIn(0f, 1f)
+                }
             else -> backup.readingProgress.coerceIn(0f, 1f)
         }
         val preferredPath = if (shouldReplacePath(existing.path, backup.path)) backup.path else existing.path

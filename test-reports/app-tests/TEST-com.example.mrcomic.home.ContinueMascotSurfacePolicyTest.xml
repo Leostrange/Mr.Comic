@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.mrcomic.home.ContinueMascotSurfacePolicyTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-12T18:59:57.733Z" hostname="LEOSTRANGE" time="0.027">
+  <properties/>
+  <testcase name="resolveContinueCompanionPresentation_keepsMascotCopyWhenMascotUiIsEnabled" classname="com.example.mrcomic.home.ContinueMascotSurfacePolicyTest" time="0.026"/>
+  <testcase name="resolveContinueCompanionPresentation_usesNeutralCopyWhenMascotUiIsDisabled" classname="com.example.mrcomic.home.ContinueMascotSurfacePolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.model.ReaderTtsSleepTimerModeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:01:58.441Z" hostname="LEOSTRANGE" time="0.004">
+  <properties/>
+  <testcase name="entries keep minute mapping" classname="com.example.core.model.ReaderTtsSleepTimerModeTest" time="0.003"/>
+  <testcase name="fromStored falls back to off" classname="com.example.core.model.ReaderTtsSleepTimerModeTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

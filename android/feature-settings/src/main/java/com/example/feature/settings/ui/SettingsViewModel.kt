@@ -40,7 +40,10 @@ import com.example.core.domain.analytics.ReadingAnalyticsTracker
 import com.example.core.domain.translation.DictionaryEngine
 import com.example.core.domain.translation.OfflineTranslationEngine
 import com.example.core.domain.translation.OnlineTranslationEngine
+import com.example.core.domain.util.LibraryViewModeKey
 import com.example.core.domain.util.Result
+import com.example.core.domain.util.normalizeLibraryViewModeKey
+import com.example.core.domain.util.normalizeTapZoneActionName
 import com.example.core.model.Comic
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReaderInfoSlot
@@ -118,278 +121,10 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 
-private fun normalizeTapZoneActionName(value: String?): String {
-    val action = ReaderTapZoneAction.fromStored(value)
-    return if (action == ReaderTapZoneAction.TOGGLE_UI) {
-        ReaderTapZoneAction.MENU.name
-    } else {
-        action.name
-    }
-}
 
-data class LibraryThemePresetSlot(
-    val index: Int,
-    val serialized: String? = null
-)
 
-data class AppThemePresetSlot(
-    val index: Int,
-    val serialized: String? = null
-)
+// Preset data classes and parsing extracted to SettingsPresets.kt
 
-data class ReaderStylePresetSlot(
-    val index: Int,
-    val serialized: String? = null
-)
-
-data class ReaderStylePresetEntry(
-    val id: String,
-    val snapshot: ReaderStylePresetSnapshot
-)
-
-private data class ImportedReaderTypographyPreset(
-    val displayName: String,
-    val readerPreset: ReadingPreset,
-    val textFontSize: Int,
-    val textColorScheme: String,
-    val textFontFamily: String,
-    val textLineHeight: Float,
-    val textLetterSpacing: Float,
-    val textWordSpacing: Float,
-    val textParagraphSpacing: Float,
-    val textAlignment: String,
-    val textBold: Boolean,
-    val textCustomTextColor: Long?,
-    val textCustomBackgroundColor: Long?,
-    val textCustomAccentColor: Long?,
-    val brightness: Float,
-    val immersiveMode: Boolean,
-    val pageAnimation: String
-)
-
-data class ReaderStylePresetSnapshot(
-    val displayName: String? = null,
-    val readerPreset: String,
-    val textFontSize: Int,
-    val textColorScheme: String,
-    val textFontFamily: String,
-    val textLineHeight: Float,
-    val textLetterSpacing: Float,
-    val textWordSpacing: Float,
-    val textParagraphSpacing: Float,
-    val textAlignment: String,
-    val textBold: Boolean,
-    val textCustomTextColor: Long? = null,
-    val textCustomBackgroundColor: Long? = null,
-    val textCustomAccentColor: Long? = null,
-    val brightness: Float,
-    val immersiveMode: Boolean,
-    val pageAnimation: String
-) {
-    fun serialize(): String = JSONObject().apply {
-        displayName?.takeIf { it.isNotBlank() }?.let { put("displayName", it) }
-        put("readerPreset", readerPreset)
-        put("textFontSize", textFontSize)
-        put("textColorScheme", textColorScheme)
-        put("textFontFamily", textFontFamily)
-        put("textLineHeight", textLineHeight.toDouble())
-        put("textLetterSpacing", textLetterSpacing.toDouble())
-        put("textWordSpacing", textWordSpacing.toDouble())
-        put("textParagraphSpacing", textParagraphSpacing.toDouble())
-        put("textAlignment", textAlignment)
-        put("textBold", textBold)
-        textCustomTextColor?.let { put("textCustomTextColor", String.format(Locale.US, "#%08X", it)) }
-        textCustomBackgroundColor?.let { put("textCustomBackgroundColor", String.format(Locale.US, "#%08X", it)) }
-        textCustomAccentColor?.let { put("textCustomAccentColor", String.format(Locale.US, "#%08X", it)) }
-        put("brightness", brightness.toDouble())
-        put("immersiveMode", immersiveMode)
-        put("pageAnimation", pageAnimation)
-    }.toString()
-}
-
-private fun JSONObject.optReaderStyleDisplayName(): String? = listOf(
-    "displayName",
-    "name",
-    "title",
-    "presetName"
-).firstNotNullOfOrNull { key ->
-    optString(key).trim().takeIf { it.isNotEmpty() && it != "null" }
-}
-
-private fun JSONObject.optReaderColorLong(vararg keys: String): Long? = keys.firstNotNullOfOrNull { key ->
-    if (!has(key)) return@firstNotNullOfOrNull null
-    when (val raw = opt(key)) {
-        is Number -> raw.toLong()
-        is String -> raw.trim()
-            .takeIf { it.isNotEmpty() && it != "null" }
-            ?.let { value ->
-                when {
-                    value.startsWith("#") -> value.removePrefix("#").toLongOrNull(16)?.let { hex ->
-                        if (value.length == 7) 0xFF000000L or hex else hex
-                    }
-                    else -> value.toLongOrNull()
-                }
-            }
-        else -> null
-    }
-}
-
-data class AppThemePresetSnapshot(
-    val themePreset: String,
-    val themeMode: String,
-    val useDynamicColor: Boolean,
-    val useAmoledDark: Boolean,
-    val customPrimaryColor: Long?,
-    val customSecondaryColor: Long?,
-    val customBackgroundColor: Long?,
-    val customSurfaceColor: Long?,
-    val surfaceOpacity: Float,
-    val uiFontScale: Float,
-    val uiDensityScale: Float,
-    val uiCornerRadius: Int
-) {
-    fun serialize(): String = JSONObject().apply {
-        put("themePreset", themePreset)
-        put("themeMode", themeMode)
-        put("useDynamicColor", useDynamicColor)
-        put("useAmoledDark", useAmoledDark)
-        put("customPrimaryColor", customPrimaryColor?.toString())
-        put("customSecondaryColor", customSecondaryColor?.toString())
-        put("customBackgroundColor", customBackgroundColor?.toString())
-        put("customSurfaceColor", customSurfaceColor?.toString())
-        put("surfaceOpacity", surfaceOpacity.toDouble())
-        put("uiFontScale", uiFontScale.toDouble())
-        put("uiDensityScale", uiDensityScale.toDouble())
-        put("uiCornerRadius", uiCornerRadius)
-    }.toString()
-}
-
-fun parseAppThemePreset(serialized: String?): AppThemePresetSnapshot? = serialized
-    ?.takeIf { it.isNotBlank() }
-    ?.let { raw ->
-        runCatching {
-            val json = JSONObject(raw)
-            AppThemePresetSnapshot(
-                themePreset = json.optString("themePreset", ThemePreset.CUSTOM.name),
-                themeMode = json.optString("themeMode", ThemeMode.SYSTEM.name),
-                useDynamicColor = json.optBoolean("useDynamicColor", true),
-                useAmoledDark = json.optBoolean("useAmoledDark", false),
-                customPrimaryColor = json.optString("customPrimaryColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                customSecondaryColor = json.optString("customSecondaryColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                customBackgroundColor = json.optString("customBackgroundColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                customSurfaceColor = json.optString("customSurfaceColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                surfaceOpacity = json.optDouble("surfaceOpacity", 1.0).toFloat().coerceIn(0.35f, 1f),
-                uiFontScale = json.optDouble("uiFontScale", 1.0).toFloat().coerceIn(0.85f, 1.3f),
-                uiDensityScale = json.optDouble("uiDensityScale", 1.0).toFloat().coerceIn(0.82f, 1.18f),
-                uiCornerRadius = json.optInt("uiCornerRadius", 12).coerceIn(0, 32)
-            )
-        }.getOrNull()
-    }
-
-fun parseReaderStylePreset(serialized: String?): ReaderStylePresetSnapshot? = serialized
-    ?.takeIf { it.isNotBlank() }
-    ?.let { raw ->
-        runCatching {
-            val json = JSONObject(raw)
-            ReaderStylePresetSnapshot(
-                displayName = json.optReaderStyleDisplayName(),
-                readerPreset = ReadingPreset.fromStored(
-                    json.optString("readerPreset", ReadingPreset.CUSTOM.name)
-                ).name,
-                textFontSize = json.optInt("textFontSize", 18).coerceIn(12, 32),
-                textColorScheme = when (json.optString("textColorScheme", "DAY").uppercase()) {
-                    "SEPIA", "NIGHT", "DAY" -> json.optString("textColorScheme", "DAY").uppercase()
-                    else -> "DAY"
-                },
-                textFontFamily = json.optString("textFontFamily", "Georgia").ifBlank { "Georgia" },
-                textLineHeight = json.optDouble("textLineHeight", 1.8).toFloat().coerceIn(1.0f, 3.0f),
-                textLetterSpacing = json.optDouble("textLetterSpacing", 0.0).toFloat().coerceIn(0f, 0.2f),
-                textWordSpacing = json.optDouble("textWordSpacing", 0.0).toFloat().coerceIn(0f, 0.6f),
-                textParagraphSpacing = json.optDouble("textParagraphSpacing", 0.2).toFloat().coerceIn(0.1f, 1.2f),
-                textAlignment = when (json.optString("textAlignment", "justify").lowercase()) {
-                    "justify", "left", "right", "center" -> json.optString("textAlignment", "justify").lowercase()
-                    else -> "justify"
-                },
-                textBold = json.optBoolean("textBold", false),
-                textCustomTextColor = json.optReaderColorLong(
-                    "textCustomTextColor",
-                    "customTextColor",
-                    "overrideTextColor"
-                ),
-                textCustomBackgroundColor = json.optReaderColorLong(
-                    "textCustomBackgroundColor",
-                    "customBackgroundColor",
-                    "overrideBackgroundColor"
-                ),
-                textCustomAccentColor = json.optReaderColorLong(
-                    "textCustomAccentColor",
-                    "customAccentColor",
-                    "overrideAccentColor"
-                ),
-                brightness = json.optDouble("brightness", -1.0).toFloat().let {
-                    if (it <= 0.01f) -1f else it.coerceIn(0.05f, 1f)
-                },
-                immersiveMode = json.optBoolean("immersiveMode", false),
-                pageAnimation = when (json.optString("pageAnimation", "SLIDE").uppercase()) {
-                    "NONE", "FADE", "SLIDE" -> json.optString("pageAnimation", "SLIDE").uppercase()
-                    else -> "SLIDE"
-                }
-            )
-        }.getOrNull()
-    }
-
-fun ReaderStylePresetSnapshot.matchesUiState(uiState: SettingsUiState): Boolean {
-    return readerPreset == uiState.readerPreset &&
-        textFontSize == uiState.textFontSize &&
-        textColorScheme == uiState.textColorScheme &&
-        textFontFamily == uiState.textFontFamily &&
-        textLineHeight == uiState.textLineHeight &&
-        textLetterSpacing == uiState.textLetterSpacing &&
-        textWordSpacing == uiState.textWordSpacing &&
-        textParagraphSpacing == uiState.textParagraphSpacing &&
-        textAlignment == uiState.textAlignment &&
-        textBold == uiState.textBold &&
-        textCustomTextColor == uiState.textCustomTextColor &&
-        textCustomBackgroundColor == uiState.textCustomBackgroundColor &&
-        textCustomAccentColor == uiState.textCustomAccentColor &&
-        brightness == uiState.brightness &&
-        immersiveMode == uiState.readerImmersiveMode &&
-        pageAnimation == uiState.readerPageAnimation
-}
-
-private fun parseReaderStylePresetEntries(serialized: String?): List<ReaderStylePresetEntry> = serialized
-    ?.takeIf { it.isNotBlank() }
-    ?.let { raw ->
-        runCatching {
-            val jsonArray = JSONArray(raw)
-            buildList {
-                for (index in 0 until jsonArray.length()) {
-                    val item = jsonArray.optJSONObject(index) ?: continue
-                    val snapshot = parseReaderStylePreset(item.toString()) ?: continue
-                    val id = item.optString("id").trim().ifBlank { "preset_${index + 1}" }
-                    add(ReaderStylePresetEntry(id = id, snapshot = snapshot))
-                }
-            }
-        }.getOrDefault(emptyList())
-    }
-    ?: emptyList()
-
-private fun serializeReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>): String = JSONArray().apply {
-    entries.forEach { entry ->
-        put(JSONObject(entry.snapshot.serialize()).apply { put("id", entry.id) })
-    }
-}.toString()
-
-private fun migrateLegacyReaderStyleSlotsToEntries(
-    slots: List<ReaderStylePresetSlot>
-): List<ReaderStylePresetEntry> = slots.mapNotNull { slot ->
-    parseReaderStylePreset(slot.serialized)?.let { snapshot ->
-        ReaderStylePresetEntry(
-            id = "legacy_slot_${slot.index}",
-            snapshot = snapshot
-        )
-    }
-}
 
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
@@ -522,6 +257,13 @@ data class SettingsUiState(
     val translationConfig: TranslationServiceConfig = TranslationServiceConfig(),
     val openRouterApiKey: String = "",
     val openRouterModel: String = "openrouter/auto",
+    val deeplApiKey: String = "",
+    val deeplUseFreeApi: Boolean = true,
+    val googleApiKey: String = "",
+    val yandexApiKey: String = "",
+    val yandexFolderId: String = "",
+    val translationWifiOnly: Boolean = false,
+    val translationDailyCharLimit: Int = 100_000,
     val translationAvailability: TranslationAvailabilitySnapshot = TranslationAvailabilitySnapshot(),
     val translationAvailabilityPairKnown: Boolean = false,
     val ocrLanguage: String = "JA",
@@ -602,66 +344,9 @@ private data class SettingsTranslationAvailabilityState(
 private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
 private const val SETTINGS_READER_DEFAULT_TOOLBAR_BLUR = 0f
 
-private object SettingsSecretStore {
-    private const val ANDROID_KEYSTORE = "AndroidKeyStore"
-    private const val KEY_ALIAS = "mr_comic_settings_openrouter_key"
-    private const val TRANSFORMATION = "AES/GCM/NoPadding"
-    private const val GCM_TAG_BITS = 128
-    private const val ENCRYPTED_PREFIX = "enc:v1:"
+// SettingsSecretStore extracted to SettingsSecretStore.kt
 
-    fun encrypt(value: String): String {
-        val trimmed = value.trim()
-        if (trimmed.isBlank()) return ""
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
-        val encrypted = cipher.doFinal(trimmed.toByteArray(Charsets.UTF_8))
-        return ENCRYPTED_PREFIX +
-            Base64.encodeToString(cipher.iv, Base64.NO_WRAP) +
-            "." +
-            Base64.encodeToString(encrypted, Base64.NO_WRAP)
-    }
-
-    fun decryptOrLegacy(stored: String): String {
-        if (stored.isBlank()) return ""
-        if (!stored.startsWith(ENCRYPTED_PREFIX)) return stored
-        return runCatching {
-            val payload = stored.removePrefix(ENCRYPTED_PREFIX)
-            val iv = payload.substringBefore('.')
-            val encrypted = payload.substringAfter('.', missingDelimiterValue = "")
-            if (iv.isBlank() || encrypted.isBlank()) return@runCatching ""
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(
-                Cipher.DECRYPT_MODE,
-                secretKey(),
-                GCMParameterSpec(GCM_TAG_BITS, Base64.decode(iv, Base64.NO_WRAP))
-            )
-            cipher.doFinal(Base64.decode(encrypted, Base64.NO_WRAP)).toString(Charsets.UTF_8)
-        }.getOrDefault("")
-    }
-
-    private fun secretKey(): SecretKey {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
-        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
-        val spec = KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-        )
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .build()
-        generator.init(spec)
-        return generator.generateKey()
-    }
-}
-
-private fun normalizeLibraryViewMode(
-    stored: String?,
-    legacyGrid: Boolean
-): String = when (stored?.trim()?.uppercase()) {
-    "GRID", "LIST", "STRIPS" -> stored.trim().uppercase()
-    else -> if (legacyGrid) "GRID" else "LIST"
-}
+// normalizeLibraryViewMode moved to com.example.core.domain.util.normalizeLibraryViewModeKey (SET-4/LIB-4).
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -756,7 +441,7 @@ class SettingsViewModel @Inject constructor(
     ) { columns, viewMode, viewGrid ->
         listOf<Any>(
             columns,
-            normalizeLibraryViewMode(viewMode, viewGrid)
+            normalizeLibraryViewModeKey(viewMode, if (viewGrid) LibraryViewModeKey.GRID else LibraryViewModeKey.LIST).name
         )
     }
 
@@ -1325,6 +1010,34 @@ class SettingsViewModel @Inject constructor(
         preferences.get(PreferencesKeys.TRANSLATION_OPENROUTER_MODEL, "openrouter/auto")
     ) { state: SettingsUiState, openRouterModel: String ->
         state.copy(openRouterModel = openRouterModel.ifBlank { "openrouter/auto" })
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_DEEPL_API_KEY, "")
+    ) { state: SettingsUiState, storedDeepLKey: String ->
+        state.copy(deeplApiKey = SettingsSecretStore.decryptOrLegacy(storedDeepLKey))
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_DEEPL_USE_FREE, true)
+    ) { state: SettingsUiState, deeplUseFree: Boolean ->
+        state.copy(deeplUseFreeApi = deeplUseFree)
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_GOOGLE_API_KEY, "")
+    ) { state: SettingsUiState, storedGoogleKey: String ->
+        state.copy(googleApiKey = SettingsSecretStore.decryptOrLegacy(storedGoogleKey))
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_YANDEX_API_KEY, "")
+    ) { state: SettingsUiState, storedYandexKey: String ->
+        state.copy(yandexApiKey = SettingsSecretStore.decryptOrLegacy(storedYandexKey))
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_YANDEX_FOLDER_ID, "")
+    ) { state: SettingsUiState, yandexFolderId: String ->
+        state.copy(yandexFolderId = yandexFolderId)
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_WIFI_ONLY, false)
+    ) { state: SettingsUiState, wifiOnly: Boolean ->
+        state.copy(translationWifiOnly = wifiOnly)
+    }.combine(
+        preferences.get(PreferencesKeys.TRANSLATION_DAILY_CHAR_LIMIT, 100_000)
+    ) { state: SettingsUiState, dailyLimit: Int ->
+        state.copy(translationDailyCharLimit = dailyLimit)
     }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state: SettingsUiState, showCoverTitles: Boolean ->
         state.copy(libraryShowCoverTitles = showCoverTitles)
     }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)) { state: SettingsUiState, showStatusChips: Boolean ->
@@ -1695,7 +1408,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setLibraryViewMode(mode: String) {
-        val normalized = normalizeLibraryViewMode(mode, legacyGrid = true)
+        val normalized = normalizeLibraryViewModeKey(mode, LibraryViewModeKey.GRID).name
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_VIEW_MODE, normalized)
             preferences.set(PreferencesKeys.LIBRARY_VIEW_GRID, normalized == "GRID")
@@ -2308,6 +2021,45 @@ class SettingsViewModel @Inject constructor(
                 value.trim().ifBlank { "openrouter/auto" }
             )
         }
+    }
+
+    fun setDeepLApiKey(value: String) {
+        viewModelScope.launch {
+            val encrypted = SettingsSecretStore.encrypt(value.trim())
+            preferences.set(PreferencesKeys.TRANSLATION_DEEPL_API_KEY, encrypted)
+        }
+    }
+
+    fun setDeepLUseFreeApi(value: Boolean) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_DEEPL_USE_FREE, value) }
+    }
+
+    fun setGoogleApiKey(value: String) {
+        viewModelScope.launch {
+            val encrypted = SettingsSecretStore.encrypt(value.trim())
+            preferences.set(PreferencesKeys.TRANSLATION_GOOGLE_API_KEY, encrypted)
+        }
+    }
+
+    fun setYandexApiKey(value: String) {
+        viewModelScope.launch {
+            val encrypted = SettingsSecretStore.encrypt(value.trim())
+            preferences.set(PreferencesKeys.TRANSLATION_YANDEX_API_KEY, encrypted)
+        }
+    }
+
+    fun setYandexFolderId(value: String) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.TRANSLATION_YANDEX_FOLDER_ID, value.trim())
+        }
+    }
+
+    fun setTranslationWifiOnly(value: Boolean) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_WIFI_ONLY, value) }
+    }
+
+    fun setTranslationDailyCharLimit(value: Int) {
+        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_DAILY_CHAR_LIMIT, value) }
     }
 
     fun setOcrLanguage(lang: String) {

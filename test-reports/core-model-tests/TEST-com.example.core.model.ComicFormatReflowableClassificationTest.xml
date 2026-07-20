@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.model.ComicFormatReflowableClassificationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:01:58.210Z" hostname="LEOSTRANGE" time="0.065">
+  <properties/>
+  <testcase name="textReadingFormatsIncludeChmAndXps" classname="com.example.core.model.ComicFormatReflowableClassificationTest" time="0.061"/>
+  <testcase name="graphicFormatsDoNotUseReflowableDeferredPageCount" classname="com.example.core.model.ComicFormatReflowableClassificationTest" time="0.001"/>
+  <testcase name="heavyReflowableFormatsCoverTextAndSingleBookArchives" classname="com.example.core.model.ComicFormatReflowableClassificationTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

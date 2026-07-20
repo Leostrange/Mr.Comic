@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderInteractionPolicyTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-07-19T17:25:03.551Z" hostname="LEOSTRANGE" time="0.033">
+  <properties/>
+  <testcase name="pagedHtmlNextPagesKeepTopInsetWithoutSkippingContent" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="webtoonModeUsesVerticalFeedOnly" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.001"/>
+  <testcase name="volumePagingStepUsesUpForPreviousAndDownForNext" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="leavingPagedHtmlModeRequiresLayoutTeardown" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="pagedHtmlVisibleViewportKeepsFullReaderSurface" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.001"/>
+  <testcase name="pagedHtmlViewportHeightFallsBackToNativeWhenCssViewportIsUnknown" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="textWebtoonReloadResetsScrollButPagedModeDoesNot" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="chapterNavigationFindsPreviousAndNextEntries" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.002"/>
+  <testcase name="pagedHtmlViewportHeightPrefersStableNativeHeightOverTransientCssViewport" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="currentChapterTitleUsesNearestPreviousEntry" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.001"/>
+  <testcase name="htmlSelectionActionsAreDisabledInPagedModeToPreventSwipeSelection" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="chromeRequiresOpaqueSurfaceOnlyForEinkPreset" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <testcase name="defaultTextAlignmentDoesNotJustifyMobileReaderText" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.02"/>
+  <testcase name="pagedHtmlNextPageStartsAfterLastFittedLineBottom" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.001"/>
+  <testcase name="textWebtoonOrdinaryScrollDoesNotRequestPageNavigation" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.001"/>
+  <testcase name="textWebtoonBoundaryPullRequestsAdjacentBackendPage" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.003"/>
+  <testcase name="pagedModesAllowHorizontalTurnAndLockHtmlVerticalScroll" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.001"/>
+  <testcase name="pagedHtmlViewportHeightFallsBackToLayoutViewportWhenNativeHeightIsUnknown" classname="com.example.feature.reader.ui.ReaderInteractionPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

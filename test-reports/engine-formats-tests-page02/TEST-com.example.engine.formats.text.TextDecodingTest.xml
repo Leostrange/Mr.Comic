@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.TextDecodingTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-19T05:21:30.136Z" hostname="LEOSTRANGE" time="0.009">
+  <properties/>
+  <testcase name="prefersWindows1251ForBomlessCyrillicText" classname="com.example.engine.formats.text.TextDecodingTest" time="0.001"/>
+  <testcase name="decodesValidUtf8WithoutBom" classname="com.example.engine.formats.text.TextDecodingTest" time="0.001"/>
+  <testcase name="decodesWesternCorpusSampleWithoutReplacementGlyphs" classname="com.example.engine.formats.text.TextDecodingTest" time="0.005"/>
+  <testcase name="detectsUtf16LeWithoutBom" classname="com.example.engine.formats.text.TextDecodingTest" time="0.0"/>
+  <testcase name="decodesWindows1252WhenUtf8IsInvalid" classname="com.example.engine.formats.text.TextDecodingTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
