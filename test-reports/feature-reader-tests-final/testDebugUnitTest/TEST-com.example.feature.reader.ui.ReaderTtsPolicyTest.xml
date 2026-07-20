@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.feature.reader.ui.ReaderTtsPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-19T17:30:51.294Z" hostname="LEOSTRANGE" time="0.018">
-  <properties/>
-  <testcase name="buildReaderTtsChunks returns empty for blank text" classname="com.example.feature.reader.ui.ReaderTtsPolicyTest" time="0.01"/>
-  <testcase name="buildReaderTtsChunks splits long paragraphs into calm chunks" classname="com.example.feature.reader.ui.ReaderTtsPolicyTest" time="0.005"/>
-  <testcase name="extractReaderTtsText strips html and keeps readable text" classname="com.example.feature.reader.ui.ReaderTtsPolicyTest" time="0.003"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

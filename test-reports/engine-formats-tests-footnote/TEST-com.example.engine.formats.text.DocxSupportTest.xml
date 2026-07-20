@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.text.DocxSupportTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-19T13:57:05.772Z" hostname="LEOSTRANGE" time="0.053">
-  <properties/>
-  <testcase name="docxBodyTextFallsBackToReaderSerifWhileExplicitHeadingFontIsKept" classname="com.example.engine.formats.text.DocxSupportTest" time="0.04"/>
-  <testcase name="docxTablesInsideStructuredDocumentTagsAreRendered" classname="com.example.engine.formats.text.DocxSupportTest" time="0.013"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

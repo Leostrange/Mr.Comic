@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.core.domain.translation.SafeOnlineTranslationEngineTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:02:06.346Z" hostname="LEOSTRANGE" time="0.01">
-  <properties/>
-  <testcase name="returns error when provider is missing and offline fallback is unavailable" classname="com.example.core.domain.translation.SafeOnlineTranslationEngineTest" time="0.006"/>
-  <testcase name="falls back to offline engine when offline pair is available" classname="com.example.core.domain.translation.SafeOnlineTranslationEngineTest" time="0.002"/>
-  <testcase name="isConfigured is false until real online provider is added" classname="com.example.core.domain.translation.SafeOnlineTranslationEngineTest" time="0.002"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

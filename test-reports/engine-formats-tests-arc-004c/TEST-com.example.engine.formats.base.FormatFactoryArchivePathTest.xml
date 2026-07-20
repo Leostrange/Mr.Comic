@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.base.FormatFactoryArchivePathTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-18T14:24:18.630Z" hostname="LEOSTRANGE" time="0.004">
-  <properties/>
-  <testcase name="archiveContainerFormatFromPathRecognizesEncodedContentLikePath" classname="com.example.engine.formats.base.FormatFactoryArchivePathTest" time="0.002"/>
-  <testcase name="archiveContainerFormatFromPathRecognizesZipEvenWhenStoredAsText" classname="com.example.engine.formats.base.FormatFactoryArchivePathTest" time="0.001"/>
-  <testcase name="archiveContainerFormatFromPathIgnoresRegularTextFiles" classname="com.example.engine.formats.base.FormatFactoryArchivePathTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

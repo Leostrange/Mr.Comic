@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.feature.reader.ui.ReaderFootnoteAnchorPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-18T11:06:01.295Z" hostname="LEOSTRANGE" time="0.003">
-  <properties/>
-  <testcase name="recognizesKnownFootnoteAnchorsButRejectsChapterAnchors" classname="com.example.feature.reader.ui.ReaderFootnoteAnchorPolicyTest" time="0.001"/>
-  <testcase name="createsStableDistinctLookupCandidates" classname="com.example.feature.reader.ui.ReaderFootnoteAnchorPolicyTest" time="0.001"/>
-  <testcase name="normalizesBridgeSchemesAndEncodedFragments" classname="com.example.feature.reader.ui.ReaderFootnoteAnchorPolicyTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -1,1 +1,0 @@
-﻿uiautomator dump succeeded but adb pull failed: /sdcard/reader_qa_reader-chrome.xml

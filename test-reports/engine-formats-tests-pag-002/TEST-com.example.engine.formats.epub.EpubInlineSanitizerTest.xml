@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.epub.EpubInlineSanitizerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-18T18:18:40.458Z" hostname="LEOSTRANGE" time="0.001">
-  <properties/>
-  <testcase name="sanitizeInlineEpubCss_removesEmbeddedFontFaces" classname="com.example.engine.formats.epub.EpubInlineSanitizerTest" time="0.0"/>
-  <testcase name="simplifySingleImageSvgContent_replacesSimpleSvgWrapperWithImage" classname="com.example.engine.formats.epub.EpubInlineSanitizerTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
