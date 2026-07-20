@@ -1,8 +1,4 @@
 <div align="center">
-  <a href="media/video_2025-09-22_00-33-37.mp4">
-    <img src="media/demo.gif" alt="Mr.Comic demo" width="100%">
-  </a>
-
   <h1>Mr.Comic</h1>
 
   <p>
@@ -22,8 +18,6 @@
 
   <p>
     <a href="https://github.com/Leostrange/Mr.Comic/releases/tag/v2.1.0"><b>Download release</b></a>
-    ·
-    <a href="media/video_2025-09-22_00-33-37.mp4">Watch MP4 demo</a>
     ·
     <a href="docs/README.md">Documentation</a>
     ·
@@ -127,10 +121,6 @@ android/
   feature-onboarding/    Onboarding and startup flows
 docs/
   README.md              Documentation map
-  active/                Active technical notes and task plans
-media/
-  demo.gif
-  video_2025-09-22_00-33-37.mp4
 ```
 
 ## Build And Run
@@ -163,16 +153,6 @@ android/app/build/outputs/apk/debug/Mr.Comic-debug.apk
 .\gradlew.bat --no-daemon --console=plain :feature-reader:testDebugUnitTest
 .\gradlew.bat --no-daemon --console=plain :app:testDebugUnitTest
 ```
-
-## Repository Hygiene
-
-The repository keeps source code, docs and small public demo media in git. Build outputs, private samples, emulator captures, logs, local agent workspaces, APKs and one-off analysis dumps should stay outside git or be attached to GitHub Releases.
-
-For release builds, upload APK artifacts to the release page instead of committing them to the repository.
-
-## Contributors
-
-See [CONTRIBUTORS.md](CONTRIBUTORS.md).
 
 ## License
 

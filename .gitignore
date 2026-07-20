@@ -128,5 +128,16 @@ READER_MASTER_BACKLOG.md
 REFACTORING_CONTINUATION_GUIDE.md
 docs/active/
 
+# Internal planning/task docs
+PROJECT_CONTEXT_HANDOFF.md
+READER_SETTINGS_SNAPSHOT*.md
+SKILL.md
+TASKLIST_*.md
+session-*.md
+docs/active/
+docs/bugs_*.md
+docs/reader_test_*.md
+docs/superpowers/
+
 # Executables
 mimo.exe
