@@ -1,5 +1,7 @@
 package com.example.engine.epub.readium
 
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import com.example.core.model.BookFormat
 import com.example.core.model.BookMetadata
 import com.example.core.model.BookSearchHit
@@ -178,15 +180,15 @@ internal fun ReaderLocator.hasReadiumPageHint(): Boolean =
 internal class LazyLegacySessionHandle(
     private val loader: suspend () -> BookSession
 ) {
+    private val mutex = Mutex()
     private var loadedSession: BookSession? = null
 
     fun peek(): BookSession? = loadedSession
 
-    suspend fun getOrLoad(): BookSession {
+    /** Idempotent: concurrent callers get the same instance. */
+    suspend fun getOrLoad(): BookSession = mutex.withLock {
         loadedSession?.let { return it }
-        return loader().also { session ->
-            loadedSession = session
-        }
+        loader().also { loadedSession = it }
     }
 }
 

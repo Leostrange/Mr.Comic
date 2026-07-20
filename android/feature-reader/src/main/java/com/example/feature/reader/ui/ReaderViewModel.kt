@@ -3234,6 +3234,7 @@ class ReaderViewModel @Inject constructor(
         closeActiveBookSession()
         return runCatching {
             val engine = bookEngineRegistry.resolve(detectedFormat)
+                ?: return@runCatching null
             val bookSource = if (resolvedPath.startsWith("content://")) {
                 BookSource.ContentUri(resolvedPath)
             } else {
@@ -3264,7 +3265,7 @@ class ReaderViewModel @Inject constructor(
         activeBookSession = null
         textReaderOrchestrator.activeSession = null
         runCatching {
-            bookEngineRegistry.resolve(session.format).close(session.sessionId)
+            bookEngineRegistry.resolve(session.format)?.close(session.sessionId)
         }.onFailure { error ->
             Log.w(TAG, "Failed to close BookEngine session ${session.sessionId}", error)
         }

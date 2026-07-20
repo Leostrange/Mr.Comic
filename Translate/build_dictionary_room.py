@@ -272,7 +272,9 @@ class DBRouter:
         if not self.split:
             return self._dbs["__combined__"]
         if lang not in self._dbs:
-            self._dbs[lang] = DictionaryDB(self.out_path / f"dict-{lang}.db")
+            db_path = self.out_path / f"dict-{lang}.db"
+            db_path.parent.mkdir(parents=True, exist_ok=True)
+            self._dbs[lang] = DictionaryDB(db_path)
         return self._dbs[lang]
 
     def insert(self, payload: EntryPayload) -> None:
@@ -289,6 +291,13 @@ class DBRouter:
     def close(self) -> None:
         for db in self._dbs.values():
             db.close()
+        self._dbs.clear()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
 
 
 def log(msg: str) -> None:
