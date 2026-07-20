@@ -68,6 +68,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Detekt
+        run: ./gradlew --no-daemon --console=plain detekt
+
       - name: Android Lint
         run: ./gradlew --no-daemon --console=plain :app:lintDebug
 
@@ -76,7 +79,9 @@ jobs:
         if: always()
         with:
           name: lint-reports
-          path: android/app/build/reports/lint-results-*.html
+          path: |
+            android/app/build/reports/lint-results-*.html
+            build/reports/detekt/*.html
           if-no-files-found: ignore
 
   build:

@@ -1,0 +1,70 @@
+# Detekt configuration for Mr.Comic
+# Documentation: https://detekt.dev/docs/rules/
+
+complexity:
+  LargeClass:
+    active: true
+    threshold: 500
+  LongMethod:
+    active: true
+    threshold: 80
+  LongParameterList:
+    active: true
+    functionThreshold: 10
+    constructorThreshold: 12
+  TooManyFunctions:
+    active: true
+    thresholdInClasses: 50
+    thresholdInFiles: 80
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+  ComplexCondition:
+    active: true
+
+style:
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreAnnotated: ['Preview']
+  ReturnCount:
+    active: true
+    max: 4
+  NestedBlockDepth:
+    active: true
+    threshold: 5
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+
+naming:
+  PackageNaming:
+    active: true
+    packagePattern: '^[a-z]+(\.[a-z][a-z0-9]*)*$'
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-z][a-zA-Z0-9]*'
+    ignoreAnnotated: ['Composable']
+
+potential-bugs:
+  UnsafeCallOnNullableType:
+    active: true
+  UnnecessaryNotNullCheck:
+    active: true
+  LateinitUsage:
+    active: false
+
+empty-blocks:
+  EmptyFunctionBlock:
+    active: true
+  EmptyWhenBlock:
+    active: true
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  SwallowedException:
+    active: false
