@@ -23,6 +23,7 @@ android {
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
+    testOptions { unitTests.isReturnDefaultValues = true }
 }
 dependencies {
     implementation(project(":engine-api"))

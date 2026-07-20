@@ -5,6 +5,7 @@ import com.example.core.model.ComicFormat
 import com.example.engine.formats.epub.EpubFormatReader
 import com.example.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.runBlocking
+import org.junit.Assume.assumeTrue
 import org.jsoup.Jsoup
 import org.junit.Test
 import java.io.File
@@ -14,6 +15,7 @@ class FormatDiagnosticsTest {
     @Test
     fun dumpSkottEpubFrontMatter() = runBlocking {
         val sample = locate("S_Skott_Protiv_zerna_glubinnaya_istoriya_drevneyshih_gosudarstv.epub")
+        assumeTrue("EPUB diagnostic sample not available", sample.exists())
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
             println("SKOTT pageCount=" + reader.getPageCount())
@@ -33,6 +35,7 @@ class FormatDiagnosticsTest {
     @Test
     fun dumpPodSolntsemEpubPages() = runBlocking {
         val sample = locate("Под солнцем_868805.epub")
+        assumeTrue("EPUB diagnostic sample not available", sample.exists())
         val reader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
             println("POD pageCount=" + reader.getPageCount())
@@ -76,6 +79,7 @@ class FormatDiagnosticsTest {
     @Test
     fun dumpMobiFrontMatter() = runBlocking {
         val sample = locate("Гарин_Михайловский_Корейские_сказки.mobi")
+        assumeTrue("MOBI diagnostic sample not available", sample.exists())
         val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.MOBI)
         try {
             println("MOBI pageCount=" + reader.getPageCount())

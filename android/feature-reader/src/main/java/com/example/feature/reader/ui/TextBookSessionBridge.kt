@@ -61,19 +61,29 @@ internal object TextBookSessionBridge {
     private suspend fun resolveBookTocPageIndex(item: BookTocItem, reader: FormatReader): Int? {
         val locator = item.locator ?: return null
         val href = locator.href?.trim().orEmpty()
-        if (reader is ReflowableTextFormatReader && href.isNotBlank()) {
-            reader.getTextDocumentSections().indexOfFirst { section ->
-                val sectionId = section.id
-                sectionId != null && hrefMatchesSpineEntry(href, sectionId)
-            }.takeIf { it >= 0 }?.let { return it }
+        if (reader is ReflowableTextFormatReader) {
+            // For reflowable books the index space is section indices, NOT the locator's legacy
+            // global pageIndex. Resolve href → section first; only fall back to pageIndex/position
+            // when href resolution fails, otherwise TOC jumps land in the wrong chapter.
+            if (href.isNotBlank()) {
+                reader.getTextDocumentSections().indexOfFirst { section ->
+                    val sectionId = section.id
+                    sectionId != null && hrefMatchesSpineEntry(href, sectionId)
+                }.takeIf { it >= 0 }?.let { return it }
+                reader.resolveHrefToPage(href)?.let { legacyPage ->
+                    return mapLegacyPageToSectionIndex(reader, legacyPage, href)
+                }
+            }
+            // href unusable: fall back to locator hints, clamped into the section range.
+            val sectionCount = reader.getTextDocumentSections().size
+            locator.pageIndex?.let { return it.coerceIn(0, (sectionCount - 1).coerceAtLeast(0)) }
+            locator.position?.let { return it.coerceIn(0, (sectionCount - 1).coerceAtLeast(0)) }
+            return null
         }
         locator.pageIndex?.let { return it }
         locator.position?.let { return it }
         if (href.isNotBlank()) {
             reader.resolveHrefToPage(href)?.let { legacyPage ->
-                if (reader is ReflowableTextFormatReader) {
-                    return mapLegacyPageToSectionIndex(reader, legacyPage, href)
-                }
                 return legacyPage
             }
         }

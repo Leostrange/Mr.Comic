@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.library.MrComicProgressUiPolicyTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-07-20T02:03:42.390Z" hostname="LEOSTRANGE" time="0.036">
+  <properties/>
+  <testcase name="isMrComicGraceSpentThisWeek_requiresLiveGoalAndSpentGraceSlot" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="mrComicProgressRecentEmptyText_prioritizesEmptyLibraryState" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="mrComicRhythmPills_hideStreakAndGraceWhenGoalsAreOff" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="mrComicStreakGraceCard_hidesPillsWhenStreakLayerIsOff" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.001"/>
+  <testcase name="resolveMrComicProgressBestWeek_breaksPageTiesByActiveDays" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.021"/>
+  <testcase name="mrComicProgressHistoryDays_prefersRecentWindowForLast7AndFallsBackToHistory" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="summarizeMrComicProgressHistory_countsPagesMinutesCheckpointsAndActiveDays" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.001"/>
+  <testcase name="mrComicProgressStreakDays_keepsWeeklySliceSeparateFromRawHistory" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.001"/>
+  <testcase name="mrComicProgressRecentEmptyText_usesSearchScopedMessageWhenLibraryIsNotEmpty" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="mrComicStreakGraceCard_showsPillsWhenGoalAndStreakLayerAreEnabled" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="resolveMrComicProgressBestWeek_returnsNullWhenNoActivityExists" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.002"/>
+  <testcase name="mrComicRhythmPills_showStreakAndGraceOnlyForLiveStreak" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <testcase name="shouldShowMrComicProgressStageArchive_requiresMoreThanOneReachedStage" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.001"/>
+  <testcase name="resolveMrComicProgressBestWeek_prefersCalendarWeekWithMorePages" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.004"/>
+  <testcase name="resolveMrComicProgressBestWeek_fallsBackToRecentActivityWhenHistoryIsEmpty" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.003"/>
+  <testcase name="mrComicRhythmPills_hideZeroStateStreakAndGraceWhenNoRhythmExistsYet" classname="com.example.feature.library.MrComicProgressUiPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

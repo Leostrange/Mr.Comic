@@ -23,8 +23,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.model.Comic
-import com.example.core.model.isReadCompleted
-import com.example.core.model.isReadingInProgress
+import com.example.core.model.ComicReadingStatus
+import com.example.core.model.displayReadingProgress
+import com.example.core.model.readingStatus
 import com.example.core.ui.designsystem.MrComicCardSurface
 import com.example.core.ui.designsystem.MrComicPill
 import com.example.core.ui.designsystem.MrComicProgressLine
@@ -50,6 +51,14 @@ internal fun libraryGridCoverRatio(
         else -> 0.66f
     }
 }
+
+internal fun shouldShowLibraryProgressLine(
+    showProgressIndicators: Boolean,
+    readingStatus: ComicReadingStatus,
+    readingProgress: Float
+): Boolean = showProgressIndicators &&
+    readingStatus != ComicReadingStatus.NEW &&
+    readingProgress > 0f
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -244,8 +253,14 @@ private fun BoxScope.GridCardBadges(
     showProgressIndicators: Boolean,
     showCoverTitles: Boolean
 ) {
-    val showProgressChip = showProgressIndicators && comic.isReadingInProgress()
-    val showCompletedChip = comic.isReadCompleted()
+    val readingStatus = comic.readingStatus()
+    val showProgressChip = showProgressIndicators && readingStatus == ComicReadingStatus.READING
+    val showCompletedChip = readingStatus == ComicReadingStatus.COMPLETED
+    val showProgressLine = shouldShowLibraryProgressLine(
+        showProgressIndicators = showProgressIndicators,
+        readingStatus = readingStatus,
+        readingProgress = comic.displayReadingProgress()
+    )
     val titleBottomPadding = if (showProgressChip || showCompletedChip) 30.dp else 8.dp
     // Format badge — top-left corner (design system spec)
     if (formatLabel != null) {
@@ -285,7 +300,7 @@ private fun BoxScope.GridCardBadges(
 
     if (showProgressChip) {
         MrComicStatusBadge(
-            text = "${(comic.readingProgress * 100).toInt()}%",
+            text = "${(comic.displayReadingProgress() * 100).toInt()}%",
             tone = MrComicStatusTone.Info,
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -308,14 +323,14 @@ private fun BoxScope.GridCardBadges(
         )
     }
 
-    if (showProgressIndicators && comic.readingProgress > 0f) {
+    if (showProgressLine) {
         val progressColor = when {
-            comic.isReadCompleted() -> mrComicCompletedColor()
+            readingStatus == ComicReadingStatus.COMPLETED -> mrComicCompletedColor()
             isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.66f)
             else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.58f)
         }
         MrComicProgressLine(
-            progress = { comic.readingProgress.coerceIn(0f, 1f) },
+            progress = comic::displayReadingProgress,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(2.dp)
@@ -416,6 +431,7 @@ private fun ListCard(
         shadowElevation = libraryCardElevation(cardShadow)
     ) {
         Column(modifier = Modifier.padding(contentPadding)) {
+            val readingStatus = comic.readingStatus()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -460,7 +476,7 @@ private fun ListCard(
                             color = titleColor,
                             modifier = Modifier.weight(1f)
                         )
-                    if (comic.isReadCompleted()) {
+                        if (readingStatus == ComicReadingStatus.COMPLETED) {
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 Icons.Filled.CheckCircle,
@@ -482,9 +498,9 @@ private fun ListCard(
                         FormatBadge(formatLabel, isGraphic = isGraphic)
                     }
                     Spacer(Modifier.height(4.dp))
-                    if (showProgressIndicators && comic.isReadingInProgress()) {
+                    if (showProgressIndicators && readingStatus == ComicReadingStatus.READING) {
                         val progressColor = when {
-                            comic.isReadCompleted() -> mrComicCompletedColor()
+                            readingStatus == ComicReadingStatus.COMPLETED -> mrComicCompletedColor()
                             isGraphic -> MaterialTheme.colorScheme.primary.copy(alpha = 0.66f)
                             else -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.58f)
                         }
@@ -493,18 +509,18 @@ private fun ListCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             MrComicProgressLine(
-                                progress = { comic.readingProgress.coerceIn(0f, 1f) },
+                                progress = comic::displayReadingProgress,
                                 modifier = Modifier.weight(1f).height(2.dp).clip(RoundedCornerShape(2.dp)),
                                 color = progressColor,
                                 trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.64f)
                             )
                             Text(
-                                "${(comic.readingProgress * 100).toInt()}%",
+                                "${(comic.displayReadingProgress() * 100).toInt()}%",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    } else if (comic.isReadCompleted()) {
+                    } else if (readingStatus == ComicReadingStatus.COMPLETED) {
                         val completedColor = mrComicCompletedColor()
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.pagination.PaginatorDiagnosticTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-18T18:28:20.280Z" hostname="LEOSTRANGE" time="0.02">
+  <properties/>
+  <testcase name="trace_textLenCalculation" classname="com.example.engine.formats.text.pagination.PaginatorDiagnosticTest" time="0.003"/>
+  <testcase name="trace_blockExtraction" classname="com.example.engine.formats.text.pagination.PaginatorDiagnosticTest" time="0.005"/>
+  <testcase name="trace_50paragraphs" classname="com.example.engine.formats.text.pagination.PaginatorDiagnosticTest" time="0.012"/>
+  <system-out><![CDATA[Block: '<p>Para1 has marker TOK1.</p>'
+textLen: 22
+Block length: 29
+Jsoup outerHtml: '<p>Para1 has marker TOK1.</p>'
+Jsoup outerHtml length: 29
+Jsoup outerHtml textLen: 22
+=== BLOCK TRACE ===
+Pages: 1
+Page0: markers=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10] htmlLen=359
+  HTML: <div style="width:100%;max-width:100%;overflow-wrap:normal;"><p>Para1 has marker TOK1.</p><p>Para2 has marker TOK2.</p><p>Para3 has marker TOK3.</p><p>Para4 has marker TOK4.</p><p>Para5 has marker TOK5.</p><p>Para6 has marker TOK6.</p><p>Para7 has marker TOK7.</p><p>Para8 has marker TOK8.</p><p>Para
+=== 50 PARA TRACE ===
+Pages: 3
+Page0: markers=25 first=1 last=25
+Page1: markers=27 first=2 last=49
+Page2: markers=2 first=5 last=50
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

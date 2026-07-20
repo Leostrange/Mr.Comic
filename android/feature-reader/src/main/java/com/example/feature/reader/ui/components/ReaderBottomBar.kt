@@ -39,7 +39,7 @@ fun ReaderBottomBar(
     val strings = LocalStrings.current
     val compactImageLayout = isLandscape && !isTextBook
     val showPageCountText = true
-    val showSectionPage = sectionPageCount > 1 && isTextBook
+    val showSectionPage = sectionPageCount > 0 && isTextBook
     val effectiveTotalPages = if (epubAccumulatedTotalPages > 0) epubAccumulatedTotalPages else totalPages
     val effectiveCurrentPage = if (epubAccumulatedTotalPages > 0) epubAccumulatedCurrentPage else currentPage
     val bookProgress = if (effectiveTotalPages > 0) ((effectiveCurrentPage + 1) * 100f / effectiveTotalPages).toInt() else 0
@@ -100,16 +100,15 @@ fun ReaderBottomBar(
 
             Spacer(Modifier.height(12.dp))
             if (showPageCountText) {
-                val counterText = if (epubAccumulatedTotalPages > 0 && chapterTitle != null) {
-                    "$chapterTitle (${epubAccumulatedCurrentPage + 1}/$epubAccumulatedTotalPages)"
-                } else if (epubAccumulatedTotalPages > 0) {
-                    "${epubAccumulatedCurrentPage + 1} / $epubAccumulatedTotalPages"
-                } else if (showSectionPage && chapterTitle != null) {
-                    "$chapterTitle (${sectionCurrentPage + 1}/$sectionPageCount)"
-                } else if (showSectionPage) {
-                    "${currentPage + 1} / $totalPages (${sectionCurrentPage + 1}/$sectionPageCount)"
-                } else {
-                    "${currentPage + 1} / $totalPages"
+                val counterText = when {
+                    epubAccumulatedTotalPages > 0 && chapterTitle != null ->
+                        "$chapterTitle (${epubAccumulatedCurrentPage + 1}/$epubAccumulatedTotalPages)"
+                    epubAccumulatedTotalPages > 0 ->
+                        "${epubAccumulatedCurrentPage + 1} / $epubAccumulatedTotalPages"
+                    chapterTitle != null ->
+                        "$chapterTitle (${currentPage + 1}/$totalPages)"
+                    else ->
+                        "${currentPage + 1} / $totalPages"
                 }
                 Text(
                     text = counterText,

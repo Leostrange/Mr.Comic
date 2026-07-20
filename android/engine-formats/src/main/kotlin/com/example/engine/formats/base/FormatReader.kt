@@ -1,6 +1,7 @@
 package com.example.engine.formats.base
 
 import android.graphics.Bitmap
+import com.example.core.model.ComicFormat
 
 /** One entry in the book's table of contents. */
 data class TocEntry(
@@ -27,6 +28,13 @@ interface FormatReader {
      * route those cases to different containers.
      */
     fun rendersHtmlContent(): Boolean = false
+
+    /**
+     * The effective content format after containers or delegates are resolved.
+     * For example, a ZIP archive with one DOCX should report DOCX here while
+     * keeping the outer reader format as ZIP.
+     */
+    fun resolvedContentFormat(): ComicFormat? = null
 
     /** Return total page count */
     suspend fun getPageCount(): Int

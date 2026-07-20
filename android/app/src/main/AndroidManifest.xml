@@ -388,7 +388,8 @@
             android:name=".media.AudiobookPlaybackService"
             android:exported="true"
             android:foregroundServiceType="mediaPlayback"
-            android:stopWithTask="false">
+            android:stopWithTask="false"
+            tools:ignore="ExportedService">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>

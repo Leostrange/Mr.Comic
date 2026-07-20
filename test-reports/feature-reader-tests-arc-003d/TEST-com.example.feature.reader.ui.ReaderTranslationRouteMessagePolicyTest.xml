@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderTranslationRouteMessagePolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-18T15:06:23.728Z" hostname="LEOSTRANGE" time="0.007">
+  <properties/>
+  <testcase name="online transport reports missing route with pair" classname="com.example.feature.reader.ui.ReaderTranslationRouteMessagePolicyTest" time="0.005"/>
+  <testcase name="online transport reports network requirement with pair" classname="com.example.feature.reader.ui.ReaderTranslationRouteMessagePolicyTest" time="0.0"/>
+  <testcase name="auto transport reports dictionary only route when only short lookup remains" classname="com.example.feature.reader.ui.ReaderTranslationRouteMessagePolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

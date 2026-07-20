@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.pagination.PageQualityMatrixTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-19T23:44:46.254Z" hostname="LEOSTRANGE" time="0.031">
+  <properties/>
+  <testcase name="test02_lastPageCanBeShorter" classname="com.example.engine.formats.text.pagination.PageQualityMatrixTest" time="0.005"/>
+  <testcase name="test02_noUnderfilledPagesInMiddleOfChapter" classname="com.example.engine.formats.text.pagination.PageQualityMatrixTest" time="0.01"/>
+  <testcase name="test03_glyphDescendersPreserved" classname="com.example.engine.formats.text.pagination.PageQualityMatrixTest" time="0.007"/>
+  <testcase name="test02_headingWithNextParagraph_staysTogether" classname="com.example.engine.formats.text.pagination.PageQualityMatrixTest" time="0.003"/>
+  <testcase name="test03_lastLineNotClipped" classname="com.example.engine.formats.text.pagination.PageQualityMatrixTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

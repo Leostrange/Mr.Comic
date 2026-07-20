@@ -203,7 +203,8 @@ internal object MobiTextSupport {
     private fun readPalmDatabaseRecords(bytes: ByteArray): List<ByteArray>? {
         if (bytes.size < PDB_HEADER_SIZE) return null
         val recordCount = bytes.readUInt16BE(76) ?: return null
-        if (recordCount <= 0) return null
+        // Cap at 64K records to prevent OOM on malformed MOBI files (P0 #3)
+        if (recordCount <= 0 || recordCount > 65536) return null
 
         val offsets = mutableListOf<Int>()
         for (index in 0 until recordCount) {
@@ -400,7 +401,14 @@ internal object MobiTextSupport {
             encodingName = Charsets.UTF_8.name(),
             score = scoreDecodedText(bytes.toString(Charsets.UTF_8), Charsets.UTF_8)
         )
-        if (encoding == 65001 && utf8Lenient.text.count { it == '\uFFFD' } <= (bytes.size / 512).coerceAtLeast(8)) {
+        // Check if UTF-8 decoding produces cyrillic-looking text with many U+FFFD replacements.
+        // If so, the file likely uses a single-byte Cyrillic encoding (Windows-1251) despite
+        // declaring UTF-8. Skip the early return and let the charset candidate logic pick the
+        // best encoding.
+        val utf8ReplacementCount = utf8Lenient.text.count { it == '\uFFFD' }
+        val utf8CyrillicCount = utf8Lenient.text.count { it in '\u0400'..'\u04FF' }
+        val hasCyrillicMojibake = utf8CyrillicCount > 10 && utf8ReplacementCount > utf8CyrillicCount / 2
+        if (encoding == 65001 && !hasCyrillicMojibake && utf8ReplacementCount <= (bytes.size / 512).coerceAtLeast(8)) {
             return utf8Lenient
         }
 
@@ -560,22 +568,24 @@ internal object MobiTextSupport {
     private fun extractMarkupFragment(text: String): String? {
         if (!looksLikeMarkup(text)) return null
 
+        // Also search for HTML-entity-encoded tags (P1 #10)
         val trimmed = text.trim()
-        val start = listOf(
+        val startList = listOf(
             "<!doctype",
-            "<html",
-            "<body",
-            "<section",
-            "<article",
-            "<chapter",
-            "<h1",
-            "<h2",
-            "<p",
-            "<div",
-            "<mbp:pagebreak"
-        ).map { marker ->
+            "<html", "&lt;html",
+            "<body", "&lt;body",
+            "<section", "&lt;section",
+            "<article", "&lt;article",
+            "<chapter", "&lt;chapter",
+            "<h1", "&lt;h1",
+            "<h2", "&lt;h2",
+            "<p", "&lt;p",
+            "<div", "&lt;div",
+            "<mbp:pagebreak", "&lt;mbp:pagebreak"
+        )
+        val start = startList.mapNotNull { marker ->
             trimmed.indexOf(marker, ignoreCase = true).takeIf { it >= 0 }
-        }.filterNotNull().minOrNull() ?: 0
+        }.minOrNull() ?: 0
 
         var fragment = trimmed.substring(start).trim()
         val htmlEnd = fragment.lastIndexOf("</html>", ignoreCase = true)
@@ -586,19 +596,21 @@ internal object MobiTextSupport {
     }
 
     private fun looksLikeMarkup(text: String): Boolean {
+        // Also match HTML-entity-encoded tags like &lt;body&gt; (P1 #10)
         val lower = text.lowercase()
-        return listOf(
-            "<html",
-            "<body",
-            "<p",
-            "<div",
-            "<span",
-            "<h1",
-            "<h2",
-            "<mbp:pagebreak",
-            "<guide",
-            "<metadata"
-        ).count { lower.contains(it) } >= 2
+        val markers = listOf(
+            "<html", "&lt;html",
+            "<body", "&lt;body",
+            "<p", "&lt;p",
+            "<div", "&lt;div",
+            "<span", "&lt;span",
+            "<h1", "&lt;h1",
+            "<h2", "&lt;h2",
+            "<mbp:pagebreak", "&lt;mbp:pagebreak",
+            "<guide", "&lt;guide",
+            "<metadata", "&lt;metadata"
+        )
+        return markers.count { lower.contains(it) } >= 2
     }
 
     private fun declaredEncodingName(encoding: Int): String = encodingToCharset(encoding).name()
@@ -699,9 +711,11 @@ internal object MobiTextSupport {
 
         if (cyrillicLetters > (basicLatinLetters + extendedLatinLetters) * 2) {
             score += cyrillicLetters * 3
-            if (charset.name().equals("windows-1251", ignoreCase = true)) score += 40
-            if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 10
-            if (charset.name().equals("IBM866", ignoreCase = true)) score += 10
+            if (charset.name().equals("windows-1251", ignoreCase = true)) score += 100
+            if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 50
+            if (charset.name().equals("IBM866", ignoreCase = true)) score += 50
+            // Penalize UTF-8 for Cyrillic text — it produces mojibake when real encoding is single-byte
+            if (charset.name().equals("UTF-8", ignoreCase = true)) score -= 80
         } else if (basicLatinLetters + extendedLatinLetters >= cyrillicLetters) {
             if (charset.name().equals("windows-1252", ignoreCase = true)) score += 20
             if (charset == Charsets.ISO_8859_1) score += 10

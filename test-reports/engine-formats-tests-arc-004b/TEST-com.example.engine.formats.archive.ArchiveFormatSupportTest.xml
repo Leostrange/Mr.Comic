@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.archive.ArchiveFormatSupportTest" tests="12" skipped="0" failures="0" errors="0" timestamp="2026-07-18T16:02:11.225Z" hostname="LEOSTRANGE" time="0.023">
+  <properties/>
+  <testcase name="selectedTextEntryKeepsSingleBookInnerFormat" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.001"/>
+  <testcase name="comicPageSequenceWithStrayReadmeStaysImageSequence" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.008"/>
+  <testcase name="archiveWithFrontispieceAndSingleTextEntryIsABook" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.001"/>
+  <testcase name="genuineBookFormatStillWinsOverNumericImages" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.005"/>
+  <testcase name="resolved image entry from archive is not a text reading format" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.001"/>
+  <testcase name="textFormatDetectionKeepsInnerBookFormat" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.0"/>
+  <testcase name="archive with only image entries is classified as image sequence" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.001"/>
+  <testcase name="imageSequenceWithoutTextStaysRaster" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.0"/>
+  <testcase name="resolved text entry from archive is a text reading format" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.003"/>
+  <testcase name="archive with text entry is classified as single book" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.0"/>
+  <testcase name="comicPageSequenceWithStrayAboutHtmlStaysImageSequence" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.001"/>
+  <testcase name="archiveWithCoverAndSingleTextEntryIsABook" classname="com.example.engine.formats.archive.ArchiveFormatSupportTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

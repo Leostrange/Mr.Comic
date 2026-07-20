@@ -1,0 +1,828 @@
+﻿--------- beginning of main
+07-18 07:10:11.524 I/HalDevMgr(  727): bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+07-18 07:10:11.526 D/WifiScoreCard(  727): BSSID update SIGNAL_POLL ID: 1602891080 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 2Mbps, Tx Link speed: 2Mbps, Max Supported Tx Link speed: 11Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Calculated Rx : 0Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+07-18 07:10:11.526 D/WifiScoreCard(  727): txRate: 5 txSpeed: 2
+07-18 07:10:11.526 D/WifiScoreCard(  727): network update SIGNAL_POLL "AndroidWifi" ID: 740479026 RSSI -50 txSpeed 2
+07-18 07:10:11.527 D/WifiClientModeImpl[94633:wlan0](  727):  ClientModeImpl$L2ConnectedState screen=on 2 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=100 link=2 tx=4.8, 0.0, 0.0 rx=3.7 bcn=0 [on:0 tx:0 rx:0 period:4122] from screen [on:0 period:1947183687] score=100
+07-18 07:10:11.625 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.19ms>
+07-18 07:10:11.650 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 5) <0.10ms>
+07-18 07:10:11.651 D/BoundBrokerSvc( 2318): onBind: Intent { act=com.google.android.gms.auth.account.data.service.START xflg=0x4 pkg=com.google.android.gms }
+07-18 07:10:11.651 D/BoundBrokerSvc( 2318): Loading bound service for intent: Intent { act=com.google.android.gms.auth.account.data.service.START xflg=0x4 pkg=com.google.android.gms }
+07-18 07:10:11.668 W/ndroid.systemui( 1014): Failed to query component store for system resources: 6
+07-18 07:10:11.672 D/CCodec  ( 1014): allocate(c2.android.vorbis.decoder)
+07-18 07:10:11.678 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.12ms>
+07-18 07:10:11.678 I/libbinder.BpBinder(  646): onLastStrongRef automatically unlinking death recipients for binder (0x7f5e94412520) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+07-18 07:10:11.679 I/libbinder.BpBinder(  646): onLastStrongRef automatically unlinking death recipients for binder (0x7f5e94410790) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+07-18 07:10:11.684 D/AidlBufferPool( 2148): bufferpool2 0x7d5d79a24438 : 0(0 size) total buffers - 0(0 size) used buffers - 0/5 (recycle/alloc) - 4/42 (fetch/transfer)
+--------- beginning of kernel
+07-18 07:10:11.631 I/servicemanager(    0): Caller(pid=1014,uid=10188,sid=u:r:platform_app:s0:c512,c768) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+07-18 07:10:11.684 D/AidlBufferPool( 2148): Destruction - bufferpool2 0x7d5d79a24438 cached: 0/0M, 0/0% in use; allocs: 5, 0% recycled; transfers: 42, 90% unfetched
+07-18 07:10:11.685 D/AidlBufferPool( 2148): Destruction - bufferpool2 0x7d5d79a21158 cached: 0/0M, 0/0% in use; allocs: 5, 0% recycled; transfers: 86, 95% unfetched
+07-18 07:10:11.688 I/CCodec  ( 1014): setting up 'default' as default (vendor) store
+07-18 07:10:11.692 W/chbox:googleapp( 2034): Long monitor contention with owner GoogleApiHandler (2235) at com.google.android.gms.common.ConnectionResult cgyz.b(cgyy, android.content.ServiceConnection, java.lang.String, java.util.concurrent.Executor)(PG:74) waiters=0 in void cgza.onServiceConnected(android.content.ComponentName, android.os.IBinder) for 389ms
+07-18 07:10:11.711 D/nativeloader( 2650): InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+07-18 07:10:11.720 W/s.nexuslauncher( 2066): Suspending all threads took: 73.022ms
+07-18 07:10:11.723 W/s.nexuslauncher( 2066): Long monitor contention with owner async-allocation1 (2648) at android.content.res.XmlBlock android.content.res.AssetManager.openXmlBlockAsset(int, java.lang.String, boolean)(AssetManager.java:1251) waiters=0 in java.lang.String android.content.res.AssetManager.getResourceTypeName(int) for 1.154s
+07-18 07:10:11.725 D/WM-Processor( 1479): Processor: processing WorkGenerationalId(workSpecId=cdc450d4-a389-45a6-af6e-1b3e7d9d0978, generation=0)
+07-18 07:10:11.727 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 5) <0.25ms>
+--------- beginning of system
+07-18 07:10:11.734 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.keyguard.ui.binder.SideFpsProgressBarViewBinder took to complete: 445ms
+07-18 07:10:11.735 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.keyguard.ui.view.AlternateBouncerWindowViewBinder took to complete: 0ms
+07-18 07:10:11.736 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.keyguard.ui.view.layout.KeyguardBlueprintCommandListener took to complete: 1ms
+07-18 07:10:11.745 W/.gms.persistent( 2318): Suspending all threads took: 56.823ms
+07-18 07:10:11.756 D/WM-Processor( 1479): Work WorkGenerationalId(workSpecId=cdc450d4-a389-45a6-af6e-1b3e7d9d0978, generation=0) is already enqueued for processing
+07-18 07:10:11.769 W/earchbox:search( 2351): Suspending all threads took: 152.328ms
+07-18 07:10:11.770 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.log.ClearLogBuffersCommand took to complete: 1ms
+07-18 07:10:11.770 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.log.SessionTracker took to complete: 0ms
+07-18 07:10:11.781 W/SignedPackage(  727): Package doesn't have required signing certificate: com.google.android.retaildemo
+07-18 07:10:11.782 E/RoleControllerServiceImpl(  727): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+07-18 07:10:11.790 W/SignedPackage(  727): Package doesn't have required signing certificate: com.google.android.apps.work.clouddpc
+07-18 07:10:11.805 D/nativeloader( 2631): Configuring clns-shared-9 for other apk /system/priv-app/TeleService/TeleService.apk. target_sdk_version=37, uses_libraries=, library_path=/system/priv-app/TeleService/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user_de/0/com.android.phone:/system/priv-app/TeleService:/system/lib64:/system_ext/lib64
+07-18 07:10:11.812 D/nativeloader( 2650): Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+07-18 07:10:11.813 D/app_process( 2650): u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/10/icu") succeeded. 
+07-18 07:10:11.813 D/app_process( 2650): I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt78l.dat
+07-18 07:10:11.816 D/nativeloader( 2650): Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+07-18 07:10:11.819 D/nativeloader( 2650): Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+07-18 07:10:11.837 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:10:11.839 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.10ms>
+07-18 07:10:11.841 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <0.26ms>
+07-18 07:10:11.841 I/CCodec  ( 1014): Created component [c2.android.vorbis.decoder] for [c2.android.vorbis.decoder]
+07-18 07:10:11.857 I/app_process( 2650): Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+07-18 07:10:11.859 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.29ms>
+07-18 07:10:11.860 W/app_process( 2650): Unexpected CPU variant for x86: x86_64.
+07-18 07:10:11.860 W/app_process( 2650): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:10:11.863 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.12ms>
+07-18 07:10:11.866 W/app_process( 2650): ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*736588042]#PCL[/system/framework/android.test.mock.jar*4008448454]} | PCL[])
+07-18 07:10:11.869 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.04ms>
+07-18 07:10:11.871 W/app_process( 2650): ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[]{PCL[/system/framework/android.test.runner.jar*805256125]{PCL[/system/framework/android.test.base.jar*736588042]#PCL[/system/framework/android.test.mock.jar*4008448454]}#PCL[/system/framework/android.test.base.jar*736588042]} | PCL[/system/framework/android.test.runner.jar*805256125])
+07-18 07:10:11.871 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <0.12ms>
+07-18 07:10:11.875 W/ndroid.systemui( 1014): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:11.875 I/CCodec  ( 1014): Created component [c2.android.vorbis.decoder] for [c2.android.vorbis.decoder]
+07-18 07:10:11.877 D/CCodecConfig( 1014): read media type: audio/vorbis
+07-18 07:10:11.883 E/lowmemorykiller(  308): process_mrelease 2304 failed: No such process
+07-18 07:10:11.884 D/CCodecConfig( 1014): read media type: audio/vorbis
+07-18 07:10:11.894 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.max-count.values
+07-18 07:10:11.895 I/lowmemorykiller(  308): Kill 'com.google.android.googlequicksearchbox:googleapp' (2034), uid 10147, oom_score_adj 100 to free 198172kB rss, 67424kB anon rss, 0kB swap, 0kB dmabuf_pss, 0kB dmabuf_rss; reason: min watermark is breached even after kill
+07-18 07:10:11.897 I/lowmemorykiller(  308): Kill 'com.google.android.googlequicksearchbox:interactor' (1454), uid 10147, oom_score_adj 100 to free 186260kB rss, 63372kB anon rss, 0kB swap, 0kB dmabuf_pss, 0kB dmabuf_rss; reason: min watermark is breached even after kill
+07-18 07:10:11.927 I/binder  (    0): 2215:2241 ioctl c0306201 7d5bbd49dd88 returned -14
+07-18 07:10:11.941 I/binder  (    0): release 2304:2461 transaction 56032 out, still active
+07-18 07:10:11.942 I/binder  (    0): undelivered TRANSACTION_COMPLETE
+07-18 07:10:11.951 I/binder  (    0): 2215:2250 ioctl c0306201 7d5bbd28dd88 returned -14
+07-18 07:10:11.974 I/binder  (    0): 1454:2036 ioctl c0306201 7d5ad37b1d88 returned -14
+07-18 07:10:11.897 I/e.mrcomic.debug( 2148): hiddenapi: Accessing hidden method Landroid/media/AudioTrack;->getLatency()I (runtime_flags=0, domain=platform, api=unsupported) from Landroidx/media3/exoplayer/audio/AudioTrackPositionTracker; (domain=app, TargetSdkVersion=35) using reflection: allowed
+07-18 07:10:11.900 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.subscribed-indices.values
+07-18 07:10:11.900 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: input.buffers.allocator-ids.values
+07-18 07:10:11.901 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.buffers.allocator-ids.values
+07-18 07:10:11.901 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.allocator-ids.values
+07-18 07:10:11.902 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.buffers.pool-ids.values
+07-18 07:10:11.902 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.pool-ids.values
+07-18 07:10:11.910 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.lowlight.LowLightBehaviorCoreStartable took to complete: 139ms
+07-18 07:10:11.913 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.RingtonePlayer took to complete: 3ms
+07-18 07:10:11.913 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.controls.domain.pipeline.MediaDataProcessor took to complete: 0ms
+07-18 07:10:11.915 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.controls.domain.pipeline.interactor.MediaCarouselInteractor took to complete: 0ms
+07-18 07:10:11.917 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.21ms>
+07-18 07:10:11.928 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.dialog.MediaOutputSwitcherDialogUI took to complete: 14ms
+07-18 07:10:11.929 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.muteawait.MediaMuteAwaitConnectionCli took to complete: 0ms
+07-18 07:10:11.935 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.nearby.NearbyMediaDevicesManager took to complete: 6ms
+07-18 07:10:11.938 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.taptotransfer.MediaTttCommandLineHelper took to complete: 2ms
+07-18 07:10:11.941 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.taptotransfer.receiver.MediaTttChipControllerReceiver took to complete: 2ms
+07-18 07:10:11.943 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.media.taptotransfer.sender.MediaTttSenderCoordinator took to complete: 1ms
+07-18 07:10:11.944 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.mediaprojection.taskswitcher.MediaProjectionTaskSwitcherCoreStartable took to complete: 0ms
+07-18 07:10:11.946 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.motioncues.MotionCuesCommand took to complete: 3ms
+07-18 07:10:11.948 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.max-count.values
+07-18 07:10:11.948 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.motioncues.MotionCuesManager took to complete: 0ms
+07-18 07:10:11.951 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.18ms>
+07-18 07:10:11.970 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.15ms>
+07-18 07:10:11.971 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <0.13ms>
+07-18 07:10:11.973 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.20ms>
+07-18 07:10:11.976 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.12ms>
+07-18 07:10:11.994 I/Zygote  ( 2675): Process 2675 created for com.google.android.apps.photos
+07-18 07:10:11.995 I/oid.apps.photos( 2675): Using generational CollectorTypeCMC GC.
+07-18 07:10:11.996 W/oid.apps.photos( 2675): Unexpected CPU variant for x86: x86_64.
+07-18 07:10:11.996 W/oid.apps.photos( 2675): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:10:11.999 I/Zygote  (  471): Process 2304 exited due to signal 9 (Killed)
+07-18 07:10:12.006 W/system_server(  727): Long monitor contention with owner appscheduling.default (832) at void com.android.server.job.controllers.QuotaController$QcHandler.handleMessage(android.os.Message)(QuotaController.java:2987) waiters=0 in void com.android.server.job.JobServiceContext.doCallback(com.android.server.job.JobServiceContext$JobCallback, boolean, java.lang.String) for 117ms
+07-18 07:10:12.010 W/ActivityThread( 1479): getPackageInfo() called with an older ApplicationInfo than the cached version for package com.google.android.providers.media.module
+07-18 07:10:12.011 D/WM-RescheduleReceiver( 1479): Received intent Intent { act=android.intent.action.BOOT_COMPLETED flg=0x89000010 cmp=com.google.android.providers.media.module/androidx.work.impl.background.systemalarm.RescheduleReceiver (has extras) }
+07-18 07:10:12.014 W/system_server(  727): Long monitor contention with owner RoleControllerService (1126) at void com.android.server.permission.access.AccessPersistence.write(com.android.server.permission.access.WritableState, com.android.server.permission.access.AccessState, int)(AccessPersistence.kt:111) waiters=0 in void com.android.server.permission.access.AccessPersistence.writePendingState(int) for 2.722s
+07-18 07:10:12.023 W/libbinder.Binder(  727): Binder transaction to android.app.IActivityManager, function: UNKNOWN_FUNCTION_NAME, code: 235, took 1555ms. Data bytes: 172 Reply bytes: 12 Flags: 18
+07-18 07:10:12.024 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.subscribed-indices.values
+07-18 07:10:12.024 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: input.buffers.allocator-ids.values
+07-18 07:10:12.025 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.buffers.allocator-ids.values
+07-18 07:10:12.025 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.allocator-ids.values
+07-18 07:10:12.026 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.buffers.pool-ids.values
+07-18 07:10:12.027 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.pool-ids.values
+07-18 07:10:12.058 D/nativeloader( 2650): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:10:12.059 D/AndroidRuntime( 2650): Calling main entry com.android.commands.uiautomator.Launcher
+07-18 07:10:12.067 I/CCodecConfig( 1014): query failed after returning 8 values (BAD_INDEX)
+07-18 07:10:12.068 D/CCodecConfig( 1014): c2 config diff is Dict {
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 coded.bitrate.value = 64000
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 input.buffers.max-size.value = 32768
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 input.delay.value = 0
+07-18 07:10:12.068 D/CCodecConfig( 1014):   string input.media-type.value = "audio/vorbis"
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 output.large-frame.max-size = 0
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 output.large-frame.threshold-size = 0
+07-18 07:10:12.068 D/CCodecConfig( 1014):   string output.media-type.value = "audio/raw"
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 raw.channel-count.value = 1
+07-18 07:10:12.068 D/CCodecConfig( 1014):   c2::u32 raw.sample-rate.value = 48000
+07-18 07:10:12.068 D/CCodecConfig( 1014): }
+07-18 07:10:12.121 I/AconfigPackage( 2650): android.media.swcodec.flags is mapped to com.android.media.swcodec
+07-18 07:10:12.122 D/OverviewActionsView( 2066): updateActionButtonsVisibility() called: showSingleTaskActions = [true], showGroupActions = [false]
+07-18 07:10:12.127 I/AconfigPackage( 2650): com.android.permission.flags is mapped to com.android.permission
+07-18 07:10:12.127 I/AconfigPackage( 2650): com.android.permissioncontroller.flags is mapped to com.android.permission
+07-18 07:10:12.128 I/AconfigPackage( 2650): com.google.android.widevine.flags is mapped to com.google.android.widevine
+07-18 07:10:12.134 I/AconfigPackage( 2650): com.android.icu is mapped to com.android.i18n
+07-18 07:10:12.134 I/AconfigPackage( 2650): com.android.appsearch.flags is mapped to com.android.appsearch
+07-18 07:10:12.137 I/AconfigPackage( 2650): com.android.uprobestats.flags is mapped to com.android.uprobestats
+07-18 07:10:12.137 I/AconfigPackage( 2650): android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+07-18 07:10:12.137 I/AconfigPackage( 2650): com.android.crashrecovery.flags is mapped to com.android.crashrecovery
+07-18 07:10:12.140 I/AconfigPackage( 2650): android.provider.flags is mapped to com.android.configinfrastructure
+07-18 07:10:12.140 I/AconfigPackage( 2650): com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+07-18 07:10:12.140 I/AconfigPackage( 2650): com.android.art.flags is mapped to com.android.art
+07-18 07:10:12.140 I/AconfigPackage( 2650): com.android.art.rw.flags is mapped to com.android.art
+07-18 07:10:12.140 I/AconfigPackage( 2650): com.android.libcore is mapped to com.android.art
+07-18 07:10:12.146 I/AconfigPackage( 2650): android.telecom.flags is mapped to com.android.telephonycore
+07-18 07:10:12.146 I/AconfigPackage( 2650): com.android.internal.telecom.flags is mapped to com.android.telephonycore
+07-18 07:10:12.146 I/AconfigPackage( 2650): com.android.telephony.flags is mapped to com.android.telephonycore
+07-18 07:10:12.147 I/AconfigPackage( 2650): com.android.media.extractor.flags is mapped to com.android.media
+07-18 07:10:12.147 I/AconfigPackage( 2650): com.android.media.metrics.flags is mapped to com.android.media
+07-18 07:10:12.147 I/AconfigPackage( 2650): com.android.media.mainline.flags is mapped to com.android.media
+07-18 07:10:12.147 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:10:12.148 I/AconfigPackage( 2650): com.android.wifi.flags is mapped to com.android.wifi
+07-18 07:10:12.150 I/CCodecConfig( 1014): query failed after returning 8 values (BAD_INDEX)
+07-18 07:10:12.151 D/CCodecConfig( 1014): c2 config diff is Dict {
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 coded.bitrate.value = 64000
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 input.buffers.max-size.value = 32768
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 input.delay.value = 0
+07-18 07:10:12.151 D/CCodecConfig( 1014):   string input.media-type.value = "audio/vorbis"
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 output.large-frame.max-size = 0
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 output.large-frame.threshold-size = 0
+07-18 07:10:12.151 D/CCodecConfig( 1014):   string output.media-type.value = "audio/raw"
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 raw.channel-count.value = 1
+07-18 07:10:12.151 D/CCodecConfig( 1014):   c2::u32 raw.sample-rate.value = 48000
+07-18 07:10:12.151 D/CCodecConfig( 1014): }
+07-18 07:10:12.151 I/AconfigPackage( 2650): com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+07-18 07:10:12.151 I/AconfigPackage( 2650): com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+07-18 07:10:12.152 I/AconfigPackage( 2650): com.android.healthfitness.flags is mapped to com.android.healthfitness
+07-18 07:10:12.152 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:10:12.153 I/AconfigPackage( 2650): com.android.ipsec.flags is mapped to com.android.ipsec
+07-18 07:10:12.153 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:10:12.153 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:10:12.153 I/AconfigPackage( 2650): com.android.nfc.module.flags is mapped to com.android.nfcservices
+07-18 07:10:12.154 I/AconfigPackage( 2650): com.android.nfc.module.nonexported.flags is mapped to com.android.nfcservices
+07-18 07:10:12.155 I/AconfigPackage( 2650): com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+07-18 07:10:12.156 I/AconfigPackage( 2650): com.android.adbd.flags is mapped to com.android.adbd
+07-18 07:10:12.003 I/binder  (    0): 1454:1476 ioctl c0306201 7d5bbd395d88 returned -14
+07-18 07:10:12.103 I/binder  (    0): 1454:1787 ioctl c0306201 7d5bbb951710 returned -14
+07-18 07:10:12.103 I/binder  (    0): 2215:2242 ioctl c0306201 7d5bbd395d88 returned -14
+07-18 07:10:12.173 I/AconfigPackage( 2650): com.android.bluetooth.beta.flags is mapped to com.android.bt
+07-18 07:10:12.174 I/AconfigPackage( 2650): com.android.bluetooth.flags is mapped to com.android.bt
+07-18 07:10:12.174 I/AconfigPackage( 2650): com.android.devicelock.flags is mapped to com.android.devicelock
+07-18 07:10:12.175 I/AconfigPackage( 2650): android.os.profiling is mapped to com.android.profiling
+07-18 07:10:12.175 I/AconfigPackage( 2650): android.os.profiling.anomaly.flags is mapped to com.android.profiling
+07-18 07:10:12.177 I/AconfigPackage( 2650): com.android.os.statsd.flags is mapped to com.android.os.statsd
+07-18 07:10:12.178 I/AconfigPackage( 2650): com.android.webapp.flags is mapped to com.android.webapp
+07-18 07:10:12.185 I/AconfigPackage( 2650): com.android.rkpd.flags is mapped to com.android.rkpd
+07-18 07:10:12.187 I/AconfigPackage( 2650): com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+07-18 07:10:12.189 I/AconfigPackage( 2650): com.android.adservices.flags is mapped to com.android.adservices
+07-18 07:10:12.189 I/AconfigPackage( 2650): com.android.sdksandbox.flags is mapped to com.android.adservices
+07-18 07:10:12.189 I/AconfigPackage( 2650): android.app.sdksandbox.flags is mapped to com.android.adservices
+07-18 07:10:12.189 I/AconfigPackage( 2650): com.android.uwb.flags is mapped to com.android.uwb
+07-18 07:10:12.189 I/AconfigPackage( 2650): com.android.ranging.flags is mapped to com.android.uwb
+07-18 07:10:12.190 I/AconfigPackage( 2650): com.android.npumanager is mapped to com.android.npumanager
+07-18 07:10:12.190 I/AconfigPackage( 2650): android.graphics.pdf.flags is mapped to com.android.mediaprovider
+07-18 07:10:12.190 I/AconfigPackage( 2650): com.android.providers.media.flags is mapped to com.android.mediaprovider
+07-18 07:10:12.190 I/AconfigPackage( 2650): android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+07-18 07:10:12.191 I/AconfigPackage( 2650): com.android.tethering.mainline.beta is mapped to com.android.tethering
+07-18 07:10:12.191 I/AconfigPackage( 2650): android.net.http is mapped to com.android.tethering
+07-18 07:10:12.191 I/AconfigPackage( 2650): com.android.tethering.readonly.flags is mapped to com.android.tethering
+07-18 07:10:12.191 I/AconfigPackage( 2650): android.net.vcn is mapped to com.android.tethering
+07-18 07:10:12.192 I/AconfigPackage( 2650): com.android.net.flags is mapped to com.android.tethering
+07-18 07:10:12.192 I/AconfigPackage( 2650): com.android.tethering.flags is mapped to com.android.tethering
+07-18 07:10:12.192 I/AconfigPackage( 2650): com.android.tethering.beta.test is mapped to com.android.tethering
+07-18 07:10:12.192 I/AconfigPackage( 2650): com.android.nearby.flags is mapped to com.android.tethering
+07-18 07:10:12.192 I/AconfigPackage( 2650): com.android.net.thread.flags is mapped to com.android.tethering
+07-18 07:10:12.192 I/AconfigPackage( 2650): com.android.net.ct.flags is mapped to com.android.tethering
+07-18 07:10:12.201 I/AconfigPackage( 2650): com.android.system.virtualmachine.flags is mapped to com.android.virt
+07-18 07:10:12.202 E/FeatureFlagsImplExport( 2650): android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:10:12.211 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:10:12.212 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:10:12.212 D/AccessibilityManagerService(  727): restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+07-18 07:10:12.222 W/system_server(  727): Long monitor contention with owner binder:727_1F (1906) at void com.android.server.accessibility.AbstractAccessibilityServiceConnection.onDisplayRemoved(int)(AbstractAccessibilityServiceConnection.java:1734) waiters=0 in void com.android.server.accessibility.AccessibilityWindowManager.setAccessibilityWindowAttributes(int, int, int, android.view.accessibility.AccessibilityWindowAttributes) for 162ms
+07-18 07:10:12.223 W/Looper  (  727): Slow dispatch took 790ms android.ui app=system_server main=false group=TOP_APP h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@137df3c m=0
+07-18 07:10:12.177 I/binder  (    0): release 1454:1787 transaction 54756 out, still active
+07-18 07:10:12.180 I/binder  (    0): undelivered TRANSACTION_COMPLETE
+07-18 07:10:12.226 E/AppOps  (  727): Bad call made by uid 1000. Package "com.google.android.googlequicksearchbox" does not belong to uid 1000.
+07-18 07:10:12.227 W/BinderNative(  727): Uncaught exception from death notification
+07-18 07:10:12.227 W/BinderNative(  727): java.lang.SecurityException: Specified package "com.google.android.googlequicksearchbox" under uid 1000 but it is not
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.verifyAndGetBypass(AppOpsService.java:5210)
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.verifyAndGetBypass(AppOpsService.java:5007)
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.verifyAndGetBypass(AppOpsService.java:4996)
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.stopWatchingAsyncNoted(AppOpsService.java:3859)
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.lambda$startWatchingAsyncNoted$8(AppOpsService.java:3835)
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.$r8$lambda$8-LvphSu5hQo1Pm8R22O3seI00E(AppOpsService.java:0)
+07-18 07:10:12.227 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService$$ExternalSyntheticLambda2.onInterfaceDied(R8$$SyntheticClass:0)
+07-18 07:10:12.227 W/BinderNative(  727): 	at android.os.RemoteCallbackList$Builder$1.onCallbackDied(RemoteCallbackList.java:337)
+07-18 07:10:12.227 W/BinderNative(  727): 	at android.os.RemoteCallbackList$Interface.binderDied(RemoteCallbackList.java:229)
+07-18 07:10:12.227 W/BinderNative(  727): 	at android.os.IBinder$DeathRecipient.binderDied(IBinder.java:341)
+07-18 07:10:12.227 W/BinderNative(  727): 	at android.os.BinderProxy.sendDeathNotice(BinderProxy.java:850)
+07-18 07:10:12.206 I/MediaCodec( 1014): media_quality service unavailable, skipping updatePictureProfile
+07-18 07:10:12.235 D/UiAutomationConnection( 2650): Created on user UserHandle{0}
+07-18 07:10:12.236 D/CCodec  ( 1014): [c2.android.vorbis.decoder] buffers are bound to CCodec for this session
+07-18 07:10:12.236 D/CCodecConfig( 1014): no c2 equivalents for durationUs
+07-18 07:10:12.236 I/UiAutomation( 2650): Initialized for user 0 on display 0
+07-18 07:10:12.236 D/CCodecConfig( 1014): no c2 equivalents for track-id
+07-18 07:10:12.236 W/UiAutomation( 2650): Created with deprecatead constructor, assumes DEFAULT_DISPLAY
+07-18 07:10:12.236 D/CCodecConfig( 1014): no c2 equivalents for csd-1
+07-18 07:10:12.236 D/CCodecConfig( 1014): no c2 equivalents for flags
+07-18 07:10:12.237 D/CCodecConfig( 1014): c2 config diff is   c2::u32 coded.bitrate.value = 160000
+07-18 07:10:12.237 D/CCodecConfig( 1014):   c2::u32 raw.channel-count.value = 2
+07-18 07:10:12.237 D/CCodecConfig( 1014):   c2::u32 raw.sample-rate.value = 44100
+07-18 07:10:12.238 D/CCodec  ( 1014): encoding statistics level = 0
+07-18 07:10:12.238 D/CCodec  ( 1014): setup formats input: AMessage(what = 0x00000000) = {
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t bitrate = 160000
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t channel-count = 2
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t max-input-size = 32768
+07-18 07:10:12.238 D/CCodec  ( 1014):   string mime = "audio/vorbis"
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t sample-rate = 44100
+07-18 07:10:12.238 D/CCodec  ( 1014): }
+07-18 07:10:12.238 D/CCodec  ( 1014): setup formats output: AMessage(what = 0x00000000) = {
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t buffer-batch-max-output-size = 0
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t buffer-batch-threshold-output-size = 0
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t channel-count = 2
+07-18 07:10:12.238 D/CCodec  ( 1014):   string mime = "audio/raw"
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t sample-rate = 44100
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t channel-mask = 3
+07-18 07:10:12.238 D/CCodec  ( 1014):   int32_t android._config-pcm-encoding = 2
+07-18 07:10:12.238 D/CCodec  ( 1014): }
+07-18 07:10:12.238 I/CCodecConfig( 1014): query failed after returning 8 values (BAD_INDEX)
+07-18 07:10:12.239 E/ndroid.systemui( 1014): Failed to query component interface for required system resources: 6
+07-18 07:10:12.241 D/C2Store ( 1014): Using DMABUF Heaps
+07-18 07:10:12.244 D/AccessibilityManagerService(  727): changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+07-18 07:10:12.244 I/UiAutomationManager(  727): Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation, flags=0x0) when called by user 0
+07-18 07:10:12.245 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:10:12.245 I/Zygote  (  471): Process 1454 exited due to signal 9 (Killed)
+07-18 07:10:12.247 D/nativeloader( 2675): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:10:12.273 D/AndroidRuntime( 2589): Shutting down VM
+07-18 07:10:12.289 W/libbinder.IPCThreadState( 2589): call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+07-18 07:10:12.290 W/libbinder.IPCThreadState( 2589): call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+07-18 07:10:12.365 W/ActivityManager(  727): Slow operation: 354ms so far, now at attachApplicationLocked: before bindApplication
+07-18 07:10:12.365 W/ActivityManager(  727): Slow operation: 355ms so far, now at attachApplicationLocked: immediately before bindApplication
+07-18 07:10:12.407 I/MediaCodec( 1014): media_quality service unavailable, skipping updatePictureProfile
+07-18 07:10:12.409 D/CCodec  ( 1014): [c2.android.vorbis.decoder] buffers are bound to CCodec for this session
+07-18 07:10:12.410 D/CCodecConfig( 1014): no c2 equivalents for durationUs
+07-18 07:10:12.410 D/CCodecConfig( 1014): no c2 equivalents for track-id
+07-18 07:10:12.410 D/CCodecConfig( 1014): no c2 equivalents for csd-1
+07-18 07:10:12.410 D/CCodecConfig( 1014): no c2 equivalents for flags
+07-18 07:10:12.415 D/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#856] Created input block pool with allocatorID 16 => poolID 17 - OK (0)
+07-18 07:10:12.504 W/ActivityManager(  727): Slow operation: 493ms so far, now at attachApplicationLocked: immediately after bindApplication
+07-18 07:10:12.515 W/ActivityManager(  727): Slow operation: 504ms so far, now at attachApplicationLocked: after updateLruProcessLocked
+07-18 07:10:12.516 D/OomAdjuster(  727): Not killing cached processes
+07-18 07:10:12.519 D/NetworkMonitor/101( 1123): PROBE_DNS www.google.com 10596ms OK 142.251.156.119,142.251.152.119,142.251.150.119,142.251.154.119,142.251.157.119,142.251.151.119,142.251.153.119,142.251.155.119,2001:4860:4827:7700::,2001:4860:4826:7700::,2001:4860:482c:7700::,2001:4860:482d:7700::,2001:4860:4829:7700::,2001:4860:482a:7700::,2001:4860:482b:7700::,2001:4860:4828:7700::
+07-18 07:10:12.524 I/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#856] Created output block pool with allocatorID 16 => poolID 37 - OK
+07-18 07:10:12.527 D/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#856] Configured output block pool ids 37 => OK
+07-18 07:10:12.532 W/ActivityManager(  727): Slow operation: 521ms so far, now at attachApplicationLocked: after updateOomAdjLocked
+07-18 07:10:12.534 W/libbinder.Binder(  727): Binder transaction to android.app.IActivityManager, function: UNKNOWN_FUNCTION_NAME, code: 29, took 1224ms. Data bytes: 112 Reply bytes: 4 Flags: 18
+07-18 07:10:12.535 E/Codec2-ComponentInterface(  646): We have a failed config
+07-18 07:10:12.545 I/netd    (  468): tetherGetStats() -> {[]} <6.21ms>
+07-18 07:10:12.549 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:10:12.549 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:10:12.549 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:10:12.549 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:10:12.549 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:10:12.550 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:10:12.550 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:10:12.550 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:10:12.558 I/ActivityManager(  727): Process android.process.acore (pid 2215) has died: prev LAST
+07-18 07:10:12.558 D/CountryDetector(  727): No listener is left
+07-18 07:10:12.559 W/Looper  (  727): Slow dispatch took 152ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@d913327> m=0
+07-18 07:10:12.559 W/Looper  (  727): Slow delivery took 348ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@c4c2bd7> m=0
+07-18 07:10:12.584 W/libbinder.Binder( 2318): Binder transaction to android.content.IContentProvider, function: UNKNOWN_FUNCTION_NAME, code: 1, took 1892ms. Data bytes: 368 Reply bytes: 80 Flags: 18
+07-18 07:10:12.599 W/mediaswcodec(  646): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:12.600 W/ndroid.systemui( 1014): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:12.608 I/Zygote  (  471): Process 2215 exited due to signal 9 (Killed)
+07-18 07:10:12.609 D/CCodecConfig( 1014): c2 config diff is   c2::u32 coded.bitrate.value = 160000
+07-18 07:10:12.609 D/CCodecConfig( 1014):   c2::u32 raw.channel-count.value = 2
+07-18 07:10:12.609 D/CCodecConfig( 1014):   c2::u32 raw.sample-rate.value = 44100
+07-18 07:10:12.613 D/SimpleC2Component(  646): Using output block pool with poolID 37 => got 37 - 0
+07-18 07:10:12.626 D/CCodec  ( 1014): encoding statistics level = 0
+07-18 07:10:12.626 D/CCodec  ( 1014): setup formats input: AMessage(what = 0x00000000) = {
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t bitrate = 160000
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t channel-count = 2
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t max-input-size = 32768
+07-18 07:10:12.626 D/CCodec  ( 1014):   string mime = "audio/vorbis"
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t sample-rate = 44100
+07-18 07:10:12.626 D/CCodec  ( 1014): }
+07-18 07:10:12.626 D/CCodec  ( 1014): setup formats output: AMessage(what = 0x00000000) = {
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t buffer-batch-max-output-size = 0
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t buffer-batch-threshold-output-size = 0
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t channel-count = 2
+07-18 07:10:12.626 D/CCodec  ( 1014):   string mime = "audio/raw"
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t sample-rate = 44100
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t channel-mask = 3
+07-18 07:10:12.626 D/CCodec  ( 1014):   int32_t android._config-pcm-encoding = 2
+07-18 07:10:12.626 D/CCodec  ( 1014): }
+07-18 07:10:12.628 W/Looper  (  727): Slow delivery took 823ms android.ui app=system_server main=false group=TOP_APP h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@ecf8f6c m=0
+07-18 07:10:12.629 W/Looper  (  727): Slow dispatch took 405ms android.ui app=system_server main=false group=TOP_APP h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@ecf8f6c m=0
+07-18 07:10:12.651 I/CCodecConfig( 1014): query failed after returning 8 values (BAD_INDEX)
+07-18 07:10:12.655 W/system_server(  727): Long monitor contention with owner binder:727_6 (991) at void com.android.server.am.ActivityManagerService.attachApplication(android.app.IApplicationThread, long)(ActivityManagerService.java:5560) waiters=1 in int com.android.server.am.ActivityManagerService.bindServiceInstance(android.app.IApplicationThread, android.os.IBinder, android.content.Intent, java.lang.String, android.app.IServiceConnection, long, java.lang.String, boolean, int, java.lang.String, android.app.IApplicationThread, java.lang.String, int) for 632ms
+07-18 07:10:12.671 I/resolv  (  468): GetAddrInfoHandler::run: {101 983141 101 983141 1073 1}
+07-18 07:10:12.672 I/resolv  (  468): res_nmkquery: (QUERY, IN, AAAA)
+07-18 07:10:12.677 E/ndroid.systemui( 1014): Failed to query component interface for required system resources: 6
+07-18 07:10:12.680 I/resolv  (  468): resolv_cache_lookup: FOUND IN CACHE entry=0x7a2498e19c90
+07-18 07:10:12.680 I/resolv  (  468): doQuery: rcode=0, ancount=8, return value=368
+07-18 07:10:12.701 D/wpa_supplicant(  993): nl80211: Drv Event 64 (NL80211_CMD_NOTIFY_CQM) received for wlan0
+07-18 07:10:12.702 D/wpa_supplicant(  993): nl80211: Beacon loss event
+07-18 07:10:12.702 D/wpa_supplicant(  993): wlan0: Event BEACON_LOSS (53) received
+07-18 07:10:12.702 I/wpa_supplicant(  993): wlan0: CTRL-EVENT-BEACON-LOSS 
+07-18 07:10:12.703 I/resolv  (  468): res_nmkquery: (QUERY, IN, A)
+07-18 07:10:12.704 I/resolv  (  468): resolv_cache_lookup: FOUND IN CACHE entry=0x7a2548e2d090
+07-18 07:10:12.704 I/resolv  (  468): doQuery: rcode=0, ancount=8, return value=272
+07-18 07:10:12.745 W/libbinder.Binder(  727): Binder transaction to android.app.IActivityManager, function: UNKNOWN_FUNCTION_NAME, code: 43, took 1154ms. Data bytes: 508 Reply bytes: 8 Flags: 18
+07-18 07:10:12.749 D/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#755] Created input block pool with allocatorID 16 => poolID 18 - OK (0)
+07-18 07:10:12.753 D/WM-WorkerWrapper( 1479): Starting work for com.android.providers.media.MediaServiceV2
+07-18 07:10:12.778 I/AiAiTextClassifier( 2257): [KnowledgeGraphCollectionsTableDownloaderImpl] triggering an initial sync of KnowledgeGraphCollectionsTable
+07-18 07:10:12.786 I/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#755] Created output block pool with allocatorID 16 => poolID 38 - OK
+07-18 07:10:12.803 D/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#755] Configured output block pool ids 38 => OK
+07-18 07:10:12.804 E/Codec2-ComponentInterface(  646): We have a failed config
+07-18 07:10:12.814 I/AiAiMatchmaker( 2257): Locale changed: null -> en-us
+07-18 07:10:12.827 D/CompatChangeReporter( 2655): Compat change id reported: 333566037; UID 10215; state: ENABLED
+07-18 07:10:12.836 D/SimpleC2Component(  646): Using output block pool with poolID 38 => got 38 - 0
+07-18 07:10:12.842 W/mediaswcodec(  646): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:12.843 W/ndroid.systemui( 1014): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:12.845 W/Looper  (  727): Slow dispatch took 143ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=com.android.server.accessibility.UiAutomationManager$UiAutomationService$$ExternalSyntheticLambda0@867e022 m=0
+07-18 07:10:12.855 W/ActivityManager(  727): Slow operation: 99ms so far, now at attachApplicationLocked: immediately after bindApplication
+07-18 07:10:12.855 W/ActivityManager(  727): Slow operation: 107ms so far, now at attachApplicationLocked: after updateLruProcessLocked
+07-18 07:10:12.867 V/UiAutomation( 2650): Init UiAutomation@2a06431[id=5, displayId=0, flags=0]
+07-18 07:10:12.877 D/Backup  ( 2330): [D2dTransport] Moved from state 0 to 0
+07-18 07:10:12.888 W/ActivityManager(  727): Slow operation: 137ms so far, now at attachApplicationLocked: after updateOomAdjLocked
+07-18 07:10:12.912 W/Looper  (  727): Drained
+07-18 07:10:12.917 I/MediaServiceV2( 1479): Work initiated for action [ android.intent.action.MEDIA_SCANNER_SCAN_FILE ]
+07-18 07:10:12.962 D/ApplicationLoaders( 2675): Returning zygote-cached class loader: /system/framework/org.apache.http.legacy.jar
+07-18 07:10:12.962 D/ApplicationLoaders( 2675): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-18 07:10:12.962 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:10:12.963 D/ApplicationLoaders( 2675): Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-18 07:10:12.979 D/ApplicationLoaders( 2655): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-18 07:10:12.979 D/ApplicationLoaders( 2655): Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-18 07:10:13.031 W/ndroid.systemui( 1014): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:13.032 W/mediaswcodec(  646): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:13.040 D/NetworkMonitor/101( 1123): PROBE_DNS connectivitycheck.gstatic.com 11324ms OK 64.233.161.94,2a00:1450:4010:c02::5e
+07-18 07:10:13.063 W/ndroid.systemui( 1014): Suspending all threads took: 1.057s
+07-18 07:10:13.069 I/ActivityManager(  727): Process com.google.android.googlequicksearchbox:interactor (pid 1454) has died: vis BFGS
+07-18 07:10:13.072 W/ActivityManager(  727): Scheduling restart of crashed service com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService in 1000ms for connection
+07-18 07:10:13.106 W/Looper  (  727): Slow dispatch took 260ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@1f70d2b> m=0
+07-18 07:10:13.111 I/Role    (  727): com.google.android.gms not qualified for android.app.role.SYSTEM_DEPENDENCY_INSTALLER due to missing RequiredComponent{mFlags='0', mIntentFilterData=IntentFilterData{mAction='android.content.pm.action.INSTALL_DEPENDENCY', mCategories='[]', mDataScheme='null', mDataType='null'}, mMetaData=[], mPermission='android.permission.BIND_DEPENDENCY_INSTALLER', mQueryFlags=0} Requirement{mFeatureFlag=null, mMinTargetSdkVersion=1}
+07-18 07:10:13.111 E/RoleControllerServiceImpl(  727): Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.SYSTEM_DEPENDENCY_INSTALLER, user: 0
+07-18 07:10:13.119 I/resolv  (  468): GetAddrInfoHandler::run: {101 983141 101 983141 1073 1}
+07-18 07:10:13.121 I/resolv  (  468): res_nmkquery: (QUERY, IN, AAAA)
+07-18 07:10:13.123 I/resolv  (  468): resolv_cache_lookup: FOUND IN CACHE entry=0x7a24c8e15d50
+07-18 07:10:13.123 I/resolv  (  468): doQuery: rcode=0, ancount=1, return value=104
+07-18 07:10:13.129 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:10:13.134 I/resolv  (  468): res_nmkquery: (QUERY, IN, A)
+07-18 07:10:13.134 I/resolv  (  468): resolv_cache_lookup: FOUND IN CACHE entry=0x7a24c8e16890
+07-18 07:10:13.135 I/resolv  (  468): doQuery: rcode=0, ancount=1, return value=92
+07-18 07:10:13.175 I/libprocessgroup(  727): Removed cgroup /sys/fs/cgroup/apps/uid_10106/pid_2215
+07-18 07:10:13.178 I/libprocessgroup(  727): Removed cgroup /sys/fs/cgroup/apps/uid_10147/pid_1454
+07-18 07:10:13.180 D/BoundBrokerSvc( 2318): onBind: Intent { act=android.intent.action.RESOLVE_INSTANT_APP_PACKAGE xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentBoundBrokerService }
+07-18 07:10:13.180 D/BoundBrokerSvc( 2318): Loading bound service for intent: Intent { act=android.intent.action.RESOLVE_INSTANT_APP_PACKAGE xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentBoundBrokerService }
+07-18 07:10:13.198 W/GoogleCertificates( 2318): GoogleCertificates has been initialized already
+07-18 07:10:13.226 V/GraphicsEnvironment( 2631): Currently set values for:
+07-18 07:10:13.228 V/GraphicsEnvironment( 2631):   angle_gl_driver_selection_pkgs=[]
+07-18 07:10:13.228 V/GraphicsEnvironment( 2631):   angle_gl_driver_selection_values=[]
+07-18 07:10:13.228 V/GraphicsEnvironment( 2631): com.android.phone is not listed in per-application setting
+07-18 07:10:13.228 V/GraphicsEnvironment( 2631): No special selections for ANGLE, returning default driver choice
+07-18 07:10:13.230 W/ndroid.systemui( 1014): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:13.230 W/mediaswcodec(  646): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:13.232 I/ActivityManager(  727): Process com.google.android.apps.restore (pid 2304) has died: cch CEM 
+07-18 07:10:13.240 W/Looper  ( 1014): Slow dispatch took 1638ms BroadcastRunning app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=android.app.LoadedApk$ReceiverDispatcher$Args$$ExternalSyntheticLambda0@86151f5 m=0
+07-18 07:10:13.284 D/MediaMetricsManagerService(  727): failed to get player_metrics_app_blocklist from DeviceConfig
+07-18 07:10:13.285 V/MediaMetricsManagerService(  727): Logging level blocked: Failed to get PLAYER_METRICS_APP_BLOCKLIST.
+07-18 07:10:13.297 D/AllAppsTransitionController( 2066): shouldProtectHeader: false skipScrim: false state: Normal stateManager.getState(): Normal
+07-18 07:10:13.301 W/Looper  (  727): Slow dispatch took 165ms android.ui app=system_server main=false group=TOP_APP h=com.android.server.am.ActivityManagerService$UiHandler c=com.android.server.am.UidObserverController$$ExternalSyntheticLambda0@a295066 m=0
+07-18 07:10:13.323 D/BoundBrokerSvc( 2318): onBind: Intent { act=android.net.action.RECOMMEND_NETWORKS xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentBoundBrokerService }
+07-18 07:10:13.323 D/BoundBrokerSvc( 2318): Loading bound service for intent: Intent { act=android.net.action.RECOMMEND_NETWORKS xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentBoundBrokerService }
+07-18 07:10:13.324 I/BndSvcConfigHelper( 2318): No bound-service is registered for action: android.net.action.RECOMMEND_NETWORKS
+07-18 07:10:13.328 V/ProcessingUtils( 1479): Media processing feature flag is not enabled.
+07-18 07:10:13.328 E/ProcessingUtils( 1479): Media processing is disabled.
+07-18 07:10:13.328 I/ProcessingUtils( 1479): OEM defined SearchMediaService is used or SearchMediaService is not enabled. Skip media processing.
+07-18 07:10:13.343 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+07-18 07:10:13.345 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+07-18 07:10:13.345 D/InetDiagMessage(  727): Destroyed live tcp sockets for uids={10152} in 2ms
+07-18 07:10:13.346 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+07-18 07:10:13.347 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+07-18 07:10:13.347 D/InetDiagMessage(  727): Destroyed live tcp sockets for uids={20152} in 3ms
+07-18 07:10:13.356 V/GraphicsEnvironment( 2631): Neither updatable production driver nor prerelease driver is supported.
+07-18 07:10:13.357 D/KeyboardInsetsHandler( 2066): setState, toState:Normal StateManager(mLastStableState:Normal, mCurrentStableState:Normal, mState:Normal, mRestState:null, isInTransition:false)
+07-18 07:10:13.357 D/KeyboardInsetsHandler( 2066): removePendingImeController: pendingImeController=null
+07-18 07:10:13.357 D/KeyboardStateManager( 2066): hideKeyboard
+07-18 07:10:13.357 D/KeyboardStateManager( 2066): isImeShown: false
+07-18 07:10:13.357 D/KeyboardStateManager( 2066): hideKeyboard: WIC IS NULL
+07-18 07:10:13.357 D/KeyboardStateManager( 2066): InputMethodManager: android.view.inputmethod.InputMethodManager@e95ea84 token: null
+07-18 07:10:13.359 W/Looper  ( 1014): Slow delivery took 1629ms SysUiBg app=com.android.systemui main=false group=FOREGROUND h=android.net.ConnectivityManager$CallbackHandler c=null m=6
+07-18 07:10:13.361 I/WifiService(  727): getWifiEnabledState uid=10188 state=3
+07-18 07:10:13.361 D/OverviewActionsView( 2066): updateActionButtonsVisibility() called: showSingleTaskActions = [true], showGroupActions = [false]
+07-18 07:10:13.371 I/Zygote  (  471): Process 2034 exited due to signal 9 (Killed)
+07-18 07:10:13.373 I/ActivityManager(  727): Process com.google.android.googlequicksearchbox:googleapp (pid 2034) has died: vis BFGS
+07-18 07:10:13.374 E/AppOps  (  727): Bad call made by uid 1000. Package "com.google.android.googlequicksearchbox" does not belong to uid 1000.
+07-18 07:10:13.375 W/BinderNative(  727): Uncaught exception from death notification
+07-18 07:10:13.375 W/BinderNative(  727): java.lang.SecurityException: Specified package "com.google.android.googlequicksearchbox" under uid 1000 but it is not
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.verifyAndGetBypass(AppOpsService.java:5210)
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.verifyAndGetBypass(AppOpsService.java:5007)
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.verifyAndGetBypass(AppOpsService.java:4996)
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.stopWatchingAsyncNoted(AppOpsService.java:3859)
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.lambda$startWatchingAsyncNoted$8(AppOpsService.java:3835)
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService.$r8$lambda$8-LvphSu5hQo1Pm8R22O3seI00E(AppOpsService.java:0)
+07-18 07:10:13.375 W/BinderNative(  727): 	at com.android.server.appop.AppOpsService$$ExternalSyntheticLambda2.onInterfaceDied(R8$$SyntheticClass:0)
+07-18 07:10:13.375 W/BinderNative(  727): 	at android.os.RemoteCallbackList$Builder$1.onCallbackDied(RemoteCallbackList.java:337)
+07-18 07:10:13.375 W/BinderNative(  727): 	at android.os.RemoteCallbackList$Interface.binderDied(RemoteCallbackList.java:229)
+07-18 07:10:13.375 W/BinderNative(  727): 	at android.os.IBinder$DeathRecipient.binderDied(IBinder.java:341)
+07-18 07:10:13.375 W/BinderNative(  727): 	at android.os.BinderProxy.sendDeathNotice(BinderProxy.java:850)
+07-18 07:10:13.386 W/ActivityManager(  727): Scheduling restart of crashed service com.google.android.googlequicksearchbox/com.google.android.apps.search.googleapp.search.suggest.plugins.onesearch.server.OneSearchSuggestService in 10686ms for connection
+07-18 07:10:13.388 D/RestoreDbTask( 2066): No restore task pending, exiting RestoreDbTask
+07-18 07:10:13.325 I/binder  (    0): release 2034:2235 transaction 56239 out, still active
+07-18 07:10:13.327 I/binder  (    0): undelivered TRANSACTION_COMPLETE
+07-18 07:10:13.330 I/binder  (    0): undelivered transaction 57356, process died.
+07-18 07:10:13.395 I/libprocessgroup(  727): Removed cgroup /sys/fs/cgroup/apps/uid_10152/pid_2304
+07-18 07:10:13.401 I/libprocessgroup(  727): Removed cgroup /sys/fs/cgroup/apps/uid_10147/pid_2034
+07-18 07:10:13.403 D/b/475447538( 2066): Rotation Helper = [mStateHandlerRequest=0, mCurrentStateRequest=0, mLastActivityFlags=5, mIgnoreAutoRotateSettings=false, mForceAllowRotationForTesting=false, mDestroyed=false, mIsFixedLandscape=false]
+07-18 07:10:13.417 I/ViewCaptureFactory( 2066): instantiating PerfettoViewCapture
+07-18 07:10:13.418 W/ActivityManager(  727): Skipping manifest association check for null package. SourceUid: -1, SourcePkg: null, TargetUid: 10231, TargetPkg: com.example.mrcomic.debug
+07-18 07:10:13.419 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.notifications.intelligence.rules.data.repository.NotificationRulesRepositoryImpl took to complete: 1470ms
+07-18 07:10:13.419 W/SystemUIService( 1014): Initialization of com.android.systemui.notifications.intelligence.rules.data.repository.NotificationRulesRepositoryImpl took 1471 ms
+07-18 07:10:13.443 D/AudioSystem( 2148): onNewServiceWithAdapter: media.audio_flinger service obtained 0x7d5de9a62cb0
+07-18 07:10:13.461 D/AudioSystem( 2148): getService: IAudioFlingerService retrieved: 0x7d5d59a2f3f0  IAudioFlinger cached: 0x7d5de9a62cb0
+07-18 07:10:13.467 D/AudioFlinger(  531): onStateChanged: pid:2148  uid:10231  state:unfrozen - no freeze activity
+07-18 07:10:13.485 D/CompatChangeReporter( 2631): Compat change id reported: 407952621; UID 1001; state: ENABLED
+07-18 07:10:13.486 D/CompatChangeReporter( 2631): Compat change id reported: 419020719; UID 1001; state: ENABLED
+07-18 07:10:13.324 I/BoundBrokerSvc( 2318): Bound service not available for: Intent { act=android.net.action.RECOMMEND_NETWORKS xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentBoundBrokerService }
+07-18 07:10:13.506 I/ChimeraSrvcProxy( 2318): com.google.android.gms.chimera.PersistentBoundBrokerService returning NullBinder for action android.net.action.RECOMMEND_NETWORKS
+07-18 07:10:13.510 W/SystemServiceRegistry( 1014): No service published for: personal_context
+07-18 07:10:13.510 V/SystemUIBootTiming( 1014): StartServices com.android.systemui.personalcontext.AutofillAttributionStartable took to complete: 92ms
+07-18 07:10:13.644 W/libbinder.Binder(  629): Binder transaction to android.IMediaExtractorService, function: makeExtractor, code: 1, took 1588ms. Data bytes: 112 Reply bytes: 32 Flags: 16
+07-18 07:10:13.645 I/GridSizeMigrationDBController( 2066): Migration is not needed. destDeviceState: DeviceGridState{mGridSizeString='4,6', mNumHotseat=4, mDeviceType=0, mDbFile=launcher_4_by_6.db, mGridType=1}, srcDeviceState: DeviceGridState{mGridSizeString='4,6', mNumHotseat=4, mDeviceType=0, mDbFile=launcher_4_by_6.db, mGridType=1}
+07-18 07:10:13.645 D/ModelDbController( 2066): isGridMigrationNecessary: no grid migration needed
+07-18 07:10:13.648 D/BoundBrokerSvc( 2330): onUnbind: Intent { act=com.google.android.mobstore.service.START xflg=0x4 pkg=com.google.android.gms }
+07-18 07:10:13.653 I/GridSizeMigrationDBController( 2066): Migration is not needed. destDeviceState: DeviceGridState{mGridSizeString='4,6', mNumHotseat=4, mDeviceType=0, mDbFile=launcher_4_by_6.db, mGridType=1}, srcDeviceState: DeviceGridState{mGridSizeString='4,6', mNumHotseat=4, mDeviceType=0, mDbFile=launcher_4_by_6.db, mGridType=1}
+07-18 07:10:13.656 W/libbinder.Binder(  639): Binder transaction to android.media.IMediaMetadataRetriever, function: UNKNOWN_FUNCTION_NAME, code: 3, took 1812ms. Data bytes: 132 Reply bytes: 4 Flags: 16
+07-18 07:10:13.672 D/LoaderTask( 2066): loadWorkspace: loading default favorites if necessary
+07-18 07:10:13.682 W/earchbox:search( 2351): Suspending all threads took: 954.560ms
+07-18 07:10:13.687 W/InputChannel-JNI(  727): Channel already disposed.
+07-18 07:10:13.737 D/LoaderTask( 2066): loadWorkspace: Packages with active install/update sessions: []
+07-18 07:10:13.739 D/LoaderTask( 2066): No pinned shortcuts found for user UserHandle{0}
+07-18 07:10:13.777 I/adbd    (  545): adbd service requested 'sync:'
+07-18 07:10:13.790 W/Looper  (  727): Slow dispatch took 143ms android.ui app=system_server main=false group=TOP_APP h=com.android.server.am.ActivityManagerService$UiHandler c=com.android.server.am.UidObserverController$$ExternalSyntheticLambda0@a295066 m=0
+07-18 07:10:13.790 W/Looper  (  727): Slow delivery took 401ms android.ui app=system_server main=false group=TOP_APP h=com.android.server.am.ActivityManagerService$UiHandler c=null m=32
+07-18 07:10:13.796 D/nativeloader( 2655): Configuring clns-shared-9 for other apk /apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@CE2A.260420.019/GoogleCellBroadcastApp.apk. target_sdk_version=37, uses_libraries=, library_path=/apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@CE2A.260420.019/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user_de/0/com.google.android.cellbroadcastreceiver:/apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@CE2A.260420.019:/system/lib64:/system_ext/lib64
+07-18 07:10:13.806 D/AidlBufferPool(  646): bufferpool2 0x7f5e8442b038 : 0(0 size) total buffers - 0(0 size) used buffers - 120/127 (recycle/alloc) - 13/127 (fetch/transfer)
+07-18 07:10:13.806 D/AidlBufferPoolAcc(  646): evictor expired: 2, evicted: 1
+07-18 07:10:13.836 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:10:13.836 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:10:13.836 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:10:13.836 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:10:13.836 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:10:13.836 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:10:13.840 W/libbinder.Binder(  727): Binder transaction to android.app.IActivityManager, function: UNKNOWN_FUNCTION_NAME, code: 69, took 2116ms. Data bytes: 116 Reply bytes: 0 Flags: 17
+07-18 07:10:13.843 W/system_server(  727): Long monitor contention with owner appscheduling.default (832) at boolean com.android.server.job.controllers.QuotaController$Timer.isActive()(QuotaController.java:2266) waiters=0 in android.app.job.JobInfo com.android.server.job.JobSchedulerService.getPendingJob(int, java.lang.String, int) for 635ms
+07-18 07:10:13.859 D/InputMonitorCompat( 2066): Input monitor (minus-one-disp0) created
+07-18 07:10:13.865 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:10:13.892 W/system_server(  727): Long monitor contention with owner binder:727_B (1375) at java.util.ArrayList com.android.server.accessibility.AccessibilityManagerService$AccessibilityDisplayListener.getValidDisplayList()(AccessibilityManagerService.java:6061) waiters=0 in void com.android.server.accessibility.AccessibilityManagerService.notifyRefreshMagnificationModeToInputFilter(int) for 785ms
+07-18 07:10:13.893 W/Looper  (  727): Slow dispatch took 786ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@4d4ac00> m=0
+07-18 07:10:13.897 D/PackageManager(  727): Connected to instant app resolver
+07-18 07:10:13.902 I/TransportConnection(  727): D2dTransportService#2: Notifying [TransportManager.registerTransport()] transport = BackupTransportClient
+07-18 07:10:13.918 D/nativeloader( 2655): InitApexLibraries:
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_adservices: libhpke_jni.so:libtflite_support_classifiers_native.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_appsearch: libappsearchservice.so:libicing_anywhere.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_art: libartservice.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_bt: libbluetooth_jni.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_conscrypt: libjavacrypto.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_extservices: libtflite_support_classifiers_native.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_mediaprovider: libpdfclient.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_nfcservices: libnfc_nci_jni.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_npumanager: libnpumanager_service_jni.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_ondevicepersonalization: libfcp_cpp_dep_jni.so:libfcp_hpke_jni.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_os_statsd: libstats_jni.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_tethering: libandroid_net_connectivity_com_android_net_module_util_jni.so:libandroid_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni.so:libcrypto_httpengine.so:libframework-connectivity-jni.so:libframework-connectivity-tiramisu-jni.so:libhttpengine.so:libservice-connectivity.so:libservice-thread-jni.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_uwb: libuwb_uci_jni_rust.so
+07-18 07:10:13.918 D/nativeloader( 2655):   com_android_virt: Mi
+07-18 07:10:13.997 I/MediaServiceV2( 1479): Work ended for action [ android.intent.action.MEDIA_SCANNER_SCAN_FILE ]
+07-18 07:10:14.018 D/AidlBufferPool( 2148): bufferpool2 0x7d5d79a1fed8 : 0(0 size) total buffers - 0(0 size) used buffers - 0/5 (recycle/alloc) - 11/252 (fetch/transfer)
+07-18 07:10:14.019 D/AidlBufferPoolAcc( 2148): evictor expired: 1, evicted: 1
+07-18 07:10:14.082 W/Looper  (  727): Slow dispatch took 152ms android.ui app=system_server main=false group=TOP_APP h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@bb1c3df m=0
+07-18 07:10:14.085 V/GrammaticalInflectionUtils(  727): AttributionSource: AttributionSource { uid = 10147, packageName = null, attributionTag = null, token = android.os.Binder@10b08d7, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+07-18 07:10:14.124 W/Looper  (  727): Slow dispatch took 122ms main app=system_server main=true group=FOREGROUND h=com.android.server.power.Notifier$NotifierHandler c=com.android.server.power.Notifier$$ExternalSyntheticLambda2@b792f5 m=0
+07-18 07:10:14.141 W/e.mrcomic.debug( 2148): Verification of androidx.compose.ui.Modifier androidx.compose.ui.ComposedModifierKt.composed(androidx.compose.ui.Modifier, java.lang.String, java.lang.Object, java.lang.Object, java.lang.Object, kotlin.jvm.functions.Function1, kotlin.jvm.functions.Function3) took 153.969ms (116.91 bytecodes/s) (0B arena alloc)
+07-18 07:10:14.147 D/BatterySaverPolicy(  727): accessibility changed to false, updating policy.
+07-18 07:10:14.166 D/BatterySaverPolicy(  727): accessibility changed to true, updating policy.
+07-18 07:10:14.271 D/NetworkMonitor/101( 1123): PROBE_HTTP http://connectivitycheck.gstatic.com/generate_204 time=1079ms ret=204 request={Connection=[close], User-Agent=[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.32 Safari/537.36]} headers={null=[HTTP/1.1 204 No Content], Connection=[close], Content-Length=[0], Cross-Origin-Resource-Policy=[cross-origin], Date=[Sat, 18 Jul 2026 07:10:14 GMT], X-Android-Received-Millis=[1784358614002], X-Android-Response-Source=[NETWORK 204], X-Android-Selected-Protocol=[http/1.1], X-Android-Sent-Millis=[1784358613437]}
+07-18 07:10:14.279 D/BluetoothSystemServer(  727): ActiveLogs: 07-18 07:10:14.279 	Package [BluetoothSystemServer] requested to [Enable]. 	Reason is RESTARTED
+07-18 07:10:14.286 D/BluetoothSystemServer(  727): BluetoothManagerService: broadcastIntentStateChange: action=BLE_STATE_CHANGED prevState=OFF newState=BLE_TURNING_ON
+07-18 07:10:14.297 W/e.mrcomic.debug( 2148): Verification of androidx.compose.ui.Modifier androidx.compose.ui.ComposedModifierKt.materializeImpl(androidx.compose.runtime.Composer, androidx.compose.ui.Modifier) took 107.216ms (345.10 bytecodes/s) (0B arena alloc)
+07-18 07:10:14.388 V/WindowManager(  727): deferTransitionReady deferReadyDepth=1 stack=com.android.server.wm.WindowOrganizerController.applyTransaction:717 com.android.server.wm.WindowOrganizerController.applyTransaction:651 com.android.server.wm.WindowOrganizerController.lambda$applyTaskFragmentTransactionLocked$5:617 com.android.server.wm.WindowOrganizerController.$r8$lambda$b9SZ7IAloD3MuUhvAJTdz5zHJ5k:0 com.android.server.wm.WindowOrganizerController$$ExternalSyntheticLambda4.onCollectStarted:0 
+07-18 07:10:14.398 W/libbinder.Binder( 2318): Binder transaction to com.google.android.gms.common.internal.IGmsServiceBroker, function: UNKNOWN_FUNCTION_NAME, code: 46, took 3277ms. Data bytes: 1280 Reply bytes: 4 Flags: 18
+07-18 07:10:14.411 W/FontLog ( 2318): Fetch {Noto Color Emoji Compat, wdth 100.0, wght 400, ital 0.0, bestEffort false}, isVf false} failed due to timeout [CONTEXT service_id=132 ]
+07-18 07:10:14.411 W/FontLog ( 2318): java.util.concurrent.TimeoutException: Waited 10000 milliseconds (plus 21 milliseconds, 106500 nanoseconds delay) for hgkx@4a0452[status=PENDING]
+07-18 07:10:14.411 W/FontLog ( 2318): 	at hghc.v(:com.google.android.gms@261136038@26.11.36 (260800-892401869):371)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at bzds.query(:com.google.android.gms@261136038@26.11.36 (260800-892401869):187)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at bbys.query(:com.google.android.gms@261136038@26.11.36 (260800-892401869):84)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at android.content.ContentProvider.query(ContentProvider.java:1670)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at aaqf.superQuery(:com.google.android.gms@261136038@26.11.36 (260800-892401869):6)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at com.google.android.chimera.ContentProvider.query(:com.google.android.gms@261136038@26.11.36 (260800-892401869):8)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at bbys.query(:com.google.android.gms@261136038@26.11.36 (260800-892401869):21)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at android.content.ContentProvider.query(ContentProvider.java:1766)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at aaqf.superQuery(:com.google.android.gms@261136038@26.11.36 (260800-892401869):1)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at com.google.android.chimera.ContentProvider.query(:com.google.android.gms@261136038@26.11.36 (260800-892401869):3)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at aaqf.query(:com.google.android.gms@261136038@26.11.36 (260800-892401869):64)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at android.content.ContentProvider$Transport.query(ContentProvider.java:304)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at android.content.ContentProviderNative.onTransact(ContentProviderNative.java:109)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at android.os.Binder.execTransactInternal(Binder.java:1364)
+07-18 07:10:14.411 W/FontLog ( 2318): 	at android.os.Binder.execTransact(Binder.java:1323)
+07-18 07:10:14.427 V/WindowManager(  727): continueTransitionReady deferReadyDepth=0 stack=com.android.server.wm.WindowOrganizerController.applyTransaction:864 com.android.server.wm.WindowOrganizerController.applyTransaction:651 com.android.server.wm.WindowOrganizerController.lambda$applyTaskFragmentTransactionLocked$5:617 com.android.server.wm.WindowOrganizerController.$r8$lambda$b9SZ7IAloD3MuUhvAJTdz5zHJ5k:0 com.android.server.wm.WindowOrganizerController$$ExternalSyntheticLambda4.onCollectStarted:0 
+07-18 07:10:14.429 W/libbinder.Binder( 2318): Binder transaction to android.content.IContentProvider, function: UNKNOWN_FUNCTION_NAME, code: 1, took 16505ms. Data bytes: 760 Reply bytes: 236 Flags: 18
+07-18 07:10:14.448 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.common.util.TraceUtil.endSection() took 138.272ms (28.93 bytecodes/s) (0B arena alloc)
+07-18 07:10:14.507 W/s.nexuslauncher( 2066): Suspending all threads took: 294.832ms
+07-18 07:10:14.519 D/nativeloader( 2675): InitLlndkLibrariesProduct: libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libRS.so:libandroid_net.so:libapexsupport.so:libavf.so:libbinder_ndk.so:libc.so:libcamera_metadata.so:libcgrouprc.so:libclang_rt.asan-x86_64-android.so:libcom.android.tethering.connectivity_native.so:libdl.so:libft2.so:liblog.so:libm.so:libmediandk.so:libnativewindow.so:libneuralnetworks.so:libnpumanager.so:libselinux.so:libsync.so:libvendorsupport.so:libvndksupport.so:libvulkan.so:libwrapfd.so
+07-18 07:10:14.519 D/nativeloader( 2675): Configuring product-clns-9 for unbundled product apk /product/app/Photos/Photos.apk. target_sdk_version=36, uses_libraries=, library_path=/product/app/Photos/lib/x86_64:/product/app/Photos/Photos.apk!/lib/x86_64:/product/lib64:/system/product/lib64, permitted_path=/data:/mnt/expand:/data/user/0/com.google.android.apps.photos:/product/lib64:/system/product/lib64
+07-18 07:10:14.552 D/nativeloader( 2675): InitVndkspLibrariesProduct: VNDK is deprecated with product
+07-18 07:10:14.595 W/Looper  (  727): Slow dispatch took 391ms main app=system_server main=true group=FOREGROUND h=android.os.Handler c=com.android.server.backup.transport.TransportConnection$$ExternalSyntheticLambda0@aa1b0c4 m=0
+07-18 07:10:14.598 D/WifiClientModeImpl[94633:wlan0](  727): updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+07-18 07:10:14.598 I/WM-WorkerWrapper( 1479): Worker result SUCCESS for Work [ id=cdc450d4-a389-45a6-af6e-1b3e7d9d0978, tags={ com.android.providers.media.MediaServiceV2 } ]
+07-18 07:10:14.602 D/WifiClientModeImpl[94633:wlan0](  727): reported txKbps 12000 rxKbps 30000
+07-18 07:10:14.602 D/WifiDataStall(  727): tx tput in kbps: 11000
+07-18 07:10:14.602 D/WifiDataStall(  727): rx tput in kbps: 11000
+07-18 07:10:14.602 V/WifiConfigManager(  727): Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+07-18 07:10:14.616 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:10:14.617 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:10:14.617 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:10:14.618 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:10:14.622 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:10:14.623 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:10:14.623 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:10:14.623 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:10:14.646 I/HalDevMgr(  727): bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+07-18 07:10:14.646 W/ActivityManager(  727): Skipping manifest association check for null package. SourceUid: -1, SourcePkg: null, TargetUid: 10231, TargetPkg: com.example.mrcomic.debug
+07-18 07:10:14.648 D/WifiScoreCard(  727): BSSID update SIGNAL_POLL ID: 1602891080 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Calculated Rx : 0Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+07-18 07:10:14.649 D/WifiScoreCard(  727): txRate: 5 txSpeed: 1
+07-18 07:10:14.655 I/AdbWifiNetworkMonitor(  727): Wi-Fi network available
+07-18 07:10:14.656 D/WifiScoreCard(  727): network update SIGNAL_POLL "AndroidWifi" ID: 740479026 RSSI -50 txSpeed 1
+07-18 07:10:14.656 I/AdbWifiNetworkMonitor(  727): Received the same Wi-Fi SSID. Ignoring.
+07-18 07:10:14.657 D/WifiClientModeImpl[94633:wlan0](  727):  ClientModeImpl$L2ConnectedState screen=on 2 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=100 link=1 tx=4.0, 0.0, 0.0 rx=3.1 bcn=0 [on:0 tx:0 rx:0 period:3129] from screen [on:0 period:1947186817] score=100
+07-18 07:10:14.659 V/WindowManager(  727): Defer transition id=11 for TaskFragmentTransaction=android.os.Binder@72cd5a9
+07-18 07:10:14.675 I/adbd    (  545): adbd service requested 'sync:'
+07-18 07:10:14.721 D/AccessibilitySourceService( 1798): enabled a11y services count 0
+07-18 07:10:14.724 D/AccessibilitySourceService( 1798): a11y source sending 0 issue to sc
+07-18 07:10:14.743 W/system_server(  727): Long monitor contention with owner binder:727_1D (1904) at void com.android.server.wm.TaskFragmentOrganizerController.applyTransaction(android.window.WindowContainerTransaction, int, boolean, android.window.RemoteTransition)(TaskFragmentOrganizerController.java:763) waiters=0 in void com.android.server.wm.WindowAnimator.lambda$new$1(android.view.Choreographer$FrameData) for 262ms
+07-18 07:10:14.775 D/nativeloader( 2257): Load libtextclassifier3_jni_agsa.so using class loader ns product-clns-9 (caller=/product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!classes2.dex): dlopen failed: library "libtextclassifier3_jni_agsa.so" not found
+07-18 07:10:14.837 W/system_server(  727): Long monitor contention with owner binder:727_3 (814) at void com.android.server.am.BroadcastController.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(BroadcastController.java:1909) waiters=4 in android.content.Intent com.android.server.am.BroadcastController.registerReceiverWithFeatureTraced(android.app.IApplicationThread, java.lang.String, java.lang.String, java.lang.String, android.content.IIntentReceiver, android.content.IntentFilter, java.lang.String, int, int) for 334ms
+07-18 07:10:14.843 W/system_server(  727): Long monitor contention with owner binder:727_3 (814) at void com.android.server.am.BroadcastController.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(BroadcastController.java:1909) waiters=5 in int com.android.server.am.ActivityManagerService.bindServiceInstance(android.app.IApplicationThread, android.os.IBinder, android.content.Intent, java.lang.String, android.app.IServiceConnection, long, java.lang.String, boolean, int, java.lang.String, android.app.IApplicationThread, java.lang.String, int) for 434ms
+07-18 07:10:14.844 W/Looper  ( 1014): Slow dispatch took 248ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=null m=19
+07-18 07:10:14.845 D/SafetySourceDataValidat(  727): No cert check requested for package com.google.android.permissioncontroller
+07-18 07:10:14.921 W/system_server(  727): Long monitor contention with owner binder:727_3 (814) at void com.android.server.am.BroadcastController.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(BroadcastController.java:1909) waiters=6 in void com.android.server.am.ActivityManagerService.publishService(android.os.IBinder, android.os.IBinder, android.os.IBinder) for 399ms
+07-18 07:10:14.923 V/WindowManagerShell( 1014): Transition requested (#11): android.os.BinderProxy@4df6bc4 TransitionRequestInfo { type = CHANGE, triggerTask = null, pipChange = null, remoteTransitionInfo = RemoteTransitionInfo { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@38ecaad, debugName = TaskFragmentComponent, filter = null }, displayChanges = null, requestedLocation = null, userChange = null, windowingLayerChange = null, fullscreenRequestChange = null, flags = 0, debugId = 11 }
+07-18 07:10:14.941 W/system_server(  727): Long monitor contention with owner binder:727_3 (814) at void com.android.server.am.BroadcastController.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(BroadcastController.java:1909) waiters=7 in void com.android.server.am.ActivityManagerService.pushTempAllowlist() for 397ms
+07-18 07:10:14.944 W/Looper  (  727): Drained
+07-18 07:10:14.945 W/Looper  (  727): Slow dispatch took 415ms android.ui app=system_server main=false group=TOP_APP h=com.android.server.am.ActivityManagerService$UiHandler c=null m=68
+07-18 07:10:14.945 W/system_server(  727): Long monitor contention with owner binder:727_3 (814) at void com.android.server.am.BroadcastController.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(BroadcastController.java:1909) waiters=2 in int com.android.server.am.BroadcastController.broadcastIntentWithFeature(android.app.IApplicationThread, java.lang.String, android.content.Intent, java.lang.String, android.content.IIntentReceiver, int, java.lang.String, android.os.Bundle, java.lang.String[], java.lang.String[], java.lang.String[], int, android.os.Bundle, boolean, boolean, int) for 594ms
+07-18 07:10:14.952 W/Looper  (  727): Slow delivery took 225ms android.ui app=system_server main=false group=TOP_APP h=com.android.server.am.ActivityManagerService$UiHandler c=null m=68
+07-18 07:10:14.952 I/BluetoothSystemServer(  727): RolePermissionListener: Role holder: [com.google.android.bluetooth]
+07-18 07:10:14.952 I/BluetoothSystemServer(  727): RolePermissionListener: Bluetooth already holds android.app.role.SYSTEM_BLUETOOTH_STACK. Starting immediately
+07-18 07:10:14.952 D/BluetoothSystemServer(  727): BluetoothManagerService: Start binding to the Bluetooth service with intent=Intent { act=android.bluetooth.IAdapter cmp=com.google.android.bluetooth/com.android.bluetooth.btservice.AdapterService (has extras) }
+07-18 07:10:14.970 V/GrammaticalInflectionUtils(  727): AttributionSource: AttributionSource { uid = 1002, packageName = null, attributionTag = null, token = android.os.Binder@10b08d7, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+07-18 07:10:14.980 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:15.015 D/Zygote  (  471): Forked child process 2727
+07-18 07:10:15.016 W/Looper  ( 1014): Slow dispatch took 1773ms BroadcastRunning app=com.android.systemui main=false group=FOREGROUND h=com.android.systemui.broadcast.BroadcastDispatcher$handler$1 c=null m=0
+07-18 07:10:15.028 W/ActivityManager(  727): Slow operation: 918ms so far, now at startProcess: returned from zygote!
+07-18 07:10:15.034 W/DisconnectHandler( 1014): No disconnect change found in the transition, not handling request.
+07-18 07:10:15.035 V/ShellDesktopMode( 1014): DesktopTasksController: skipping handleRequest reason=triggerTask is null
+07-18 07:10:15.035 V/WindowManagerShell( 1014): RemoteTransition directly requested for (#11) android.os.BinderProxy@4df6bc4: RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@38ecaad, appThread = null, debugName = TaskFragmentComponent, filter = null }
+07-18 07:10:15.040 W/Looper  (  727): Drained
+07-18 07:10:15.044 W/TracingHelper( 2318): Mismatched RequestContext found for module INSTANTAPPS. Module id from RequestContext is MODULEID_UNKNOWN [CONTEXT service_id=259 ratelimit_count=1410065408 ]
+07-18 07:10:15.045 I/libprocessgroup( 2727): Created cgroup /sys/fs/cgroup/apps/uid_10147/pid_2727
+07-18 07:10:15.048 D/DesktopExperienceFlags( 2351): Toggle override initialized to: false
+07-18 07:10:15.052 W/ActivityManager(  727): Slow operation: 933ms so far, now at startProcess: done updating battery stats
+07-18 07:10:15.056 W/ActivityManager(  727): Slow operation: 945ms so far, now at startProcess: building log message
+07-18 07:10:15.056 I/ActivityManager(  727): Start proc 2727:com.google.android.googlequicksearchbox:interactor/u0a147 for bound-service {com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService}
+07-18 07:10:15.057 W/ActivityManager(  727): Slow operation: 946ms so far, now at startProcess: starting to update pids map
+07-18 07:10:15.061 V/WindowManagerShell( 1014): Transition (#11): request handled by RemoteTransitionHandler
+07-18 07:10:15.067 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:15.067 I/adbd    (  545): adbd service requested 'shell,v2,TERM=dumb:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time' '-t' '700''
+07-18 07:10:15.109 D/nativeloader( 2631): Configuring clns-shared-10 for other apk /system/app/Stk/Stk.apk. target_sdk_version=37, uses_libraries=, library_path=/system/app/Stk/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user_de/0/com.android.stk:/system/app/Stk:/system/lib64:/system_ext/lib64
+07-18 07:10:15.144 W/ActivityManager(  727): Slow operation: 1033ms so far, now at startProcess: done updating pids map
+07-18 07:10:15.148 I/netd    (  468): tetherGetStats() -> {[]} <3.31ms>
+07-18 07:10:15.157 W/ActivityManager(  727): Slow operation: 185ms so far, now at startProcess: asking zygote to start proc
+07-18 07:10:15.168 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:10:15.171 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:10:15.171 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:10:15.171 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:10:15.125 I/logd    (    0): logdr: UID=2000 GID=2000 PID=2728 n tail=700 logMask=99 pid=0 start=0ns deadline=0ns
+07-18 07:10:15.208 W/Looper  ( 1014): Slow dispatch took 363ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=com.android.wm.shell.transition.Transitions$ShellTransitionImpl$$ExternalSyntheticLambda1@ad34973 m=0
+07-18 07:10:15.208 D/Zygote  (  471): Forked child process 2731
+07-18 07:10:15.226 W/ActivityManager(  727): Slow operation: 254ms so far, now at startProcess: returned from zygote!
+07-18 07:10:15.236 W/ActivityManager(  727): Slow operation: 264ms so far, now at startProcess: done updating battery stats
+07-18 07:10:15.236 W/ActivityManager(  727): Slow operation: 264ms so far, now at startProcess: building log message
+07-18 07:10:15.236 I/ActivityManager(  727): Start proc 2731:com.google.android.bluetooth/1002 for bound-service {com.google.android.bluetooth/com.android.bluetooth.btservice.AdapterService}
+07-18 07:10:15.236 W/ActivityManager(  727): Slow operation: 264ms so far, now at startProcess: starting to update pids map
+07-18 07:10:15.236 W/ActivityManager(  727): Slow operation: 265ms so far, now at startProcess: done updating pids map
+07-18 07:10:15.239 W/system_server(  727): Long monitor contention with owner android.bg (762) at void com.android.server.am.ContentProviderHelper.handleProviderRemoval(com.android.server.am.ContentProviderConnection, boolean, boolean)(ContentProviderHelper.java:1569) waiters=1 in void com.android.server.am.ActivityManagerService.publishService(android.os.IBinder, android.os.IBinder, android.os.IBinder) for 218ms
+07-18 07:10:15.343 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:15.378 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:15.434 W/FuseDaemon( 1479): Suspending all threads took: 693.703ms
+07-18 07:10:15.463 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:15.466 I/libprocessgroup( 2731): Created cgroup /sys/fs/cgroup/system/uid_1002/pid_2731
+07-18 07:10:15.494 I/Zygote  ( 2727): Process 2727 created for com.google.android.googlequicksearchbox:interactor
+07-18 07:10:15.507 I/hbox:interactor( 2727): Using generational CollectorTypeCMC GC.
+07-18 07:10:15.553 W/hbox:interactor( 2727): Unexpected CPU variant for x86: x86_64.
+07-18 07:10:15.553 W/hbox:interactor( 2727): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:10:15.559 D/InputMonitorCompat( 2066): Input event receiver for monitor (minus-one-disp0) created
+07-18 07:10:15.570 I/Zygote  ( 2731): Process 2731 created for com.google.android.bluetooth
+07-18 07:10:15.572 I/droid.bluetooth( 2731): Using generational CollectorTypeCMC GC.
+07-18 07:10:15.579 W/droid.bluetooth( 2731): Unexpected CPU variant for x86: x86_64.
+07-18 07:10:15.579 W/droid.bluetooth( 2731): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:10:15.663 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:10:15.666 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:10:15.667 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:10:15.667 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:10:15.680 D/nativeloader( 2727): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:10:15.817 W/rkstack.process( 1123): Suspending all threads took: 347.286ms
+07-18 07:10:15.883 W/libbinder.Binder( 2066): Binder transaction to android.app.ITaskStackListener, function: UNKNOWN_FUNCTION_NAME, code: 12, took 1370ms. Data bytes: 3948 Reply bytes: 0 Flags: 17
+07-18 07:10:15.954 W/e.mrcomic.debug( 2148): Verification of androidx.media3.common.DrmInitData androidx.media3.extractor.mp4.FragmentedMp4Extractor.getDrmInitDataFromAtoms(java.util.List) took 148.351ms (492.07 bytecodes/s) (0B arena alloc)
+07-18 07:10:15.990 W/ndroid.systemui( 1014): Suspending all threads took: 223.171ms
+07-18 07:10:16.074 W/ActivityThread( 2318): getPackageInfo() called with an older ApplicationInfo than the cached version for package com.google.android.gms
+07-18 07:10:16.077 I/WifiService(  727): getWifiEnabledState uid=10188 state=3
+07-18 07:10:16.118 W/e.mrcomic.debug( 2148): Verification of androidx.media3.extractor.mp4.FragmentedMp4Extractor$TrackBundle androidx.media3.extractor.mp4.FragmentedMp4Extractor.getNextTrackBundle(android.util.SparseArray) took 163.925ms (378.22 bytecodes/s) (0B arena alloc)
+07-18 07:10:16.203 W/libbinder.Binder(  727): Binder transaction to android.safetycenter.ISafetyCenterManager, function: UNKNOWN_FUNCTION_NAME, code: 2, took 1392ms. Data bytes: 272 Reply bytes: 4 Flags: 18
+07-18 07:10:16.220 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:10:16.294 W/droid.bluetooth( 2731): Long monitor contention with owner main (2731) at void java.lang.Daemons$Daemon.start()(Daemons.java:110) waiters=1 in void java.lang.Daemons$FinalizerWatchdogDaemon.monitoringNeeded(int) for 582ms
+07-18 07:10:16.302 W/droid.bluetooth( 2731): Long monitor contention with owner main (2731) at void java.lang.Daemons$Daemon.start()(Daemons.java:110) waiters=0 in void java.lang.Daemons$FinalizerWatchdogDaemon.monitoringNeeded(int) for 590ms
+07-18 07:10:16.303 D/AccessibilityManagerService(  727): restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+07-18 07:10:16.303 W/libbinder.Binder(  727): Binder transaction to android.view.accessibility.IAccessibilityManager, function: UNKNOWN_FUNCTION_NAME, code: 11, took 1311ms. Data bytes: 144 Reply bytes: 4 Flags: 18
+07-18 07:10:16.306 W/system_server(  727): Long monitor contention with owner binder:727_1A (1790) at java.util.ArrayList com.android.server.accessibility.AccessibilityManagerService$AccessibilityDisplayListener.getValidDisplayList()(AccessibilityManagerService.java:6061) waiters=0 in void com.android.server.accessibility.AccessibilityManagerService.updateFingerprintGestureHandling(com.android.server.accessibility.AccessibilityUserState) for 1.115s
+07-18 07:10:16.307 W/Looper  (  727): Slow dispatch took 1116ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@de9accb> m=0
+07-18 07:10:16.307 W/libbinder.IPCThreadState( 2650): call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+07-18 07:10:16.308 D/AndroidRuntime( 2650): Shutting down VM
+07-18 07:10:16.309 W/libbinder.IPCThreadState( 2650): call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+07-18 07:10:16.310 D/WorkspaceItemProcessor( 2066): valid target true, marking restored: com.google.android.dialer, itemType=0, restoreFlag=0
+07-18 07:10:16.323 W/BLASTSyncEngine(  727): Sync group 11 timeout
+07-18 07:10:16.323 W/BLASTSyncEngine(  727): Sync group 11 timed-out because not ready. If you see this, please file a bug.
+07-18 07:10:16.323 E/Transition(  727): #11 readiness timeout. state=1
+07-18 07:10:16.327 E/Transition(  727):    met conditions: [{TF WCT Applied}, {Legacy: used=true deferDepth=0 group={Display{#0 state=ON size=1080x2400 ROTATION_0}=true}}]
+07-18 07:10:16.327 E/Transition(  727):    unmet conditions: [{task-fragment transaction:TaskFragmentTransaction{token=android.os.Binder@72cd5a9 changes=[Change{ type=4 },Change{ type=1 }]}}]
+07-18 07:10:16.396 W/s.nexuslauncher( 2066): Long monitor contention with owner async-allocation1 (2648) at void android.content.res.AssetManager.applyStyle(long, int, int, android.content.res.XmlBlock$Parser, int[], long, long)(AssetManager.java:1272) waiters=0 in android.content.res.Configuration[] android.content.res.AssetManager.getResourceConfigurations() for 459ms
+07-18 07:10:16.444 V/WindowManager(  727): Sent Transition (#11) createdAt=07-18 07:10:14.182 via request=TransitionRequestInfo { type = CHANGE, triggerTask = null, pipChange = null, remoteTransitionInfo = RemoteTransitionInfo { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@91c13c1, debugName = TaskFragmentComponent, filter = null }, displayChanges = null, requestedLocation = null, userChange = null, windowingLayerChange = null, fullscreenRequestChange = null, flags = 0, debugId = 11 }
+07-18 07:10:16.444 V/WindowManager(  727):     startWCT=WindowContainerTransaction { changes= {} hops= [] flags= 0 errorCallbackToken=null taskFragmentOrganizer=null }
+07-18 07:10:16.444 V/WindowManager(  727):     info={id=11 t=CHANGE f=0x0 trk=0 r=[0@Point(0, 0)] c=[
+07-18 07:10:16.444 V/WindowManager(  727):         {WCT{RemoteToken{ee7374 Task{f1ba716 #10 type=standard A=10231:com.example.mrcomic.debug}}} m=CHANGE f=NONE leash=Surface(name=Task=10#85)/@0x473fa86 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0}
+07-18 07:10:16.444 V/WindowManager(  727):     ]}
+07-18 07:10:16.461 I/WM-WorkerWrapper( 1479): Setting status to enqueued for b686802c-3396-4bae-8dbd-14e637c45c5a
+07-18 07:10:16.465 W/Looper  (  727): Slow dispatch took 157ms main app=system_server main=true group=FOREGROUND h=com.android.server.accessibility.AccessibilityManagerService$MainHandler c=<recycled PooledLambda@c61e5ea> m=0
+07-18 07:10:16.534 W/Looper  (  727): Drained
+07-18 07:10:16.535 D/BatterySaverPolicy(  727): accessibility changed to false, updating policy.
+07-18 07:10:16.637 D/nativeloader( 2731): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:10:16.759 W/libbinder.Binder( 2066): Binder transaction to android.app.IApplicationThread, function: UNKNOWN_FUNCTION_NAME, code: 56, took 2072ms. Data bytes: 1112 Reply bytes: 0 Flags: 17
+07-18 07:10:16.818 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.ui.PlayerControlView.<init>(android.content.Context, android.util.AttributeSet, int, android.util.AttributeSet) took 327.865ms (5993.32 bytecodes/s) (0B arena alloc)
+07-18 07:10:16.850 D/AidlBufferPool(  646): bufferpool2 0x7f5e84425858 : 0(0 size) total buffers - 0(0 size) used buffers - 0/0 (recycle/alloc) - 0/0 (fetch/transfer)
+07-18 07:10:16.851 D/AidlBufferPool(  646): bufferpool2 0x7f5e8442a258 : 0(0 size) total buffers - 0(0 size) used buffers - 0/0 (recycle/alloc) - 0/0 (fetch/transfer)
+07-18 07:10:16.851 D/AidlBufferPoolAcc(  646): evictor expired: 2, evicted: 2
+07-18 07:10:16.914 D/BaseActivity( 2066): Launcher flags updated: [state_started] +[state_started]
+07-18 07:10:16.943 D/nativeloader( 2257): Load /product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!/lib/x86_64/libtextclassifier3_jni_aiai.so using class loader ns product-clns-9 (caller=/product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!classes2.dex): ok
+07-18 07:10:16.948 D/nativeloader( 2257): Load libtextclassifier3_jni_agsa.so using class loader ns product-clns-9 (caller=/product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!classes2.dex): dlopen failed: library "libtextclassifier3_jni_agsa.so" not found
+07-18 07:10:16.951 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.extractor.mkv.MatroskaExtractor.<clinit>() took 165.336ms (1070.54 bytecodes/s) (0B arena alloc)
+07-18 07:10:16.956 D/nativeloader( 2631): Configuring clns-shared-11 for other apk /system/priv-app/TelephonyProvider/TelephonyProvider.apk. target_sdk_version=37, uses_libraries=, library_path=/system/priv-app/TelephonyProvider/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user_de/0/com.android.providers.telephony:/system/priv-app/TelephonyProvider:/system/lib64:/system_ext/lib64
+07-18 07:10:16.966 W/system_server(  727): Suspending all threads took: 363.505ms
+07-18 07:10:16.969 D/CarrierProvider( 2631): onCreate
+07-18 07:10:16.986 I/adbd    (  545): adbd service requested 'shell,v2,TERM=dumb,raw:input tap 680 1985'
+07-18 07:10:17.007 W/earchbox:search( 2351): Suspending all threads took: 217.039ms
+07-18 07:10:17.013 D/DeferredSmsMmsRestoreService( 2631): startIfFilesExist: no files to restore
+07-18 07:10:17.013 D/DeferredSmsMmsRestoreService( 2631): addAllSharedPrefToLocalLog
+07-18 07:10:17.040 D/CompatChangeReporter( 2631): Compat change id reported: 418924588; UID 1001; state: ENABLED
+07-18 07:10:17.040 D/AidlBufferPoolAcc( 2148): evictor expired: 2, evicted: 0
+07-18 07:10:17.095 D/BaseActivity( 2066): Launcher flags updated: [state_started|state_resumed|state_user_active] +[state_resumed|state_user_active]
+07-18 07:10:17.163 I/SQLiteConnection( 1479): Long db operation: /data/user/0/com.google.android.providers.media.module/no_backup/androidx.work.workdb
+07-18 07:10:17.243 V/WindowManagerShell( 1014): onTransitionReady(transaction=3122441225068)
+07-18 07:10:17.254 V/WindowManagerShell( 1014): onTransitionReady (#11) android.os.BinderProxy@4df6bc4: {id=11 t=CHANGE f=0x0 trk=0 r=[0@Point(0, 0)] c=[
+07-18 07:10:17.254 V/WindowManagerShell( 1014):         {m=CHANGE f=NONE leash=Surface(name=Task=10#85)/@0xf6ba265 sb=Rect(0, 0 - 1080, 2400) eb=Rect(0, 0 - 1080, 2400) epz=Point(1080, 2400) d=0 taskParent=-1 winMode=1 userId=0}
+07-18 07:10:17.254 V/WindowManagerShell( 1014):     ]}
+07-18 07:10:17.311 V/WindowManagerShell( 1014): Playing animation for (#11) android.os.BinderProxy@4df6bc4@0
+07-18 07:10:17.312 V/WindowManagerShell( 1014):  try firstHandler com.android.wm.shell.transition.RemoteTransitionHandler@49c73eb
+07-18 07:10:17.312 V/WindowManagerShell( 1014):  Delegate animation for (#11) to RemoteTransition { remoteTransition = android.window.IRemoteTransition$Stub$Proxy@38ecaad, appThread = null, debugName = TaskFragmentComponent, filter = null }
+07-18 07:10:17.316 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.extractor.ts.Ac3Extractor.<clinit>() took 124.153ms (64.44 bytecodes/s) (0B arena alloc)
+07-18 07:10:17.381 I/AiAiLocation( 2257): Creating location tracker with config: LocationConfig(minUpdateIntervalSeconds=21600, minTravelDistanceMeters=100000)
+07-18 07:10:17.386 D/WM-Processor( 1479): Processor cdc450d4-a389-45a6-af6e-1b3e7d9d0978 executed; reschedule = false
+07-18 07:10:17.387 D/WM-SystemJobService( 1479): cdc450d4-a389-45a6-af6e-1b3e7d9d0978 executed on JobScheduler
+07-18 07:10:17.396 I/AiAiTextClassifier( 2257): Updating text classifier flags in CutoffProvider.
+07-18 07:10:17.473 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:17.515 W/Looper  (  727): Slow delivery took 862ms android.ui app=system_server main=false group=TOP_APP h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@64a93f2 m=0
+07-18 07:10:17.515 W/Looper  (  727): Slow dispatch took 119ms android.ui app=system_server main=false group=TOP_APP h=android.view.ViewRootImpl$ViewRootHandler c=android.view.accessibility.AccessibilityManager$$ExternalSyntheticLambda0@64a93f2 m=0
+07-18 07:10:17.540 W/Looper  (  727): Drained
+07-18 07:10:17.542 V/WindowManagerShell( 1014): Received remote transition finished callback for (#11)
+07-18 07:10:17.606 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.extractor.ts.Ac4Extractor.<clinit>() took 231.515ms (34.55 bytecodes/s) (0B arena alloc)
+07-18 07:10:17.751 D/BoundBrokerSvc( 2330): onBind: Intent { act=com.google.android.mobstore.service.START xflg=0x4 pkg=com.google.android.gms }
+07-18 07:10:17.753 D/BoundBrokerSvc( 2330): Loading bound service for intent: Intent { act=com.google.android.mobstore.service.START xflg=0x4 pkg=com.google.android.gms }
+07-18 07:10:17.785 D/AidlBufferPool( 1014): bufferpool2 0x7d5d79a316a8 : 6(196608 size) total buffers - 4(131072 size) used buffers - 1/7 (recycle/alloc) - 11/22 (fetch/transfer)
+07-18 07:10:17.787 D/AidlBufferPool( 1014): bufferpool2 0x7d5d79a32dc8 : 4(131072 size) total buffers - 4(131072 size) used buffers - 2/7 (recycle/alloc) - 8/33 (fetch/transfer)
+07-18 07:10:17.787 D/AidlBufferPoolAcc( 1014): evictor expired: 2, evicted: 2
+07-18 07:10:17.787 D/AidlBufferPool(  646): bufferpool2 0x7f5e84420e58 : 5(163840 size) total buffers - 2(65536 size) used buffers - 10/15 (recycle/alloc) - 5/13 (fetch/transfer)
+07-18 07:10:17.778 I/binder  (    0): 2332:2318 cannot find target node
+07-18 07:10:17.786 I/binder  (    0): 2318:2332 transaction call to 0:0 failed 58684/29189/-22, code 3 size 1140-8 line 3430
+07-18 07:10:17.841 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.extractor.ts.Ac4Reader.packetStarted(long, int) took 228.003ms (13.16 bytecodes/s) (0B arena alloc)
+07-18 07:10:17.852 E/libbinder.IPCThreadState( 2318): Binder transaction failure. id: 58684, cmd: BR_DEAD_REPLY (29189), error: -22 (Invalid argument)
+07-18 07:10:17.935 W/libbinder.Binder( 2318): Binder transaction to com.google.android.gms.common.internal.IGmsServiceBroker, function: UNKNOWN_FUNCTION_NAME, code: 46, took 6718ms. Data bytes: 1296 Reply bytes: 4 Flags: 18
+07-18 07:10:18.074 W/AllowlistProviderService( 2318): No listener registered for allowlist changes, cannot notify
+07-18 07:10:18.093 W/e.mrcomic.debug( 2148): Verification of void androidx.media3.extractor.mp3.Mp3Extractor.<clinit>() took 248.058ms (60.47 bytecodes/s) (0B arena alloc)
+07-18 07:10:18.100 W/s.nexuslauncher( 2066): Suspending all threads took: 7.476ms
+07-18 07:10:17.893 I/binder  (    0): 2332:2318 reply target not found
+07-18 07:10:18.051 I/binder  (    0): 2318:2332 transaction reply to 0:0 failed 58732/29189/0, code 0 size 4-0 line 3359
+07-18 07:10:18.123 I/HWUI    ( 2148): Using FreeType backend (prop=Auto)
+07-18 07:10:18.141 W/libbinder.Binder(  629): Binder transaction to android.IMediaExtractorService, function: makeExtractor, code: 1, took 3839ms. Data bytes: 112 Reply bytes: 32 Flags: 16
+07-18 07:10:18.144 D/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#856] MediaCodec discarded an unknown buffer
+07-18 07:10:18.145 D/CCodecBufferChannel( 1014): [c2.android.vorbis.decoder#856] MediaCodec discarded an unknown buffer
+07-18 07:10:18.150 W/gle.android.gms( 2330): Long monitor contention with owner binder:2330_3 (2366) at boolean bigc.j()(:com.google.android.gms@261136038@26.11.36 (260800-892401869):32) waiters=0 in boolean bigc.j() for 4.457s
+07-18 07:10:18.111 I/binder  (    0): send failed reply for transaction 56032, target dead
+07-18 07:10:18.164 D/CCodec  ( 1014): hold CodecLooper(1) until release
+07-18 07:10:18.179 I/adbd    (  545): adbd service requested 'sync:'
+07-18 07:10:18.195 D/nativeloader( 2257): Load libtextclassifier3_jni_agsa.so using class loader ns product-clns-9 (caller=/product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!classes2.dex): dlopen failed: library "libtextclassifier3_jni_agsa.so" not found
+07-18 07:10:18.248 D/AidlBufferPool(  646): Destruction - bufferpool2 0x7f5e84425858 cached: 0/0M, 0/0% in use; allocs: 0, 0% recycled; transfers: 0, 0% unfetched
+07-18 07:10:18.250 W/libbinder.Binder(  639): Binder transaction to android.media.IMediaMetadataRetriever, function: UNKNOWN_FUNCTION_NAME, code: 3, took 4111ms. Data bytes: 132 Reply bytes: 4 Flags: 16
+07-18 07:10:18.254 W/.gms.persistent( 2318): Suspending all threads took: 159.545ms
+07-18 07:10:18.468 D/CCodec  ( 1014): hold CodecLooper(1) until release
+07-18 07:10:18.512 I/libbinder.BpBinder(  646): onLastStrongRef automatically unlinking death recipients for binder (0x7f5e94411810) with descriptor: 'android.hardware.media.bufferpool2.IClientManager'
+07-18 07:10:18.543 D/AidlBufferPool(  646): Destruction - bufferpool2 0x7f5e8442a258 cached: 0/0M, 0/0% in use; allocs: 0, 0% recycled; transfers: 0, 0% unfetched
+07-18 07:10:18.546 D/AidlBufferPool(  646): bufferpool2 0x7f5e84425cf8 : 0(0 size) total buffers - 0(0 size) used buffers - 10/16 (recycle/alloc) - 6/15 (fetch/transfer)
+07-18 07:10:18.592 D/NetworkMonitor/101( 1123): PROBE_HTTPS https://www.google.com/generate_204 time=5923ms ret=204 request={Connection=[close], User-Agent=[Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.32 Safari/537.36]} headers={null=[HTTP/1.1 204 No Content], Alt-Svc=[h3=":443"; ma=2592000,h3-29=":443"; ma=2592000], Connection=[close], Content-Length=[0], Cross-Origin-Resource-Policy=[cross-origin], Date=[Sat, 18 Jul 2026 07:10:18 GMT], X-Android-Received-Millis=[1784358618521], X-Android-Response-Source=[NETWORK 204], X-Android-Selected-Protocol=[http/1.1], X-Android-Sent-Millis=[1784358617888]}
+07-18 07:10:18.656 W/System  ( 2066): A resource failed to call release. 
+07-18 07:10:18.656 W/System  ( 2066): A resource failed to call release. 
+07-18 07:10:18.673 D/nativeloader( 2257): Load libtextclassifier3_jni_agsa.so using class loader ns product-clns-9 (caller=/product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!classes2.dex): dlopen failed: library "libtextclassifier3_jni_agsa.so" not found
+07-18 07:10:18.740 I/adbd    (  545): adbd service requested 'sync:'
+07-18 07:10:18.810 D/MediaCodecList( 1014): codecHandlesFormat: no format, so no extra checks
+07-18 07:10:18.840 I/MediaCodec( 1014): Retry enabled for HDCP failure
+07-18 07:10:18.871 I/tombstoned(  377): intercept for pid 2195 and type kDebuggerdJavaBacktrace terminated: due to timeout
+07-18 07:10:18.871 E/system_server(  727): libdebuggerd_client: tombstoned reported failure: 
+07-18 07:10:18.932 W/FuseDaemon( 1479): Suspending all threads took: 6.142ms
+07-18 07:10:18.884 I/servicemanager(    0): Caller(pid=1014,uid=10188,sid=u:r:platform_app:s0:c512,c768) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+07-18 07:10:18.944 D/nativeloader( 2257): Load libtextclassifier3_jni_agsa.so using class loader ns product-clns-9 (caller=/product/priv-app/DevicePersonalizationAiAiPrebuiltPixel2021/DevicePersonalizationAiAiPrebuiltPixel2021.apk!classes2.dex): dlopen failed: library "libtextclassifier3_jni_agsa.so" not found
+07-18 07:10:18.966 W/ndroid.systemui( 1014): Failed to query component store for system resources: 6
+07-18 07:10:19.003 I/AiAiEcho( 2257): SearchBE[TrackerImpl]: initialized.
+07-18 07:10:19.024 D/CCodec  ( 1014): allocate(c2.android.vorbis.decoder)
+07-18 07:10:19.038 D/nativeloader( 2195): Load /product/app/LatinIMEGooglePrebuilt/LatinIMEGooglePrebuilt.apk!/lib/x86_64/libintegrated_shared_object.so using class loader ns product-clns-9 (caller=/product/app/LatinIMEGooglePrebuilt/LatinIMEGooglePrebuilt.apk): ok
+07-18 07:10:18.983 I/servicemanager(    0): Caller(pid=1014,uid=10188,sid=u:r:platform_app:s0:c512,c768) Found android.hardware.media.c2.IComponentStore/default in device VINTF manifest.
+07-18 07:10:19.048 I/CCodec  ( 1014): setting up 'default' as default (vendor) store
+07-18 07:10:19.063 I/libbinder.BpBinder(  646): onLastStrongRef automatically unlinking death recipients for binder (0x7f5e9440cd20) with descriptor: 'android.hardware.media.bufferpool2.IAccessor'
+07-18 07:10:19.067 D/AidlBufferPool( 2148): bufferpool2 0x7d5d79a1fed8 : 0(0 size) total buffers - 0(0 size) used buffers - 0/5 (recycle/alloc) - 11/252 (fetch/transfer)
+07-18 07:10:19.086 D/AidlBufferPool( 2148): Destruction - bufferpool2 0x7d5d79a1fed8 cached: 0/0M, 0/0% in use; allocs: 5, 0% recycled; transfers: 252, 96% unfetched
+07-18 07:10:19.092 W/putmethod.latin( 2195): Suspending all threads took: 9.621s
+07-18 07:10:19.141 W/e.mrcomic.debug( 2148): Verification of androidx.media3.common.ColorInfo androidx.media3.extractor.mp4.BoxParser.parseAv1c(androidx.media3.common.util.ParsableByteArray) took 106.433ms (4218.61 bytecodes/s) (0B arena alloc)
+07-18 07:10:19.182 I/adbd    (  545): adbd service requested 'shell,v2,TERM=dumb:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time' '-t' '700''
+07-18 07:10:19.239 I/system_server(  727): IncrementDisableThreadFlip blocked for 1.652s
+07-18 07:10:19.248 W/ndroid.systemui( 1014): AIBinder_linkToDeath is being called with a non-null cookie and no onUnlink callback set. Use AIBinder_DeathRecipient_setOnUnlinked to manage the lifetime of the cookie. This will become an abort.
+07-18 07:10:19.248 I/CCodec  ( 1014): Created component [c2.android.vorbis.decoder] for [c2.android.vorbis.decoder]
+07-18 07:10:19.249 D/CCodecConfig( 1014): read media type: audio/vorbis
+07-18 07:10:19.263 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:19.263 W/libbinder.Binder(  727): Binder transaction to android.content.pm.IPackageManager, function: UNKNOWN_FUNCTION_NAME, code: 34, took 2133ms. Data bytes: 256 Reply bytes: 17892 Flags: 18
+07-18 07:10:19.272 I/WifiService(  727): isFeatureSupported uid=1000 returns [WIFI_FEATURE_INFRA, WIFI_FEATURE_P2P, WIFI_FEATURE_MOBILE_HOTSPOT, WIFI_FEATURE_WPA3_SAE, WIFI_FEATURE_WPA3_SUITE_B, WIFI_FEATURE_OWE, WIFI_FEATURE_DPP, WIFI_FEATURE_AP_RAND_MAC, WIFI_FEATURE_MBO, WIFI_FEATURE_FILS_SHA256, WIFI_FEATURE_FILS_SHA384, WIFI_FEATURE_SAE_PK, WIFI_FEATURE_DPP_ENROLLEE_RESPONDER, WIFI_FEATURE_PASSPOINT_TERMS_AND_CONDITIONS, WIFI_FEATURE_WFD_R2, WIFI_FEATURE_DECORATED_IDENTITY, WIFI_FEATURE_TRUST_ON_FIRST_USE, WIFI_FEATURE_SET_TLS_MINIMUM_VERSION, WIFI_FEATURE_TLS_V1_3, WIFI_FEATURE_WEP, WIFI_FEATURE_WPA_PERSONAL]
+07-18 07:10:19.287 E/BluetoothSystemServer(  727): BluetoothManagerService: TIMEOUT_BIND: Impossible to bind to Bluetooth service
+07-18 07:10:19.288 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:19.291 W/ActivityManager(  727): Dumping Java threads failed, initiating native stack dump.
+07-18 07:10:19.305 W/system_server(  727): Long monitor contention with owner android.ui (755) at void com.android.server.wm.WindowManagerService$LocalService.setAccessibilityIdToSurfaceMetadata(android.os.IBinder, int)(WindowManagerService.java:9234) waiters=0 in void com.android.server.wm.ActivityTaskManagerService.setRunningRemoteTransitionDelegate(android.os.IBinder) for 276ms
+07-18 07:10:19.305 W/ActivityTaskManager(  727): setRunningRemoteTransition: no process for null
+07-18 07:10:19.312 I/system_server(  727): Background young concurrent mark compact GC freed 19MB AllocSpace bytes, 34(1408KB) LOS objects, 42% free, 31MB/54MB, paused 825.049ms,1.655s total 7.270s
+07-18 07:10:19.320 W/libbinder.Binder( 2195): Binder transaction to android.view.accessibility.IAccessibilityManagerClient, function: UNKNOWN_FUNCTION_NAME, code: 3, took 8627ms. Data bytes: 132 Reply bytes: 0 Flags: 17
+07-18 07:10:19.339 I/NativeLibHelper( 2195): NativeLibHelper.loadLibrary():209 Loaded native library:integrated_shared_object (result=true)
+07-18 07:10:19.343 W/ApplicationInfo(  727): Large ApplicationInfo parcel: size=17500 package=com.google.android.googlequicksearchbox sharedLibs=3 resDirs=2 overlayPaths=2
+07-18 07:10:19.345 D/WifiConfigStore(  727): Writing to stores completed in 3578 ms.
+07-18 07:10:19.346 I/Delight5( 2195): JniUtil.loadLibrary():30 loadLibrary(): nativeLibraryLoaded=false
+07-18 07:10:19.347 I/Delight5( 2195): JniUtil.loadLibrary():42 Loaded jni_delight5decoder: enablePerfettoNativeTracing=false
+07-18 07:10:19.347 I/native  ( 2195): I0000 00:00:1784358619.347532    2376 tracing.cc:18] TracingInit: enable perfetto tracing: false
+07-18 07:10:19.351 W/libbinder.IPCThreadState(  727): Waiting for thread to be free. mExecutingThreadsCount=31 mMaxThreads=31
+07-18 07:10:19.378 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.max-count.values
+07-18 07:10:19.379 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.subscribed-indices.values
+07-18 07:10:19.379 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: input.buffers.allocator-ids.values
+07-18 07:10:19.381 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.buffers.allocator-ids.values
+07-18 07:10:19.383 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.allocator-ids.values
+07-18 07:10:19.383 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: output.buffers.pool-ids.values
+07-18 07:10:19.384 D/ReflectedParamUpdater( 1014): extent() != 1 for single value type: algo.buffers.pool-ids.values
+07-18 07:10:19.389 W/libbinder.IPCThreadState(  727): Waiting for thread to be free. mExecutingThreadsCount=32 mMaxThreads=31
+07-18 07:10:19.389 I/CCodecConfig( 1014): query failed after returning 8 values (BAD_INDEX)
+07-18 07:10:19.389 D/CCodecConfig( 1014): c2 config diff is Dict {
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 coded.bitrate.value = 64000
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 input.buffers.max-size.value = 32768
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 input.delay.value = 0
+07-18 07:10:19.389 D/CCodecConfig( 1014):   string input.media-type.value = "audio/vorbis"
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 output.large-frame.max-size = 0
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 output.large-frame.threshold-size = 0
+07-18 07:10:19.389 D/CCodecConfig( 1014):   string output.media-type.value = "audio/raw"
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 raw.channel-count.value = 1
+07-18 07:10:19.389 D/CCodecConfig( 1014):   c2::u32 raw.sample-rate.value = 48000
+07-18 07:10:19.389 D/CCodecConfig( 1014): }
+07-18 07:10:19.394 I/MediaCodec( 1014): media_quality service unavailable, skipping updatePictureProfile
+07-18 07:10:19.395 D/CCodec  ( 1014): [c2.android.vorbis.decoder] buffers are bound to CCodec for this session
+07-18 07:10:19.395 D/CCodecConfig( 1014): no c2 equivalents for durationUs
+07-18 07:10:19.396 D/CCodecConfig( 1014): no c2 equivalents for track-id
+07-18 07:10:19.396 D/CCodecConfig( 1014): no c2 equivalents for csd-1
+07-18 07:10:19.396 D/CCodecConfig( 1014): no c2 equivalents for flags
+07-18 07:10:19.397 D/CCodecConfig( 1014): c2 config diff is   c2::u32 coded.bitrate.value = 160000
+07-18 07:10:19.397 D/CCodecConfig( 1014):   c2::u32 raw.channel-count.value = 2

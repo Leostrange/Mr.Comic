@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.domain.analytics.MascotProgressCalculatorTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:02:05.978Z" hostname="LEOSTRANGE" time="0.019">
+  <properties/>
+  <testcase name="resolveMascotStagePreview_returnsCurrentStageWhenAcknowledgedStageIsLower" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.004"/>
+  <testcase name="resolveMascotStageTimeline_handlesFinalStageWithoutFutureTarget" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.004"/>
+  <testcase name="resolveMascotStageTimeline_marksTeenBandAndRemainingXp" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.0"/>
+  <testcase name="resolveMascotStagePreview_hidesPreviewWhenDisabledOrAlreadyAcknowledged" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.001"/>
+  <testcase name="resolveMascotStageArchive_keepsHighestReachedStageFromAcknowledgedPreview" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.004"/>
+  <testcase name="resolveMascotStageArchive_usesCurrentStageWhenNoHigherAcknowledgedStageExists" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.0"/>
+  <testcase name="calculateMascotProgress_capsAdultStage" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.005"/>
+  <testcase name="calculateMascotProgress_usesApproximatePagesAndCompletedTitles" classname="com.example.core.domain.analytics.MascotProgressCalculatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

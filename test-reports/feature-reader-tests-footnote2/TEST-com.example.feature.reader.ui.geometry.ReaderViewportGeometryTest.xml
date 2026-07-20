@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-07-19T13:56:50.144Z" hostname="LEOSTRANGE" time="0.007">
+  <properties/>
+  <testcase name="contentHeight_reducedByInsets" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.005"/>
+  <testcase name="visibleToolbars_topInsetIncludesToolbarHeight" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="minimumViewportHeight_enforced" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="contentWidth_cssConverted" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="densityScale_minimum1" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="readerPadding_addedToInsets" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="visibleToolbars_cssInsetsIncludeToolbar" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="displayCutout_includedInTopInset" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="hiddenToolbars_cssInsetsIncludeSafetyMargin" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.0"/>
+  <testcase name="hiddenToolbars_topInsetIncludesOnlySystemInsets" classname="com.example.feature.reader.ui.geometry.ReaderViewportGeometryTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.library.AudiobookFolderImportPlanTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-20T02:03:42.075Z" hostname="LEOSTRANGE" time="0.016">
+  <properties/>
+  <testcase name="nestedMixedAudiobookFolderStaysFolderImportWhenFolderGroupingIsEnabled" classname="com.example.feature.library.AudiobookFolderImportPlanTest" time="0.01"/>
+  <testcase name="mixedLibraryTreeSplitsStandaloneFileAndNestedAudiobookFolder" classname="com.example.feature.library.AudiobookFolderImportPlanTest" time="0.001"/>
+  <testcase name="nestedAudiobookFolderIsImportedSeparatelyFromParentLibraryTree" classname="com.example.feature.library.AudiobookFolderImportPlanTest" time="0.001"/>
+  <testcase name="pureAudiobookFolderCanSplitIntoFilesWhenFolderGroupingIsOff" classname="com.example.feature.library.AudiobookFolderImportPlanTest" time="0.001"/>
+  <testcase name="pureAudiobookFolderStaysAsSingleFolderImport" classname="com.example.feature.library.AudiobookFolderImportPlanTest" time="0.001"/>
+  <testcase name="mixedFolderImportsDirectAudioFileSeparatelyWhenFolderContainsOtherMedia" classname="com.example.feature.library.AudiobookFolderImportPlanTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

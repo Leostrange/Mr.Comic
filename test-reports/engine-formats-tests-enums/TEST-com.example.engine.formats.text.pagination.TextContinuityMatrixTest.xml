@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-07-19T22:55:53.187Z" hostname="LEOSTRANGE" time="0.083">
+  <properties/>
+  <testcase name="continuity_landscape873x393" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.016"/>
+  <testcase name="continuity_tablet800x1280" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.005"/>
+  <testcase name="continuity_lineHeight12" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_lineHeight16" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_lineHeight20" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_lineHeight25" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_fontSize12" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_fontSize18" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.005"/>
+  <testcase name="continuity_fontSize24" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_fontSize32" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.003"/>
+  <testcase name="continuity_portrait360x640" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.003"/>
+  <testcase name="continuity_portrait393x873" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_landscape640x360" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.004"/>
+  <testcase name="continuity_500lines" classname="com.example.engine.formats.text.pagination.TextContinuityMatrixTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

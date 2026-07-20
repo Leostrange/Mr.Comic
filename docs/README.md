@@ -5,6 +5,7 @@ This folder contains the working documentation for the Mr.Comic Android reader p
 ## Start Here
 
 - [Root README](../README.md) - project overview, build commands, supported formats, and demo media.
+- [Release notes](../RELEASE_NOTES.md) - public release summary and build notes.
 - [Reader QA checklist](active/QA_REGRESSION_CHECKLIST.md) - manual and emulator scenarios for reader regressions.
 - [Format support audit](active/FORMAT_SUPPORT_AUDIT_2026-03-27.md) - supported formats and known format-specific risks.
 - [Reader test progress](reader_test_progress.md) - current testing notes.
@@ -18,6 +19,7 @@ This folder contains the working documentation for the Mr.Comic Android reader p
 - [Localization audit](active/LOCALIZATION_AUDIT.md)
 - [Translation module task](active/TRANSLATION_MODULE_TZ.md)
 - [Third-party dictionaries](active/THIRD_PARTY_DICTIONARIES.md)
+- [Reader import/open plan](active/READER_IMPORT_OPEN_PLAN.md)
 - [Library background generation task](active/LIBRARY_BACKGROUND_GENERATION_TZ.md)
 - [Library background prompt pack](active/LIBRARY_BACKGROUND_PROMPT_PACK.md)
 

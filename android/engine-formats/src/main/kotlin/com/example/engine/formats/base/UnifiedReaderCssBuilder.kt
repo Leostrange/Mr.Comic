@@ -9,7 +9,7 @@ internal fun buildReaderDocumentCss(
     bodyColor: String = "inherit",
     bodyBackground: String = "transparent",
     textAlignOnBody: Boolean = true,
-    includeHyphens: Boolean = true,
+    includeHyphens: Boolean = false,
     includeTypography: Boolean = true,
     includeRichElements: Boolean = true,
     headingFontWeight: String = "700",
@@ -20,7 +20,11 @@ internal fun buildReaderDocumentCss(
     blockquoteStyle: String = "",
     extraCss: String = ""
 ): String = buildString {
-    val hyphenDecl = if (includeHyphens) "hyphens: auto; -webkit-hyphens: auto; word-break: normal;" else ""
+    val hyphenDecl = if (includeHyphens) {
+        "hyphens: auto; -webkit-hyphens: auto; word-break: normal;"
+    } else {
+        "hyphens: manual; -webkit-hyphens: manual; word-break: normal;"
+    }
     append("""
     body {
       margin: $bodyMargin;
@@ -36,6 +40,9 @@ internal fun buildReaderDocumentCss(
       overflow-wrap: break-word;
       word-break: normal;
       $hyphenDecl
+    }
+    body:not([data-mrcomic-preserve-layout="true"]) * {
+      font-family: inherit !important;
     }
     """.trimIndent())
 
@@ -89,7 +96,9 @@ internal fun buildReaderDocumentCss(
     li + li { margin-top: 0.25rem; }
     table { width: 100%; max-width: 100%; border-collapse: collapse; margin: 1rem 0; table-layout: fixed; }
     table.auto-layout { table-layout: auto; }
-    .table-wrapper { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table-wrapper, .mrcomic-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .mrcomic-table-scroll table { border-collapse: collapse; margin: 0.8em 0; table-layout: auto; width: auto; max-width: 100%; }
+    .mrcomic-table-scroll td, .mrcomic-table-scroll th { padding: 0.4rem 0.6rem; border: 1px solid rgba(120,120,120,0.3); text-align: left; word-wrap: break-word; }
     th, td { padding: 0.5rem 0.65rem; text-align: left; word-wrap: break-word; overflow-wrap: break-word; max-width: 100%; }
     table[border] th, table[border] td { border: 1px solid rgba(120,120,120,0.35); }
     table:not([border]) th, table:not([border]) td { border: none; }
@@ -232,11 +241,12 @@ private fun buildReaderOverrideCss(
         body:not([data-mrcomic-preserve-layout="true"]) * {
           ${resolvedTextColor?.let { "color: $it !important;" } ?: ""}
         }
-        body:not([data-mrcomic-preserve-layout="true"]) * {
-          ${resolvedBackgroundColor?.let { "background-color: transparent !important;" } ?: ""}
-          background-image: none !important;
-          box-shadow: none !important;
-        }
+    body:not([data-mrcomic-preserve-layout="true"]) * {
+      font-family: inherit !important;
+      ${resolvedBackgroundColor?.let { "background-color: transparent !important;" } ?: ""}
+      background-image: none !important;
+      box-shadow: none !important;
+    }
         body:not([data-mrcomic-preserve-layout="true"]) a,
         body:not([data-mrcomic-preserve-layout="true"]) a *,
         body:not([data-mrcomic-preserve-layout="true"]) .note-num,

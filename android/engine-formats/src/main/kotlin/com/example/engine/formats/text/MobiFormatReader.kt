@@ -3,6 +3,7 @@ package com.example.engine.formats.text
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import com.example.core.model.ComicFormat
 import com.example.engine.formats.base.FormatReader
 import com.example.engine.formats.base.TocEntry
@@ -197,8 +198,13 @@ private fun InputStream.readMobiBytesBounded(maxBytes: Int): ByteArray? {
 }
 
 private fun buildMobiSections(markup: String, baseUrl: String?): List<TextDocumentSection> {
-    if (!MOBI_HEAVY_MARKUP_RE.containsMatchIn(markup)) {
-        buildMobiFastBlockDocument(markup)?.pages?.mapIndexed { index, html ->
+    Log.d("MobiFormatReader", "buildMobiSections: markup.length=${markup.length}, hasHeavyMarkup=${MOBI_HEAVY_MARKUP_RE.containsMatchIn(markup)}")
+    // Fast path: only for small MOBI files (<10KB). Larger files go through
+    // the section-splitting path to ensure proper pagination.
+    if (markup.length < 10000 && !MOBI_HEAVY_MARKUP_RE.containsMatchIn(markup)) {
+        val fastDoc = buildMobiFastBlockDocument(markup)
+        Log.d("MobiFormatReader", "buildMobiFastBlockDocument: pages=${fastDoc?.pages?.size ?: 0}")
+        fastDoc?.pages?.mapIndexed { index, html ->
             TextDocumentSection(index = index, html = html, baseUrl = baseUrl)
         }?.let { return it.withSequentialIndices() }
     }

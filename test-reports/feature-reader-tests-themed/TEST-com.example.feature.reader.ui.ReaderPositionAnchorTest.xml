@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderPositionAnchorTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-07-19T17:48:27.526Z" hostname="LEOSTRANGE" time="0.018">
+  <properties/>
+  <testcase name="restoreAnchor_byElementId" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.001"/>
+  <testcase name="extractAnchor_noMatch_returnsNull" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.001"/>
+  <testcase name="restoreAnchor_byTextContent" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.0"/>
+  <testcase name="anchor_stableAfterToolbarChange" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.014"/>
+  <testcase name="anchor_stableAfterFontSizeChange" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.001"/>
+  <testcase name="extractAnchor_fromIdAttribute" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.0"/>
+  <testcase name="extractAnchor_fromTextContent" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.001"/>
+  <testcase name="restoreAnchor_notFound_returnsNull" classname="com.example.feature.reader.ui.ReaderPositionAnchorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

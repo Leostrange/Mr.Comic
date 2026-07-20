@@ -6,6 +6,8 @@ import androidx.room.TypeConverters
 import com.example.core.model.Comic
 import com.example.core.model.Converters
 import com.example.core.model.SavedQuote
+import com.example.core.model.TextHighlight
+import com.example.core.model.TranslationCacheEntry
 
 @Database(
     entities = [
@@ -13,9 +15,11 @@ import com.example.core.model.SavedQuote
         SavedQuote::class,
         AudiobookEntity::class,
         EpubStructureCacheEntity::class,
-        EpubManifestCacheEntity::class
+        EpubManifestCacheEntity::class,
+        TextHighlight::class,
+        TranslationCacheEntry::class
     ],
-    version = 6,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -25,4 +29,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun audiobookDao(): AudiobookDao
     abstract fun epubStructureCacheDao(): EpubStructureCacheDao
     abstract fun epubManifestCacheDao(): EpubManifestCacheDao
+    abstract fun textHighlightDao(): TextHighlightDao
+    abstract fun translationCacheDao(): TranslationCacheDao
 }

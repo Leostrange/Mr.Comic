@@ -10,14 +10,15 @@
     </style>
 
     <!-- Основная тема приложения -->
-    <style name="Theme.MrComic" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.MrComic" parent="Theme.MrComic.Base" />
+
+    <style name="Theme.MrComic.Base" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 
 </resources>

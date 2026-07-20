@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.archive.ArchiveDelegatingFormatReaderTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-20T00:52:50.611Z" hostname="LEOSTRANGE" time="0.575">
+  <properties/>
+  <testcase name="zipWithSingleTxtBookRendersAsTextArchive" classname="com.example.engine.formats.archive.ArchiveDelegatingFormatReaderTest" time="0.575"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

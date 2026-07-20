@@ -17,13 +17,24 @@ internal object RtfHtmlSupport {
         "latentstyles", "mmathPr"
     )
 
-    fun renderHtmlBlocks(raw: String): List<String> {
+    data class RtfRenderResult(
+        val blocks: List<String>,
+        val footnoteMap: Map<String, String>
+    )
+
+    fun renderHtmlBlocksWithFootnotes(raw: String): RtfRenderResult {
         val parser = Parser(raw)
         val root = parser.parse()
         val renderer = Renderer(parseColorTable(raw))
         renderer.render(root)
-        return renderer.blocks()
+        return RtfRenderResult(
+            blocks = renderer.blocks(),
+            footnoteMap = renderer.footnoteMap()
+        )
     }
+
+    fun renderHtmlBlocks(raw: String): List<String> =
+        renderHtmlBlocksWithFootnotes(raw).blocks
 
     fun extractPlainText(raw: String): String {
         return renderHtmlBlocks(raw)
@@ -152,8 +163,10 @@ internal object RtfHtmlSupport {
                     ParsedControl(Node.Control("*"), currentUcSkip)
                 }
                 else -> {
+                    // Always advance past non-letter / non-identifier characters (P0 #4)
+                    index++
+                    if (index >= raw.length) return ParsedControl(null, currentUcSkip)
                     if (!next.isLetter()) {
-                        index++
                         return ParsedControl(null, currentUcSkip)
                     }
                     val start = index
@@ -173,8 +186,20 @@ internal object RtfHtmlSupport {
                         }
                         "uc" -> ParsedControl(Node.Control(word, param), param ?: currentUcSkip)
                         "u" -> {
-                            val codePoint = param?.let { if (it < 0) it + 65536 else it } ?: '?'.code
-                            val text = runCatching { Character.toChars(codePoint).concatToString() }.getOrDefault("?")
+                            // RTF \uN: N is the Unicode code point. Negative values like \u-1234
+                            // mean the character is encoded as high surrogate (0xD800 + N), not 65536+N.
+                            // But some RTF writers emit negative values — treat as BMP+offset for surrogate pairs.
+                            val codePoint = param?.let { 
+                                // Negative means: first, compute the absolute code point from 16-bit signed
+                                // then handle surrogates properly (P2)
+                                if (it < 0) {
+                                    // RTF stores 16-bit signed values: -1 → 0xFFFF (surrogate), -2 → 0xFFFE
+                                    // In practice: \u-1234 → codePoint 64402 is already > BMP
+                                    // Use the raw value as-is (it's already a valid Unicode code point)
+                                    it + 0x10000
+                                } else it 
+                            } ?: '?'.code
+                            val text = runCatching { Character.toChars(codePoint.coerceIn(0, 0x10FFFF)).concatToString() }.getOrDefault("?")
                             skipUnicodeFallback(currentUcSkip)
                             ParsedControl(Node.Text(text), currentUcSkip)
                         }
@@ -226,6 +251,8 @@ internal object RtfHtmlSupport {
         private val currentRowCells = mutableListOf<String>()
         private val currentCellBlocks = mutableListOf<String>()
         private var insideTableRow = false
+        private val footnoteMap = mutableMapOf<String, String>()
+        private var footnoteCounter = 0
 
         fun render(root: Node.Group) {
             val state = StyleState()
@@ -236,6 +263,8 @@ internal object RtfHtmlSupport {
 
         fun blocks(): List<String> =
             blocks.ifEmpty { listOf("<p></p>") }
+
+        fun footnoteMap(): Map<String, String> = footnoteMap.toMap()
 
         private fun renderNode(node: Node, inheritedState: StyleState) {
             if (!insideTableRow && currentTableRows.isNotEmpty() && !isTableContinuation(node)) {
@@ -252,6 +281,19 @@ internal object RtfHtmlSupport {
             val destination = group.prefixControls.firstOrNull()?.word
             if (group.starred && destination !in setOf("fldinst", "fldrslt")) return
             if (destination in DESTINATIONS_TO_SKIP && destination !in setOf("pict")) return
+
+            // Handle RTF footnotes: extract content, store in map, insert clickable reference
+            if (destination == "footnote") {
+                footnoteCounter++
+                val id = "rtf-fn-$footnoteCounter"
+                val footnoteHtml = renderInlineHtml(group.children, inheritedState.copy())
+                val footnoteText = Jsoup.parse(footnoteHtml).text().trim()
+                if (footnoteText.isNotBlank()) {
+                    footnoteMap[id] = footnoteHtml
+                    appendRawHtml("""<sup><a class="fn" href="#$id">$footnoteCounter</a></sup>""")
+                }
+                return
+            }
 
             if (destination == "listtext" || destination == "pntext") {
                 val prefixHtml = renderInlineHtml(group.children, inheritedState.copy())

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.TextPagePaginationControllerTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-18T11:06:01.726Z" hostname="LEOSTRANGE" time="0.002">
+  <properties/>
+  <testcase name="toTextPaginationConstraintsUsesViewportAndTypography" classname="com.example.feature.reader.ui.TextPagePaginationControllerTest" time="0.002"/>
+  <testcase name="textPagePaginationKeyChangesWithTypography" classname="com.example.feature.reader.ui.TextPagePaginationControllerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

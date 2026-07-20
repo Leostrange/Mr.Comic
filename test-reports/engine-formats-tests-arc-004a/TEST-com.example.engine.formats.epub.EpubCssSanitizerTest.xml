@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.epub.EpubCssSanitizerTest" tests="18" skipped="0" failures="0" errors="0" timestamp="2026-07-18T14:09:43.845Z" hostname="LEOSTRANGE" time="0.019">
+  <properties/>
+  <testcase name="sanitizeAssetBacked_stripsUnsafeUrls" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.002"/>
+  <testcase name="normalizeAssetPath_stripsDots" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.0"/>
+  <testcase name="sanitizeAssetBacked_stripsOtfTtfFonts" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.002"/>
+  <testcase name="normalizeAssetPath_resolvesDotDot" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.0"/>
+  <testcase name="sanitizeInline_stripsDominantIdScope" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.002"/>
+  <testcase name="isSafeAssetBackedCssUrl_acceptsHttp" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="sanitizeAssetBacked_keepsResolvableFontFace" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="isSafeAssetBackedCssUrl_rejectsFile" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="isSafeAssetBackedCssUrl_rejectsBlank" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="sanitizeInline_stripsFontFace" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.0"/>
+  <testcase name="normalizeAssetPath_stripsLeadingSlash" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="sanitizeAssetBacked_stripsBrokenFontFace" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.002"/>
+  <testcase name="normalizeAssetPath_handlesDoubleDots" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.0"/>
+  <testcase name="sanitizeInline_clampsDangerouslySmallLineHeight" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.0"/>
+  <testcase name="isSafeAssetBackedCssUrl_rejectsJavascript" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="isSafeAssetBackedCssUrl_checksAssetExists" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="isSafeAssetBackedCssUrl_acceptsDataUri" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <testcase name="sanitizeInline_keepsRareIdSelectors" classname="com.example.engine.formats.epub.EpubCssSanitizerTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,1003 @@
+﻿--------- beginning of main
+07-18 07:11:40.024 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.024 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.024 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.024 D/ConfigUpdater( 3926): Calling UpdateFetcher.startUpdate
+07-18 07:11:40.024 D/ConfigUpdater( 3926): startUpdate
+07-18 07:11:40.024 I/ConfigUpdater( 3926): Update metadata and content URIs are identical to previous successful installation. Skipping.
+07-18 07:11:40.029 D/AccessControllerMetricsStats( 3420): setConfigDataSource: config data source = 4
+07-18 07:11:40.029 D/SatelliteAccessController( 3420): loadConfigUpdaterConfigs
+07-18 07:11:40.029 E/SatelliteAccessController( 3420): loadConfigUpdaterConfigs: satelliteConfigVersion is invalid: 0
+07-18 07:11:40.038 D/ConfigUpdater( 3926): Finished async task for startUpdate
+07-18 07:11:40.062 D/ConfigUpdater( 3926): UpdateRequestReceiver constructed with Config: com.google.android.configupdater.emergencynumberdb.EmergencyNumberDbConfig@913126e, StoredState: com.google.android.configupdater.StoredState@bd08d0f, DownloadManagerHelper: com.google.android.configupdater.DownloadManagerHelper@b60d19c, FlagHelper: com.google.android.configupdater.PhenotypeHelper@2bef7a5
+07-18 07:11:40.063 D/ConfigUpdater( 3926): Setting up preferences for StoredState, Downloader, and FlagHelper
+07-18 07:11:40.063 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.063 D/ConfigUpdater( 3926): Loaded SharedPreferences: EmergencyNumberDbDownload
+07-18 07:11:40.063 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.063 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.063 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.063 D/ConfigUpdater( 3926): Received intent with action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:40.063 D/ConfigUpdater( 3926): handleUpdateRequestIntent
+07-18 07:11:40.087 W/system_server(  727): Long monitor contention with owner appscheduling.default (832) at void com.android.server.job.JobSchedulerService$JobHandler.handleMessage(android.os.Message)(JobSchedulerService.java:3889) waiters=0 in int com.android.server.job.JobSchedulerService.scheduleAsPackage(android.app.job.JobInfo, android.app.job.JobWorkItem, int, java.lang.String, int, java.lang.String, java.lang.String) for 288ms
+07-18 07:11:40.090 D/ConfigUpdater( 3926): Falling back to flag content location
+07-18 07:11:40.090 E/ConfigUpdater( 3926): Content location is empty, ignoring update request.
+07-18 07:11:40.102 D/SatelliteController( 3420): getSelectedSatelliteSubId: subId=-1
+07-18 07:11:40.102 D/TelephonyConfigUpdateInstallReceiver( 3420): getConfigParser: domain=satellite
+07-18 07:11:40.102 D/TelephonyConfigUpdateInstallReceiver( 3420): CreateNewConfigParser with domain satellite
+07-18 07:11:40.103 E/TelephonyConfigUpdateInstallReceiver( 3420): Failed to read current content : /data/misc/telephonyconfig/valid_telephony_config.pb
+07-18 07:11:40.103 D/TelephonyConfigUpdateInstallReceiver( 3420): content data is null
+07-18 07:11:40.103 V/SatelliteController( 3420): satelliteConfigParser is not ready
+07-18 07:11:40.103 D/SatelliteController( 3420): isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+07-18 07:11:40.111 D/BoundBrokerSvc( 3343): onBind: Intent { act=com.google.android.gms.common.telemetry.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+07-18 07:11:40.111 D/BoundBrokerSvc( 3343): Loading bound service for intent: Intent { act=com.google.android.gms.common.telemetry.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+07-18 07:11:40.122 D/ConfigUpdater( 3926): UpdateRequestReceiver constructed with Config: com.google.android.configupdater.intentfirewall.IntentFirewallConfig@592eb2b, StoredState: com.google.android.configupdater.StoredState@1776b88, DownloadManagerHelper: com.google.android.configupdater.DownloadManagerHelper@5cc6921, FlagHelper: com.google.android.configupdater.PhenotypeHelper@970146
+07-18 07:11:40.122 D/ConfigUpdater( 3926): Setting up preferences for StoredState, Downloader, and FlagHelper
+07-18 07:11:40.122 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.123 D/ConfigUpdater( 3926): Loaded SharedPreferences: IntentFirewallDownload
+07-18 07:11:40.123 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.123 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.123 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.123 D/ConfigUpdater( 3926): Received intent with action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:40.123 D/ConfigUpdater( 3926): handleUpdateRequestIntent
+07-18 07:11:40.124 D/ConfigUpdater( 3926): Falling back to flag content location
+07-18 07:11:40.124 E/ConfigUpdater( 3926): Content location is empty, ignoring update request.
+07-18 07:11:40.142 W/SatelliteController( 3420): getConfigForSubId: java.lang.IllegalStateException: Carrier config loader is not available.
+07-18 07:11:40.142 D/SatelliteController( 3420): Satellite for carrier is not supported.
+07-18 07:11:40.143 D/SatelliteController( 3420): getSelectedSatelliteSubId: subId=-1
+07-18 07:11:40.143 D/TelephonyConfigUpdateInstallReceiver( 3420): getConfigParser: domain=satellite
+07-18 07:11:40.143 V/SatelliteController( 3420): satelliteConfigParser is not ready
+07-18 07:11:40.143 D/SatelliteController( 3420): isSatelliteAttachSupportedViaConfigupdater: return null (satelliteConfig is null)
+07-18 07:11:40.161 D/ConfigUpdater( 3926): UpdateRequestReceiver constructed with Config: com.google.android.configupdater.langid.LangIdConfig@5e5765d, StoredState: com.google.android.configupdater.StoredState@5b1ebd2, DownloadManagerHelper: com.google.android.configupdater.DownloadManagerHelper@90794a3, FlagHelper: com.google.android.configupdater.PhenotypeHelper@9623a0
+07-18 07:11:40.172 I/WM-WorkerWrapper( 1479): Worker result SUCCESS for Work [ id=d1f5c1ca-a61c-48dc-be3d-223f4557f922, tags={ com.android.providers.media.MediaServiceV2 } ]
+07-18 07:11:40.175 W/SatelliteController( 3420): getConfigForSubId: java.lang.IllegalStateException: Carrier config loader is not available.
+07-18 07:11:40.175 D/SatelliteController( 3420): Satellite for carrier is not supported.
+07-18 07:11:40.181 D/ConfigUpdater( 3926): Setting up preferences for StoredState, Downloader, and FlagHelper
+07-18 07:11:40.182 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.182 D/ConfigUpdater( 3926): Loaded SharedPreferences: LangIdDownload
+07-18 07:11:40.182 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.182 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.182 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.182 D/ConfigUpdater( 3926): Received intent with action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:40.182 D/ConfigUpdater( 3926): handleUpdateRequestIntent
+07-18 07:11:40.184 D/ConfigUpdater( 3926): Falling back to flag content location
+07-18 07:11:40.184 D/ConfigUpdater( 3926): Received metadata location from intent
+07-18 07:11:40.184 D/ConfigUpdater( 3926): Falling back to flag metadata location
+07-18 07:11:40.184 D/ConfigUpdater( 3926): Starting update from request intent.
+07-18 07:11:40.287 I/Choreographer( 2937): Skipped 47 frames!  The application may be doing too much work on its main thread.
+07-18 07:11:40.288 W/.gms.persistent( 3343): Long monitor contention with owner highpool[1] (3648) at android.database.sqlite.SQLiteDatabase ewyk.l()(:com.google.android.gms@261136038@26.11.36 (260800-892401869):323) waiters=2 in android.database.sqlite.SQLiteDatabase ewyk.l() for 1.352s
+--------- beginning of system
+07-18 07:11:40.347 W/ActivityManager(  727): Skipping manifest association check for null package. SourceUid: -1, SourcePkg: null, TargetUid: 10228, TargetPkg: com.google.android.gms
+07-18 07:11:40.357 D/ConfigUpdater( 3926): UpdateFetcher constructor with context
+07-18 07:11:40.358 D/ConfigUpdater( 3926): Setting up UpdateFetcher
+07-18 07:11:40.358 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.358 D/ConfigUpdater( 3926): Loaded SharedPreferences: LangIdDownload
+07-18 07:11:40.358 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.358 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.358 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.358 D/ConfigUpdater( 3926): Calling UpdateFetcher.startUpdate
+07-18 07:11:40.358 D/ConfigUpdater( 3926): startUpdate
+07-18 07:11:40.358 I/ConfigUpdater( 3926): Update metadata and content URIs are identical to previous successful installation. Skipping.
+07-18 07:11:40.363 D/ConfigUpdater( 3926): Finished async task for startUpdate
+07-18 07:11:40.367 D/WM-Processor( 1479): Processor d1f5c1ca-a61c-48dc-be3d-223f4557f922 executed; reschedule = false
+07-18 07:11:40.369 D/WM-SystemJobService( 1479): d1f5c1ca-a61c-48dc-be3d-223f4557f922 executed on JobScheduler
+07-18 07:11:40.386 W/oid.apps.photos( 3236): Verification of void m2.cu.<init>(boolean, boolean, boolean, java.util.List, boolean, java.util.List, boolean, java.util.List, boolean) took 157.760ms (215.52 bytecodes/s) (0B arena alloc)
+07-18 07:11:40.402 W/roid.apps.pulse( 3783): Long monitor contention with owner Primes-1 (3813) at cuq bnj.d()(PG:1148) waiters=0 in cuq bnj.d() for 359ms
+--------- beginning of kernel
+07-18 07:11:40.599 I/servicemanager(    0): Caller(pid=3976,uid=2000,sid=u:r:shell:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+07-18 07:11:40.412 D/WM-GreedyScheduler( 1479): Cancelling work ID d1f5c1ca-a61c-48dc-be3d-223f4557f922
+07-18 07:11:40.519 I/PhenotypeModule( 3097): PhenotypeModule.handleResult():374 fetchAndUpdate() : Success, hasFlags=true, fetchStatus=oqs[reason=ON_CREATE, timestamp=1784358675456, isFullFetch=true, success=true, fetchedFlagsCount=1407, deletedFlagsCount=0, isEmpty=false, isDelta=false, totalTime=25058, failureMessage=null, registeredFormFactor=phone, fetchedFormFactor=phone, serverToken=CAMSYw1m15vyAAPvD8cZkwLKAspOkCLJEwP-BTiYEg-9BgCwDw8zDaQDD-0GKQDHAw2yBgSK5d0DBLQMBAEEuxcEKQQBBN8KBOYN9gO1BAQBBJQKBKIGA0oOxQQDxwYNJgODBQQHDQ==]
+07-18 07:11:40.520 I/PhenotypeModule( 3097): PhenotypeModule$1.onSuccess():183 Fetch at onCreate(): true
+07-18 07:11:40.577 D/nativeloader( 3963): InitDefaultPublicLibraries for_preload=1: libandroid.so:libaaudio.so:libamidi.so:libbinder_ndk.so:libc.so:libcamera2ndk.so:libdl.so:libEGL.so:libGLESv1_CM.so:libGLESv2.so:libGLESv3.so:libicu.so:libicui18n.so:libicuuc.so:libjnigraphics.so:liblog.so:libmediandk.so:libm.so:libnativehelper.so:libnativewindow.so:libOpenMAXAL.so:libOpenSLES.so:libRS.so:libstdc++.so:libsync.so:libvulkan.so:libwebviewchromium_plat_support.so:libz.so
+07-18 07:11:40.588 D/ConnectivityService(  727): NetReassign [no changes] [c 0] [a 1] [i 1]
+07-18 07:11:40.592 W/ActivityManager(  727): Skipping manifest association check for null package. SourceUid: -1, SourcePkg: null, TargetUid: 10228, TargetPkg: com.google.android.gms
+07-18 07:11:40.606 W/ProcessCpuTracker(  727): Failed to stat(/proc/3891): android.system.ErrnoException: stat failed: ENOENT (No such file or directory)
+07-18 07:11:40.606 W/ProcessCpuTracker(  727): Skipping unknown process pid 3891
+07-18 07:11:40.607 W/ProcessCpuTracker(  727): Failed to stat(/proc/3894): android.system.ErrnoException: stat failed: ENOENT (No such file or directory)
+07-18 07:11:40.607 W/ProcessCpuTracker(  727): Skipping unknown process pid 3894
+07-18 07:11:40.608 W/libbinder.BackendUnifiedServiceManager( 3976): Thread Pool max thread count is 0. Cannot cache binder as linkToDeath cannot be implemented. serviceName: SurfaceFlingerAIDL
+07-18 07:11:40.609 W/libbinder.BpBinder( 3976): Linking to death on android.gui.ISurfaceComposer but there are no threads (yet?) listening to incoming transactions. See ProcessState::startThreadPool and ProcessState::setThreadPoolMaxThreadCount. Generally you should setup the binder threadpool before other initialization steps.
+07-18 07:11:40.610 W/libbinder.ProcessState( 3976): Extra binder thread started, but 0 threads requested. Do not use *startThreadPool when zero threads are requested.
+07-18 07:11:40.636 W/BLASTSyncEngine(  727): Sync group 17 timeout
+07-18 07:11:40.642 W/BLASTSyncEngine(  727): Sync group 17 timed-out because not ready. If you see this, please file a bug.
+07-18 07:11:40.642 E/Transition(  727): #17 readiness timeout. state=1
+07-18 07:11:40.642 E/Transition(  727):    met conditions: []
+07-18 07:11:40.642 E/Transition(  727):    unmet conditions: [{Legacy: used=false deferDepth=0 group={}}]
+07-18 07:11:40.623 I/servicemanager(    0): Caller(pid=3976,uid=2000,sid=u:r:shell:s0) Found android.hardware.graphics.allocator.IAllocator/default in device VINTF manifest.
+07-18 07:11:40.652 V/WindowManagerShell( 3699): onTransitionReady(transaction=3122441225723)
+07-18 07:11:40.654 D/SatelliteController( 3420): registerForSatelliteSupportedStateChanged: cached supported state is null
+07-18 07:11:40.654 D/SatelliteAccessController( 3420): registerForSatelliteSupportedStateChanged result: 0
+07-18 07:11:40.654 D/SatelliteAccessController( 3420): onSatelliteProvisionStateChanged: isProvisioned=false
+07-18 07:11:40.634 I/servicemanager(    0): Caller(pid=3976,uid=2000,sid=u:r:shell:s0) Found mapper/ranchu in device VINTF manifest.
+07-18 07:11:40.654 D/SatelliteController( 3420): registerForSatelliteProvisionStateChanged: report current provisioned state, state=false
+07-18 07:11:40.654 D/SatelliteAccessController( 3420): registerForSatelliteProvisionStateChanged result: 0
+07-18 07:11:40.654 D/SatelliteAccessController( 3420): initSatelliteOnDeviceAccessController
+07-18 07:11:40.670 D/nativeloader( 3963): Load libicu_jni.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+07-18 07:11:40.670 D/app_process( 3963): u_setTimeZoneFilesDirectory("/apex/com.android.tzdata/etc/tz/versioned/10/icu") succeeded. 
+07-18 07:11:40.671 D/app_process( 3963): I18n APEX ICU file found: /apex/com.android.i18n/etc/icu/icudt78l.dat
+07-18 07:11:40.679 D/nativeloader( 3963): Load libjavacore.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+07-18 07:11:40.684 D/nativeloader( 3963): Load libopenjdk.so using APEX ns com_android_art for caller /apex/com.android.art/javalib/core-oj.jar: ok
+07-18 07:11:40.687 V/WindowManagerShell( 3699): onTransitionReady (#17) android.os.BinderProxy@ff733db: {id=17 t=OPEN f=0x10040 trk=0 r=[] c=[]}
+07-18 07:11:40.695 V/WindowManager(  727): Sent Transition (#17) createdAt=07-18 07:11:35.498 via request=TransitionRequestInfo { type = OPEN, triggerTask = TaskInfo{userId=0 taskId=10 effectiveUid=10231 displayId=0 isRunning=true baseIntent=Intent { act=android.intent.action.MAIN cat=[android.intent.category.LAUNCHER] flg=0x10200000 cmp=com.example.mrcomic.debug/com.example.mrcomic.MainActivityIcon_1 } baseActivity=ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.MainActivity} topActivity=ComponentInfo{com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity} origActivity=ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.MainActivityIcon_1} realActivity=ComponentInfo{com.example.mrcomic.debug/com.example.mrcomic.splash.VideoSplashActivity} realActivityIsAppLockEnabled=false numActivities=2 lastActiveTime=287981 supportsMultiWindow=true supportsMultiWindowWithoutConstraints=true resizeMode=1 isResizeable=true minWidth=-1 minHeight=-1 defaultMinSize=220 token=WCT{RemoteToken{ee7374 Task{f1ba716 #10 type=standard A=10231:com.example.mrcomic.debug}}} topActivityType=1 pictureInPictureParams=null shouldDockBigOverlays=false launchIntoPipHostTaskId=-1 lastParentTaskIdBeforePip=-1 displayCutoutSafeInsets=Rect(0, 136 - 0, 0) topActivityInfo=ActivityInfo{78bfbcf com.android.permissioncontroller.permission.ui.GrantPermissionsActivity} launchCookies=[] positionInParent=Point(0, 0) parentTaskId=-1 isFocused=true isInteractive=false isVisible=false isVisibleRequested=false isTopActivityNoDisplay=false isSleeping=true locusId=null displayAreaFeatureId=1 isTopActivityTransparent=true isActivityStackTransparent=false lastNonFullscreenBounds=null leafTaskBoundsFromOptions= false capturedLink=null capturedLinkTimestamp=0 requestedVisibleTypes=503 topActivityRequestOpenInBrowserEducationTimestamp=0 appCompatTaskInfo=AppCompatTaskInfo { topActivityInSizeCompat=false isLeafTask= true eligibleForLetterboxEducation= false isLetterboxEducationEnabled= true isLetterboxDoubleTapEnabled= false eligibleForUserAspectRatioButton= false topActivityBoundsLetterboxed= false isFromLetterboxDoubleTap= false topActivityLetterboxVerticalPosition= -1 topActivityLetterboxHorizontalPosition= -1 topActivityLetterboxWidth=-1 topActivityLetterboxHeight=-1 topActivityAppBounds=Rect(0, 0 - 1080, 2400) isUserFullscreenOverrideEnabled=false isSystemFullscreenOverrideEnabled=false hasMinAspectRatioOverride=false topActivityLetterboxBounds=null topNonResizableActivityAspectRatio=-1.0} topActivityMainWindowFrame=null isAppBubble=false}, pipChange = null, remoteTransitionInfo = null, displayChanges = null, requestedLocation = null, userChange = null, windowingLayerChange = null, fullscreenRequestChange = null, flags = 65536, debugId = 17 }
+07-18 07:11:40.695 V/WindowManager(  727):     startWCT=WindowContainerTransaction { changes= {} hops= [] flags= 0 errorCallbackToken=null taskFragmentOrganizer=null }
+07-18 07:11:40.695 V/WindowManager(  727):     info={id=17 t=OPEN f=0x10040 trk=0 r=[] c=[]}
+07-18 07:11:40.696 I/app_process( 3963): Priority-to-niceness mapping: 19, 16, 13, 10, 0, -2, -4, -5, -6, -8
+07-18 07:11:40.697 W/app_process( 3963): Unexpected CPU variant for x86: x86_64.
+07-18 07:11:40.697 W/app_process( 3963): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:11:40.703 W/app_process( 3963): ClassLoaderContext shared library size mismatch. Expected=2, found=0 (PCL[]{PCL[/system/framework/android.test.base.jar*736588042]#PCL[/system/framework/android.test.mock.jar*4008448454]} | PCL[])
+07-18 07:11:40.704 W/libc    ( 3976): Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-18 07:11:40.712 W/app_process( 3963): ClassLoaderContext classpath size mismatch. expected=0, found=1 (PCL[]{PCL[/system/framework/android.test.runner.jar*805256125]{PCL[/system/framework/android.test.base.jar*736588042]#PCL[/system/framework/android.test.mock.jar*4008448454]}#PCL[/system/framework/android.test.base.jar*736588042]} | PCL[/system/framework/android.test.runner.jar*805256125])
+07-18 07:11:40.713 V/WindowManagerShell( 3699): No transition roots in (#17) android.os.BinderProxy@ff733db@0 so abort
+07-18 07:11:40.715 D/ConfigUpdater( 3926): UpdateRequestReceiver constructed with Config: com.google.android.configupdater.smartselection.SmartSelectionConfig@d50dc91, StoredState: com.google.android.configupdater.StoredState@7c847f6, DownloadManagerHelper: com.google.android.configupdater.DownloadManagerHelper@477c7f7, FlagHelper: com.google.android.configupdater.PhenotypeHelper@5f79664
+07-18 07:11:40.715 D/ConfigUpdater( 3926): Setting up preferences for StoredState, Downloader, and FlagHelper
+07-18 07:11:40.715 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.716 D/ConfigUpdater( 3926): Loaded SharedPreferences: SmartSelectionDownload
+07-18 07:11:40.716 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.716 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.716 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.716 D/ConfigUpdater( 3926): Received intent with action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:40.716 D/ConfigUpdater( 3926): handleUpdateRequestIntent
+07-18 07:11:40.718 V/WindowManagerShell( 3699): Transition animation finished (aborted=true), notifying core (#17) android.os.BinderProxy@ff733db@0
+07-18 07:11:40.732 V/WindowManager(  727): Finish Transition (#17): created at 07-18 07:11:35.498 collect-started=0.285ms request-sent=24.749ms started=1678.531ms ready=-305786.241ms sent=5144.394ms commit=81.751ms finished=5229.376ms
+07-18 07:11:40.736 W/oid.apps.photos( 3236): Verification of m2.dr m2.dr.k(java.lang.Object[], int) took 198.631ms (55.38 bytecodes/s) (0B arena alloc)
+07-18 07:11:40.738 V/WindowManagerShell( 3699): Track 0 became idle
+07-18 07:11:40.739 W/Looper  ( 3699): Slow dispatch took 52ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda1@b7b7649 m=0
+07-18 07:11:40.741 D/ConfigUpdater( 3926): Falling back to flag content location
+07-18 07:11:40.741 D/ConfigUpdater( 3926): Received metadata location from intent
+07-18 07:11:40.750 D/ConfigUpdater( 3926): Falling back to flag metadata location
+07-18 07:11:40.750 D/ConfigUpdater( 3926): Starting update from request intent.
+07-18 07:11:40.751 V/WindowManager(  727): deferTransitionReady deferReadyDepth=1 stack=com.android.server.wm.WindowOrganizerController.applyTransaction:717 com.android.server.wm.WindowOrganizerController.applyTransaction:641 com.android.server.wm.WindowOrganizerController.lambda$startTransition$3:388 com.android.server.wm.WindowOrganizerController.$r8$lambda$PHnU0rj5Bcvaq0dL-Wi7kOJt8bo:0 com.android.server.wm.WindowOrganizerController$$ExternalSyntheticLambda5.onCollectStarted:0 
+07-18 07:11:40.753 V/WindowManager(  727): continueTransitionReady deferReadyDepth=0 stack=com.android.server.wm.WindowOrganizerController.applyTransaction:864 com.android.server.wm.WindowOrganizerController.applyTransaction:641 com.android.server.wm.WindowOrganizerController.lambda$startTransition$3:388 com.android.server.wm.WindowOrganizerController.$r8$lambda$PHnU0rj5Bcvaq0dL-Wi7kOJt8bo:0 com.android.server.wm.WindowOrganizerController$$ExternalSyntheticLambda5.onCollectStarted:0 
+07-18 07:11:40.758 D/ConfigUpdater( 3926): UpdateFetcher constructor with context
+07-18 07:11:40.759 D/ConfigUpdater( 3926): Setting up UpdateFetcher
+07-18 07:11:40.759 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.759 D/ConfigUpdater( 3926): Loaded SharedPreferences: SmartSelectionDownload
+07-18 07:11:40.759 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.759 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.759 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.759 D/ConfigUpdater( 3926): Calling UpdateFetcher.startUpdate
+07-18 07:11:40.759 D/ConfigUpdater( 3926): startUpdate
+07-18 07:11:40.759 I/ConfigUpdater( 3926): Update metadata and content URIs are identical to previous successful installation. Skipping.
+07-18 07:11:40.764 D/EntitlementMetricsStats( 3420): Create new EntitlementMetricsStats.
+07-18 07:11:40.765 V/WindowManagerShell( 3699): onTransitionReady(transaction=3122441225732)
+07-18 07:11:40.767 D/ConfigUpdater( 3926): Finished async task for startUpdate
+07-18 07:11:40.772 I/ImsRcsController( 3420): ImsRcsController
+07-18 07:11:40.779 V/WindowManagerShell( 3699): onTransitionReady (#19) android.os.BinderProxy@cb79aa9: {id=19 t=CHANGE f=0x40 trk=1 r=[] c=[]}
+07-18 07:11:40.780 D/WM-GreedyScheduler( 1479): Ignoring {WorkSpec: 66c5b209-f8a2-4e3b-b5c8-7f684939512e}. Requires device idle.
+07-18 07:11:40.783 V/WindowManagerShell( 3699): No transition roots in (#19) android.os.BinderProxy@cb79aa9@1 so abort
+07-18 07:11:40.786 V/WindowManagerShell( 3699): Transition animation finished (aborted=true), notifying core (#19) android.os.BinderProxy@cb79aa9@1
+07-18 07:11:40.795 D/SatelliteAccessController( 3420): initSatelliteAccessController: end
+07-18 07:11:40.797 V/WindowManager(  727): deferTransitionReady deferReadyDepth=1 stack=com.android.server.wm.WindowOrganizerController.applyTransaction:717 com.android.server.wm.WindowOrganizerController.applyTransaction:641 com.android.server.wm.WindowOrganizerController.lambda$startTransition$3:388 com.android.server.wm.WindowOrganizerController.$r8$lambda$PHnU0rj5Bcvaq0dL-Wi7kOJt8bo:0 com.android.server.wm.WindowOrganizerController$$ExternalSyntheticLambda5.onCollectStarted:0 
+07-18 07:11:40.798 V/WindowManager(  727): continueTransitionReady deferReadyDepth=0 stack=com.android.server.wm.WindowOrganizerController.applyTransaction:864 com.android.server.wm.WindowOrganizerController.applyTransaction:641 com.android.server.wm.WindowOrganizerController.lambda$startTransition$3:388 com.android.server.wm.WindowOrganizerController.$r8$lambda$PHnU0rj5Bcvaq0dL-Wi7kOJt8bo:0 com.android.server.wm.WindowOrganizerController$$ExternalSyntheticLambda5.onCollectStarted:0 
+07-18 07:11:40.798 D/SatelliteAccessController( 3420): EVENT_SATELLITE_PROVISIONED_STATE_CHANGED
+07-18 07:11:40.798 D/SatelliteAccessController( 3420): handleSatelliteProvisionedStateChanged: isProvisioned=false
+07-18 07:11:40.799 D/SatelliteAccessController( 3420): getSatelliteDisallowedReasons: satelliteDisallowedReasons:[1]
+07-18 07:11:40.799 D/SatelliteAccessController( 3420): notifySatelliteDisallowedReasonsChanged
+07-18 07:11:40.800 D/SatelliteAccessController( 3420): mSatelliteDisallowedReasons: CurrentLocationAvailable: false SatelliteProvision: false
+07-18 07:11:40.810 V/WindowManager(  727): Sent Transition (#19) createdAt=07-18 07:11:36.551
+07-18 07:11:40.810 V/WindowManager(  727):     startWCT=WindowContainerTransaction { changes= {RemoteToken{e14dd6c DefaultTaskDisplayArea@195289702}={isTaskMoveAllowed:false,}} hops= [] flags= 0 errorCallbackToken=null taskFragmentOrganizer=null }
+07-18 07:11:40.810 V/WindowManager(  727):     info={id=19 t=CHANGE f=0x40 trk=1 r=[] c=[]}
+07-18 07:11:40.830 V/WindowManagerShell( 3699): Track 1 became idle
+07-18 07:11:40.830 W/Looper  ( 3699): Slow dispatch took 51ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda1@711cb4e m=0
+07-18 07:11:40.832 V/WindowManager(  727): Finish Transition (#19): created at 07-18 07:11:36.551 collect-started=4092.842ms started=4199.451ms ready=4206.325ms sent=4208.303ms commit=28.539ms finished=4249.602ms
+07-18 07:11:40.834 W/Looper  (  727): Slow dispatch took 140ms android.ui app=system_server main=false group=TOP_APP h=com.android.server.am.ActivityManagerService$UiHandler c=null m=68
+07-18 07:11:40.836 D/ConfigUpdater( 3926): UpdateRequestReceiver constructed with Config: com.google.android.configupdater.smsshortcodes.SmsShortCodesConfig@dc9b4d0, StoredState: com.google.android.configupdater.StoredState@cd98cc9, DownloadManagerHelper: com.google.android.configupdater.DownloadManagerHelper@dfc5fce, FlagHelper: com.google.android.configupdater.PhenotypeHelper@f9beef
+07-18 07:11:40.836 D/ConfigUpdater( 3926): Setting up preferences for StoredState, Downloader, and FlagHelper
+07-18 07:11:40.836 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:40.836 D/ConfigUpdater( 3926): Loaded SharedPreferences: SmsShortCodesDownload
+07-18 07:11:40.836 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:40.836 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:40.836 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:40.837 D/ConfigUpdater( 3926): Received intent with action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:40.837 D/ConfigUpdater( 3926): handleUpdateRequestIntent
+07-18 07:11:40.850 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:40.850 E/ActivityTaskManager(  727): Can't set forceTranslucent on a task that is already forced opaque.
+07-18 07:11:40.850 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:40.859 D/ConfigUpdater( 3926): Falling back to flag content location
+07-18 07:11:40.859 D/ConfigUpdater( 3926): Received metadata location from intent
+07-18 07:11:40.859 D/ConfigUpdater( 3926): Falling back to flag metadata location
+07-18 07:11:40.861 D/ConfigUpdater( 3926): Starting update from request intent.
+07-18 07:11:40.864 D/nativeloader( 3963): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:11:40.865 D/AndroidRuntime( 3963): Calling main entry com.android.commands.uiautomator.Launcher
+07-18 07:11:40.891 I/AconfigPackage( 3963): android.media.swcodec.flags is mapped to com.android.media.swcodec
+07-18 07:11:40.892 I/AconfigPackage( 3963): com.android.permission.flags is mapped to com.android.permission
+07-18 07:11:40.892 I/AconfigPackage( 3963): com.android.permissioncontroller.flags is mapped to com.android.permission
+07-18 07:11:40.892 I/AconfigPackage( 3963): com.google.android.widevine.flags is mapped to com.google.android.widevine
+07-18 07:11:40.893 I/AconfigPackage( 3963): com.android.icu is mapped to com.android.i18n
+07-18 07:11:40.894 I/AconfigPackage( 3963): com.android.appsearch.flags is mapped to com.android.appsearch
+07-18 07:11:40.895 I/AconfigPackage( 3963): com.android.uprobestats.flags is mapped to com.android.uprobestats
+07-18 07:11:40.895 I/AconfigPackage( 3963): android.uprobestats.mainline.flags is mapped to com.android.uprobestats
+07-18 07:11:40.895 I/AconfigPackage( 3963): com.android.crashrecovery.flags is mapped to com.android.crashrecovery
+07-18 07:11:40.896 I/AconfigPackage( 3963): android.provider.flags is mapped to com.android.configinfrastructure
+07-18 07:11:40.896 I/AconfigPackage( 3963): com.android.server.deviceconfig is mapped to com.android.configinfrastructure
+07-18 07:11:40.897 I/AconfigPackage( 3963): com.android.art.flags is mapped to com.android.art
+07-18 07:11:40.897 I/AconfigPackage( 3963): com.android.art.rw.flags is mapped to com.android.art
+07-18 07:11:40.897 I/AconfigPackage( 3963): com.android.libcore is mapped to com.android.art
+07-18 07:11:40.899 I/AconfigPackage( 3963): android.telecom.flags is mapped to com.android.telephonycore
+07-18 07:11:40.899 I/AconfigPackage( 3963): com.android.internal.telecom.flags is mapped to com.android.telephonycore
+07-18 07:11:40.899 I/AconfigPackage( 3963): com.android.telephony.flags is mapped to com.android.telephonycore
+07-18 07:11:40.900 I/AconfigPackage( 3963): com.android.media.extractor.flags is mapped to com.android.media
+07-18 07:11:40.900 I/AconfigPackage( 3963): com.android.media.metrics.flags is mapped to com.android.media
+07-18 07:11:40.900 I/AconfigPackage( 3963): com.android.media.mainline.flags is mapped to com.android.media
+07-18 07:11:40.901 I/AconfigPackage( 3963): com.android.wifi.flags is mapped to com.android.wifi
+07-18 07:11:40.902 I/AconfigPackage( 3963): com.android.org.conscrypt.flags is mapped to com.android.conscrypt
+07-18 07:11:40.902 I/AconfigPackage( 3963): com.android.org.conscrypt.net.flags is mapped to com.android.conscrypt
+07-18 07:11:40.903 I/AconfigPackage( 3963): com.android.healthfitness.flags is mapped to com.android.healthfitness
+07-18 07:11:40.903 I/AconfigPackage( 3963): com.android.ipsec.flags is mapped to com.android.ipsec
+07-18 07:11:40.904 I/AconfigPackage( 3963): com.android.nfc.module.flags is mapped to com.android.nfcservices
+07-18 07:11:40.904 I/AconfigPackage( 3963): com.android.nfc.module.nonexported.flags is mapped to com.android.nfcservices
+07-18 07:11:40.905 I/AconfigPackage( 3963): com.android.adservices.ondevicepersonalization.flags is mapped to com.android.ondevicepersonalization
+07-18 07:11:40.907 I/AconfigPackage( 3963): com.android.adbd.flags is mapped to com.android.adbd
+07-18 07:11:40.907 I/AconfigPackage( 3963): com.android.bluetooth.beta.flags is mapped to com.android.bt
+07-18 07:11:40.908 I/AconfigPackage( 3963): com.android.bluetooth.flags is mapped to com.android.bt
+07-18 07:11:40.908 I/AconfigPackage( 3963): com.android.devicelock.flags is mapped to com.android.devicelock
+07-18 07:11:40.909 I/AconfigPackage( 3963): android.os.profiling is mapped to com.android.profiling
+07-18 07:11:40.909 I/AconfigPackage( 3963): android.os.profiling.anomaly.flags is mapped to com.android.profiling
+07-18 07:11:40.910 I/AconfigPackage( 3963): com.android.os.statsd.flags is mapped to com.android.os.statsd
+07-18 07:11:40.911 I/AconfigPackage( 3963): com.android.webapp.flags is mapped to com.android.webapp
+07-18 07:11:40.912 V/WindowManagerShell( 3699): SyncTransactionQueue.onTransactionReady(): syncId=18
+07-18 07:11:40.912 I/AconfigPackage( 3963): com.android.rkpd.flags is mapped to com.android.rkpd
+07-18 07:11:40.912 I/AconfigPackage( 3963): com.android.cellbroadcastreceiver.flags is mapped to com.android.cellbroadcast
+07-18 07:11:40.913 V/WindowManagerShell( 3699): SyncTransactionQueue.onTransactionReady(): syncId=18 apply
+07-18 07:11:40.913 I/AconfigPackage( 3963): com.android.adservices.flags is mapped to com.android.adservices
+07-18 07:11:40.913 I/AconfigPackage( 3963): com.android.sdksandbox.flags is mapped to com.android.adservices
+07-18 07:11:40.913 I/AconfigPackage( 3963): android.app.sdksandbox.flags is mapped to com.android.adservices
+07-18 07:11:40.915 I/AconfigPackage( 3963): com.android.uwb.flags is mapped to com.android.uwb
+07-18 07:11:40.915 I/AconfigPackage( 3963): com.android.ranging.flags is mapped to com.android.uwb
+07-18 07:11:40.915 I/AconfigPackage( 3963): com.android.npumanager is mapped to com.android.npumanager
+07-18 07:11:40.916 I/AconfigPackage( 3963): android.graphics.pdf.flags is mapped to com.android.mediaprovider
+07-18 07:11:40.916 I/AconfigPackage( 3963): com.android.providers.media.flags is mapped to com.android.mediaprovider
+07-18 07:11:40.917 I/AconfigPackage( 3963): android.graphics.pdf.flags.readonly is mapped to com.android.mediaprovider
+07-18 07:11:40.918 I/AconfigPackage( 3963): com.android.tethering.mainline.beta is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): android.net.http is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): com.android.tethering.readonly.flags is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): android.net.vcn is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): com.android.net.flags is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): com.android.tethering.flags is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): com.android.tethering.beta.test is mapped to com.android.tethering
+07-18 07:11:40.918 I/AconfigPackage( 3963): com.android.nearby.flags is mapped to com.android.tethering
+07-18 07:11:40.919 I/AconfigPackage( 3963): com.android.net.thread.flags is mapped to com.android.tethering
+07-18 07:11:40.919 I/AconfigPackage( 3963): com.android.net.ct.flags is mapped to com.android.tethering
+07-18 07:11:40.919 I/AconfigPackage( 3963): com.android.system.virtualmachine.flags is mapped to com.android.virt
+07-18 07:11:40.920 E/FeatureFlagsImplExport( 3963): android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+07-18 07:11:40.928 D/UiAutomationConnection( 3963): Created on user UserHandle{0}
+07-18 07:11:40.928 I/UiAutomation( 3963): Initialized for user 0 on display 0
+07-18 07:11:40.928 W/UiAutomation( 3963): Created with deprecatead constructor, assumes DEFAULT_DISPLAY
+07-18 07:11:40.952 V/WindowManagerShell( 3699): onTransitionReady(transaction=3122441225773)
+07-18 07:11:40.957 V/WindowManagerShell( 3699): onTransitionReady (#20) android.os.BinderProxy@2463865: {id=20 t=CHANGE f=0x40 trk=2 r=[] c=[]}
+07-18 07:11:40.958 V/WindowManagerShell( 3699): No transition roots in (#20) android.os.BinderProxy@2463865@2 so abort
+07-18 07:11:40.965 W/Looper  (  727): Slow dispatch took 124ms android.fg app=system_server main=false group=FOREGROUND h=android.os.Handler c=com.android.server.am.SameProcessApplicationThread$$ExternalSyntheticLambda1@c9555cb m=0
+07-18 07:11:40.968 V/WindowManagerShell( 3699): SyncTransactionQueue.onTransactionReady(): syncId=21
+07-18 07:11:40.972 D/CompatChangeReporter( 3968): Compat change id reported: 333566037; UID 10208; state: ENABLED
+07-18 07:11:40.972 V/WindowManagerShell( 3699): Transition animation finished (aborted=true), notifying core (#20) android.os.BinderProxy@2463865@2
+07-18 07:11:40.973 V/WindowManager(  727): Sent Transition (#20) createdAt=07-18 07:11:36.670
+07-18 07:11:40.979 D/CarrierConfigLoader( 3420): CarrierConfigLoader has started
+07-18 07:11:40.988 D/AccessibilityManagerService(  727): changeCurrentUserForTestAutomationIfNeededLocked(0): ignoring because device doesn't support visible background users
+07-18 07:11:40.989 I/UiAutomationManager(  727): Registering UiTestAutomationService (id=com.android.server.accessibility/UiAutomation, flags=0x0) when called by user 0
+07-18 07:11:40.999 D/ApplicationLoaders( 3968): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-18 07:11:40.999 D/ApplicationLoaders( 3968): Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-18 07:11:41.000 V/WindowManagerShell( 3699): Track 2 became idle
+07-18 07:11:41.029 D/ConfigUpdater( 3926): UpdateFetcher constructor with context
+07-18 07:11:41.029 D/ConfigUpdater( 3926): Setting up UpdateFetcher
+07-18 07:11:41.031 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:41.031 D/ConfigUpdater( 3926): Loaded SharedPreferences: SmsShortCodesDownload
+07-18 07:11:41.031 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:41.031 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:41.031 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:41.032 D/ConfigUpdater( 3926): Calling UpdateFetcher.startUpdate
+07-18 07:11:41.032 D/ConfigUpdater( 3926): startUpdate
+07-18 07:11:41.032 I/ConfigUpdater( 3926): Update metadata and content URIs are identical to previous successful installation. Skipping.
+07-18 07:11:41.035 W/oid.apps.photos( 3236): Suspending all threads took: 158.314ms
+07-18 07:11:41.039 D/ConfigUpdater( 3926): Finished async task for startUpdate
+07-18 07:11:41.046 V/WindowManager(  727):     startWCT=WindowContainerTransaction { changes= {RemoteToken{e14dd6c DefaultTaskDisplayArea@195289702}={isTaskMoveAllowed:false,}} hops= [] flags= 0 errorCallbackToken=null taskFragmentOrganizer=null }
+07-18 07:11:41.046 V/WindowManager(  727):     info={id=20 t=CHANGE f=0x40 trk=2 r=[] c=[]}
+07-18 07:11:41.054 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:11:41.056 V/WindowManager(  727): Finish Transition (#20): created at 07-18 07:11:36.670 collect-started=4091.721ms started=4125.519ms ready=4127.724ms sent=4175.092ms commit=132.757ms finished=4313.767ms
+07-18 07:11:41.058 I/netd    (  468): tetherGetStats() -> {[]} <2.65ms>
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:11:41.063 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:11:41.063 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:11:41.064 V/WindowManagerShell( 3699): All active transition animations finished
+07-18 07:11:41.069 W/MediaProvider( 1479): isAppCloneUserPair for user 0: false
+07-18 07:11:41.106 W/Looper  ( 3699): Slow dispatch took 148ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=com.android.wm.shell.transition.Transitions$TransitionPlayerImpl$$ExternalSyntheticLambda1@816a581 m=0
+07-18 07:11:41.111 D/Zygote  (  471): Forked child process 4023
+07-18 07:11:41.114 D/ShellSplitScreen( 3699): onTaskInfoChanged: taskId=13 taskAct=null stageId=MAIN displayId=0
+07-18 07:11:41.116 W/Looper  ( 3699): Slow delivery took 145ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=android.window.TaskOrganizer$1$$ExternalSyntheticLambda4@ad7f626 m=0
+07-18 07:11:41.117 V/UiAutomation( 3963): Init UiAutomation@644ad2[id=9, displayId=0, flags=0]
+07-18 07:11:41.117 V/ShellSplitScreen( 3699): Updating status bar for split, no change in state
+07-18 07:11:41.117 V/ShellSplitScreen( 3699): Updating status bar for split, no change in state
+07-18 07:11:41.117 W/ActivityManager(  727): Slow operation: 205ms so far, now at startProcess: returned from zygote!
+07-18 07:11:41.125 D/WifiClientModeImpl[94633:wlan0](  727): updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+07-18 07:11:41.125 D/WifiDataStall(  727): tx tput in kbps: 11000
+07-18 07:11:41.125 D/WifiDataStall(  727): rx tput in kbps: 11000
+07-18 07:11:41.125 V/WifiConfigManager(  727): Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+07-18 07:11:41.126 I/libprocessgroup( 4023): Created cgroup /sys/fs/cgroup/apps/uid_10229/pid_4023
+07-18 07:11:41.131 W/ActivityManager(  727): Slow operation: 220ms so far, now at startProcess: done updating battery stats
+07-18 07:11:41.132 W/ActivityManager(  727): Slow operation: 220ms so far, now at startProcess: building log message
+07-18 07:11:41.132 I/ActivityManager(  727): Start proc 4023:com.google.android.permissioncontroller/u0a229 for top-activity {com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity}
+07-18 07:11:41.132 W/ActivityManager(  727): Slow operation: 221ms so far, now at startProcess: starting to update pids map
+07-18 07:11:41.137 W/ActivityManager(  727): Slow operation: 225ms so far, now at startProcess: done updating pids map
+07-18 07:11:41.139 D/ShellSplitScreen( 3699): Updating status bar override leftRight=false currentSplit=-1 splitVisible=false overridden=false
+07-18 07:11:41.139 D/ShellSplitScreen( 3699): No change in status bar override state
+07-18 07:11:41.139 D/ShellSplitScreen( 3699): onTaskInfoChanged: taskId=14 taskAct=null stageId=SIDE displayId=0
+07-18 07:11:41.139 D/nativeloader( 3968): Configuring clns-shared-9 for other apk /apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019/GoogleExtServices-sminus.apk. target_sdk_version=37, uses_libraries=, library_path=/apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019/lib/x86_64:/apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019/GoogleExtServices-sminus.apk!/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user/0/com.google.android.ext.services:/apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019:/system/lib64:/system_ext/lib64
+07-18 07:11:41.140 V/WindowManagerShell( 3699): SyncTransactionQueue.onTransactionReady(): syncId=21 apply
+07-18 07:11:41.146 D/nativeloader( 3968): InitApexLibraries:
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_adservices: libhpke_jni.so:libtflite_support_classifiers_native.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_appsearch: libappsearchservice.so:libicing_anywhere.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_art: libartservice.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_bt: libbluetooth_jni.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_conscrypt: libjavacrypto.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_extservices: libtflite_support_classifiers_native.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_mediaprovider: libpdfclient.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_nfcservices: libnfc_nci_jni.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_npumanager: libnpumanager_service_jni.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_ondevicepersonalization: libfcp_cpp_dep_jni.so:libfcp_hpke_jni.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_os_statsd: libstats_jni.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_tethering: libandroid_net_connectivity_com_android_net_module_util_jni.so:libandroid_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni.so:libcrypto_httpengine.so:libframework-connectivity-jni.so:libframework-connectivity-tiramisu-jni.so:libhttpengine.so:libservice-connectivity.so:libservice-thread-jni.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_uwb: libuwb_uci_jni_rust.so
+07-18 07:11:41.146 D/nativeloader( 3968):   com_android_virt: Mi
+07-18 07:11:41.150 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:41.150 D/ConfigUpdater( 3926): UpdateRequestReceiver constructed with Config: com.google.android.configupdater.telephonyconfigupdate.TelephonyConfigUpdateConfig@84d5b0b, StoredState: com.google.android.configupdater.StoredState@2f4de8, DownloadManagerHelper: com.google.android.configupdater.DownloadManagerHelper@7510c01, FlagHelper: com.google.android.configupdater.PhenotypeHelper@8f09aa6
+07-18 07:11:41.150 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:41.150 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:41.150 D/ConfigUpdater( 3926): Setting up preferences for StoredState, Downloader, and FlagHelper
+07-18 07:11:41.150 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:41.150 D/ConfigUpdater( 3926): Setting up DownloadManagerHelper
+07-18 07:11:41.151 D/ConfigUpdater( 3926): Loaded SharedPreferences: TelephonyConfigUpdateDownload
+07-18 07:11:41.151 D/ConfigUpdater( 3926): download directory: /data/user/0/com.google.android.configupdater/files/downloads
+07-18 07:11:41.151 D/ConfigUpdater( 3926): Got DownloadManager service
+07-18 07:11:41.151 D/ConfigUpdater( 3926): Is wearable device: false
+07-18 07:11:41.151 D/ConfigUpdater( 3926): Received intent with action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:41.151 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:41.151 D/ConfigUpdater( 3926): handleUpdateRequestIntent
+07-18 07:11:41.151 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:41.151 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:41.162 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:41.164 I/Zygote  ( 4023): Process 4023 created for com.google.android.permissioncontroller
+07-18 07:11:41.164 I/ssioncontroller( 4023): Using generational CollectorTypeCMC GC.
+07-18 07:11:41.166 D/ConfigUpdater( 3926): Falling back to flag content location
+07-18 07:11:41.167 E/ConfigUpdater( 3926): Content location is empty, ignoring update request.
+07-18 07:11:41.180 D/ConfigUpdater( 3926): PhenotypeBroadcastReceiver received action: android.intent.action.BOOT_COMPLETED
+07-18 07:11:41.180 D/ConfigUpdater( 3926): Device boot completed. Scheduling Phenotype sync job.
+07-18 07:11:41.183 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:11:41.183 W/ssioncontroller( 4023): Unexpected CPU variant for x86: x86_64.
+07-18 07:11:41.183 W/ssioncontroller( 4023): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:11:41.190 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:11:41.191 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:11:41.192 I/HalDevMgr(  727): bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+07-18 07:11:41.199 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.16ms>
+07-18 07:11:41.210 D/WifiScoreCard(  727): BSSID update SIGNAL_POLL ID: 1602891080 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Calculated Rx : 0Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+07-18 07:11:41.210 D/WifiScoreCard(  727): txRate: 7 txSpeed: 1
+07-18 07:11:41.212 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 5) <0.11ms>
+07-18 07:11:41.216 D/WifiScoreCard(  727): network update SIGNAL_POLL "AndroidWifi" ID: 740479026 RSSI -50 txSpeed 1
+07-18 07:11:41.220 D/WifiClientModeImpl[94633:wlan0](  727):  ClientModeImpl$L2ConnectedState screen=on 2 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=100 link=1 tx=6.1, 0.0, 0.0 rx=5.1 bcn=0 [on:0 tx:0 rx:0 period:3105] from screen [on:0 period:1947273376] score=100
+07-18 07:11:41.228 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.23ms>
+07-18 07:11:41.232 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 5) <0.11ms>
+07-18 07:11:41.295 W/ChimeraUtils( 3343): Module com.google.android.gms.backup_base missing resource null(0)
+07-18 07:11:41.298 D/ActivityManager(  727): created ANR temporary file:/data/anr/temp_anr_7308898438047523866.txt
+07-18 07:11:41.298 I/ActivityManager(  727): Collecting stacks for pid 3420 into temporary file temp_anr_7308898438047523866.txt
+07-18 07:11:41.327 W/system_server(  727): Long monitor contention with owner appscheduling.default (832) at boolean com.android.server.job.controllers.QuotaController.isUidInForeground(int)(QuotaController.java:816) waiters=2 in void com.android.server.job.JobStore$2.run() for 118ms
+07-18 07:11:41.346 I/ImsFeatureBinderRepo( 3420): [0] registerForConnectionUpdates, type= MMTEL, conn= ListenerContainer{cb=com.android.ims.FeatureConnector$1@60ed9c4}
+07-18 07:11:41.352 D/BatterySaverPolicy(  727): accessibility changed to true, updating policy.
+07-18 07:11:41.352 D/nativeloader( 4023): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:11:41.359 I/ImsFeatureBinderRepo( 3420): [0] registerForConnectionUpdates, type= RCS, conn= ListenerContainer{cb=com.android.ims.FeatureConnector$1@c44a0ad}
+07-18 07:11:41.380 I/system_server(  727): libdebuggerd_client: started dumping process 3420
+07-18 07:11:41.383 I/tombstoned(  377): registered intercept for pid 3420 and type kDebuggerdJavaBacktrace
+07-18 07:11:41.383 I/m.android.phone( 3420): Thread[2,tid=3421,WaitingInMainSignalCatcherLoop,Thread*=0x7d5bf9a0e6f0,peer=0x2000fc8,"Signal Catcher"]: reacting to signal 3
+07-18 07:11:41.383 I/m.android.phone( 3420): Mutator lock exclusive owner tid: -1
+07-18 07:11:41.383 I/m.android.phone( 3420): ThreadList lock owner tid: 0
+07-18 07:11:41.383 I/m.android.phone( 3420): ClassLinker classes lock owner tid: 0
+07-18 07:11:41.383 I/m.android.phone( 3420): ClassLinker dex lock owner tid: 0
+07-18 07:11:41.387 W/system_server(  727): Long monitor contention with owner appscheduling.default (832) at boolean com.android.server.job.controllers.QuotaController.isUidInForeground(int)(QuotaController.java:816) waiters=0 in int com.android.server.job.JobSchedulerService.scheduleAsPackage(android.app.job.JobInfo, android.app.job.JobWorkItem, int, java.lang.String, int, java.lang.String, java.lang.String) for 200ms
+07-18 07:11:41.479 I/TelephonyRcsService( 3420): updateFeatureControllers: oldSlots=0, newNumSlots=1
+07-18 07:11:41.540 D/ConnectivityService(  727): requestNetwork for uid/pid:1000/727 asUid: 10158 activeRequest: null callbackRequest: 111 [NetworkRequest [ REQUEST id=112, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10158 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|BLK
+07-18 07:11:41.555 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:11:41.587 W/ContentProviderHelper(  727): Slow operation: 192ms so far, now at getContentProviderImpl: after updateOomAdj
+07-18 07:11:41.595 W/ContentProviderHelper(  727): Slow operation: 198ms so far, now at getContentProviderImpl: done!
+07-18 07:11:41.597 I/DownloadManager( 3097): DownloadManager$3.onProgress():537 Downloading emoji_kitchen_data with size 3271
+07-18 07:11:41.644 D/ConfigUpdater( 3926): Heartbeat scheduled.
+07-18 07:11:41.671 D/CompatChangeReporter( 4023): Compat change id reported: 333566037; UID 10229; state: ENABLED
+07-18 07:11:41.682 D/ApplicationLoaders( 4023): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-18 07:11:41.682 D/ApplicationLoaders( 4023): Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-18 07:11:41.683 D/ApplicationLoaders( 4023): Returning zygote-cached class loader: /system/framework/org.apache.http.legacy.jar
+07-18 07:11:41.720 W/system_server(  727): Long monitor contention with owner binder:727_A (1372) at boolean com.android.server.job.controllers.QuotaController.isUidInForeground(int)(QuotaController.java:816) waiters=1 in void com.android.server.job.controllers.ContentObserverController$ObserverInstance.onChange(boolean, android.net.Uri) for 261ms
+07-18 07:11:41.749 D/ConnectivityService(  727): NetReassign [112 : null → 101] [c 0] [a 2] [i 93]
+07-18 07:11:41.760 D/WifiNetworkFactory(  727): got request NetworkRequest [ REQUEST id=112, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10158 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+07-18 07:11:41.760 V/WifiNetworkFactory(  727): Accepted network request NetworkRequest [ REQUEST id=112, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10158 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+07-18 07:11:41.761 D/UntrustedWifiNetworkFactory(  727): got request NetworkRequest [ REQUEST id=112, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10158 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+07-18 07:11:41.761 D/OemPaidWifiNetworkFactory(  727): got request NetworkRequest [ REQUEST id=112, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10158 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+07-18 07:11:41.761 D/MultiInternetWifiNetworkFactory(  727): got request NetworkRequest [ REQUEST id=112, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10158 RequestorUid: 1000 RequestorPkg: android UnderlyingNetworks: Null] ]
+07-18 07:11:41.767 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.27ms>
+07-18 07:11:41.772 D/wpa_supplicant(  993): nl80211: Drv Event 64 (NL80211_CMD_NOTIFY_CQM) received for wlan0
+07-18 07:11:41.772 D/wpa_supplicant(  993): nl80211: Beacon loss event
+07-18 07:11:41.772 D/wpa_supplicant(  993): wlan0: Event BEACON_LOSS (53) received
+07-18 07:11:41.772 I/wpa_supplicant(  993): wlan0: CTRL-EVENT-BEACON-LOSS 
+07-18 07:11:41.784 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <0.12ms>
+07-18 07:11:41.785 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.12ms>
+07-18 07:11:41.788 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.12ms>
+07-18 07:11:41.792 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.36ms>
+07-18 07:11:41.799 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <0.11ms>
+07-18 07:11:41.812 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.14ms>
+07-18 07:11:41.818 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.13ms>
+07-18 07:11:41.847 W/m.android.phone( 3420): Suspending all threads took: 212.916ms
+07-18 07:11:41.849 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.14ms>
+07-18 07:11:41.881 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <1.10ms>
+07-18 07:11:41.894 V/GraphicsEnvironment( 3968): Currently set values for:
+07-18 07:11:41.894 V/GraphicsEnvironment( 3968):   angle_gl_driver_selection_pkgs=[]
+07-18 07:11:41.894 V/GraphicsEnvironment( 3968):   angle_gl_driver_selection_values=[]
+07-18 07:11:41.895 V/GraphicsEnvironment( 3968): com.google.android.ext.services is not listed in per-application setting
+07-18 07:11:41.895 V/GraphicsEnvironment( 3968): No special selections for ANGLE, returning default driver choice
+07-18 07:11:41.904 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 499
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 727
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3343
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 73
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 535
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 2937
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3420
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3699
+07-18 07:11:41.905 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 307
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 1479
+07-18 07:11:41.906 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.11ms>
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 500
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 506
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3783
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 594
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 639
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3097
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3236
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 118
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 629
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 309
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 688
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3030
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 335
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3459
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3823
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 336
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 468
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 469
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 471
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 46
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 267
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 368
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 443
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 545
+07-18 07:11:41.906 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 599
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 1
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 18
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 19
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 32
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 33
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 40
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 45
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 48
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 49
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 78
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 90
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 112
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 113
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 284
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 580
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 1123
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3765
+07-18 07:11:41.907 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3926
+07-18 07:11:41.908 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3963
+07-18 07:11:41.908 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3968
+07-18 07:11:41.908 I/ActivityManager(  727): Skipping next CPU consuming process, not a java proc: 3976
+07-18 07:11:41.912 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.22ms>
+07-18 07:11:41.932 D/nativeloader( 4023): Configuring clns-shared-9 for other apk /apex/com.android.permission/priv-app/GooglePermissionController@CE2A.260420.019/GooglePermissionController.apk. target_sdk_version=37, uses_libraries=, library_path=/apex/com.android.permission/priv-app/GooglePermissionController@CE2A.260420.019/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user_de/0/com.google.android.permissioncontroller:/apex/com.android.permission/priv-app/GooglePermissionController@CE2A.260420.019:/system/lib64:/system_ext/lib64
+07-18 07:11:41.936 D/nativeloader( 4023): InitApexLibraries:
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_adservices: libhpke_jni.so:libtflite_support_classifiers_native.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_appsearch: libappsearchservice.so:libicing_anywhere.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_art: libartservice.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_bt: libbluetooth_jni.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_conscrypt: libjavacrypto.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_extservices: libtflite_support_classifiers_native.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_mediaprovider: libpdfclient.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_nfcservices: libnfc_nci_jni.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_npumanager: libnpumanager_service_jni.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_ondevicepersonalization: libfcp_cpp_dep_jni.so:libfcp_hpke_jni.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_os_statsd: libstats_jni.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_tethering: libandroid_net_connectivity_com_android_net_module_util_jni.so:libandroid_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni.so:libcrypto_httpengine.so:libframework-connectivity-jni.so:libframework-connectivity-tiramisu-jni.so:libhttpengine.so:libservice-connectivity.so:libservice-thread-jni.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_uwb: libuwb_uci_jni_rust.so
+07-18 07:11:41.936 D/nativeloader( 4023):   com_android_virt: Mi
+07-18 07:11:41.951 I/ActivityManager(  727): dumpStackTraces extraPids=[]
+07-18 07:11:41.952 I/ActivityManager(  727): Done dumping
+07-18 07:11:41.982 I/netd    (  468): setProcSysNet(4, 2, wlan0, retrans_time_ms, 750) <0.73ms>
+07-18 07:11:41.983 W/libbinder.Binder( 3343): Binder transaction to com.google.android.gms.common.internal.IGmsServiceBroker, function: UNKNOWN_FUNCTION_NAME, code: 46, took 1012ms. Data bytes: 1300 Reply bytes: 4 Flags: 18
+07-18 07:11:41.987 I/netd    (  468): setProcSysNet(4, 2, wlan0, ucast_solicit, 10) <0.12ms>
+07-18 07:11:42.008 I/DownloadManager( 3097): DownloadManager$3.onProgress():537 Downloading emoji_kitchen_data with size 6876
+07-18 07:11:42.012 I/netd    (  468): setProcSysNet(6, 2, wlan0, retrans_time_ms, 750) <0.17ms>
+07-18 07:11:42.022 V/GraphicsEnvironment( 4023): Currently set values for:
+07-18 07:11:42.022 V/GraphicsEnvironment( 4023):   angle_gl_driver_selection_pkgs=[]
+07-18 07:11:42.022 V/GraphicsEnvironment( 4023):   angle_gl_driver_selection_values=[]
+07-18 07:11:42.022 V/GraphicsEnvironment( 4023): com.google.android.permissioncontroller is not listed in per-application setting
+07-18 07:11:42.023 V/GraphicsEnvironment( 4023): No special selections for ANGLE, returning default driver choice
+07-18 07:11:42.024 I/DownloadManager( 3097): DownloadManager$3.onProgress():537 Downloading emoji_kitchen_data with size 6876
+07-18 07:11:42.031 V/GraphicsEnvironment( 4023): Neither updatable production driver nor prerelease driver is supported.
+07-18 07:11:42.043 I/netd    (  468): setProcSysNet(6, 2, wlan0, ucast_solicit, 10) <0.13ms>
+07-18 07:11:42.049 D/CompatChangeReporter( 4023): Compat change id reported: 407952621; UID 10229; state: ENABLED
+07-18 07:11:42.049 D/CompatChangeReporter( 4023): Compat change id reported: 419020719; UID 10229; state: ENABLED
+07-18 07:11:42.058 V/GraphicsEnvironment( 3968): Neither updatable production driver nor prerelease driver is supported.
+07-18 07:11:42.075 V/Backup  ( 3343): [BackupAccountNotifier] Handling new intent. Show notification: true
+07-18 07:11:42.084 D/OomAdjuster(  727): Not killing cached processes
+07-18 07:11:42.176 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:11:42.176 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:11:42.177 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:11:42.177 D/IpClient/wlan0( 1123): interfaceLinkStateChanged: ifindex 16 up
+07-18 07:11:42.180 D/CompatChangeReporter( 3968): Compat change id reported: 407952621; UID 10208; state: ENABLED
+07-18 07:11:42.180 D/CompatChangeReporter( 3968): Compat change id reported: 419020719; UID 10208; state: ENABLED
+07-18 07:11:42.235 V/AccessibilityManagerService(  727): onUserStateChangedLocked for userId: 0, forceUpdate: false
+07-18 07:11:42.251 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_shortcut_target_service, current:{}, new:{}
+07-18 07:11:42.252 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_button_targets, current:{}, new:{}
+07-18 07:11:42.252 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_gesture_targets, current:{}, new:{}
+07-18 07:11:42.252 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_qs_targets, current:{}, new:{}
+07-18 07:11:42.252 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_key_gesture_targets, current:{}, new:{}
+07-18 07:11:42.252 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_top_row_key_targets, current:{}, new:{}
+07-18 07:11:42.252 V/AccessibilityUserState(  727): updateShortcutTargets: type:accessibility_quick_access_targets, current:{}, new:{}
+07-18 07:11:42.252 W/MagnificationConnectionManager(  727): requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+07-18 07:11:42.252 D/AccessibilityManagerService(  727): restoreCurrentUserForTestAutomationIfNeededLocked(): ignoring because device doesn't support visible background users
+07-18 07:11:42.277 D/BatterySaverPolicy(  727): accessibility changed to false, updating policy.
+07-18 07:11:42.310 W/libbinder.IPCThreadState( 3963): call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+07-18 07:11:42.314 W/libbinder.IPCThreadState( 3963): call to talkWithDriver in joinThreadPool returned error: -9 (Bad file descriptor), FD: -1
+07-18 07:11:42.316 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+07-18 07:11:42.319 D/AndroidRuntime( 3963): Shutting down VM
+07-18 07:11:42.349 I/KeyguardTransitionRepository( 3699): FINISHED transition: TransitionStep(from=OFF, to=OFF, value=1.0, transitionState=FINISHED, ownerName=)
+07-18 07:11:42.389 W/oid.apps.photos( 3236): Verification of void m2.ad.onModuleLoaded(java.lang.String, java.lang.String, android.content.Context) took 159.755ms (6.26 bytecodes/s) (0B arena alloc)
+07-18 07:11:42.416 W/libbinder.Binder( 3343): Binder transaction to com.google.android.gms.common.internal.IGmsServiceBroker, function: UNKNOWN_FUNCTION_NAME, code: 46, took 1889ms. Data bytes: 744 Reply bytes: 4 Flags: 18
+07-18 07:11:42.418 D/InetDiagMessage(  727): Destroyed 1 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+07-18 07:11:42.418 D/InetDiagMessage(  727): Destroyed live tcp sockets for uids={10191} in 104ms
+07-18 07:11:42.419 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+07-18 07:11:42.420 D/InetDiagMessage(  727): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+07-18 07:11:42.420 D/InetDiagMessage(  727): Destroyed live tcp sockets for uids={20191} in 1ms
+07-18 07:11:42.422 V/GrammaticalInflectionUtils(  727): AttributionSource: AttributionSource { uid = 10208, packageName = null, attributionTag = null, token = android.os.Binder@10b08d7, deviceId = 0, next = null } does not have READ_SYSTEM_GRAMMATICAL_GENDER permission.
+07-18 07:11:42.433 D/CompatChangeReporter( 3968): Compat change id reported: 458413887; UID 10208; state: ENABLED
+07-18 07:11:42.491 I/m.android.phone( 3420): Background young concurrent mark compact GC freed 2176KB AllocSpace bytes, 0(0B) LOS objects, 41% free, 3638KB/6174KB, paused 492.227ms,161.592ms total 2.197s
+07-18 07:11:42.503 D/CompatChangeReporter( 3968): Compat change id reported: 418924588; UID 10208; state: ENABLED
+07-18 07:11:42.510 W/PackageInfo(  727): Large parcel: size=84180 pkg=com.google.android.healthconnect.controller uid=10213 perm=80304(344) reqPerm=836(16) prevAllowSquashing=false
+07-18 07:11:42.511 I/AppHashHelper( 3968): Loaded 1 app hashes from disk
+07-18 07:11:42.513 I/PackageManager(  727): getInstalledPackages: callingUid=10208 flags=138412032 updatedFlags=139198464 userId=0
+07-18 07:11:42.533 E/FeatureFlagsImplExport( 4023): android.os.flagging.AconfigStorageReadException: ERROR_PACKAGE_NOT_FOUND: package android.xr cannot be found on the device
+07-18 07:11:42.543 D/DesktopExperienceFlags( 3236): Toggle override initialized to: false
+07-18 07:11:42.574 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 10
+07-18 07:11:42.596 D/Zygote  (  471): Forked child process 4040
+07-18 07:11:42.599 I/WifiService(  727): getVerboseLoggingLevel uid=10228
+07-18 07:11:42.615 I/libprocessgroup( 4040): Created cgroup /sys/fs/cgroup/apps/uid_10208/pid_4040
+07-18 07:11:42.617 D/CompatChangeReporter( 4023): Compat change id reported: 458413887; UID 10229; state: ENABLED
+07-18 07:11:42.643 I/DisplayManager( 4023): Choreographer implicitly registered for the refresh rate.
+07-18 07:11:42.646 W/ActivityManager(  727): Slow operation: 178ms so far, now at startProcess: returned from zygote!
+07-18 07:11:42.676 W/putmethod.latin( 3097): Long monitor contention with owner Block-P11-1 (3378) at boolean sey.k(seq)(PG:163) waiters=0 in java.net.HttpURLConnection sey.b(java.lang.String, java.lang.String) for 530ms
+07-18 07:11:42.682 I/Zygote  ( 4040): Process 4040 created for .adservices
+07-18 07:11:42.683 I/.adservices( 4040): Using generational CollectorTypeCMC GC.
+07-18 07:11:42.686 W/.adservices( 4040): Unexpected CPU variant for x86: x86_64.
+07-18 07:11:42.686 W/.adservices( 4040): Known variants: atom, sandybridge, silvermont, goldmont, goldmont-plus, goldmont-without-sha-xsaves, tremont, kabylake, alderlake, pantherlake, default
+07-18 07:11:42.715 D/nativeloader( 4040): Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-18 07:11:42.800 W/system_server(  727): Long monitor contention with owner ActivityManager (763) at void com.android.server.am.BroadcastQueueImpl.updateRunningList()(BroadcastQueueImpl.java:485) waiters=1 in void com.android.server.am.ProcessList.lambda$handleProcessStart$1(com.android.server.am.ProcessRecord, java.lang.String, int[], int, int, int, java.lang.String, java.lang.String, java.lang.String, long) for 154ms
+07-18 07:11:42.806 W/ActivityManager(  727): Slow operation: 338ms so far, now at startProcess: done updating battery stats
+07-18 07:11:42.807 W/ActivityManager(  727): Slow operation: 339ms so far, now at startProcess: building log message
+07-18 07:11:42.807 I/ActivityManager(  727): Start proc 4040:.adservices/u0a208 for broadcast {com.google.android.ext.services/com.android.adservices.service.common.AdExtBootCompletedReceiver}
+07-18 07:11:42.808 W/ActivityManager(  727): Slow operation: 339ms so far, now at startProcess: starting to update pids map
+07-18 07:11:42.810 W/ActivityManager(  727): Slow operation: 342ms so far, now at startProcess: done updating pids map
+07-18 07:11:42.815 W/Looper  ( 3699): Drained
+07-18 07:11:42.856 D/DesktopExperienceFlags( 4023): Toggle override initialized to: false
+07-18 07:11:42.866 I/ImsFeatureBinderRepo( 3420): [0] registerForConnectionUpdates, type= MMTEL, conn= ListenerContainer{cb=com.android.ims.FeatureConnector$1@a7ff9eb}
+07-18 07:11:42.897 W/oid.apps.photos( 3236): Verification of boolean com.google.android.gms.common.GoogleCertificatesImpl.isGoogleOrPlatformSigned(m5.dd, m5.jk) took 100.585ms (874.88 bytecodes/s) (0B arena alloc)
+07-18 07:11:42.912 I/GFXSTREAM( 4023): [eglDisplay.cpp(297)] Opening libGLESv1_CM_emulation.so
+07-18 07:11:42.913 I/GFXSTREAM( 4023): [eglDisplay.cpp(297)] Opening libGLESv2_emulation.so
+07-18 07:11:42.915 W/libc    ( 4023): Access denied finding property "vendor.mesa.virtgpu.kumquat"
+07-18 07:11:42.917 I/ActivityManager(  727): Broadcasting: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }
+07-18 07:11:42.924 D/CompatChangeReporter( 4040): Compat change id reported: 333566037; UID 10208; state: ENABLED
+07-18 07:11:42.936 I/ActivityManager(  727): Enqueued broadcast Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x400000 }: 0
+07-18 07:11:42.939 I/ImsFeatureBinderRepo( 3420): [0] registerForConnectionUpdates, type= RCS, conn= ListenerContainer{cb=com.android.ims.FeatureConnector$1@d653348}
+07-18 07:11:42.939 D/ApplicationLoaders( 4040): Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-18 07:11:42.939 D/ApplicationLoaders( 4040): Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-18 07:11:42.955 W/HWUI    ( 4023): Failed to initialize 101010-2 format, error = EGL_SUCCESS
+07-18 07:11:42.978 W/Looper  ( 3699): Drained
+07-18 07:11:43.007 W/AppHashHelper( 3968): Loading app hashes timed out after 500 ms
+07-18 07:11:43.042 D/nativeloader( 4040): Configuring clns-shared-9 for other apk /apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019/GoogleExtServices-sminus.apk. target_sdk_version=37, uses_libraries=, library_path=/apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019/lib/x86_64:/apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019/GoogleExtServices-sminus.apk!/lib/x86_64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user/0/com.google.android.ext.services:/apex/com.android.extservices/priv-app/GoogleExtServices-sminus@CE2A.260420.019:/system/lib64:/system_ext/lib64
+07-18 07:11:43.065 I/PhoneGlobals( 3420): handleAirplaneModeChange: isAirplaneNewlyOn=false
+07-18 07:11:43.096 I/MediaServiceV2( 1479): Creating work for intent Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x1400010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaServiceV2 }
+07-18 07:11:43.096 W/ActivityTaskManager(  727): Activity top resumed state loss timeout for ActivityRecord{203265954 u0 com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity t10}
+07-18 07:11:43.098 I/DownloadManager( 3097): DownloadManager$3.onProgress():537 Downloading emoji_kitchen_data with size 15068
+07-18 07:11:43.098 W/ActivityTaskManager(  727): Activity pause timeout for ActivityRecord{203265954 u0 com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity t10}
+07-18 07:11:43.110 I/MediaServiceV2( 1479): Work enqueued for intent: Intent { act=android.intent.action.MEDIA_SCANNER_SCAN_FILE dat=file:///... flg=0x1400010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaServiceV2 }
+07-18 07:11:43.163 I/PhoneGlobals( 3420): Ignoring airplane mode: not newly on
+07-18 07:11:43.239 D/ShadeStatusBarComponentsInteractor#phoneStatusBarViewController( 3699): newValue: null
+07-18 07:11:43.243 D/nativeloader( 4040): InitApexLibraries:
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_adservices: libhpke_jni.so:libtflite_support_classifiers_native.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_appsearch: libappsearchservice.so:libicing_anywhere.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_art: libartservice.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_bt: libbluetooth_jni.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_conscrypt: libjavacrypto.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_extservices: libtflite_support_classifiers_native.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_mediaprovider: libpdfclient.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_nfcservices: libnfc_nci_jni.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_npumanager: libnpumanager_service_jni.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_ondevicepersonalization: libfcp_cpp_dep_jni.so:libfcp_hpke_jni.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_os_statsd: libstats_jni.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_tethering: libandroid_net_connectivity_com_android_net_module_util_jni.so:libandroid_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni.so:libcrypto_httpengine.so:libframework-connectivity-jni.so:libframework-connectivity-tiramisu-jni.so:libhttpengine.so:libservice-connectivity.so:libservice-thread-jni.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_uwb: libuwb_uci_jni_rust.so
+07-18 07:11:43.243 D/nativeloader( 4040):   com_android_virt: Mi
+07-18 07:11:43.267 V/RecentTasksController( 3699): Notify recent tasks changed
+07-18 07:11:43.274 E/SystemUiProxy( 2066): getRecentTasks() failed due to null mRecentTasks
+07-18 07:11:43.274 D/PreloadThumbnailUseCase( 2066): Preloading thumbnails for task ids: []
+07-18 07:11:43.276 W/.gms.persistent( 3343): Suspending all threads took: 508.976ms
+07-18 07:11:43.277 D/ShadeModeInteractorImpl( 3699): The Dual Shade feature flag is disabled
+07-18 07:11:43.277 D/ShadeModeInteractorImpl( 3699): Shade layout is derived from the legacy config
+07-18 07:11:43.279 I/DownloadManager( 3097): DownloadManager$3.onProgress():537 Downloading emoji_kitchen_data with size 47044
+07-18 07:11:43.280 W/oid.apps.photos( 3236): Verification of void m5.jg.<init>(android.content.Context) took 211.303ms (28.40 bytecodes/s) (0B arena alloc)
+07-18 07:11:43.302 W/Looper  ( 3699): Slow dispatch took 35ms wmshell.main app=com.android.systemui main=false group=FOREGROUND h=android.os.Handler c=null m=1
+07-18 07:11:43.304 W/system_server(  727): Long monitor contention with owner binder:727_15 (1640) at void com.android.server.am.BroadcastController.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(BroadcastController.java:1909) waiters=0 in void com.android.server.am.BroadcastQueueImpl.updateRunningList() for 117ms
+07-18 07:11:43.364 E/ActivityManager(  727): ANR in com.android.systemui
+07-18 07:11:43.364 E/ActivityManager(  727): PID: 3699
+07-18 07:11:43.364 E/ActivityManager(  727): Reason: Process ProcessRecord{2c8637a 3699:com.android.systemui/u0a188} failed to complete startup
+07-18 07:11:43.364 E/ActivityManager(  727): ErrorId: 40320e44-3b61-4d03-97c7-d34aa5428854
+07-18 07:11:43.364 E/ActivityManager(  727): Frozen: false
+07-18 07:11:43.364 E/ActivityManager(  727): Load: 44.68 / 23.13 / 9.29
+07-18 07:11:43.364 E/ActivityManager(  727): ----- Output from /proc/pressure/memory -----
+07-18 07:11:43.364 E/ActivityManager(  727): some avg10=0.31 avg60=1.23 avg300=0.62 total=2736057
+07-18 07:11:43.364 E/ActivityManager(  727): full avg10=0.07 avg60=0.47 avg300=0.26 total=1336120
+07-18 07:11:43.364 E/ActivityManager(  727): ----- End output from /proc/pressure/memory -----
+07-18 07:11:43.364 E/ActivityManager(  727): ----- Output from /proc/pressure/cpu -----
+07-18 07:11:43.364 E/ActivityManager(  727): some avg10=43.18 avg60=60.87 avg300=38.08 total=194129805
+07-18 07:11:43.364 E/ActivityManager(  727): full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+07-18 07:11:43.364 E/ActivityManager(  727): ----- End output from /proc/pressure/cpu -----
+07-18 07:11:43.364 E/ActivityManager(  727): ----- Output from /proc/pressure/io -----
+07-18 07:11:43.364 E/ActivityManager(  727): some avg10=10.60 avg60=10.68 avg300=7.00 total=31702115
+07-18 07:11:43.364 E/ActivityManager(  727): full avg10=0.09 avg60=0.15 avg300=0.65 total=5538925
+07-18 07:11:43.364 E/ActivityManager(  727): ----- End output from /proc/pressure/io -----
+07-18 07:11:43.364 E/ActivityManager(  727): 
+07-18 07:11:43.364 E/ActivityManager(  727): CPU usage from 1ms to 6355ms later (2026-07-18 07:11:35.600 to 2026-07-18 07:11:41.955):
+07-18 07:11:43.364 E/ActivityManager(  727):   65% 499/android.hardware.radio-service.ranchu: 36% user + 28% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   57% 727/system_server: 9.7% user + 47% kernel / faults: 3115 minor 7 major
+07-18 07:11:43.364 E/ActivityManager(  727):   35% 2937/com.example.mrcomic.debug: 22% user + 13% kernel / faults: 1979 minor 1 major
+07-18 07:11:43.364 E/ActivityManager(  727):   25% 3343/com.google.android.gms.persistent: 11% user + 13% kernel / faults: 4666 minor 73 major
+07-18 07:11:43.364 E/ActivityManager(  727):   16% 3699/com.android.systemui: 5.3% user + 10% kernel / faults: 2837 minor 32 major
+07-18 07:11:43.364 E/ActivityManager(  727):   15% 3097/com.google.android.inputmethod.latin: 4.4% user + 11% kernel / faults: 4035 minor 10 major
+07-18 07:11:43.364 E/ActivityManager(  727):   14% 3823/com.google.android.as.oss: 4% user + 10% kernel / faults: 2277 minor 18 major
+07-18 07:11:43.364 E/ActivityManager(  727):   9.9% 3420/com.android.phone: 4.3% user + 5.5% kernel / faults: 3195 minor 13 major
+07-18 07:11:43.364 E/ActivityManager(  727):   7.8% 535/surfaceflinger: 1% user + 6.7% kernel / faults: 35 minor
+07-18 07:11:43.364 E/ActivityManager(  727):   6.9% 594/logcat: 0% user + 6.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727): 99% TOTAL: 35% user + 63% kernel + 0.6% softirq
+07-18 07:11:43.364 E/ActivityManager(  727): CPU usage from 703ms to 5212ms later (2026-07-18 07:11:36.303 to 2026-07-18 07:11:40.811):
+07-18 07:11:43.364 E/ActivityManager(  727):   61% 499/android.hardware.radio-service.ranchu: 32% user + 29% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     61% 1331/android.hardwar: 31% user + 29% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   60% 727/system_server: 10% user + 50% kernel / faults: 1154 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     10% 3342/AnrAuxiliaryTas: 1.1% user + 9.4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     4.7% 832/eduling.default: 0% user + 4.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     4.3% 919/audioserver_lif: 4.3% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     3.5% 755/android.ui: 0% user + 3.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.3% 757/android.display: 0% user + 2.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.3% 1788/binder:727_19: 0.3% user + 1.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.3% 1904/binder:727_1D: 0.7% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.9% 758/android.anim: 0% user + 1.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.9% 1879/binder:727_1B: 0.3% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.9% 1903/binder:727_1C: 0% user + 1.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 727/system_server: 0.3% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 763/ActivityManager: 0.3% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 1640/binder:727_15: 0.7% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 751/socket_writer_q: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 815/binder:727_4: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 991/binder:727_6: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1375/binder:727_B: 0.3% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1421/binder:727_D: 0.3% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 746/binder:727_2: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 754/android.fg: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 898/WifiHandlerThre: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 1070/binder:727_7: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 1372/binder:727_A: 0.3% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 756/android.io: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 764/ActivityManager: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 769/LowMemThread: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 773/batterystats-ha: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 786/PowerManagerSer: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 830/SensorService: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 855/InputDispatcher: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 906/ConnectivitySer: 0.3% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 1385/binder:727_C: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 1955/binder:727_20: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4000/DefaultExecutor: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4027/AnrMainProcessD: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   26% 3343/com.google.android.gms.persistent: 8.3% user + 18% kernel / faults: 467 minor 15 major
+07-18 07:11:43.364 E/ActivityManager(  727):     3.7% 3343/.gms.persistent: 0.7% user + 3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     3% 3890/GoogleLocationS: 1.5% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.2% 3351/HeapTaskDaemon: 1.5% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.2% 3565/highpool[0]: 0.7% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.2% 3790/highpool[5]: 1.5% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.2% 3817/lowpool[9]: 0.7% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 3349/Jit thread pool: 0.7% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 3356/binder:3343_1: 0.7% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 3357/binder:3343_2: 0.7% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3452/CMEventHandler: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3502/binder:3343_4: 0.7% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3517/GoogleApiHandle: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3594/binder:3343_6: 0.7% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3648/highpool[1]: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3656/lowpool[1]: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3664/SharedPreferenc: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3740/lowpool[5]: 0.7% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3747/highpool[3]: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3788/highpool[4]: 0.7% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3816/lowpool[8]: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3925/binder:3343_8: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 3997/highpool[7]: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4003/FlpThread: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4014/ED_NOTIFICATION: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4033/-Executor] idle: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   6.6% 73/kswapd0: 0% user + 6.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   8.7% 535/surfaceflinger: 2% user + 6.6% kernel / faults: 35 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     2.7% 535/surfaceflinger: 0.3% user + 2.4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.3% 712/binder:535_5: 0.6% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1% 553/binder:535_1: 0% user + 1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1% 647/binder:535_4: 0% user + 1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 613/TimerDispatch: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 621/BckgrndExec HP: 0.3% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 560/RenderEngine: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 614/app: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 616/RegSampIdle: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 618/surfaceflinger: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 852/BckgrndExec WL: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   15% 2937/com.example.mrcomic.debug: 7% user + 8.5% kernel / faults: 32 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     9.9% 2946/Jit thread pool: 4.9% user + 4.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.1% 2937/e.mrcomic.debug: 1.4% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.4% 3171/RenderThread: 0% user + 1.4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 2952/binder:2937_1: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   14% 3420/com.android.phone: 6.4% user + 7.7% kernel / faults: 784 minor 4 major
+07-18 07:11:43.364 E/ActivityManager(  727):     3.8% 3421/Signal Catcher: 2.5% user + 1.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.5% 3420/m.android.phone: 0% user + 2.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     2.5% 3424/HeapTaskDaemon: 1.2% user + 1.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.9% 3635/elephony.worker: 0.6% user + 1.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4002/SatelliteEntitl: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4022/ImsStateCallbac: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   12% 3699/com.android.systemui: 5.1% user + 7.1% kernel / faults: 647 minor 3 major
+07-18 07:11:43.364 E/ActivityManager(  727):     4.5% 3705/HeapTaskDaemon: 2.5% user + 1.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     3.2% 3699/ndroid.systemui: 0.6% user + 2.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.9% 3758/wmshell.main: 0.6% user + 1.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4018/binder:3699_4: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4021/binder:3699_5: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   4.3% 307/logd: 0% user + 4.3% kernel / faults: 24 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     4% 317/logd.writer: 0% user + 4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.2% 607/logd.reader.per: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   8.8% 1479/com.google.android.providers.media.module: 2.9% user + 5.8% kernel / faults: 291 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1485/Jit thread pool: 0.5% user + 0.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1596/MediaDbOpsBackg: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1652/WM.task-1: 0.5% user + 0.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1661/fg: 0.5% user + 0.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 1817/WM.task-2: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 2179/pool-4-thread-1: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 2969/Thread-7: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.5% 1486/HeapTaskDaemon: 0.5% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   4.5% 500/android.hardware.sensors-service.multihal: 0% user + 4.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     3.8% 512/android.hardwar: 0% user + 3.8% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 513/android.hardwar: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   4.5% 506/android.hardware.graphics.composer3-service.ranchu: 0% user + 4.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     3.5% 595/_thread: 0% user + 3.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 527/binder:506_1: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   8.5% 3783/com.google.android.apps.pulse: 3.9% user + 4.5% kernel / faults: 219 minor 2 major
+07-18 07:11:43.364 E/ActivityManager(  727):     5.2% 3813/Primes-1: 1.9% user + 3.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.3% 3966/Primes-2: 0% user + 1.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 3999/Scheduler Threa: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4001/GoogleApiHandle: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4019/SharedPreferenc: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   4.3% 594/logcat: 0% user + 4.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   4.1% 639/mediaserver: 0% user + 4.1% kernel / faults: 3 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 1727/binder:639_3: 0% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 2331/binder:639_4: 0% user + 1.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 639/mediaserver: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   7.4% 3097/com.google.android.inputmethod.latin: 2.2% user + 5.1% kernel / faults: 96 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     2.9% 3853/CronetNet: 1.4% user + 1.4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.4% 3097/putmethod.latin: 0.7% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.4% 3842/ThreadPoolForeg: 0% user + 1.4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3109/binder:3097_2: 0.7% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3400/GoogleApiHandle: 0.7% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   6% 3236/com.google.android.apps.photos: 0.7% user + 5.2% kernel / faults: 32 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     4.5% 3930/ptz-fgd-1-PHOTO: 0% user + 4.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     1.5% 3563/GoogleApiHandle: 0.7% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   1.8% 118/kworker/2:3H-kblockd: 0% user + 1.8% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   2.1% 629/media.extractor: 0.7% user + 1.4% kernel / faults: 3 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     1.8% 629/mediaextractor: 0.7% user + 1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   1.4% 309/servicemanager: 0% user + 1.4% kernel / faults: 1 minor 1 major
+07-18 07:11:43.364 E/ActivityManager(  727):     1.1% 309/servicemanager: 0% user + 1.1% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   1.9% 688/kworker/1:4H-kverityd: 0% user + 1.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   3.5% 3030/com.google.android.apps.wellbeing: 0.7% user + 2.8% kernel / faults: 48 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3197/BG Thread #0: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3204/BG Thread #2: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.7% 3209/GoogleApiHandle: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   1.2% 335/keystore2: 0% user + 1.2% kernel / faults: 11 minor 12 major
+07-18 07:11:43.364 E/ActivityManager(  727):     1.2% 335/keystore2: 0% user + 1.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 3958/keystore2: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   2.5% 3459/com.android.dynsystem: 0.6% user + 1.8% kernel / faults: 170 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     1.8% 3466/HeapTaskDaemon: 0% user + 1.8% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 4009/socket_writer_q: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   2.7% 3823/com.google.android.as.oss: 0.6% user + 2% kernel / faults: 22 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     2% 3960/WM.task-3: 0% user + 2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.9% 336/android.hardware.security.keymint-service: 0.3% user + 0.6% kernel / faults: 12 minor 64 major
+07-18 07:11:43.364 E/ActivityManager(  727):   0.9% 468/netd: 0.3% user + 0.6% kernel / faults: 19 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 493/binder:468_2: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.9% 469/statsd: 0% user + 0.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.9% 477/statsd.writer: 0% user + 0.9% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.9% 471/zygote64: 0% user + 0.9% kernel / faults: 88 minor
+07-18 07:11:43.364 E/ActivityManager(  727):   0.4% 46/kworker/3:0-mm_percpu_wq: 0% user + 0.4% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.5% 267/kworker/u20:2-writeback: 0% user + 0.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.6% 368/jbd2/dm-6-8: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.6% 443/kworker/u18:2-events_unbound: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.7% 545/adbd: 0% user + 0.7% kernel / faults: 661 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 545/adbd: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.3% 584/adbd: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 3964/shell svc 3963: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):    +0% 3979/shell svc 3976: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.7% 599/kworker/1:3-virtio_vsock: 0% user + 0.7% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 1/init: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 18/rcu_preempt: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 19/rcuog/0: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 32/kworker/1:0H-kblockd: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 33/rcuop/1: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 40/rcuog/2: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 45/ksoftirqd/3: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 48/rcuop/3: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 49/kworker/u17:0-writeback: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 78/kworker/u25:0-fscrypt_read_queue: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 90/khvcd: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 112/erofs_worker/2: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 113/erofs_worker/3: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.2% 284/kworker/u19:2-writeback: 0% user + 0.2% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.3% 580/drmserver: 0% user + 0.3% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.5% 1123/com.android.networkstack.process: 0% user + 0.5% kernel / faults: 37 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     0.5% 2299/NetworkMonitor/: 0% user + 0.5% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):   0.6% 3765/com.google.android.gms: 0% user + 0.6% kernel / faults: 5 minor
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 3781/binder:3765_2: 0% user + 0.6% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):     0.6% 3868/GoogleApiHandle: 0.6% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):  +0% 3926/com.google.android.configupdater: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):  +0% 3963/uiautomator: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):  +0% 3968/com.google.android.ext.services: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727):  +0% 3976/screencap: 0% user + 0% kernel
+07-18 07:11:43.364 E/ActivityManager(  727): 99% TOTAL: 36% user + 62% kernel + 0.4% softirq
+07-18 07:11:43.392 I/DropBoxManagerService(  727): add tag=system_app_anr isTagEnabled=true flags=0x6
+07-18 07:11:43.396 D/ShadeStatusBarComponentsInteractor#homeStatusBarComponent( 3699): newValue: null
+07-18 07:11:43.420 I/ActivityManager(  727): Extending process start timeout by 11037ms for ProcessRecord{2c8637a 3699:com.android.systemui/u0a188}
+07-18 07:11:43.450 I/ActivityManager(  727): Broadcast completed: result=0
+07-18 07:11:43.451 W/ActivityManager(  727): Process com.android.systemui has crashed too many times, killing! Reason: crashed quickly
+07-18 07:11:43.459 I/ActivityManager(  727): Killing 3699:com.android.systemui/u0a188 (adj -800): user request after error
+07-18 07:11:43.463 I/netd    (  468): tetherGetStats() -> {[]} <1.57ms>
+07-18 07:11:43.471 D/ActivityManager(  727): Completed ANR of com.android.systemui in 7900ms, latency 15ms (expired, only dump ANR app)
+07-18 07:11:43.557 W/Looper  (  727): Slow dispatch took 107ms android.fg app=system_server main=false group=FOREGROUND h=com.android.server.DropBoxManagerService$DropBoxManagerBroadcastHandler c=null m=1
+07-18 07:11:43.666 I/tombstoned(  377): received crash request for pid 3420
+07-18 07:11:43.666 I/tombstoned(  377): found intercept fd 512 for pid 3420 and type kDebuggerdJavaBacktrace
+07-18 07:11:43.668 I/m.android.phone( 3420): Wrote stack traces to tombstoned
+07-18 07:11:43.668 W/tombstoned(  377): skipping tombstone file creation due to intercept
+07-18 07:11:43.699 V/GraphicsEnvironment( 4040): Currently set values for:
+07-18 07:11:43.700 V/GraphicsEnvironment( 4040):   angle_gl_driver_selection_pkgs=[]
+07-18 07:11:43.700 V/GraphicsEnvironment( 4040):   angle_gl_driver_selection_values=[]
+07-18 07:11:43.700 V/GraphicsEnvironment( 4040): com.google.android.ext.services is not listed in per-application setting
+07-18 07:11:43.700 V/GraphicsEnvironment( 4040): No special selections for ANGLE, returning default driver choice
+07-18 07:11:43.768 I/HWUI    ( 4023): Using FreeType backend (prop=Auto)
+07-18 07:11:43.789 I/adbd    (  545): adbd service requested 'sync:'
+07-18 07:11:43.835 V/GraphicsEnvironment( 4040): Neither updatable production driver nor prerelease driver is supported.
+07-18 07:11:43.939 I/AppHashHelper( 3968): App hash codes refreshed, total found=146
+07-18 07:11:43.955 I/system_server(  727): libdebuggerd_client: done dumping process 3420
+07-18 07:11:43.987 I/Telephony( 3420): TelecomAccountRegistry: isTelecomReady: telecom ready
+07-18 07:11:43.988 I/Telephony( 3420): TelecomAccountRegistry: setupOnBootInternal - register subscription listener
+07-18 07:11:44.050 I/adbd    (  545): adbd service requested 'shell,v2,TERM=dumb,raw:uiautomator dump /sdcard/reader_qa_reader-webtoon-after-scroll.xml'
+07-18 07:11:44.064 D/CompatChangeReporter( 4040): Compat change id reported: 407952621; UID 10208; state: ENABLED
+07-18 07:11:44.064 D/CompatChangeReporter( 4040): Compat change id reported: 419020719; UID 10208; state: ENABLED
+07-18 07:11:44.075 W/JobInfo ( 1479): Requested important-while-foreground flag for job14 is ignored and takes no effect
+07-18 07:11:44.075 D/WM-SystemJobScheduler( 1479): Scheduling work ID 1c19d66e-9609-4b1d-8897-39b8f4edd615Job ID 14
+07-18 07:11:44.159 I/DownloadManager( 3097): DownloadManager$3.onProgress():537 Downloading emoji_kitchen_data with size 133012
+07-18 07:11:44.245 D/WifiClientModeImpl[94633:wlan0](  727): updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-50 TxLinkspeed=1 freq=2447 RxLinkSpeed=2
+07-18 07:11:44.250 D/WifiDataStall(  727): tx tput in kbps: 11000
+07-18 07:11:44.250 D/WifiDataStall(  727): rx tput in kbps: 11000
+07-18 07:11:44.250 V/WifiConfigManager(  727): Updating scan detail cache freq=2447 BSSID=00:13:10:85:fe:01 RSSI=-50 for "AndroidWifi"NONE
+07-18 07:11:44.251 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:44.251 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:44.251 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:44.251 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:44.252 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:44.252 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:44.252 D/WifiThroughputPredictor(  727):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+07-18 07:11:44.252 D/WifiThroughputPredictor(  727):  BW: 0 RSSI: -50 Nss: 1 Mode: 1 symDur: 4000 snrDb 30 bitPerTone: 4500 rate: 54 throughput: 11
+07-18 07:11:44.266 I/adbd    (  545): adbd service requested 'sync:'
+07-18 07:11:44.300 I/binder  (    0): undelivered TRANSACTION_COMPLETE
+07-18 07:11:44.313 I/binder  (    0): undelivered transaction 100293, process died.
+07-18 07:11:44.342 I/Zygote  (  471): Process 3699 exited due to signal 9 (Killed)
+07-18 07:11:44.345 I/adbd    (  545): Remote process closed the socket (on MSG_PEEK)
+07-18 07:11:44.434 I/ApplicationContextProvider( 4040): onCreate(): setting application context from android.ext.services.ExtServicesApplication@1c8cce3
+07-18 07:11:44.436 I/libprocessgroup(  727): Removed cgroup /sys/fs/cgroup/apps/uid_10188/pid_3699
+07-18 07:11:44.491 I/ActivityManager(  727): Process com.android.systemui (pid 3699) has died: pers PER 
+07-18 07:11:44.494 I/ActivityManager(  727): dumpStackTraces pids=null
+07-18 07:11:44.495 I/ActivityManager(  727): Dumping to /data/anr/anr_2026-07-18-07-11-44-494
+07-18 07:11:44.496 W/system_server(  727): Long monitor contention with owner appscheduling.default (832) at boolean com.android.server.job.controllers.QuotaController.isUidInForeground(int)(QuotaController.java:816) waiters=0 in int com.android.server.job.JobSchedulerService.scheduleAsPackage(android.app.job.JobInfo, android.app.job.JobWorkItem, int, java.lang.String, int, java.lang.String, java.lang.String) for 149ms
+07-18 07:11:44.496 I/ActivityManager(  727): dumpStackTraces nativepids=null
+07-18 07:11:44.496 I/ActivityManager(  727): dumpStackTraces extraPids=null
+07-18 07:11:44.496 I/ActivityManager(  727): Done dumping
+07-18 07:11:44.497 E/libprocessgroup(  727): Failed to write 1 to /sys/fs/cgroup/apps/uid_10188/pid_3699/cgroup.kill: No such file or directory
+07-18 07:11:44.510 I/HalDevMgr(  727): bestIfaceCreationProposal is null, requestIface=STA, existingIface=[name=wlan0 type=STA]
+07-18 07:11:44.511 D/WifiScoreCard(  727): BSSID update SIGNAL_POLL ID: 1602891080 SSID: "AndroidWifi", BSSID: 00:13:10:85:fe:01, MAC: 02:15:b2:00:00:00, IP: /10.0.2.16, Security type: 0, Supplicant state: COMPLETED, Wi-Fi standard: legacy, RSSI: -50, Link speed: 1Mbps, Tx Link speed: 1Mbps, Max Supported Tx Link speed: 11Mbps, Calculated Tx : 0Mbps, Rx Link speed: 2Mbps, Max Supported Rx Link speed: 11Mbps, Calculated Rx : 0Mbps, Frequency: 2447MHz, Net ID: 0, Metered hint: false, score: 100, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"AndroidWifi"openMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+07-18 07:11:44.511 D/WifiScoreCard(  727): txRate: 40 txSpeed: 1
+07-18 07:11:44.511 D/WifiScoreCard(  727): network update SIGNAL_POLL "AndroidWifi" ID: 740479026 RSSI -50 txSpeed 1
+07-18 07:11:44.556 W/ctxmgr  ( 3343): [WorkManager] Long workInfo: pkg=com.google.android.gms, lbl=Modulesdelayed_module_init, start=2026-07-18 07:11:28.550+0000, stop=2026-07-18 07:11:44.537+0000, durtn=15987ms [CONTEXT service_id=47 ]
+07-18 07:11:44.580 I/adservices-shared( 4040): set(): set singleton context as android.ext.services.ExtServicesApplication@1c8cce3
+07-18 07:11:44.586 D/WifiClientModeImpl[94633:wlan0](  727):  ClientModeImpl$L2ConnectedState screen=on 2 0 "AndroidWifi" 00:13:10:85:fe:01 rssi=-50 f=2447 sc=100 link=1 tx=39.9, 0.0, 0.0 rx=197.7 bcn=0 [on:0 tx:0 rx:0 period:3275] from screen [on:0 period:1947276671] score=100
+07-18 07:11:44.655 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.662 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.663 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 0
+07-18 07:11:44.663 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 0
+07-18 07:11:44.680 W/ActivityTaskManager(  727): No component for base intent of task: Task{b60a760 #0 name=Bubbles-visibility-barrier type=undefined}
+07-18 07:11:44.688 E/ActivityManager(  727): ANR in com.android.phone
+07-18 07:11:44.688 E/ActivityManager(  727): PID: 3420
+07-18 07:11:44.688 E/ActivityManager(  727): Reason: Process ProcessRecord{8bc4d57 3420:com.android.phone/1001} failed to complete startup
+07-18 07:11:44.688 E/ActivityManager(  727): ErrorId: 8bdde303-578d-46f2-bc6c-2b93f8f070a2
+07-18 07:11:44.688 E/ActivityManager(  727): Frozen: false
+07-18 07:11:44.688 E/ActivityManager(  727): Load: 0.0 / 0.0 / 0.0
+07-18 07:11:44.688 E/ActivityManager(  727): ----- Output from /proc/pressure/memory -----
+07-18 07:11:44.688 E/ActivityManager(  727): some avg10=3.97 avg60=2.37 avg300=0.91 total=3015783
+07-18 07:11:44.688 E/ActivityManager(  727): full avg10=1.87 avg60=1.03 avg300=0.40 total=1489967
+07-18 07:11:44.688 E/ActivityManager(  727): ----- End output from /proc/pressure/memory -----
+07-18 07:11:44.688 E/ActivityManager(  727): ----- Output from /proc/pressure/cpu -----
+07-18 07:11:44.688 E/ActivityManager(  727): some avg10=43.76 avg60=59.12 avg300=38.50 total=201926198
+07-18 07:11:44.688 E/ActivityManager(  727): full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+07-18 07:11:44.688 E/ActivityManager(  727): ----- End output from /proc/pressure/cpu -----
+07-18 07:11:44.688 E/ActivityManager(  727): ----- Output from /proc/pressure/io -----
+07-18 07:11:44.688 E/ActivityManager(  727): some avg10=9.79 avg60=11.06 avg300=7.23 total=32072354
+07-18 07:11:44.688 E/ActivityManager(  727): full avg10=0.03 avg60=0.12 avg300=0.63 total=5539534
+07-18 07:11:44.688 E/ActivityManager(  727): ----- End output from /proc/pressure/io -----
+07-18 07:11:44.688 E/ActivityManager(  727): 
+07-18 07:11:44.688 E/ActivityManager(  727): CPU usage from 7959ms to 1605ms ago (2026-07-18 07:11:35.600 to 2026-07-18 07:11:41.955):
+07-18 07:11:44.688 E/ActivityManager(  727):   65% 499/android.hardware.radio-service.ranchu: 36% user + 28% kernel
+07-18 07:11:44.688 E/ActivityManager(  727):   57% 727/system_server: 9.7% user + 47% kernel / faults: 3115 minor 7 major
+07-18 07:11:44.688 E/ActivityManager(  727):   35% 2937/com.example.mrcomic.debug: 22% user + 13% kernel / faults: 1979 minor 1 major
+07-18 07:11:44.688 E/ActivityManager(  727):   25% 3343/com.google.android.gms.persistent: 11% user + 13% kernel / faults: 4666 minor 73 major
+07-18 07:11:44.688 E/ActivityManager(  727):   16% 3699/com.android.systemui: 5.3% user + 10% kernel / faults: 2837 minor 32 major
+07-18 07:11:44.688 E/ActivityManager(  727):   15% 3097/com.google.android.inputmethod.latin: 4.4% user + 11% kernel / faults: 4035 minor 10 major
+07-18 07:11:44.688 E/ActivityManager(  727):   14% 3823/com.google.android.as.oss: 4% user + 10% kernel / faults: 2277 minor 18 major
+07-18 07:11:44.688 E/ActivityManager(  727):   9.9% 3420/com.android.phone: 4.3% user + 5.5% kernel / faults: 3195 minor 13 major
+07-18 07:11:44.688 E/ActivityManager(  727):   7.8% 535/surfaceflinger: 1% user + 6.7% kernel / faults: 35 minor
+07-18 07:11:44.688 E/ActivityManager(  727):   6.9% 594/logcat: 0% user + 6.9% kernel
+07-18 07:11:44.688 E/ActivityManager(  727): 99% TOTAL: 35% user + 63% kernel + 0.6% softirq
+07-18 07:11:44.688 E/ActivityManager(  727): CPU usage from 313847ms to 313847ms ago (1970-01-01 00:00:00.000 to 1970-01-01 00:00:00.000) with 0% awake:
+07-18 07:11:44.688 E/ActivityManager(  727): 0% TOTAL: 0% user + 0% kernel
+07-18 07:11:44.700 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.700 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.700 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 0
+07-18 07:11:44.700 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 0
+07-18 07:11:44.749 I/adbd    (  545): adbd service requested 'shell,v2,TERM=dumb:export ANDROID_LOG_TAGS=''; exec logcat '-d' '-v' 'time' '-t' '700''
+07-18 07:11:44.782 W/ActivityTaskManager(  727): No component for base intent of task: Task{b60a760 #0 name=Bubbles-visibility-barrier type=undefined}
+07-18 07:11:44.782 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 0
+07-18 07:11:44.782 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 0
+07-18 07:11:44.783 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 11
+07-18 07:11:44.783 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 11
+07-18 07:11:44.846 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.846 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.846 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 14
+07-18 07:11:44.850 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 14
+07-18 07:11:44.850 W/ActivityTaskManager(  727): No component for base intent of task: Task{d1cd51 #14 name=side type=undefined}
+07-18 07:11:44.850 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.850 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.851 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 13
+07-18 07:11:44.851 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 13
+07-18 07:11:44.851 W/ActivityTaskManager(  727): No component for base intent of task: Task{4400278 #13 name=main type=undefined}
+07-18 07:11:44.880 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.880 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.880 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 14
+07-18 07:11:44.880 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 14
+07-18 07:11:44.880 W/ActivityTaskManager(  727): No component for base intent of task: Task{d1cd51 #14 name=side type=undefined}
+07-18 07:11:44.906 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 14
+07-18 07:11:44.906 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 14
+07-18 07:11:44.909 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.910 E/TransitionChain(  727): Can't collect into a chain with no transition
+07-18 07:11:44.910 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 13
+07-18 07:11:44.910 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 13
+07-18 07:11:44.910 W/ActivityTaskManager(  727): No component for base intent of task: Task{4400278 #13 name=main type=undefined}
+07-18 07:11:44.910 D/CorePackageUpdate(  727): onRecentTaskRemoved Removing task: 13
+07-18 07:11:44.910 D/CorePackageUpdate(  727): Couldn't find a persistent state for task= 13
+07-18 07:11:44.916 I/logd    (    0): logdr: UID=2000 GID=2000 PID=4072 n tail=700 logMask=99 pid=0 start=0ns deadline=0ns

@@ -1,68 +1,142 @@
-# Mr.Comic
+<div align="center">
+  <a href="media/video_2025-09-22_00-33-37.mp4">
+    <img src="media/demo.gif" alt="Mr.Comic demo" width="100%">
+  </a>
 
-Mr.Comic is an Android reader for comics, manga, webtoons, books, audiobooks, OCR-assisted translation, dictionaries, and a customizable library UI. The project is built with Kotlin, Jetpack Compose, Material 3, Hilt, Room, DataStore, Media3, and modular Android feature/engine layers.
+  <h1>Mr.Comic</h1>
 
-## Demo
+  <p>
+    <b>Android-reader for comics, manga, webtoons, books, audiobooks, OCR and translation workflows.</b><br>
+    One modular Kotlin app for raster pages, reflowable books, local dictionaries, TTS and customizable reading.
+  </p>
 
-![Mr.Comic demo](media/demo.gif)
+  <p>
+    <a href="https://github.com/Leostrange/Mr.Comic/releases/tag/v2.1.0">
+      <img alt="Release" src="https://img.shields.io/badge/release-v2.1.0-2563eb?style=for-the-badge">
+    </a>
+    <img alt="Platform" src="https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white">
+    <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7f52ff?style=for-the-badge&logo=kotlin&logoColor=white">
+    <img alt="Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285f4?style=for-the-badge&logo=jetpackcompose&logoColor=white">
+    <img alt="License" src="https://img.shields.io/badge/license-source--available-16a34a?style=for-the-badge">
+  </p>
 
-[Watch the video splash screen](media/video_2025-09-22_00-33-37.mp4)
+  <p>
+    <a href="https://github.com/Leostrange/Mr.Comic/releases/tag/v2.1.0"><b>Download release</b></a>
+    ·
+    <a href="media/video_2025-09-22_00-33-37.mp4">Watch MP4 demo</a>
+    ·
+    <a href="docs/README.md">Documentation</a>
+    ·
+    <a href="THIRD_PARTY_NOTICES.md">Third-party notices</a>
+  </p>
+</div>
 
-GitHub may show repository videos as a downloadable media link instead of an inline player. The GIF above is the lightweight preview; the MP4 is the original video splash screen.
+---
 
-## Purpose
+## About
 
-Mr.Comic is designed as one app for several reading workflows:
+Mr.Comic is an Android reader for comics, manga, webtoons, books, audiobooks, OCR-assisted translation, dictionaries and a customizable library UI.
 
-- reading comics, manga, webtoons, PDF, DJVU, CBR, CBZ, and image folders;
-- reading reflowable books such as EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX, and ODT;
-- OCR for page images and scanned content;
-- offline translation and dictionary lookup;
-- text-to-speech and audiobook playback;
-- customizable library views, reader themes, typography, and visual presets.
+The reader is built around separate containers for raster pages, raster vertical feeds, text pages and text vertical feeds. This keeps image archives, PDF/DJVU pages, EPUB/FB2/MOBI/DOCX/ODT books and plain text formats on the rendering path that fits them best.
 
-## Main Features
+## What It Does
 
-- Unified library for image-based and text-based books.
-- Four reader container paths: raster page, raster vertical feed, text page, and text vertical feed.
-- Reader chrome, table of contents, bookmarks, progress, pop-up footnotes, quote saving, translation, dictionary lookup, and explanation actions.
-- Reading presets: paper, sepia, newspaper, night ink, OLED black, and e-ink oriented styles.
-- Typography controls for text readers: font family, font size, line height, letter spacing, paragraph spacing, alignment, and custom fonts.
-- OCR and translation flows for comics and scanned documents.
-- Offline dictionaries and local lookup routing.
-- TTS, page-turn sounds, media session support, mini player, and audiobook UI.
-- Library layout presets, progress surfaces, seasonal/decorative layers, and customizable visual styling.
+<table>
+  <tr>
+    <td><b>Comic and manga reading</b></td>
+    <td>CBR, CBZ, ZIP, RAR, 7Z, TAR, image folders, PDF and DJVU with page and vertical-feed modes.</td>
+  </tr>
+  <tr>
+    <td><b>Book reading</b></td>
+    <td>EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX and ODT with text pagination and webtoon-style flow.</td>
+  </tr>
+  <tr>
+    <td><b>Reader tools</b></td>
+    <td>TOC navigation, bookmarks, progress, quote saving, pop-up footnotes, dictionary lookup, translation and explain actions.</td>
+  </tr>
+  <tr>
+    <td><b>Reading style</b></td>
+    <td>Paper, sepia, newspaper, night ink, OLED black and e-ink presets plus typography controls and custom fonts.</td>
+  </tr>
+  <tr>
+    <td><b>Audio and OCR</b></td>
+    <td>TTS, audiobook playback, media controls, OCR entry points and scanned-page workflows.</td>
+  </tr>
+</table>
+
+## Release v2.1.0
+
+Current release focus:
+
+- stabilized text/raster reader separation;
+- improved EPUB close behavior, asset handling and progress calculation;
+- mojibake recovery and language-aware text rendering;
+- archive routing for text books inside ZIP/RAR/7Z/TAR containers;
+- safer footnote parsing, body inset injection and webtoon document building;
+- local/online explain engine provider with OpenRouter integration;
+- expanded unit tests for reader policy, CSS, formats, pagination and import/open routing.
+
+Full notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 ## Supported Formats
 
-### Image and Document Formats
+| Type | Formats |
+| --- | --- |
+| Comic/image archives | CBR, CBZ, ZIP, RAR, 7Z, TAR |
+| Documents/pages | PDF, DJVU, image folders |
+| Reflowable books | EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX, ODT |
+| Audio flows | Local audiobook playback through the library and player UI |
 
-- CBR, CBZ, ZIP, RAR, 7Z, TAR image archives
-- PDF
-- DJVU
-- Image folders
+Archives are classified before rendering. Image sequences use raster containers; single-book text archives delegate to the matching text reader instead of being forced through the raster page loader.
 
-### Text Formats
+## Technology Stack
 
-- EPUB
-- FB2
-- TXT
-- HTML
-- Markdown
-- RTF
-- MOBI and AZW3
-- DOCX
-- ODT
+| Layer | Used |
+| --- | --- |
+| Language | Kotlin, Java 17 toolchain |
+| UI | Jetpack Compose, Material 3 |
+| Architecture | Modular Android app, feature/core/engine modules |
+| DI | Hilt |
+| Storage | Room, DataStore |
+| Media | Android Media3 |
+| Images | Coil |
+| Networking | Retrofit, OkHttp |
+| Archives | Zip4j, Junrar, Apache Commons Compress |
+| EPUB engine path | Readium-oriented engine module plus format adapters |
+| Build | Gradle wrapper, Android Gradle Plugin |
+| CI | GitHub Actions APK build and unit-test workflow |
 
-### Archive Behavior
+## Project Structure
 
-Archives are expected to be classified before rendering. Image sequences should use raster containers. Single-book text archives should delegate to the matching text reader instead of going through the raster page loader.
+```text
+android/
+  app/                   Application entry point, navigation, DI root, APK build
+  core-model/            Shared models, format catalog and enums
+  core-data/             Room, DataStore, repositories, migrations
+  core-domain/           Domain logic, translation, dictionary, analytics
+  core-ui/               Theme, design primitives, chrome, shared UI
+  engine-api/            Reader engine boundary interfaces
+  engine-epub-readium/   EPUB/Readium integration layer
+  engine-formats/        Format readers: archives, EPUB, FB2, text, PDF, DJVU, images
+  engine-rendering/      Bitmap cache, preloading, page rendering infrastructure
+  engine-registry/       Engine registration
+  feature-library/       Library, import flows, audiobook player, progress UI
+  feature-reader/        Reader screen, text/raster containers, TTS, controls
+  feature-settings/      Settings and customization screens
+  feature-ocr/           OCR feature module
+  feature-onboarding/    Onboarding and startup flows
+docs/
+  README.md              Documentation map
+  active/                Active technical notes and task plans
+media/
+  demo.gif
+  video_2025-09-22_00-33-37.mp4
+```
 
 ## Build And Run
 
 ### Requirements
 
-- Windows, macOS, or Linux with Android development tools
 - Android Studio
 - Android SDK
 - JDK 17
@@ -76,7 +150,7 @@ On Windows in this repository use `.\gradlew.bat`, not `./gradlew`.
 .\gradlew.bat --no-daemon --console=plain :app:assembleDebug
 ```
 
-Output APK:
+Output:
 
 ```text
 android/app/build/outputs/apk/debug/Mr.Comic-debug.apk
@@ -85,74 +159,23 @@ android/app/build/outputs/apk/debug/Mr.Comic-debug.apk
 ### Useful Checks
 
 ```powershell
-.\gradlew.bat --no-daemon --console=plain :feature-reader:testDebugUnitTest
 .\gradlew.bat --no-daemon --console=plain :engine-formats:testDebugUnitTest
-.\gradlew.bat --no-daemon --console=plain :feature-library:testDebugUnitTest
+.\gradlew.bat --no-daemon --console=plain :feature-reader:testDebugUnitTest
+.\gradlew.bat --no-daemon --console=plain :app:testDebugUnitTest
 ```
-
-## Project Structure
-
-```text
-android/
-  app/                  Application entry point, navigation, DI root, APK build
-  core-model/           Shared models and enums
-  core-data/            Room, DataStore, repositories, migrations
-  core-domain/          Domain logic, translation, dictionary, analytics
-  core-ui/              Theme, design system primitives, chrome, shared UI
-  engine-api/           Reader engine boundary interfaces
-  engine-formats/       Format readers: archives, EPUB, FB2, text, PDF, DJVU, images
-  engine-rendering/     Bitmap cache, preloading, page rendering infrastructure
-  engine-registry/      Engine registration
-  feature-library/      Library, import flows, audiobook player, progress UI
-  feature-reader/       Reader screen, text/raster containers, TTS, controls
-  feature-settings/     Settings and customization screens
-  feature-ocr/          OCR feature module
-  feature-onboarding/   Onboarding and startup flows
-docs/
-  README.md             Documentation map
-  active/               Active technical notes and task plans
-samples/
-  format-real-corpus/   Real sample files for smoke and regression testing
-media/
-  demo.gif              README preview
-  video_2025-09-22_00-33-37.mp4
-```
-
-## Documentation
-
-- [Documentation map](docs/README.md)
-- [Reader QA checklist](docs/active/QA_REGRESSION_CHECKLIST.md)
-- [Format support audit](docs/active/FORMAT_SUPPORT_AUDIT_2026-03-27.md)
-- [DJVU renderer research](docs/active/DJVU_RENDERER_RESEARCH.md)
-- [Readium EPUB/DJVU migration plan](docs/active/READIUM_EPUB_DJVU_MIGRATION_PLAN.md)
-- [Third-party dictionaries](docs/active/THIRD_PARTY_DICTIONARIES.md)
-- [Reader test progress](docs/reader_test_progress.md)
-
-## Media And Demo Assets
-
-The repository keeps only public demo media under `media/`:
-
-- `media/demo.gif` for a lightweight README preview.
-- `media/video_2025-09-22_00-33-37.mp4` for the video splash screen.
-
-Large design dumps, local mockups, exported screenshots, emulator captures, and test logs should stay outside Git.
-
-## Current Status
-
-Mr.Comic is under active development. Current high-priority areas are reader stability, text/raster container separation, text pagination, archive text handling, EPUB/HTML/DOCX formatting, DJVU rendering, OCR/translation polish, and library customization.
-
-The project contains experimental and legacy paths while the reader architecture is being stabilized. See the documentation map and active task plans for the current engineering focus.
 
 ## Repository Hygiene
 
-Before committing, exclude:
+The repository keeps source code, docs and small public demo media in git. Build outputs, private samples, emulator captures, logs, local agent workspaces, APKs and one-off analysis dumps should stay outside git or be attached to GitHub Releases.
 
-- `android/**/build/`, `.gradle/`, `.kotlin/`, `.cxx/`, and generated sources;
-- Android Studio workspace files;
-- emulator screenshots, `qa-*`, `mrcomic-*`, UI dumps, and log files;
-- local test databases and private sample books;
-- signing keys, keystores, tokens, local API keys, and machine-specific settings.
+For release builds, upload APK artifacts to the release page instead of committing them to the repository.
+
+## Contributors
+
+See [CONTRIBUTORS.md](CONTRIBUTORS.md).
 
 ## License
 
-No explicit project license file is currently present in the repository. Third-party assets and bundled dictionaries may have their own licenses or attribution files in the relevant asset folders.
+Mr.Comic source code is published as source-available unless a different license is granted in writing by the project owner. See [LICENSE](LICENSE).
+
+Third-party libraries, Android components, dictionaries and bundled assets remain under their own licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

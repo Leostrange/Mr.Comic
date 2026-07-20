@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderProgressPersistencePolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-19T23:44:28.151Z" hostname="LEOSTRANGE" time="0.003">
+  <properties/>
+  <testcase name="completionRequiresTheLastPageAndActualReading" classname="com.example.feature.reader.ui.ReaderProgressPersistencePolicyTest" time="0.001"/>
+  <testcase name="blocksNewHeavyReflowableBookUntilAPageCountIsAuthoritative" classname="com.example.feature.reader.ui.ReaderProgressPersistencePolicyTest" time="0.001"/>
+  <testcase name="allowsPersistingMeasuredEpubAndOtherLoadedBooks" classname="com.example.feature.reader.ui.ReaderProgressPersistencePolicyTest" time="0.0"/>
+  <testcase name="blocksEpubBeforeWebViewHasPaginatedEnoughSections" classname="com.example.feature.reader.ui.ReaderProgressPersistencePolicyTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

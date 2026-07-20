@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderTtsPlaybackServiceTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-19T17:48:27.659Z" hostname="LEOSTRANGE" time="0.001">
+  <properties/>
+  <testcase name="fallback notification channel id is correct" classname="com.example.feature.reader.ui.ReaderTtsPlaybackServiceTest" time="0.0"/>
+  <testcase name="service action constants are defined" classname="com.example.feature.reader.ui.ReaderTtsPlaybackServiceTest" time="0.0"/>
+  <testcase name="notification id is defined" classname="com.example.feature.reader.ui.ReaderTtsPlaybackServiceTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

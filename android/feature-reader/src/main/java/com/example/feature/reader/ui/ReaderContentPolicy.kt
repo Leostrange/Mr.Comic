@@ -2,7 +2,9 @@ package com.example.feature.reader.ui
 
 import com.example.core.model.ComicFormat
 import com.example.core.model.ReadingMode
+import com.example.core.model.isArchiveFormat
 import com.example.core.model.isGraphicReaderFormat
+import com.example.core.model.isHeavyReflowableFormat
 import com.example.core.model.isTextReadingFormat
 
 enum class ReaderContainerKind {
@@ -19,10 +21,16 @@ fun resolveReaderContainerKind(
 ): ReaderContainerKind {
     val resolvedFormat = format ?: ComicFormat.UNKNOWN
     val isTextRoute = when {
+        // Text formats always go to TEXT containers — no exceptions.
         resolvedFormat.isTextReadingFormat() -> true
-        readerRendersHtmlContent && resolvedFormat.isGraphicReaderFormat() -> false
-        readerRendersHtmlContent -> true
-        else -> false
+        // Graphic formats NEVER go to TEXT, even if they produce HTML fallbacks.
+        resolvedFormat.isGraphicReaderFormat() -> false
+        // Archive containers route by their inner content: if the archive delegates
+        // to a text reader (e.g. ZIP containing EPUB), use TEXT; otherwise RASTER.
+        resolvedFormat.isArchiveFormat() -> readerRendersHtmlContent
+        // Fallback for UNKNOWN: trust the reader's HTML flag, but only if the
+        // format is not a known graphic format (already handled above).
+        else -> readerRendersHtmlContent
     }
     return when {
         isTextRoute && readingMode == ReadingMode.WEBTOON -> ReaderContainerKind.TEXT_WEBTOON
@@ -39,18 +47,27 @@ fun ReaderContainerKind.isRasterContainer(): Boolean =
     this == ReaderContainerKind.RASTER_PAGE || this == ReaderContainerKind.RASTER_WEBTOON
 
 /**
- * EPUB/Readium books use spine HTML rendered in WebView with JS viewport pagination (Moon+ model).
- * Kotlin char-split pagination breaks cover pages, TOC mapping, and footnotes.
+ * All text formats now use WebView JS viewport pagination (the same pixel-precise
+ * TreeWalker + getClientRects() algorithm that EPUB uses). The old Kotlin char-count
+ * heuristic (LayoutUnitTextPaginator) is retired because it produced inaccurate page
+ * boundaries — the 0.56f avg-char-width and 0.75f fill-factor model broke on variable-
+ * width fonts, images, tables, and CJK text.
+ *
+ * Returning false routes every TEXT_PAGE format through the WebView paged layout, which
+ * measures actual rendered line rects for exact page breaks.
  */
 fun shouldUseKotlinTextPagePagination(
     containerKind: ReaderContainerKind,
     format: ComicFormat?
+): Boolean = false
+
+fun shouldDeferReaderPageCount(
+    readerRendersHtmlContent: Boolean,
+    contentFormat: ComicFormat?
 ): Boolean {
-    if (containerKind != ReaderContainerKind.TEXT_PAGE) return false
-    // EPUB uses WebView JS pagination. Unknown/null format on HTML routes must not
-    // char-split — mis-tagged EPUBs otherwise get 300+ display pages and a blank UI.
-    if (format == null || format == ComicFormat.EPUB || format == ComicFormat.UNKNOWN) return false
-    return format.isTextReadingFormat()
+    val resolvedFormat = contentFormat ?: ComicFormat.UNKNOWN
+    return readerRendersHtmlContent &&
+        (resolvedFormat.isHeavyReflowableFormat() || resolvedFormat == ComicFormat.EPUB)
 }
 
 /**

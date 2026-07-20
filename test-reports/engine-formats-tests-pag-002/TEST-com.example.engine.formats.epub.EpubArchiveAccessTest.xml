@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.epub.EpubArchiveAccessTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-07-18T18:18:37.982Z" hostname="LEOSTRANGE" time="0.004">
+  <properties/>
+  <testcase name="textEncodingFor_textFormats" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="mimeTypeFor_text" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.001"/>
+  <testcase name="textEncodingFor_binaryFormats" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="mimeTypeFor_images" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="normalizePath_complex" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.001"/>
+  <testcase name="normalizePath_stripsLeadingSlash" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="normalizePath_stripsDots" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="normalizePath_emptySegments" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.001"/>
+  <testcase name="normalizePath_resolvesDotDot" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="mimeTypeFor_fonts" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.0"/>
+  <testcase name="mimeTypeFor_other" classname="com.example.engine.formats.epub.EpubArchiveAccessTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

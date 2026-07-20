@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.FormatDiagnosticsTest" tests="3" skipped="0" failures="1" errors="0" timestamp="2026-07-18T18:28:08.433Z" hostname="LEOSTRANGE" time="0.532">
+  <properties/>
+  <testcase name="dumpMobiFrontMatter" classname="com.example.engine.formats.FormatDiagnosticsTest" time="0.314"/>
+  <testcase name="dumpPodSolntsemEpubPages" classname="com.example.engine.formats.FormatDiagnosticsTest" time="0.18">
+    <failure message="java.nio.file.NoSuchFileException: C:\Users\xmeta\projects\Mr.Comic_fresh_clone\android\engine-formats\Под солнцем_868805.epub" type="java.nio.file.NoSuchFileException">java.nio.file.NoSuchFileException: C:\Users\xmeta\projects\Mr.Comic_fresh_clone\android\engine-formats\Под солнцем_868805.epub
+	at java.base/sun.nio.fs.WindowsException.translateToIOException(Unknown Source)
+	at java.base/sun.nio.fs.WindowsException.rethrowAsIOException(Unknown Source)
+	at java.base/sun.nio.fs.WindowsException.rethrowAsIOException(Unknown Source)
+	at java.base/sun.nio.fs.WindowsFileAttributeViews$Basic.readAttributes(Unknown Source)
+	at java.base/sun.nio.fs.WindowsFileAttributeViews$Basic.readAttributes(Unknown Source)
+	at java.base/sun.nio.fs.WindowsFileSystemProvider.readAttributes(Unknown Source)
+	at java.base/java.nio.file.Files.readAttributes(Unknown Source)
+	at java.base/java.util.zip.ZipFile$Source.get(Unknown Source)
+	at java.base/java.util.zip.ZipFile$CleanableResource.&lt;init&gt;(Unknown Source)
+	at java.base/java.util.zip.ZipFile.&lt;init&gt;(Unknown Source)
+	at java.base/java.util.zip.ZipFile.&lt;init&gt;(Unknown Source)
+	at java.base/java.util.zip.ZipFile.&lt;init&gt;(Unknown Source)
+	at com.example.engine.formats.FormatDiagnosticsTest$dumpPodSolntsemEpubPages$1.invokeSuspend(FormatDiagnosticsTest.kt:62)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:263)
+	at kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:94)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking(Builders.kt:70)
+	at kotlinx.coroutines.BuildersKt.runBlocking(Unknown Source)
+	at kotlinx.coroutines.BuildersKt__BuildersKt.runBlocking$default(Builders.kt:48)
+	at kotlinx.coroutines.BuildersKt.runBlocking$default(Unknown Source)
+	at com.example.engine.formats.FormatDiagnosticsTest.dumpPodSolntsemEpubPages(FormatDiagnosticsTest.kt:34)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)
+	at org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)
+	at org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:413)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:137)
+	at org.junit.runner.JUnitCore.run(JUnitCore.java:115)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.runRequest(JUnitTestExecutor.java:175)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:84)
+	at org.gradle.api.internal.tasks.testing.junit.JUnitTestExecutor.accept(JUnitTestExecutor.java:47)
+	at org.gradle.api.internal.tasks.testing.junit.AbstractJUnitTestDefinitionProcessor.processTestDefinition(AbstractJUnitTestDefinitionProcessor.java:65)
+	at org.gradle.api.internal.tasks.testing.SuiteTestDefinitionProcessor.processTestDefinition(SuiteTestDefinitionProcessor.java:53)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(Unknown Source)
+	at java.base/java.lang.reflect.Method.invoke(Unknown Source)
+	at org.gradle.internal.dispatch.MethodInvocation.invokeOn(MethodInvocation.java:77)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:28)
+	at org.gradle.internal.dispatch.ReflectionDispatch.dispatch(ReflectionDispatch.java:19)
+	at org.gradle.internal.dispatch.ContextClassLoaderDispatch.dispatch(ContextClassLoaderDispatch.java:33)
+	at org.gradle.internal.dispatch.ProxyDispatchAdapter$DispatchingInvocationHandler.invoke(ProxyDispatchAdapter.java:88)
+	at jdk.proxy1/jdk.proxy1.$Proxy4.processTestDefinition(Unknown Source)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker$2.run(TestWorker.java:178)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.executeAndMaintainThreadName(TestWorker.java:126)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:103)
+	at org.gradle.api.internal.tasks.testing.worker.TestWorker.execute(TestWorker.java:63)
+	at org.gradle.process.internal.worker.child.ActionExecutionWorker.execute(ActionExecutionWorker.java:56)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:122)
+	at org.gradle.process.internal.worker.child.SystemApplicationClassLoaderWorker.call(SystemApplicationClassLoaderWorker.java:72)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.run(GradleWorkerMain.java:69)
+	at worker.org.gradle.process.internal.worker.GradleWorkerMain.main(GradleWorkerMain.java:74)
+</failure>
+  </testcase>
+  <testcase name="dumpSkottEpubFrontMatter" classname="com.example.engine.formats.FormatDiagnosticsTest" time="0.025"/>
+  <system-out><![CDATA[MOBI pageCount=1
+---- MOBI PAGE 0 ----
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 680px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: inherit;
+  background: transparent;
+  
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p, div.paragraph {
+  margin: 0.2em 0;
+  text-align: justify; text-indent: 1.5em;
+}
+p:first-child,
+div.paragraph:first-child,
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+h1 + div.paragraph, h2 + div.paragraph, h3 + div.paragraph,
+h4 + div.paragraph, h5 + div.paragraph, h6 + div.paragraph {
+  text-indent: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  text-indent: 0;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.6em 0 0.7em;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
+h4, h5, h6 { font-size: 1em; }img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 0.8rem auto; page-break-inside: avoid; break-inside: avoid; }
+a[href] { -webkit-user-select: text; user-select: text; }figure { margin: 1rem 0; }
+figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
+pre, code { white-space: pre-wrap; word-break: break-word; }
+pre {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(120,120,120,0.10);
+  overflow-x: auto;
+}
+code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
+ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
+li + li { margin-top: 0.25rem; }
+table { width: 100%; max-width: 100%; border-collapse: collapse; margin: 1rem 0; table-layout: fixed; }
+table.auto-layout { table-layout:
+POD pageCount=0
+SKOTT pageCount=0
+resolve cover=null
+resolve ch1=null
+resolve ch1-1=null
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

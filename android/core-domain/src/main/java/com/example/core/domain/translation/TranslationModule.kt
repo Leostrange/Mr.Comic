@@ -1,10 +1,13 @@
 package com.example.core.domain.translation
 
+import com.example.core.data.db.TranslationCacheDao
 import dagger.Binds
 import dagger.Module
+import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Named
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -31,4 +34,18 @@ abstract class TranslationModule {
         impl: DelegatingLlmExplainEngine
     ): LlmExplainEngine
 
+    companion object {
+        @Provides
+        fun provideTranslatorEngine(
+            mlKitEngine: MlKitTranslatorEngine,
+            cacheDao: TranslationCacheDao
+        ): TranslatorEngine = CachingTranslatorEngine(mlKitEngine, cacheDao)
+
+        @Provides
+        @Singleton
+        fun provideTranslationEngineSelector(
+            mlKitEngine: MlKitTranslatorEngine,
+            cachingEngine: CachingTranslatorEngine
+        ): TranslationEngineSelector = TranslationEngineSelector(mlKitEngine, cachingEngine)
+    }
 }

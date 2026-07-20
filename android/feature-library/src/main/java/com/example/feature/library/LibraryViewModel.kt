@@ -22,15 +22,19 @@ import com.example.core.domain.analytics.MascotStage
 import com.example.core.domain.analytics.ReadingAnalyticsEvent
 import com.example.core.domain.analytics.ReadingAnalyticsTracker
 import com.example.core.domain.analytics.calculateMascotProgress
+import com.example.core.domain.util.LibraryViewModeKey
+import com.example.core.domain.util.normalizeLibraryViewModeKey
 import com.example.core.model.Comic
 import com.example.core.model.ComicLibraryShelf
 import com.example.core.model.ComicFormat
+import com.example.core.model.displayReadingProgress
 import com.example.core.model.SavedQuote
 import com.example.core.model.SortOrder
 import com.example.core.model.isReadCompleted
 import com.example.core.model.isReadingInProgress
 import com.example.core.model.isTextReadingFormat
 import com.example.core.model.libraryShelfCategory
+import com.example.core.model.storedReaderLocator
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import com.example.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
@@ -55,6 +59,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -66,6 +71,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 enum class LibraryStatusFilter { ALL, BOOKMARKED, IN_PROGRESS, COMPLETED }
@@ -1030,7 +1036,9 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private suspend fun repairMissingAudiobookCovers(audiobooks: List<Audiobook>) {
+    private suspend fun repairMissingAudiobookCovers(audiobooks: List<Audiobook>) = withContext(Dispatchers.IO) {
+        // Runs on every audiobook list emission; each resolve does MediaMetadataRetriever + file
+        // copy + DocumentTree walk. Must stay off the main thread to avoid jank/ANR on library open.
         audiobooks
             .forEach { audiobook ->
                 val hasValidStoredCover = audiobook.coverUri
@@ -1053,7 +1061,7 @@ class LibraryViewModel @Inject constructor(
 
     /** Add a single audio file as a 1-chapter audiobook. */
     fun addAudiobookFromUri(uri: Uri) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val title = DocumentFile.fromSingleUri(context, uri)?.name
                     ?.substringBeforeLast('.')
@@ -1077,7 +1085,7 @@ class LibraryViewModel @Inject constructor(
 
     /** Scan a folder tree and add direct audio files and nested audio folders separately. */
     fun addAudiobookFromFolder(treeUri: Uri) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val root = DocumentFile.fromTreeUri(context, treeUri) ?: run {
                     Log.w("LibraryViewModel", "Could not resolve tree URI: $treeUri")
@@ -1184,14 +1192,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     private fun effectiveReadingProgress(comic: Comic): Float {
-        if (comic.isReadCompleted()) return 1f
-        val storedProgress = comic.readingProgress.coerceIn(0f, 1f)
-        val pageProgress = if (comic.pageCount > 0) {
-            ((comic.currentPage + 1).toFloat() / comic.pageCount.toFloat()).coerceIn(0f, 1f)
-        } else {
-            0f
-        }
-        return maxOf(storedProgress, pageProgress)
+        return comic.displayReadingProgress()
     }
 
     private fun buildSections(

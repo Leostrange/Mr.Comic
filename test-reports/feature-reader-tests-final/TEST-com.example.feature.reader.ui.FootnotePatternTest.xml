@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.FootnotePatternTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-07-19T05:45:44.917Z" hostname="LEOSTRANGE" time="0.012">
+  <properties/>
+  <testcase name="footnoteIdMatchesLegacyPatterns" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.003"/>
+  <testcase name="footnoteMarkerMatchesNewPatterns" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.001"/>
+  <testcase name="footnoteMarkerIsCaseInsensitive" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.001"/>
+  <testcase name="footnoteIdRequiresDigitSuffix" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.001"/>
+  <testcase name="epubFootnoteParserNoteIdReMatchesNewPatterns" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.001"/>
+  <testcase name="footnoteIdMatchesNewPatterns" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.001"/>
+  <testcase name="footnoteIdRejectsNonFootnotePatterns" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.0"/>
+  <testcase name="footnoteMarkerMatchesLegacyPatterns" classname="com.example.feature.reader.ui.FootnotePatternTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

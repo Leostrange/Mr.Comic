@@ -139,6 +139,7 @@ dependencies {
     implementation(project(":core-domain"))
     implementation(project(":core-ui"))
     implementation(project(":engine-formats"))
+    implementation(project(":engine-llm"))
     implementation(project(":engine-rendering"))
     implementation(project(":engine-api"))
     implementation(project(":engine-registry"))
