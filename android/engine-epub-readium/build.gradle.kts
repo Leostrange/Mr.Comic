@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.engine.epub.readium"
+    namespace = "io.leostrange.mrcomic.engine.epub.readium"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {

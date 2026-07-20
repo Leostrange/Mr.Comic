@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.engine.registry"
+    namespace = "io.leostrange.mrcomic.engine.registry"
     compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig { minSdk = libs.versions.minSdk.get().toInt() }
     compileOptions {
