@@ -15,7 +15,12 @@ import android.view.MenuItem
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import com.example.feature.reader.domain.enums.FootnotePresentation
+import com.example.feature.reader.domain.enums.ReaderChromeState
+import com.example.feature.reader.domain.enums.ReaderNavigationProgressSource
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -102,6 +107,11 @@ import com.example.feature.reader.ui.components.PageView
 import com.example.feature.reader.ui.components.TextContainer
 import com.example.feature.reader.ui.components.ReaderBottomBar
 import com.example.feature.reader.ui.components.WebtoonView
+import com.example.feature.reader.ui.gesture.PagedGestureAction
+import com.example.feature.reader.ui.gesture.PagedGesturePolicy
+import com.example.feature.reader.ui.geometry.ReaderViewportGeometry
+import com.example.feature.reader.ui.gesture.ReaderColorScheme
+import com.example.feature.reader.ui.gesture.ReaderHtmlHelpers
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -124,414 +134,7 @@ import kotlin.math.roundToInt
  *  вЂў Click anywhere else в†’ call onTap(xPercent) for page-turn navigation.
  * The guard flag prevents double-registration across multiple onPageFinished calls.
  */
-private const val JS_TAP_HANDLER = """(function(){
-  if(window.__tapAdded)return;
-  window.__tapAdded=true;
-
-  // Hoisted footnote patterns — compiled once, reused on every tap.
-  var _fn = {
-    marker: /\b(footnote|note|notebody|rearnote|endnote|fnote|fbautid|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b/i,
-    role:   /(^|\s)doc-noteref(\s|$)|(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)doc-fn(\s|$)|(^|\s)doc-backref(\s|$)/i,
-    href:   /#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation)[-_]?\w+/i,
-    epubType: /(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)|(^|\s)annref(\s|$)|(^|\s)annotation(\s|$)/i,
-    cls:    /\bfn\b|\bnoteref\b|\bfootnote-ref\b|\bdoc-noteref\b|\bfnt\b|\bbacknote\b|\bsupnote\b|\btext-fn\b|\bpagenote\b|\bannref\b|\bannotation\b/i,
-    noteRefText: /^[\[\(]?\d{1,4}[\]\)]?$/,
-    starRefText: /^\*{1,4}$/
-  };
-  function hasActivePagedLayout(){
-    return !!(window.__mrcomicPageLayouts&&window.__mrcomicPageLayouts.length)||!!window.__mrcomicPageStep;
-  }
-  function isPagedEdgeTap(clientX){
-    var winW=window.innerWidth||document.documentElement.clientWidth||360;
-    if(!winW)return false;
-    var ratio=(Number(clientX)||0)/winW;
-    return ratio<0.28||ratio>0.72;
-  }
-  function routePagedTapFromLink(e,forceForward){
-    e.preventDefault();
-    e.stopPropagation();
-    var x=forceForward?0.85:((Number(e.clientX)||0)/(window.innerWidth||document.documentElement.clientWidth||360));
-    if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
-  }
-  function isInlineSpineChapterLink(href,linkEl){
-    if(!href||href.indexOf('://')>=0)return false;
-    if(!/\.(?:xhtml|html|htm)(?:#|$)/i.test(href))return false;
-    var filePart=href.split('#')[0];
-    if(filePart.indexOf('/')>=0){
-      var curPath=(window.location.pathname||'').split('/');
-      var curFile=curPath[curPath.length-1]||'';
-      var targetFile=filePart.split('/').pop()||'';
-      if(curFile&&targetFile&&curFile.toLowerCase()!==targetFile.toLowerCase())return false;
-    }
-    if(linkEl){
-      var cls=linkEl.getAttribute('class')||'';
-      var epubType=linkEl.getAttribute('epub:type')||linkEl.getAttribute('type')||'';
-      var title=linkEl.getAttribute('title')||'';
-      var linkText=(linkEl.textContent||'').trim();
-      var isNoteRef=_fn.noteRefText.test(linkText)||_fn.starRefText.test(linkText);
-      if(/\bfn\b|\bnoteref\b|\bfootnote-ref\b/i.test(cls))return false;
-      if(/(^|\s)noteref(\s|$)|(^|\s)footnote(\s|$)/i.test(epubType))return false;
-      if(href.indexOf('fbanchor://')===0||href.indexOf('FbAutId_')>=0)return false;
-      if(title&&href.indexOf('#')>=0)return false;
-      if(isNoteRef)return false;
-      try{
-        if(linkEl.closest&&linkEl.closest('table'))return true;
-        if(document.getElementById('pgepubid00002')&&linkEl.closest&&linkEl.closest('#pgepubid00002'))return true;
-      }catch(err){}
-    }
-    return true;
-  }
-  function shouldRouteLinkAsPagedTap(href,linkEl){
-    if(!isInlineSpineChapterLink(href,linkEl))return false;
-    return !!(window.__mrcomicPagedModeScrollLock||hasActivePagedLayout());
-  }
-  document.addEventListener('click',function(e){
-    var t=e.target;
-    while(t&&t.tagName){
-      if(t.tagName==='A'){
-        var href=t.getAttribute('href')||'';
-        if(shouldRouteLinkAsPagedTap(href,t)){
-          routePagedTapFromLink(e,true);
-          return;
-        }
-        break;
-      }
-      t=t.parentNode;
-    }
-  },true);
-  window.__readerTouchStartTs=0;
-  window.__readerTouchStartX=0;
-  window.__readerTouchStartY=0;
-  window.__readerTouchMoved=false;
-  window.__readerSelectionTs=0;
-  window.__mrcomicScrollToAnchor=function(target){
-    try{
-      if(!target)return false;
-      var root=document.documentElement;
-      var body=document.body;
-      var scroller=document.scrollingElement||root;
-      var hasPagedPages=!!window.__mrcomicPageStep;
-      var hasPagedColumns=!hasPagedPages&&!!(window.__mrcomicPageWidth||(body&&(body.style.columnWidth||body.style.webkitColumnWidth)));
-      if(window.__mrcomicPageBreaks&&window.__mrcomicPageBreaks.length){
-        var breaks=window.__mrcomicPageBreaks;
-        var content=document.getElementById('__mrcomic_paged_content')||body;
-        var contentRect=content.getBoundingClientRect();
-        var rect=target.getBoundingClientRect();
-        var absoluteTop=Math.max(0,rect.top-contentRect.top);
-        var targetPage=0;
-        for(var i=0;i<breaks.length;i++){
-          if(Number(breaks[i])<=absoluteTop+2)targetPage=i;else break;
-        }
-        if(typeof window.__mrcomicApplyPagedPage==='function'){
-          targetPage=window.__mrcomicApplyPagedPage(targetPage);
-        }else{
-          var targetY=Math.max(0,Number(breaks[targetPage]||0));
-          content.style.transform='translate3d(0,'+(-targetY)+'px,0)';
-          content.style.webkitTransform='translate3d(0,'+(-targetY)+'px,0)';
-          window.__mrcomicCurrentPageY=targetY;
-        }
-        try{scroller.scrollTop=0;}catch(e){}
-        try{window.scrollTo(0,0);}catch(e){}
-        window.__mrcomicPagedIndex=targetPage;
-      }else if(hasPagedPages){
-        var pageStep=Math.max(1,Math.round(Number(window.__mrcomicPageStep||0))||root.clientHeight||window.innerHeight||640);
-        var firstPageOffset=Math.max(0,Math.round(Number(window.__mrcomicFirstPageOffset||0)));
-        var pageHeight=Math.max(320,Math.round(Number(window.__mrcomicPageHeight||0))||root.clientHeight||window.innerHeight||640);
-        var rect=target.getBoundingClientRect();
-        var absoluteTop=rect.top+(scroller.scrollTop||window.pageYOffset||0);
-        var scrollHeight=Math.max(scroller.scrollHeight||0,root.scrollHeight||0,body.scrollHeight||0,pageHeight);
-        var maxScroll=Math.max(0,scrollHeight-pageHeight);
-        var targetPage=Math.max(0,Math.floor((absoluteTop+firstPageOffset)/pageStep));
-        var targetY=targetPage<=0?0:Math.min(maxScroll,Math.max(0,targetPage*pageStep-firstPageOffset));
-        try{scroller.scrollTop=targetY;}catch(e){}
-        try{window.scrollTo(0,targetY);}catch(e){}
-        window.__mrcomicPagedIndex=targetPage;
-      }else if(hasPagedColumns){
-        var pageWidth=Math.max(1,Math.round(Number(window.__mrcomicPageWidth||window.__mrcomicNativeViewportWidth||0))||root.clientWidth||window.innerWidth||360);
-        var rect=target.getBoundingClientRect();
-        var absoluteLeft=rect.left+(scroller.scrollLeft||window.pageXOffset||0);
-        var targetPage=Math.max(0,Math.floor(absoluteLeft/pageWidth));
-        try{scroller.scrollLeft=targetPage*pageWidth;}catch(e){}
-        try{window.scrollTo(targetPage*pageWidth,0);}catch(e){}
-      }else{
-        try{target.scrollIntoView({block:'start',inline:'nearest'});}catch(e){target.scrollIntoView(true);}
-      }
-      return true;
-    }catch(e){
-      return false;
-    }
-  };
-  document.addEventListener('selectionchange',function(){
-    try{
-      var selected=(window.getSelection&&window.getSelection().toString())||'';
-      if((selected||'').trim().length>0){
-        window.__readerSelectionTs=Date.now();
-      }
-    }catch(e){}
-  },false);
-  document.addEventListener('touchstart',function(e){
-    window.__readerTouchStartTs=Date.now();
-    window.__readerTouchMoved=false;
-    if(e.touches&&e.touches.length===1){
-      window.__readerTouchStartX=e.touches[0].clientX;
-      window.__readerTouchStartY=e.touches[0].clientY;
-    }
-  },{passive:true});
-  // Prevent spontaneous text selection from accidental short taps, but allow
-  // deliberate long-press selection for dictionary/quote features. A long press
-  // (touchstart held > 350ms without move) signals user intent to select text.
-  document.addEventListener('selectstart',function(e){
-    if(!e.target||!e.target.closest)return;
-    // Allow selection inside <a> links always
-    if(e.target.closest('a'))return;
-    // Allow selection if the user has been holding touch for > 350ms (deliberate long-press)
-    var holdDuration=window.__readerTouchStartTs?(Date.now()-window.__readerTouchStartTs):0;
-    if(holdDuration>350)return;
-    // Allow selection if a recent selection exists (user is extending an existing selection)
-    if(window.__readerSelectionTs&&((Date.now()-window.__readerSelectionTs)<2000))return;
-    // Block spontaneous selection from accidental taps
-    e.preventDefault();
-  });
-  document.addEventListener('touchmove',function(){
-    window.__readerTouchMoved=true;
-  },{passive:true});
-  document.addEventListener('touchend',function(e){
-    var now=Date.now();
-    var elapsed=now-window.__readerTouchStartTs;
-    if(elapsed<=0||elapsed>260)return;
-    var selected='';
-    try{selected=(window.getSelection&&window.getSelection().toString())||'';selected=(selected||'').trim();}catch(err){}
-    if(selected.length>0)return;
-    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<1200);
-    if(hasRecentSelection)return;
-    var ch=e.changedTouches&&e.changedTouches[0];
-    if(!ch)return;
-    var dx=ch.clientX-window.__readerTouchStartX;
-    var dy=ch.clientY-window.__readerTouchStartY;
-    if(Math.abs(dx)>54&&Math.abs(dy)<24&&Math.abs(dx)>Math.abs(dy)*1.8){
-      if(typeof _NativeReader!='undefined'&&typeof _NativeReader.onSwipe==='function')_NativeReader.onSwipe(dx>0?-1:1);
-    }
-  },{passive:true});
-  function isFootnoteTarget(target,link){
-    try{
-      var probe=target;
-      while(probe&&probe!==document.body){
-        var probeId=(probe.id||'');
-        var probeClass=(probe.className&&String(probe.className))||'';
-        var probeType=(probe.getAttribute&&(probe.getAttribute('epub:type')||probe.getAttribute('type')||''))||'';
-        var probeRole=(probe.getAttribute&&(
-          probe.getAttribute('role')||
-          probe.getAttribute('data-type')||
-          probe.getAttribute('data-footnote')||
-          ''
-        ))||'';
-        var probeName=(probe.getAttribute&&probe.getAttribute('name'))||'';
-        var marker=[probeId,probeClass,probeType,probeRole,probeName].join(' ');
-        if(_fn.marker.test(marker)){
-          return true;
-        }
-        probe=probe.parentNode;
-      }
-      var href=(link&&link.getAttribute&&link.getAttribute('href'))||'';
-      var cls=(link&&link.getAttribute&&link.getAttribute('class'))||'';
-      var title=(link&&link.getAttribute&&link.getAttribute('title'))||'';
-      var epubType=(link&&link.getAttribute&&(link.getAttribute('epub:type')||link.getAttribute('type')||''))||'';
-      var role=(link&&link.getAttribute&&(link.getAttribute('role')||link.getAttribute('data-type')||link.getAttribute('data-footnote-id')||''))||'';
-      var linkText=((link&&link.textContent)||'').trim();
-      return href.indexOf('FbAutId_')>=0||
-        href.indexOf('fbanchor://')===0||
-        _fn.role.test(role)||
-        _fn.href.test(href)||
-        _fn.epubType.test(epubType)||
-        _fn.cls.test(cls)||
-        (!!title&&href.indexOf('#')>=0)||
-        _fn.noteRefText.test(linkText);
-    }catch(err){
-      return false;
-    }
-  }
-  document.addEventListener('click',function(e){
-    var now=Date.now();
-    if(window.__readerNativeSuppressClickUntil&&now<window.__readerNativeSuppressClickUntil){
-      e.preventDefault();
-      return;
-    }
-    if(window.__readerTouchStartTs&&((now-window.__readerTouchStartTs)<900)){
-      var movedX=Math.abs((e.clientX||0)-window.__readerTouchStartX);
-      var movedY=Math.abs((e.clientY||0)-window.__readerTouchStartY);
-      if(movedX>24||movedY>24){
-        e.preventDefault();
-        return;
-      }
-    }
-    var selected='';
-    try{
-      selected=(window.getSelection&&window.getSelection().toString())||'';
-      selected=(selected||'').trim();
-    }catch(err){}
-    var isLongPress=window.__readerTouchStartTs&&((now-window.__readerTouchStartTs)>380);
-    var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<1200);
-    if(selected.length>0||window.__readerTouchMoved||isLongPress||hasRecentSelection){
-      return;
-    }
-    var t=e.target;
-    while(t&&t!==document.body){
-      if(t.tagName==='A'){
-        var href=t.getAttribute('href')||'';
-        var title=t.getAttribute('title')||'';
-        var epubType=t.getAttribute('epub:type')||t.getAttribute('type')||'';
-        var role=t.getAttribute('role')||t.getAttribute('data-type')||t.getAttribute('data-footnote-id')||'';
-        var cls=t.getAttribute('class')||'';
-        var linkText=(t.textContent||'').trim();
-        var isLinkTextNoteRef=_fn.noteRefText.test(linkText)||_fn.starRefText.test(linkText);
-        var isFootnoteLink=_fn.cls.test(cls)||
-          _fn.role.test(role)||
-          _fn.epubType.test(epubType)||
-          href.indexOf('fbanchor://')===0||
-          href.indexOf('FbAutId_')>=0||
-          _fn.href.test(href)||
-          (title&&href.indexOf('#')>=0)||
-          isLinkTextNoteRef;
-        if(isFootnoteLink){
-          e.preventDefault();
-          if(title&&typeof _NativeReader!='undefined'){
-            _NativeReader.onInlineFootnote(title);
-            return;
-          }
-          var fnFragId='';
-          if(href.charAt(0)==='#')fnFragId=href.substring(1);
-          else if(href.indexOf('#')>=0)fnFragId=href.split('#')[1]||'';
-          if(fnFragId){
-            var fnEl=document.getElementById(fnFragId)||document.querySelector('[name="'+fnFragId+'"]');
-            if(fnEl){
-              var fnText=(fnEl.innerText||fnEl.textContent||'').replace(/\s+/g,' ').trim();
-              if(fnText&&fnText.length>0&&fnText.length<3000&&typeof _NativeReader!='undefined'){
-                _NativeReader.onInlineFootnote(fnText);
-                return;
-              }
-            }
-          }
-          var footnoteHref=href.indexOf('fbanchor://')===0?href.slice(11):href;
-          if(footnoteHref&&typeof _NativeReader!='undefined')_NativeReader.onAnchorClick('noteref://'+encodeURIComponent(footnoteHref));
-          return;
-        }
-        if(shouldRouteLinkAsPagedTap(href,t)||(hasActivePagedLayout()&&isPagedEdgeTap(e.clientX))){
-          routePagedTapFromLink(e,shouldRouteLinkAsPagedTap(href,t));
-          return;
-        }
-        if(href.indexOf('fbanchor://')===0){
-          e.preventDefault();
-          var id=href.slice(11);
-          if(id&&typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(id);
-        } else if(href.charAt(0)==='#'){
-          if(title&&typeof _NativeReader!='undefined'){
-            e.preventDefault();
-            _NativeReader.onInlineFootnote(title);
-            return;
-          }
-          e.preventDefault();
-          var anchorId=href.substring(1);
-          var target=document.getElementById(anchorId)||document.querySelector('[name="'+anchorId+'"]');
-          if(target&&isFootnoteTarget(target,t)){
-            if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick('noteref://'+encodeURIComponent(href));
-            return;
-          }
-          if(target&&window.__mrcomicScrollToAnchor(target))return;
-          if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
-          return;
-        } else if(/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(href)){
-          e.preventDefault();
-          if(typeof _NativeReader!='undefined')_NativeReader.onExternalLink(href);
-        } else if(href&&href.indexOf('://')<0){
-          var absHref='';
-          try{absHref=(t.href||'');}catch(err){}
-          var currentBase=(window.location.href||'').split('#')[0];
-          var targetBase=(absHref||'').split('#')[0];
-          if(href.indexOf('#')>=0&&targetBase&&targetBase===currentBase){
-            e.preventDefault();
-            var fragHref=href.split('#')[1]||'';
-            var fragTarget=document.getElementById(fragHref)||document.querySelector('[name="'+fragHref+'"]');
-            if(fragTarget&&isFootnoteTarget(fragTarget,t)){
-              if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick('noteref://'+encodeURIComponent(href));
-              return;
-            }
-            if(fragTarget&&window.__mrcomicScrollToAnchor(fragTarget))return;
-            if(title&&typeof _NativeReader!='undefined'){
-              _NativeReader.onInlineFootnote(title);
-              return;
-            }
-            if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
-            return;
-          }
-          e.preventDefault();
-          if(title&&typeof _NativeReader!='undefined'){
-            _NativeReader.onInlineFootnote(title);
-            return;
-          }
-          if(shouldRouteLinkAsPagedTap(href,t)){
-            routePagedTapFromLink(e,true);
-            return;
-          }
-          if(typeof _NativeReader!='undefined')_NativeReader.onAnchorClick(href);
-        } else {
-          e.preventDefault();
-          var x=e.clientX/window.innerWidth;
-          if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
-        }
-        return;
-      }
-      t=t.parentNode;
-    }
-    var x=e.clientX/window.innerWidth;
-    if(typeof _NativeReader!='undefined')_NativeReader.onTap(x);
-  },false);
-})();"""
-
-private const val HTML_READER_TAG = "ReaderHtmlView"
-private const val HTML_READER_BASE_URL = "https://appassets.androidplatform.net/reader/"
-private const val HTML_READER_ASSET_PATH = "/reader/content/"
-private const val HTML_READER_RESET_FREE_SCROLL_JS = """(function(){
-  try{
-    var viewport=document.getElementById('__mrcomic_paged_viewport');
-    var content=document.getElementById('__mrcomic_paged_content');
-    if(viewport&&content&&content.parentNode===viewport){
-      Array.prototype.slice.call(content.childNodes).forEach(function(node){
-        document.body.insertBefore(node,viewport);
-      });
-      if(viewport.parentNode)viewport.parentNode.removeChild(viewport);
-    }
-    if(content&&content.parentNode===document.body){
-      content.parentNode.removeChild(content);
-    }
-    var shield=document.getElementById('__mrcomic_page_shield');
-    if(shield&&shield.parentNode)shield.parentNode.removeChild(shield);
-    window.__mrcomicPagedIndex=0;
-    window.__mrcomicPageBreaks=null;
-    window.__mrcomicPageBreakSig='';
-    var scroller=document.scrollingElement||document.documentElement||document.body;
-    if(scroller)scroller.scrollTop=0;
-    if(document.documentElement)document.documentElement.scrollTop=0;
-    if(document.body)document.body.scrollTop=0;
-    window.scrollTo(0,0);
-  }catch(e){}
-})();"""
-private const val HTML_READER_BLANK_CHECK_JS = """(function(){
-  try{
-    var body=document.body;
-    var root=document.documentElement;
-    var text=(body&&body.innerText?body.innerText:'').trim().length;
-    var rawText=(body&&body.textContent?body.textContent:'').trim().length;
-    var images=(document.images&&document.images.length)||0;
-    var media=document.querySelectorAll?document.querySelectorAll('img,svg,figure,table,blockquote,h1,h2,h3,h4,h5,h6,p,div').length:0;
-    var height=Math.max(
-      body&&body.scrollHeight?body.scrollHeight:0,
-      root&&root.scrollHeight?root.scrollHeight:0
-    );
-    return JSON.stringify({text:text,rawText:rawText,images:images,media:media,height:height});
-  }catch(e){
-    return JSON.stringify({error:String(e)});
-  }
-})();"""
+// WebView JS constants extracted to ReaderWebViewJavaScript.kt
 
 private sealed interface ReaderHtmlPageSource {
     val loadToken: String
@@ -652,6 +255,17 @@ private suspend fun buildReaderHtmlPageSource(
     }
 }
 
+internal fun readerHtmlPageSourceReloadKey(
+    html: String,
+    resolvedBaseUrl: String,
+    cacheDirPath: String
+): String = listOf(
+    html.length,
+    html.hashCode(),
+    resolvedBaseUrl,
+    cacheDirPath
+).joinToString(separator = "|")
+
 @Composable
 private fun rememberReaderHtmlPageSource(
     html: String,
@@ -660,10 +274,14 @@ private fun rememberReaderHtmlPageSource(
     resolvedBaseUrl: String
 ): ReaderHtmlPageSource? {
     val context = LocalContext.current
-    var pageSource by remember(html, bg, fg, resolvedBaseUrl, context.cacheDir.absolutePath) {
+    val cacheDirPath = context.cacheDir.absolutePath
+    val reloadKey = remember(html, resolvedBaseUrl, cacheDirPath) {
+        readerHtmlPageSourceReloadKey(html, resolvedBaseUrl, cacheDirPath)
+    }
+    var pageSource by remember(reloadKey) {
         mutableStateOf<ReaderHtmlPageSource?>(null)
     }
-    LaunchedEffect(html, bg, fg, resolvedBaseUrl, context.cacheDir.absolutePath) {
+    LaunchedEffect(reloadKey) {
         pageSource = buildReaderHtmlPageSource(
             context = context,
             html = html,
@@ -703,11 +321,8 @@ private enum class ReaderSelectionAction {
     COMPARE_TRANSLATIONS
 }
 
-internal fun colorSchemePalette(scheme: String): Pair<String, String> = when (scheme) {
-    "SEPIA" -> "#f4ecd8" to "#3b2a1a"
-    "NIGHT" -> "#1a1a1a" to "#e8e8e8"
-    else    -> "#fafafa"  to "#1a1a1a"
-}
+internal fun colorSchemePalette(scheme: String): Pair<String, String> =
+    ReaderColorScheme.palette(scheme)
 
 private fun readerHeaderFooterReservedHeightDp(
     fontSizeSp: Int,
@@ -721,27 +336,13 @@ private fun readerHeaderFooterReservedHeightDp(
 internal fun colorSchemePaletteForPreset(
     scheme: String,
     readerPreset: ReadingPreset
-): Pair<String, String> = when {
-    scheme == "SEPIA" && readerPreset == ReadingPreset.SEPIA_BOOK -> "#f4ecd8" to "#352618"
-    scheme == "DAY" && readerPreset == ReadingPreset.NEWSPAPER -> "#f1eee7" to "#202020"
-    scheme == "NIGHT" && readerPreset == ReadingPreset.OLED_BLACK -> "#000000" to "#f2f5f7"
-    scheme == "DAY" && readerPreset == ReadingPreset.PAPER -> "#f6f1e7" to "#2b2118"
-    scheme == "DAY" && readerPreset == ReadingPreset.EINK -> "#f0efe9" to "#121212"
-    else -> colorSchemePalette(scheme)
-}
+): Pair<String, String> = ReaderColorScheme.paletteForPreset(scheme, readerPreset)
 
-private val MANUAL_READER_COLOR_REGEX = Regex("^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+internal fun normalizeReaderOverrideColor(value: String?): String? =
+    ReaderColorScheme.normalizeOverrideColor(value)
 
-internal fun normalizeReaderOverrideColor(value: String?): String? {
-    val normalized = value?.trim().orEmpty()
-    return normalized.takeIf { it.isNotEmpty() && MANUAL_READER_COLOR_REGEX.matches(it) }
-}
-
-internal fun defaultReaderAccentColor(backgroundColor: String): String = when {
-    backgroundColor.equals("#1a1a1a", ignoreCase = true) -> "#5ab4dc"
-    backgroundColor.equals("#000000", ignoreCase = true) -> "#5ab4dc"
-    else -> "#1a6f9a"
-}
+internal fun defaultReaderAccentColor(backgroundColor: String): String =
+    ReaderColorScheme.defaultAccentColor(backgroundColor)
 
 internal fun readerSelectionOverlayColor(color: String, alpha: Float): String {
     val clampedAlpha = alpha.coerceIn(0f, 1f)
@@ -757,193 +358,9 @@ internal fun readerSelectionOverlayColor(color: String, alpha: Float): String {
 private fun readerColorOverrideHex(value: Long?): String? =
     value?.let { String.format(Locale.US, "#%08X", it) }
 
-private fun readerMaterialColorScheme(
-    isTextReader: Boolean,
-    readerPreset: ReadingPreset,
-    textColorScheme: String,
-    fallback: ColorScheme
-): ColorScheme {
-    val surfaceAlpha = fallback.surface.alpha
-    val baseScheme = if (!isTextReader) {
-        darkColorScheme(
-            primary = Color(0xFF7DB7E8),
-            onPrimary = Color(0xFF0F1C29),
-            primaryContainer = Color(0xFF243748),
-            onPrimaryContainer = Color(0xFFE3F1FE),
-            secondary = Color(0xFFD9B982),
-            onSecondary = Color(0xFF36250D),
-            secondaryContainer = Color(0xFF544122),
-            onSecondaryContainer = Color(0xFFF7E7CA),
-            background = Color(0xFF090B0E),
-            onBackground = Color(0xFFF2F2F2),
-            surface = Color(0xFF14181D),
-            onSurface = Color(0xFFF2F2F2),
-            surfaceVariant = Color(0xFF232A31),
-            onSurfaceVariant = Color(0xFFC5CBD2),
-            outline = Color(0xFF5B6772),
-            outlineVariant = Color(0xFF313A44),
-            error = fallback.error,
-            onError = fallback.onError
-        )
-    } else {
-        when {
-            readerPreset == ReadingPreset.OLED_BLACK -> darkColorScheme(
-                primary = Color(0xFFB8D3FF),
-                onPrimary = Color(0xFF091019),
-                primaryContainer = Color(0xFF152231),
-                onPrimaryContainer = Color(0xFFE2ECFA),
-                secondary = Color(0xFF98A2B1),
-                onSecondary = Color(0xFF0F141B),
-                secondaryContainer = Color(0xFF1A222C),
-                onSecondaryContainer = Color(0xFFE4E7EB),
-                background = Color(0xFF000000),
-                onBackground = Color(0xFFF2F5F7),
-                surface = Color(0xFF050505),
-                onSurface = Color(0xFFF2F5F7),
-                surfaceVariant = Color(0xFF121212),
-                onSurfaceVariant = Color(0xFFBAC0C7),
-                outline = Color(0xFF525860),
-                outlineVariant = Color(0xFF22262B)
-            )
-            readerPreset == ReadingPreset.SEPIA_BOOK -> lightColorScheme(
-                primary = Color(0xFF835D2F),
-                onPrimary = Color(0xFFFFF7EA),
-                primaryContainer = Color(0xFFF0DEC2),
-                onPrimaryContainer = Color(0xFF43280A),
-                secondary = Color(0xFF966B3A),
-                onSecondary = Color(0xFFFFF7EA),
-                secondaryContainer = Color(0xFFF5E3C7),
-                onSecondaryContainer = Color(0xFF45270C),
-                background = Color(0xFFF4ECD8),
-                onBackground = Color(0xFF352618),
-                surface = Color(0xFFEEE2C8),
-                onSurface = Color(0xFF352618),
-                surfaceVariant = Color(0xFFE5D4B1),
-                onSurfaceVariant = Color(0xFF6C5337),
-                outline = Color(0xFF9A7B58),
-                outlineVariant = Color(0xFFD2BC95)
-            )
-            readerPreset == ReadingPreset.NEWSPAPER -> lightColorScheme(
-                primary = Color(0xFF31404F),
-                onPrimary = Color(0xFFF7F7F5),
-                primaryContainer = Color(0xFFDCE1E6),
-                onPrimaryContainer = Color(0xFF19232D),
-                secondary = Color(0xFF5E6975),
-                onSecondary = Color(0xFFF7F7F5),
-                secondaryContainer = Color(0xFFE2E6EA),
-                onSecondaryContainer = Color(0xFF242C34),
-                background = Color(0xFFF1EEE7),
-                onBackground = Color(0xFF202020),
-                surface = Color(0xFFE9E5DD),
-                onSurface = Color(0xFF202020),
-                surfaceVariant = Color(0xFFDED8D0),
-                onSurfaceVariant = Color(0xFF55504A),
-                outline = Color(0xFF80776E),
-                outlineVariant = Color(0xFFC3BBB1)
-            )
-            textColorScheme == "NIGHT" -> darkColorScheme(
-                primary = Color(0xFF7DB7E8),
-                onPrimary = Color(0xFF0F1C29),
-                primaryContainer = Color(0xFF253748),
-                onPrimaryContainer = Color(0xFFE2F0FD),
-                secondary = Color(0xFFD4B384),
-                onSecondary = Color(0xFF3F2A11),
-                secondaryContainer = Color(0xFF594225),
-                onSecondaryContainer = Color(0xFFF3E2C6),
-                background = Color(0xFF16181C),
-                onBackground = Color(0xFFE8E2D8),
-                surface = Color(0xFF1F2328),
-                onSurface = Color(0xFFE8E2D8),
-                surfaceVariant = Color(0xFF2A2F36),
-                onSurfaceVariant = Color(0xFFC5C0B6),
-                outline = Color(0xFF716A60),
-                outlineVariant = Color(0xFF3B403E)
-            )
-            textColorScheme == "SEPIA" -> lightColorScheme(
-                primary = Color(0xFF2F6B94),
-                onPrimary = Color(0xFFF7F1E4),
-                primaryContainer = Color(0xFFD5E7F4),
-                onPrimaryContainer = Color(0xFF11344A),
-                secondary = Color(0xFF8E6335),
-                onSecondary = Color(0xFFF9F1E4),
-                secondaryContainer = Color(0xFFEFDDBB),
-                onSecondaryContainer = Color(0xFF3D2910),
-                background = Color(0xFFF4ECD8),
-                onBackground = Color(0xFF372719),
-                surface = Color(0xFFEADFC2),
-                onSurface = Color(0xFF372719),
-                surfaceVariant = Color(0xFFE3D4B4),
-                onSurfaceVariant = Color(0xFF6A543B),
-                outline = Color(0xFF94785A),
-                outlineVariant = Color(0xFFC7B08C)
-            )
-            readerPreset == ReadingPreset.PAPER -> lightColorScheme(
-                primary = Color(0xFF345C7C),
-                onPrimary = Color(0xFFF9F4EA),
-                primaryContainer = Color(0xFFDCE6ED),
-                onPrimaryContainer = Color(0xFF142D3D),
-                secondary = Color(0xFF8B6841),
-                onSecondary = Color(0xFFF9F1E7),
-                secondaryContainer = Color(0xFFE8D8BF),
-                onSecondaryContainer = Color(0xFF382411),
-                background = Color(0xFFF6F1E7),
-                onBackground = Color(0xFF2F241A),
-                surface = Color(0xFFEEE6D7),
-                onSurface = Color(0xFF2F241A),
-                surfaceVariant = Color(0xFFE2D6C3),
-                onSurfaceVariant = Color(0xFF675745),
-                outline = Color(0xFF8F7D67),
-                outlineVariant = Color(0xFFCDBEAA)
-            )
-            readerPreset == ReadingPreset.EINK -> lightColorScheme(
-                primary = Color(0xFF1A1A1A),
-                onPrimary = Color(0xFFF3F3F1),
-                primaryContainer = Color(0xFFD7D7D3),
-                onPrimaryContainer = Color(0xFF111111),
-                secondary = Color(0xFF4C4C4C),
-                onSecondary = Color(0xFFF5F5F3),
-                secondaryContainer = Color(0xFFE0E0DC),
-                onSecondaryContainer = Color(0xFF1E1E1E),
-                background = Color(0xFFF0EFE9),
-                onBackground = Color(0xFF111111),
-                surface = Color(0xFFE4E3DD),
-                onSurface = Color(0xFF111111),
-                surfaceVariant = Color(0xFFD7D6D0),
-                onSurfaceVariant = Color(0xFF4A4A47),
-                outline = Color(0xFF777773),
-                outlineVariant = Color(0xFFBDBCB7)
-            )
-            else -> lightColorScheme(
-                primary = Color(0xFF1A6F9A),
-                onPrimary = Color(0xFFF5FAFD),
-                primaryContainer = Color(0xFFD3EAF5),
-                onPrimaryContainer = Color(0xFF0E3346),
-                secondary = Color(0xFF7B5A33),
-                onSecondary = Color(0xFFFEF8F2),
-                secondaryContainer = Color(0xFFF0E3D1),
-                onSecondaryContainer = Color(0xFF34220F),
-                background = Color(0xFFFAFAF8),
-                onBackground = Color(0xFF171717),
-                surface = Color(0xFFF0F0EC),
-                onSurface = Color(0xFF171717),
-                surfaceVariant = Color(0xFFE6E5DF),
-                onSurfaceVariant = Color(0xFF52504A),
-                outline = Color(0xFF7C7A73),
-                outlineVariant = Color(0xFFC9C7C0)
-            )
-        }.copy(error = fallback.error, onError = fallback.onError)
-    }
+// readerMaterialColorScheme extracted to ReaderMaterialColorScheme.kt
 
-    return baseScheme.copy(
-        surface = baseScheme.surface.copy(alpha = surfaceAlpha),
-        surfaceVariant = baseScheme.surfaceVariant.copy(alpha = surfaceAlpha),
-        surfaceContainer = baseScheme.surfaceContainer.copy(alpha = surfaceAlpha),
-        surfaceContainerLow = baseScheme.surfaceContainerLow.copy(alpha = surfaceAlpha),
-        surfaceContainerHigh = baseScheme.surfaceContainerHigh.copy(alpha = surfaceAlpha)
-    )
-}
-
-private fun normalizedTocTitle(title: String): String =
+internal fun normalizedTocTitle(title: String): String =
     title.replace(Regex("\\s+"), " ").trim()
 
 private tailrec fun findReaderHardwareKeyHost(context: Context): ReaderHardwareKeyHost? = when (context) {
@@ -952,428 +369,9 @@ private tailrec fun findReaderHardwareKeyHost(context: Context): ReaderHardwareK
     else -> null
 }
 
-internal fun textSettingsJs(
-    fontSize: Int,
-    bg: String,
-    fg: String,
-    overrideTextColor: String? = null,
-    overrideBackgroundColor: String? = null,
-    overrideAccentColor: String? = null,
-    fontFamily: String = "Georgia",
-    fontSourceUrl: String? = null,
-    lineHeight: Float  = 1.8f,
-    letterSpacing: Float = 0f,
-    wordSpacing: Float = 0f,
-    paragraphSpacing: Float = 0.2f,
-    align: String      = "left",
-    bold: Boolean      = false,
-    topPaddingPx: Int  = 16,
-    bottomPaddingPx: Int = 24,
-    horizontalPaddingPx: Int = 16,
-    maxWidthPx: Int = 0,
-    pagedMode: Boolean = false,
-    nativeViewportWidthPx: Int? = null,
-    nativeViewportHeightPx: Int? = null
-): String {
-    val resolvedTextColor = normalizeReaderOverrideColor(overrideTextColor) ?: fg
-    val resolvedBackgroundColor = normalizeReaderOverrideColor(overrideBackgroundColor) ?: bg
-    val resolvedAccentColor = normalizeReaderOverrideColor(overrideAccentColor)
-        ?: defaultReaderAccentColor(resolvedBackgroundColor)
-    val fontWeight   = if (bold) "bold" else "normal"
-    val isNightTheme = resolvedBackgroundColor.equals("#1a1a1a", ignoreCase = true) ||
-        resolvedBackgroundColor.equals("#000000", ignoreCase = true)
-    val noteColor    = resolvedAccentColor
-    val headingBg    = "transparent"
-    val headingBorder = when {
-        isNightTheme -> "#5a5a5a"
-        resolvedBackgroundColor.equals("#f4ecd8", ignoreCase = true) -> "#b79f78"
-        else -> "#808080"
-    }
-    val quoteColor = if (isNightTheme) "#c9c9c9" else "#555555"
-    val pagedTocLinkCss = if (pagedMode) {
-        "body table a[href],body table[summary] a[href],body #pgepubid00002 a[href]{pointer-events:none !important;cursor:default !important;-webkit-tap-highlight-color:transparent !important;text-decoration:none !important;color:inherit !important;}"
-    } else {
-        ""
-    }
-    val selectionBackgroundColor = readerSelectionOverlayColor(
-        color = resolvedAccentColor,
-        alpha = if (isNightTheme) 0.38f else 0.28f
-    )
-    val selectionForegroundColor = if (isNightTheme) "#ffffff" else "#111111"
-    // Inject @font-face for custom fonts once (guard by style id)
-    val fontFaceSnip = if (fontSourceUrl != null) {
-        val id = "__cf_${fontFamily.replace(Regex("[^\\p{L}\\p{N}]+"), "_")}"
-        """if(!document.getElementById('$id')){var s=document.createElement('style');s.id='$id';""" +
-        """s.textContent="@font-face{font-family:'$fontFamily';src:url('$fontSourceUrl');font-display:swap;}";""" +
-        """(__mrcomicHead||document.head||document.documentElement).appendChild(s);}"""
-    } else ""
-    val themeStyle = """
-        var themeStyle=document.getElementById('__reader_theme_overrides');
-        if(!themeStyle){
-          themeStyle=document.createElement('style');
-          themeStyle.id='__reader_theme_overrides';
-        }
-        themeStyle.textContent=
-          ":root{--mrcomic-reader-text-color:$resolvedTextColor;--mrcomic-reader-background-color:$resolvedBackgroundColor;--mrcomic-reader-accent-color:$resolvedAccentColor;}"+
-          "html,body{background-color:$resolvedBackgroundColor !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']){color:$resolvedTextColor !important;}"+
-          "html,body{width:100% !important;max-width:100% !important;min-width:0 !important;overflow-x:hidden !important;-webkit-text-size-adjust:100% !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']){padding-left:${horizontalPaddingPx}px !important;padding-right:${horizontalPaddingPx}px !important;}"+
-          ${if (maxWidthPx > 0) "\"body:not([data-mrcomic-preserve-layout='true']){max-width:${maxWidthPx}px !important;margin-left:auto !important;margin-right:auto !important;}\"+" else ""}
-          "body:not([data-mrcomic-preserve-layout='true']),body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:normal !important;word-break:normal !important;hyphens:auto !important;-webkit-hyphens:auto !important;max-width:100% !important;min-width:0 !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) li{width:auto !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) span{display:inline !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) pre,body:not([data-mrcomic-preserve-layout='true']) code{white-space:pre-wrap !important;overflow-wrap:break-word !important;word-break:break-word !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li,body:not([data-mrcomic-preserve-layout='true']) td,body:not([data-mrcomic-preserve-layout='true']) th,body:not([data-mrcomic-preserve-layout='true']) strong,body:not([data-mrcomic-preserve-layout='true']) em,body:not([data-mrcomic-preserve-layout='true']) i,body:not([data-mrcomic-preserve-layout='true']) b,body:not([data-mrcomic-preserve-layout='true']) font,body:not([data-mrcomic-preserve-layout='true']) small,body:not([data-mrcomic-preserve-layout='true']) big,body:not([data-mrcomic-preserve-layout='true']) sup,body:not([data-mrcomic-preserve-layout='true']) sub{color:$resolvedTextColor !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) span{font-size:inherit !important;line-height:inherit !important;font-family:inherit !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) font{font-size:1em !important;font-family:inherit !important;line-height:inherit !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) big{font-size:1.08em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) small{font-size:0.92em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) a[href],body:not([data-mrcomic-preserve-layout='true']) a[href]:link,body:not([data-mrcomic-preserve-layout='true']) a[href]:visited,body:not([data-mrcomic-preserve-layout='true']) a[href]:hover,body:not([data-mrcomic-preserve-layout='true']) a[href]:active{color:$resolvedAccentColor !important;text-decoration:underline !important;text-underline-offset:0.14em !important;text-decoration-thickness:0.08em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) a[href] *{color:inherit !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) [bgcolor],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:#ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: #ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:#fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: #fff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:#ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: #ffffff'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: white'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color:rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background-color: rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background:rgb(255'],body:not([data-mrcomic-preserve-layout='true']) [style*='background: rgb(255']{background-color:transparent !important;background-image:none !important;box-shadow:none !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) h1,body:not([data-mrcomic-preserve-layout='true']) h2,body:not([data-mrcomic-preserve-layout='true']) h3,body:not([data-mrcomic-preserve-layout='true']) h4,body:not([data-mrcomic-preserve-layout='true']) h5,body:not([data-mrcomic-preserve-layout='true']) h6,body:not([data-mrcomic-preserve-layout='true']) .calibre5,body:not([data-mrcomic-preserve-layout='true']) .calibre12{color:$resolvedTextColor !important;background-color:$headingBg !important;border-color:$headingBorder !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) blockquote,body:not([data-mrcomic-preserve-layout='true']) cite,body:not([data-mrcomic-preserve-layout='true']) .epigraph{color:$quoteColor !important;border-left-color:$headingBorder !important;}"+
-          "::selection{background:$selectionBackgroundColor !important;color:$selectionForegroundColor !important;}"+
-          "body *::selection{background:$selectionBackgroundColor !important;color:$selectionForegroundColor !important;}"+
-          "a.fn,a.footnote-ref,a.noteref,a[role='doc-noteref'],a[epub\\\\:type~='noteref'],a[data-footnote-id],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[href^='#fn'],a[href^='#note'],a[href^='#footnote'],a[title][href*='#']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
-          "a.fn *,a.footnote-ref *,a.noteref *,a[role='doc-noteref'] *,a[epub\\\\:type~='noteref'] *,a[data-footnote-id] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[href^='#fn'] *,a[href^='#note'] *,a[href^='#footnote'] *,a[title][href*='#'] *{color:$noteColor !important;}"+
-          ".note-num,.footnote-label{color:$noteColor !important;}"+
-          "$pagedTocLinkCss";
-        if(!themeStyle.parentNode){(__mrcomicHead||document.head||document.documentElement).appendChild(themeStyle);}
-    """.trimIndent()
-    // Direct DOM coloring of footnote anchors вЂ” robust fallback for cases where
-    // CSS !important rules lose to element-level inline styles or specificity issues.
-    val colorNotesDom = """
-        (function(){
-          var nc='$noteColor';
-          var sel='a.fn,a.footnote-ref,a.noteref,a[role="doc-noteref"],a[data-footnote-id],a[href*="fbanchor://"],a[href*="FbAutId_"],a[href^="#fn"],a[href^="#note"],a[href^="#footnote"],a[epub\\:type~="noteref"],a[title][href*="#"]';
-          try{document.querySelectorAll(sel).forEach(function(a){
-            a.style.setProperty('color',nc,'important');
-            a.querySelectorAll('*').forEach(function(c){c.style.setProperty('color',nc,'important');});
-          });}catch(e){}
-        })();
-    """.trimIndent()
-    val spacingStyle = """
-        var spacingStyle=document.getElementById('__reader_spacing_overrides');
-        if(!spacingStyle){
-          spacingStyle=document.createElement('style');
-          spacingStyle.id='__reader_spacing_overrides';
-        }
-        spacingStyle.textContent=
-          "body:not([data-mrcomic-preserve-layout='true']){letter-spacing:${letterSpacing}em !important;word-spacing:${wordSpacing}em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) p,"+
-          "body:not([data-mrcomic-preserve-layout='true']) div.paragraph,"+
-          "body:not([data-mrcomic-preserve-layout='true']) .paragraph{margin-top:0 !important;margin-bottom:${paragraphSpacing}em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) li{margin-bottom:${(paragraphSpacing * 0.8f).coerceAtLeast(0.1f)}em !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) blockquote{margin-bottom:${(paragraphSpacing + 0.4f).coerceAtLeast(0.4f)}em !important;}";
-        if(!spacingStyle.parentNode){(__mrcomicHead||document.head||document.documentElement).appendChild(spacingStyle);}
-    """.trimIndent()
-    val fontStack = if (fontSourceUrl != null) "'$fontFamily',Georgia,serif" else "$fontFamily,Georgia,serif"
-    val effectiveAlign = if (pagedMode && align.equals("justify", ignoreCase = true)) "left" else align
-    val nativeViewportWidthLiteral = nativeViewportWidthPx
-        ?.coerceAtLeast(1)
-        ?.toString()
-        ?: "0"
-    val nativeViewportHeightLiteral = nativeViewportHeightPx
-        ?.coerceAtLeast(1)
-        ?.toString()
-        ?: "0"
-    val initialBodyTopPaddingPx = if (pagedMode) 0 else topPaddingPx
-    val initialBodyBottomPaddingPx = if (pagedMode) 0 else bottomPaddingPx
-    val headGuard = """
-        var __mrcomicHead=document.head||document.getElementsByTagName('head')[0];
-        if(!__mrcomicHead){
-          __mrcomicHead=document.createElement('head');
-          var __mrcomicHtml=document.documentElement||document.getElementsByTagName('html')[0];
-          if(__mrcomicHtml){__mrcomicHtml.insertBefore(__mrcomicHead,__mrcomicHtml.firstChild);}
-        }
-    """.trimIndent()
-    val pageLockJs = if (pagedMode) {
-        """
-        window.__mrcomicPagedModeScrollLock=true;
-        document.documentElement.style.overflowY='hidden';
-        document.body.style.overflowY='visible';
-        document.documentElement.style.overflowX='hidden';
-        document.body.style.overflowX='hidden';
-        var mrcomicVisualViewportHeight=Math.round((window.visualViewport&&window.visualViewport.height)||0);
-        var mrcomicWindowInnerHeight=Math.round(window.innerHeight||0);
-        var mrcomicRootClientHeight=Math.round(document.documentElement.clientHeight||0);
-        var mrcomicActualViewportHeightCandidates=[mrcomicVisualViewportHeight,mrcomicWindowInnerHeight,mrcomicRootClientHeight].filter(function(v){return v&&v>0;});
-        var mrcomicActualViewportHeight=mrcomicActualViewportHeightCandidates.length?Math.min.apply(Math,mrcomicActualViewportHeightCandidates):0;
-        var mrcomicViewportHeight=Math.max(320,mrcomicActualViewportHeight||nativeViewportHeight||window.innerHeight||document.documentElement.clientHeight||0);
-        if(mrcomicActualViewportHeight&&nativeViewportHeight){
-          mrcomicViewportHeight=Math.max(320,Math.min(mrcomicActualViewportHeight,nativeViewportHeight));
-        }
-        var mrcomicViewportWidth=Math.max(1,nativeViewportWidth||document.documentElement.clientWidth||window.innerWidth||360);
-        var mrcomicHorizontalPadding=${horizontalPaddingPx * 2};
-        var mrcomicPageInsetTop=${topPaddingPx};
-        var mrcomicPageInsetBottom=${bottomPaddingPx};
-        var mrcomicColumnWidth=Math.max(1,mrcomicViewportWidth-mrcomicHorizontalPadding);
-        var mrcomicVisibleHeight=Math.max(240,mrcomicViewportHeight-mrcomicPageInsetTop-mrcomicPageInsetBottom);
-        document.documentElement.style.setProperty('--mrcomic-page-visible-height',mrcomicVisibleHeight+'px');
-        document.documentElement.style.setProperty('--mrcomic-page-inset-top',mrcomicPageInsetTop+'px');
-        document.documentElement.style.setProperty('--mrcomic-page-inset-bottom',mrcomicPageInsetBottom+'px');
-        window.__mrcomicPageWidth=mrcomicViewportWidth;
-        window.__mrcomicPageHeight=mrcomicViewportHeight;
-        window.__mrcomicColumnWidth=mrcomicColumnWidth;
-        window.__mrcomicColumnGap=mrcomicHorizontalPadding;
-        window.__mrcomicPageInsetTop=mrcomicPageInsetTop;
-        window.__mrcomicPageInsetBottom=mrcomicPageInsetBottom;
-        document.documentElement.style.setProperty('width',mrcomicViewportWidth+'px','important');
-        document.documentElement.style.setProperty('max-width',mrcomicViewportWidth+'px','important');
-        document.documentElement.style.setProperty('height',mrcomicViewportHeight+'px','important');
-        document.documentElement.style.setProperty('max-height',mrcomicViewportHeight+'px','important');
-        document.body.style.boxSizing='border-box';
-        document.body.style.setProperty('width',mrcomicViewportWidth+'px','important');
-        document.body.style.setProperty('max-width',mrcomicViewportWidth+'px','important');
-        document.body.style.marginLeft='0';
-        document.body.style.marginRight='0';
-        document.body.style.position='relative';
-        document.body.style.removeProperty('height');
-        document.body.style.removeProperty('min-height');
-        document.body.style.removeProperty('max-height');
-        document.body.style.overflow='visible';
-        document.body.style.removeProperty('-webkit-column-width');
-        document.body.style.removeProperty('column-width');
-        document.body.style.removeProperty('-webkit-column-gap');
-        document.body.style.removeProperty('column-gap');
-        document.body.style.removeProperty('-webkit-column-fill');
-        document.body.style.removeProperty('column-fill');
-        var mrcomicPagedViewport=document.getElementById('__mrcomic_paged_viewport');
-        if(!mrcomicPagedViewport){
-          mrcomicPagedViewport=document.createElement('div');
-          mrcomicPagedViewport.id='__mrcomic_paged_viewport';
-        }
-        var mrcomicPagedContent=document.getElementById('__mrcomic_paged_content');
-        if(!mrcomicPagedContent){
-          mrcomicPagedContent=document.createElement('div');
-          mrcomicPagedContent.id='__mrcomic_paged_content';
-        }
-        if(mrcomicPagedViewport.parentNode!==document.body){
-          document.body.appendChild(mrcomicPagedViewport);
-        }
-        if(mrcomicPagedContent.parentNode!==mrcomicPagedViewport){
-          mrcomicPagedViewport.appendChild(mrcomicPagedContent);
-        }
-        Array.prototype.slice.call(document.body.childNodes).forEach(function(node){
-          if(node!==mrcomicPagedViewport&&node!==mrcomicPagedContent){
-            mrcomicPagedContent.appendChild(node);
-          }
-        });
-        mrcomicPagedViewport.style.boxSizing='border-box';
-        mrcomicPagedViewport.style.position='relative';
-        mrcomicPagedViewport.style.left='0';
-        mrcomicPagedViewport.style.top='0';
-        mrcomicPagedViewport.style.width='100%';
-        mrcomicPagedViewport.style.maxWidth='100%';
-        mrcomicPagedViewport.style.overflow='hidden';
-        mrcomicPagedViewport.style.visibility='hidden';
-        mrcomicPagedViewport.style.paddingTop='0px';
-        mrcomicPagedViewport.style.paddingBottom='0px';
-        mrcomicPagedViewport.style.setProperty('height',mrcomicViewportHeight+'px','important');
-        mrcomicPagedViewport.style.setProperty('min-height',mrcomicViewportHeight+'px','important');
-        mrcomicPagedViewport.style.setProperty('max-height',mrcomicViewportHeight+'px','important');
-        mrcomicPagedContent.style.boxSizing='border-box';
-        mrcomicPagedContent.style.position='absolute';
-        mrcomicPagedContent.style.left='0';
-        mrcomicPagedContent.style.right='0';
-        mrcomicPagedContent.style.top=mrcomicPageInsetTop+'px';
-        mrcomicPagedContent.style.width='100%';
-        mrcomicPagedContent.style.maxWidth='100%';
-        mrcomicPagedContent.style.transformOrigin='0 0';
-        mrcomicPagedContent.style.webkitTransformOrigin='0 0';
-        mrcomicPagedContent.style.willChange='transform';
-        document.body.style.setProperty('text-align','left','important');
-        document.body.style.setProperty('text-align-last','auto','important');
-        document.body.style.setProperty('padding-top','0px','important');
-        document.body.style.setProperty('padding-bottom','0px','important');
-        try{
-          Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6'),function(el){
-            el.style.setProperty('text-align','left','important');
-            el.style.setProperty('text-align-last','auto','important');
-          });
-        }catch(e){}
-        try{window.scrollTo(0,0);document.documentElement.scrollTop=0;(document.scrollingElement||document.documentElement).scrollTop=0;}catch(e){}
-        """.trimIndent()
-    } else {
-        """
-        window.__mrcomicPagedModeScrollLock=false;
-        document.documentElement.style.removeProperty('overflow-y');
-        document.documentElement.style.removeProperty('overflow-x');
-        document.documentElement.style.removeProperty('height');
-        document.documentElement.style.removeProperty('max-height');
-        document.body.style.removeProperty('overflow-y');
-        document.body.style.removeProperty('overflow-x');
-        document.body.style.removeProperty('height');
-        document.body.style.removeProperty('min-height');
-        document.body.style.removeProperty('max-height');
-        document.body.style.removeProperty('overflow');
-        document.body.style.removeProperty('-webkit-column-width');
-        document.body.style.removeProperty('column-width');
-        document.body.style.removeProperty('-webkit-column-gap');
-        document.body.style.removeProperty('column-gap');
-        document.body.style.removeProperty('-webkit-column-fill');
-        document.body.style.removeProperty('column-fill');
-        document.body.style.removeProperty('transform');
-        document.body.style.removeProperty('-webkit-transform');
-        document.body.style.removeProperty('transform-origin');
-        document.body.style.removeProperty('-webkit-transform-origin');
-        document.body.style.removeProperty('will-change');
-        document.body.style.removeProperty('transition');
-        document.body.style.setProperty('padding-top','${topPaddingPx}px','important');
-        document.body.style.setProperty('padding-bottom','${bottomPaddingPx}px','important');
-        var mrcomicPagedViewport=document.getElementById('__mrcomic_paged_viewport');
-        var mrcomicPagedContent=document.getElementById('__mrcomic_paged_content');
-        if(mrcomicPagedViewport){
-          mrcomicPagedViewport.style.removeProperty('height');
-          mrcomicPagedViewport.style.removeProperty('min-height');
-          mrcomicPagedViewport.style.removeProperty('max-height');
-          mrcomicPagedViewport.style.removeProperty('overflow');
-        }
-        if(mrcomicPagedContent){
-          mrcomicPagedContent.style.removeProperty('transform');
-          mrcomicPagedContent.style.removeProperty('-webkit-transform');
-          mrcomicPagedContent.style.removeProperty('transform-origin');
-          mrcomicPagedContent.style.removeProperty('-webkit-transform-origin');
-          mrcomicPagedContent.style.removeProperty('will-change');
-        }
-        if(mrcomicPagedViewport&&mrcomicPagedContent&&mrcomicPagedContent.parentNode===mrcomicPagedViewport){
-          Array.prototype.slice.call(mrcomicPagedContent.childNodes).forEach(function(node){
-            document.body.insertBefore(node,mrcomicPagedViewport);
-          });
-          mrcomicPagedViewport.parentNode&&mrcomicPagedViewport.parentNode.removeChild(mrcomicPagedViewport);
-        }
-        if(mrcomicPagedContent&&mrcomicPagedContent.parentNode===document.body){
-          mrcomicPagedContent.parentNode.removeChild(mrcomicPagedContent);
-        }
-        var mrcomicPageShield=document.getElementById('__mrcomic_page_shield');
-        if(mrcomicPageShield&&mrcomicPageShield.parentNode){
-          mrcomicPageShield.parentNode.removeChild(mrcomicPageShield);
-        }
-        window.__mrcomicPagedIndex=0;
-        window.__mrcomicPageBreaks=null;
-        window.__mrcomicPageBreakSig='';
-        """.trimIndent()
-    }
-    return """(function(){$headGuard $fontFaceSnip $themeStyle $spacingStyle if(document.body){""" +
-        """var preservePublisherLayout=document.body.hasAttribute('data-mrcomic-preserve-layout')||document.body.classList.contains('cover');""" +
-        """var viewport=document.querySelector('meta[name="viewport"]')||document.createElement('meta');""" +
-        """viewport.setAttribute('name','viewport');viewport.setAttribute('content','width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no');if(!viewport.parentNode)(__mrcomicHead||document.head).appendChild(viewport);""" +
-        """var visualViewportWidth=(window.visualViewport&&window.visualViewport.width)?Math.round(window.visualViewport.width):0;""" +
-        """var layoutViewportWidth=Math.round(document.documentElement.clientWidth||window.innerWidth||0);""" +
-        """var screenCssWidth=(window.screen&&window.devicePixelRatio)?Math.round(window.screen.width/window.devicePixelRatio):0;""" +
-        """var nativeViewportWidth=$nativeViewportWidthLiteral;""" +
-        """var nativeViewportHeight=$nativeViewportHeightLiteral;""" +
-        """window.__mrcomicNativeViewportWidth=nativeViewportWidth;""" +
-        """window.__mrcomicNativeViewportHeight=nativeViewportHeight;""" +
-        """var rawViewportWidth=nativeViewportWidth||visualViewportWidth||layoutViewportWidth||screenCssWidth||360;""" +
-        """var mrcomicViewportWidth=Math.max(280,Math.min(1200,rawViewportWidth));""" +
-        """document.documentElement.lang=document.documentElement.lang||'ru';""" +
-        """document.documentElement.style.width='100%';""" +
-        """document.documentElement.style.maxWidth='100%';""" +
-        """document.documentElement.style.overflowX='hidden';""" +
-        """document.body.style.color='$resolvedTextColor';""" +
-        """document.documentElement.style.background='$resolvedBackgroundColor';""" +
-        """document.body.style.background='$resolvedBackgroundColor';""" +
-        """document.body.style.boxSizing='border-box';""" +
-        """document.body.style.width=mrcomicViewportWidth+'px';""" +
-        """document.body.style.maxWidth=mrcomicViewportWidth+'px';""" +
-        """document.body.style.marginLeft='0';""" +
-        """document.body.style.marginRight='0';""" +
-        """if(!preservePublisherLayout){""" +
-        """document.body.style.whiteSpace='normal';""" +
-        """document.body.style.overflowWrap='normal';""" +
-        """document.body.style.wordBreak='normal';""" +
-        """document.body.style.width=mrcomicViewportWidth+'px';""" +
-        """document.body.style.maxWidth=mrcomicViewportWidth+'px';""" +
-        """document.body.style.minWidth='0';""" +
-        """document.body.style.overflowX='hidden';""" +
-        """Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,ul,ol,li'),function(el){el.style.maxWidth='100%';el.style.minWidth='0';el.style.width='auto';el.style.whiteSpace='normal';el.style.overflowWrap='normal';el.style.wordBreak='normal';});""" +
-        """document.body.style.fontSize='${fontSize}px';""" +
-        """document.body.style.fontWeight='$fontWeight';""" +
-        """document.body.style.fontFamily="$fontStack";""" +
-        """document.body.style.lineHeight='$lineHeight';""" +
-        """document.body.style.textAlign='$effectiveAlign';""" +
-        """document.body.style.hyphens='auto';""" +
-        """document.body.style.webkitHyphens='auto';""" +
-        """document.body.style.paddingLeft='${horizontalPaddingPx}px';""" +
-        """document.body.style.paddingRight='${horizontalPaddingPx}px';""" +
-        """document.body.style.paddingTop='${initialBodyTopPaddingPx}px';""" +
-        """document.body.style.paddingBottom='${initialBodyBottomPaddingPx}px';""" +
-        """}else{""" +
-        """document.body.style.paddingLeft='${horizontalPaddingPx}px';""" +
-        """document.body.style.paddingRight='${horizontalPaddingPx}px';""" +
-        """document.body.style.paddingTop='${initialBodyTopPaddingPx}px';""" +
-        """document.body.style.paddingBottom='${initialBodyBottomPaddingPx}px';""" +
-        """document.body.style.width='100%';""" +
-        """document.body.style.maxWidth='none';""" +
-        """document.body.style.minWidth='0';""" +
-        """document.body.style.overflowWrap='normal';""" +
-        """document.body.style.wordBreak='normal';""" +
-        """document.body.style.hyphens='auto';""" +
-        """document.body.style.webkitHyphens='auto';""" +
-        """try{var pcs=window.getComputedStyle(document.body);var pfs=parseFloat(pcs&&pcs.fontSize)||0;var plh=parseFloat(pcs&&pcs.lineHeight)||0;if(!pfs||pfs<${fontSize}*0.78){document.body.style.setProperty('font-size','${fontSize}px','important');}if(!plh||plh<${lineHeight}*0.9){document.body.style.setProperty('line-height','${lineHeight}','important');}Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,li,td,th'),function(el){var cls=(el.className||'').toLowerCase();var tag=el.tagName.toLowerCase();if(tag==='sup'||tag==='sub'||tag==='small'||tag==='abbr'||cls.indexOf('note')>=0||cls.indexOf('footnote')>=0||cls.indexOf('fn-')>=0||cls.indexOf('endnote')>=0)return;var fs=parseFloat(window.getComputedStyle(el).fontSize)||0;if(fs>0&&fs<12){el.style.setProperty('font-size','1em','important');}});}catch(e){}""" +
-        """Array.prototype.forEach.call(document.body.children,function(el){el.style.maxWidth='100%';el.style.minWidth='0';el.style.boxSizing='border-box';});""" +
-        """Array.prototype.forEach.call(document.body.querySelectorAll('img,svg,video,canvas,figure,table'),function(el){el.style.maxWidth='100%';el.style.boxSizing='border-box';});""" +
-        """}$pageLockJs}$colorNotesDom})();"""
-}
 
-internal fun buildThemedHtmlDocument(
-    html: String,
-    bg: String,
-    fg: String
-): String {
-    val bootstrapStyle = """
-        <style id="__reader_bootstrap_theme">
-          html, body {
-            background: $bg !important;
-            color: $fg !important;
-          }
-          body:not([data-mrcomic-preserve-layout="true"]) {
-            margin: 0 !important;
-            color: $fg !important;
-          }
-          body:not([data-mrcomic-preserve-layout="true"]) a[href] {
-            color: var(--mrcomic-reader-accent-color, #1a6f9a) !important;
-            text-decoration: underline !important;
-            text-underline-offset: 0.14em !important;
-            text-decoration-thickness: 0.08em !important;
-          }
-          body [bgcolor],
-          body [style*="background-color:#fff"],
-          body [style*="background-color: #fff"],
-          body [style*="background-color:#ffffff"],
-          body [style*="background-color: #ffffff"],
-          body [style*="background:#fff"],
-          body [style*="background: #fff"],
-          body [style*="background:#ffffff"],
-          body [style*="background: #ffffff"],
-          body [style*="background-color:white"],
-          body [style*="background-color: white"],
-          body [style*="background:white"],
-          body [style*="background: white"],
-          body [style*="background-color:rgb(255"],
-          body [style*="background-color: rgb(255"],
-          body [style*="background:rgb(255"],
-          body [style*="background: rgb(255"] {
-            background-color: transparent !important;
-            background-image: none !important;
-          }
-        </style>
-    """.trimIndent()
-
-    return when {
-        Regex("(?i)</head>").containsMatchIn(html) ->
-            html.replaceFirst(Regex("(?i)</head>"), "$bootstrapStyle</head>")
-        Regex("(?i)<body[^>]*>").containsMatchIn(html) ->
-            html.replaceFirst(Regex("(?i)<body([^>]*)>"), "<body$1>$bootstrapStyle")
-        Regex("(?i)<html[^>]*>").containsMatchIn(html) ->
-            html.replaceFirst(Regex("(?i)<html([^>]*)>"), "<html$1><head>$bootstrapStyle</head>")
-        else ->
-            "<html><head>$bootstrapStyle</head><body>$html</body></html>"
-    }
-}
+internal fun buildThemedHtmlDocument(html: String, bg: String, fg: String): String =
+    ReaderHtmlHelpers.buildThemedHtmlDocument(html, bg, fg)
 
 private fun looksLikeReaderStyleJson(raw: String): Boolean = runCatching {
     JSONTokener(raw.trim()).nextValue() is org.json.JSONObject
@@ -1430,6 +428,8 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
     private var nativePagedEdgeTapXPercent: Float? = null
     private var nativePagedGestureMoved: Boolean = false
     private var pagedDragSuppressesSelection: Boolean = false
+    /** Set by JS touchstart when the touch target is a clickable link/footnote. */
+    @Volatile var touchStartedOnLink: Boolean = false
     private var touchStartedAtTopBoundary: Boolean = false
     private var touchStartedAtBottomBoundary: Boolean = false
     private var pagedLayoutReady: Boolean = false
@@ -1484,29 +484,34 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
                     touchStartTimeMs = android.os.SystemClock.uptimeMillis()
                     nativePagedGestureMoved = false
                     pagedDragSuppressesSelection = false
+                    // Preserve touchStartedOnLink set by JS via setTouchOnLink()
+                    // during dispatchTouchEvent — do NOT reset here.
                     val widthPx = width.takeIf { it > 0 } ?: measuredWidth
                     val xPercent = if (widthPx > 0) (event.x / widthPx).coerceIn(0f, 1f) else 0.5f
-                    nativePagedEdgeTapXPercent = xPercent.takeIf { it < 0.12f || it > 0.88f }
-                    if (nativePagedEdgeTapXPercent != null) {
+                    val isEdgeTap = PagedGesturePolicy.isEdgeTap(xPercent)
+                    nativePagedEdgeTapXPercent = xPercent.takeIf { isEdgeTap }
+                    if (nativePagedEdgeTapXPercent != null && !touchStartedOnLink) {
                         clearReaderSelection()
                         return true
                     }
+                    nativePagedEdgeTapXPercent = null
                     super.onTouchEvent(event)
                     return true
                 }
                 android.view.MotionEvent.ACTION_MOVE -> {
                     val dx = event.x - touchStartX
                     val dy = event.y - touchStartY
-                    if (abs(dx) > 12f || abs(dy) > 12f) {
+                    val moved = PagedGesturePolicy.hasMoved(dx, dy)
+                    if (moved) {
                         nativePagedGestureMoved = true
                         nativePagedEdgeTapXPercent = null
-                        suppressPagedDragSelection()
+                        val hasActiveSelection = activeSelectionActionMode != null
+                        if (PagedGesturePolicy.shouldSuppressSelectionOnMove(moved, !hasActiveSelection)) {
+                            suppressPagedDragSelection()
+                        }
                         suppressNextReaderClick()
                     }
-                    if (abs(dy) > 8f && abs(dy) > abs(dx) * 1.15f) {
-                        return true
-                    }
-                    if (abs(dx) > 48f && abs(dx) > abs(dy) * 1.35f) {
+                    if (PagedGesturePolicy.shouldInterceptMove(dx, dy, activeSelectionActionMode != null)) {
                         return true
                     }
                 }
@@ -1514,51 +519,58 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
                     val dx = event.x - touchStartX
                     val dy = event.y - touchStartY
                     val elapsed = android.os.SystemClock.uptimeMillis() - touchStartTimeMs
-                    if (nativePagedGestureMoved && abs(dy) > 24f && abs(dy) >= abs(dx)) {
-                        suppressNextReaderClick()
-                        nativePagedGestureMoved = false
-                        nativePagedEdgeTapXPercent = null
-                        restorePagedDragSelection()
-                        return true
-                    }
-                    if (abs(dy) > 32f && abs(dy) > abs(dx) * 1.15f) {
-                        suppressNextReaderClick()
-                        nativePagedGestureMoved = false
-                        nativePagedEdgeTapXPercent = null
-                        restorePagedDragSelection()
-                        return true
-                    }
-                    nativePagedEdgeTapXPercent?.let { startXPercent ->
-                        nativePagedEdgeTapXPercent = null
-                        if (elapsed <= 600L && abs(dx) < 32f && abs(dy) < 32f) {
+                    val widthPx = width.takeIf { it > 0 } ?: measuredWidth
+                    val xPercent = if (widthPx > 0) (event.x / widthPx).coerceIn(0f, 1f) else 0.5f
+                    val isEdgeTap = nativePagedEdgeTapXPercent != null
+
+                    val gesture = PagedGesturePolicy.classifyPagedGesture(
+                        dx = dx, dy = dy,
+                        elapsed = elapsed,
+                        xPercent = nativePagedEdgeTapXPercent ?: xPercent,
+                        isEdgeTap = isEdgeTap,
+                        hasMoved = nativePagedGestureMoved,
+                        hasActiveSelection = activeSelectionActionMode != null,
+                        touchStartedOnLink = touchStartedOnLink
+                    )
+
+                    when (gesture) {
+                        PagedGestureAction.PASS_THROUGH -> {
+                            touchStartedOnLink = false
+                            nativePagedEdgeTapXPercent = null
+                            restorePagedDragSelection()
+                            // Center tap → chrome toggle (handled by WebView click listener)
+                        }
+                        PagedGestureAction.RESOLVED -> {
+                            suppressNextReaderClick()
+                            nativePagedGestureMoved = false
+                            nativePagedEdgeTapXPercent = null
+                            restorePagedDragSelection()
+                            return true
+                        }
+                        PagedGestureAction.TAP_LEFT -> {
                             clearReaderSelection()
                             restorePagedDragSelection()
                             suppressNextReaderClick()
-                            onNativePagedTapRequest?.invoke(if (startXPercent < 0.5f) 0.1f else 0.9f)
+                            nativePagedGestureMoved = false
+                            nativePagedEdgeTapXPercent = null
+                            onNativePagedTapRequest?.invoke(0.1f)
+                            return true
+                        }
+                        PagedGestureAction.TAP_RIGHT -> {
+                            clearReaderSelection()
+                            restorePagedDragSelection()
+                            suppressNextReaderClick()
+                            nativePagedGestureMoved = false
+                            nativePagedEdgeTapXPercent = null
+                            onNativePagedTapRequest?.invoke(0.9f)
                             return true
                         }
                     }
-                    if (elapsed < 900L && abs(dx) > 64f && abs(dx) > abs(dy) * 1.35f) {
-                        clearReaderSelection()
-                        restorePagedDragSelection()
-                        suppressNextReaderClick()
-                        onNativePagedTapRequest?.invoke(if (dx < 0f) 0.9f else 0.1f)
-                        return true
-                    }
-                    val widthPx = width.takeIf { it > 0 } ?: measuredWidth
-                    val xPercent = if (widthPx > 0) (event.x / widthPx).coerceIn(0f, 1f) else 0.5f
-                    if (elapsed <= 320L && abs(dx) < 18f && abs(dy) < 18f && (xPercent < 0.16f || xPercent > 0.84f)) {
-                        clearReaderSelection()
-                        restorePagedDragSelection()
-                        suppressNextReaderClick()
-                        onNativePagedTapRequest?.invoke(if (xPercent < 0.5f) 0.1f else 0.9f)
-                        return true
-                    }
-                    restorePagedDragSelection()
                 }
                 android.view.MotionEvent.ACTION_CANCEL -> {
                     nativePagedEdgeTapXPercent = null
                     nativePagedGestureMoved = false
+                    touchStartedOnLink = false
                     restorePagedDragSelection()
                 }
             }
@@ -1981,15 +993,24 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         }
     }
 
+    private var lastLayoutAffectingSignature: String? = null
+
     fun applyReaderTextSettingsIfNeeded(
         signature: String,
         script: String,
-        force: Boolean = false
+        force: Boolean = false,
+        layoutAffectingSignature: String = signature
     ) {
         if (!force && lastReaderTextSettingsSignature == signature) return
+        val layoutChanged = lastLayoutAffectingSignature != layoutAffectingSignature
         lastReaderTextSettingsSignature = signature
+        lastLayoutAffectingSignature = layoutAffectingSignature
         evaluateJavascript(script) {
-            if (pagedModeScrollLock) {
+            // Only rebuild paged layout when layout-affecting properties changed
+            // (font-size, line-height, font-family, padding, etc.). Cosmetic-only
+            // changes (colors, accent) do not require page reflow — skipping the
+            // rebuild prevents the visible blank-screen flash during preset switches.
+            if (pagedModeScrollLock && layoutChanged) {
                 applyPagedLayout()
             }
         }
@@ -2100,17 +1121,16 @@ private data class ReaderPagedLayoutMetrics(
             usableHeight >= 72
 }
 
-private fun decodePagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetrics? = runCatching {
-    val decoded = JSONTokener(rawValue ?: return null).nextValue()?.toString().orEmpty()
-    val json = JSONTokener(decoded).nextValue() as? org.json.JSONObject ?: return null
-    ReaderPagedLayoutMetrics(
-        handled = json.optBoolean("handled", false),
-        pageIndex = json.optInt("pageIndex", 0).coerceAtLeast(0),
-        pageCount = json.optInt("pageCount", 1).coerceAtLeast(1),
-        clipHeight = json.optInt("clipHeight", 0).coerceAtLeast(0),
-        usableHeight = json.optInt("usableHeight", 0).coerceAtLeast(0)
+private fun decodePagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetrics? {
+    val m = ReaderHtmlHelpers.decodePagedLayoutMetrics(rawValue) ?: return null
+    return ReaderPagedLayoutMetrics(
+        handled = m.handled,
+        pageIndex = m.pageIndex,
+        pageCount = m.pageCount,
+        clipHeight = m.clipHeight,
+        usableHeight = m.usableHeight
     )
-}.getOrNull()
+}
 
 /**
  * Injects a `<style>` with the correct body inset padding into [html] just before `</head>`.
@@ -2122,25 +1142,9 @@ internal fun injectBodyInsetCss(
     topPx: Int,
     bottomPx: Int,
     horizontalPx: Int = 0,
-    maxWidthPx: Int = 0
-): String {
-    val horizontalCss = if (horizontalPx > 0) {
-        "padding-left:${horizontalPx}px!important;padding-right:${horizontalPx}px!important;"
-    } else ""
-    val maxWidthCss = if (maxWidthPx > 0) {
-        "max-width:${maxWidthPx}px!important;margin-left:auto!important;margin-right:auto!important;"
-    } else ""
-    val style = "<style id='__mrcomic_body_inset'>" +
-        "body{padding-top:${topPx}px!important;padding-bottom:${bottomPx}px!important;$horizontalCss$maxWidthCss}" +
-        "</style>"
-    val headCloseIdx = html.indexOf("</head>").takeIf { it >= 0 }
-        ?: html.indexOf("</HEAD>").takeIf { it >= 0 }
-    return if (headCloseIdx != null) {
-        html.substring(0, headCloseIdx) + style + html.substring(headCloseIdx)
-    } else {
-        style + html
-    }
-}
+    maxWidthPx: Int = 0,
+    isRtl: Boolean = false
+): String = ReaderHtmlHelpers.injectBodyInsetCss(html, topPx, bottomPx, horizontalPx, maxWidthPx, isRtl)
 
 private fun WebView.readerCssViewportWidthPxOrNull(): Int? {
     val rawWidth = width.takeIf { it > 0 } ?: measuredWidth.takeIf { it > 0 } ?: return null
@@ -2154,640 +1158,6 @@ private fun WebView.readerCssViewportHeightPxOrNull(): Int? {
     return (rawHeight / density).roundToInt().coerceAtLeast(1)
 }
 
-private fun readerPagedLayoutJs(targetPage: Int): String = readerPagedCoreJs(
-    """
-    var requested=$targetPage;
-    var target=(requested<0)?current:((requested>=2147483647)?(pageCount-1):Math.max(0,Math.min(pageCount-1,requested||0)));
-    """.trimIndent()
-)
-
-private fun readerPagedTurnJs(delta: Int): String = readerPagedCoreJs(
-    """
-    var target=current+($delta);
-    if(target<0||target>=pageCount){
-      return JSON.stringify({handled:false,pageIndex:current,pageCount:pageCount});
-    }
-    """.trimIndent(),
-    failureHandled = false,
-    reuseExistingLayoutsOnly = true
-)
-
-private fun readerPagedCoreJs(
-    targetJs: String,
-    failureHandled: Boolean = true,
-    reuseExistingLayoutsOnly: Boolean = false
-): String = """
-(function(){
-  try{
-    var root=document.documentElement;
-    var body=document.body;
-    if(!root||!body)return JSON.stringify({handled:$failureHandled,pageIndex:0,pageCount:1});
-    var nativeWidth=Math.round(Number(window.__mrcomicNativeViewportWidth||0));
-    var nativeHeight=Math.round(Number(window.__mrcomicNativeViewportHeight||0));
-    var visualViewportHeight=Math.round((window.visualViewport&&window.visualViewport.height)||0);
-    var windowInnerHeight=Math.round(window.innerHeight||0);
-    var rootClientHeight=Math.round(root.clientHeight||0);
-    var actualViewportHeightCandidates=[visualViewportHeight,windowInnerHeight,rootClientHeight].filter(function(v){return v&&v>0;});
-    var actualViewportHeight=actualViewportHeightCandidates.length?Math.min.apply(Math,actualViewportHeightCandidates):0;
-    var pageWidth=Math.max(1,nativeWidth||root.clientWidth||window.innerWidth||360);
-    var pageHeight=Math.max(320,actualViewportHeight||nativeHeight||window.innerHeight||root.clientHeight||640);
-    if(actualViewportHeight&&nativeHeight){
-      pageHeight=Math.max(320,Math.min(actualViewportHeight,nativeHeight));
-    }
-    root.style.setProperty('width',pageWidth+'px','important');
-    root.style.setProperty('max-width',pageWidth+'px','important');
-    root.style.setProperty('height',pageHeight+'px','important');
-    root.style.setProperty('max-height',pageHeight+'px','important');
-    root.style.overflowX='hidden';
-    root.style.overflowY='hidden';
-    body.style.boxSizing='border-box';
-    body.style.setProperty('width',pageWidth+'px','important');
-    body.style.setProperty('max-width',pageWidth+'px','important');
-    body.style.marginLeft='0';
-    body.style.marginRight='0';
-    body.style.position='relative';
-    body.style.overflow='hidden';
-    body.style.setProperty('padding-bottom','0px','important');
-    body.style.removeProperty('-webkit-column-width');
-    body.style.removeProperty('column-width');
-    body.style.removeProperty('-webkit-column-gap');
-    body.style.removeProperty('column-gap');
-    body.style.removeProperty('-webkit-column-fill');
-    body.style.removeProperty('column-fill');
-    window.__mrcomicPageWidth=pageWidth;
-    window.__mrcomicPageHeight=pageHeight;
-    window.__mrcomicColumnWidth=0;
-    window.__mrcomicColumnGap=0;
-    var scroller=document.scrollingElement||root;
-    var cs=window.getComputedStyle?window.getComputedStyle(body):null;
-    var lineHeight=cs?parseFloat(cs.lineHeight):0;
-    if(!lineHeight||isNaN(lineHeight))lineHeight=Math.max(18,(parseFloat(cs&&cs.fontSize)||18)*1.5);
-    var pageInsetTop=Math.max(0,parseFloat(window.__mrcomicPageInsetTop||0)||0);
-    var pageInsetBottom=Math.max(0,parseFloat(window.__mrcomicPageInsetBottom||0)||0);
-    var firstPageOffset=0;
-    // In paged mode, body padding is already accounted for by pageInsetTop/Bottom,
-    // so clear it from the DOM to avoid double-subtraction. The raw body padding
-    // value is only useful for scroll mode where it genuinely eats into content area.
-    body.style.paddingBottom='0px';
-    var bodyPaddingBottom=0;
-    var clipHeight=Math.max(lineHeight*3,pageHeight);
-    var viewport=document.getElementById('__mrcomic_paged_viewport')||body;
-    viewport.style.boxSizing='border-box';
-    viewport.style.position='relative';
-    viewport.style.left='0';
-    viewport.style.top='0';
-    viewport.style.width='100%';
-    viewport.style.maxWidth='100%';
-    viewport.style.overflow='hidden';
-    viewport.style.setProperty('height',clipHeight+'px','important');
-    viewport.style.setProperty('min-height',clipHeight+'px','important');
-    viewport.style.setProperty('max-height',clipHeight+'px','important');
-    var content=document.getElementById('__mrcomic_paged_content')||body;
-    content.style.position='absolute';
-    content.style.left='0';
-    content.style.right='0';
-    content.style.top=Math.ceil(pageInsetTop)+'px';
-    content.style.width='100%';
-    content.style.maxWidth='100%';
-    content.style.transformOrigin='0 0';
-    content.style.webkitTransformOrigin='0 0';
-    content.style.willChange='transform';
-    var viewportBottomSafety=0;
-    var pageFitSafety=0;
-    viewport.style.boxSizing='border-box';
-    viewport.style.paddingTop='0px';
-    viewport.style.paddingBottom='0px';
-    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-Math.max(2,lineHeight*0.12));
-    var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
-    var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
-    root.style.setProperty('--mrcomic-page-visible-height',usableHeight+'px');
-    root.style.setProperty('--mrcomic-page-inset-top',pageInsetTop+'px');
-    root.style.setProperty('--mrcomic-page-inset-bottom',pageInsetBottom+'px');
-    var contentViewportTopOffset=0;
-    window.__mrcomicPageStep=usableHeight;
-    window.__mrcomicFirstPageOffset=firstPageOffset;
-    window.__mrcomicBaseClipHeight=clipHeight;
-
-    function buildPages(){
-      var existingLayouts=window.__mrcomicPageLayouts;
-      if($reuseExistingLayoutsOnly){
-        return (existingLayouts&&existingLayouts.length)?existingLayouts:null;
-      }
-      var contentRect=content.getBoundingClientRect();
-      var contentHeight=Math.ceil(Math.max(content.scrollHeight||0,content.offsetHeight||0,contentRect.height||0,clipHeight));
-      var sig=['text-page-no-overlap-v6',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign].join('|');
-      if(existingLayouts&&window.__mrcomicPageBreakSig===sig){
-        return existingLayouts;
-      }
-
-      var oldTransform=content.style.transform;
-      var oldWebkitTransform=content.style.webkitTransform;
-      var oldViewportVisibility=viewport.style.visibility;
-      var oldContentVisibility=content.style.visibility;
-      viewport.style.visibility='hidden';
-      content.style.visibility='hidden';
-      content.style.transform='none';
-      content.style.webkitTransform='none';
-      try{scroller.scrollTop=0;}catch(e){}
-      try{window.scrollTo(0,0);}catch(e){}
-      contentRect=content.getBoundingClientRect();
-      contentHeight=Math.ceil(Math.max(content.scrollHeight||0,content.offsetHeight||0,contentRect.height||0,clipHeight));
-      try{
-        var viewportRect=viewport.getBoundingClientRect();
-        contentViewportTopOffset=Math.max(0,Math.ceil((contentRect.top||0)-(viewportRect.top||0)));
-      }catch(e){
-        contentViewportTopOffset=Math.max(0,pageInsetTop);
-      }
-      window.__mrcomicContentViewportTopOffset=contentViewportTopOffset;
-
-      var fragments=[];
-      var blockStarts=[];
-      function addFragment(top,bottom){
-        top=Math.floor(Number(top)||0);
-        bottom=Math.ceil(Number(bottom)||top);
-        if(!isFinite(top)||!isFinite(bottom)||top<0||bottom<0)return;
-        if(bottom<top)bottom=top;
-        if(top<=contentHeight+pageHeight)fragments.push({top:top,bottom:bottom});
-      }
-      function addBlockStart(top){
-        top=Math.floor(Number(top)||0);
-        if(!isFinite(top)||top<0||top>contentHeight+pageHeight)return;
-        blockStarts.push(top);
-      }
-      function addTop(y){
-        y=Math.floor(Number(y)||0);
-        addFragment(y,y+lineHeight);
-      }
-      addTop(firstPageOffset);
-      try{
-        var range=document.createRange();
-        var walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT,{
-          acceptNode:function(node){
-            return node&&node.nodeValue&&node.nodeValue.trim().length?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
-          }
-        });
-        var node;
-        while((node=walker.nextNode())){
-          range.selectNodeContents(node);
-          var rects=range.getClientRects();
-          for(var i=0;i<rects.length;i++){
-            var r=rects[i];
-            if(r&&r.width>1&&r.height>2)addFragment(r.top-contentRect.top,r.bottom-contentRect.top);
-          }
-        }
-        range.detach&&range.detach();
-      }catch(e){}
-      try{
-        content.querySelectorAll('img,svg,canvas,video,table,figure,hr').forEach(function(el){
-          var rects=el.getClientRects();
-          for(var i=0;i<rects.length;i++){
-            var r=rects[i];
-            if(r&&r.height>2)addFragment(r.top-contentRect.top,r.bottom-contentRect.top);
-          }
-        });
-      }catch(e){}
-      try{
-        content.querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6,pre').forEach(function(el){
-          var rect=el.getBoundingClientRect();
-          if(rect&&rect.height>2)addBlockStart(rect.top-contentRect.top);
-        });
-      }catch(e){}
-      fragments.sort(function(a,b){return (a.top-b.top)||(a.bottom-b.bottom);});
-      blockStarts.sort(function(a,b){return a-b;});
-      var unique=[];
-      for(var t=0;t<fragments.length;t++){
-        var f=fragments[t];
-        var last=unique[unique.length-1];
-        if(!last||Math.abs(f.top-last.top)>2){
-          unique.push({top:f.top,bottom:f.bottom});
-        }else if(f.bottom>last.bottom){
-          last.bottom=f.bottom;
-        }
-      }
-      if(!unique.length){
-        unique.push({top:0,bottom:Math.max(lineHeight,Math.min(contentHeight,clipHeight))});
-      }
-
-      var mediaFirstPageBottom=0;
-      try{
-        var heroMedia=content.querySelector('img,svg,canvas,video,figure');
-        if(heroMedia){
-          var heroRect=heroMedia.getBoundingClientRect();
-          var heroTop=Math.max(0,heroRect.top-contentRect.top);
-          var heroBottom=Math.max(heroTop,heroRect.bottom-contentRect.top);
-          var bodyTextLength=((content.innerText||'').replace(/\s+/g,' ').trim().length)||0;
-          if(
-            heroTop <= lineHeight*1.1 &&
-            heroBottom >= Math.max(lineHeight*6,clipHeight*0.62) &&
-            bodyTextLength <= 2200
-          ){
-            mediaFirstPageBottom=Math.min(contentHeight,Math.max(heroBottom,Math.min(contentHeight,clipHeight)));
-          }
-        }
-      }catch(e){}
-
-      function nearestBreakBetween(minY,maxY,targetY){
-        var safeMin=Math.max(0,Number(minY)||0);
-        var safeMax=Math.max(safeMin,Number(maxY)||safeMin);
-        var safeTarget=Math.max(safeMin,Math.min(safeMax,Number(targetY)||safeMin));
-        var best=-1;
-        var bestDistance=Number.MAX_VALUE;
-        for(var breakIdx=0;breakIdx<blockStarts.length;breakIdx++){
-          var candidate=Math.floor(Number(blockStarts[breakIdx])||0);
-          if(candidate<=safeMin||candidate>=safeMax)continue;
-          var distance=Math.abs(candidate-safeTarget);
-          if(distance<bestDistance){
-            best=candidate;
-            bestDistance=distance;
-          }
-        }
-        if(best>=0)return best;
-        for(var fragmentIdx=0;fragmentIdx<unique.length;fragmentIdx++){
-          var fragmentTop=Math.floor(Number(unique[fragmentIdx].top)||0);
-          if(fragmentTop<=safeMin||fragmentTop>=safeMax)continue;
-          var fragmentDistance=Math.abs(fragmentTop-safeTarget);
-          if(fragmentDistance<bestDistance){
-            best=fragmentTop;
-            bestDistance=fragmentDistance;
-          }
-        }
-        return best;
-      }
-
-      function makeVisibleHeight(pageStart,pageEnd,pageTopInset,pageBottomInset){
-        var span=Math.max(1,Number(pageEnd||0)-Number(pageStart||0));
-        var leadingViewportOffset=contentViewportTopOffset;
-        return Math.ceil(Math.max(
-          1,
-          Math.min(
-            clipHeight,
-            leadingViewportOffset+span+1
-          )
-        ));
-      }
-
-      function rebalanceTrailingPages(pages){
-        if(!pages||pages.length<2)return pages;
-        var lastIndex=pages.length-1;
-        var lastPage=pages[lastIndex];
-        var prevPage=pages[lastIndex-1];
-        if(!lastPage||!prevPage)return pages;
-
-        var prevSpan=Math.max(0,Number(prevPage.end||0)-Number(prevPage.start||0));
-        var lastSpan=Math.max(0,Number(lastPage.end||0)-Number(lastPage.start||0));
-        if(prevSpan<=0||lastSpan<=0)return pages;
-
-        var minTailSpan=Math.max(lineHeight*5,usableHeight*0.58);
-        if(lastSpan>=minTailSpan)return pages;
-        if(prevSpan<=Math.max(lineHeight*7,usableHeight*0.72))return pages;
-
-        var mergedStart=Math.max(0,Number(prevPage.start||0));
-        var mergedEnd=Math.max(mergedStart+lineHeight*2,Number(lastPage.end||0));
-        var targetBreak=mergedStart+((mergedEnd-mergedStart)/2);
-        var minBreak=mergedStart+Math.max(lineHeight*6,usableHeight*0.36);
-        var maxBreak=mergedEnd-Math.max(lineHeight*5,usableHeight*0.32);
-        if(maxBreak<=minBreak)return pages;
-
-        var balancedBreak=nearestBreakBetween(minBreak,maxBreak,targetBreak);
-        if(!(balancedBreak>mergedStart+lineHeight*2&&balancedBreak<mergedEnd-lineHeight*2)){
-          return pages;
-        }
-
-        prevPage.end=Math.round(balancedBreak);
-        prevPage.visibleHeight=makeVisibleHeight(prevPage.start,balancedBreak,pageInsetTop,pageInsetBottom);
-        lastPage.start=Math.round(balancedBreak);
-        lastPage.visibleHeight=makeVisibleHeight(balancedBreak,lastPage.end,pageInsetTop,pageInsetBottom);
-        return pages;
-      }
-
-      function firstFragmentTopAfter(y){
-        var safeY=Math.ceil(Number(y)||0);
-        for(var idx=0;idx<unique.length;idx++){
-          var top=Math.floor(Number(unique[idx].top)||0);
-          if(top>safeY+1)return top;
-        }
-        return -1;
-      }
-
-      var pages=[];
-      var current=0;
-      var guard=0;
-      while(current<contentHeight&&guard++<2000){
-        var pageTopInset=pageInsetTop;
-        var pageBottomInset=pageInsetBottom;
-        var pageBudget=Math.max(lineHeight*3,clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
-        if(pages.length===0&&current<=firstPageOffset+1&&mediaFirstPageBottom>current+lineHeight*2){
-          var nextStartAfterMedia=contentHeight;
-          for(var frontIdx=0;frontIdx<blockStarts.length;frontIdx++){
-            var blockAfterMedia=blockStarts[frontIdx];
-            if(blockAfterMedia<=mediaFirstPageBottom-lineHeight*0.25)continue;
-            nextStartAfterMedia=blockAfterMedia;
-            break;
-          }
-          pages.push({
-            start:Math.round(current),
-            end:Math.round(nextStartAfterMedia),
-            visibleHeight:makeVisibleHeight(current,mediaFirstPageBottom,pageTopInset,pageBottomInset)
-          });
-          if(nextStartAfterMedia>=contentHeight||nextStartAfterMedia<=current){
-            break;
-          }
-          current=nextStartAfterMedia;
-          continue;
-        }
-        var limit=current+pageBudget;
-        var lastFitIndex=-1;
-        var overflowIndex=unique.length;
-        for(var j=0;j<unique.length;j++){
-          var fragment=unique[j];
-          var top=fragment.top;
-          var bottom=fragment.bottom;
-          if(bottom<=current+Math.max(1,lineHeight*0.25))continue;
-          if(bottom<=limit){
-            lastFitIndex=j;
-            continue;
-          }
-          overflowIndex=j;
-          break;
-        }
-        if(lastFitIndex<0){
-          if(overflowIndex<unique.length){
-            lastFitIndex=overflowIndex;
-          }else{
-            var pageExtraPixel=pageTopInset>0?0:1;
-            pages.push({
-              start:Math.round(current),
-              end:Math.round(contentHeight),
-              visibleHeight:makeVisibleHeight(current,contentHeight,pageTopInset,pageBottomInset)
-            });
-            break;
-          }
-        }
-
-        // endBottom = clean bottom edge of the last line that fully fit on this page.
-        var endBottom=Math.max(current+lineHeight,Math.min(contentHeight,Number(unique[lastFitIndex].bottom||limit)));
-        // The next page must begin exactly at the TOP of the first line that did not
-        // fully fit. Using the overflow fragment's own top (not endBottom + a guard)
-        // guarantees: (1) no line is cut horizontally, (2) no line is repeated across
-        // the page boundary, (3) the whole inter-line gap stays on one side only.
-        var nextStart;
-        if(overflowIndex<unique.length){
-          var overflowTop=Math.floor(Number(unique[overflowIndex].top)||0);
-          // The next page must start at the top of the first fragment that did
-          // not fully fit. Starting at endBottom can bisect the next line when
-          // WebView reports overlapping text rects, which shows up as repeated
-          // sentence tails or clipped first lines after a page turn.
-          nextStart=overflowTop>current+lineHeight*0.5?overflowTop:endBottom;
-        }else{
-          nextStart=contentHeight;
-        }
-
-        // Orphan guard: if a new block (paragraph/heading) starts within the last
-        // ~1.35 lines of this page, push that block wholly to the next page so a
-        // heading is never left dangling at the very bottom edge.
-        var orphanGuardStart=0;
-        for(var m=0;m<blockStarts.length;m++){
-          var blockTop=blockStarts[m];
-          if(blockTop<=current+lineHeight*0.75)continue;
-          if(blockTop>endBottom)break;
-          orphanGuardStart=blockTop;
-        }
-        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*1.35){
-          var backupBottom=0;
-          for(var p=0;p<=lastFitIndex;p++){
-            var fitted=unique[p];
-            if(fitted.bottom<orphanGuardStart-1&&fitted.top>current+lineHeight*0.25){
-              backupBottom=fitted.bottom;
-            }
-          }
-          if(backupBottom>current+lineHeight*0.75){
-            endBottom=backupBottom;
-            nextStart=orphanGuardStart;
-          }
-        }
-
-        // Forward-progress guard only: never go backwards or stall. We intentionally
-        // do NOT add any overlap padding here, otherwise the boundary line repeats.
-        if(nextStart<=current+lineHeight*0.5){
-          nextStart=Math.min(contentHeight,Math.max(endBottom,current+lineHeight));
-        }
-
-        pages.push({
-          start:Math.round(current),
-          end:Math.round(nextStart),
-          visibleHeight:makeVisibleHeight(current,nextStart,pageTopInset,pageBottomInset)
-        });
-
-        if(nextStart>=contentHeight||nextStart<=current){
-          break;
-        }
-        current=nextStart;
-      }
-      pages=rebalanceTrailingPages(pages);
-      pages=(function compactHeadingAndBlankPages(pages){
-        if(!pages||!pages.length)return pages;
-        var out=[];
-        var idx=0;
-        while(idx<pages.length){
-          var pg=pages[idx];
-          var span=Math.max(0,Number(pg.end||0)-Number(pg.start||0));
-          if(span<lineHeight*0.45){idx++;continue;}
-          if(idx+1<pages.length&&span<=lineHeight*5.5){
-            var nextPg=pages[idx+1];
-            var budgetEnd=Math.min(contentHeight,Number(pg.start||0)+pageBudget);
-            pg.end=Math.min(Math.max(Number(pg.end||0),Number(nextPg.end||0)),budgetEnd);
-            pg.visibleHeight=makeVisibleHeight(pg.start,pg.end,pageInsetTop,pageInsetBottom);
-            nextPg.start=Math.round(Number(pg.end||0));
-            if(Number(nextPg.end||0)-Number(nextPg.start||0)<lineHeight*0.45){
-              pg.end=Number(nextPg.end||0);
-              pg.visibleHeight=makeVisibleHeight(pg.start,pg.end,pageInsetTop,pageInsetBottom);
-              out.push(pg);
-              idx+=2;
-              continue;
-            }
-          }
-          out.push(pg);
-          idx++;
-        }
-        return out.length?out:pages;
-      })(pages);
-      pages=(function keepHeadingsWithFollowingBody(pages){
-        if(!pages||pages.length<2)return pages;
-        for(var hi=0;hi<pages.length-1;hi++){
-          var headPage=pages[hi];
-          var bodyPage=pages[hi+1];
-          var headSpan=Math.max(0,Number(headPage.end||0)-Number(headPage.start||0));
-          if(headSpan>lineHeight*10)continue;
-          var budgetEnd=Math.min(contentHeight,Number(headPage.start||0)+pageBudget);
-          var mergedEnd=Math.min(budgetEnd,Number(bodyPage.end||0));
-          if(mergedEnd<=Number(headPage.end||0)+lineHeight*0.5)continue;
-          headPage.end=Math.round(mergedEnd);
-          headPage.visibleHeight=makeVisibleHeight(headPage.start,headPage.end,pageInsetTop,pageInsetBottom);
-          bodyPage.start=Math.round(mergedEnd);
-          if(Number(bodyPage.end||0)-Number(bodyPage.start||0)<lineHeight*0.35){
-            pages.splice(hi+1,1);
-            hi--;
-          }
-        }
-        var idx=0;
-        while(idx<pages.length-1){
-          var cur=pages[idx];
-          var curH=Math.max(0,Number(cur.visibleHeight||0)-pageInsetTop-pageInsetBottom);
-          if(curH<clipHeight*0.4&&idx<pages.length-1){
-            var nxt=pages[idx+1];
-            var extendTo=Math.min(contentHeight,Number(cur.start||0)+pageBudget);
-            if(extendTo>Number(cur.end||0)+lineHeight*0.5){
-              cur.end=Math.round(Math.min(extendTo,Number(nxt.end||0)));
-              cur.visibleHeight=makeVisibleHeight(cur.start,cur.end,pageInsetTop,pageInsetBottom);
-              nxt.start=Math.round(cur.end);
-              if(Number(nxt.end||0)-Number(nxt.start||0)<lineHeight*0.35){
-                pages.splice(idx+1,1);
-                continue;
-              }
-            }
-          }
-          idx++;
-        }
-        return pages;
-      })(pages);
-      // If the entire section fits on a single page and uses less than 35% of the viewport
-      // height, expand it to clipHeight so the page fills the screen (avoids the "short
-      // content + huge blank" look for title/heading-only sections like EPUB frontmatter).
-      if(pages.length===1){
-        var onlyPage=pages[0];
-        var contentSpan=Math.max(0,Number(onlyPage.visibleHeight||0)-pageInsetTop-pageInsetBottom-viewportBottomSafety);
-        if(contentSpan<clipHeight*0.35){
-          onlyPage.visibleHeight=clipHeight;
-        }
-      }
-      window.__mrcomicPageLayouts=pages;
-      window.__mrcomicPageBreaks=pages.map(function(page){return Math.round(Number(page.start)||0);});
-      window.__mrcomicPageBreakSig=sig;
-      window.__mrcomicPagedContentHeight=contentHeight;
-      content.style.transform=oldTransform;
-      content.style.webkitTransform=oldWebkitTransform;
-      viewport.style.visibility=oldViewportVisibility||'';
-      content.style.visibility=oldContentVisibility||'';
-      return pages;
-    }
-
-    function applyPage(index,pages){
-      var page=pages[index]||pages[0]||{start:0,visibleHeight:clipHeight};
-      var y=Math.max(0,Number(page.start||0));
-      var appliedContentViewportTopOffset=Math.max(
-        contentViewportTopOffset,
-        Math.max(0,Number(window.__mrcomicContentViewportTopOffset||0)||0)
-      );
-      var shiftY=y;
-      var rawVisibleHeight=Math.max(1,Math.min(clipHeight,Number(page.visibleHeight||clipHeight)));
-      // Keep the PAGE viewport at full height so the reader surface does not
-      // collapse to the top half of the screen. Content after the calculated
-      // page break is covered by a background shield below, which prevents the
-      // next page from peeking through and repeating after a turn.
-      var visibleHeight=clipHeight;
-      viewport.style.setProperty('height',Math.ceil(visibleHeight)+'px','important');
-      viewport.style.setProperty('min-height',Math.ceil(visibleHeight)+'px','important');
-      viewport.style.setProperty('max-height',Math.ceil(visibleHeight)+'px','important');
-      var shield=document.getElementById('__mrcomic_page_shield');
-      if(!shield){
-        shield=document.createElement('div');
-        shield.id='__mrcomic_page_shield';
-      }
-      if(shield.parentNode!==viewport){
-        viewport.appendChild(shield);
-      }
-      var bottomTextGutter=Math.max(lineHeight,pageInsetBottom,viewportBottomSafety);
-      var shieldTop=Math.max(
-        0,
-        Math.min(
-          visibleHeight,
-          rawVisibleHeight,
-          visibleHeight-bottomTextGutter
-        )
-      );
-      var rootStyle=window.getComputedStyle?window.getComputedStyle(document.documentElement):null;
-      var bodyStyle=window.getComputedStyle?window.getComputedStyle(document.body):null;
-      var cssReaderBg=rootStyle?String(rootStyle.getPropertyValue('--mrcomic-reader-background-color')||'').trim():'';
-      var bodyBg=bodyStyle?String(bodyStyle.backgroundColor||'').trim():'';
-      var htmlBg=rootStyle?String(rootStyle.backgroundColor||'').trim():'';
-      function solidReaderBackground(value){
-        if(!value)return '';
-        var normalized=String(value).replace(/\s+/g,'').toLowerCase();
-        if(normalized==='transparent'||normalized==='rgba(0,0,0,0)'||normalized==='hsla(0,0%,0%,0)')return '';
-        return value;
-      }
-      var shieldBg=
-        solidReaderBackground(cssReaderBg)||
-        solidReaderBackground(bodyBg)||
-        solidReaderBackground(htmlBg)||
-        '#ffffff';
-      var topShield=document.getElementById('__mrcomic_page_top_shield');
-      if(!topShield){
-        topShield=document.createElement('div');
-        topShield.id='__mrcomic_page_top_shield';
-      }
-      if(topShield.parentNode!==viewport){
-        viewport.appendChild(topShield);
-      }
-      topShield.style.position='absolute';
-      topShield.style.left='0';
-      topShield.style.right='0';
-      topShield.style.top='0';
-      topShield.style.height=Math.ceil(Math.max(0,pageInsetTop))+'px';
-      topShield.style.zIndex='2147483000';
-      topShield.style.pointerEvents='none';
-      topShield.style.background=shieldBg;
-      shield.style.position='absolute';
-      shield.style.left='0';
-      shield.style.right='0';
-      shield.style.top=Math.ceil(shieldTop)+'px';
-      shield.style.bottom='0';
-      shield.style.zIndex='2147483000';
-      shield.style.pointerEvents='none';
-      shield.style.background=shieldBg;
-      viewport.style.visibility='visible';
-      content.style.visibility='visible';
-      content.style.transform='translate3d(0,'+(-shiftY)+'px,0)';
-      content.style.webkitTransform='translate3d(0,'+(-shiftY)+'px,0)';
-      try{scroller.scrollTop=0;}catch(e){}
-      try{window.scrollTo(0,0);}catch(e){}
-      window.__mrcomicPagedIndex=index;
-      window.__mrcomicCurrentPageY=y;
-      window.__mrcomicCurrentPageShiftY=shiftY;
-      window.__mrcomicAppliedContentViewportTopOffset=appliedContentViewportTopOffset;
-    }
-    window.__mrcomicApplyPagedPage=function(index){
-      var pageLayouts=window.__mrcomicPageLayouts||pages||[{start:0,visibleHeight:clipHeight}];
-      var pageIndex=Math.max(0,Math.min(pageLayouts.length-1,Math.round(Number(index||0))||0));
-      applyPage(pageIndex,pageLayouts);
-      return pageIndex;
-    };
-
-    var pages=buildPages();
-    if(!pages||!pages.length){
-      return JSON.stringify({handled:$failureHandled,pageIndex:0,pageCount:1});
-    }
-    var pageCount=Math.max(1,pages.length||1);
-    var current=Math.max(0,Math.min(pageCount-1,Math.round(Number(window.__mrcomicPagedIndex||0))||0));
-    $targetJs
-    target=Math.max(0,Math.min(pageCount-1,target||0));
-    applyPage(target,pages);
-    return JSON.stringify({
-      handled:true,
-      pageIndex:target,
-      pageCount:pageCount,
-      insetTop:pageInsetTop,
-      insetBottom:pageInsetBottom,
-      clipHeight:clipHeight,
-      usableHeight:usableHeight,
-      contentOffset:window.__mrcomicContentViewportTopOffset||0,
-      layouts:pages.slice(0,6).map(function(p){return [Math.round(p.start||0),Math.round(p.end||0),Math.round(p.visibleHeight||0)];})
-    });
-  }catch(e){
-    return JSON.stringify({handled:$failureHandled,pageIndex:0,pageCount:1,error:String(e)});
-  }
-})();
-""".trimIndent()
 
 /**
  * Renders HTML content (text EPUB / FB2) inside a WebView.
@@ -2823,6 +1193,7 @@ internal fun HtmlPageView(
     pendingScrollToAnchor: String? = null,
     onConsumeScrollToAnchor: () -> Unit = {},
     readingMode: ReadingMode,
+    autoScrollSpeed: Float = 0f,
     fontSize: Int    = 18,
     colorScheme: String = "DAY",
     readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
@@ -2849,6 +1220,7 @@ internal fun HtmlPageView(
     val context = LocalContext.current
     val density = LocalDensity.current
     val pagedMode = readerModeLocksHtmlVerticalScroll(readingMode)
+    val isRtl = readingMode == ReadingMode.PAGE_RTL
     val presetStyle = remember(readerPreset) { readerPreset.style() }
     val topPaddingPx = contentTopInsetPx.coerceAtLeast(0)
     val bottomPaddingPx = contentBottomInsetPx.coerceAtLeast(0)
@@ -2907,11 +1279,28 @@ internal fun HtmlPageView(
     val currentHorizontalPaddingPx = rememberUpdatedState(horizontalPaddingPx)
     val currentMaxWidthPx = rememberUpdatedState(maxWidthPx)
 
+    // Auto-scroll state — must be before AndroidView so the factory can capture it.
+    val autoScrollPaused = remember { mutableStateOf(false) }
+    val autoScrollScrollLambda = remember { mutableStateOf<((Int) -> Unit)?>(null) }
+    LaunchedEffect(autoScrollSpeed) {
+        if (autoScrollSpeed <= 0f) return@LaunchedEffect
+        autoScrollPaused.value = false
+        while (true) {
+            kotlinx.coroutines.delay(16) // ~60fps
+            val scrollFn = autoScrollScrollLambda.value
+            if (!autoScrollPaused.value && scrollFn != null) {
+                val pixelsPerFrame = (autoScrollSpeed / 60f).coerceAtLeast(0.5f).toInt()
+                scrollFn(pixelsPerFrame)
+            }
+        }
+    }
+
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
             ReaderWebView(ctx).apply {
                 val readerWebView = this
+                autoScrollScrollLambda.value = { pixels -> scrollBy(0, pixels) }
                 pagedModeScrollLock = pagedMode
                 settings.javaScriptEnabled  = true   // required for tap bridge
                 settings.domStorageEnabled  = true
@@ -2977,6 +1366,11 @@ internal fun HtmlPageView(
                     @JavascriptInterface
                     fun onTap(xPercent: Float) {
                         post { dispatchReaderTap(xPercent) }
+                    }
+
+                    @JavascriptInterface
+                    fun setTouchOnLink(onLink: Boolean) {
+                        readerWebView.touchStartedOnLink = onLink
                     }
 
                     @JavascriptInterface
@@ -3147,7 +1541,8 @@ internal fun HtmlPageView(
                                 maxWidthPx = currentMaxWidthPx.value,
                                 pagedMode = currentPagedMode.value,
                                 nativeViewportWidthPx = view.readerCssViewportWidthPxOrNull(),
-                                nativeViewportHeightPx = view.readerCssViewportHeightPxOrNull()
+                                nativeViewportHeightPx = view.readerCssViewportHeightPxOrNull(),
+                                isRtl = readingMode == ReadingMode.PAGE_RTL
                             )
                         ) {
                             readerView?.applyPagedLayout()
@@ -3290,7 +1685,8 @@ internal fun HtmlPageView(
                         val fallbackWithInset = injectBodyInsetCss(
                             currentSource.fallbackHtml, topPaddingPx, injectBottom,
                             horizontalPx = horizontalPaddingPx,
-                            maxWidthPx = maxWidthPx
+                            maxWidthPx = maxWidthPx,
+                            isRtl = isRtl
                         )
                         webView.scheduleInlineFallback(
                             loadToken = currentSource.loadToken,
@@ -3312,7 +1708,8 @@ internal fun HtmlPageView(
                         val htmlWithInset = injectBodyInsetCss(
                             currentSource.html, injectTop, injectBottom,
                             horizontalPx = horizontalPaddingPx,
-                            maxWidthPx = maxWidthPx
+                            maxWidthPx = maxWidthPx,
+                            isRtl = isRtl
                         )
                         webView.loadDataWithBaseURL(
                             currentSource.baseUrl,
@@ -3356,10 +1753,33 @@ internal fun HtmlPageView(
                 maxWidthPx,
                 pagedMode,
                 viewportWidthPx ?: -1,
-                viewportHeightPx ?: -1
+                viewportHeightPx ?: -1,
+                isRtl
             ).joinToString(separator = "|")
+            // Layout-affecting properties only — when these change, pages must be
+            // rebuilt. Cosmetic properties (colors) don't affect page breaks.
+            val layoutAffectingSignature = ReaderTextLayoutFingerprint(
+                fontSize = fontSize,
+                fontFamily = fontFamily,
+                fontSourceUrl = fontSourceUrl.orEmpty(),
+                lineHeight = lineHeight,
+                letterSpacing = letterSpacing,
+                wordSpacing = wordSpacing,
+                paragraphSpacing = paragraphSpacing,
+                textAlign = textAlign,
+                bold = bold,
+                topPaddingPx = topPaddingPx,
+                bottomPaddingPx = bottomPaddingPx,
+                horizontalPaddingPx = horizontalPaddingPx,
+                maxWidthPx = maxWidthPx,
+                pagedMode = pagedMode,
+                viewportWidthPx = viewportWidthPx ?: -1,
+                viewportHeightPx = viewportHeightPx ?: -1,
+                isRtl = isRtl
+            ).signature()
             webView.applyReaderTextSettingsIfNeeded(
                 signature = textSettingsSignature,
+                layoutAffectingSignature = layoutAffectingSignature,
                 script = textSettingsJs(
                     fontSize = fontSize,
                     bg = resolvedBg,
@@ -3381,9 +1801,21 @@ internal fun HtmlPageView(
                     maxWidthPx = maxWidthPx,
                     pagedMode = pagedMode,
                     nativeViewportWidthPx = viewportWidthPx,
-                    nativeViewportHeightPx = viewportHeightPx
+                    nativeViewportHeightPx = viewportHeightPx,
+                    isRtl = isRtl
                 )
             )
+        },
+        onRelease = { webView ->
+            // Compose only detaches the AndroidView; it never destroys the WebView. Without this
+            // the WebView, its renderer process, and the "_NativeReader" JS bridge (which captures
+            // the Activity via onExternalLink) leak for the whole process lifetime on every exit.
+            autoScrollScrollLambda.value = null
+            webView.removeJavascriptInterface("_NativeReader")
+            (webView.parent as? android.view.ViewGroup)?.removeView(webView)
+            webView.stopLoading()
+            webView.loadUrl("about:blank")
+            webView.destroy()
         }
     )
 }
@@ -3443,6 +1875,8 @@ fun ReaderScreen(
     var showBrightnessRow by remember { mutableStateOf(false) }
     var openControlCenterAtServices by remember { mutableStateOf(false) }
     var showReaderAudioSheet by remember { mutableStateOf(false) }
+    var showRsvpOverlay by remember { mutableStateOf(false) }
+    var rsvpWords by remember { mutableStateOf<List<String>>(emptyList()) }
     var showTextTranslationPageSheet by remember { mutableStateOf(false) }
     var pendingTtsRestartTargetPage by remember { mutableStateOf<Int?>(null) }
     var eyeRestReminderMinutes by remember { mutableStateOf<Int?>(null) }
@@ -3536,11 +1970,15 @@ fun ReaderScreen(
             Toast.LENGTH_SHORT
         ).show()
     }
+    // During loading (especially slow archive extraction), default to text color scheme
+    // to avoid a dark flash for text formats inside archives. Once loading completes,
+    // the correct scheme is applied based on the resolved readerContainerKind.
+    val effectiveIsTextReader = isTextReader || uiState.isLoading
     val readerColorScheme = if (isEInk) {
         inheritedColorScheme
     } else {
         readerMaterialColorScheme(
-            isTextReader = isTextReader,
+            isTextReader = effectiveIsTextReader,
             readerPreset = activeReaderPreset,
             textColorScheme = uiState.textColorScheme,
             fallback = inheritedColorScheme
@@ -3718,7 +2156,6 @@ fun ReaderScreen(
             .coerceAtLeast(8)
     }
     val maxStableTopChromeReservePx = with(density) { 96.dp.roundToPx() }
-    val maxStableBottomChromeReservePx = with(density) { 128.dp.roundToPx() }
     val estimatedHeaderOverlayContentPx = with(density) {
         readerHeaderFooterReservedHeightDp(
             fontSizeSp = uiState.headerFooterFontSize,
@@ -3726,8 +2163,12 @@ fun ReaderScreen(
         ).roundToPx()
     }
     val estimatedFooterOverlayContentPx = estimatedHeaderOverlayContentPx
-    val chromeIsVisible = !uiState.chromeAutoHideEnabled &&
-        uiState.chromeState != ReaderChromeState.HIDDEN
+    // This describes panels that are physically drawn over the WebView. Auto-hide
+    // changes whether they are normally hidden; it must not make a currently
+    // expanded toolbar invisible to the inset calculation.
+    val chromeIsVisible = uiState.chromeState != ReaderChromeState.HIDDEN &&
+        !uiState.showTextSettings &&
+        !uiState.showTocSheet
     // When chrome is visible: include measured toolbar height in the reserve.
     // When chrome is hidden: only use the small header/footer overlay (info strip), not the
     // stale measuredTopChromePx from when the toolbar was last open вЂ” that value persists
@@ -3747,7 +2188,7 @@ fun ReaderScreen(
         chromeIsVisible -> maxOf(
             (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
             (measuredBottomChromePx - systemBottomInsetPx).coerceAtLeast(0)
-        ).coerceAtMost(maxStableBottomChromeReservePx)
+        )
         else -> maxOf(
             (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
             estimatedFooterOverlayContentPx
@@ -3801,16 +2242,16 @@ fun ReaderScreen(
         stableBottomChromeReservePx,
         (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
     )
-    val topChromeReservePx = if (!uiState.chromeAutoHideEnabled && chromeIsVisible) {
-        maxOf(stableTopChromeReservePx, measuredTopReservePx)
-    } else {
-        0
-    }
-    val bottomChromeReservePx = if (!uiState.chromeAutoHideEnabled && chromeIsVisible) {
-        maxOf(stableBottomChromeReservePx, measuredBottomReservePx)
-    } else {
-        0
-    }
+    val topChromeReservePx = visibleChromeContentReservePx(
+        chromeIsVisible = chromeIsVisible,
+        stableReservePx = stableTopChromeReservePx,
+        measuredReservePx = measuredTopReservePx
+    )
+    val bottomChromeReservePx = visibleChromeContentReservePx(
+        chromeIsVisible = chromeIsVisible,
+        stableReservePx = stableBottomChromeReservePx,
+        measuredReservePx = measuredBottomReservePx
+    )
     // Text WebView owns the whole reader viewport. If chrome is visible and not
     // auto-hidden, the toolbar itself is the reserve: do not add an extra sentence
     // gutter on top of it. If chrome is hidden/overlayed, keep exactly one line
@@ -3823,8 +2264,28 @@ fun ReaderScreen(
     val textContentTopInsetCssPx = (textContentTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
     val textContentBottomInsetCssPx = (textContentBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
     // PAGE and WEBTOON share the same inset contract to avoid jumps when switching modes.
+    // VERTICAL-01/02: Add safety margin for edge-to-edge mode where WebView draws
+    // behind status bar. The CSS padding must be at least the system inset height.
     val textWebtoonTopInsetCssPx = textContentTopInsetCssPx
     val textWebtoonBottomInsetCssPx = textContentBottomInsetCssPx
+
+    // GEOMETRY-01: Unified viewport geometry for future migration.
+    // Currently computed in parallel with the inline values above.
+    // TODO: Replace inline calculations with geometry.contentTopInsetCssPx / contentBottomInsetCssPx
+    //       after confirming they produce identical values across all device/config combinations.
+    val viewportGeometry = ReaderViewportGeometry.fromMeasured(
+        viewportWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() },
+        viewportHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() },
+        statusBarInsetPx = systemTopInsetPx,
+        navigationBarInsetPx = systemBottomInsetPx,
+        displayCutoutInsetPx = 0, // already included in systemTopInsetPx
+        topToolbarHeightPx = if (chromeIsVisible) topChromeReservePx else 0,
+        bottomToolbarHeightPx = if (chromeIsVisible) bottomChromeReservePx else 0,
+        readerTopPaddingPx = textSentenceInsetPx,
+        readerBottomPaddingPx = textSentenceInsetPx,
+        hideToolbarsWhileReading = !chromeIsVisible,
+        densityScale = densityScale
+    )
 
     val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
         tapZoneLayout,
@@ -3856,7 +2317,11 @@ fun ReaderScreen(
     }
 
     val latestVolumeKeysPagingEnabled by rememberUpdatedState(uiState.volumeKeysPagingEnabled)
+    var lastHardwarePageTurnMs by remember { mutableLongStateOf(0L) }
     val latestHandleHardwarePageTurn by rememberUpdatedState<(Int) -> Unit> { step ->
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - lastHardwarePageTurnMs < 280L) return@rememberUpdatedState
+        lastHardwarePageTurnMs = now
         when {
             step < 0 -> viewModel.prevPage()
             step > 0 -> viewModel.nextPage()
@@ -3951,6 +2416,7 @@ fun ReaderScreen(
             window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
+
 
     // Immersive / fullscreen mode вЂ” hides system bars while reading
     DisposableEffect(uiState.immersiveMode, context) {
@@ -4117,6 +2583,7 @@ fun ReaderScreen(
                                     assetDocumentPath = uiState.htmlAssetBasePath,
                                     assetLoader = readerAssetLoader,
                                     readingMode = uiState.readingMode,
+                                    autoScrollSpeed = uiState.autoScrollSpeed,
                                     onLeftTap = {
                                         if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
                                             handleTapZoneAction(tapZoneLayout.left)
@@ -4315,18 +2782,31 @@ fun ReaderScreen(
                         ReaderNotePanel(
                             text = popup.text,
                             colorScheme = uiState.textColorScheme,
-                            expanded = uiState.footnotePresentation == FootnotePresentation.EXPANDED ||
-                                uiState.chromeState == ReaderChromeState.EXPANDED,
+                            expanded = uiState.footnotePresentation == FootnotePresentation.EXPANDED,
                             onDismiss = viewModel::dismissFootnote,
                             onExpand = viewModel::expandFootnote,
                             onCollapse = viewModel::collapseFootnote,
-                            modifier = Modifier.padding(horizontal = if (uiState.chromeState == ReaderChromeState.HIDDEN) 12.dp else 0.dp),
+                            chromeReservedDp = if (uiState.chromeState == ReaderChromeState.HIDDEN) 0 else 64,
+                            modifier = Modifier
+                                .padding(horizontal = if (uiState.chromeState == ReaderChromeState.HIDDEN) 12.dp else 0.dp)
+                                .then(
+                                    if (uiState.chromeState == ReaderChromeState.HIDDEN) {
+                                        Modifier.navigationBarsPadding()
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
                             palette = { scheme -> colorSchemePaletteForPreset(scheme, activeReaderPreset) }
                         )
                     }
 
                     // РќРёР¶РЅСЏСЏ РїР°РЅРµР»СЊ РїСЂРѕРіСЂРµСЃСЃР°/СѓРїСЂР°РІР»РµРЅРёСЏ - СЃРєСЂС‹РІР°РµРј, РµСЃР»Рё РѕС‚РєСЂС‹С‚С‹ РЅР°СЃС‚СЂРѕР№РєРё РёР»Рё РѕРіР»Р°РІР»РµРЅРёРµ
-                    if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
+                    if (
+                        uiState.chromeState != ReaderChromeState.HIDDEN &&
+                        !uiState.showTextSettings &&
+                        !uiState.showTocSheet &&
+                        uiState.footnotePresentation != FootnotePresentation.EXPANDED
+                    ) {
                         when (uiState.chromeState) {
                             ReaderChromeState.EXPANDED -> ReaderExpandedBottomPanel(
                                 uiState = uiState,
@@ -4415,6 +2895,8 @@ fun ReaderScreen(
                                     showDirectionIcon = uiState.chromeShowDirectionIcon,
                                     showTranslateIcon = uiState.chromeShowTranslateIcon,
                                     showBrightnessIcon = uiState.chromeShowBrightnessIcon,
+                                    showAutoScrollIcon = true,
+                                    autoScrollActive = uiState.autoScrollSpeed > 0f,
                                     onNavigateBack = onNavigateBack,
                                     onToggleToc = viewModel::toggleTocSheet,
                                     onToggleTextSettings = viewModel::toggleTextSettings,
@@ -4429,7 +2911,8 @@ fun ReaderScreen(
                                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
                                     onToggleTtsControls = {
                                         showReaderAudioSheet = true
-                                    }
+                                    },
+                                    onAutoScrollToggle = { viewModel.cycleAutoScrollSpeed() }
                                 )
                                 if (showBrightnessRow) {
                                     ReaderBrightnessRow(
@@ -4485,6 +2968,15 @@ fun ReaderScreen(
         )
     }
 
+    // RSVP speed reading overlay
+    if (showRsvpOverlay && rsvpWords.isNotEmpty()) {
+        com.example.feature.reader.ui.rsvp.RsvpOverlay(
+            words = rsvpWords,
+            onClose = { showRsvpOverlay = false },
+            onFinished = { showRsvpOverlay = false }
+        )
+    }
+
     if (showReaderAudioSheet && isTextReader) {
         ReaderAudioSheet(
             title = uiState.comic?.title.orEmpty(),
@@ -4520,7 +3012,16 @@ fun ReaderScreen(
             onSpeedChange = viewModel::setTtsSpeed,
             onPitchChange = viewModel::setTtsPitch,
             onVolumeChange = viewModel::setTtsVolume,
-            onSleepTimerChange = viewModel::setTtsSleepTimerMode
+            onSleepTimerChange = viewModel::setTtsSleepTimerMode,
+            onSpeedRead = if (isTextReader) {{
+                // Extract words from current page HTML for RSVP
+                val pageText = uiState.currentHtmlContent ?: ""
+                val words = com.example.feature.reader.ui.rsvp.extractWordsForRsvp(pageText)
+                if (words.isNotEmpty()) {
+                    rsvpWords = words
+                    showRsvpOverlay = true
+                }
+            }} else null
         )
     }
 
@@ -4704,1219 +3205,3 @@ fun ReaderScreen(
 private fun nextReaderUiEventToken(currentToken: Int): Int =
     if (currentToken == Int.MAX_VALUE) 1 else currentToken + 1
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SelectedTextActionSheet(
-    state: SelectedTextActionSheetState,
-    onDismiss: () -> Unit,
-    onTranslate: () -> Unit,
-    onDictionary: () -> Unit,
-    onExplain: () -> Unit,
-    onSaveQuote: () -> Unit
-) {
-    val readerText = readerUiText(LocalStrings.current.languageCode)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        scrimColor = Color.Transparent
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = readerText.selectionActionSheetTitle,
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = state.originalText,
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Button(
-                    onClick = onTranslate,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(readerText.selectionTranslateAction)
-                }
-                OutlinedButton(
-                    onClick = onDictionary,
-                    enabled = state.canUseDictionary,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(readerText.openDictionary)
-                }
-                OutlinedButton(
-                    onClick = onExplain,
-                    enabled = state.canExplain,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(readerText.selectionExplainAction)
-                }
-                OutlinedButton(
-                    onClick = onSaveQuote,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(readerText.saveQuote)
-                }
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.End)
-                ) {
-                    Text(readerText.close)
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun HighlightColorPickerSheet(
-    text: String,
-    onColorSelected: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val colors = listOf(
-        0x50FFEB3B.toInt() to "Yellow",
-        0x504CAF50 to "Green",
-        0x502196F3 to "Blue",
-        0x50E91E63 to "Pink",
-        0x50FF9800 to "Orange"
-    )
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = "Highlight text",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            Text(
-                text = "\"${text.take(80)}${if (text.length > 80) "…" else ""}\"",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                colors.forEach { (colorArgb, label) ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .clickable { onColorSelected(colorArgb) }
-                            .padding(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    Color(colorArgb),
-                                    RoundedCornerShape(12.dp)
-                                )
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
-
-@Composable
-private fun ChapterTranslationProgressBar(
-    progress: ChapterTranslationProgressUi
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        tonalElevation = 2.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Translating chapter…",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = "${progress.percent}%",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = { progress.completedParagraphs.toFloat() / progress.totalParagraphs.coerceAtLeast(1) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
-            progress.currentPreview?.let { preview ->
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "“$preview…”",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TranslationComparisonSheet(
-    comparison: TranslationComparisonUi,
-    onDismiss: () -> Unit
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
-        ) {
-            Text(
-                text = "Compare Translations",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            Text(
-                text = "\"${comparison.originalText.take(80)}${if (comparison.originalText.length > 80) "…" else ""}\"",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
-
-            if (comparison.isLoading) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp)
-                )
-                Text(
-                    text = "Translating with multiple engines…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-            } else {
-                comparison.results.forEach { result ->
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        tonalElevation = 1.dp
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                text = result.engineName,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            if (result.success) {
-                                Text(
-                                    text = result.translatedText,
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            } else {
-                                Text(
-                                    text = "Error: ${result.error ?: "Unknown"}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun SelectedTextTranslationSheet(
-    state: SelectedTextTranslationState,
-    onDismiss: () -> Unit,
-    onDictionary: () -> Unit,
-    onTranslateAsPhrase: () -> Unit,
-    onExplain: () -> Unit,
-    onTransportChange: (TranslationTransportPreference) -> Unit,
-    onCopy: (String) -> Unit,
-    onSaveQuote: () -> Unit
-) {
-    val readerText = readerUiText(LocalStrings.current.languageCode)
-    val language = LocalStrings.current.languageCode
-    val isDictionaryMode = state.mode == TranslationMode.DICTIONARY
-    val isExplainMode = state.mode == TranslationMode.LLM
-    val dictionaryEntry = state.dictionaryEntry
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        scrimColor = Color.Transparent
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-                Text(
-                    text = when {
-                        isDictionaryMode -> readerText.dictionarySheetTitle
-                        isExplainMode -> readerText.explainSheetTitle
-                        else -> readerText.translationSheetTitle
-                    },
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            val modeLabel = readerTranslationModeLabel(state.mode, language)
-            if (modeLabel != null || state.sourceLanguage != null || state.targetLanguage != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    modeLabel?.let {
-                        AssistChip(
-                            onClick = {},
-                            enabled = false,
-                            label = { Text(it) }
-                        )
-                    }
-                    if (state.sourceLanguage != null && state.targetLanguage != null) {
-                        AssistChip(
-                            onClick = {},
-                            enabled = false,
-                            label = { Text("${state.sourceLanguage.uppercase()} в†’ ${state.targetLanguage.uppercase()}") }
-                        )
-                    }
-                }
-            }
-
-                if (!isDictionaryMode && !isExplainMode) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = readerText.translationTransportTitle,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            TranslationTransportPreference.AUTO,
-                            TranslationTransportPreference.OFFLINE,
-                            TranslationTransportPreference.ONLINE
-                        ).forEach { preference ->
-                            FilterChip(
-                                selected = state.preferredTransport == preference,
-                                onClick = { onTransportChange(preference) },
-                                label = { Text(readerTransportPreferenceLabel(preference, language)) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    text = readerText.translationOriginalLabel,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = state.originalText,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            when {
-                state.isLoading -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = when {
-                                isDictionaryMode -> readerText.dictionaryMeaningsLabel
-                                isExplainMode -> readerText.explanationResultLabel
-                                else -> readerText.translationResultLabel
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp
-                            )
-                            Text(
-                                text = if (isExplainMode) readerText.explainLoading else readerText.translationLoading,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                state.error != null -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = when {
-                                isDictionaryMode -> readerText.dictionaryMeaningsLabel
-                                isExplainMode -> readerText.explanationResultLabel
-                                else -> readerText.translationResultLabel
-                            },
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = state.error,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-
-                isDictionaryMode && dictionaryEntry != null -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = readerText.dictionaryLemmaLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = dictionaryEntry.lemma,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        readerDictionaryPartOfSpeechLabel(dictionaryEntry.partOfSpeech, language)?.let { posLabel ->
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = readerText.dictionaryPartOfSpeechLabel,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = posLabel,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = readerText.dictionaryMeaningsLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            dictionaryEntry.translations.forEach { meaning ->
-                                Text(
-                                    text = "вЂў $meaning",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-
-                        if (dictionaryEntry.forms.isNotEmpty()) {
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = readerText.dictionaryFormsLabel,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = dictionaryEntry.forms.joinToString(", "),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-
-                else -> {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                              text = if (isExplainMode) readerText.explanationResultLabel else readerText.translationResultLabel,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Text(
-                            text = state.translatedText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                maxItemsInEachRow = 4
-            ) {
-                if (isDictionaryMode && state.canTranslateAsPhrase) {
-                    TextButton(onClick = onTranslateAsPhrase) {
-                        Text(readerText.translateAsPhrase)
-                    }
-                } else if (!isDictionaryMode && state.canUseDictionary) {
-                    TextButton(onClick = onDictionary) {
-                        Text(readerText.openDictionary)
-                    }
-                }
-                if (state.canExplain && !isExplainMode) {
-                    TextButton(onClick = onExplain) {
-                        Text(readerText.openExplain)
-                    }
-                }
-                TextButton(
-                    onClick = onSaveQuote,
-                    enabled = !state.isLoading && state.originalText.isNotBlank()
-                ) {
-                    Text(readerText.saveQuote)
-                }
-                TextButton(onClick = onDismiss) {
-                    Text(readerText.close)
-                }
-                Button(
-                    onClick = {
-                        val copyText = dictionaryEntry?.translations?.joinToString("; ")
-                            ?: state.translatedText.ifBlank { state.originalText }
-                        onCopy(copyText)
-                    },
-                    enabled = !state.isLoading && (
-                        state.translatedText.isNotBlank() ||
-                            state.originalText.isNotBlank() ||
-                            dictionaryEntry?.translations?.isNotEmpty() == true
-                        )
-                ) {
-                    Text(readerText.copyTranslation)
-                }
-            }
-        }
-    }
-}
-
-// в”Ђв”Ђ Composables в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-
-@Composable
-private fun FootnotePopupPanel(
-    text: String,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val strings = LocalStrings.current
-    val readerText = readerUiText(strings.languageCode)
-    val fgColor = MaterialTheme.colorScheme.onSurface
-    val accentColor = MaterialTheme.colorScheme.primary
-    val panelColor = MaterialTheme.colorScheme.surface.copy(alpha = 1f)
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = panelColor,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        shadowElevation = 8.dp
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = readerText.noteTitle,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = accentColor
-                )
-                IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = readerText.close,
-                        tint = fgColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium.copy(hyphens = Hyphens.None),
-                color = fgColor,
-                lineHeight = 20.sp,
-                maxLines = 8,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(4.dp))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TocBottomSheet(
-    entries: List<TocEntry>,
-    currentPage: Int,
-    bookmarkedPages: Set<Int>,
-    readerPreset: ReadingPreset,
-    toolbarOpacity: Float,
-    toolbarBlur: Float,
-    resolveDisplayPage: (enginePageIndex: Int) -> Int = { it },
-    onNavigate: (TocEntry) -> Unit,
-    onRemoveBookmark: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val strings = LocalStrings.current
-    val readerText = readerUiText(strings.languageCode)
-    val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(toolbarOpacity, readerPreset)
-    val effectiveToolbarBlur = readerEffectiveToolbarBlur(toolbarBlur, readerPreset)
-    val sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
-    val sheetSurface = readerPanelSurfaceColor(
-        base = MaterialTheme.colorScheme.surface,
-        emphasis = if (readerPreset == ReadingPreset.EINK) {
-            1f
-        } else {
-            (effectiveToolbarOpacity + 0.18f + effectiveToolbarBlur * 0.08f).coerceIn(0.92f, 1f)
-        },
-        minAlpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.94f
-    )
-    val itemSurface = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.98f)
-    val activeItemSurface = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (readerPreset == ReadingPreset.EINK) 1f else 0.92f)
-    val secondaryPillSurface = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
-    var selectedTab by remember(entries, bookmarkedPages) {
-        mutableStateOf(if (entries.isEmpty() && bookmarkedPages.isNotEmpty()) "bookmarks" else "chapters")
-    }
-    val showChaptersTab = entries.isNotEmpty()
-    val hasBookmarks = bookmarkedPages.isNotEmpty()
-    val showBookmarksTab = hasBookmarks || (!showChaptersTab && selectedTab == "bookmarks")
-
-    LaunchedEffect(showChaptersTab, hasBookmarks) {
-        when {
-            selectedTab == "bookmarks" && !hasBookmarks && showChaptersTab -> selectedTab = "chapters"
-            selectedTab == "chapters" && !showChaptersTab && hasBookmarks -> selectedTab = "bookmarks"
-            !showChaptersTab && !showBookmarksTab -> selectedTab = "chapters"
-        }
-    }
-
-    val selectedTabIndex = when {
-        selectedTab == "bookmarks" && showChaptersTab -> 1
-        else -> 0
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        shape = sheetShape,
-        containerColor = sheetSurface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        tonalElevation = readerPanelTonalElevation(effectiveToolbarBlur, base = 0f, extra = 1f),
-        scrimColor = readerPanelScrimColor(MaterialTheme.colorScheme.onSurface, effectiveToolbarBlur),
-        dragHandle = {
-            BottomSheetDefaults.DragHandle(
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.62f)
-            )
-        }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-        ) {
-            TabRow(
-                modifier = Modifier.heightIn(min = 42.dp),
-                selectedTabIndex = selectedTabIndex,
-                containerColor = Color.Transparent
-            ) {
-                if (showChaptersTab) {
-                    Tab(
-                        modifier = Modifier.heightIn(min = 42.dp),
-                        selected = selectedTab == "chapters",
-                        onClick = { selectedTab = "chapters" },
-                        text = {
-                            Text(
-                                readerText.chapters,
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    )
-                }
-                if (showBookmarksTab) {
-                    Tab(
-                        modifier = Modifier.heightIn(min = 42.dp),
-                        selected = selectedTab == "bookmarks",
-                        onClick = { selectedTab = "bookmarks" },
-                        text = {
-                            val count = bookmarkedPages.size
-                            Text(
-                                readerBookmarksTabLabel(count, strings.languageCode),
-                                style = MaterialTheme.typography.labelMedium
-                            )
-                        }
-                    )
-                }
-            }
-
-            when (selectedTab) {
-                "chapters" -> {
-                    if (!showChaptersTab) return@Column
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight()
-                            .heightIn(max = 456.dp),
-                        contentPadding = PaddingValues(top = 6.dp, bottom = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        itemsIndexed(entries) { idx, entry ->
-                            val entryDisplayPage = resolveDisplayPage(entry.pageIndex)
-                            val nextDisplayPage = entries.getOrNull(idx + 1)
-                                ?.let { resolveDisplayPage(it.pageIndex) }
-                                ?: Int.MAX_VALUE
-                            val isCurrentChapter = currentPage >= entryDisplayPage &&
-                                currentPage < nextDisplayPage
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isCurrentChapter) activeItemSurface else itemSurface
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onNavigate(entry) }
-                                        .padding(horizontal = 12.dp, vertical = 7.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = normalizedTocTitle(entry.title),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isCurrentChapter) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = if (isCurrentChapter)
-                                            MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(999.dp),
-                                        color = if (isCurrentChapter) {
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
-                                        } else {
-                                            secondaryPillSurface
-                                        }
-                                    ) {
-                                        Text(
-                                            text = "${entryDisplayPage + 1}",
-                                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = if (isCurrentChapter)
-                                                MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontWeight = if (isCurrentChapter) FontWeight.SemiBold else FontWeight.Normal
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        item { Spacer(Modifier.navigationBarsPadding()) }
-                    }
-                }
-                "bookmarks" -> {
-                    if (!showBookmarksTab) return@Column
-                    val sortedBookmarks = remember(bookmarkedPages) { bookmarkedPages.sorted() }
-                    if (sortedBookmarks.isEmpty()) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                                .height(176.dp),
-                            shape = RoundedCornerShape(18.dp),
-                            color = itemSurface
-                        ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Default.BookmarkBorder,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                    )
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(
-                                        readerText.noBookmarks,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 456.dp),
-                            contentPadding = PaddingValues(top = 8.dp, bottom = 10.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            items(sortedBookmarks) { page ->
-                                val isCurrent = page == currentPage
-                                Surface(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = if (isCurrent) activeItemSurface else itemSurface
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onNavigate(TocEntry(title = "", pageIndex = page)) }
-                                            .padding(start = 14.dp, end = 6.dp, top = 9.dp, bottom = 9.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Bookmark,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.width(12.dp))
-                                        Text(
-                                            text = readerPageLabel(page, strings.languageCode),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = if (isCurrent) FontWeight.SemiBold else FontWeight.Normal,
-                                            color = if (isCurrent)
-                                                MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                        IconButton(
-                                            onClick = { onRemoveBookmark(page) },
-                                            modifier = Modifier.size(32.dp)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Delete,
-                                                contentDescription = readerText.deleteBookmark,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            item { Spacer(Modifier.navigationBarsPadding()) }
-                        }
-                    }
-                }
-                else -> Unit
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TextPageTranslationSheet(
-    entries: List<TocEntry>,
-    currentPage: Int,
-    totalPages: Int,
-    onDismiss: () -> Unit,
-    onTranslatePage: (Int) -> Unit
-) {
-    val strings = LocalStrings.current
-    val readerText = readerUiText(strings.languageCode)
-    val title = when (strings.languageCode) {
-        "en" -> "Translate page"
-        "ja" -> "гѓљгѓјг‚ёг‚’зї»иЁі"
-        "zh" -> "зї»иЇ‘йЎµйќў"
-        "ko" -> "нЋмќґм§Ђ лІ€м—­"
-        else -> "РџРµСЂРµРІРµСЃС‚Рё СЃС‚СЂР°РЅРёС†Сѓ"
-    }
-    val currentLabel = when (strings.languageCode) {
-        "en" -> "Current"
-        "ja" -> "зЏѕењЁ"
-        "zh" -> "еЅ“е‰Ќ"
-        "ko" -> "н„мћ¬"
-        else -> "РўРµРєСѓС‰Р°СЏ"
-    }
-
-    ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
-            )
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 456.dp),
-                contentPadding = PaddingValues(top = 4.dp, bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                if (entries.isNotEmpty()) {
-                    itemsIndexed(entries) { index, entry ->
-                        val nextPageIndex = entries.getOrNull(index + 1)?.pageIndex ?: Int.MAX_VALUE
-                        val isCurrent = currentPage >= entry.pageIndex && currentPage < nextPageIndex
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isCurrent) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onTranslatePage(entry.pageIndex) }
-                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = normalizedTocTitle(entry.title),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = readerPageLabel(entry.pageIndex, strings.languageCode),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (isCurrent) {
-                                    Text(
-                                        text = currentLabel,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    items(totalPages.coerceAtLeast(1)) { index ->
-                        val isCurrent = index == currentPage
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            color = if (isCurrent) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceVariant
-                            }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onTranslatePage(index) }
-                                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = readerPageLabel(index, strings.languageCode),
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                if (isCurrent) {
-                                    Text(
-                                        text = currentLabel,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TextSettingsSheet(
-    fontSize: Int,
-    colorScheme: String,
-    fontFamily: String,
-    lineHeight: Float,
-    textAlignment: String,
-    bold: Boolean,
-    currentPreset: String,
-    onApplyReadingPreset: (ReadingPreset) -> Unit,
-    onFontSizeChange: (Int) -> Unit,
-    onColorSchemeChange: (String) -> Unit,
-    onFontFamilyChange: (String) -> Unit,
-    onLineHeightChange: (Float) -> Unit,
-    onTextAlignChange: (String) -> Unit,
-    onBoldChange: (Boolean) -> Unit,
-    onReset: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val strings = LocalStrings.current
-    val readerText = readerUiText(strings.languageCode)
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        scrimColor = Color.Transparent
-    ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val maxSheetHeight = maxHeight * 0.58f
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = maxSheetHeight)
-                    .padding(horizontal = 20.dp),
-                contentPadding = PaddingValues(bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item {
-                    Text(
-                        readerText.textSettingsTitle,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
-                item { HorizontalDivider() }
-                item {
-                    Text(
-                        readerText.quickPresetsTitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        com.example.core.ui.theme.readingPresetQuickChoices().forEach { preset ->
-                            item {
-                                FilterChip(
-                                    selected = currentPreset == preset.name,
-                                    onClick = { onApplyReadingPreset(preset) },
-                                    label = {
-                                        Text(readerPresetLabel(preset, strings.languageCode))
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-                item {
-                    Text(
-                        readerText.colorSchemeTitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            "DAY" to readerText.day,
-                            "SEPIA" to readerText.sepia,
-                            "NIGHT" to readerText.night
-                        ).forEach { (id, label) ->
-                            FilterChip(
-                                selected = colorScheme == id,
-                                onClick = { onColorSchemeChange(id) },
-                                label = { Text(label) }
-                            )
-                        }
-                    }
-                }
-                item {
-                    Text(
-                        readerText.fontTitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    val fontPickerContext = LocalContext.current
-                    val fonts = remember(fontPickerContext) {
-                        ReaderTextFontCatalog.availableFontFamilies(fontPickerContext)
-                    }
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(fonts) { f ->
-                            FilterChip(
-                                selected = (fontFamily == f) || (fontFamily !in fonts && f == "Georgia"),
-                                onClick = { onFontFamilyChange(f) },
-                                label = { Text(f, style = MaterialTheme.typography.bodySmall) }
-                            )
-                        }
-                    }
-                }
-                item {
-                    Text(
-                        readerFontSizeLabel(fontSize, strings.languageCode),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("A", style = MaterialTheme.typography.bodySmall)
-                        Slider(
-                            value = fontSize.toFloat(),
-                            onValueChange = { onFontSizeChange(it.toInt()) },
-                            valueRange = 12f..32f,
-                            steps = 19,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text("A", style = MaterialTheme.typography.bodyLarge)
-                    }
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            readerText.boldFont,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Switch(checked = bold, onCheckedChange = onBoldChange)
-                    }
-                }
-                item {
-                    Text(
-                        readerLineHeightLabel((lineHeight * 100).toInt(), strings.languageCode),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        IconButton(
-                            onClick = { onLineHeightChange((lineHeight - 0.1f).coerceAtLeast(1.0f)) },
-                            modifier = Modifier.size(36.dp)
-                        ) { Text("в€’", style = MaterialTheme.typography.titleLarge) }
-                        Slider(
-                            value = lineHeight,
-                            onValueChange = onLineHeightChange,
-                            valueRange = 1.0f..3.0f,
-                            steps = 19,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(
-                            onClick = { onLineHeightChange((lineHeight + 0.1f).coerceAtMost(3.0f)) },
-                            modifier = Modifier.size(36.dp)
-                        ) { Text("+", style = MaterialTheme.typography.titleLarge) }
-                    }
-                }
-                item {
-                    Text(
-                        readerText.textAlignTitle,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(
-                            "justify" to readerText.alignJustify,
-                            "left" to readerText.alignLeft,
-                            "right" to readerText.alignRight,
-                            "center" to readerText.alignCenter
-                        ).forEach { (id, label) ->
-                            FilterChip(
-                                selected = textAlignment == id,
-                                onClick = { onTextAlignChange(id) },
-                                label = { Text(label, style = MaterialTheme.typography.bodySmall) }
-                            )
-                        }
-                    }
-                }
-                item { HorizontalDivider() }
-                item {
-                    OutlinedButton(
-                        onClick = onReset,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp)
-                    ) {
-                        Text(readerText.resetDefaults)
-                    }
-                }
-            }
-        }
-    }
-}

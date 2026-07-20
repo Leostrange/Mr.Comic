@@ -6,6 +6,12 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
+import com.example.engine.formats.base.log.perfNowMs
+import com.example.engine.formats.base.log.safeLogE
+import com.example.engine.formats.base.log.safeLogW
+import com.example.engine.formats.base.charset.detectBomCharset
+import com.example.engine.formats.base.charset.hasUtf8Bom
+import com.example.engine.formats.base.charset.isStrictUtf8
 import com.example.core.data.db.EpubManifestCacheDao
 import com.example.core.data.db.EpubManifestCacheEntity
 import com.example.core.data.db.EpubStructureCacheDao
@@ -36,220 +42,21 @@ import java.net.URLDecoder
 import java.nio.charset.Charset
 import java.util.Base64
 
-private fun safeLogW(tag: String, message: String, throwable: Throwable? = null) {
-    runCatching { Log.w(tag, message, throwable) }
+/**
+ * Elapsed-time source for perf instrumentation. Uses [System.nanoTime] (monotonic, JVM-portable)
+ * so timing works on-device and in plain JVM unit tests, unlike android.os.SystemClock.
+ */
+/** TEMP perf instrumentation (P-perf): logs elapsed ms of a phase on the EPUB open path. */
+private inline fun <T> perfPhase(label: String, block: () -> T): T {
+    val start = perfNowMs()
+    val result = block()
+    runCatching { Log.i("EpubPerf", "$label: ${perfNowMs() - start} ms") }
+    return result
 }
 
-private fun safeLogE(tag: String, message: String, throwable: Throwable? = null) {
-    runCatching { Log.e(tag, message, throwable) }
-}
-
-internal fun decodeEpubText(bytes: ByteArray): String =
-    bytes.toString(detectEpubTextCharset(bytes)).removePrefix("\uFEFF")
-
-internal fun detectEpubTextCharset(bytes: ByteArray): Charset {
-    detectEpubBomCharset(bytes)?.let { return it }
-
-    val declared = declaredEpubCharset(bytes) ?: Charsets.UTF_8
-    if (declared != Charsets.UTF_8) {
-        return declared
-    }
-
-    val payload = if (hasUtf8Bom(bytes)) bytes.copyOfRange(3, bytes.size) else bytes
-    if (isStrictUtf8(payload)) {
-        return Charsets.UTF_8
-    }
-
-    return chooseReadableEpubFallbackCharset(bytes)
-}
-
-private fun hasUtf8Bom(bytes: ByteArray): Boolean =
-    bytes.size >= 3 &&
-        bytes[0] == 0xEF.toByte() &&
-        bytes[1] == 0xBB.toByte() &&
-        bytes[2] == 0xBF.toByte()
-
-private fun detectEpubBomCharset(bytes: ByteArray): Charset? {
-    if (hasUtf8Bom(bytes)) return Charsets.UTF_8
-    if (bytes.size >= 2) {
-        if (bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) return Charsets.UTF_16LE
-        if (bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) return Charsets.UTF_16BE
-    }
-    return null
-}
-
-private fun declaredEpubCharset(bytes: ByteArray): Charset? {
-    val peekLength = bytes.size.coerceAtMost(2048)
-    if (peekLength <= 0) return null
-    val peek = bytes.copyOfRange(0, peekLength).toString(Charsets.ISO_8859_1)
-    val name = Regex(
-        """(?:encoding|charset)\s*=\s*["']?([A-Za-z0-9._:-]+)""",
-        RegexOption.IGNORE_CASE
-    ).find(peek)?.groupValues?.getOrNull(1)?.trim()?.trim('"', '\'')
-        ?.takeIf { it.isNotBlank() }
-        ?: return null
-    return runCatching { Charset.forName(name) }.getOrNull()
-}
-
-private fun chooseReadableEpubFallbackCharset(bytes: ByteArray): Charset {
-    val candidates = listOfNotNull(
-        charsetOrNull("windows-1251"),
-        charsetOrNull("windows-1252"),
-        Charsets.ISO_8859_1,
-        charsetOrNull("KOI8-R"),
-        charsetOrNull("IBM866"),
-        charsetOrNull("Shift_JIS"),
-        charsetOrNull("GB18030"),
-        charsetOrNull("Big5"),
-        charsetOrNull("EUC-KR")
-    ).distinctBy { it.name() }
-
-    return candidates
-        .map { charset -> charset to scoreEpubDecodedText(bytes.toString(charset), charset) }
-        .maxByOrNull { it.second }
-        ?.first
-        ?: charsetOrNull("windows-1252")
-        ?: Charsets.ISO_8859_1
-}
-
-private fun charsetOrNull(name: String): Charset? =
-    runCatching { Charset.forName(name) }.getOrNull()
-
-private fun isStrictUtf8(bytes: ByteArray): Boolean {
-    var index = 0
-    while (index < bytes.size) {
-        val value = bytes[index].toInt() and 0xFF
-        when {
-            value <= 0x7F -> index++
-            value in 0xC2..0xDF -> {
-                if (!hasUtf8Continuation(bytes, index, 1)) return false
-                index += 2
-            }
-            value in 0xE0..0xEF -> {
-                if (!hasUtf8Continuation(bytes, index, 2)) return false
-                val b1 = bytes[index + 1].toInt() and 0xFF
-                if ((value == 0xE0 && b1 < 0xA0) || (value == 0xED && b1 >= 0xA0)) return false
-                index += 3
-            }
-            value in 0xF0..0xF4 -> {
-                if (!hasUtf8Continuation(bytes, index, 3)) return false
-                val b1 = bytes[index + 1].toInt() and 0xFF
-                if ((value == 0xF0 && b1 < 0x90) || (value == 0xF4 && b1 >= 0x90)) return false
-                index += 4
-            }
-            else -> return false
-        }
-    }
-    return true
-}
-
-private fun hasUtf8Continuation(bytes: ByteArray, start: Int, count: Int): Boolean {
-    if (start + count >= bytes.size) return false
-    for (offset in 1..count) {
-        val next = bytes[start + offset].toInt() and 0xFF
-        if (next !in 0x80..0xBF) return false
-    }
-    return true
-}
-
-private fun scoreEpubDecodedText(text: String, charset: Charset): Int {
-    var score = 0
-    var basicLatinLetters = 0
-    var extendedLatinLetters = 0
-    var cyrillicLetters = 0
-    var cjkLetters = 0
-    var kanaLetters = 0
-    var hangulLetters = 0
-    var controls = 0
-    var replacement = 0
-
-    text.forEach { ch ->
-        when {
-            ch == '\uFFFD' -> {
-                replacement++
-                score -= 160
-            }
-            ch == '\n' || ch == '\r' || ch == '\t' -> score += 1
-            ch.isISOControl() -> {
-                controls++
-                score -= 48
-            }
-            ch.isLetter() -> {
-                score += 7
-                when (ch) {
-                    in '\u0041'..'\u007A' -> basicLatinLetters++
-                    in '\u00C0'..'\u024F' -> extendedLatinLetters++
-                    in '\u0400'..'\u04FF' -> cyrillicLetters++
-                    in '\u3040'..'\u30FF' -> kanaLetters++
-                    in '\u3400'..'\u9FFF' -> cjkLetters++
-                    in '\uAC00'..'\uD7AF' -> hangulLetters++
-                }
-            }
-            ch.isDigit() -> score += 3
-            ch.isWhitespace() -> score += 1
-            ch in listOf('<', '>', '/', '=', '"', '\'', '-', '_', '.', ',', ':', ';', '&') -> score += 2
-            else -> score += 1
-        }
-    }
-
-    if (text.contains("<html", ignoreCase = true) || text.contains("<package", ignoreCase = true)) score += 60
-    if (text.contains("<body", ignoreCase = true) || text.contains("<manifest", ignoreCase = true)) score += 40
-
-    val visibleText = Regex("<[^>]+>").replace(text, " ")
-    val visibleBasicLatinLetters = visibleText.count { it in '\u0041'..'\u007A' }
-    val visibleExtendedLatinLetters = visibleText.count { it in '\u00C0'..'\u024F' }
-    val visibleCyrillicLetters = visibleText.count { it in '\u0400'..'\u04FF' }
-    val visibleCjkLetters = visibleText.count { it in '\u3400'..'\u9FFF' }
-    val visibleKanaLetters = visibleText.count { it in '\u3040'..'\u30FF' }
-    val visibleHangulLetters = visibleText.count { it in '\uAC00'..'\uD7AF' }
-    val visibleLatinLetters = visibleBasicLatinLetters + visibleExtendedLatinLetters
-
-    if (
-        visibleCyrillicLetters >= 4 &&
-        (visibleCyrillicLetters >= visibleLatinLetters * 2 || visibleCyrillicLetters > visibleBasicLatinLetters)
-    ) {
-        score += visibleCyrillicLetters * 4
-        if (charset.name().equals("windows-1251", ignoreCase = true)) score += 80
-        if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 35
-        if (charset.name().equals("IBM866", ignoreCase = true)) score += 20
-    }
-    if (
-        visibleExtendedLatinLetters >= 2 &&
-        visibleExtendedLatinLetters <= visibleBasicLatinLetters &&
-        visibleCyrillicLetters == 0 &&
-        charset.name().equals("windows-1252", ignoreCase = true)
-    ) {
-        score += visibleExtendedLatinLetters * 5 + 45
-    }
-    if (
-        visibleExtendedLatinLetters > visibleBasicLatinLetters &&
-        charset.name().equals("windows-1252", ignoreCase = true)
-    ) {
-        score -= visibleExtendedLatinLetters * 8
-    }
-    if (
-        visibleCyrillicLetters in 1..visibleLatinLetters &&
-        charset.name().equals("windows-1251", ignoreCase = true)
-    ) {
-        score -= visibleCyrillicLetters * 14
-    }
-    if (visibleCjkLetters + visibleKanaLetters + visibleHangulLetters >= 2) {
-        score += (visibleCjkLetters + visibleKanaLetters + visibleHangulLetters) * 6
-        val charsetName = charset.name().lowercase()
-        if (charsetName.contains("jis") || charsetName.contains("gb") ||
-            charsetName.contains("big5") || charsetName.contains("euc")
-        ) {
-            score += 70
-        }
-    }
-
-    score -= controls * 12
-    score -= replacement * 25
-    return score
-}
 
 internal fun sanitizeInlineEpubCss(css: String): String {
-    return sanitizeEpubCss(css, stripFontFace = true)
+    return EpubCssSanitizer.sanitizeInline(css)
 }
 
 internal fun sanitizeAssetBackedEpubCss(
@@ -257,223 +64,10 @@ internal fun sanitizeAssetBackedEpubCss(
     cssEntryPath: String? = null,
     assetExists: (String) -> Boolean = { true }
 ): String {
-    val sanitized = sanitizeEpubCss(css, stripFontFace = false)
-    return sanitizeAssetBackedFontFaces(sanitized, cssEntryPath, assetExists)
+    return EpubCssSanitizer.sanitizeAssetBacked(css, cssEntryPath, assetExists)
 }
 
-private fun sanitizeEpubCss(css: String, stripFontFace: Boolean): String {
-    var result = css.trim()
-    if (stripFontFace) {
-        val fontFaceRegex = Regex(
-            """@font-face\s*[{][\s\S]*?[}]""",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        )
-        result = fontFaceRegex.replace(result, "").trim()
-    }
 
-    // Strip dominant #id scope prefix (e.g. O'Reilly "#sbo-rt-content").
-    // When CSS scopes all rules under a single wrapper ID that we remove during chunking,
-    // the styles stop applying. If one #id appears ≥ 10 times as a leading selector
-    // token, it's almost certainly an intentional document-level scope — remove it so
-    // the rules apply globally within our isolated reader WebView.
-    val idScopeRegex = Regex("""#([\w-]+)\s+""")
-    val counts = idScopeRegex.findAll(result).groupingBy { it.groupValues[1] }.eachCount()
-    val dominant = counts.maxByOrNull { it.value }
-    if (dominant != null && dominant.value >= 10) {
-        result = result.replace(Regex("""#${Regex.escape(dominant.key)}\s+"""), "")
-    }
-
-    // Clamp dangerously small line-height values (e.g. 0.1 from FB2EPUB footnote styles).
-    // Values below 1.0 cause lines to overlap visually. Replace with a readable minimum.
-    result = result.replace(
-        Regex("""line-height\s*:\s*0\.\d+""", RegexOption.IGNORE_CASE),
-        "line-height: 1.2"
-    )
-
-    return result
-}
-
-private val CSS_URL_REGEX = Regex("""url\(\s*(['"]?)([^'")]+)\1\s*\)""", RegexOption.IGNORE_CASE)
-private val FONT_FACE_BLOCK_REGEX = Regex(
-    """@font-face\s*[{][\s\S]*?[}]""",
-    setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-)
-
-private fun normalizeEpubAssetPath(path: String): String {
-    val stack = ArrayDeque<String>()
-    for (part in path.split('/')) when (part) {
-        ".." -> if (stack.isNotEmpty()) stack.removeLast()
-        ".", "" -> {}
-        else -> stack.addLast(part)
-    }
-    return stack.joinToString("/")
-}
-
-private fun sanitizeAssetBackedFontFaces(
-    css: String,
-    cssEntryPath: String?,
-    assetExists: (String) -> Boolean
-): String {
-    return FONT_FACE_BLOCK_REGEX.replace(css) { match ->
-        val block = match.value
-        var keptUrls = 0
-        val cleanedBlock = CSS_URL_REGEX.replace(block) { urlMatch ->
-            val rawUrl = urlMatch.groupValues[2].trim()
-            if (isSafeAssetBackedCssUrl(rawUrl, cssEntryPath, assetExists)) {
-                keptUrls += 1
-                urlMatch.value
-            } else {
-                "/* mrcomic-stripped-font-url */"
-            }
-        }
-            .replace(Regex("""\s*,\s*/\* mrcomic-stripped-font-url \*/"""), "")
-            .replace(Regex("""/\* mrcomic-stripped-font-url \*/\s*,\s*"""), "")
-            .replace("/* mrcomic-stripped-font-url */", "")
-        if (keptUrls <= 0) "" else cleanedBlock
-    }
-}
-
-private fun isSafeAssetBackedCssUrl(
-    rawUrl: String,
-    cssEntryPath: String?,
-    assetExists: (String) -> Boolean
-): Boolean {
-    if (rawUrl.isBlank()) return false
-    val decoded = try { URLDecoder.decode(rawUrl, "UTF-8") } catch (_: Exception) { rawUrl }
-    val lower = decoded.lowercase()
-    if (lower.startsWith("javascript:")) return false
-    if (lower.startsWith("file:")) return false
-    if (lower.startsWith("content:")) return false
-    if (lower.startsWith("android_asset:")) return false
-    if (lower.startsWith("res:")) return false
-    if (lower.startsWith("data:")) return true
-    if (lower.startsWith("http://") || lower.startsWith("https://")) return true
-    val baseDir = cssEntryPath
-        ?.substringBeforeLast('/', "")
-        .orEmpty()
-    val normalized = normalizeEpubAssetPath(
-        if (decoded.startsWith("/")) decoded.trimStart('/')
-        else if (baseDir.isEmpty()) decoded else "$baseDir/$decoded"
-    )
-    return assetExists(normalized)
-}
-
-internal fun simplifySingleImageSvgContent(html: String): String {
-    val svgBlockRegex = Regex(
-        """<svg\b[^>]*>.*?</svg>""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    )
-    val imageHrefRegex = Regex(
-        """<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["']([^"']+)["'][^>]*(?:/?>|>.*?</image>)""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    )
-    return svgBlockRegex.replace(html) { match ->
-        val svgBlock = match.value
-        val hrefMatches = imageHrefRegex.findAll(svgBlock).toList()
-        if (hrefMatches.size != 1) {
-            svgBlock
-        } else {
-            val imageSrc = hrefMatches.first().groupValues[1]
-            """<div class="epub-inline-cover"><img src="$imageSrc" alt="" style="max-width:100%;height:auto;display:block;margin:0 auto;"/></div>"""
-        }
-    }
-}
-
-internal fun normalizeInlinedEpubMarkup(html: String): String = runCatching {
-    val document = Jsoup.parse(html)
-    document.outputSettings(Document.OutputSettings().prettyPrint(false))
-    val rawBodyInnerHtml = extractEpubBodyInnerHtmlByTag(html)
-    val blockTags = setOf(
-        "div", "p", "h1", "h2", "h3", "h4", "h5", "h6",
-        "blockquote", "ul", "ol", "li", "table", "thead", "tbody",
-        "tfoot", "tr", "td", "th", "section", "article", "aside",
-        "figure", "figcaption"
-    )
-    var changed = true
-    while (changed) {
-        changed = false
-        document.select("span, font").forEach { wrapper ->
-            val hasBlockChild = wrapper.children().any { child -> child.normalName() in blockTags }
-            if (hasBlockChild && wrapper.ownText().isBlank()) {
-                wrapper.unwrap()
-                changed = true
-            }
-        }
-    }
-    val normalized = document.outerHtml()
-    if (document.body().html().isBlank() && rawBodyInnerHtml != null) {
-        html
-    } else {
-        normalized
-    }
-}.getOrDefault(html)
-
-private fun extractEpubBodyInnerHtmlByTag(html: String): String? {
-    val open = Regex("""<body\b[^>]*>""", RegexOption.IGNORE_CASE).find(html) ?: return null
-    val close = html.lastIndexOf("</body>", ignoreCase = true)
-    val end = if (close > open.range.last) close else html.length
-    return html.substring(open.range.last + 1, end)
-        .trim()
-        .takeIf { it.isNotBlank() }
-}
-
-private fun extractEpubBodyAttributesByTag(html: String): Map<String, String> {
-    val bodyOpen = Regex("""<body\b[^>]*>""", RegexOption.IGNORE_CASE).find(html)?.value ?: return emptyMap()
-    return Regex("""([:\w-]+)\s*=\s*(["'])(.*?)\2""")
-        .findAll(bodyOpen)
-        .associate { match -> match.groupValues[1] to match.groupValues[3] }
-}
-
-internal fun rebuildNormalizedInlinedEpubDocument(html: String, readerCss: String): String = runCatching {
-    val fallbackBodyInnerHtml = extractEpubBodyInnerHtmlByTag(html)
-    val fallbackBodyAttributes = extractEpubBodyAttributesByTag(html)
-    val source = Jsoup.parse(html)
-    source.outputSettings(Document.OutputSettings().prettyPrint(false))
-
-    val rebuilt = Document("")
-    rebuilt.outputSettings(Document.OutputSettings().prettyPrint(false))
-
-    val htmlElement = rebuilt.appendElement("html")
-    source.selectFirst("html")?.attributes()?.forEach { attr ->
-        htmlElement.attr(attr.key, attr.value)
-    }
-
-    val headElement = htmlElement.appendElement("head")
-    headElement.appendElement("meta").attr("charset", "UTF-8")
-    headElement.append(readerCss)
-    source.head().children().forEach { child ->
-        val tag = child.normalName()
-        if (tag == "style" || tag == "title" || tag == "meta" || tag == "link") {
-            headElement.appendChild(child.clone())
-        }
-    }
-
-    val bodyElement = htmlElement.appendElement("body")
-    source.body().attributes().forEach { attr ->
-        bodyElement.attr(attr.key, attr.value)
-    }
-    fallbackBodyAttributes.forEach { (key, value) ->
-        if (!bodyElement.hasAttr(key)) bodyElement.attr(key, value)
-    }
-    val sourceBodyHtml = source.body().html().trim()
-    if (sourceBodyHtml.isBlank() && fallbackBodyInnerHtml != null) {
-        bodyElement.html(fallbackBodyInnerHtml)
-    } else {
-        source.body().childNodes().forEach { child ->
-            bodyElement.appendChild(child.clone())
-        }
-    }
-
-    rebuilt.outerHtml()
-}.getOrDefault(
-    when {
-        Regex("<head[^>]*>", RegexOption.IGNORE_CASE).containsMatchIn(html) ->
-            html.replaceFirst(Regex("<head([^>]*)>", RegexOption.IGNORE_CASE), "<head$1>$readerCss")
-        html.contains("<body", ignoreCase = true) ->
-            html.replaceFirst(Regex("<body[^>]*>", RegexOption.IGNORE_CASE), "$0$readerCss")
-        else -> "<html><head>$readerCss</head><body>$html</body></html>"
-    }
-)
 
 internal fun prepareAssetBackedEpubDocument(
     html: String,
@@ -483,9 +77,11 @@ internal fun prepareAssetBackedEpubDocument(
 ): String = runCatching {
     val strippedHtml = html
         .replaceFirst(Regex("""^\s*<\?xml[^>]*\?>\s*""", RegexOption.IGNORE_CASE), "")
+        // Strip ALL nav types — not just page-list (P1 #11)
+        // EPUB2: toc, EPUB3: toc/page-list/landmarks
         .replace(
             Regex(
-                """<nav\b[^>]*\bepub:type\s*=\s*["']page-list["'][^>]*>.*?</nav>""",
+                """<nav\b[^>]*\bepub:type\s*=\s*["'](?:toc|page-list|landmarks)[^"']*["'][^>]*>.*?</nav>""",
                 setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
             ),
             ""
@@ -531,77 +127,6 @@ private data class EpubEstimatedChunkBlock(
     val visibleCharCount: Int,
     val canSplitOversized: Boolean
 )
-
-internal fun resolveEpubHtmlChunkCount(
-    blockCharCounts: List<Int>,
-    charsPerPage: Int = 2000
-): Int {
-    if (blockCharCounts.isEmpty()) return 1
-    val structuralChunkBudget = (charsPerPage * 2).coerceAtLeast(charsPerPage)
-    var chunks = 0
-    var accumulated = 0
-    var hasCurrentChunk = false
-    for (blockChars in blockCharCounts) {
-        val normalizedChars = blockChars.coerceAtLeast(1)
-        if (hasCurrentChunk && accumulated + normalizedChars > structuralChunkBudget) {
-            chunks++
-            accumulated = 0
-            hasCurrentChunk = false
-        }
-        accumulated += normalizedChars
-        hasCurrentChunk = true
-    }
-    if (hasCurrentChunk) chunks++
-    return chunks.coerceAtLeast(1)
-}
-
-internal fun shouldKeepWholeEpubHtmlBody(bodyHtml: String): Boolean {
-    val trimmedBody = bodyHtml.trimStart()
-    // Quick path: body starts with an inline wrapper — classic FB2EPUB pattern.
-    if (trimmedBody.startsWith("<span", ignoreCase = true) ||
-        trimmedBody.startsWith("<font", ignoreCase = true)
-    ) {
-        return true
-    }
-
-    // Tail-based detection: if the body ENDS with a closing inline wrapper
-    // (</span> or </font>) that sits outside (after) the last block-level close,
-    // it means block content is wrapped in an inline element — unsafe to chunk.
-    val trailingCloseRegex = Regex(
-        """</(?:span|font)\s*>\s*(?:</(?:div|section|article|aside)\s*>\s*)*$""",
-        RegexOption.IGNORE_CASE
-    )
-    if (trailingCloseRegex.containsMatchIn(bodyHtml.trimEnd())) {
-        val hasBlockContent = Regex(
-            """<(?:p|h[1-6]|blockquote|ul|ol|table)\b""",
-            RegexOption.IGNORE_CASE
-        ).containsMatchIn(bodyHtml)
-        if (hasBlockContent) return true
-    }
-
-    // General detection: look for orphaned closing wrapper tags among
-    // first 6 AND last 6 regex blocks (previous .take(12) missed long chapters).
-    val htmlTagRegex = Regex("<[^>]+>")
-    val htmlBlockRegex = Regex(
-        """(.+?</(?:p|div|h1|h2|h3|h4|h5|h6|blockquote|li|tr|section|article|aside|ul|ol)>|.+$)""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    )
-    val closingWrapperRegex = Regex(
-        """^</(?:span|font)\b""",
-        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-    )
-    val allBlocks = htmlBlockRegex.findAll(bodyHtml)
-        .map { it.value.trim() }
-        .filter { it.isNotEmpty() }
-        .toList()
-    val toCheck = if (allBlocks.size <= 12) allBlocks
-                  else allBlocks.take(6) + allBlocks.takeLast(6)
-    return toCheck.any { block ->
-        val hasVisibleContent = htmlTagRegex.replace(block, "")
-            .any { !it.isWhitespace() }
-        !hasVisibleContent && closingWrapperRegex.containsMatchIn(block)
-    }
-}
 
 /**
  * EPUB reader — handles both image-based (manga) and text-based (novel) EPUBs.
@@ -694,6 +219,14 @@ class EpubFormatReader(
     private val pageHtmlCache = object : LinkedHashMap<Int, String>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?) = size > 12
     }
+
+    // Memoized spine-item classifications. These are pure functions of an entry's content but were
+    // recomputed O(n²) times inside the merge pass of buildPagesFromOpf (each call re-read the zip
+    // entry and, for title detection, ran a full Jsoup.parse) — the dominant cost of opening an EPUB
+    // (~49 s for a 15-item book). One boolean per spine entry, so unbounded is fine.
+    private val notesTitlePageCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val footnotePageCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val titleOnlySpinePageCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     private sealed class EpubPage {
         data class Image(val entry: String) : EpubPage()
@@ -794,8 +327,8 @@ class EpubFormatReader(
                 if (manifest.isEmpty() || spine.isEmpty()) {
                     return@lazy null
                 }
-                val isPublisherEpub = detectPublisherEpub(opfText, manifest, spine)
-                val repairFrontMatter = shouldRepairFrontMatter(opfText, manifest, spine)
+                val isPublisherEpub = EpubManifestParser.detectPublisherEpub(opfText, manifest, spine)
+                val repairFrontMatter = EpubManifestParser.shouldRepairFrontMatter(opfText, manifest, spine)
                 val blueprint = ManifestBlueprint(
                     manifest = manifest,
                     spine = spine,
@@ -810,6 +343,7 @@ class EpubFormatReader(
                     repairFrontMatter = repairFrontMatter
                 )
                 storeManifestInCache(cacheKey, blueprint)
+                perfPhase("manifestBuilt(spine=${blueprint.spine.size})") { }
                 blueprint
             } else {
                 null
@@ -831,13 +365,15 @@ class EpubFormatReader(
                 return@lazy ParsedEpub(fallbackPages)
             }
             val pages = runCatching {
-                buildPagesFromBlueprint(blueprint, zip).ifEmpty { fallbackPages }
+                perfPhase("buildPagesFromBlueprint(spine=${blueprint.spine.size})") {
+                    buildPagesFromBlueprint(blueprint, zip).ifEmpty { fallbackPages }
+                }
             }.getOrElse { error ->
                 safeLogW(TAG, "Failed to build EPUB pages from manifest cache", error)
                 fallbackPages
             }
             val parsed = ParsedEpub(pages = pages)
-            storeParsedInCache(cacheKey, parsed)
+            perfPhase("storeParsedInCache(pages=${pages.size})") { storeParsedInCache(cacheKey, parsed) }
             parsed
         } catch (e: Exception) {
             safeLogE(TAG, "Failed to build EPUB page list", e)
@@ -875,8 +411,10 @@ class EpubFormatReader(
     // ── FormatReader ──────────────────────────────────────────────────────────
 
     override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
-        val sectionCount = textDocumentSections.size
-        if (sectionCount > 0) sectionCount else pages.size
+        perfPhase("getPageCount(total)") {
+            val sectionCount = textDocumentSections.size
+            if (sectionCount > 0) sectionCount else pages.size
+        }
     }
 
     override suspend fun getPage(index: Int): Bitmap? = withContext(Dispatchers.IO) {
@@ -984,7 +522,9 @@ class EpubFormatReader(
         }
     }
 
-    private val textDocumentSections: List<TextDocumentSection> by lazy { buildTextDocumentSections() }
+    private val textDocumentSections: List<TextDocumentSection> by lazy {
+        perfPhase("buildTextDocumentSections") { buildTextDocumentSections() }
+    }
 
     override suspend fun getTextDocumentSections(): List<TextDocumentSection> = withContext(Dispatchers.IO) {
         textDocumentSections
@@ -1112,9 +652,15 @@ class EpubFormatReader(
             )?.let { extractWrappedBodyContent(it) }
         }.filter { it.isNotBlank() }
         if (extraBodies.isEmpty()) return firstHtml
+        // FOOTNOTE-01: Wrap footnote bodies in a hidden container so they don't
+        // participate in layout, scrollWidth, scrollHeight, or pageCount.
+        // The content is still in the DOM for popup retrieval via getFootnoteText().
+        val hiddenContainer = """<div id="__mrcomic_footnote_storage" style="display:none!important;position:absolute!important;height:0!important;width:0!important;overflow:hidden!important;">""" +
+            extraBodies.joinToString("") +
+            "</div>"
         val merged = firstHtml.replace(
             "</body>",
-            extraBodies.joinToString("") + "</body>",
+            hiddenContainer + "</body>",
             ignoreCase = true
         )
         synchronized(htmlCache) { htmlCache[cacheKey] = merged }
@@ -1167,12 +713,12 @@ class EpubFormatReader(
     }
 
     /** Extracts the content between <body> and </body> tags. */
-    private fun extractBodyContent(html: String): String {
+    private fun extractBodyContent(html: String): String = runCatching {
         val bodyStart = Regex("<body[^>]*>", RegexOption.IGNORE_CASE).find(html)
             ?.let { it.range.last + 1 } ?: 0
         val bodyEnd = html.lastIndexOf("</body>").let { if (it < 0) html.length else it }
-        return html.substring(bodyStart, bodyEnd)
-    }
+        html.substring(bodyStart, bodyEnd.coerceAtLeast(bodyStart))
+    }.getOrElse { html }
 
     private fun extractWrappedBodyContent(html: String): String = runCatching {
         val document = Jsoup.parse(html)
@@ -1220,8 +766,26 @@ class EpubFormatReader(
         }
 
         if (filePart.isBlank()) return null
-        return resolveFileNameToPageIndex(filePart, parsed.pages)
+        
+        // Try resolved file name first; if not found, search by prefix on all
+        // chunkIndices — not just chunkIndex==0 (P1 #8)
+        val baseResult = resolveFileNameToPageIndex(filePart, parsed.pages)
             ?.let { mapLegacyPageIndexToSectionIndex(it) }
+        if (baseResult != null) return baseResult
+        
+        // Fallback: search pages whose entries end with this filePart
+        // (handles cases where the same XHTML file appears with different chunk indices)
+        return parsed.pages.indices.firstOrNull { index ->
+            val page = parsed.pages[index]
+            when (page) {
+                is EpubPage.Html -> page.entry.endsWith(filePart, ignoreCase = true) ||
+                    page.extraEntries.any { it.endsWith(filePart, ignoreCase = true) }
+                is EpubPage.SyntheticHtml -> 
+                    page.entry.endsWith(filePart, ignoreCase = true) ||
+                    page.sourceEntries.any { it.endsWith(filePart, ignoreCase = true) }
+                else -> false
+            }
+        }?.let { mapLegacyPageIndexToSectionIndex(it) }
     }
 
     /** Maps legacy char-chunk page indices to spine-level section indices (Moon+ model). */
@@ -1512,6 +1076,8 @@ class EpubFormatReader(
 
         val isSpecialFlavor = flavor in setOf(EPUB_FLAVOR_FB2, EPUB_FLAVOR_CALIBRE, EPUB_FLAVOR_PUBLISHER)
 
+        val __t0 = perfNowMs()
+
         spineLoop@ for (idref in spine) {
             val rawHref = manifest[idref] ?: continue
             val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
@@ -1539,7 +1105,10 @@ class EpubFormatReader(
                         // frontispiece/title/illustration wrappers very small (often just an
                         // <svg>, <img>, <object> or a short redirect-like body). Treating files
                         // <=150 bytes as empty dropped valid visual pages from the spine.
-                        estimateContent(zip, entry)
+                        val __et = perfNowMs()
+                        val e = estimateContent(zip, entry)
+                        runCatching { Log.i("EpubPerf", "    estimateContent[$entry]: ${perfNowMs() - __et} ms (chunks=${e.chunkCount})") }
+                        e
                     }
                     val charCount = estimate.textCharCount
                     val imgCount = estimate.imageTagCount
@@ -1569,6 +1138,9 @@ class EpubFormatReader(
             return if (rawResult.isNotEmpty()) rawResult else if (allowFallback) fallbackContentPages(zip) else emptyList()
         }
 
+        runCatching { Log.i("EpubPerf", "  phase.spineLoop: ${perfNowMs() - __t0} ms (${rawResult.size} raw pages)") }
+        val __t1 = perfNowMs()
+
         // ── Second pass: normalize note sections and only then merge tiny leftovers ──
         val normalized = mutableListOf<EpubPage>()
         var i = 0
@@ -1595,6 +1167,8 @@ class EpubFormatReader(
 
         val merged = mutableListOf<EpubPage>()
         val mergeVisibleCharsLimit = CHARS_PER_PAGE.coerceAtMost(1_900)
+        runCatching { Log.i("EpubPerf", "  phase.normalize: ${perfNowMs() - __t1} ms") }
+        val __t2 = perfNowMs()
 
         fun isMergeSafePage(page: EpubPage.Html): Boolean {
             if (page.totalChunks != 1) return false
@@ -1675,6 +1249,8 @@ class EpubFormatReader(
             }
         }
 
+        runCatching { Log.i("EpubPerf", "  phase.merge: ${perfNowMs() - __t2} ms") }
+
         return if (filtered.isNotEmpty()) filtered else if (allowFallback) fallbackContentPages(zip) else emptyList()
     }
 
@@ -1728,13 +1304,7 @@ class EpubFormatReader(
         val fromContainer = containerHeader?.let { header ->
             zip.getInputStream(header).use { stream ->
                 val containerXml = decodeEpubText(stream.readBytes())
-                Regex("""full-path\s*=\s*["']([^"']+\.opf)["']""", RegexOption.IGNORE_CASE)
-                    .find(containerXml)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.let { rawPath ->
-                        try { URLDecoder.decode(rawPath, "UTF-8") } catch (_: Exception) { rawPath }
-                    }
+                EpubManifestParser.extractOpfPathFromContainer(containerXml)
             }
         }
         if (!fromContainer.isNullOrBlank()) return fromContainer
@@ -1795,51 +1365,8 @@ class EpubFormatReader(
         rawOpf: String,
         existingNcxId: String? = null
     ): Triple<Map<String, String>, List<String>, String?> {
-        val manifest = linkedMapOf<String, String>()
-        val spine = mutableListOf<String>()
-        var ncxId = existingNcxId
-
-        val itemRegex = Regex("""<item\b([^>]*)/?>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-        val itemRefRegex = Regex("""<itemref\b([^>]*)/?>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-        val spineRegex = Regex("""<spine\b([^>]*)>""", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-
-        fun attrValue(attrs: String, name: String): String? =
-            Regex("""\b$name\s*=\s*["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-                .find(attrs)
-                ?.groupValues
-                ?.getOrNull(1)
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-
-        spineRegex.find(rawOpf)?.groupValues?.getOrNull(1)?.let { attrs ->
-            ncxId = ncxId ?: attrValue(attrs, "toc")
-        }
-
-        itemRegex.findAll(rawOpf).forEach { match ->
-            val attrs = match.groupValues[1]
-            val id = attrValue(attrs, "id") ?: return@forEach
-            val href = attrValue(attrs, "href") ?: return@forEach
-            manifest[id] = href
-            val mediaType = attrValue(attrs, "media-type").orEmpty()
-            val properties = attrValue(attrs, "properties").orEmpty()
-            if (ncxId == null && mediaType.equals("application/x-dtbncx+xml", ignoreCase = true)) {
-                ncxId = id
-            }
-            if (ncxId == null && properties.contains("nav", ignoreCase = true)) {
-                ncxId = id
-            }
-        }
-
-        itemRefRegex.findAll(rawOpf).forEach { match ->
-            val attrs = match.groupValues[1]
-            val idRef = attrValue(attrs, "idref") ?: return@forEach
-            val linear = attrValue(attrs, "linear").orEmpty()
-            if (!linear.equals("no", ignoreCase = true)) {
-                spine += idRef
-            }
-        }
-
-        return Triple(manifest, spine, ncxId)
+        val result = EpubManifestParser.parseOpfRegex(rawOpf, existingNcxId)
+        return Triple(result.manifest, result.spine, result.ncxId)
     }
 
     /**
@@ -1940,25 +1467,8 @@ class EpubFormatReader(
      * be filtered out of the chapter list. Common patterns from FB2EPUB and
      * other converters: FbAutId_*, #fn*, #note*, numeric-only titles, etc.
      */
-    private fun isFootnoteTocEntry(href: String, title: String): Boolean {
-        val lowerHref = href.lowercase()
-        // FB2EPUB footnote anchors
-        if (lowerHref.contains("fbautid_")) return true
-        // Common footnote ID patterns
-        if (lowerHref.contains("#fn") || lowerHref.contains("#footnote") ||
-            lowerHref.contains("#note") || lowerHref.contains("#endnote") ||
-            lowerHref.contains("#rearnote") || lowerHref.contains("#noteref")) return true
-        // fbanchor:// scheme
-        if (lowerHref.startsWith("fbanchor://") || lowerHref.startsWith("fbanchor:")) return true
-        // Pure numeric titles (1, 2, 3...) from footnote lists
-        if (title.matches(Regex("^\\d{1,4}$"))) return true
-        // Known footnote section names
-        val lowerTitle = title.lowercase().trim()
-        if (lowerTitle in setOf("notes", "note", "footnotes", "endnotes", "endnote",
-                "примечания", "примечание", "сноски", "сноска",
-                "annotations", "annotation")) return true
-        return false
-    }
+    private fun isFootnoteTocEntry(href: String, title: String): Boolean =
+        EpubFootnoteResolver.isFootnoteTocEntry(href, title)
 
     /**
      * Resolves an href (relative to [baseDir]) to the 0-based reader page index
@@ -2227,33 +1737,37 @@ class EpubFormatReader(
         return hasHeading && !hasBodyText
     }
 
-    private fun isTitleOnlySpinePage(zip: ZipFile, entry: String): Boolean {
-        if (isHeadingOnlySpinePage(zip, entry)) return true
-        val raw = readTextEntry(zip, entry) ?: return false
-        val document = Jsoup.parse(raw)
-        document.outputSettings(Document.OutputSettings().prettyPrint(false))
-        val body = document.body() ?: return false
-        val visibleText = body.text()
-            .replace('\u00A0', ' ')
-            .trim()
-        if (visibleText.length > 160) return false
-        if (body.select("img,svg,image,figure").isNotEmpty()) return false
-        val titleLike = CHAPTER_TITLE_RE.containsMatchIn(visibleText) ||
-            (visibleText.length <= 80 && body.select("p,div,h1,h2,h3,h4").size <= 2)
-        if (!titleLike) return false
-        return !body.select("p,li,blockquote,pre,td").any { element ->
-            val text = element.text().replace('\u00A0', ' ').trim()
-            text.isNotBlank() && text.length > 48 && !CHAPTER_TITLE_RE.containsMatchIn(text)
+    private fun isTitleOnlySpinePage(zip: ZipFile, entry: String): Boolean =
+        titleOnlySpinePageCache.getOrPut(entry) {
+            if (isHeadingOnlySpinePage(zip, entry)) return@getOrPut true
+            val raw = readTextEntry(zip, entry) ?: return@getOrPut false
+            val document = Jsoup.parse(raw)
+            document.outputSettings(Document.OutputSettings().prettyPrint(false))
+            val body = document.body() ?: return@getOrPut false
+            val visibleText = body.text()
+                .replace('\u00A0', ' ')
+                .trim()
+            if (visibleText.length > 160) return@getOrPut false
+            if (body.select("img,svg,image,figure").isNotEmpty()) return@getOrPut false
+            val titleLike = CHAPTER_TITLE_RE.containsMatchIn(visibleText) ||
+                (visibleText.length <= 80 && body.select("p,div,h1,h2,h3,h4").size <= 2)
+            if (!titleLike) return@getOrPut false
+            !body.select("p,li,blockquote,pre,td").any { element ->
+                val text = element.text().replace('\u00A0', ' ').trim()
+                text.isNotBlank() && text.length > 48 && !CHAPTER_TITLE_RE.containsMatchIn(text)
+            }
         }
-    }
 
-    private fun isNotesTitlePage(zip: ZipFile, entry: String): Boolean {
-        val raw = readTextEntry(zip, entry) ?: return false
-        return EpubFootnoteParser.hasNotesTitle(raw)
-    }
+    private fun isNotesTitlePage(zip: ZipFile, entry: String): Boolean =
+        notesTitlePageCache.getOrPut(entry) {
+            val raw = readTextEntry(zip, entry) ?: return@getOrPut false
+            EpubFootnoteParser.hasNotesTitle(raw)
+        }
 
     private fun isFootnotePage(zip: ZipFile, entry: String): Boolean =
-        extractFootnoteItems(zip, entry).isNotEmpty()
+        footnotePageCache.getOrPut(entry) {
+            extractFootnoteItems(zip, entry).isNotEmpty()
+        }
 
     private fun buildFootnoteMap(
         manifest: Map<String, String>,
@@ -2276,35 +1790,8 @@ class EpubFormatReader(
         return result
     }
 
-    private fun epubFootnoteLookupCandidates(anchorId: String): List<String> {
-        val raw = anchorId.trim()
-        if (raw.isBlank()) return emptyList()
-        val withoutScheme = raw
-            .removePrefix("noteref://")
-            .removePrefix("noteref:")
-            .removePrefix("fbanchor://")
-        val decoded = runCatching { URLDecoder.decode(withoutScheme, "UTF-8") }
-            .getOrDefault(withoutScheme)
-            .trim()
-        val fragment = decoded.substringAfter('#', decoded)
-            .substringAfterLast('/')
-            .trim()
-            .trimStart('#')
-        val fileAndFragment = decoded.trimStart('/')
-        return listOf(
-            raw,
-            decoded,
-            fileAndFragment,
-            fragment,
-            "#$fragment",
-            "fn$fragment",
-            "note$fragment",
-            "footnote$fragment",
-            "docx-footnote-$fragment"
-        ).map { it.trim() }
-            .filter { it.isNotEmpty() && it != "#" }
-            .distinct()
-    }
+    private fun epubFootnoteLookupCandidates(anchorId: String): List<String> =
+        EpubFootnoteResolver.lookupCandidates(anchorId)
 
     private fun extractFootnoteItems(zip: ZipFile, entry: String): List<EpubFootnoteItem> {
         val raw = readTextEntry(zip, entry) ?: return emptyList()
@@ -2519,8 +2006,10 @@ class EpubFormatReader(
         charsPerPage: Int
     ): Int {
         if (visibleCharCount <= charsPerPage) return 1
-        val exactChunkCount = partitionChunkBlocks(extractChunkBlocks(bodyHtml), charsPerPage).size
-        if (exactChunkCount > 0) return exactChunkCount
+        // COUNT chunks with the lightweight char-count estimator (Jsoup parse + tree walk, no HTML
+        // re-serialization). The exact DOM extraction (extractChunkBlocks → wrapInChunkAncestors →
+        // outerHtml per paragraph) is 2–18 s per large section and is only needed at render time in
+        // extractChunk — running it here per spine item made opening a book take ~70 s.
         val estimatedBlocks = extractEstimatedChunkBlocks(bodyHtml)
         val blockCounts = estimatedBlocks.flatMap { block ->
             if (block.canSplitOversized && block.visibleCharCount > charsPerPage) {
@@ -2563,7 +2052,7 @@ class EpubFormatReader(
         val bodyEnd = html.lastIndexOf("</body>", ignoreCase = true)
             .let { if (it < 0) html.length else it }
         val bodyOpen = bodyOpenMatch?.value ?: "<body>"
-        val bodyHtml = html.substring(bodyStart, bodyEnd)
+        val bodyHtml = html.substring(bodyStart, bodyEnd.coerceAtLeast(bodyStart))
         val blocks = extractChunkBlocks(bodyHtml)
         if (blocks.isEmpty()) return "${head}${bodyOpen}</body></html>"
         var chunkedBlocks = partitionChunkBlocks(blocks, CHARS_PER_PAGE)
@@ -2984,35 +2473,14 @@ class EpubFormatReader(
 
     private fun detectCharset(bytes: ByteArray): Charset = detectEpubTextCharset(bytes)
 
-    private fun findHeader(zip: ZipFile, entry: String): FileHeader? {
-        zip.getFileHeader(entry)?.let { return it }
-        // Fallback: case-insensitive match by filename only.
-        // Some EPUBs store "Image.JPG" in the ZIP but reference "image.jpg" in the OPF.
-        val name = entry.substringAfterLast('/').lowercase()
-        return zip.fileHeaders.find { it.fileName.substringAfterLast('/').lowercase() == name }
-    }
+    private fun findHeader(zip: ZipFile, entry: String): FileHeader? =
+        EpubArchiveAccess.findHeader(zip, entry)
 
-    private fun epubMimeTypeFor(extension: String): String = when (extension) {
-        "jpg", "jpeg" -> "image/jpeg"
-        "png" -> "image/png"
-        "gif" -> "image/gif"
-        "webp" -> "image/webp"
-        "svg" -> "image/svg+xml"
-        "css" -> "text/css"
-        "htm", "html", "xhtml" -> "text/html"
-        "ttf" -> "font/ttf"
-        "otf" -> "font/otf"
-        "woff" -> "font/woff"
-        "woff2" -> "font/woff2"
-        "js" -> "application/javascript"
-        "xml", "ncx" -> "application/xml"
-        else -> "application/octet-stream"
-    }
+    private fun epubMimeTypeFor(extension: String): String =
+        EpubArchiveAccess.mimeTypeFor(extension)
 
-    private fun epubTextEncodingFor(extension: String): String? = when (extension) {
-        "css", "htm", "html", "xhtml", "xml", "ncx", "js" -> "UTF-8"
-        else -> null
-    }
+    private fun epubTextEncodingFor(extension: String): String? =
+        EpubArchiveAccess.textEncodingFor(extension)
 
     private fun ensureReadableZipPath(rawPath: String): String? {
         val normalized = rawPath.removePrefix("file://")
@@ -3104,13 +2572,5 @@ class EpubFormatReader(
         return cacheFile
     }
 
-    private fun normalizePath(p: String): String {
-        val stack = ArrayDeque<String>()
-        for (part in p.split('/')) when (part) {
-            ".." -> if (stack.isNotEmpty()) stack.removeLast()
-            ".", "" -> {}
-            else -> stack.addLast(part)
-        }
-        return stack.joinToString("/")
-    }
+    private fun normalizePath(p: String): String = EpubArchiveAccess.normalizePath(p)
 }

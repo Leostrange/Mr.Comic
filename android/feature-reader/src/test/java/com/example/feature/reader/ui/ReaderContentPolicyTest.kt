@@ -117,7 +117,62 @@ class ReaderContentPolicyTest {
     }
 
     @Test
-    fun epubUsesJsPaginationOnlyInTextPageMode() {
+    fun graphicFormatsNeverRouteToTextEvenWithHtmlFlag() {
+        // Graphic formats must NEVER enter TEXT containers, even if the reader
+        // produces HTML fallback content. This is the strict container contract.
+        listOf(ComicFormat.CBZ, ComicFormat.CBR, ComicFormat.PDF, ComicFormat.DJVU).forEach { format ->
+            listOf(ReadingMode.PAGE_LTR, ReadingMode.PAGE_RTL, ReadingMode.WEBTOON).forEach { mode ->
+                val result = resolveReaderContainerKind(format, mode, readerRendersHtmlContent = true)
+                val expected = if (mode == ReadingMode.WEBTOON)
+                    ReaderContainerKind.RASTER_WEBTOON else ReaderContainerKind.RASTER_PAGE
+                assertEquals(
+                    "Graphic format $format with mode=$mode must stay RASTER, got $result",
+                    expected,
+                    result
+                )
+            }
+        }
+    }
+
+    @Test
+    fun archiveWithTextContentRoutesToText() {
+        // ZIP containing EPUB/MOBI/etc → readerRendersHtmlContent=true → TEXT
+        listOf(ComicFormat.ZIP, ComicFormat.RAR, ComicFormat.SEVENZ, ComicFormat.TAR).forEach { format ->
+            assertEquals(
+                "Archive $format with HTML content must route to TEXT_PAGE",
+                ReaderContainerKind.TEXT_PAGE,
+                resolveReaderContainerKind(format, ReadingMode.PAGE_LTR, readerRendersHtmlContent = true)
+            )
+            assertEquals(
+                "Archive $format with HTML content must route to TEXT_WEBTOON",
+                ReaderContainerKind.TEXT_WEBTOON,
+                resolveReaderContainerKind(format, ReadingMode.WEBTOON, readerRendersHtmlContent = true)
+            )
+        }
+    }
+
+    @Test
+    fun archiveWithImageContentRoutesToRaster() {
+        // ZIP containing images (no text reader) → readerRendersHtmlContent=false → RASTER
+        listOf(ComicFormat.ZIP, ComicFormat.RAR, ComicFormat.SEVENZ, ComicFormat.TAR).forEach { format ->
+            assertEquals(
+                "Archive $format without HTML content must route to RASTER_PAGE",
+                ReaderContainerKind.RASTER_PAGE,
+                resolveReaderContainerKind(format, ReadingMode.PAGE_LTR, readerRendersHtmlContent = false)
+            )
+            assertEquals(
+                "Archive $format without HTML content must route to RASTER_WEBTOON",
+                ReaderContainerKind.RASTER_WEBTOON,
+                resolveReaderContainerKind(format, ReadingMode.WEBTOON, readerRendersHtmlContent = false)
+            )
+        }
+    }
+
+    @Test
+    fun allTextFormatsUseWebViewJsPagination() {
+        // All text formats (EPUB, TXT, FB2, etc.) now use WebView JS pagination.
+        // The Kotlin char-split paginator is retired in favour of pixel-precise
+        // TreeWalker + getClientRects() page breaks inside the WebView.
         assertEquals(
             false,
             shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.EPUB)
@@ -131,8 +186,53 @@ class ReaderContentPolicyTest {
             shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.UNKNOWN)
         )
         assertEquals(
-            true,
+            false,
             shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.TXT)
+        )
+        assertEquals(
+            false,
+            shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.FB2)
+        )
+        assertEquals(
+            false,
+            shouldUseKotlinTextPagePagination(ReaderContainerKind.TEXT_PAGE, ComicFormat.DOCX)
+        )
+        // Non-text containers should also return false.
+        assertEquals(
+            false,
+            shouldUseKotlinTextPagePagination(ReaderContainerKind.RASTER_PAGE, ComicFormat.TXT)
+        )
+    }
+
+    @Test
+    fun heavyTextFormatsDeferReaderPageCount() {
+        listOf(ComicFormat.TXT, ComicFormat.MOBI, ComicFormat.AZW3, ComicFormat.DOCX, ComicFormat.ODT).forEach { format ->
+            assertEquals(
+                "format=$format",
+                true,
+                shouldDeferReaderPageCount(
+                    readerRendersHtmlContent = true,
+                    contentFormat = format
+                )
+            )
+        }
+    }
+
+    @Test
+    fun reflowableEpubDefersReaderPageCountUntilAfterFirstPage() {
+        assertEquals(
+            true,
+            shouldDeferReaderPageCount(
+                readerRendersHtmlContent = true,
+                contentFormat = ComicFormat.EPUB
+            )
+        )
+        assertEquals(
+            false,
+            shouldDeferReaderPageCount(
+                readerRendersHtmlContent = false,
+                contentFormat = ComicFormat.ZIP
+            )
         )
     }
 

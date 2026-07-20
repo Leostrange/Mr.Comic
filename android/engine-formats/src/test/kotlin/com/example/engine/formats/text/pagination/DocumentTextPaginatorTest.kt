@@ -1,5 +1,7 @@
 package com.example.engine.formats.text.pagination
 
+import com.example.engine.formats.text.TextDocumentSection
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -14,7 +16,7 @@ class DocumentTextPaginatorTest {
 
     @Test
     fun paginateMarkupProducesPagesForEachSection() {
-        val result = kotlinx.coroutines.runBlocking {
+        val result = runBlocking {
             paginator.paginateMarkup(
                 markup = """
                     <h1>One</h1><p>${"word ".repeat(80)}</p>
@@ -33,9 +35,44 @@ class DocumentTextPaginatorTest {
     @Test
     fun paginatePlainTextIsDeterministic() {
         val text = "Chapter A\n\n${"Paragraph. ".repeat(40)}\n\nChapter B\n\nTail."
-        val first = kotlinx.coroutines.runBlocking { paginator.paginatePlainText(text, constraints) }
-        val second = kotlinx.coroutines.runBlocking { paginator.paginatePlainText(text, constraints) }
+        val first = runBlocking { paginator.paginatePlainText(text, constraints) }
+        val second = runBlocking { paginator.paginatePlainText(text, constraints) }
         assertEquals(first.pages.size, second.pages.size)
         assertEquals(first.pages.map { it.html }, second.pages.map { it.html })
+    }
+
+    @Test
+    fun shortTitleSectionIsRepaginatedWithFollowingSection() = runBlocking {
+        val requestedMarkup = mutableListOf<String>()
+        val paginator = DocumentTextPaginator(
+            sectionPaginator = object : TextPaginator {
+                override suspend fun paginate(
+                    sectionHtml: String,
+                    constraints: TextPaginationConstraints
+                ): TextPaginationResult {
+                    requestedMarkup += sectionHtml
+                    return TextPaginationResult(
+                        listOf(TextPaginationSubPage(html = sectionHtml, index = 0))
+                    )
+                }
+            }
+        )
+        val result = paginator.paginateSections(
+            sections = listOf(
+                TextDocumentSection(index = 0, html = "<p>Previous page text.</p>"),
+                TextDocumentSection(index = 1, html = "<h1>ATLANTIDA</h1>"),
+                TextDocumentSection(
+                    index = 2,
+                    html = "<p>${"First paragraph of the chapter. ".repeat(20)}</p>"
+                )
+            ),
+            constraints = TextPaginationConstraints(720, 1200)
+        )
+
+        assertEquals(2, result.pages.size)
+        assertEquals("<p>Previous page text.</p>", result.pages[0].html)
+        val mergedChapter = "<h1>ATLANTIDA</h1><p>${"First paragraph of the chapter. ".repeat(20)}</p>"
+        assertEquals(mergedChapter, result.pages[1].html)
+        assertTrue(requestedMarkup.contains(mergedChapter))
     }
 }

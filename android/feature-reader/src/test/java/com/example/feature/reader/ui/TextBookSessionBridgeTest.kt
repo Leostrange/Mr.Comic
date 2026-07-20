@@ -3,6 +3,8 @@ package com.example.feature.reader.ui
 import com.example.core.model.BookTocItem
 import com.example.core.model.ReaderLocator
 import com.example.engine.formats.base.FormatReader
+import com.example.engine.formats.text.ReflowableTextFormatReader
+import com.example.engine.formats.text.TextDocumentSection
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -30,5 +32,44 @@ class TextBookSessionBridgeTest {
         }
         assertEquals(1, entries.single().pageIndex)
         assertEquals("Chapter 2", entries.single().title)
+    }
+
+    /**
+     * Regression (P1-6): for a reflowable reader the TOC must resolve to the SECTION index via href,
+     * not to the locator's legacy global pageIndex (a different index space). A stray pageIndex must
+     * not short-circuit and send the jump to the wrong chapter.
+     */
+    @Test
+    fun reflowableTocResolvesHrefToSectionIndexNotLegacyPageIndex() {
+        val sections = listOf(
+            TextDocumentSection(index = 0, id = "OEBPS/cover.xhtml", html = ""),
+            TextDocumentSection(index = 1, id = "OEBPS/chapter1.xhtml", html = ""),
+            TextDocumentSection(index = 2, id = "OEBPS/chapter2.xhtml", html = "")
+        )
+        val reader = ReflowableTestReader(sections)
+        val entries = kotlinx.coroutines.runBlocking {
+            TextBookSessionBridge.mapBookTocToTocEntries(
+                items = listOf(
+                    BookTocItem(
+                        title = "Chapter 2",
+                        // Legacy pageIndex 99 is in a different (page) index space; href wins.
+                        locator = ReaderLocator(href = "OEBPS/chapter2.xhtml", pageIndex = 99)
+                    )
+                ),
+                reader = reader
+            )
+        }
+        assertEquals(2, entries.single().pageIndex)
+        assertEquals("Chapter 2", entries.single().title)
+    }
+
+    private class ReflowableTestReader(
+        private val sections: List<TextDocumentSection>
+    ) : FormatReader, ReflowableTextFormatReader {
+        override suspend fun getPageCount(): Int = sections.size
+        override suspend fun getPage(index: Int) = null
+        override fun resolveHrefToPage(href: String): Int? = null
+        override fun close() = Unit
+        override suspend fun getTextDocumentSections(): List<TextDocumentSection> = sections
     }
 }

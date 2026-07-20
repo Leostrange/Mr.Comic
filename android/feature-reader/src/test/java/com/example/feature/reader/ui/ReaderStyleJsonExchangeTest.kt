@@ -1,6 +1,9 @@
 package com.example.feature.reader.ui
 
 import com.example.core.ui.theme.ReadingPreset
+import com.example.feature.reader.domain.preset.ReaderStylePresetSlot
+import com.example.feature.reader.domain.preset.ReaderStylePresetSnapshot
+import com.example.feature.reader.domain.preset.parseReaderStylePreset
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

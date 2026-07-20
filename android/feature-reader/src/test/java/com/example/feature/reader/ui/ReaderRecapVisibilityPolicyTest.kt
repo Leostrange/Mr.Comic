@@ -1,5 +1,7 @@
 package com.example.feature.reader.ui
 
+import com.example.feature.reader.domain.session.ReaderClosedSessionMetrics
+import com.example.feature.reader.domain.session.shouldRecordReaderSessionMinutes
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

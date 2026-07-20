@@ -2,6 +2,13 @@ package com.example.feature.reader.ui
 
 import com.example.core.domain.analytics.DailyReadingGoalState
 import com.example.core.domain.analytics.ReadingAnalyticsEvent
+import com.example.core.model.ComicFormat
+import com.example.feature.reader.domain.enums.ReaderNavigationProgressSource
+import com.example.feature.reader.domain.session.ReaderSessionCoordinator
+import com.example.feature.reader.domain.session.ReaderSessionSnapshot
+import com.example.feature.reader.domain.session.ReaderClosedSessionMetrics
+import com.example.feature.reader.domain.session.buildReaderClosedAnalyticsEvent
+import com.example.feature.reader.domain.session.shouldRecordReaderSessionMinutes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -10,6 +17,34 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderProgressPolicyTest {
+
+    @Test
+    fun pageForPersistence_usesEpubVisualPageOnlyForEpub() {
+        assertEquals(
+            37,
+            ReaderProgressPolicy.pageForPersistence(
+                format = ComicFormat.EPUB,
+                readerPage = 2,
+                epubAbsolutePage = 37
+            )
+        )
+        assertEquals(
+            12,
+            ReaderProgressPolicy.pageForPersistence(
+                format = ComicFormat.CBZ,
+                readerPage = 12,
+                epubAbsolutePage = 0
+            )
+        )
+        assertEquals(
+            8,
+            ReaderProgressPolicy.pageForPersistence(
+                format = ComicFormat.TXT,
+                readerPage = 8,
+                epubAbsolutePage = 0
+            )
+        )
+    }
 
     private fun resolveReaderClosedPayloadForScenario(
         countsTowardReadingProgress: Boolean,
@@ -28,15 +63,24 @@ class ReaderProgressPolicyTest {
             sessionManualPageTurns = sessionManualPageTurns,
             goalProgressDelta = goalProgressDelta
         )
-        return resolveReaderClosedSessionMetrics(
-            sessionComicId = "comic-1",
+        val coordinator = ReaderSessionCoordinator().apply {
+            start(ReaderSessionSnapshot(
+                comicId = "comic-1",
+                format = "EPUB",
+                totalPages = 100,
+                startPage = startPage,
+                readingMode = "PAGE_LTR",
+                startedAtMillis = 0L,
+                resumedFromProgress = false
+            ))
+            repeat(sessionManualPageTurns) { recordManualPageTurn() }
+            repeat(chapterTransitions) { recordChapterTransition() }
+        }
+        return coordinator.close(
             currentComicId = "comic-1",
             currentComicCompleted = titlePolicy.shouldComplete,
-            currentPage = currentPage,
-            startPage = startPage,
-            manualPageTurns = sessionManualPageTurns,
-            chapterTransitions = chapterTransitions
-        )
+            currentPage = currentPage
+        )!!.metrics
     }
 
     @Test
@@ -267,8 +311,8 @@ class ReaderProgressPolicyTest {
     }
 
     @Test
-    fun resolveReaderClosedSessionMetrics_keepsCurrentPageAndCompletionForActiveComic() {
-        val metrics = resolveReaderClosedSessionMetrics(
+    fun readerSessionCoordinator_keepsCurrentPageAndCompletionForActiveComic() {
+        val metrics = closeSession(
             sessionComicId = "comic-1",
             currentComicId = "comic-1",
             currentComicCompleted = true,
@@ -285,8 +329,8 @@ class ReaderProgressPolicyTest {
     }
 
     @Test
-    fun resolveReaderClosedSessionMetrics_fallsBackWhenSessionComicIsGone() {
-        val metrics = resolveReaderClosedSessionMetrics(
+    fun readerSessionCoordinator_fallsBackWhenSessionComicIsGone() {
+        val metrics = closeSession(
             sessionComicId = "comic-1",
             currentComicId = null,
             currentComicCompleted = false,
@@ -300,6 +344,31 @@ class ReaderProgressPolicyTest {
         assertFalse(metrics.completed)
         assertEquals(0, metrics.manualPageTurns)
         assertEquals(0, metrics.chapterTransitions)
+    }
+
+    private fun closeSession(
+        sessionComicId: String,
+        currentComicId: String?,
+        currentComicCompleted: Boolean,
+        currentPage: Int,
+        startPage: Int,
+        manualPageTurns: Int,
+        chapterTransitions: Int
+    ): ReaderClosedSessionMetrics {
+        val coordinator = ReaderSessionCoordinator().apply {
+            start(ReaderSessionSnapshot(
+                comicId = sessionComicId,
+                format = "EPUB",
+                totalPages = 100,
+                startPage = startPage,
+                readingMode = "PAGE_LTR",
+                startedAtMillis = 0L,
+                resumedFromProgress = false
+            ))
+            repeat(manualPageTurns) { recordManualPageTurn() }
+            repeat(chapterTransitions) { recordChapterTransition() }
+        }
+        return coordinator.close(currentComicId, currentComicCompleted, currentPage)!!.metrics
     }
 
     @Test

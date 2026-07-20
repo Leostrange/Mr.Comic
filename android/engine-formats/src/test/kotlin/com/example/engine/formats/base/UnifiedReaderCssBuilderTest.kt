@@ -15,6 +15,11 @@ class UnifiedReaderCssBuilderTest {
         assertTrue("line-height: 1.6", css.contains("line-height: 1.6"))
         assertTrue("text-align: justify", css.contains("text-align: justify"))
         assertTrue("box-sizing: border-box", css.contains("box-sizing: border-box"))
+        assertTrue(
+            "ordinary reader text inherits selected font",
+            css.contains("""body:not([data-mrcomic-preserve-layout="true"]) *""") &&
+                css.contains("font-family: inherit !important")
+        )
         assertFalse("no user-select: none on body", css.contains("user-select: none"))
     }
 
@@ -131,11 +136,21 @@ class UnifiedReaderCssBuilderTest {
         val css = buildReaderDocumentCss(includeHyphens = false)
         assertFalse("no hyphens", css.contains("hyphens: auto"))
         assertFalse("no webkit-hyphens", css.contains("-webkit-hyphens: auto"))
+        assertTrue("manual hyphens", css.contains("hyphens: manual"))
+        assertTrue("manual webkit hyphens", css.contains("-webkit-hyphens: manual"))
     }
 
     @Test
-    fun buildReaderDocumentCss_hyphensAutoByDefault() {
+    fun buildReaderDocumentCss_hyphensManualByDefault() {
         val css = buildReaderDocumentCss()
+        assertTrue("hyphens: manual", css.contains("hyphens: manual"))
+        assertTrue("-webkit-hyphens: manual", css.contains("-webkit-hyphens: manual"))
+        assertFalse("no hyphens auto by default", css.contains("hyphens: auto"))
+    }
+
+    @Test
+    fun buildReaderDocumentCss_hyphensAutoWhenRequested() {
+        val css = buildReaderDocumentCss(includeHyphens = true)
         assertTrue("hyphens: auto", css.contains("hyphens: auto"))
         assertTrue("-webkit-hyphens: auto", css.contains("-webkit-hyphens: auto"))
     }

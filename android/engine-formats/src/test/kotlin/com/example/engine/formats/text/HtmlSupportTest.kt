@@ -1,10 +1,32 @@
 package com.example.engine.formats.text
 
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 class HtmlSupportTest {
+
+    @Test
+    fun extractsSemanticFootnoteBodiesWithoutRemovingReferences() {
+        val extraction = extractReaderHtmlFootnotes(
+            """
+            <html><body>
+              <p>Visible text<a href="#fn-1" epub:type="noteref">1</a>.</p>
+              <aside id="fn-1" epub:type="footnote">1 Footnote body.</aside>
+              <section id="end-2" role="doc-endnote">2 Endnote body.</section>
+            </body></html>
+            """.trimIndent()
+        )
+
+        assertTrue(extraction.contentHtml.contains("Visible text"))
+        assertTrue(extraction.contentHtml.contains("href=\"#fn-1\""))
+        assertFalse(extraction.contentHtml.contains("Footnote body."))
+        assertFalse(extraction.contentHtml.contains("Endnote body."))
+        assertEquals("1 Footnote body.", extraction.footnoteMap["fn-1"])
+        assertEquals("2 Endnote body.", extraction.footnoteMap["end-2"])
+    }
 
     @Test
     fun rendersUtf8HtmlCorpusSample() {
@@ -61,7 +83,14 @@ class HtmlSupportTest {
 
         assertTrue(html.contains("font-family: Georgia, \"Times New Roman\", serif;"))
         assertTrue(html.contains("text-indent: 1.5em;"))
-        assertTrue(!html.contains("data-mrcomic-preserve-layout", ignoreCase = true))
+        // The body tag must NOT carry the preserve-layout attribute. The CSS uses
+        // :not([data-mrcomic-preserve-layout="true"]) selectors, so the string does
+        // appear in the stylesheet — check only the <body> tag itself.
+        val bodyTag = Regex("<body[^>]*>", RegexOption.IGNORE_CASE).find(html)?.value ?: ""
+        assertTrue(
+            "Simple HTML must not have preserve-layout body attribute, got: $bodyTag",
+            !bodyTag.contains("data-mrcomic-preserve-layout", ignoreCase = true)
+        )
     }
 
     @Test
