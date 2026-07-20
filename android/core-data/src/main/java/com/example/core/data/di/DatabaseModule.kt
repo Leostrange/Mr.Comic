@@ -8,6 +8,8 @@ import com.example.core.data.db.AudiobookDao
 import com.example.core.data.db.EpubManifestCacheDao
 import com.example.core.data.db.EpubStructureCacheDao
 import com.example.core.data.db.QuoteDao
+import com.example.core.data.db.TextHighlightDao
+import com.example.core.data.db.TranslationCacheDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -24,13 +26,19 @@ object DatabaseModule {
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "comics_db")
             .addMigrations(
-                AppDatabaseMigrations.MIGRATION_5_6,
-                AppDatabaseMigrations.MIGRATION_4_5,
                 AppDatabaseMigrations.MIGRATION_1_2,
                 AppDatabaseMigrations.MIGRATION_2_3,
-                AppDatabaseMigrations.MIGRATION_3_4
+                AppDatabaseMigrations.MIGRATION_3_4,
+                AppDatabaseMigrations.MIGRATION_4_5,
+                AppDatabaseMigrations.MIGRATION_5_6,
+                AppDatabaseMigrations.MIGRATION_6_7,
+                AppDatabaseMigrations.MIGRATION_7_8,
+                AppDatabaseMigrations.MIGRATION_8_9
             )
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            // Never silently drop the user's library on a forward-migration gap (a missing
+            // migration is a bug to fix, not data to wipe). Destructive recovery is kept only for
+            // genuine downgrades, which SQLite cannot roll back.
+            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
 
     @Provides
@@ -48,4 +56,12 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideEpubManifestCacheDao(db: AppDatabase): EpubManifestCacheDao = db.epubManifestCacheDao()
+
+    @Provides
+    @Singleton
+    fun provideTextHighlightDao(db: AppDatabase): TextHighlightDao = db.textHighlightDao()
+
+    @Provides
+    @Singleton
+    fun provideTranslationCacheDao(db: AppDatabase): TranslationCacheDao = db.translationCacheDao()
 }

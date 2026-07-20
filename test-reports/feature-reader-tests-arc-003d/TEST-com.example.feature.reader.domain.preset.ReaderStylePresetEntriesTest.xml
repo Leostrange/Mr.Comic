@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.domain.preset.ReaderStylePresetEntriesTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-18T15:06:22.861Z" hostname="LEOSTRANGE" time="0.092">
+  <properties/>
+  <testcase name="entryAtSlot_clampsLegacySlotRange" classname="com.example.feature.reader.domain.preset.ReaderStylePresetEntriesTest" time="0.042"/>
+  <testcase name="toLegacySlots_limitsSerializationToFirstThreeEntries" classname="com.example.feature.reader.domain.preset.ReaderStylePresetEntriesTest" time="0.037"/>
+  <testcase name="prepend_normalizesDuplicateIdsAndKeepsNewEntry" classname="com.example.feature.reader.domain.preset.ReaderStylePresetEntriesTest" time="0.0"/>
+  <testcase name="mutateOperations_preserveOrderAndNormalizeName" classname="com.example.feature.reader.domain.preset.ReaderStylePresetEntriesTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

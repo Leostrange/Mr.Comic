@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.pagination.TextImmutabilityTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-07-19T05:34:12.752Z" hostname="LEOSTRANGE" time="0.038">
+  <properties/>
+  <testcase name="htmlNumericEntities_decodedCorrectly" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <testcase name="htmlNamedEntities_preserved" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <testcase name="entityNotSplitByBlockBoundary" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.006"/>
+  <testcase name="zeroWidthSpace_preservedInHtml" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <testcase name="cyrillicText_preservedThroughPagination" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <testcase name="wordsNotSplitAtArbitraryPoints" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <testcase name="nonBreakingSpace_preservedInHtml" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.004"/>
+  <testcase name="specialPunctuation_preserved" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.004"/>
+  <testcase name="softHyphen_preservedInHtml" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <testcase name="mixedScript_preserved" classname="com.example.engine.formats.text.pagination.TextImmutabilityTest" time="0.003"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

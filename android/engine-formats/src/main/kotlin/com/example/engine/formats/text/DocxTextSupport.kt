@@ -68,13 +68,7 @@ internal object DocxTextSupport {
         document.outputSettings(Document.OutputSettings().prettyPrint(false))
         val body = document.getElementsByTag("w:body").firstOrNull()
 
-        val blocks = body?.children()?.mapNotNull { child ->
-            when (child.tagName()) {
-                "w:p" -> renderDocxParagraph(child, archive)
-                "w:tbl" -> renderDocxTable(child, archive)
-                else -> null
-            }
-        }.orEmpty()
+        val blocks = body?.let { renderDocxBlockChildren(it, archive) }.orEmpty()
 
         val safeBlocks = blocks.ifEmpty {
             listOf("<p>${escapeDocxHtml(xmlTextToPlain(xml))}</p>")

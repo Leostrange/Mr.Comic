@@ -1,0 +1,82 @@
+
+07-18 05:18:19.043 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=0 chapter=Reader semantic footnote fixture
+07-18 05:18:19.045 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:19.099 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:19.162 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:19.224 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:19.677 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:24.004 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:24.007 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:24.047 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:24.142 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:24.217 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=1 chapter=Semantic footnote fixture
+07-18 05:18:24.237 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:24.326 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:24.362 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:24.803 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=777
+07-18 05:18:26.186 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:26.237 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:30.273 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:30.279 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:30.322 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:30.415 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=0 chapter=Reader semantic footnote fixture
+07-18 05:18:30.420 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:30.871 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:30.894 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:30.899 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:31.051 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:33.482 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:33.486 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:33.542 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:18:33.667 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=1 chapter=Semantic footnote fixture
+07-18 05:18:33.738 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:34.174 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:34.259 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:34.260 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:18:34.377 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:20:04.161 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:20:04.220 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=0 chapter=Reader semantic footnote fixture
+07-18 05:20:04.222 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:20:04.302 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:20:04.361 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:20:04.539 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:20:04.603 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:20:04.609 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:20:05.025 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:38.550 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:21:38.552 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:21:38.567 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:21:38.653 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=1 chapter=Semantic footnote fixture
+07-18 05:21:38.673 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:38.859 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:38.876 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:38.890 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:39.333 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:39.675 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:21:39.679 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:21:39.705 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:21:39.790 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=0 chapter=Reader semantic footnote fixture
+07-18 05:21:39.795 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:39.951 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:39.978 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:40.014 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:21:40.440 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:35.509 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:25:35.512 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:25:35.530 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:25:35.645 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=1 chapter=Semantic footnote fixture
+07-18 05:25:35.660 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:35.907 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:35.932 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:35.934 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:36.311 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:38.284 D/ReaderHtmlView( 4405): WebView page started: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:25:38.358 D/ReadingAnalytics( 4405): chapter_reached comicId=5264745e-70d9-4f75-bb20-54d237530179 page=0 chapter=Reader semantic footnote fixture
+07-18 05:25:38.360 D/ReaderHtmlView( 4405): WebView page finished: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:25:38.388 D/ReaderHtmlView( 4405): WebView page commit visible: https://appassets.androidplatform.net/reader/content/reader_smoke.html
+07-18 05:25:38.467 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:38.676 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:38.699 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:38.708 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+07-18 05:25:39.154 D/ReaderHtmlView( 4405): Paged layout ready: page=1/1 clip=914 usable=432
+

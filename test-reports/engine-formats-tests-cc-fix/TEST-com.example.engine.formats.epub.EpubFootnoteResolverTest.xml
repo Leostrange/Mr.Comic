@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.epub.EpubFootnoteResolverTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-07-20T03:39:06.541Z" hostname="LEOSTRANGE" time="0.008">
+  <properties/>
+  <testcase name="lookupCandidates_urlEncoded" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <testcase name="isFootnoteTocEntry_normalChapterReturnsFalse" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <testcase name="lookupCandidates_standardFragment" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <testcase name="lookupCandidates_blankReturnsEmpty" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.0"/>
+  <testcase name="lookupCandidates_relativePath" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.0"/>
+  <testcase name="lookupCandidates_noDuplicates" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <testcase name="isFootnoteTocEntry_fbanchorReturnsTrue" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.0"/>
+  <testcase name="lookupCandidates_noterefScheme" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <testcase name="isFootnoteTocEntry_numericTitleReturnsTrue" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.0"/>
+  <testcase name="isFootnoteTocEntry_fnHashReturnsTrue" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.0"/>
+  <testcase name="isFootnoteTocEntry_fbautidReturnsTrue" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <testcase name="isFootnoteTocEntry_notesTitleReturnsTrue" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.0"/>
+  <testcase name="lookupCandidates_fbanchorScheme" classname="com.example.engine.formats.epub.EpubFootnoteResolverTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

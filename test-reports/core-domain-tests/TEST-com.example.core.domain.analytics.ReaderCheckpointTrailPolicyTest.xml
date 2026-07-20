@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.core.domain.analytics.ReaderCheckpointTrailPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:02:06.018Z" hostname="LEOSTRANGE" time="0.017">
+  <properties/>
+  <testcase name="mergeCheckpointTrail_capsTrailToConfiguredLimit" classname="com.example.core.domain.analytics.ReaderCheckpointTrailPolicyTest" time="0.002"/>
+  <testcase name="mergeCheckpointTrail_movesDuplicateCheckpointToFront" classname="com.example.core.domain.analytics.ReaderCheckpointTrailPolicyTest" time="0.0"/>
+  <testcase name="removeComicCheckpoints_dropsOnlyMatchingComic" classname="com.example.core.domain.analytics.ReaderCheckpointTrailPolicyTest" time="0.0"/>
+  <testcase name="pruneCheckpointTrail_keepsOnlyValidComicIds" classname="com.example.core.domain.analytics.ReaderCheckpointTrailPolicyTest" time="0.014"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

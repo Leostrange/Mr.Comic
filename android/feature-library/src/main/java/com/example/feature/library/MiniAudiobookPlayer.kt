@@ -157,8 +157,7 @@ fun MiniAudiobookPlayer(
 
                     // Stop/close button
                     MrComicIconButton(onClick = {
-                        viewModel.pause()
-                        viewModel.saveProgress()
+                        viewModel.dismiss()
                     }) {
                         Icon(
                             imageVector = Icons.Default.Close,

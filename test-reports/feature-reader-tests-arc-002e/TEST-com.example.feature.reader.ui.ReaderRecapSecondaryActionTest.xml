@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderRecapSecondaryActionTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-18T11:06:01.612Z" hostname="LEOSTRANGE" time="0.0">
+  <properties/>
+  <testcase name="shouldEmitChapterProgressRecap_skipsFinalPageAndKeepsMidBookRecaps" classname="com.example.feature.reader.ui.ReaderRecapSecondaryActionTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

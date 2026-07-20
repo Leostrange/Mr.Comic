@@ -71,7 +71,7 @@ fun readerTextWebtoonBoundaryNavigationStep(
     }
 }
 
-fun readerHtmlSelectionActionsEnabled(pagedModeScrollLock: Boolean): Boolean = true
+fun readerHtmlSelectionActionsEnabled(pagedModeScrollLock: Boolean): Boolean = !pagedModeScrollLock
 
 fun readerHtmlReloadResetsScroll(pagedModeScrollLock: Boolean): Boolean = !pagedModeScrollLock
 
@@ -93,17 +93,15 @@ fun readerResolvedPagedCssViewportHeight(
     minimumHeight: Int = 320,
     fallbackHeight: Int = 640
 ): Int {
-    val actualViewportHeight = listOf(visualViewportHeight, windowInnerHeight, rootClientHeight)
-        .filter { it > 0 }
-        .minOrNull()
-        ?: 0
-    val resolved = when {
-        actualViewportHeight > 0 && nativeViewportHeight > 0 -> minOf(actualViewportHeight, nativeViewportHeight)
-        actualViewportHeight > 0 -> actualViewportHeight
-        nativeViewportHeight > 0 -> nativeViewportHeight
+    val fallbackViewportHeight = when {
         windowInnerHeight > 0 -> windowInnerHeight
         rootClientHeight > 0 -> rootClientHeight
+        visualViewportHeight > 0 -> visualViewportHeight
         else -> fallbackHeight
+    }
+    val resolved = when {
+        nativeViewportHeight > 0 -> nativeViewportHeight
+        else -> fallbackViewportHeight
     }
     return maxOf(minimumHeight, resolved)
 }

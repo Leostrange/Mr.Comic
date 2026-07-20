@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.TextTocSanitizerTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-19T05:04:00.844Z" hostname="LEOSTRANGE" time="0.009">
+  <properties/>
+  <testcase name="sanitizeDeduplicatesByTitleAndPage" classname="com.example.feature.reader.ui.TextTocSanitizerTest" time="0.005"/>
+  <testcase name="sanitizeCollapsesNotesSectionAndFootnoteChildren" classname="com.example.feature.reader.ui.TextTocSanitizerTest" time="0.003"/>
+  <testcase name="isReaderNotesTocTitleRecognizesRussianAndEnglish" classname="com.example.feature.reader.ui.TextTocSanitizerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -53,7 +53,8 @@ class FormatFactory @Inject constructor(
             ComicFormat.MOBI,
             ComicFormat.AZW3,
             ComicFormat.DOCX,
-            ComicFormat.ODT                  -> TextFormatReader(context, path, format)
+            ComicFormat.ODT,
+            ComicFormat.CHM                  -> TextFormatReader(context, path, format)
             ComicFormat.DJVU                 -> DjvuFormatReader(context, path, djvuBackend)
             ComicFormat.FOLDER               -> FolderFormatReader(context, path, deviceProfile, bitmapAllocator)
             else -> null

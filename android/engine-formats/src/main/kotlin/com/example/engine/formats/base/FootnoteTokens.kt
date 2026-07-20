@@ -38,7 +38,7 @@ internal object FootnoteTokens {
 
     /** Matches href values whose fragment looks like a footnote anchor. */
     val FOOTNOTE_HREF_REGEX: Regex = Regex(
-        "#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pagenote|annref|annotation|FbAutId_)",
+        "#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId_|docx-footnote)",
         RegexOption.IGNORE_CASE
     )
 
@@ -46,7 +46,7 @@ internal object FootnoteTokens {
 
     /** Matches class values that strongly indicate a footnote link. */
     val FOOTNOTE_CLASS_REGEX: Regex = Regex(
-        "(?:^|\\s)(?:fn|noteref|footnote-ref|fnt|backnote|supnote|footnote)(?:\\s|$)",
+        "(?:^|\\s)(?:fn|noteref|footnote-ref|fnt|backnote|supnote|text-fn|pagenote|annref|annotation|footnote|doc-noteref)(?:\\s|$)",
         RegexOption.IGNORE_CASE
     )
 
@@ -76,7 +76,9 @@ internal object FootnoteTokens {
         href: String,
         epubType: String,
         title: String,
-        text: String
+        text: String,
+        dataFootnoteId: String = "",
+        dataFootnote: String = ""
     ): Boolean {
         if (FOOTNOTE_CLASS_REGEX.containsMatchIn(cls)) return true
         if (EPUB_FOOTNOTE_ROLES.any { role.contains(it, ignoreCase = true) }) return true
@@ -86,6 +88,8 @@ internal object FootnoteTokens {
         if (NUMBER_REF_REGEX.matches(text.trim())) return true
         if (STAR_REF_REGEX.matches(text.trim())) return true
         if (title.isNotBlank() && href.contains('#')) return true
+        if (dataFootnoteId.isNotBlank()) return true
+        if (dataFootnote.isNotBlank()) return true
         return false
     }
 }

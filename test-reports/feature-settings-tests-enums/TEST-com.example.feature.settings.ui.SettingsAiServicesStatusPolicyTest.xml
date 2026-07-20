@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-19T22:55:35.343Z" hostname="LEOSTRANGE" time="0.071">
+  <properties/>
+  <testcase name="providers status reports network requirement for configured external route" classname="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" time="0.047"/>
+  <testcase name="auto transport reports unsupported pair when no machine route is available" classname="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" time="0.005"/>
+  <testcase name="offline transport reports missing model when pair is known and network exists" classname="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" time="0.001"/>
+  <testcase name="online transport reports ready when provider and network are available" classname="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" time="0.001"/>
+  <testcase name="providers status reports validation needed for malformed openrouter credentials" classname="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" time="0.004"/>
+  <testcase name="providers status reports not configured when no external route exists" classname="com.example.feature.settings.ui.SettingsAiServicesStatusPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

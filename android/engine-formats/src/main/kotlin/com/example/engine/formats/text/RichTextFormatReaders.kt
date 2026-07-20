@@ -155,13 +155,70 @@ internal class OdtFormatReader(
     override fun close() = Unit
 }
 
+internal class ChmFormatReader(
+    private val context: Context,
+    private val path: String
+) : FormatReader {
+
+    override fun rendersHtmlContent(): Boolean = true
+
+    override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
+        // CHM via chmlib — заглушка
+        1
+    }
+
+    override suspend fun getPage(index: Int): Bitmap? = null
+
+    override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
+        // TODO: Implement CHM parser
+        null
+    }
+
+    override suspend fun getMetadata(): Map<String, String> = mapOf(
+        "format" to ComicFormat.CHM.name,
+        "engine" to "chm-v1"
+    )
+
+    override fun getTableOfContents(): List<TocEntry> = emptyList()
+
+    override fun close() = Unit
+}
+
+internal class XpsFormatReader(
+    private val context: Context,
+    private val path: String
+) : FormatReader {
+
+    override fun rendersHtmlContent(): Boolean = false
+
+    override suspend fun getPageCount(): Int = withContext(Dispatchers.IO) {
+        // XPS via PdfRenderer — заглушка
+        1
+    }
+
+    override suspend fun getPage(index: Int): Bitmap? = null
+
+    override suspend fun getHtmlPage(index: Int): String? = null
+
+    override suspend fun getMetadata(): Map<String, String> = mapOf(
+        "format" to ComicFormat.XPS.name,
+        "engine" to "xps-v1"
+    )
+
+    override fun getTableOfContents(): List<TocEntry> = emptyList()
+
+    override fun close() = Unit
+}
+
 internal fun readRtfReflowableDocument(context: Context, path: String): ReflowableDocument {
     val rawBytes = readRichTextBytes(context, path)
         ?: return ReflowableDocumentBuilder.error("Unable to read file.")
     val rawRtf = rawBytes.toString(Charsets.ISO_8859_1)
 
-    // Fast path: modern HTML-block renderer.
-    val blocks = RtfTextSupport.renderHtmlBlocks(rawRtf)
+    // Fast path: modern HTML-block renderer with footnote extraction.
+    val renderResult = RtfTextSupport.renderHtmlBlocksWithFootnotes(rawRtf)
+    val blocks = renderResult.blocks
+    val footnoteMap = renderResult.footnoteMap
     val renderedText = if (blocks.isEmpty()) "" else
         Jsoup.parse(blocks.joinToString("\n")).text().replace(Regex("\\s+"), " ").trim()
 
@@ -174,7 +231,7 @@ internal fun readRtfReflowableDocument(context: Context, path: String): Reflowab
         !(isCp1251 && hasRtfMojibake(renderedText))
 
     if (fastPathOk) {
-        return reflowableDocumentFromHtmlBlocks(blocks)
+        return reflowableDocumentFromHtmlBlocks(blocks, footnoteMap)
     }
 
     // Fast path failed or looks suspicious.
@@ -201,7 +258,7 @@ internal fun readRtfReflowableDocument(context: Context, path: String): Reflowab
     } else if (blocks.isEmpty() || blocks.all { Jsoup.parse(it).text().isBlank() }) {
         ReflowableDocumentBuilder.error("Unable to extract readable text from RTF.")
     } else {
-        reflowableDocumentFromHtmlBlocks(blocks)
+        reflowableDocumentFromHtmlBlocks(blocks, footnoteMap)
     }
 }
 
@@ -231,9 +288,15 @@ internal fun readOdtReflowableDocument(context: Context, path: String): Reflowab
     return reflowableDocumentFromHtmlBlocks(blocks)
 }
 
-private fun reflowableDocumentFromHtmlBlocks(blocks: List<String>): ReflowableDocument {
+private fun reflowableDocumentFromHtmlBlocks(
+    blocks: List<String>,
+    footnoteMap: Map<String, String> = emptyMap()
+): ReflowableDocument {
     val sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(blocks)
-    return ReflowableDocument(pages = sections.map { it.html })
+    return ReflowableDocument(
+        pages = sections.map { it.html },
+        footnoteMap = footnoteMap
+    )
 }
 
 private fun reflowableDocumentFromPlainText(text: String): ReflowableDocument {
@@ -286,6 +349,9 @@ private fun richTextBaseUrl(path: String): String? {
 
 internal object RtfTextSupport {
     fun renderHtmlBlocks(raw: String): List<String> = RtfHtmlSupport.renderHtmlBlocks(raw)
+
+    fun renderHtmlBlocksWithFootnotes(raw: String): RtfHtmlSupport.RtfRenderResult =
+        RtfHtmlSupport.renderHtmlBlocksWithFootnotes(raw)
 
     fun extractPlainText(raw: String): String {
         val rendered = RtfHtmlSupport.extractPlainText(raw)

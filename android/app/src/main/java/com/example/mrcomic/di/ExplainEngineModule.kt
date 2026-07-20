@@ -6,6 +6,7 @@ import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
 import com.example.core.domain.translation.ExplainProviderSupplier
 import com.example.core.domain.translation.LlmExplainEngine
+import com.example.mrcomic.translation.LlmPoweredExplainEngine
 import com.example.mrcomic.translation.OpenRouterExplainEngine
 import dagger.Binds
 import dagger.Module
@@ -23,7 +24,7 @@ abstract class ExplainEngineModule {
     @Binds
     @Named("online_explain_engine")
     abstract fun bindOnlineExplainEngine(
-        impl: OpenRouterExplainEngine
+        impl: LlmPoweredExplainEngine
     ): LlmExplainEngine
 
     companion object {

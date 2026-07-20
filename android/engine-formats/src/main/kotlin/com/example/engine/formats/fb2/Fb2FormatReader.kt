@@ -51,7 +51,7 @@ private const val CHARS_PER_PAGE = 4000
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
         private val GENERATED_BLOCK_RE = Regex(
-            """<(?:h2|h3|p|blockquote)\b[^>]*>.*?</(?:h2|h3|p|blockquote)>|<br\s*/?>""",
+            """<(?:h2|h3|p|blockquote)\b[^>]*>.*?</(?:h2|h3|p|blockquote)>|<br\s*/?(?:>|</br>)?""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
         )
         private const val FB2_READER_CSS = """
@@ -267,7 +267,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
 
         var depth = 0
         var bodyDepth = -1
-        var mainBodyDone = false
+        var isMainBody = false
         var sectionDepth = 0
         var inBinary = false
         var binaryId = ""
@@ -365,11 +365,18 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 val bodyName = parser.getAttributeValue(null, "name") ?: ""
                                 when {
                                     // First unnamed body → main text body
-                                    bodyDepth < 0 && !mainBodyDone && bodyName.isEmpty() ->
+                                    !isMainBody && bodyName.isEmpty() -> {
                                         bodyDepth = depth
+                                        isMainBody = true
+                                    }
                                     // Any named body (notes, footnotes, comments…) → footnote map
-                                    bodyName.isNotEmpty() && notesBodyDepth < 0 ->
-                                        notesBodyDepth = depth
+                                    // Reset notesBodyDepth on each body entry so second named
+                                    // body after main body also gets parsed (P1 #6)
+                                    bodyName.isNotEmpty() -> {
+                                        if (notesBodyDepth < 0) {
+                                            notesBodyDepth = depth
+                                        }
+                                    }
                                 }
                             }
 
@@ -460,7 +467,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                             name == "body" && depth == bodyDepth -> {
                                 flushPage()
                                 bodyDepth = -1
-                                mainBodyDone = true  // ignore any subsequent <body> as main body
+                                isMainBody = true  // ignore any subsequent <body> as main body
                             }
                             name == "body" && depth == notesBodyDepth -> {
                                 notesBodyDepth = -1
@@ -495,7 +502,11 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 "section" -> {
                                     notesSectionDepth--
                                     if (notesSectionDepth == 0 && currentNoteId.isNotEmpty()) {
+                                        // Store both id and fbanchor://-prefixed key for footnote lookup (P1 #9)
                                         footnoteMap[currentNoteId] = notesBuf.toString().trim()
+                                        if (currentNoteId.isNotEmpty()) {
+                                            footnoteMap["fbanchor://$currentNoteId"] = notesBuf.toString().trim()
+                                        }
                                         currentNoteId = ""
                                         notesBuf.clear()
                                     }
@@ -564,8 +575,13 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         if (pendingMerge.isNotEmpty()) mergedSections.add(pendingMerge.toString())
 
         // Now binaries is fully populated — build HTML pages with images resolved.
+        // NOTE: Do NOT escape HTML here — appendEscapedFb2Text() already escapes
+        // text nodes (< → &lt;), while parser-generated tags (<h2>, <p>, etc.)
+        // must remain as real HTML markup for WebView rendering.
         val fb2Lang = metadata["language"]
-        val mainPages = mergedSections.map { buildHtmlPage(it, binaries, fb2Lang) }
+        val mainPages = mergedSections.map {
+            buildHtmlPage(it, binaries, fb2Lang)
+        }
 
         // Build final TOC: map rawSectionIdx → mergedPage index
         val tocEntries = tocRaw.mapNotNull { (title, rawSectionIdx) ->
@@ -664,6 +680,14 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     }
 
     private fun String.escapeAttr() = replace("\"", "&quot;")
+
+    /** Escapes HTML-unsafe characters in FB2 body text before it reaches WebView. */
+    private fun escapeHtmlForFb2(text: String): String = text
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
 
     private fun openStream(): InputStream? = try {
         if (path.startsWith("content://"))

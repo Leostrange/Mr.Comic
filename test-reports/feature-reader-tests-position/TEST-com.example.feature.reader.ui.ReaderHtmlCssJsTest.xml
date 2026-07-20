@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.ui.ReaderHtmlCssJsTest" tests="41" skipped="0" failures="0" errors="0" timestamp="2026-07-19T05:45:45.106Z" hostname="LEOSTRANGE" time="0.178">
+  <properties/>
+  <testcase name="textSettingsJs_containsSpacing" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.078"/>
+  <testcase name="textSettingsJs_pagedModeAlignsCompactedBoundariesToFragments" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.026"/>
+  <testcase name="textSettingsJs_pagedModeUsesStableNativeViewportHeight" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.006"/>
+  <testcase name="readerPagedLayoutJs_masksFractionalBoundaryBeforeTheNextLine" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.003"/>
+  <testcase name="textSettingsJs_boldFontWeight" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="tapHandler_resolvesFootnoteAtTapPointBeforePagedEdgeFallback" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="textSettingsJs_maxWidthPx" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="textSettingsJs_footnoteDomColoringCoversClickableNoterefPatterns" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.015"/>
+  <testcase name="readerSelectionOverlayColor_validColor" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="colorSchemePaletteForPreset_fallbackToBase" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.003"/>
+  <testcase name="textSettingsJs_containsThemeStyle" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="textSettingsJs_pagedModeSetsScrollLock" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="textSettingsJs_freeScrollModeClearsLock" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="defaultReaderAccentColor_lightBackground" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="normalizeReaderOverrideColor_invalidHex" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="textSettingsJs_doesNotBreakOrdinaryWordsInsideInlineSpans" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="normalizeReaderOverrideColor_validHex" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="textSettingsJs_nightThemeColors" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="tapHandler_treatsPunctuatedNumericMarkersAsFootnotes" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="colorSchemePalette_day" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="readerHtmlPageSourceReloadKeyUsesDocumentIdentityOnly" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="colorSchemePaletteForPreset_presetsOverrideDefaults" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="injectBodyInsetCss_zeroPadding" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="injectBodyInsetCss_addsPadding" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="readerSelectionOverlayColor_invalidColorFallsBack" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="buildThemedHtmlDocument_wrapsBareContent" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="textSettingsJs_containsFontSettings" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="buildThemedHtmlDocument_injectsStyleInBody" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="buildThemedHtmlDocument_injectsStyleInHead" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="buildThemedHtmlDocument_injectsStyleInHtml" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="defaultReaderAccentColor_darkBackground" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="readerPagedLayoutJs_mediaPagesDoNotMaskFrontispieceBottom" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.004"/>
+  <testcase name="readerPagedLayoutJs_includesTopInsetBeforePlacingBottomShield" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.003"/>
+  <testcase name="tapHandler_doesNotTreatEveryEdgeLinkAsPageNavigation" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="textSettingsJs_forcesReaderFontOnOrdinaryTextDescendants" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <testcase name="colorSchemePalette_night" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="colorSchemePalette_sepia" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="tapHandler_blocksSelectionInPagedMode" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="textSettingsJs_customHorizontalPadding" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.001"/>
+  <testcase name="normalizeReaderOverrideColor_trimsWhitespace" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.0"/>
+  <testcase name="readerPagedLayoutJs_usesStableNativeViewportHeight" classname="com.example.feature.reader.ui.ReaderHtmlCssJsTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

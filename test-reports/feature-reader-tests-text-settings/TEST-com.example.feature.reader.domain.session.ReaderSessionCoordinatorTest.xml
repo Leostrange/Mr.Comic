@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.reader.domain.session.ReaderSessionCoordinatorTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-19T17:02:14.879Z" hostname="LEOSTRANGE" time="0.004">
+  <properties/>
+  <testcase name="close_collectsSessionSignalsAndUsesUpdatedPageCount" classname="com.example.feature.reader.domain.session.ReaderSessionCoordinatorTest" time="0.003"/>
+  <testcase name="close_doesNotMarkDifferentComicCompleteAndKeepsStartFloor" classname="com.example.feature.reader.domain.session.ReaderSessionCoordinatorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

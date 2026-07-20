@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.mrcomic.home.ContinueReturnPromptPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-12T18:59:57.763Z" hostname="LEOSTRANGE" time="0.024">
+  <properties/>
+  <testcase name="resolveContinueReturnPrompt_fallsBackToCheckpointWhenNoActiveContinueTargetExists" classname="com.example.mrcomic.home.ContinueReturnPromptPolicyTest" time="0.017"/>
+  <testcase name="resolveContinueReturnPrompt_returnsContinueReadingTargetForTwoToFourDayGap" classname="com.example.mrcomic.home.ContinueReturnPromptPolicyTest" time="0.003"/>
+  <testcase name="resolveContinueReturnPrompt_hidesOutsideTwoToFourDayWindow" classname="com.example.mrcomic.home.ContinueReturnPromptPolicyTest" time="0.002"/>
+  <testcase name="resolveContinueReturnSupportTone_prioritizesWeeklyDoneThenGraceThenStreak" classname="com.example.mrcomic.home.ContinueReturnPromptPolicyTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

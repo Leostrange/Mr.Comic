@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-07-19T05:34:02.216Z" hostname="LEOSTRANGE" time="0.019">
+  <properties/>
+  <testcase name="buildReaderDocumentCss_customMaxWidth" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="buildReaderDocumentCss_noTypography" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="baseDocumentCss_containsLinksAndBorders" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.0"/>
+  <testcase name="baseDocumentCss_containsTypography" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="buildReaderDocumentCss_noHyphens" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="buildReaderDocumentCss_hyphensManualByDefault" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="epubDocumentCss_hasFootnoteRules" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="baseDocumentCss_containsBodyDefaults" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="mobiDocumentCss_hasPageBreakRules" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="buildReaderDocumentCss_textAlignOnParagraph" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.002"/>
+  <testcase name="baseDocumentCss_containsRichElements" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="buildReaderDocumentCss_noRichElements" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="preserveLayoutCss_hasSafetyRules" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.0"/>
+  <testcase name="epubDocumentCss_hasCiteRules" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="allConstants_areNotEmpty" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.0"/>
+  <testcase name="buildReaderDocumentCss_customExtraCss" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="preserveLayoutCss_isMinimal" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.0"/>
+  <testcase name="epubDocumentCss_hasDarkMode" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.0"/>
+  <testcase name="buildReaderDocumentCss_hyphensAutoWhenRequested" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.001"/>
+  <testcase name="mobiDocumentCss_hasDifferentMaxWidth" classname="com.example.engine.formats.base.UnifiedReaderCssBuilderTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

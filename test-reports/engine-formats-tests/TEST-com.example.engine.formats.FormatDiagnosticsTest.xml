@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.FormatDiagnosticsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-12T18:52:43.045Z" hostname="LEOSTRANGE" time="4.51">
+  <properties/>
+  <testcase name="dumpMobiFrontMatter" classname="com.example.engine.formats.FormatDiagnosticsTest" time="2.384"/>
+  <testcase name="dumpPodSolntsemEpubPages" classname="com.example.engine.formats.FormatDiagnosticsTest" time="1.439"/>
+  <testcase name="dumpSkottEpubFrontMatter" classname="com.example.engine.formats.FormatDiagnosticsTest" time="0.675"/>
+  <system-out><![CDATA[MOBI pageCount=1
+---- MOBI PAGE 0 ----
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 680px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: inherit;
+  background: transparent;
+  
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p, div.paragraph {
+  margin: 0.2em 0;
+  text-align: justify; text-indent: 1.5em;
+}
+p:first-child,
+div.paragraph:first-child,
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+h1 + div.paragraph, h2 + div.paragraph, h3 + div.paragraph,
+h4 + div.paragraph, h5 + div.paragraph, h6 + div.paragraph {
+  text-indent: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  text-indent: 0;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.6em 0 0.7em;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
+h4, h5, h6 { font-size: 1em; }img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 0.8rem auto; page-break-inside: avoid; break-inside: avoid; }
+a[href] { -webkit-user-select: text; user-select: text; }figure { margin: 1rem 0; }
+figcaption { margin-top: 0.35rem; text-align: center; opacity: 0.78; font-size: 0.92em; }
+pre, code { white-space: pre-wrap; word-break: break-word; }
+pre {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(120,120,120,0.10);
+  overflow-x: auto;
+}
+code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
+ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
+li + li { margin-top: 0.25rem; }
+table { width: 100%; max-width: 100%; border-collapse: collapse; margin: 1rem 0; table-layout: fixed; }
+table.auto-layout { table-layout:
+POD pageCount=24
+---- POD PAGE 0 len=4043 visible=3505 body=0 assetBase=OPS/cover.xhtml ----
+
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 1 len=3990 visible=3532 body=26 assetBase=OPS/ch1.xhtml ----
+Ги де Мопассан Под солнцем
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 2 len=3980 visible=3542 body=36 assetBase=OPS/ch1-1.xhtml ----
+© ООО «Издательство АСТ», 2026 * * *
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 3 len=38329 visible=37902 body=1023 assetBase=OPS/ch1-2.xhtml ----
+– Это Господняя воля! Тогда король оттолкнул от себя дочь, которая цеплялась за него, и сбросил ее с крупа коня. Волны тотчас же подхватили ее и затем обратились вспять. А печальное озеро, в которое погружены эти развалины, – это воды, затопившие некогда оскверненный и разрушенный город. Эта легенда, как видите, похожа на историю Содома в переделке для дам. Событие же, о котором говорится точно о случившемся вчера, произошло, кажется, в четвертом веке после Рождества Христова. К вечеру я пришел в Дуарненез. Это рыбацкий городишко, который был бы самым знаменитым из морских курортов Франции, если бы не его уединенное местоположение. Что составляет всю красоту и прелесть Дуарненеза, это залив. Город расположен в глубине его и как будто любуется на мягкие волнистые очертания берегов: изгибы их очаровательны, а вдалеке гребни скал тонут в бело-голубых, легких и прозрачных, туманах, которые наплывают с моря. На другой день я отправился в Кемпер, а ночевал уже в Бресте, чтобы на рассвете вер
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+HTML_BODY_3=<body><p class="p1">–&nbsp;Это Господняя воля!</p><p class="p1">Тогда король оттолкнул от себя дочь, которая цеплялась за него, и сбросил ее с крупа коня. Волны тотчас же подхватили ее и затем обратились вспять.</p><p class="p1">А печальное озеро, в которое погружены эти развалины,&nbsp;– это воды, затопившие некогда оскверненный и разрушенный город.</p><p class="p1">Эта легенда, как видите, похожа на историю Содома в переделке для дам.</p><p class="p1">Событие же, о котором говорится точно о случившемся вчера, произошло, кажется, в четвертом веке после Рождества Христова.</p><p class="p1">К вечеру я пришел в Дуарненез.</p><p class="p1">Это рыбацкий городишко, который был бы самым знаменитым из морских курортов Франции, если бы не его уединенное местоположение.</p><p class="p1">Что составляет всю красоту и прелесть Дуарненеза, это залив. Город расположен в глубине его и как будто любуется на мягкие волнистые очертания берегов: изгибы их очаровательны, а вдалеке гребни скал тонут в бело-голубых, легких и прозрачных, туманах, которые наплывают с моря.</p><p class="p1">На другой день я отправился в Кемпер, а ночевал уже в Бресте, чтобы на рассвете вернуться поездом в Париж.</p>
+</body
+---- POD PAGE 4 len=13555 visible=13196 body=933 assetBase=OPS/ch1-3.xhtml ----
+Идеальные построения, так же как и чистая, бескорыстная наука, наука Галилея, Ньютона, Паскаля, представляются нам чем-то запретным, а воображение наше словно все сильнее и сильнее притягивают открытия, полезные для жизни. Но разве гений того, кто единым взлетом своей мысли перенесся от падения яблока к великому закону, управляющему мирами, не порожден началом более божественным, чем проницательный ум американского изобретателя, чудодейственного фабриканта звонков, звуковых и световых приборов? Не в этом ли тайный порок современной души, признак ее неполноценности, несмотря на все ее торжество? Возможно, что я совершенно неправ. Во всяком случае, все эти вещи, возбуждая наш интерес, не могут, подобно древним формам мысли, увлечь нас, своевольных рабов мечты об утонченной красоте, мечты, которая преследует нас и портит нам жизнь. Я почувствовал, что мне было бы приятно снова увидать Флоренцию, и отправился в путешествие.
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+HTML_BODY_4=<body><p class="p1">Идеальные построения, так же как и чистая, бескорыстная наука, наука Галилея, Ньютона, Паскаля, представляются нам чем-то запретным, а воображение наше словно все сильнее и сильнее притягивают открытия, полезные для жизни.</p><p class="p1">Но разве гений того, кто единым взлетом своей мысли перенесся от падения яблока к великому закону, управляющему мирами, не порожден началом более божественным, чем проницательный ум американского изобретателя, чудодейственного фабриканта звонков, звуковых и световых приборов?</p><p class="p1">Не в этом ли тайный порок современной души, признак ее неполноценности, несмотря на все ее торжество?</p><p class="p1">Возможно, что я совершенно неправ. Во всяком случае, все эти вещи, возбуждая наш интерес, не могут, подобно древним формам мысли, увлечь нас, своевольных рабов мечты об утонченной красоте, мечты, которая преследует нас и портит нам жизнь.</p><p class="p1">Я почувствовал, что мне было бы приятно снова увидать Флоренцию, и отправился в путешествие.</p>
+</body></html>
+---- POD PAGE 5 len=36463 visible=36112 body=844 assetBase=OPS/ch1-4.xhtml ----
+Колокольня позади собора, вечно наклоненная, словно готовая упасть, иронизирует над заложенным в нас чувством равновесия, а против нее Баптистерий закругляет свой высокий конусообразный купол перед воротами Кампо-Санто. Это старинное кладбище, фрески которого, по общему признанию, представляют величайший интерес, опоясывает очаровательная галерея, полная проникновенной и меланхолической прелести; посреди кладбища растут две древние липы, скрывающие в своей густой листве столько сухих ветвей, что при каждом порыве ветра они производят странный шум, напоминающий стук костей. Дни бегут, лето на исходе. Я хочу посетить еще одну далекую страну, где другие люди оставили не так хорошо уцелевшие, но тоже вечные следы. И, право, они одни сумели подарить своему отечеству Всемирную выставку, которую не перестанут посещать во все грядущие века.
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+HTML_BODY_5=<body><p class="p1">Колокольня позади собора, вечно наклоненная, словно готовая упасть, иронизирует над заложенным в нас чувством равновесия, а против нее Баптистерий закругляет свой высокий конусообразный купол перед воротами Кампо-Санто.</p><p class="p1">Это старинное кладбище, фрески которого, по общему признанию, представляют величайший интерес, опоясывает очаровательная галерея, полная проникновенной и меланхолической прелести; посреди кладбища растут две древние липы, скрывающие в своей густой листве столько сухих ветвей, что при каждом порыве ветра они производят странный шум, напоминающий стук костей.</p><p class="empty-line"></p><p class="p1">Дни бегут, лето на исходе. Я хочу посетить еще одну далекую страну, где другие люди оставили не так хорошо уцелевшие, но тоже вечные следы. И, право, они одни сумели подарить своему отечеству Всемирную выставку, которую не перестанут посещать во все грядущие века.</p>
+</body></html>
+---- POD PAGE 6 len=53813 visible=53488 body=952 assetBase=OPS/ch1-5.xhtml ----
+На фоне этого античного неба встает весь античный мир. Вас охватывает могучее и необычное душевное волнение, вам хочется преклонить колени перед этим величественным наследием, оставленным нам учителями наших учителей. Конечно, Сицилия – прежде всего священная земля, ибо если мы в ней находим эти последние обители Юноны, Юпитера, Меркурия и Геркулеса, то здесь же встречаются и самые замечательные христианские церкви в мире. Воспоминание, которое остается у вас о соборах в Чефалу или в Монреале, а также о Дворцовой капелле, об этом чуде из чудес, еще более глубоко и живо, чем воспоминание о памятниках греческой архитектуры. У подножия холма с храмами Джирдженти начинается изумительная страна, которая представляется подлинным царством Сатаны; ведь если, как верили в прежние времена, Сатана обитает в обширной подземной области, где в расплавленной сере варятся грешники, то несомненно, что он основал свое таинственное царство именно в Сицилии.
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 7 len=43040 visible=42627 body=1269 assetBase=OPS/ch1-6.xhtml ----
+Под нами, на дне реки, целый лес длинных волнистых водорослей: они движутся, колышутся и словно плывут в колеблющей их воде. Потом Анапо отделяется от своего притока, древней Цианеи. Мы продолжаем плыть, подталкивая лодку багром. Речка, извиваясь, открывает нашим взорам все новые и новые очаровательные уголки, цветущие и живописные. Наконец появляется остров, заросший странными деревцами. Жидкие трехгранные стебли девяти-двенадцати футов высотой, увенчаны круглыми пучками зеленых нитей, длинных, тонких и гибких, как волосы. Они похожи на головы людей, обращенных в растения и брошенных в воды священного источника языческими богами, некогда населявшими эти места. Это и есть древний папирус. Крестьяне зовут этот камыш «parruca»[6]. А там дальше его еще больше, целый лес. Камыши дрожат, шелестят, склоняются, сталкиваются волосатыми лбами и словно ведут между собой беседу о неведомых делах далекого прошлого. Не странно ли, что почтенное растение, которое сохранило для нас мысли умерших, кот
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 8 len=9476 visible=8901 body=1225 assetBase=OPS/ch1-7.xhtml ----
+Вот полдень, лета царь, покровом сребротканым Пал на пустынный мир под горней синевой. Пылает воздух сам в молчанье бездыханном; Земля затихла, спит в одежде огневой[7]. Этот-то полдень пустыни, полдень, распростертый над морем песка, недвижным и беспредельным, и заставил меня покинуть цветущие берега Сены, воспетые мадам Дезульер[8], освежительное купание по утрам и зеленую сень лесов, чтобы держать путь сквозь раскаленные пространства пустынь. Еще одно обстоятельство придавало в ту пору Алжиру особенный интерес. Неуловимый Бу-Амама[9] вел тогда фантастическую войну, по поводу которой было сказано, написано и совершено столько глупостей. Утверждали также, что мусульманские племена подготовляют всеобщее восстание, что они решились на последнее усилие и что сейчас же после Рамадана война вспыхнет сразу по всему Алжиру. Было крайне любопытно увидеть арабов именно в такой момент, попытаться понять их душу – то, чем колонизаторы вовсе не интересуются. Флобер говорил, бывало: «Можно предста
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 9 len=7865 visible=7455 body=1573 assetBase=OPS/ch1-8.xhtml ----
+Полковник настойчиво требует назначения военного губернатора, говорит о военной тактике в условиях пустыни и объявляет, что для армии телеграф бесполезен и даже опасен. Этот штаб-офицер, видимо, испытал по вине телеграфа какую-нибудь неприятность в военное время. Инженер хотел бы вверить колонию генеральному инспектору путей сообщения, дабы последний строил каналы, плотины, дороги и тому подобное. Капитан парохода остроумно замечает, что моряк был бы там гораздо более на месте, так как Алжир доступен только с моря. Оба буржуа указывают на грубые оплошности губернатора, и все смеются, удивляясь, как можно быть таким неловким. Потом пассажиры снова поднимаются на палубу. Кругом одно только море, спокойное море, без малейшей ряби, позлащенное луной. Тяжелый пароход словно скользит по водной глади, оставляя за собой длинную кипящую борозду, где вспененная вода кажется жидким огнем. Над нашей головой простирается небо, иссиня-черное, усеянное звездами, которые время от времени заволакиваютс
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 10 len=9992 visible=9610 body=1172 assetBase=OPS/ch1-9.xhtml ----
+Наполеон III сделал как-то разумное замечание (может быть, подсказанное кем-нибудь из министров): «В Алжире нужны не завоеватели, а просветители». Мы же продолжаем оставаться грубыми, неуклюжими завоевателями и чваниться своими готовыми истинами. Навязанные нами нравы, наши парижские дома, наши обычаи шокируют в этой стране, как грубые промахи, противоречащие требованиям эстетики, благоразумия, здравого смысла. Все, что мы ни делаем, кажется какой-то нелепостью, каким-то вызовом, бросаемым этой стране, и не столько даже ее коренному населению, сколько самой земле. Спустя несколько дней по приезде я наблюдал в квартале Мустафа бал под открытым небом. Это был совершенно такой же праздник, как в Нейи[14]: те же лавки с пряниками, тиры, лотереи, кукольный театр, упражнения с ножами, ясновидящие, женщины-рыбы, приказчики, танцующие с продавщицами заправские кадрили, словно в Бюлье[15], – в то время как за оградой, в которую пускали только за плату, на широком песчаном поле, служившем для во
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 11 len=22340 visible=21998 body=1410 assetBase=OPS/ch1-10.xhtml ----
+Нас осталось теперь всего шестеро около поезда. Ни к чему не прикоснешься, все пылает. Медные части в вагонах кажутся раскаленными докрасна. Невольно вскрикнешь, если коснешься рукой стали оружия. Несколько дней назад племя резайна, примкнув к мятежникам, прошло через шотт, до которого мы не добрались, потому что пора было возвращаться. Во время перехода через это пересохшее болото жара была такая, что бегущее племя потеряло всех своих ослов, павших от жажды, и даже шестнадцать детей, умерших на руках у матерей. Локомотив свистит. Мы покидаем Уэд-Фаллет. Замечательный случай из военной жизни сделал это место известным по всей стране. Здесь стояла колонна солдат под прикрытием 15-го линейного полка. Однажды ночью два туземца-разведчика появляются у передового поста, проехав десять часов в седле, чтобы передать спешное распоряжение от командующего из Сайды. Как полагается, они машут факелом, чтоб их признали. Часовой – рекрут из Франции, – не зная обычаев и правил службы, принятых во вре
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 12 len=17892 visible=17550 body=1838 assetBase=OPS/ch1-11.xhtml ----
+Во всяком случае, арабы имеют перед нами одно преимущество, против которого мы напрасно стараемся бороться. Они дети своей страны. Обходясь несколькими финиками и щепоткой муки, не зная усталости в этом климате, который изнуряет северян, всегда верхом на лошади, неприхотливой, как они сами, и, подобно им, не чувствительной к зною, они делают за день сто – сто тридцать километров. У них нет необходимости тащить за собой снаряжение, обоз или провиант, и они передвигаются с необыкновенной быстротой, проходят между двумя расположившимися лагерем отрядами, чтобы захватить и ограбить деревушку, считавшую себя в полной безопасности, после чего бесследно исчезают, а затем внезапно возвращаются, когда, по общему мнению, они должны быть далеко. В европейской войне армия, как бы быстро ни передвигалась, все же не может пройти незамеченной. Обилие снаряжения роковым образом замедляет ее переходы и всегда обнаруживает выбранную дорогу. Арабский отряд, наоборот, оставляет за собой не больше следов, 
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 13 len=38070 visible=37728 body=881 assetBase=OPS/ch1-12.xhtml ----
+Имеются и другие случаи, весьма обычные и до такой степени отвратительные, что я не могу привести их здесь. Спускаясь однажды вечером из Бухрари незадолго до заката солнца, я увидел трех улад-найль, двух в красном и одну в синем, стоявших среди группы мужчин, которые сидели по-восточному или лежали на земле. Женщины были похожи на дикарские божества, возвышающиеся над распростертым ниц народом. Глаза всех были устремлены на форт Богар, туда, на высокий холм в противоположном конце пыльной долины. Все были неподвижны и внимательны, словно ожидали какого-нибудь необычайного события. У всех в руках была еще не закуренная, только что свернутая сигарета. Вдруг над крепостью взвился белый дымок, земля слегка содрогнулась от глухого отдаленного гула, и мгновенно каждая сигарета оказалась во рту. Это французская пушка извещала побежденный народ о конце ежедневного воздержания.
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+---- POD PAGE 14 len=53746 visible=53455 body=636 assetBase=OPS/ch1-13.xhtml ----
+Как-то раз, ночью, во время сна, что-то леденящее коснулось моего лица. Я вскочил в испуге, но песок, шатер – все терялось во мраке, и я различал только большие белые пятна – арабов, спавших вокруг нас. Не укусила ли меня лефа, проползая мимо? Или, быть может, скорпион? Откуда это холодное прикосновение? Взволнованный, я зажег фонарь и стал оглядывать землю, подняв ногу для удара, и тут увидел перед собой безобразную жабу, одну из тех фантастических белых жаб, что водятся в пустыне: она смотрела на меня, раздув брюхо и расставив лапы. Отвратительная тварь, видимо, пробиралась своей обычной дорогой и случайно задела меня по щеке.
+HTML_START=<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p,
+RAW_CHUNK[0] body=0 
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+</head><body class="z"><p>В Бретани Июль 1882 года Вот и пора путешествий, пора ясных дней, когда влечет к новым горизонтам, к широким просторам синего моря, где отдыхает глаз, где успокаивается мысль; к лесистым и свежим долинам, где часто чувствуешь себя растроганным неведомо чем, сидя под вечереющим небом у дороги, на бархатно-зеленом откосе и глядя на отражения заходящего солнца
+RAW_CHUNK[1] body=0 
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+</head><body class="z"><p>Старые верования, уже умершие повсюду, продолжают корениться в ее гранитной почве. Старинные сказания тоже сохранились здесь в полной неприкосновенности, и какой-нибудь крестьянин так расскажет вам о событиях, происшедших пятнадцать веков назад, будто они совершились вчера, будто его отец или дед были их очевидцами. Бывают подземелья, где тело мертвеца сохр
+RAW_CHUNK[2] body=0 
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+<link rel="stylesheet" href="style.css" type="text/css"/>
+</head><body class="z"><p>– Так вы, сударь, осматриваете наш Карнак? Я поделился с ним своим восхищением и признался, что он напугал меня. Он продолжал: – Здесь, сударь, самый воздух так насыщен поверьями, что все боятся сами не зная чего. Вот уж пять лет, как я произвожу раскопки под этими камнями: почти каждый из них скрывает какую-нибудь тайну, – и подчас мне думается, что у них 
+SKOTT pageCount=21
+resolve cover=0
+resolve ch1=1
+resolve ch1-1=2
+---- SKOTT PAGE 0 ----
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p, div.paragraph {
+  margin: 0.2em 0;
+  text-indent: 1.5em;
+}
+p:first-child,
+div.paragraph:first-child,
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+h1 + div.paragraph, h2 + div.paragraph, h3 + div.paragraph,
+h4 + div.paragraph, h5 + div.paragraph, h6 + div.paragraph {
+  text-indent: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  text-indent: 0;
+  font-weight: bold;
+  line-height: normal;
+  margin: 1.2em 0 0.5em;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
+h4, h5, h6 { font-size: 1em; }img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; page-break-inside: avoid; break-inside: avoid; }
+a[href] { -webkit-user-select: text; user-select: text; }div, section, article, aside, span, main, header, footer { border: none; }
+a[href] {
+  color: var(--mrcomic-reader-accent-color, #1a6f9a);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+cite { display: block; margin-top: 0.3em; border-left: 3px solid #bbb; font-style: italic; color: #555; hyphens: none; -webkit-hyphens: none; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 4px 8px; }
+table[border] td, table[border] th { border: 1px solid #ccc; }
+table:not([border]) td, table:not([border]) th { border: none; }
+.center, .align-center, [align="center"] { text-align: center !important; text-indent: 0; }
+.right, .align-right, [align="right"] { text-align: right !important; text-indent: 0; }
+.left, .align-left, [align="left"] { text-align: left !important; }
+a.fn, a[epub\\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][hre
+---- SKOTT PAGE 1 ----
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p, div.paragraph {
+  margin: 0.2em 0;
+  text-indent: 1.5em;
+}
+p:first-child,
+div.paragraph:first-child,
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+h1 + div.paragraph, h2 + div.paragraph, h3 + div.paragraph,
+h4 + div.paragraph, h5 + div.paragraph, h6 + div.paragraph {
+  text-indent: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  text-indent: 0;
+  font-weight: bold;
+  line-height: normal;
+  margin: 1.2em 0 0.5em;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
+h4, h5, h6 { font-size: 1em; }img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; page-break-inside: avoid; break-inside: avoid; }
+a[href] { -webkit-user-select: text; user-select: text; }div, section, article, aside, span, main, header, footer { border: none; }
+a[href] {
+  color: var(--mrcomic-reader-accent-color, #1a6f9a);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+cite { display: block; margin-top: 0.3em; border-left: 3px solid #bbb; font-style: italic; color: #555; hyphens: none; -webkit-hyphens: none; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 4px 8px; }
+table[border] td, table[border] th { border: 1px solid #ccc; }
+table:not([border]) td, table:not([border]) th { border: none; }
+.center, .align-center, [align="center"] { text-align: center !important; text-indent: 0; }
+.right, .align-right, [align="right"] { text-align: right !important; text-indent: 0; }
+.left, .align-left, [align="left"] { text-align: left !important; }
+a.fn, a[epub\\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][hre
+---- SKOTT PAGE 2 ----
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p, div.paragraph {
+  margin: 0.2em 0;
+  text-indent: 1.5em;
+}
+p:first-child,
+div.paragraph:first-child,
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+h1 + div.paragraph, h2 + div.paragraph, h3 + div.paragraph,
+h4 + div.paragraph, h5 + div.paragraph, h6 + div.paragraph {
+  text-indent: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  text-indent: 0;
+  font-weight: bold;
+  line-height: normal;
+  margin: 1.2em 0 0.5em;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
+h4, h5, h6 { font-size: 1em; }img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; page-break-inside: avoid; break-inside: avoid; }
+a[href] { -webkit-user-select: text; user-select: text; }div, section, article, aside, span, main, header, footer { border: none; }
+a[href] {
+  color: var(--mrcomic-reader-accent-color, #1a6f9a);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+cite { display: block; margin-top: 0.3em; border-left: 3px solid #bbb; font-style: italic; color: #555; hyphens: none; -webkit-hyphens: none; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 4px 8px; }
+table[border] td, table[border] th { border: 1px solid #ccc; }
+table:not([border]) td, table:not([border]) th { border: none; }
+.center, .align-center, [align="center"] { text-align: center !important; text-indent: 0; }
+.right, .align-right, [align="right"] { text-align: right !important; text-indent: 0; }
+.left, .align-left, [align="left"] { text-align: left !important; }
+a.fn, a[epub\\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][hre
+---- SKOTT PAGE 3 ----
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>body {
+  margin: 0 auto;
+  padding: 0 1.5em;
+  max-width: 720px;
+  box-sizing: border-box;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fafafa;
+  text-align: justify;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+body:not([data-mrcomic-preserve-layout="true"]) * {
+  font-family: inherit !important;
+}p, div.paragraph {
+  margin: 0.2em 0;
+  text-indent: 1.5em;
+}
+p:first-child,
+div.paragraph:first-child,
+h1 + p, h2 + p, h3 + p, h4 + p, h5 + p, h6 + p,
+h1 + div.paragraph, h2 + div.paragraph, h3 + div.paragraph,
+h4 + div.paragraph, h5 + div.paragraph, h6 + div.paragraph {
+  text-indent: 0;
+}
+h1, h2, h3, h4, h5, h6 {
+  text-align: center;
+  text-indent: 0;
+  font-weight: bold;
+  line-height: normal;
+  margin: 1.2em 0 0.5em;
+  hyphens: manual; -webkit-hyphens: manual; word-break: normal;
+}
+h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
+h2 { font-size: clamp(1.05em, 1.35em, 1.6rem); letter-spacing: 0.02em; }
+h3 { font-size: clamp(1em, 1.15em, 1.3rem); }
+h4, h5, h6 { font-size: 1em; }img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: 8px auto; page-break-inside: avoid; break-inside: avoid; }
+a[href] { -webkit-user-select: text; user-select: text; }div, section, article, aside, span, main, header, footer { border: none; }
+a[href] {
+  color: var(--mrcomic-reader-accent-color, #1a6f9a);
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.14em;
+}
+cite { display: block; margin-top: 0.3em; border-left: 3px solid #bbb; font-style: italic; color: #555; hyphens: none; -webkit-hyphens: none; }
+table { width: 100%; border-collapse: collapse; }
+td, th { padding: 4px 8px; }
+table[border] td, table[border] th { border: 1px solid #ccc; }
+table:not([border]) td, table:not([border]) th { border: none; }
+.center, .align-center, [align="center"] { text-align: center !important; text-indent: 0; }
+.right, .align-right, [align="right"] { text-align: right !important; text-indent: 0; }
+.left, .align-left, [align="left"] { text-align: left !important; }
+a.fn, a[epub\\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][hre
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -464,7 +464,17 @@ private fun MainActivity.tryPersistIncomingUriPermission(intent: Intent?, uri: U
     )
     if (readFlags == 0) return
     try {
-        contentResolver.takePersistableUriPermission(uri, readFlags)
+        when (readFlags) {
+            Intent.FLAG_GRANT_READ_URI_PERMISSION ->
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION ->
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION ->
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+        }
     } catch (_: Exception) {
     }
 }
@@ -525,40 +535,14 @@ private fun MainActivity.resolveIncomingExtension(
     uri: Uri,
     displayName: String?
 ): String? {
-    val extensionFromName = displayName
-        ?.substringAfterLast('.', "")
-        ?.lowercase()
-        ?.takeIf { it.isNotBlank() }
-    if (!extensionFromName.isNullOrBlank()) return extensionFromName
-
     val mimeType = runCatching { intent?.type ?: contentResolver.getType(uri) }
         .getOrNull()
         ?.lowercase()
-    return when (mimeType) {
-        "application/epub+zip" -> "epub"
-        "application/pdf" -> "pdf"
-        "application/x-cbz", "application/vnd.comicbook+zip" -> "cbz"
-        "application/x-cbr",
-        "application/vnd.comicbook-rar",
-        "application/x-rar-compressed",
-        "application/x-rar",
-        "application/vnd.rar" -> "cbr"
-        "application/zip" -> "zip"
-        "application/xhtml+xml", "text/html" -> "html"
-        "text/plain" -> "txt"
-        "text/markdown" -> "md"
-        "application/rtf", "text/rtf" -> "rtf"
-        "application/x-mobipocket-ebook",
-        "application/vnd.amazon.ebook",
-        "application/vnd.amazon.mobi8-ebook" -> "mobi"
-        "image/vnd.djvu",
-        "image/x-djvu",
-        "image/vnd.djvu+multipage",
-        "application/x-djvu" -> "djvu"
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> "docx"
-        "application/vnd.oasis.opendocument.text" -> "odt"
-        else -> mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
-    }
+    // Single-sourced via the format catalog (core-model). The previous hand-maintained when()
+    // had drifted from the catalog (missing AZW3/FB2/7z/tar/chm/xps), staging some incoming files
+    // with a blank/wrong extension. Keep the generic MimeTypeMap fallback for unknown types.
+    return IncomingOpenFormatPolicy.resolveExtension(displayName, mimeType)
+        ?: mimeType?.let { MimeTypeMap.getSingleton().getExtensionFromMimeType(it) }
 }
 
 private inline fun <reified T : Parcelable> Intent.parcelableExtraCompat(name: String): T? {

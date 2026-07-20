@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.settings.ui.SettingsImportValidationTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-07-19T22:55:35.428Z" hostname="LEOSTRANGE" time="0.009">
+  <properties/>
+  <testcase name="jsonMimeTypeIsAccepted" classname="com.example.feature.settings.ui.SettingsImportValidationTest" time="0.003"/>
+  <testcase name="jsonExtensionIsAcceptedWhenMimeTypeIsGeneric" classname="com.example.feature.settings.ui.SettingsImportValidationTest" time="0.001"/>
+  <testcase name="jsonContentMustBeObject" classname="com.example.feature.settings.ui.SettingsImportValidationTest" time="0.004"/>
+  <testcase name="nonJsonFileIsRejected" classname="com.example.feature.settings.ui.SettingsImportValidationTest" time="0.001"/>
+  <testcase name="oversizedJsonFileIsRejected" classname="com.example.feature.settings.ui.SettingsImportValidationTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

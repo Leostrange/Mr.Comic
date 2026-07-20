@@ -23,15 +23,18 @@ internal object EpubFootnoteParser {
     private val headingRe = Regex("""(?is)<h[1-6][^>]*>(.*?)</h[1-6]>""")
     private val legacyNoteIdRe = Regex("""^FbAutId_\d+$""", RegexOption.IGNORE_CASE)
     private val noteIdRe = Regex(
-        """^(?:FbAutId_\d+|id\d+|fn\d+|note[-_]*\d+|footnote[-_]*\d+)$""",
+        """^(?:FbAutId_\d+|id\d+|fn\d+|fnt[-_]*\d+|note[-_]*\d+|footnote[-_]*\d+|back[-_]*\d+|sup[-_]*\d+|text-fn[-_]*\d+|pn[-_]*\d+|ann[-_]*\d+|annotation[-_]*\d+)$""",
         RegexOption.IGNORE_CASE
     )
+    /** EPUB3 semantic attributes that mark an element as a footnote/endnote. */
+    private val epubFootnoteTypes = setOf("footnote", "endnote", "rearnote")
+    private val docFootnoteRoles = setOf("doc-footnote", "doc-endnote")
     private val noteLabelRe = Regex("""^[\[(]?\d+[\]).]?$|^[IVXLCDM]+[.).]?$""", RegexOption.IGNORE_CASE)
     private val leadingLabelRe = Regex("""^\s*([\[(]?\d+[\]).]?|[IVXLCDM]+[.).]?)(?=\s|$)""", RegexOption.IGNORE_CASE)
     private val emptyAnchorRe = Regex("""(?is)<a\b[^>]*></a>""")
     private val blockTagRe = Regex("""(?is)</?(?:div|p|section|article|aside|blockquote|ul|ol|li)[^>]*>""")
     private val spanNoteRe = Regex(
-        """(?is)<span\b[^>]*\bid\s*=\s*["']((?:FbAutId_\d+|id\d+|fn\d+|note[-_]*\d+|footnote[-_]*\d+))["'][^>]*>(.*?)</span>""",
+        """(?is)<span\b[^>]*\bid\s*=\s*["']((?:FbAutId_\d+|id\d+|fn\d+|fnt[-_]*\d+|note[-_]*\d+|footnote[-_]*\d+|back[-_]*\d+|sup[-_]*\d+|text-fn[-_]*\d+|pn[-_]*\d+|ann[-_]*\d+|annotation[-_]*\d+))["'][^>]*>(.*?)</span>""",
         RegexOption.IGNORE_CASE
     )
     private val firstBlockRe = Regex(
@@ -72,7 +75,11 @@ internal object EpubFootnoteParser {
 
         collectElements(body).forEach { element ->
             val anchorId = element.getAttribute("id").orEmpty().trim()
-            if (!noteIdRe.matches(anchorId) || hasNoteLikeAncestor(element)) return@forEach
+            val epubType = element.getAttribute("epub:type").orEmpty().trim().lowercase()
+            val role = element.getAttribute("role").orEmpty().trim().lowercase()
+            val matchesId = noteIdRe.matches(anchorId)
+            val isEpub3Footnote = epubType in epubFootnoteTypes || role in docFootnoteRoles
+            if ((!matchesId && !isEpub3Footnote) || hasNoteLikeAncestor(element)) return@forEach
             extractItemFromElement(element)?.let { item ->
                 result.putIfAbsent(item.anchorId, item)
             }

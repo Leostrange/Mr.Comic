@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.library.LibraryNextStepPolicyTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-20T02:03:42.243Z" hostname="LEOSTRANGE" time="0.005">
+  <properties/>
+  <testcase name="mrComicNextStepRoute_prefersBookmarksForOpenGoalWithoutRecent" classname="com.example.feature.library.LibraryNextStepPolicyTest" time="0.004"/>
+  <testcase name="mrComicNextStepRoute_prefersRecentWhenAvailable" classname="com.example.feature.library.LibraryNextStepPolicyTest" time="0.0"/>
+  <testcase name="mrComicNextStepRoute_fallsBackToFilesWhenNoLiveRoutesExist" classname="com.example.feature.library.LibraryNextStepPolicyTest" time="0.001"/>
+  <testcase name="mrComicNextStepRoute_prefersQuotesAfterWeeklyPlanWithoutRecent" classname="com.example.feature.library.LibraryNextStepPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
