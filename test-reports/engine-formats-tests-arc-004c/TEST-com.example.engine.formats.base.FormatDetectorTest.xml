@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.base.FormatDetectorTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-18T14:24:18.615Z" hostname="LEOSTRANGE" time="0.009">
+  <properties/>
+  <testcase name="detect recognizes docx container when name has no extension" classname="com.example.engine.formats.base.FormatDetectorTest" time="0.005"/>
+  <testcase name="detect recognizes single-page djvu by magic bytes" classname="com.example.engine.formats.base.FormatDetectorTest" time="0.001"/>
+  <testcase name="detect recognizes multipage djvu by magic bytes" classname="com.example.engine.formats.base.FormatDetectorTest" time="0.001"/>
+  <testcase name="detect still falls back to extension when magic bytes are absent" classname="com.example.engine.formats.base.FormatDetectorTest" time="0.0"/>
+  <testcase name="detect recognizes epub container when name has no extension" classname="com.example.engine.formats.base.FormatDetectorTest" time="0.001"/>
+  <testcase name="detect prefers epub extension over zip magic bytes" classname="com.example.engine.formats.base.FormatDetectorTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

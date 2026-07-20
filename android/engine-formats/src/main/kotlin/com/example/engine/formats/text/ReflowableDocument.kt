@@ -31,7 +31,8 @@ internal object ReflowableDocumentBuilder {
     private const val TEXT_CHARS_PER_PAGE = 4000
     private const val MIN_REMAINDER_LAYOUT_UNITS = 100
     private const val MIN_SPLIT_TEXT_CHARS = 34
-    private const val MIN_SECTION_BREAK_CURRENT_UNITS = PAGE_LAYOUT_UNITS / 3
+    private const val MIN_SECTION_BREAK_CURRENT_UNITS = (PAGE_LAYOUT_UNITS * 6) / 10
+    private const val MIN_SECTION_VISIBLE_CHARS = 600
     private const val MIN_PAGE_FILL_REMAINDER_UNITS = 220
     private const val MIN_PAGE_FILL_TEXT_CHARS = 72
     private const val MIN_ORPHAN_TEXT_CHARS = 80
@@ -787,31 +788,39 @@ internal object ReflowableDocumentBuilder {
         baseUrl: String? = null
     ): List<TextDocumentSection> {
         val sectionBodies = mutableListOf<List<String>>()
+        // Track what caused each section break: true = structural (heading/pagebreak),
+        // false = implicit. Used to prevent merging across structural boundaries.
+        val structuralSplitAfter = mutableListOf<Boolean>()
         val current = mutableListOf<String>()
 
-        fun flush() {
+        fun flush(structural: Boolean = false) {
             if (current.isNotEmpty()) {
                 sectionBodies += current.toList()
+                structuralSplitAfter += structural
                 current.clear()
             }
         }
 
         blocks.forEach { block ->
             if (block == FORCED_PAGEBREAK_MARKER) {
-                flush()
+                flush(structural = true)
                 return@forEach
             }
             if (current.isNotEmpty() && block.isReaderSectionStartBlock()) {
-                flush()
+                flush(structural = true)
             }
             if (current.isNotEmpty() && block.isPlainTextChapterStartBlock()) {
-                flush()
+                flush(structural = true)
             }
             current += block
         }
         flush()
 
-        return sectionBodies.mapIndexed { index, bodyBlocks ->
+        // Merge short sections to avoid half-empty pages, but never merge
+        // across structural boundaries (heading splits, forced pagebreaks).
+        val mergedBodies = mergeShortSections(sectionBodies, structuralSplitAfter, MIN_SECTION_VISIBLE_CHARS)
+
+        return mergedBodies.mapIndexed { index, bodyBlocks ->
             TextDocumentSection(
                 index = index,
                 id = sectionIdFromBlocks(bodyBlocks),
@@ -828,6 +837,41 @@ internal object ReflowableDocumentBuilder {
                 )
             )
         }
+    }
+
+    /**
+     * Merge adjacent sections that are shorter than [minChars] visible characters.
+     * Short sections are appended to the preceding section so they don't produce
+     * half-empty reader pages. Sections separated by structural boundaries (headings,
+     * forced pagebreaks) are never merged regardless of length.
+     *
+     * @param structuralSplitAfter boolean list of size `sections.size`; element i is
+     *   true when a heading or pagebreak caused the split after section i. The last
+     *   element is always false (nothing follows the final section).
+     */
+    private fun mergeShortSections(
+        sections: List<List<String>>,
+        structuralSplitAfter: List<Boolean>,
+        minChars: Int
+    ): List<List<String>> {
+        if (sections.size <= 1) return sections
+        val merged = mutableListOf<MutableList<String>>()
+        // prevHadStructuralSplit tracks whether a structural boundary exists
+        // between the previous section and the current one. The first section
+        // has no predecessor, so it starts false.
+        var prevHadStructuralSplit = false
+        for (i in sections.indices) {
+            val blocks = sections[i]
+            val visibleLen = blocks.sumOf { it.visibleTextForLayout().length }
+            if (merged.isNotEmpty() && visibleLen < minChars && !prevHadStructuralSplit) {
+                // Append short non-structural section to previous
+                merged.last() += blocks
+            } else {
+                merged.add(blocks.toMutableList())
+            }
+            prevHadStructuralSplit = structuralSplitAfter.getOrElse(i) { false }
+        }
+        return merged
     }
 
     private fun sectionTitleFromBlocks(blocks: List<String>): String? {

@@ -15,6 +15,28 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.core.text.HtmlCompat
+import com.example.feature.reader.domain.enums.FootnotePresentation
+import com.example.feature.reader.domain.enums.ReaderChromeState
+import com.example.feature.reader.domain.enums.ReaderNavigationProgressSource
+import com.example.feature.reader.domain.enums.ReaderProgressRecapType
+import com.example.feature.reader.domain.session.ReaderProgressRecap
+import com.example.feature.reader.domain.session.ReaderClosedSessionMetrics
+import com.example.feature.reader.domain.session.ReaderSessionCoordinator
+import com.example.feature.reader.domain.session.ReaderSessionSnapshot
+import com.example.feature.reader.domain.session.buildReaderClosedAnalyticsEvent
+import com.example.feature.reader.domain.session.shouldRecordReaderSessionMinutes
+import com.example.feature.reader.ui.preset.applyReaderStylePreset
+import com.example.feature.reader.ui.preset.persistReaderStylePresetSnapshot
+import com.example.feature.reader.ui.preset.ReaderStylePresetReducer
+import com.example.feature.reader.ui.preset.toReaderStylePresetSnapshot
+import com.example.feature.reader.domain.preset.ReaderStylePresetEntry
+import com.example.feature.reader.domain.preset.ReaderStylePresetEntries
+import com.example.feature.reader.domain.preset.ReaderStylePresetSlot
+import com.example.feature.reader.domain.preset.ReaderStylePresetSnapshot
+import com.example.feature.reader.domain.preset.migrateLegacyReaderStyleSlotsToEntries
+import com.example.feature.reader.domain.preset.parseReaderStylePreset
+import com.example.feature.reader.domain.preset.parseReaderStylePresetEntries
+import com.example.feature.reader.domain.preset.serializeReaderStylePresetEntries
 import com.example.core.data.preferences.PreferencesKeys
 import com.example.core.data.preferences.UserPreferences
 import com.example.core.data.preferences.dataStore
@@ -64,6 +86,7 @@ import com.example.core.domain.translation.OnlineTranslationEngine
 import com.example.core.domain.translation.resolveBestSingleWordDictionaryMatch
 import com.example.core.domain.analytics.ReaderCheckpointStore
 import com.example.core.domain.util.Result
+import com.example.core.domain.util.normalizeTapZoneActionName
 import com.example.engine.formats.base.FormatFactory
 import com.example.engine.formats.base.FormatDetector
 import com.example.engine.formats.base.FormatReader
@@ -87,344 +110,23 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
-import java.net.URLDecoder
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
-enum class ReaderChromeState { HIDDEN, EXPANDED }
 
-enum class FootnotePresentation { PEEK, EXPANDED }
-
-private data class PreparedReaderOpen(
-    val resolvedPath: String,
-    val detectedFormat: ComicFormat,
-    val reader: FormatReader?,
-    val pages: Int,
-    val readerRendersHtmlContent: Boolean
-)
-
-private const val DEFAULT_TEXT_FONT_SIZE = 18
-private const val DEFAULT_TEXT_COLOR_SCHEME = "DAY"
-private const val DEFAULT_TEXT_FONT_FAMILY = "Georgia"
-private const val DEFAULT_TEXT_LINE_HEIGHT = 1.6f
-private const val DEFAULT_TEXT_LETTER_SPACING = 0f
-private const val DEFAULT_TEXT_WORD_SPACING = 0f
-private const val DEFAULT_TEXT_PARAGRAPH_SPACING = 0.2f
-private const val DEFAULT_TEXT_ALIGNMENT = "left"
-private const val DEFAULT_TEXT_BOLD = false
-private const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
-private const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
-private const val TAG = "ReaderViewModel"
-private val FOOTNOTE_MARKER_RE = Regex(
-    """\b(footnote|note|notebody|rearnote|endnote|fnote|noteref|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b""",
-    RegexOption.IGNORE_CASE
-)
-
-private fun normalizeTapZoneActionName(value: String?): String {
-    val action = ReaderTapZoneAction.fromStored(value)
-    return if (action == ReaderTapZoneAction.TOGGLE_UI) {
-        ReaderTapZoneAction.MENU.name
-    } else {
-        action.name
-    }
-}
-
-/**
- * Normalizes anchor hrefs for FB2/EPUB footnote links.
- * Strips `fbanchor://` and `fbanchor:` prefixes, then decodes URI-encoded characters.
- */
-internal fun normalizeReaderAnchorHref(href: String): String {
-    var normalized = href
-    // Explicit footnote bridge from WebView. It keeps noteref clicks separate from
-    // ordinary chapter anchors; after stripping the scheme we still resolve the id
-    // against the format reader's footnote map.
-    if (normalized.startsWith("noteref://", ignoreCase = true)) {
-        normalized = normalized.substring(10)
-    } else if (normalized.startsWith("noteref:", ignoreCase = true)) {
-        normalized = normalized.substring(8)
-    }
-    // Strip fbanchor:// prefix (11 characters)
-    if (normalized.startsWith("fbanchor://")) {
-        normalized = normalized.substring(11)
-    }
-    // Strip fbanchor: prefix (9 characters)
-    else if (normalized.startsWith("fbanchor:")) {
-        normalized = normalized.substring(9)
-    }
-    // Decode URI-encoded characters
-    return runCatching {
-        URLDecoder.decode(normalized, Charsets.UTF_8.name())
-    }.getOrDefault(normalized)
-}
-
-data class ReaderUiState(
-    val comic: Comic? = null,
-    val currentPage: Int = 0,
-    val totalPages: Int = 0,
-    val isLoading: Boolean = true,
-    val error: String? = null,
-    val readingMode: ReadingMode = ReadingMode.PAGE_LTR,
-    val chromeState: ReaderChromeState = ReaderChromeState.HIDDEN,
-    val brightness: Float = -1f,
-    val keepScreenOn: Boolean = false,
-    val screenTimeoutMode: String = ReaderScreenTimeoutMode.SYSTEM.storedValue,
-    val landscapeSpreadEnabled: Boolean = true,
-    /** true when the screen is in landscape; used to drive automatic DUAL_PAGE switch */
-    val isLandscape: Boolean = false,
-    /** Page transition animation: "NONE" | "SLIDE" | "FADE" */
-    val readerPageAnimation: String = "SLIDE",
-    /** Whether page-flip sound effects are enabled */
-    val pageSoundEnabled: Boolean = false,
-    /** Page-flip sound style: "PAPER" | "CRISP" | "SOFT" */
-    val pageSoundStyle: String = "PAPER",
-    /** Immersive (fullscreen) mode — hides system bars while reading */
-    val immersiveMode: Boolean = false,
-    /** Whether expanded reader chrome should hide itself after a short pause. */
-    val chromeAutoHideEnabled: Boolean = true,
-    /** Opacity for the expanded top toolbar. */
-    val topToolbarOpacity: Float = 0.86f,
-    /** Opacity for the expanded bottom toolbar. */
-    val bottomToolbarOpacity: Float = 0.9f,
-    /** Soft blur amount for reader chrome and info panels. */
-    val toolbarBlur: Float = READER_TOOLBAR_DEFAULT_BLUR,
-    /** How graphic pages should be fitted on the reader canvas. */
-    val imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
-    /** Symmetric left/right crop for document page margins. */
-    val imageMarginCropHorizontal: Float = DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL,
-    /** Symmetric top/bottom crop for document page margins. */
-    val imageMarginCropVertical: Float = DEFAULT_IMAGE_MARGIN_CROP_VERTICAL,
-    /** Number of pages to preload ahead of the current page */
-    val preloadPages: Int = 3,
-    /**
-     * Non-null when the current page is rendered as HTML (text EPUB / FB2 novel).
-     * Null when the page is a Bitmap (image-based formats).
-     */
-    val currentHtmlContent: String? = null,
-    /** True when the active reader is routed through text/HTML containers. */
-    val readerRendersHtmlContent: Boolean = false,
-    /** Resolved visual container for the active format + reading mode pair. */
-    val readerContainerKind: ReaderContainerKind = ReaderContainerKind.RASTER_PAGE,
-    /** Base URL for resolving relative resources inside [currentHtmlContent]. */
-    val htmlBaseUrl: String? = null,
-    /** Asset-backed document path for WebViewAssetLoader resources of the current HTML page. */
-    val htmlAssetBasePath: String? = null,
-    /**
-     * Whole-book HTML used only by the text WEBTOON container. PAGE mode keeps using
-     * [currentHtmlContent] so paged layout and page progress remain isolated.
-     */
-    val textWebtoonHtmlContent: String? = null,
-    val textWebtoonHtmlAssetBasePath: String? = null,
-    val textWebtoonHtmlPageCount: Int = 0,
-    /** Pre-render candidate for the previous text page. */
-    val previousHtmlContent: String? = null,
-    val previousHtmlAssetBasePath: String? = null,
-    /** Pre-render candidate for the next text page. */
-    val nextHtmlContent: String? = null,
-    val nextHtmlAssetBasePath: String? = null,
-    /** Table of contents entries (chapters). Empty for image-based formats. */
-    val tableOfContents: List<TocEntry> = emptyList(),
-    /** Whether the TOC bottom sheet is open. */
-    val showTocSheet: Boolean = false,
-    /** Non-null when a footnote popup should be shown. */
-    val footnotePopup: FootnotePopup? = null,
-    /** Peek card vs expanded note sheet for inline notes/translations. */
-    val footnotePresentation: FootnotePresentation = FootnotePresentation.PEEK,
-    /** Font size for text books (sp). */
-    val textFontSize: Int = 18,
-    /** Color scheme for text books: "DAY" | "SEPIA" | "NIGHT" */
-    val textColorScheme: String = "DAY",
-    /** Optional manual text color override for text books. */
-    val textCustomTextColor: Long? = null,
-    /** Optional manual background color override for text books. */
-    val textCustomBackgroundColor: Long? = null,
-    /** Optional manual accent color override for text books. */
-    val textCustomAccentColor: Long? = null,
-    /** Font family for text books: "Georgia" | "Merriweather" | "Open Sans" | "Roboto Slab" | "PT Serif" | "Literata" */
-    val textFontFamily: String = "Georgia",
-    /** Line height multiplier for text books (e.g. 1.5 = 150%). */
-    val textLineHeight: Float = 1.6f,
-    /** Letter spacing in em units for text books. */
-    val textLetterSpacing: Float = 0f,
-    /** Word spacing in em units for text books. */
-    val textWordSpacing: Float = 0f,
-    /** Paragraph spacing in em units for text books. */
-    val textParagraphSpacing: Float = 0.2f,
-    /** Text alignment for text books: "justify" | "left" | "right" | "center" */
-    val textAlignment: String = "left",
-    /** Bold text for text books. */
-    val textBold: Boolean = false,
-    /** Three saved typography slots shared with settings. */
-    val readerStylePresetSlots: List<ReaderStylePresetSlot> = listOf(
-        ReaderStylePresetSlot(1),
-        ReaderStylePresetSlot(2),
-        ReaderStylePresetSlot(3)
-    ),
-    /** Full user-managed saved reading styles. */
-    val readerStylePresetEntries: List<ReaderStylePresetEntry> = emptyList(),
-    /** Tap zone mode for image and text readers. */
-    val tapZoneMode: String = ReaderTapZoneMode.SIMPLE.name,
-    /** Whether the simple three-zone layout should swap left/right actions. */
-    val tapZoneSwap: Boolean = false,
-    /** Fragment to scroll to after the next page load completes (TOC jump with anchor). */
-    val pendingScrollToAnchor: String? = null,
-    /** Number of visual JS pages in the current spine section (paged mode). */
-    val sectionPageCount: Int = 0,
-    /** Current visual page index within the current spine section (0-based). */
-    val sectionCurrentPage: Int = 0,
-    /** Accumulated total visual pages across all visited EPUB sections (0 when not EPUB or no data). */
-    val epubAccumulatedTotalPages: Int = 0,
-    /** Accumulated current visual page position across all visited EPUB sections. */
-    val epubAccumulatedCurrentPage: Int = 0,
-    /** Whether hardware volume buttons should turn pages inside the reader. */
-    val volumeKeysPagingEnabled: Boolean = false,
-    /** System TTS defaults used by the reader services tab. */
-    val ttsProvider: String = ReaderTtsProviderType.SYSTEM.storedValue,
-    val ttsSpeed: Float = 1.0f,
-    val ttsPitch: Float = 1.0f,
-    val ttsVolume: Float = 1.0f,
-    val ttsVoiceName: String? = null,
-    val ttsSleepTimerMode: String = ReaderTtsSleepTimerMode.OFF.storedValue,
-    /** Custom left zone action. */
-    val tapZoneLeftAction: String = ReaderTapZoneAction.PREVIOUS_PAGE.name,
-    /** Custom center zone action. */
-    val tapZoneCenterAction: String = ReaderTapZoneAction.MENU.name,
-    /** Custom right zone action. */
-    val tapZoneRightAction: String = ReaderTapZoneAction.NEXT_PAGE.name,
-    /** Header/footer slot configuration. */
-    val headerLeftSlot: String = ReaderInfoSlot.BOOK_TITLE.name,
-    val headerCenterSlot: String = ReaderInfoSlot.NONE.name,
-    val headerRightSlot: String = ReaderInfoSlot.TIME.name,
-    val footerLeftSlot: String = ReaderInfoSlot.CHAPTER_TITLE.name,
-    val footerCenterSlot: String = ReaderInfoSlot.PAGE.name,
-    val footerRightSlot: String = ReaderInfoSlot.PROGRESS.name,
-    val headerFooterFontSize: Int = 12,
-    val headerFooterVerticalPadding: Int = 6,
-    val headerFooterLeftPadding: Int = 16,
-    val headerFooterRightPadding: Int = 16,
-    /** Whether the text settings bottom sheet is open. */
-    val showTextSettings: Boolean = false,
-    /** Set of bookmarked page indices for the current comic. */
-    val bookmarkedPages: Set<Int> = emptySet(),
-    /** Saved translation/note for the current page, if any. */
-    val pageTranslationNote: String? = null,
-    /** Pending action sheet for selected text. */
-    val selectedTextActionSheet: SelectedTextActionSheetState? = null,
-    /** Selected text translation state for text-based books. */
-    val selectedTextTranslation: SelectedTextTranslationState? = null,
-    /** Shared reading preset applied to theme + reader controls. */
-    val readerPreset: String = ReadingPreset.CUSTOM.name,
-    /** Whether eye-rest reminders are enabled for reading sessions. */
-    val eyeRestEnabled: Boolean = false,
-    /** Eye-rest reminder interval in minutes. */
-    val eyeRestMinutes: Int = 20,
-    /** Global mascot visibility for reader chrome and milestone feedback. */
-    val mascotUiEnabled: Boolean = true,
-    /** Reader top chrome icons visibility and manual order. */
-    val chromeIconOrder: String = ReaderChromeButton.defaultStoredOrder,
-    val chromeShowTocIcon: Boolean = true,
-    val chromeShowStyleIcon: Boolean = true,
-    val chromeShowAudioIcon: Boolean = true,
-    val chromeShowDirectionIcon: Boolean = true,
-    val chromeShowTranslateIcon: Boolean = true,
-    val chromeShowBrightnessIcon: Boolean = true
-)
-
-data class SelectedTextTranslationState(
-    val originalText: String,
-    val translatedText: String = "",
-    val dictionaryEntry: DictionaryEntry? = null,
-    val sourceLanguage: String? = null,
-    val targetLanguage: String? = null,
-    val mode: TranslationMode? = null,
-    val preferredTransport: TranslationTransportPreference = TranslationTransportPreference.AUTO,
-    val canUseDictionary: Boolean = false,
-    val canTranslateAsPhrase: Boolean = false,
-    val canExplain: Boolean = false,
-    val isLoading: Boolean = true,
-    val error: String? = null
-)
-
-data class SelectedTextActionSheetState(
-    val originalText: String,
-    val canUseDictionary: Boolean,
-    val canExplain: Boolean
-)
-
-/** Data for the inline footnote popup shown when the user taps a footnote link. */
-data class FootnotePopup(
-    /** Raw HTML text of the footnote (stripped to plain text for display). */
-    val text: String
-)
-
-data class OcrLaunchRequest(
-    val imagePath: String,
-    val comicId: String?,
-    val page: Int
-)
-
-private data class PendingProgressSave(
-    val comicId: String,
-    val page: Int,
-    val totalPages: Int,
-    val countsTowardReadingProgress: Boolean
-)
-
-private data class PersistedProgressMarker(
-    val comicId: String,
-    val page: Int
-)
-
-private data class ChapterMilestoneMarker(
+internal data class ChapterMilestoneMarker(
     val comicId: String,
     val chapterPage: Int
 )
 
-enum class ReaderNavigationProgressSource {
-    READING,
-    JUMP
-}
-
-private const val TITLE_COMPLETE_BONUS_XP = 60
-
-enum class ReaderProgressRecapType { CHAPTER, TITLE_COMPLETE }
-
-data class ReaderProgressRecap(
-    val type: ReaderProgressRecapType,
-    val comicId: String,
-    val comicTitle: String,
-    val chapterTitle: String? = null,
-    val currentPage: Int,
-    val totalPages: Int,
-    val pagesDelta: Int,
-    val xpAwarded: Int,
-    val goalEnabled: Boolean,
-    val pagesReadToday: Int,
-    val targetPages: Int,
-    val isDailyGoalComplete: Boolean,
-    val pagesReadThisWeek: Int,
-    val weeklyTargetPages: Int,
-    val isWeeklyPlanComplete: Boolean,
-    val streakEnabled: Boolean,
-    val currentStreak: Int,
-    val emittedAtMillis: Long = System.currentTimeMillis()
-)
-
-private data class ReaderSessionSnapshot(
-    val comicId: String,
-    val format: String,
-    val totalPages: Int,
-    val startPage: Int,
-    val readingMode: String,
-    val startedAtMillis: Long,
-    val resumedFromProgress: Boolean
-)
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val comicRepository: ComicRepository,
     private val quoteRepository: QuoteRepository,
+    private val textHighlightRepository: com.example.core.data.repository.TextHighlightRepository,
     private val formatFactory: FormatFactory,
     private val bookEngineRegistry: BookEngineRegistry,
     private val pagePreloader: PagePreloader,
@@ -434,9 +136,12 @@ class ReaderViewModel @Inject constructor(
     private val offlineTranslationEngine: OfflineTranslationEngine,
     private val onlineTranslationEngine: OnlineTranslationEngine,
     private val llmExplainEngine: LlmExplainEngine,
+    private val translatorEngine: com.example.core.domain.translation.TranslatorEngine,
+    private val translationComparisonEngine: com.example.core.domain.translation.TranslationComparisonEngine,
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val readerCheckpointStore: ReaderCheckpointStore,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
+    private val appScope: com.example.core.domain.coroutines.AppCoroutineScope,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -481,11 +186,9 @@ class ReaderViewModel @Inject constructor(
     private var pendingProgressSave: PendingProgressSave? = null
     private var lastPersistedProgress: PersistedProgressMarker? = null
     private val lastChapterMilestone = AtomicReference<ChapterMilestoneMarker?>(null)
-    private var activeReaderSession: ReaderSessionSnapshot? = null
-    private var sessionManualPageTurns: Int = 0
-    private var sessionChapterTransitions: Int = 0
+    private val readerSessionCoordinator = ReaderSessionCoordinator()
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
-    private var currentOpenRequestToken: Long = 0L
+    private val openGuard = com.example.feature.reader.domain.session.ReaderOpenGuard()
     /**
      * Accumulated visual page counts per spine section for EPUB (sectionIndex → pageCount).
      *
@@ -497,6 +200,13 @@ class ReaderViewModel @Inject constructor(
      * no missed pages).
      */
     private val sectionPageCounts = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+
+    /**
+     * Total number of sections (spine items) in the book. Set once when the book opens.
+     * Used by [accumulatedTotalPagesForEpub] to estimate total visual pages including
+     * unvisited sections, preventing premature 100% progress display.
+     */
+    private var totalBookSections: Int = 0
 
     /** Returns a stable snapshot copy for accumulation; never expose the live map. */
     private fun snapshotSectionPageCounts(): Map<Int, Int> =
@@ -525,10 +235,10 @@ class ReaderViewModel @Inject constructor(
 
     private fun loadComicById(comicId: String) {
         loadComicJob?.cancel()
-        val requestToken = ++currentOpenRequestToken
+        val requestToken = openGuard.nextToken()
         loadComicJob = viewModelScope.launch {
             val comic = comicRepository.getComicById(comicId)
-            if (!isOpenRequestCurrent(requestToken)) return@launch
+            if (!openGuard.isCurrent(requestToken)) return@launch
             if (comic == null) {
                 val errorMessage = localizedReaderError(::readerComicNotFoundMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
@@ -540,12 +250,12 @@ class ReaderViewModel @Inject constructor(
 
     private fun loadComic(path: String) {
         loadComicJob?.cancel()
-        val requestToken = ++currentOpenRequestToken
+        val requestToken = openGuard.nextToken()
         loadComicJob = viewModelScope.launch {
             val comic = comicRepository.getComicByPath(path) ?: run {
                 comicRepository.addComic(Uri.parse(path))
             }
-            if (!isOpenRequestCurrent(requestToken)) return@launch
+            if (!openGuard.isCurrent(requestToken)) return@launch
             if (comic == null) {
                 val errorMessage = localizedReaderError(::readerComicLookupFailedMessage)
                 _uiState.update { it.copy(error = errorMessage, isLoading = false) }
@@ -562,7 +272,7 @@ class ReaderViewModel @Inject constructor(
             tocLoadJob?.cancel()
             deferredTocWarmupJob?.cancel()
             deferredPageCountJob?.cancel()
-            if (!isOpenRequestCurrent(requestToken)) return
+            if (!openGuard.isCurrent(requestToken)) return
             _uiState.update {
                 it.copy(
                     isLoading = true,
@@ -588,15 +298,16 @@ class ReaderViewModel @Inject constructor(
             eyeRestJob?.cancel()
             highQualityWarmupJob?.cancel()
             textReaderOrchestrator.cancelPrewarmJob()
-            if (!isOpenRequestCurrent(requestToken)) return
+            if (!openGuard.isCurrent(requestToken)) return
             lastRetainedHighQualityPages = emptySet()
             pagePreloader.clearPages()
             clearHtmlPageCache()
             closeReaderResources()
 
-            if (!isOpenRequestCurrent(requestToken)) return
+            if (!openGuard.isCurrent(requestToken)) return
             val prepared = withContext(Dispatchers.IO) {
-                val resolvedPath = resolveReadablePath(comic, sourcePath) ?: sourcePath
+                val resolvedPath = resolveReadablePath(comic, sourcePath)
+                    ?: throw java.io.FileNotFoundException("Reader source is not readable: $sourcePath")
                 // Re-detect by extension when stored format might be wrong (e.g. EPUB stored as CBZ
                 // because magic bytes of EPUB == ZIP). Extension is always more reliable than magic.
                 val detectedFormat = when (comic.format) {
@@ -613,21 +324,32 @@ class ReaderViewModel @Inject constructor(
                 }
                 val readerRendersHtmlContent =
                     newReader?.rendersHtmlContent() == true || detectedFormat.isTextReadingFormat()
-                val pages = try {
-                    newReader?.getPageCount() ?: 0
-                } catch (t: Throwable) {
-                    newReader?.close()
-                    throw t
+                val contentFormat = newReader?.resolvedContentFormat() ?: detectedFormat
+                val deferPageCount = shouldDeferReaderPageCount(
+                    readerRendersHtmlContent = readerRendersHtmlContent,
+                    contentFormat = contentFormat
+                )
+                val pages = if (deferPageCount) {
+                    1
+                } else {
+                    try {
+                        newReader?.getPageCount() ?: 0
+                    } catch (t: Throwable) {
+                        newReader?.close()
+                        throw t
+                    }
                 }
                 PreparedReaderOpen(
                     resolvedPath = resolvedPath,
                     detectedFormat = detectedFormat,
+                    contentFormat = contentFormat,
                     reader = newReader,
                     pages = pages,
-                    readerRendersHtmlContent = readerRendersHtmlContent
+                    readerRendersHtmlContent = readerRendersHtmlContent,
+                    deferPageCount = deferPageCount
                 )
             }
-            if (!isOpenRequestCurrent(requestToken)) {
+            if (!openGuard.isCurrent(requestToken)) {
                 prepared.reader?.close()
                 return
             }
@@ -635,6 +357,7 @@ class ReaderViewModel @Inject constructor(
             val newReader = prepared.reader
             formatReader = newReader
             sectionPageCounts.clear()
+            totalBookSections = prepared.pages.coerceAtLeast(1)
 
             if (formatReader == null) {
                 val errorMessage = localizedReaderError { language ->
@@ -645,7 +368,7 @@ class ReaderViewModel @Inject constructor(
             }
             val activeReader = newReader ?: return
 
-            if (!isOpenRequestCurrent(requestToken)) {
+            if (!openGuard.isCurrent(requestToken)) {
                 formatReader?.takeIf { it === activeReader }?.close()
                 if (formatReader === activeReader) {
                     formatReader = null
@@ -656,8 +379,7 @@ class ReaderViewModel @Inject constructor(
             val readerRendersHtmlContent = prepared.readerRendersHtmlContent
             val openingMode = effectiveOpeningModeFor(detectedFormat, readerRendersHtmlContent)
             val requestedPage = pendingRequestedPage
-            val shouldDeferCount = detectedFormat.isHeavyReflowableFormat() &&
-                detectedFormat != ComicFormat.EPUB
+            val shouldDeferCount = prepared.deferPageCount
             val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
             val startPage = normalizePageForMode(
                 page = requestedPage ?: comic.currentPage,
@@ -708,7 +430,7 @@ class ReaderViewModel @Inject constructor(
             }
             val sessionStartedAtMillis = System.currentTimeMillis()
             val resumedFromProgress = requestedPage != null || comic.currentPage > 0
-            activeReaderSession = ReaderSessionSnapshot(
+            val readerSession = ReaderSessionSnapshot(
                 comicId = comic.id,
                 format = comic.format.name,
                 totalPages = initialPages,
@@ -717,8 +439,7 @@ class ReaderViewModel @Inject constructor(
                 startedAtMillis = sessionStartedAtMillis,
                 resumedFromProgress = resumedFromProgress
             )
-            sessionManualPageTurns = 0
-            sessionChapterTransitions = 0
+            readerSessionCoordinator.start(readerSession)
             analyticsTracker.track(
                 ReadingAnalyticsEvent.ReaderOpened(
                     comicId = comic.id,
@@ -730,7 +451,7 @@ class ReaderViewModel @Inject constructor(
                     resumedFromProgress = resumedFromProgress
                 )
             )
-            if (!isOpenRequestCurrent(requestToken)) return
+            if (!openGuard.isCurrent(requestToken)) return
             formatReader?.let { reader ->
                 if (readerRendersHtmlContent) {
                     syncBookEngineTextLayer(reader)
@@ -779,7 +500,7 @@ class ReaderViewModel @Inject constructor(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            if (!isOpenRequestCurrent(requestToken)) return
+            if (!openGuard.isCurrent(requestToken)) return
             Log.e("ReaderViewModel", "Failed to open comic", e)
             eyeRestJob?.cancel()
             highQualityWarmupJob?.cancel()
@@ -865,6 +586,7 @@ class ReaderViewModel @Inject constructor(
                             )
                         }
                         refreshAdjacentHtmlPages(index)
+                        loadHighlightsForCurrentPage()
                     }
                     return@launch
                 }
@@ -999,11 +721,19 @@ class ReaderViewModel @Inject constructor(
             return
         }
         if (countsAsManualPageTurn(progressSource)) {
-            sessionManualPageTurns += 1
+            readerSessionCoordinator.recordManualPageTurn()
         }
         _uiState.update {
+            val sectionPaging = sectionPagingStateAfterNavigation(
+                previousSection = previousState.currentPage,
+                nextSection = clamped,
+                previousPageCount = previousState.sectionPageCount,
+                previousPageIndex = previousState.sectionCurrentPage
+            )
             it.copy(
                 currentPage = clamped,
+                sectionPageCount = sectionPaging.pageCount,
+                sectionCurrentPage = sectionPaging.pageIndex,
                 footnotePopup = null,
                 footnotePresentation = FootnotePresentation.PEEK,
                 selectedTextActionSheet = null,
@@ -1235,6 +965,187 @@ class ReaderViewModel @Inject constructor(
 
     fun explainSelectedTextDirect(selectedText: String) {
         explainSelectedText(selectedText)
+    }
+
+    fun highlightSelectedText(selectedText: String) {
+        val normalized = selectedText.trim().replace(Regex("\\s+"), " ")
+        if (normalized.isBlank()) return
+        _uiState.update { it.copy(pendingHighlightText = normalized) }
+    }
+
+    fun confirmHighlight(colorArgb: Int) {
+        val text = _uiState.value.pendingHighlightText ?: return
+        _uiState.update { it.copy(pendingHighlightText = null) }
+        val comic = _uiState.value.comic ?: return
+        val page = _uiState.value.currentPage
+        viewModelScope.launch {
+            runCatching {
+                val html = _uiState.value.currentHtmlContent.orEmpty()
+                val bodyText = html.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ")
+                val startOffset = bodyText.indexOf(text).coerceAtLeast(0)
+                val endOffset = startOffset + text.length
+                textHighlightRepository.saveHighlight(
+                    com.example.core.model.TextHighlight(
+                        comicId = comic.id,
+                        comicTitle = comic.title ?: "",
+                        page = page,
+                        text = text,
+                        startOffset = startOffset,
+                        endOffset = endOffset,
+                        colorArgb = colorArgb
+                    )
+                )
+                loadHighlightsForCurrentPage()
+            }.onFailure { e ->
+                Log.w("ReaderVM", "Failed to save highlight", e)
+            }
+        }
+    }
+
+    fun dismissHighlight() {
+        _uiState.update { it.copy(pendingHighlightText = null) }
+    }
+
+    fun deleteHighlight(id: String) {
+        viewModelScope.launch {
+            runCatching {
+                textHighlightRepository.deleteHighlight(id)
+                loadHighlightsForCurrentPage()
+            }
+        }
+    }
+
+    private fun loadHighlightsForCurrentPage() {
+        val comicId = _uiState.value.comic?.id ?: return
+        val page = _uiState.value.currentPage
+        viewModelScope.launch {
+            textHighlightRepository.highlightsForPage(comicId, page).collect { highlights ->
+                _uiState.update { it.copy(pageHighlights = highlights) }
+            }
+        }
+    }
+
+    fun injectHighlightsJs(): String {
+        val highlights = _uiState.value.pageHighlights
+        return HighlightJsGenerator.generate(highlights)
+    }
+
+    /**
+     * Compare translations from multiple engines side by side.
+     */
+    fun compareTranslations(selectedText: String) {
+        val normalized = selectedText.trim().replace(Regex("\\s+"), " ")
+        if (normalized.isBlank()) return
+
+        _uiState.update {
+            it.copy(translationComparison = TranslationComparisonUi(
+                originalText = normalized,
+                results = emptyList(),
+                isLoading = true
+            ))
+        }
+
+        viewModelScope.launch {
+            val translationSettings = resolveTranslationSettings()
+            val sourceLang = translationSettings.sourceLanguage ?: "auto"
+            val targetLang = translationSettings.targetLanguage
+
+            val comparisonResults = translationComparisonEngine.compare(
+                normalized, sourceLang, targetLang
+            )
+
+            _uiState.update {
+                it.copy(translationComparison = TranslationComparisonUi(
+                    originalText = normalized,
+                    results = comparisonResults.map { r ->
+                        ComparisonResultUi(
+                            engineName = r.engineName,
+                            translatedText = r.translatedText,
+                            success = r.success,
+                            error = r.error
+                        )
+                    },
+                    isLoading = false
+                ))
+            }
+        }
+    }
+
+    fun dismissTranslationComparison() {
+        _uiState.update { it.copy(translationComparison = null) }
+    }
+
+    /**
+     * Translate the current page/chapter text using the unified TranslatorEngine.
+     * Splits text into paragraphs, translates sequentially, reports progress.
+     */
+    fun translateCurrentChapter() {
+        val html = _uiState.value.currentHtmlContent ?: return
+
+        viewModelScope.launch {
+            val translationSettings = resolveTranslationSettings()
+            val sourceLang = translationSettings.sourceLanguage ?: "auto"
+            val targetLang = translationSettings.targetLanguage
+
+            // Check if engine is available before starting
+            val engineAvailable = try {
+                translatorEngine.isLanguagePairAvailable(sourceLang, targetLang)
+            } catch (e: Exception) {
+                false
+            }
+
+            if (!engineAvailable) {
+                _uiState.update {
+                    it.copy(error = "Translation not available. Configure an engine in Settings → AI Services.")
+                }
+                return@launch
+            }
+
+            // Extract paragraphs from HTML
+            val paragraphs = html
+                .replace(Regex("<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
+                .replace(Regex("<p[^>]*>", RegexOption.IGNORE_CASE), "\n")
+                .replace(Regex("</p>", RegexOption.IGNORE_CASE), "\n")
+                .replace(Regex("<[^>]+>"), "")
+                .split(Regex("\n+"))
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+
+            if (paragraphs.isEmpty()) return@launch
+
+            _uiState.update {
+                it.copy(chapterTranslationProgress = ChapterTranslationProgressUi(
+                    totalParagraphs = paragraphs.size,
+                    completedParagraphs = 0
+                ))
+            }
+
+            val translatedParagraphs = mutableListOf<String>()
+            for ((index, paragraph) in paragraphs.withIndex()) {
+                try {
+                    val translated = translatorEngine.translate(paragraph, sourceLang, targetLang)
+                    translatedParagraphs.add(translated)
+                } catch (e: Exception) {
+                    translatedParagraphs.add(paragraph) // Keep original on failure
+                }
+                _uiState.update {
+                    it.copy(chapterTranslationProgress = ChapterTranslationProgressUi(
+                        totalParagraphs = paragraphs.size,
+                        completedParagraphs = index + 1,
+                        currentPreview = paragraph.take(50)
+                    ))
+                }
+            }
+
+            // Build translated HTML
+            val translatedHtml = translatedParagraphs.joinToString("\n") { "<p>$it</p>" }
+            _uiState.update {
+                it.copy(
+                    currentHtmlContent = translatedHtml,
+                    chapterTranslationProgress = null
+                )
+            }
+        }
     }
 
     fun translateSelectedText(
@@ -1986,28 +1897,11 @@ class ReaderViewModel @Inject constructor(
      }
 
     private fun readerFootnoteCandidates(cleanHref: String, fragPart: String): List<String> {
-        val noHash = cleanHref.trim().trimStart('#')
-        val fragment = fragPart.trim().trimStart('#')
-        return listOf(
-            fragment,
-            noHash,
-            "#$fragment",
-            "#$noHash"
-        ).map { it.trim() }
-            .filter { it.isNotEmpty() && it != "#" }
-            .distinct()
+        return ReaderFootnoteAnchorPolicy.lookupCandidates(cleanHref, fragPart)
     }
 
     private fun looksLikeReaderFootnoteAnchor(anchor: String): Boolean {
-        val value = anchor.trim().trimStart('#')
-        if (value.isBlank()) return false
-        if (FOOTNOTE_MARKER_RE.containsMatchIn(value)) return true
-        // Match common footnote ID patterns: fn1, fnt-1, note-1, endnote1,
-        // back1, sup1, text-fn1, pn1, ann1, annotation1, FbAutId_*
-        return value.matches(Regex(
-            """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id)[-_]?\d+$""",
-            RegexOption.IGNORE_CASE
-        ))
+        return ReaderFootnoteAnchorPolicy.isFootnoteAnchor(anchor)
     }
 
     private fun extractCurrentHtmlFootnote(anchorId: String, href: String): String? {
@@ -2041,11 +1935,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun showFootnotePopup(html: String) {
-        val plain = html.replace(Regex("<[^>]+>"), "")
-            .replace("\u00AD", "")
-            .replace(Regex("""^\d+[\s\u00A0]+"""), "")
-            .trim()
-        if (plain.isBlank()) return
+        val plain = ReaderFootnotePopupPolicy.toPopupText(html) ?: return
         _uiState.update {
             it.copy(
                 footnotePopup = FootnotePopup(plain),
@@ -2056,11 +1946,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Shows a footnote popup directly from inline EPUB metadata like anchor title="...". */
     fun showInlineFootnote(text: String) {
-        val plain = text.replace(Regex("<[^>]+>"), "")
-            .replace("\u00AD", "")
-            .replace(Regex("""^\d+[\s\u00A0]+"""), "")
-            .trim()
-        if (plain.isBlank()) return
+        val plain = ReaderFootnotePopupPolicy.toPopupText(text) ?: return
         _uiState.update {
             it.copy(
                 footnotePopup = FootnotePopup(plain),
@@ -2071,38 +1957,24 @@ class ReaderViewModel @Inject constructor(
 
     fun onPagedLayoutPageCountChanged(pageCount: Int, pageIndex: Int = 0) {
         // This callback reports visual subpages inside the currently loaded HTML
-        // section. It must not replace the document-level page count: doing so
-        // makes long reflowable books look complete (100%) in the middle of the
-        // text when a section happens to have only a few visual pages.
+        // section as calculated by the WebView JS pagination engine.
         if (pageCount <= 0) return
         val sectionIndex = _uiState.value.currentPage
         val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
-        if (formatReader is com.example.engine.formats.epub.EpubFormatReader) {
-            sectionPageCounts[sectionIndex] = pageCount
-            val progress = EpubProgressCalculator.accumulate(
-                sectionPageCounts = snapshotSectionPageCounts(),
-                sectionIndex = sectionIndex,
-                sectionPageIndex = safePageIndex
+        sectionPageCounts[sectionIndex] = pageCount
+        val progress = EpubProgressCalculator.accumulate(
+            sectionPageCounts = snapshotSectionPageCounts(),
+            sectionIndex = sectionIndex,
+            sectionPageIndex = safePageIndex,
+            totalSections = totalBookSections
+        )
+        _uiState.update {
+            it.copy(
+                sectionPageCount = pageCount,
+                sectionCurrentPage = safePageIndex,
+                epubAccumulatedTotalPages = progress.accumulatedTotalPages,
+                epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
             )
-            _uiState.update {
-                it.copy(
-                    sectionPageCount = pageCount,
-                    sectionCurrentPage = safePageIndex,
-                    epubAccumulatedTotalPages = progress.accumulatedTotalPages,
-                    epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
-                )
-            }
-        } else {
-            _uiState.update {
-                // For non-EPUB formats (MOBI, FB2, etc.), update totalPages from the
-                // JS pagination result. The Kotlin pagination may estimate only 1 page
-                // while the WebView correctly calculates multiple pages.
-                it.copy(
-                    sectionPageCount = pageCount,
-                    sectionCurrentPage = safePageIndex,
-                    totalPages = if (it.totalPages <= 1 && pageCount > 1) pageCount else it.totalPages
-                )
-            }
         }
     }
 
@@ -2118,10 +1990,7 @@ class ReaderViewModel @Inject constructor(
     fun openHtmlAsset(path: String) = formatReader?.openHtmlAsset(path)
 
     fun expandFootnote() = _uiState.update {
-        it.copy(
-            footnotePresentation = FootnotePresentation.EXPANDED,
-            chromeState = ReaderChromeState.EXPANDED
-        )
+        it.copy(footnotePresentation = FootnotePresentation.EXPANDED)
     }
 
     fun collapseFootnote() = _uiState.update { it.copy(footnotePresentation = FootnotePresentation.PEEK) }
@@ -2135,7 +2004,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun markReaderPresetCustom() {
-        _uiState.update { it.copy(readerPreset = ReadingPreset.CUSTOM.name) }
+        _uiState.update { ReaderStylePresetReducer.markCustom(it) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name) }
     }
 
@@ -2145,25 +2014,7 @@ class ReaderViewModel @Inject constructor(
             return
         }
         val style = preset.style()
-        _uiState.update {
-            it.copy(
-                readerPreset = preset.name,
-                textColorScheme = style.textColorScheme,
-                textCustomTextColor = null,
-                textCustomBackgroundColor = null,
-                textCustomAccentColor = null,
-                textFontFamily = style.fontFamily,
-                textLineHeight = style.lineHeight,
-                textLetterSpacing = style.letterSpacing,
-                textWordSpacing = style.wordSpacing,
-                textParagraphSpacing = style.paragraphSpacing,
-                textAlignment = style.textAlignment,
-                textBold = style.textBold,
-                immersiveMode = style.immersiveMode,
-                readerPageAnimation = style.pageAnimation,
-                chromeState = ReaderChromeState.EXPANDED
-            )
-        }
+        _uiState.update { ReaderStylePresetReducer.applyBuiltInPreset(it, preset) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, preset.name)
             readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, style.immersiveMode)
@@ -2184,88 +2035,115 @@ class ReaderViewModel @Inject constructor(
 
     /** Updates font size for text books. */
     fun setTextFontSize(size: Int) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textFontSize = size) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, size) }
+        _uiState.update { ReaderStylePresetReducer.setFontSize(it, size) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, size)
+        }
     }
 
     /** Updates color scheme for text books: "DAY" | "SEPIA" | "NIGHT". */
     fun setTextColorScheme(scheme: String) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textColorScheme = scheme) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme) }
+        _uiState.update { ReaderStylePresetReducer.setColorScheme(it, scheme) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme)
+        }
     }
 
     fun setTextCustomTextColor(color: Long?) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textCustomTextColor = color) }
-        viewModelScope.launch { persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, color) }
+        _uiState.update { ReaderStylePresetReducer.setCustomTextColor(it, color) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, color)
+        }
     }
 
     fun setTextCustomBackgroundColor(color: Long?) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textCustomBackgroundColor = color) }
-        viewModelScope.launch { persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, color) }
+        _uiState.update { ReaderStylePresetReducer.setCustomBackgroundColor(it, color) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, color)
+        }
     }
 
     fun setTextCustomAccentColor(color: Long?) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textCustomAccentColor = color) }
-        viewModelScope.launch { persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, color) }
+        _uiState.update { ReaderStylePresetReducer.setCustomAccentColor(it, color) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, color)
+        }
     }
 
     /** Updates font family for text books. */
     fun setTextFontFamily(family: String) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textFontFamily = family) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, family) }
+        _uiState.update { ReaderStylePresetReducer.setFontFamily(it, family) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, family)
+        }
     }
 
     /** Updates line height multiplier for text books. */
     fun setTextLineHeight(height: Float) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textLineHeight = height) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, height) }
+        _uiState.update { ReaderStylePresetReducer.setLineHeight(it, height) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, height)
+        }
     }
 
     /** Updates letter spacing for text books in em units. */
     fun setTextLetterSpacing(spacing: Float) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textLetterSpacing = spacing) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, spacing) }
+        _uiState.update { ReaderStylePresetReducer.setLetterSpacing(it, spacing) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, spacing)
+        }
     }
 
     /** Updates word spacing for text books in em units. */
     fun setTextWordSpacing(spacing: Float) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textWordSpacing = spacing) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, spacing) }
+        _uiState.update { ReaderStylePresetReducer.setWordSpacing(it, spacing) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, spacing)
+        }
     }
 
     /** Updates paragraph spacing for text books in em units. */
     fun setTextParagraphSpacing(spacing: Float) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textParagraphSpacing = spacing) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, spacing) }
+        _uiState.update { ReaderStylePresetReducer.setParagraphSpacing(it, spacing) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, spacing)
+        }
     }
 
     /** Updates text alignment for text books: "justify" | "left" | "right" | "center". */
     fun setTextAlignment(align: String) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textAlignment = align) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, align) }
+        _uiState.update { ReaderStylePresetReducer.setAlignment(it, align) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, align)
+        }
     }
 
     /** Toggles bold text for text books. */
     fun setTextBold(bold: Boolean) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(textBold = bold) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.TEXT_BOLD, bold) }
+        _uiState.update { ReaderStylePresetReducer.setBold(it, bold) }
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
+            readerPreferences.set(PreferencesKeys.TEXT_BOLD, bold)
+        }
     }
 
     fun saveReaderStylePreset(slot: Int) {
         val normalizedSlot = slot.coerceIn(1, 3)
-        val existingEntry = _uiState.value.readerStylePresetEntries.getOrNull(normalizedSlot - 1)
+        val existingEntry = ReaderStylePresetEntries.entryAtSlot(
+            _uiState.value.readerStylePresetEntries,
+            normalizedSlot
+        )
         if (existingEntry != null) {
             overwriteReaderStylePreset(existingEntry.id)
         } else {
@@ -2279,36 +2157,32 @@ class ReaderViewModel @Inject constructor(
             displayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
                 ?: localizedReaderStyleFallbackName(_uiState.value.readerStylePresetEntries.size + 1)
         )
-        val updatedEntries = listOf(
-            ReaderStylePresetEntry(
+        val updatedEntries = ReaderStylePresetEntries.prepend(
+            entries = _uiState.value.readerStylePresetEntries,
+            entry = ReaderStylePresetEntry(
                 id = "preset_${System.currentTimeMillis()}",
                 snapshot = snapshot
             )
-        ) + _uiState.value.readerStylePresetEntries
+        )
         updateReaderStylePresetEntries(updatedEntries)
     }
 
     fun overwriteReaderStylePreset(id: String) {
         val currentEntries = _uiState.value.readerStylePresetEntries
         val existing = currentEntries.firstOrNull { it.id == id } ?: return
-        val updatedEntries = currentEntries.map { entry ->
-            if (entry.id == id) {
-                entry.copy(
-                    snapshot = _uiState.value.toReaderStylePresetSnapshot(
-                        displayName = existing.snapshot.displayName
-                    )
-                )
-            } else {
-                entry
-            }
-        }
+        val updatedEntries = ReaderStylePresetEntries.overwrite(
+            entries = currentEntries,
+            id = id,
+            snapshot = _uiState.value.toReaderStylePresetSnapshot(
+                displayName = existing.snapshot.displayName
+            )
+        )
         updateReaderStylePresetEntries(updatedEntries)
     }
 
     fun applyReaderStylePreset(slot: Int) {
         val normalizedSlot = slot.coerceIn(1, 3)
-        _uiState.value.readerStylePresetEntries
-            .getOrNull(normalizedSlot - 1)
+        ReaderStylePresetEntries.entryAtSlot(_uiState.value.readerStylePresetEntries, normalizedSlot)
             ?.let { applyReaderStylePreset(it.id) }
     }
 
@@ -2322,30 +2196,22 @@ class ReaderViewModel @Inject constructor(
 
     fun clearReaderStylePreset(slot: Int) {
         val normalizedSlot = slot.coerceIn(1, 3)
-        _uiState.value.readerStylePresetEntries
-            .getOrNull(normalizedSlot - 1)
+        ReaderStylePresetEntries.entryAtSlot(_uiState.value.readerStylePresetEntries, normalizedSlot)
             ?.let { deleteReaderStylePreset(it.id) }
     }
 
     fun deleteReaderStylePreset(id: String) {
         updateReaderStylePresetEntries(
-            _uiState.value.readerStylePresetEntries.filterNot { it.id == id }
+            ReaderStylePresetEntries.delete(_uiState.value.readerStylePresetEntries, id)
         )
     }
 
     fun renameReaderStylePreset(id: String, displayName: String) {
-        val trimmed = displayName.trim()
-        val updatedEntries = _uiState.value.readerStylePresetEntries.map { entry ->
-            if (entry.id == id) {
-                entry.copy(
-                    snapshot = entry.snapshot.copy(
-                        displayName = trimmed.takeIf { it.isNotEmpty() }
-                    )
-                )
-            } else {
-                entry
-            }
-        }
+        val updatedEntries = ReaderStylePresetEntries.rename(
+            entries = _uiState.value.readerStylePresetEntries,
+            id = id,
+            displayName = displayName
+        )
         updateReaderStylePresetEntries(updatedEntries)
     }
 
@@ -2357,23 +2223,8 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun resetTextSettings() {
-        markReaderPresetCustom()
-        _uiState.update {
-            it.copy(
-                textFontSize = DEFAULT_TEXT_FONT_SIZE,
-                textColorScheme = DEFAULT_TEXT_COLOR_SCHEME,
-                textCustomTextColor = null,
-                textCustomBackgroundColor = null,
-                textCustomAccentColor = null,
-                textFontFamily = DEFAULT_TEXT_FONT_FAMILY,
-                textLineHeight = DEFAULT_TEXT_LINE_HEIGHT,
-                textLetterSpacing = DEFAULT_TEXT_LETTER_SPACING,
-                textWordSpacing = DEFAULT_TEXT_WORD_SPACING,
-                textParagraphSpacing = DEFAULT_TEXT_PARAGRAPH_SPACING,
-                textAlignment = DEFAULT_TEXT_ALIGNMENT,
-                textBold = DEFAULT_TEXT_BOLD
-            )
-        }
+        _uiState.update { ReaderStylePresetReducer.resetTextSettings(it) }
+        viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE)
             readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
@@ -2392,20 +2243,12 @@ class ReaderViewModel @Inject constructor(
 
     private fun localizedReaderStyleFallbackName(index: Int): String = "Style $index"
 
-    private fun List<ReaderStylePresetEntry>.toLegacyReaderStyleSlots(): List<ReaderStylePresetSlot> =
-        (1..3).map { index ->
-            ReaderStylePresetSlot(
-                index = index,
-                serialized = getOrNull(index - 1)?.snapshot?.serialize()
-            )
-        }
-
     private fun updateReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
-        val normalizedEntries = entries.distinctBy { it.id }
+        val normalizedEntries = ReaderStylePresetEntries.normalize(entries)
         _uiState.update { state ->
             state.copy(
                 readerStylePresetEntries = normalizedEntries,
-                readerStylePresetSlots = normalizedEntries.toLegacyReaderStyleSlots()
+                readerStylePresetSlots = ReaderStylePresetEntries.toLegacySlots(normalizedEntries)
             )
         }
         viewModelScope.launch {
@@ -2414,7 +2257,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
-        val legacySlots = entries.toLegacyReaderStyleSlots()
+        val legacySlots = ReaderStylePresetEntries.toLegacySlots(entries)
         readerPreferences.set(
             PreferencesKeys.READER_STYLE_PRESET_LIST,
             serializeReaderStylePresetEntries(entries)
@@ -2430,68 +2273,14 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun ReaderUiState.toReaderStylePresetSnapshot(
-        displayName: String? = null
-    ): ReaderStylePresetSnapshot =
-        ReaderStylePresetSnapshot(
-            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() },
-            readerPreset = ReadingPreset.fromStored(readerPreset).name,
-            textFontSize = textFontSize,
-            textColorScheme = textColorScheme,
-            textFontFamily = textFontFamily,
-            textLineHeight = textLineHeight,
-            textLetterSpacing = textLetterSpacing,
-            textWordSpacing = textWordSpacing,
-            textParagraphSpacing = textParagraphSpacing,
-            textAlignment = textAlignment,
-            textBold = textBold,
-            textCustomTextColor = textCustomTextColor,
-            textCustomBackgroundColor = textCustomBackgroundColor,
-            textCustomAccentColor = textCustomAccentColor,
-            brightness = brightness,
-            immersiveMode = immersiveMode,
-            pageAnimation = readerPageAnimation
-        )
-
     private fun applyReaderStylePresetSnapshot(snapshot: ReaderStylePresetSnapshot) {
-        _uiState.update {
-            it.copy(
-                readerPreset = snapshot.readerPreset,
-                textFontSize = snapshot.textFontSize,
-                textColorScheme = snapshot.textColorScheme,
-                textCustomTextColor = snapshot.textCustomTextColor,
-                textCustomBackgroundColor = snapshot.textCustomBackgroundColor,
-                textCustomAccentColor = snapshot.textCustomAccentColor,
-                textFontFamily = snapshot.textFontFamily,
-                textLineHeight = snapshot.textLineHeight,
-                textLetterSpacing = snapshot.textLetterSpacing,
-                textWordSpacing = snapshot.textWordSpacing,
-                textParagraphSpacing = snapshot.textParagraphSpacing,
-                textAlignment = snapshot.textAlignment,
-                textBold = snapshot.textBold,
-                brightness = snapshot.brightness,
-                immersiveMode = snapshot.immersiveMode,
-                readerPageAnimation = snapshot.pageAnimation,
-                chromeState = ReaderChromeState.EXPANDED
-            )
-        }
+        _uiState.update { ReaderStylePresetReducer.applySnapshot(it, snapshot) }
         viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
-            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, snapshot.textFontFamily)
-            readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, snapshot.textLineHeight)
-            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, snapshot.textLetterSpacing)
-            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, snapshot.textWordSpacing)
-            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, snapshot.textParagraphSpacing)
-            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, snapshot.textAlignment)
-            readerPreferences.set(PreferencesKeys.TEXT_BOLD, snapshot.textBold)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, snapshot.textCustomTextColor)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, snapshot.textCustomBackgroundColor)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, snapshot.textCustomAccentColor)
-            readerPreferences.set(PreferencesKeys.READING_BRIGHTNESS, snapshot.brightness)
-            readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, snapshot.immersiveMode)
-            readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, snapshot.pageAnimation)
+            persistReaderStylePresetSnapshot(
+                snapshot = snapshot,
+                readerPreferences = readerPreferences,
+                dataStore = context.dataStore
+            )
         }
     }
 
@@ -2591,9 +2380,31 @@ class ReaderViewModel @Inject constructor(
     ) {
         deferredPageCountJob?.cancel()
         deferredPageCountJob = viewModelScope.launch(Dispatchers.IO) {
-            val realPages = runCatching { reader.getPageCount() }.getOrNull() ?: initialPages
+            // loadPage() publishes the first HTML section asynchronously. EPUB readers
+            // serialize section access, so starting a whole-book count immediately can
+            // take that lock first and leave the reader blank for the entire count.
+            delay(DEFERRED_PAGE_COUNT_START_DELAY_MILLIS)
+            val retryResult = resolveDeferredPageCountWithRetries(
+                provisionalPages = initialPages,
+                maxRetries = DEFERRED_PAGE_COUNT_MAX_RETRIES,
+                retryDelayMillis = DEFERRED_PAGE_COUNT_RETRY_DELAY_MILLIS,
+                pageCount = reader::getPageCount
+            )
+            val realPages = when (val resolution = retryResult.resolution) {
+                is DeferredPageCountResolution.Resolved -> resolution.totalPages
+                is DeferredPageCountResolution.RetryRequired -> {
+                    Log.w(
+                        "ReaderVM",
+                        "Deferred page count failed after ${retryResult.attempts} attempts; " +
+                            "keeping provisional=${resolution.provisionalPages}, " +
+                            "format=${_uiState.value.comic?.format}",
+                        retryResult.lastFailure
+                    )
+                    return@launch
+                }
+            }
             Log.d("ReaderVM", "scheduleDeferredPageCountResolution: initial=$initialPages, real=$realPages, format=${_uiState.value.comic?.format}")
-            if (!isOpenRequestCurrent(requestToken)) return@launch
+            if (!openGuard.isCurrent(requestToken)) return@launch
             if (formatReader !== reader) return@launch
             if (realPages <= 0) return@launch
             if (realPages == initialPages) {
@@ -2606,17 +2417,22 @@ class ReaderViewModel @Inject constructor(
                 totalPages = realPages
             )
             withContext(Dispatchers.Main) {
-                if (!isOpenRequestCurrent(requestToken)) return@withContext
-                if (formatReader !== reader) return@withContext
-                val currentTotal = _uiState.value.totalPages
-                if (currentTotal > 1 && currentTotal != initialPages) return@withContext
+                if (!shouldApplyDeferredPageCount(
+                        openRequestCurrent = openGuard.isCurrent(requestToken),
+                        readerCurrent = formatReader === reader,
+                        currentTotalPages = _uiState.value.totalPages,
+                        provisionalPages = initialPages,
+                        resolvedTotalPages = realPages
+                    )
+                ) return@withContext
+                totalBookSections = realPages.coerceAtLeast(1)
                 _uiState.update {
                     it.copy(
                         totalPages = realPages,
                         currentPage = normalizedStartPage
                     )
                 }
-                activeReaderSession = activeReaderSession?.copy(totalPages = realPages)
+                readerSessionCoordinator.updateTotalPages(realPages)
                 val visiblePages = visiblePagesFor(normalizedStartPage, openingMode)
                 reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->
                     pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)
@@ -2696,7 +2512,7 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(isLandscape = useLandscapeSpread) }
         val currentMode = _uiState.value.readingMode
         val canAutoLandscapeSpread = _uiState.value.landscapeSpreadEnabled &&
-            supportsAutomaticLandscapeSpread(portraitReadingMode)
+            ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(portraitReadingMode)
         if (isTextReader) {
             if (currentMode == ReadingMode.DUAL_PAGE) {
                 applyReadingMode(portraitPagedReadingMode)
@@ -2765,6 +2581,23 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_KEEP_SCREEN_ON, enabled)
         }
+    }
+
+    /** Set auto-scroll speed. 0 disables, positive values = pixels per second. */
+    fun setAutoScrollSpeed(speed: Float) {
+        _uiState.update { it.copy(autoScrollSpeed = speed.coerceIn(0f, 500f)) }
+    }
+
+    /** Cycle through auto-scroll presets: off → slow → medium → fast → off. */
+    fun cycleAutoScrollSpeed() {
+        val current = _uiState.value.autoScrollSpeed
+        val next = when {
+            current <= 0f -> 30f    // slow
+            current < 60f -> 80f   // medium
+            current < 120f -> 180f // fast
+            else -> 0f             // off
+        }
+        setAutoScrollSpeed(next)
     }
 
     fun setScreenTimeoutMode(mode: String) {
@@ -3105,6 +2938,9 @@ class ReaderViewModel @Inject constructor(
                 _uiState.update { it.copy(chromeShowBrightnessIcon = visible) }
                 viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, visible) }
             }
+            ReaderChromeButton.AUTO_SCROLL -> {
+                // Auto-scroll icon visibility is always true; no preference needed.
+            }
         }
     }
 
@@ -3125,15 +2961,26 @@ class ReaderViewModel @Inject constructor(
         val comic = _uiState.value.comic ?: return
         val epubAccumulated = accumulatedTotalPagesForEpub()
         val totalPages = if (epubAccumulated > 0) epubAccumulated else _uiState.value.totalPages
-        if (totalPages <= 1 && comic.format.isHeavyReflowableFormat()) return
-        val accuratePage = calculateAccuratePage(page)
+        if (!ReaderProgressPolicy.shouldPersist(
+                totalPages = totalPages,
+                isHeavyReflowable = comic.format.isHeavyReflowableFormat(),
+                isEpub = comic.format == ComicFormat.EPUB,
+                epubAccumulatedPages = epubAccumulated,
+                paginatedSectionCount = snapshotSectionPageCounts().size
+            )
+        ) return
+        val accuratePage = ReaderProgressPolicy.pageForPersistence(
+            format = comic.format,
+            readerPage = page,
+            epubAbsolutePage = calculateAccuratePage(page)
+        )
         val pending = PendingProgressSave(
             comicId = comic.id,
             page = accuratePage,
             totalPages = totalPages,
             countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
         )
-        if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, page)) return
+        if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, accuratePage)) return
         pendingProgressSave = pending
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
@@ -3179,7 +3026,7 @@ class ReaderViewModel @Inject constructor(
         }
         val previous = lastChapterMilestone.getAndSet(marker)
         if (previous == marker) return
-        sessionChapterTransitions += 1
+        readerSessionCoordinator.recordChapterTransition()
         viewModelScope.launch {
             dailyReadingGoalStore.recordCompletedCheckpoint()
             readerCheckpointStore.recordChapterReached(
@@ -3281,25 +3128,18 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun visiblePagesFor(page: Int, mode: ReadingMode): List<Int> {
-        val totalPages = _uiState.value.totalPages
-        val normalizedPage = normalizePageForMode(page, mode, totalPages)
-        return when (mode) {
-            ReadingMode.DUAL_PAGE -> buildList {
-                add(normalizedPage)
-                val rightPage = (normalizedPage + 1).takeIf { it < totalPages }
-                if (rightPage != null) add(rightPage)
-            }
-            else -> listOf(normalizedPage)
-        }
+        return ReaderNavigationPolicy.visiblePages(
+            page = page,
+            mode = mode,
+            totalPages = _uiState.value.totalPages
+        )
     }
 
     private fun currentChapterFor(page: Int): TocEntry? {
-        val toc = _uiState.value.tableOfContents
-        if (toc.isEmpty()) return null
-        val tocPage = enginePageForUiPage(page)
-        return toc.asSequence()
-            .sortedBy { it.pageIndex }
-            .lastOrNull { it.pageIndex <= tocPage }
+        return ReaderChapterPolicy.currentChapter(
+            tableOfContents = _uiState.value.tableOfContents,
+            enginePage = enginePageForUiPage(page)
+        )
     }
 
     private fun enginePageForUiPage(page: Int): Int =
@@ -3323,42 +3163,23 @@ class ReaderViewModel @Inject constructor(
         page: Int,
         mode: ReadingMode,
         totalPages: Int = _uiState.value.totalPages
-    ): Int {
-        val clamped = page.coerceIn(0, (totalPages - 1).coerceAtLeast(0))
-        return when (mode) {
-            ReadingMode.DUAL_PAGE -> (clamped / 2) * 2
-            else -> clamped
-        }
-    }
+    ): Int = ReaderNavigationPolicy.normalizePage(page, mode, totalPages)
 
-    private fun pageStepForMode(mode: ReadingMode): Int =
-        if (mode == ReadingMode.DUAL_PAGE) 2 else 1
+    private fun pageStepForMode(mode: ReadingMode): Int = ReaderNavigationPolicy.pageStep(mode)
 
     private fun effectiveOpeningModeFor(
         format: ComicFormat,
         readerRendersHtmlContent: Boolean = format.isTextReadingFormat()
-    ): ReadingMode {
-        val state = _uiState.value
-        return when {
-            readerRendersHtmlContent -> {
-                val rememberedMode = if (state.readingMode == ReadingMode.DUAL_PAGE) {
-                    portraitReadingMode
-                } else {
-                    state.readingMode
-                }
-                if (rememberedMode == ReadingMode.WEBTOON) ReadingMode.WEBTOON else portraitPagedReadingMode
-            }
-            state.isLandscape &&
-                state.landscapeSpreadEnabled &&
-                supportsAutomaticLandscapeSpread(portraitReadingMode) &&
-                state.readingMode != ReadingMode.WEBTOON -> ReadingMode.DUAL_PAGE
-            state.readingMode == ReadingMode.DUAL_PAGE -> portraitReadingMode
-            else -> state.readingMode
-        }
-    }
+    ): ReadingMode = ReaderOpeningModePolicy.resolve(
+        readerRendersHtmlContent = readerRendersHtmlContent,
+        currentMode = _uiState.value.readingMode,
+        portraitMode = portraitReadingMode,
+        portraitPagedMode = portraitPagedReadingMode,
+        isLandscape = _uiState.value.isLandscape,
+        landscapeSpreadEnabled = _uiState.value.landscapeSpreadEnabled
+    )
 
-    private fun isOpenRequestCurrent(requestToken: Long): Boolean =
-        requestToken == currentOpenRequestToken
+    // isOpenRequestCurrent replaced by openGuard.isCurrent()
 
     private fun rememberPortraitMode(mode: ReadingMode) {
         if (mode == ReadingMode.DUAL_PAGE) return
@@ -3367,9 +3188,6 @@ class ReaderViewModel @Inject constructor(
             portraitPagedReadingMode = mode
         }
     }
-
-    private fun supportsAutomaticLandscapeSpread(mode: ReadingMode): Boolean =
-        mode == ReadingMode.PAGE_LTR || mode == ReadingMode.PAGE_RTL
 
     private fun applyHighQualityRetention(indices: Set<Int>) {
         if (indices == lastRetainedHighQualityPages) return
@@ -3401,37 +3219,11 @@ class ReaderViewModel @Inject constructor(
         )
 
     private fun scheduleTextPagePaginationBuild() {
-        val state = _uiState.value
-        if (formatReader is com.example.engine.formats.epub.EpubFormatReader) {
-            textReaderOrchestrator.controller.clearTextPagePagination()
-            return
-        }
-        if (!shouldUseKotlinTextPagePagination(state.readerContainerKind, state.comic?.format)) {
-            textReaderOrchestrator.controller.clearTextPagePagination()
-            return
-        }
-        val reader = formatReader ?: return
-        val comicId = state.comic?.id ?: return
-        textReaderOrchestrator.scheduleTextPagePaginationBuild(
-            scope = viewModelScope,
-            context = context,
-            reader = reader,
-            comicId = comicId,
-            getUiState = { _uiState.value },
-            getBookSession = { activeBookSession },
-            isStillActive = { formatReader === reader && _uiState.value.comic?.id == comicId },
-            onComplete = { result ->
-                _uiState.update {
-                    it.copy(
-                        totalPages = result.displayCount,
-                        currentPage = result.displayStart
-                    )
-                }
-                activeReaderSession = activeReaderSession?.copy(totalPages = result.displayCount)
-                loadPage(result.displayStart)
-                prewarmHtmlPagesAround(result.displayStart, delayMillis = 0L)
-            }
-        )
+        // All text formats now use WebView JS viewport pagination (pixel-precise
+        // TreeWalker + getClientRects()). The Kotlin char-split paginator is retired;
+        // clear any stale snapshot so isTextPagePaginationReady() stays false and
+        // loadHtmlPage() always returns the full section HTML for the WebView to paginate.
+        textReaderOrchestrator.controller.clearTextPagePagination()
     }
 
     private suspend fun openTextFormatReader(
@@ -3538,23 +3330,24 @@ class ReaderViewModel @Inject constructor(
     private fun calculateAccuratePage(sectionIndex: Int): Int {
         val state = _uiState.value
         val snapshot = snapshotSectionPageCounts()
-        if (formatReader is com.example.engine.formats.epub.EpubFormatReader && snapshot.isNotEmpty()) {
+        if (snapshot.isNotEmpty()) {
             return EpubProgressCalculator.absolutePage(
                 sectionPageCounts = snapshot,
                 sectionIndex = sectionIndex,
-                sectionPageIndex = state.sectionCurrentPage
+                sectionPageIndex = state.sectionCurrentPage,
+                totalSections = totalBookSections
             )
         }
-        if (state.sectionPageCount <= 1) return sectionIndex
-        val pagesPerSection = state.sectionPageCount
-        return sectionIndex * pagesPerSection + state.sectionCurrentPage
+        // No paginated data yet — return 0 to avoid storing a raw spine index
+        // that would be misinterpreted as a visual page on reopen.
+        return 0
     }
 
     private fun accumulatedTotalPagesForEpub(): Int {
-        if (formatReader !is com.example.engine.formats.epub.EpubFormatReader) return 0
-        val snapshot = snapshotSectionPageCounts()
-        if (snapshot.isEmpty()) return 0
-        return snapshot.values.sum()
+        return EpubProgressCalculator.estimatedTotalPages(
+            sectionPageCounts = snapshotSectionPageCounts(),
+            totalSections = totalBookSections
+        )
     }
 
     private fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
@@ -3615,7 +3408,7 @@ class ReaderViewModel @Inject constructor(
                 currentComicIdMatches = currentComic.id == pending.comicId,
                 alreadyCompleted = currentComic.isCompleted,
                 countsTowardReadingProgress = pending.countsTowardReadingProgress,
-                sessionManualPageTurns = sessionManualPageTurns,
+                sessionManualPageTurns = readerSessionCoordinator.currentManualPageTurns,
                 goalProgressDelta = goalProgressDelta
             )
             if (titleCompletionPolicy.shouldComplete) {
@@ -3660,7 +3453,11 @@ class ReaderViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        runCatching { kotlinx.coroutines.runBlocking { flushPendingProgressSave() } }
+        // Snapshot the pending IO work, then run it on an application-scoped coroutine so leaving
+        // the reader never blocks the main thread. These paths (progress save, session close) only
+        // touch Room/DataStore/engine registry — all independent of the resources torn down below —
+        // so completing them slightly after onCleared returns is safe. Previously three runBlocking
+        // calls here caused an ANR on slow storage.
         emitReaderClosed()
         super.onCleared()
         loadComicJob?.cancel()
@@ -3671,39 +3468,42 @@ class ReaderViewModel @Inject constructor(
         textReaderOrchestrator.cancelAllJobs()
         progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
+        brightnessJob?.cancel()
         runCatching { formatReader?.close() }
         formatReader = null
-        runCatching { kotlinx.coroutines.runBlocking { closeActiveBookSession() } }
+        appScope.launch {
+            runCatching { flushPendingProgressSave() }
+                .onFailure { Log.e("ReaderViewModel", "Failed to flush progress on close", it) }
+            runCatching { closeActiveBookSession() }
+                .onFailure { Log.w(TAG, "Failed to close book session on close", it) }
+        }
         pagePreloader.cancelPreload()
         pagePreloader.clearPages()
         clearHtmlPageCache()
     }
 
     private fun emitReaderClosed() {
-        val session = activeReaderSession ?: return
-        activeReaderSession = null
         val state = _uiState.value
-        val currentComic = state.comic?.takeIf { it.id == session.comicId }
-        val sessionMetrics = resolveReaderClosedSessionMetrics(
-            sessionComicId = session.comicId,
+        val currentComic = state.comic
+        val closedSession = readerSessionCoordinator.close(
             currentComicId = currentComic?.id,
             currentComicCompleted = currentComic?.isCompleted == true,
-            currentPage = state.currentPage,
-            startPage = session.startPage,
-            manualPageTurns = sessionManualPageTurns,
-            chapterTransitions = sessionChapterTransitions
+            currentPage = state.currentPage
         )
+            ?: return
+        val session = closedSession.session
+        val sessionMetrics = closedSession.metrics
         val finishedAtMillis = System.currentTimeMillis()
         if (shouldRecordReaderSessionMinutes(sessionMetrics)) {
-            runCatching {
-                kotlinx.coroutines.runBlocking {
+            appScope.launch {
+                runCatching {
                     dailyReadingGoalStore.recordSessionMinutes(
                         durationMillis = finishedAtMillis - session.startedAtMillis,
                         nowMillis = finishedAtMillis
                     )
+                }.onFailure { error ->
+                    Log.e("ReaderViewModel", "Failed to record reading session minutes", error)
                 }
-            }.onFailure { error ->
-                Log.e("ReaderViewModel", "Failed to record reading session minutes", error)
             }
         }
         analyticsTracker.track(
@@ -3871,7 +3671,7 @@ class ReaderViewModel @Inject constructor(
             migrateLegacyReaderStyleSlotsToEntries(legacyReaderStylePresetSlots)
         }
         val readerStylePresetSlots = if (readerStylePresetEntries.isNotEmpty()) {
-            readerStylePresetEntries.toLegacyReaderStyleSlots()
+            ReaderStylePresetEntries.toLegacySlots(readerStylePresetEntries)
         } else {
             legacyReaderStylePresetSlots
         }
@@ -3879,7 +3679,9 @@ class ReaderViewModel @Inject constructor(
             pref(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
         )
         _uiState.update { state ->
-            val effectiveMode = if (state.isLandscape && supportsAutomaticLandscapeSpread(mode)) {
+            val effectiveMode = if (
+                state.isLandscape && ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(mode)
+            ) {
                 ReadingMode.DUAL_PAGE
             } else {
                 mode
@@ -4025,14 +3827,13 @@ class ReaderViewModel @Inject constructor(
         if (!fallbackPath.startsWith("content://")) {
             val normalizedPath = fallbackPath.removePrefix("file://")
             EpubReadablePath.ensureLocal(context, normalizedPath)?.let { return it }
-            val filePath = java.io.File(normalizedPath)
-            if (filePath.exists()) return filePath.absolutePath
+            if (isLocalFileReadable(normalizedPath)) return java.io.File(normalizedPath).absolutePath
             val sourceUri = comic.treeUri
             if (!sourceUri.isNullOrBlank() && !DocumentsContract.isTreeUri(Uri.parse(sourceUri)) && hasReadAccess(sourceUri)) {
                 return sourceUri
             }
             resolveReadablePathFromPersistedPermissions(comic)?.let { return it }
-            return fallbackPath
+            return null
         }
         if (hasReadAccess(fallbackPath)) {
             cacheContentUriForEpub(comic, fallbackPath)?.let { return it }
@@ -4045,16 +3846,14 @@ class ReaderViewModel @Inject constructor(
         }
 
         if (treeUri.isNullOrBlank() || documentId.isNullOrBlank()) {
-            return resolveReadablePathFromPersistedPermissions(comic) ?: fallbackPath
+            return resolveReadablePathFromPersistedPermissions(comic)
         }
 
         return runCatching {
             val rebuilt = DocumentsContract.buildDocumentUriUsingTree(Uri.parse(treeUri), documentId).toString()
-            if (hasReadAccess(rebuilt)) rebuilt else fallbackPath
+            if (hasReadAccess(rebuilt)) rebuilt else null
         }.getOrElse {
-            resolveReadablePathFromPersistedPermissions(comic) ?: fallbackPath
-        }.let { resolved ->
-            if (resolved != fallbackPath) resolved else resolveReadablePathFromPersistedPermissions(comic) ?: fallbackPath
+            resolveReadablePathFromPersistedPermissions(comic)
         }
     }
 
@@ -4284,162 +4083,3 @@ class ReaderViewModel @Inject constructor(
     }
 }
 
-internal fun positiveProgressDelta(
-    previousPersistedPage: Int?,
-    newPage: Int
-): Int {
-    if (previousPersistedPage == null) return 0
-    return (newPage - previousPersistedPage).coerceAtLeast(0)
-}
-
-internal fun navigationProgressDelta(
-    previousPersistedPage: Int?,
-    newPage: Int,
-    countsTowardReadingProgress: Boolean
-): Int {
-    if (!countsTowardReadingProgress) return 0
-    return positiveProgressDelta(previousPersistedPage = previousPersistedPage, newPage = newPage)
-}
-
-internal fun countsAsManualPageTurn(
-    progressSource: ReaderNavigationProgressSource
-): Boolean = progressSource == ReaderNavigationProgressSource.READING
-
-internal data class TitleCompletionPolicy(
-    val shouldComplete: Boolean,
-    val recapPagesDelta: Int,
-    val recapXpAwarded: Int,
-    val bonusXpAwarded: Int
-)
-
-internal data class ReaderClosedSessionMetrics(
-    val endPage: Int,
-    val completed: Boolean,
-    val manualPageTurns: Int,
-    val chapterTransitions: Int
-)
-
-internal fun resolveGoalCompletedAnalyticsEvent(
-    comicId: String,
-    previousState: DailyReadingGoalState,
-    currentState: DailyReadingGoalState
-): ReadingAnalyticsEvent.GoalCompleted? {
-    val dailyCompleted = currentState.enabled && !previousState.isCompleted && currentState.isCompleted
-    val weeklyCompleted = currentState.enabled &&
-        !previousState.isWeeklyPlanCompleted &&
-        currentState.isWeeklyPlanCompleted
-    if (!dailyCompleted && !weeklyCompleted) return null
-    return ReadingAnalyticsEvent.GoalCompleted(
-        comicId = comicId,
-        targetPages = currentState.targetPages,
-        pagesReadToday = currentState.pagesReadToday,
-        weeklyTargetPages = currentState.weeklyTargetPages,
-        pagesReadThisWeek = currentState.pagesReadThisWeek,
-        completedDaysThisWeek = currentState.completedDaysThisWeek,
-        currentStreak = currentState.currentStreak,
-        dailyCompleted = dailyCompleted,
-        weeklyCompleted = weeklyCompleted
-    )
-}
-
-internal fun shouldRecordReaderSessionMinutes(
-    sessionMetrics: ReaderClosedSessionMetrics
-): Boolean = sessionMetrics.manualPageTurns > 0 || sessionMetrics.chapterTransitions > 0
-
-internal fun buildReaderClosedAnalyticsEvent(
-    comicId: String,
-    format: String,
-    totalPages: Int,
-    readingMode: String,
-    startedAtMillis: Long,
-    finishedAtMillis: Long,
-    sessionMetrics: ReaderClosedSessionMetrics
-): ReadingAnalyticsEvent.ReaderClosed = ReadingAnalyticsEvent.ReaderClosed(
-    comicId = comicId,
-    format = format,
-    totalPages = totalPages,
-    endPage = sessionMetrics.endPage,
-    readingMode = readingMode,
-    startedAtMillis = startedAtMillis,
-    durationMs = (finishedAtMillis - startedAtMillis).coerceAtLeast(0L),
-    completed = sessionMetrics.completed,
-    manualPageTurns = sessionMetrics.manualPageTurns,
-    chapterTransitions = sessionMetrics.chapterTransitions
-)
-
-internal fun shouldAutoCompleteTitle(
-    reachedLastPage: Boolean,
-    currentComicIdMatches: Boolean,
-    alreadyCompleted: Boolean,
-    countsTowardReadingProgress: Boolean,
-    sessionManualPageTurns: Int
-): Boolean {
-    if (!reachedLastPage || !currentComicIdMatches || alreadyCompleted) return false
-    return countsTowardReadingProgress || sessionManualPageTurns > 0
-}
-
-internal fun resolveTitleCompletionPolicy(
-    reachedLastPage: Boolean,
-    currentComicIdMatches: Boolean,
-    alreadyCompleted: Boolean,
-    countsTowardReadingProgress: Boolean,
-    sessionManualPageTurns: Int,
-    goalProgressDelta: Int
-): TitleCompletionPolicy {
-    val shouldComplete = shouldAutoCompleteTitle(
-        reachedLastPage = reachedLastPage,
-        currentComicIdMatches = currentComicIdMatches,
-        alreadyCompleted = alreadyCompleted,
-        countsTowardReadingProgress = countsTowardReadingProgress,
-        sessionManualPageTurns = sessionManualPageTurns
-    )
-    if (!shouldComplete) {
-        return TitleCompletionPolicy(
-            shouldComplete = false,
-            recapPagesDelta = 0,
-            recapXpAwarded = 0,
-            bonusXpAwarded = 0
-        )
-    }
-    val safePagesDelta = goalProgressDelta.coerceAtLeast(0)
-    return TitleCompletionPolicy(
-        shouldComplete = true,
-        recapPagesDelta = safePagesDelta,
-        recapXpAwarded = safePagesDelta + TITLE_COMPLETE_BONUS_XP,
-        bonusXpAwarded = TITLE_COMPLETE_BONUS_XP
-    )
-}
-
-internal fun resolveReaderClosedSessionMetrics(
-    sessionComicId: String,
-    currentComicId: String?,
-    currentComicCompleted: Boolean,
-    currentPage: Int,
-    startPage: Int,
-    manualPageTurns: Int,
-    chapterTransitions: Int
-): ReaderClosedSessionMetrics {
-    val currentComicMatches = currentComicId == sessionComicId
-    return ReaderClosedSessionMetrics(
-        endPage = if (currentComicMatches) currentPage else currentPage.coerceAtLeast(startPage),
-        completed = currentComicMatches && currentComicCompleted,
-        manualPageTurns = manualPageTurns,
-        chapterTransitions = chapterTransitions
-    )
-}
-
-internal fun shouldEmitChapterProgressRecap(
-    page: Int,
-    totalPages: Int
-): Boolean = totalPages <= 0 || page < totalPages - 1
-
-internal fun DailyReadingGoalState.projectReaderProgressRecap(
-    additionalPages: Int
-): DailyReadingGoalState {
-    val safeAdditionalPages = additionalPages.coerceAtLeast(0)
-    if (!enabled || safeAdditionalPages == 0) return this
-    return copy(
-        pagesReadToday = pagesReadToday + safeAdditionalPages,
-        pagesReadThisWeek = pagesReadThisWeek + safeAdditionalPages
-    )
-}

@@ -96,7 +96,8 @@ internal fun ReaderAudioSheet(
     onSpeedChange: (Float) -> Unit,
     onPitchChange: (Float) -> Unit,
     onVolumeChange: (Float) -> Unit,
-    onSleepTimerChange: (String) -> Unit
+    onSleepTimerChange: (String) -> Unit,
+    onSpeedRead: (() -> Unit)? = null
 ) {
     var showSettings by rememberSaveable { mutableStateOf(true) }
     var showChapters by rememberSaveable { mutableStateOf(false) }
@@ -480,6 +481,11 @@ internal fun ReaderAudioSheet(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.End
                                             ) {
+                                                if (onSpeedRead != null) {
+                                                    TextButton(onClick = { onSpeedRead(); onDismiss() }) {
+                                                        Text("⚡ Speed Read")
+                                                    }
+                                                }
                                                 TextButton(onClick = onStop) {
                                                     Text(readerText.close)
                                                 }

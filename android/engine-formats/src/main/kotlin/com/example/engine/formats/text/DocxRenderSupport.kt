@@ -9,6 +9,26 @@ private val DOCX_INSTR_TEXT_RE = Regex(
     RegexOption.IGNORE_CASE
 )
 
+internal fun renderDocxBlockChildren(container: Element, archive: DocxArchive): List<String> =
+    container.children().flatMap { child ->
+        when (child.tagName()) {
+            "w:p" -> listOfNotNull(renderDocxParagraph(child, archive))
+            "w:tbl" -> listOfNotNull(renderDocxTable(child, archive))
+            "w:sdt" -> {
+                val content = child.children().firstOrNull { it.tagName() == "w:sdtContent" }
+                renderDocxBlockChildren(content ?: child, archive)
+            }
+            "w:sdtContent",
+            "w:customXml",
+            "w:ins",
+            "w:moveTo",
+            "w:smartTag" -> renderDocxBlockChildren(child, archive)
+            "w:del",
+            "w:moveFrom" -> emptyList()
+            else -> emptyList()
+        }
+    }
+
 internal fun renderDocxParagraph(paragraph: Element, archive: DocxArchive): String? {
     val headingLevel = docxHeadingLevel(paragraph)
     val alignment = docxParagraphAlignment(paragraph)
@@ -45,7 +65,7 @@ internal fun renderDocxParagraph(paragraph: Element, archive: DocxArchive): Stri
 }
 
 internal fun renderDocxTable(table: Element, archive: DocxArchive): String? {
-    val rows = table.getElementsByTag("w:tr").mapNotNull { row ->
+    val rows = table.children().filter { it.tagName() == "w:tr" }.mapNotNull { row ->
         val cells = row.children()
             .filter { it.tagName() == "w:tc" }
             .mapNotNull { cell ->
@@ -54,13 +74,7 @@ internal fun renderDocxTable(table: Element, archive: DocxArchive): String? {
                     ?.takeIf { it.isNotBlank() && it != "1" }
                     ?.let { " colspan=\"$it\"" }
                     .orEmpty()
-                val cellBody = cell.children().mapNotNull { child ->
-                    when (child.tagName()) {
-                        "w:p" -> renderDocxParagraph(child, archive)
-                        "w:tbl" -> renderDocxTable(child, archive)
-                        else -> null
-                    }
-                }.joinToString(separator = "")
+                val cellBody = renderDocxBlockChildren(cell, archive).joinToString(separator = "")
                 if (cellBody.isBlank()) null else "<td$colspan>$cellBody</td>"
             }
         if (cells.isEmpty()) null else "<tr>${cells.joinToString(separator = "")}</tr>"
@@ -78,7 +92,7 @@ internal fun renderDocxInlineChildren(container: Element, archive: DocxArchive):
         when (child.tagName()) {
             "w:r" -> renderDocxRun(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
             "w:hyperlink" -> renderDocxHyperlink(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
-            "w:smartTag", "w:sdt", "w:ins" -> {
+            "w:smartTag", "w:sdt", "w:sdtContent", "w:customXml", "w:ins", "w:moveTo" -> {
                 renderDocxInlineChildren(child, archive).takeIf(String::isNotBlank)?.let(parts::add)
             }
             // Simple field — w:instr is an attribute (not a child element); the child w:r

@@ -19,6 +19,8 @@ class ComicFormatReflowableClassificationTest {
             ComicFormat.AZW3,
             ComicFormat.DOCX,
             ComicFormat.ODT,
+            ComicFormat.CHM,
+            ComicFormat.XPS,
             ComicFormat.ZIP,
             ComicFormat.RAR,
             ComicFormat.SEVENZ,
@@ -37,6 +39,16 @@ class ComicFormatReflowableClassificationTest {
             ComicFormat.DJVU
         ).forEach { format ->
             assertFalse("$format must stay on raster page-count path", format.isHeavyReflowableFormat())
+        }
+    }
+
+    @Test
+    fun textReadingFormatsIncludeChmAndXps() {
+        listOf(
+            ComicFormat.CHM,
+            ComicFormat.XPS
+        ).forEach { format ->
+            assertTrue("$format should be treatable as text", format.isTextReadingFormat())
         }
     }
 }

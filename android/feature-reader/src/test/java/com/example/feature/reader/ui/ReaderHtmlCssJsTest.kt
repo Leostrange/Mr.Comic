@@ -96,6 +96,50 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun textSettingsJs_doesNotBreakOrdinaryWordsInsideInlineSpans() {
+        val js = textSettingsJs(
+            fontSize = 18,
+            bg = "#fafafa",
+            fg = "#1a1a1a"
+        )
+
+        assertTrue(
+            "ordinary text must keep whole words, including footnote spans",
+            js.contains("span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:normal !important;word-break:normal !important;")
+        )
+        assertFalse(
+            "ordinary text must not force breaks inside words",
+            js.contains("span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:break-word !important;")
+        )
+    }
+
+    @Test
+    fun tapHandler_blocksSelectionInPagedMode() {
+        assertTrue(JS_TAP_HANDLER.contains("window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()"))
+        assertTrue(JS_TAP_HANDLER.contains("selection.removeAllRanges()"))
+        assertTrue(JS_TAP_HANDLER.contains("e.preventDefault();"))
+    }
+
+    @Test
+    fun tapHandler_resolvesFootnoteAtTapPointBeforePagedEdgeFallback() {
+        assertTrue(JS_TAP_HANDLER.contains("function footnoteLinkAtEvent(e)"))
+        assertTrue(JS_TAP_HANDLER.contains("document.elementFromPoint(e.clientX,e.clientY)"))
+        assertTrue(JS_TAP_HANDLER.contains("var t=footnoteLinkAtEvent(e)||e.target;"))
+        assertTrue(JS_TAP_HANDLER.contains("isFootnoteTarget(probe,probe)"))
+    }
+
+    @Test
+    fun tapHandler_treatsPunctuatedNumericMarkersAsFootnotes() {
+        assertTrue(JS_TAP_HANDLER.contains("noteRefText: /^[\\s\\u200b]*[\\[\\(]?\\d{1,4}[\\]\\)\\.,]?[\\s\\u200b]*$/"))
+    }
+
+    @Test
+    fun tapHandler_doesNotTreatEveryEdgeLinkAsPageNavigation() {
+        assertTrue(JS_TAP_HANDLER.contains("if(shouldRouteLinkAsPagedTap(href,t)){"))
+        assertFalse(JS_TAP_HANDLER.contains("shouldRouteLinkAsPagedTap(href,t)||(hasActivePagedLayout()&&isPagedEdgeTap(e.clientX))"))
+    }
+
+    @Test
     fun textSettingsJs_containsFontSettings() {
         val js = textSettingsJs(
             fontSize = 20,
@@ -107,6 +151,29 @@ class ReaderHtmlCssJsTest {
         assertTrue("font-size 20px", js.contains("fontSize='20px'"))
         assertTrue("font-family Lora", js.contains("fontFamily=\"Lora"))
         assertTrue("line-height 2.0", js.contains("lineHeight='2.0'"))
+    }
+
+    @Test
+    fun textSettingsJs_forcesReaderFontOnOrdinaryTextDescendants() {
+        val js = textSettingsJs(
+            fontSize = 20,
+            bg = "#fafafa",
+            fg = "#1a1a1a",
+            fontFamily = "Lora"
+        )
+
+        assertTrue(
+            "body font is important",
+            js.contains("""document.body.style.setProperty('font-family',"Lora,Georgia,serif",'important');""")
+        )
+        assertTrue(
+            "descendants get reader font",
+            js.contains("""el.style.setProperty('font-family',"Lora,Georgia,serif",'important');""")
+        )
+        assertTrue(
+            "svg artwork keeps its own font handling",
+            js.contains("el.closest&&el.closest('svg')")
+        )
     }
 
     @Test
@@ -136,6 +203,174 @@ class ReaderHtmlCssJsTest {
         assertTrue("paged scroll lock", js.contains("__mrcomicPagedModeScrollLock=true"))
         assertTrue("overflow hidden", js.contains("overflowY='hidden'"))
         assertTrue("page viewport", js.contains("__mrcomic_paged_viewport"))
+    }
+
+    @Test
+    fun textSettingsJs_pagedModeUsesStableNativeViewportHeight() {
+        val js = textSettingsJs(
+            fontSize = 18,
+            bg = "#fafafa",
+            fg = "#1a1a1a",
+            pagedMode = true,
+            nativeViewportHeightPx = 720
+        )
+
+        assertTrue(
+            "transient visualViewport is only a fallback",
+            js.contains("var mrcomicFallbackViewportHeight=mrcomicWindowInnerHeight||mrcomicRootClientHeight||mrcomicVisualViewportHeight||0;")
+        )
+        assertTrue(
+            "native WebView height wins for stable page layout",
+            js.contains("var mrcomicViewportHeight=Math.max(320,nativeViewportHeight||mrcomicFallbackViewportHeight||0);")
+        )
+        assertFalse(
+            "paged mode must not shrink to transient visualViewport height",
+            js.contains("Math.min(mrcomicActualViewportHeight,nativeViewportHeight)")
+        )
+        assertFalse(
+            "paged mode must not pick the smallest browser viewport candidate",
+            js.contains("mrcomicActualViewportHeightCandidates")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_usesStableNativeViewportHeight() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "layout recalculation treats visualViewport as fallback",
+            js.contains("var fallbackPageHeight=windowInnerHeight||rootClientHeight||visualViewportHeight||0;")
+        )
+        assertTrue(
+            "layout recalculation keeps native WebView height stable",
+            js.contains("var pageHeight=Math.max(320,nativeHeight||fallbackPageHeight||640);")
+        )
+        assertFalse(
+            "page breaks must not shrink to transient visualViewport height",
+            js.contains("Math.min(actualViewportHeight,nativeHeight)")
+        )
+        assertFalse(
+            "page breaks must not pick the smallest browser viewport candidate",
+            js.contains("actualViewportHeightCandidates")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_mediaPagesDoNotMaskFrontispieceBottom() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "frontispiece and cover pages are marked as media pages",
+            js.contains("mediaPage:true")
+        )
+        assertTrue(
+            "media pages do not reserve a text gutter that crops the image",
+            js.contains("var bottomTextGutter=isMediaPage?0:Math.max(lineHeight,pageInsetBottom,viewportBottomSafety);")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_includesTopInsetBeforePlacingBottomShield() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "the visible span must include the inset used to position page content",
+            js.contains("var leadingViewportOffset=contentViewportTopOffset+Math.max(0,Number(pageTopInset||0));")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_masksFractionalBoundaryBeforeTheNextLine() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "the bottom shield must start before the next page's first line can peek through",
+            js.contains("Math.max(0,rawVisibleHeight-1)")
+        )
+    }
+
+    @Test
+    fun textSettingsJs_pagedModeAlignsCompactedBoundariesToFragments() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue("safe boundary helper", js.contains("safePageBoundaryAtOrBefore"))
+        assertTrue("compact pages use safe boundary", js.contains("var compactEnd=safePageBoundaryAtOrBefore"))
+        assertTrue("heading merge uses safe boundary", js.contains("var mergedEnd=safePageBoundaryAtOrBefore"))
+        assertTrue("small page extension uses safe boundary", js.contains("var safeExtendTo=safePageBoundaryAtOrBefore"))
+        assertFalse(
+            "small page extension must not cut inside a line",
+            js.contains("cur.end=Math.round(Math.min(extendTo,Number(nxt.end||0)))")
+        )
+    }
+
+    @Test
+    fun textSettingsJs_footnoteDomColoringCoversClickableNoterefPatterns() {
+        val js = textSettingsJs(
+            fontSize = 18,
+            bg = "#fafafa",
+            fg = "#1a1a1a"
+        )
+        val selectorMatch = Regex("""var sel='([^']+)'""").find(js)
+        assertNotNull("footnote DOM selector", selectorMatch)
+        val selector = selectorMatch!!.groupValues[1]
+
+        listOf(
+            "a.fnt",
+            "a.doc-noteref",
+            "a.doc-fn",
+            "a.doc-backref",
+            "a.backnote",
+            "a.supnote",
+            "a.text-fn",
+            "a.pagenote",
+            "a.annref",
+            "a.annotation",
+            "a[role=\"doc-fn\"]",
+            "a[data-footnote]",
+            "a[data-type=\"annotation\"]",
+            "a[href^=\"noteref:\"]",
+            "a[href^=\"#docx-footnote\"]",
+            """a[epub\\:type~="footnote"]""",
+            """a[epub\\:type~="annotation"]"""
+        ).forEach { pattern ->
+            assertTrue("$pattern should be styled as footnote", selector.contains(pattern))
+        }
+
+        assertTrue("fallback scans clickable anchors", js.contains("document.querySelectorAll('a[href]')"))
+        assertTrue("numeric note refs are colored when they route to anchors", js.contains("inlineNoteRef="))
+        assertTrue("fallback applies inline color", js.contains("paintNoteRef(a);"))
+    }
+
+    @Test
+    fun readerHtmlPageSourceReloadKeyUsesDocumentIdentityOnly() {
+        val key = readerHtmlPageSourceReloadKey(
+            html = "<p>Hello</p>",
+            resolvedBaseUrl = "https://appassets.androidplatform.net/content/book.xhtml",
+            cacheDirPath = "cache"
+        )
+
+        assertEquals(
+            key,
+            readerHtmlPageSourceReloadKey(
+                html = "<p>Hello</p>",
+                resolvedBaseUrl = "https://appassets.androidplatform.net/content/book.xhtml",
+                cacheDirPath = "cache"
+            )
+        )
+        assertFalse(
+            key == readerHtmlPageSourceReloadKey(
+                html = "<p>Hello again</p>",
+                resolvedBaseUrl = "https://appassets.androidplatform.net/content/book.xhtml",
+                cacheDirPath = "cache"
+            )
+        )
+        assertFalse(
+            key == readerHtmlPageSourceReloadKey(
+                html = "<p>Hello</p>",
+                resolvedBaseUrl = "https://appassets.androidplatform.net/content/next.xhtml",
+                cacheDirPath = "cache"
+            )
+        )
     }
 
     @Test

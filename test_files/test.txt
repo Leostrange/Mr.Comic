@@ -1,0 +1,13 @@
+Тестовый файл для Mr.Comic ридера.
+
+Этот файл содержит несколько абзацев для тестирования пагинации и разрыва страниц.
+
+Абзац 1: Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+Абзац 2: Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+Абзац 3: Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.
+
+Абзац 4: Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit.
+
+Абзац 5: Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur.

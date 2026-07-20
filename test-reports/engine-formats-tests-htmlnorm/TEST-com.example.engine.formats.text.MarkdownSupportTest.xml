@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.MarkdownSupportTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-20T00:52:55.716Z" hostname="LEOSTRANGE" time="0.724">
+  <properties/>
+  <testcase name="parsesRealCorpusSampleIntoManyBlocks" classname="com.example.engine.formats.text.MarkdownSupportTest" time="0.484"/>
+  <testcase name="preservesSafeInlineHtml" classname="com.example.engine.formats.text.MarkdownSupportTest" time="0.001"/>
+  <testcase name="sanitizesDangerousHtmlTags" classname="com.example.engine.formats.text.MarkdownSupportTest" time="0.002"/>
+  <testcase name="rendersFencedCodeBlocksAndHeadings" classname="com.example.engine.formats.text.MarkdownSupportTest" time="0.002"/>
+  <testcase name="rendersTablesAutolinksAndStrikethrough" classname="com.example.engine.formats.text.MarkdownSupportTest" time="0.008"/>
+  <testcase name="realCorpusKeepsOrderedListsAndBlockquotes" classname="com.example.engine.formats.text.MarkdownSupportTest" time="0.227"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

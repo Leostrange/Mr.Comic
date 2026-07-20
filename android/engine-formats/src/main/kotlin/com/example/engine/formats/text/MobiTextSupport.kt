@@ -203,7 +203,8 @@ internal object MobiTextSupport {
     private fun readPalmDatabaseRecords(bytes: ByteArray): List<ByteArray>? {
         if (bytes.size < PDB_HEADER_SIZE) return null
         val recordCount = bytes.readUInt16BE(76) ?: return null
-        if (recordCount <= 0) return null
+        // Cap at 64K records to prevent OOM on malformed MOBI files (P0 #3)
+        if (recordCount <= 0 || recordCount > 65536) return null
 
         val offsets = mutableListOf<Int>()
         for (index in 0 until recordCount) {
@@ -567,22 +568,24 @@ internal object MobiTextSupport {
     private fun extractMarkupFragment(text: String): String? {
         if (!looksLikeMarkup(text)) return null
 
+        // Also search for HTML-entity-encoded tags (P1 #10)
         val trimmed = text.trim()
-        val start = listOf(
+        val startList = listOf(
             "<!doctype",
-            "<html",
-            "<body",
-            "<section",
-            "<article",
-            "<chapter",
-            "<h1",
-            "<h2",
-            "<p",
-            "<div",
-            "<mbp:pagebreak"
-        ).map { marker ->
+            "<html", "&lt;html",
+            "<body", "&lt;body",
+            "<section", "&lt;section",
+            "<article", "&lt;article",
+            "<chapter", "&lt;chapter",
+            "<h1", "&lt;h1",
+            "<h2", "&lt;h2",
+            "<p", "&lt;p",
+            "<div", "&lt;div",
+            "<mbp:pagebreak", "&lt;mbp:pagebreak"
+        )
+        val start = startList.mapNotNull { marker ->
             trimmed.indexOf(marker, ignoreCase = true).takeIf { it >= 0 }
-        }.filterNotNull().minOrNull() ?: 0
+        }.minOrNull() ?: 0
 
         var fragment = trimmed.substring(start).trim()
         val htmlEnd = fragment.lastIndexOf("</html>", ignoreCase = true)
@@ -593,19 +596,21 @@ internal object MobiTextSupport {
     }
 
     private fun looksLikeMarkup(text: String): Boolean {
+        // Also match HTML-entity-encoded tags like &lt;body&gt; (P1 #10)
         val lower = text.lowercase()
-        return listOf(
-            "<html",
-            "<body",
-            "<p",
-            "<div",
-            "<span",
-            "<h1",
-            "<h2",
-            "<mbp:pagebreak",
-            "<guide",
-            "<metadata"
-        ).count { lower.contains(it) } >= 2
+        val markers = listOf(
+            "<html", "&lt;html",
+            "<body", "&lt;body",
+            "<p", "&lt;p",
+            "<div", "&lt;div",
+            "<span", "&lt;span",
+            "<h1", "&lt;h1",
+            "<h2", "&lt;h2",
+            "<mbp:pagebreak", "&lt;mbp:pagebreak",
+            "<guide", "&lt;guide",
+            "<metadata", "&lt;metadata"
+        )
+        return markers.count { lower.contains(it) } >= 2
     }
 
     private fun declaredEncodingName(encoding: Int): String = encodingToCharset(encoding).name()

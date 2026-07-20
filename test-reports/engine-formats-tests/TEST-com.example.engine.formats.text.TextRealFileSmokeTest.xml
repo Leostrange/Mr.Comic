@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.formats.text.TextRealFileSmokeTest" tests="27" skipped="0" failures="0" errors="0" timestamp="2026-07-12T18:52:56.129Z" hostname="LEOSTRANGE" time="8.406">
+  <properties/>
+  <testcase name="odtFooterSampleKeepsMultiPageBodyText" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.059"/>
+  <testcase name="realCorpusDocxFootnotesKeepReferencesAndEmbeddedFonts" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.028"/>
+  <testcase name="realCorpusTxtSampleBuildsChapterTocAndResolvesAnchors" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.33"/>
+  <testcase name="realCorpusHtmlAliceSampleResolvesInternalChapterAnchors" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.262"/>
+  <testcase name="realCorpusWelshTxtSampleKeepsReadableNonAsciiText" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.199"/>
+  <testcase name="htmlSampleKeepsBookLikeMarkup" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.073"/>
+  <testcase name="realCorpusHtmlBigPreambleSampleKeepsAssetBackedMainDocumentAndStripsPreamble" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.493"/>
+  <testcase name="mobiSampleKeepsCenteredFrontMatterAndChapterText" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.391"/>
+  <testcase name="realCorpusDocxSampleKeepsCalibreDemoStructureAndAssets" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="2.651"/>
+  <testcase name="htmlSampleResolvesInternalChapterAnchors" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.215"/>
+  <testcase name="docxSamplePreservesRichContent" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="1.985"/>
+  <testcase name="htmlUtf8SampleKeepsUnicodeCharacters" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.007"/>
+  <testcase name="rtfRegularImagesSampleKeepsEmbeddedImagesVisible" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.217"/>
+  <testcase name="realCorpusMarkdownSampleKeepsSpecStructure" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.161"/>
+  <testcase name="htmlBigPreambleSampleStillProducesReadableDocument" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.24"/>
+  <testcase name="htmlBigPreambleSampleStripsHeavyScriptPreambleOnReaderPath" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.284"/>
+  <testcase name="markdownSampleKeepsSpecStructure" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.158"/>
+  <testcase name="odtBoldItalicSampleKeepsStyleRichParagraphs" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.069"/>
+  <testcase name="realCorpusHtmlAliceSampleUsesAssetBackedReaderPath" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.233"/>
+  <testcase name="rtfCyrillicSampleKeepsCp1251TextReadable" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.016"/>
+  <testcase name="realCorpusHtmlUtf8SampleUsesAssetBackedReaderPath" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.012"/>
+  <testcase name="rtfSampleKeepsHyperlinksAndRecipeStructure" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.01"/>
+  <testcase name="htmlSampleUsesAssetBackedBaseForLocalResources" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.211"/>
+  <testcase name="odtSampleKeepsVisibleBodyText" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.053"/>
+  <testcase name="realCorpusDocxNumberedListKeepsNestedListTextVisible" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.028"/>
+  <testcase name="realCorpusDocxFootnotesSampleKeepsPlainTextAndFootnoteMarkers" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.01"/>
+  <testcase name="realCorpusWin1252TxtSampleKeepsCharsetSpecificText" classname="com.example.engine.formats.text.TextRealFileSmokeTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

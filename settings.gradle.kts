@@ -29,6 +29,7 @@ include(":core-ui");            project(":core-ui").projectDir            = file
 include(":engine-api");         project(":engine-api").projectDir         = file("android/engine-api")
 include(":engine-epub-readium"); project(":engine-epub-readium").projectDir = file("android/engine-epub-readium")
 include(":engine-formats");     project(":engine-formats").projectDir     = file("android/engine-formats")
+include(":engine-llm");         project(":engine-llm").projectDir         = file("android/engine-llm")
 include(":engine-registry");    project(":engine-registry").projectDir    = file("android/engine-registry")
 include(":engine-rendering");   project(":engine-rendering").projectDir   = file("android/engine-rendering")
 include(":feature-library");    project(":feature-library").projectDir    = file("android/feature-library")

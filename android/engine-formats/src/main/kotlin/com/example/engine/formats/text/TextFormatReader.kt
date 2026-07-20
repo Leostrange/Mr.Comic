@@ -27,6 +27,10 @@ import org.jsoup.nodes.Element
 import org.jsoup.safety.Safelist
 import java.io.File
 import java.io.InputStream
+import com.example.engine.formats.base.charset.bomLength
+import com.example.engine.formats.base.charset.detectBomCharset
+import com.example.engine.formats.base.charset.isStrictUtf8
+import com.example.engine.formats.base.charset.looksLikeUtf16
 import java.nio.charset.Charset
 import java.net.URLDecoder
 import javax.inject.Inject
@@ -34,7 +38,6 @@ import javax.inject.Inject
 private const val CHARS_PER_PAGE = 4000
 private const val MAX_TEXT_SOURCE_BYTES = 96 * 1024 * 1024
 private const val MAX_SECTION_CHARS = 100_000
-private val UTF8_BOM = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 private val MARKDOWN_EXTENSIONS: List<Extension> = listOf(
     AutolinkExtension.create(),
     TablesExtension.create(),
@@ -54,7 +57,8 @@ private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
         "html", "head", "body", "main", "article", "section", "aside", "header", "footer",
         "figure", "figcaption", "hr", "table", "thead", "tbody", "tfoot", "tr", "th", "td",
         "caption", "colgroup", "col", "sup", "sub", "center", "font", "big", "small",
-        "kbd", "details", "summary", "mark", "abbr", "del", "s", "em", "strong"
+        "kbd", "details", "summary", "mark", "abbr", "del", "s", "em", "strong",
+        "div", "span"
     )
     .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align", "data-mrcomic-pagebreak")
     .addAttributes("img", "src", "alt", "title", "width", "height", "loading", "align")
@@ -64,16 +68,10 @@ private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
     .addAttributes("td", "colspan", "rowspan")
     .addAttributes("table", "width", "border", "cellpadding", "cellspacing", "align")
     .addAttributes("col", "span")
-    .addProtocols("a", "href", "http", "https", "mailto", "tel", "file", "content")
+    .addProtocols("a", "href", "http", "https", "mailto", "tel", "file", "content", "#")
     .addProtocols("img", "src", "http", "https", "file", "content", "data")
     .preserveRelativeLinks(true)
-private val SINGLE_BYTE_TEXT_CHARSETS = listOf(
-    Charset.forName("windows-1252"),
-    Charset.forName("windows-1251"),
-    Charset.forName("KOI8-R"),
-    Charset.forName("IBM866"),
-    Charsets.ISO_8859_1
-)
+// SINGLE_BYTE_TEXT_CHARSETS extracted to TextCharsetUtils.kt
 private val TXT_CHAPTER_PATTERNS = listOf(
     Regex("""(?iu)^(глава|часть|книга|том)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),
     Regex("""(?iu)^(chapter|part|book|volume)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),
@@ -102,6 +100,45 @@ private data class HtmlPageAnchorResult(
     val pages: List<String>,
     val anchors: List<TxtChapterAnchor>
 )
+
+internal data class ReaderHtmlFootnoteExtraction(
+    val contentHtml: String,
+    val footnoteMap: Map<String, String>
+)
+
+/** Removes only semantic note bodies; references in the reading flow stay intact. */
+internal fun extractReaderHtmlFootnotes(raw: String): ReaderHtmlFootnoteExtraction {
+    val document = Jsoup.parse(raw)
+    document.outputSettings(Document.OutputSettings().prettyPrint(false))
+    val footnoteMap = linkedMapOf<String, String>()
+    val noteBodies = document.allElements.filter(::isReaderHtmlFootnoteBody)
+        .filter { element -> element.parents().none(::isReaderHtmlFootnoteBody) }
+
+    noteBodies.forEach { note ->
+        val anchorId = note.id().trim()
+        val text = note.text().replace(Regex("\\s+"), " ").trim()
+        if (anchorId.isNotBlank() && text.isNotBlank()) {
+            footnoteMap.putIfAbsent(anchorId, text)
+        }
+        note.remove()
+    }
+    return ReaderHtmlFootnoteExtraction(
+        contentHtml = document.outerHtml(),
+        footnoteMap = footnoteMap
+    )
+}
+
+private fun isReaderHtmlFootnoteBody(element: Element): Boolean {
+    val epubTypeTokens = element.attr("epub:type")
+        .lowercase()
+        .split(Regex("\\s+"))
+    val roleTokens = element.attr("role")
+        .lowercase()
+        .split(Regex("\\s+"))
+    return epubTypeTokens.any { it in setOf("footnote", "endnote", "rearnote") } ||
+        roleTokens.any { it in setOf("doc-footnote", "doc-endnote") } ||
+        element.hasAttr("data-footnote-body")
+}
 
 // ── RTF non-content destination groups ────────────────────────────────────────
 private val RTF_SKIP_DESTINATIONS = setOf(
@@ -248,243 +285,7 @@ private fun buildReaderHtmlDocument(
     )
 }
 
-private fun textReaderMimeTypeFor(extension: String): String = when (extension.lowercase()) {
-    "html", "htm" -> "text/html"
-    "css" -> "text/css"
-    "js" -> "application/javascript"
-    "txt" -> "text/plain"
-    "xml" -> "application/xml"
-    "svg" -> "image/svg+xml"
-    "jpg", "jpeg" -> "image/jpeg"
-    "png" -> "image/png"
-    "gif" -> "image/gif"
-    "webp" -> "image/webp"
-    "avif" -> "image/avif"
-    "bmp" -> "image/bmp"
-    "ico" -> "image/x-icon"
-    "ttf" -> "font/ttf"
-    "otf" -> "font/otf"
-    "woff" -> "font/woff"
-    "woff2" -> "font/woff2"
-    else -> "application/octet-stream"
-}
-
-internal fun decodeTextBytes(bytes: ByteArray): String {
-    if (bytes.isEmpty()) return ""
-    if (bytes.startsWith(UTF8_BOM)) {
-        return repairCommonTextMojibake(bytes.copyOfRange(3, bytes.size).toString(Charsets.UTF_8))
-    }
-    if (bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xFE.toByte()))) {
-        return repairCommonTextMojibake(bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16LE))
-    }
-    if (bytes.startsWith(byteArrayOf(0xFE.toByte(), 0xFF.toByte()))) {
-        return repairCommonTextMojibake(bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16BE))
-    }
-
-    if (looksLikeUtf16(bytes, littleEndian = true)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_16LE))
-    if (looksLikeUtf16(bytes, littleEndian = false)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_16BE))
-    if (isValidUtf8(bytes)) return repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
-
-    // Single-byte-charset fallback. Apply repairCommonTextMojibake EXACTLY ONCE per
-    // branch: a second unconditional pass over already-repaired text used to risk
-    // picking a different candidate and corrupting valid text.
-    val bestResult = SINGLE_BYTE_TEXT_CHARSETS
-        .map { charset ->
-            val text = bytes.toString(charset)
-            val score = scoreDecodedText(text, charset)
-            Triple(charset, text, score)
-        }
-        .maxByOrNull { it.third }
-
-    return bestResult?.let { (charset, text, score) ->
-        if (score >= 50) {
-            repairCommonTextMojibake(text)
-        } else {
-            repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
-        }
-    } ?: repairCommonTextMojibake(bytes.toString(Charsets.UTF_8))
-}
-
-private fun repairCommonTextMojibake(text: String): String {
-    if (!looksLikeCommonMojibake(text)) return text
-    // Also attempt repair for valid UTF-8 that may be double-encoded
-    val candidates = buildList {
-        add(text)
-        listOf("windows-1252", "windows-1251", "ISO-8859-1", "ISO-8859-5", "KOI8-R").forEach { charsetName ->
-            val repaired = runCatching {
-                text.toByteArray(Charset.forName(charsetName)).toString(Charsets.UTF_8)
-            }.getOrNull()
-            if (!repaired.isNullOrBlank() && '\uFFFD' !in repaired) add(repaired)
-        }
-    }
-    val originalScore = scoreDecodedText(text, Charsets.UTF_8)
-    // Lower threshold for short texts: minimum 30, scale up for longer texts
-    val threshold = if (text.length < 500) 30 else 80
-    // Pick the best candidate.  Tie-breaking rule: when two candidates score
-    // equally the one that is NOT mojibake wins.  This matters for double-encoded
-    // Cyrillic (UTF-8 → misread as windows-1252 → re-encoded UTF-8) where the
-    // mojibake "ÐŸÑ€Ð¸Ð²ÐµÑ‚" and the clean recovery "Привет" score identically
-    // (the Latin letters Ð/Ñ count as valid), and the original text won — recovery
-    // never happened.
-    var best = candidates.firstOrNull() ?: return text
-    var bestScore = scoreDecodedText(best, Charsets.UTF_8)
-    var bestIsMojibake = looksLikeCommonMojibake(best)
-    for (i in 1 until candidates.size) {
-        val c = candidates[i]
-        val s = scoreDecodedText(c, Charsets.UTF_8)
-        val m = looksLikeCommonMojibake(c)
-        if (s > bestScore || (s == bestScore && !m && bestIsMojibake)) {
-            best = c; bestScore = s; bestIsMojibake = m
-        }
-    }
-    if (best == text) return text
-    // Standard improvement-based acceptance.
-    if (bestScore > originalScore + threshold) return best
-    // looksLikeCommonMojibake already proved the text is corrupted, and the candidate
-    // decoded cleanly without replacement glyphs (filtered above). For the common
-    // UTF-8-as-windows-1252 Cyrillic case the mojibake scores deceptively high (Latin
-    // letters Ð/Ñ each count as valid), so a tiny gap can still mean real recovery.
-    // Trust a clean (non-mojibake) candidate when it is at least as good as the
-    // mojibake; the tie-break above already preferred it over the input.
-    if ('\uFFFD' !in best && !bestIsMojibake && bestScore >= originalScore) return best
-    return text
-}
-
-private fun looksLikeCommonMojibake(text: String): Boolean {
-    if (text.length < 4) return false
-    // Cyrillic mojibake patterns (UTF-8 read as windows-1252)
-    val suspiciousMarkers = listOf("Ð", "Ñ", "Рџ", "Рђ", "СЂ", "СЃ", "Рё", "Рµ")
-    val markerHits = suspiciousMarkers.count { it in text }
-    if (markerHits >= 2) return true
-    val cyrillicLetters = text.count { it in '\u0400'..'\u04FF' }
-    val mojibakePairs = Regex("""[РС][\u0400-\u04FF]""").findAll(text).count()
-    if (cyrillicLetters > 0 && mojibakePairs >= 3) return true
-    // Double-encoding detection: UTF-8 bytes that were decoded as latin-1 and re-encoded
-    // Pattern: \xC3\x90\xC2 or \xC3\x91\xC2 (common in double-encoded Cyrillic)
-    if (text.contains("\u00C3\u0090") || text.contains("\u00C3\u0091") ||
-        text.contains("\u00C3\u00C2")) return true
-    // Latin supplement characters that shouldn't appear in normal text
-    val latinSupplement = text.count { it in '\u0080'..'\u00FF' }
-    if (latinSupplement > text.length / 4 && latinSupplement >= 3) return true
-    return false
-}
-
-private fun ByteArray.startsWith(prefix: ByteArray): Boolean {
-    if (size < prefix.size) return false
-    return prefix.indices.all { this[it] == prefix[it] }
-}
-
-private fun looksLikeUtf16(bytes: ByteArray, littleEndian: Boolean): Boolean {
-    if (bytes.size < 4) return false
-    val sampleSize = bytes.size.coerceAtMost(512)
-    var zeroEven = 0
-    var zeroOdd = 0
-    var pairs = 0
-    var index = 0
-    while (index + 1 < sampleSize) {
-        if (bytes[index] == 0.toByte()) zeroEven++
-        if (bytes[index + 1] == 0.toByte()) zeroOdd++
-        pairs++
-        index += 2
-    }
-    if (pairs == 0) return false
-    val dominantZeros = if (littleEndian) zeroOdd else zeroEven
-    val nonDominantZeros = if (littleEndian) zeroEven else zeroOdd
-    return dominantZeros * 1.0 / pairs >= 0.3 && nonDominantZeros * 1.0 / pairs <= 0.1
-}
-
-private fun isValidUtf8(bytes: ByteArray): Boolean {
-    var index = 0
-    while (index < bytes.size) {
-        val value = bytes[index].toInt() and 0xFF
-        when {
-            value <= 0x7F -> index++
-            value in 0xC2..0xDF -> {
-                if (!hasUtf8Continuation(bytes, index, 1)) return false
-                index += 2
-            }
-            value in 0xE0..0xEF -> {
-                if (!hasUtf8Continuation(bytes, index, 2)) return false
-                val b1 = bytes[index + 1].toInt() and 0xFF
-                if ((value == 0xE0 && b1 < 0xA0) || (value == 0xED && b1 >= 0xA0)) return false
-                index += 3
-            }
-            value in 0xF0..0xF4 -> {
-                if (!hasUtf8Continuation(bytes, index, 3)) return false
-                val b1 = bytes[index + 1].toInt() and 0xFF
-                if ((value == 0xF0 && b1 < 0x90) || (value == 0xF4 && b1 >= 0x90)) return false
-                index += 4
-            }
-            else -> return false
-        }
-    }
-    return true
-}
-
-private fun hasUtf8Continuation(bytes: ByteArray, start: Int, count: Int): Boolean {
-    if (start + count >= bytes.size) return false
-    for (offset in 1..count) {
-        val next = bytes[start + offset].toInt() and 0xFF
-        if (next !in 0x80..0xBF) return false
-    }
-    return true
-}
-
-private fun scoreDecodedText(text: String, charset: Charset): Int {
-    var score = 0
-    var latinLetters = 0
-    var cyrillicLetters = 0
-    var printable = 0
-    var suspicious = 0
-    var controls = 0
-
-    text.forEach { ch ->
-        when {
-            ch == '\uFFFD' -> score -= 120
-            ch == '\n' || ch == '\r' || ch == '\t' -> score += 1
-            ch.isLetter() -> {
-                printable++
-                score += 6
-                if (ch in '\u0041'..'\u024F') latinLetters++
-                if (ch in '\u0400'..'\u04FF') cyrillicLetters++
-                if (ch in "аеинorstклмп".toSet()) score += 2
-            }
-            ch.isDigit() -> {
-                printable++
-                score += 3
-            }
-            ch.isWhitespace() -> score += 1
-            ch.isISOControl() -> {
-                controls++
-                score -= 40
-            }
-            ch in setOf('\u003F', '\uFFFD', '\u00A4', '\u00A6', '\u00A8', '\u00AC', '\u00AF') -> {
-                suspicious++
-                score -= 8
-            }
-            ch in setOf('.', ',', ':', ';', '!', '?') -> score += 1
-            else -> {
-                printable++
-                score += 2
-            }
-        }
-    }
-
-    if (cyrillicLetters > latinLetters * 2) {
-        score += cyrillicLetters * 3
-        if (charset.name().equals("windows-1251", ignoreCase = true)) score += 60
-        if (charset.name().equals("KOI8-R", ignoreCase = true)) score += 40
-        if (charset.name().equals("IBM866", ignoreCase = true)) score += 30
-    } else if (latinLetters >= cyrillicLetters) {
-        if (charset.name().equals("windows-1252", ignoreCase = true)) score += 20
-        if (charset == Charsets.ISO_8859_1) score += 10
-    }
-
-    score += printable
-    score -= suspicious * 6
-    score -= controls * 10
-    return score
-}
+// Charset/mojibake utilities extracted to TextCharsetUtils.kt
 
 internal fun renderMarkdownToHtmlBlocks(raw: String): List<String> {
     val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
@@ -773,7 +574,8 @@ class TextFormatReader @Inject constructor(
             ComicFormat.RTF -> {
                 val document = readRtfReflowableDocument(context, path)
                 TextDocumentData(
-                    sections = reflowableDocumentSections(document)
+                    sections = reflowableDocumentSections(document),
+                    footnoteMap = document.footnoteMap
                 )
             }
             ComicFormat.DOCX -> {
@@ -824,10 +626,12 @@ class TextFormatReader @Inject constructor(
 
     private fun sectionHtmlDocument(raw: String): TextDocumentData {
         val readerBaseUrl = htmlBaseUrl()
-        val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(raw)
-        val pages = if (isGutenbergHtml(raw)) {
+        val footnotes = extractReaderHtmlFootnotes(raw)
+        val contentHtml = footnotes.contentHtml
+        val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(contentHtml)
+        val pages = if (isGutenbergHtml(contentHtml)) {
             paginateHtmlDocument(
-                raw = raw,
+                raw = contentHtml,
                 baseUrl = readerBaseUrl,
                 preservePublisherLayout = true,
                 baseCss = PRESERVE_LAYOUT_HTML_CSS,
@@ -835,7 +639,7 @@ class TextFormatReader @Inject constructor(
             )
         } else {
             paginateHtmlDocument(
-                raw = raw,
+                raw = contentHtml,
                 baseUrl = readerBaseUrl,
                 preservePublisherLayout = preservePublisherLayout,
                 baseCss = if (preservePublisherLayout) {
@@ -847,18 +651,19 @@ class TextFormatReader @Inject constructor(
             )
         }
         val anchored = addHtmlHeadingAnchorsToPages(pages)
-        val sections = if (preservePublisherLayout || isGutenbergHtml(raw)) {
+        val sections = if (preservePublisherLayout || isGutenbergHtml(contentHtml)) {
             anchored.pages.mapIndexed { index, html ->
                 TextDocumentSection(index = index, html = html, baseUrl = readerBaseUrl)
             }
         } else {
-            val reflowSections = ReflowableDocumentBuilder.sectionsFromMarkup(raw, readerBaseUrl)
+            val reflowSections = ReflowableDocumentBuilder.sectionsFromMarkup(contentHtml, readerBaseUrl)
             injectHeadingIdsFromAnchoredPages(reflowSections, anchored.pages)
         }
         val splitSections = splitLargeSections(sections.withSequentialIndices())
         return TextDocumentData(
             sections = splitSections,
-            chapterAnchors = anchored.anchors
+            chapterAnchors = anchored.anchors,
+            footnoteMap = footnotes.footnoteMap
         )
     }
 
@@ -1021,6 +826,16 @@ class TextFormatReader @Inject constructor(
         }
         rendered = rendered.replace(Regex("""(?<!\w)\*([^*\n]+?)\*(?!\w)""")) {
             "<em>${it.groupValues[1]}</em>"
+        }
+        // Footnote markers: [1], [2], [12] etc. — wrap in clickable link
+        rendered = rendered.replace(Regex("""\[(\d{1,4})]""")) {
+            val num = it.groupValues[1]
+            """<a class="fn" href="fbanchor://note_$num" data-footnote-id="$num"><sup>[$num]</sup></a>"""
+        }
+        // Unicode superscript footnote markers: ¹ ² ³ etc.
+        rendered = rendered.replace(Regex("""([¹²³⁴⁵⁶⁷⁸⁹⁰]+)""")) {
+            val marker = it.groupValues[1]
+            """<a class="fn" href="fbanchor://note_$marker" data-footnote-id="$marker"><sup>$marker</sup></a>"""
         }
         return rendered
     }
@@ -1723,7 +1538,8 @@ class TextFormatReader @Inject constructor(
     }
 
     private fun buildTableOfContents(): List<TocEntry> {
-        return documentData.chapterAnchors.mapNotNull { anchor ->
+        // Primary: use detected chapter anchors (h1-h6 headings).
+        val fromAnchors = documentData.chapterAnchors.mapNotNull { anchor ->
             val pageIndex = anchorPageIndex[anchor.id] ?: return@mapNotNull null
             val charOffset = findAnchorCharOffset(htmlPages.getOrNull(pageIndex), anchor.id)
             TocEntry(
@@ -1734,6 +1550,35 @@ class TextFormatReader @Inject constructor(
                 charOffset = charOffset
             )
         }
+        if (fromAnchors.isNotEmpty()) return fromAnchors
+
+        // Fallback: when no heading-based anchors were detected (e.g. plain HTML
+        // documents without h1-h6), build TOC from all named/id anchors found in
+        // the HTML pages. This matches how Moon+ Reader shows TOC for any document
+        // that has anchor targets.
+        return anchorPageIndex.entries.mapNotNull { (id, pageIndex) ->
+            val title = findAnchorTitle(htmlPages.getOrNull(pageIndex), id)
+                ?: return@mapNotNull null
+            TocEntry(
+                title = title,
+                pageIndex = pageIndex,
+                anchorId = id,
+                sectionIndex = pageIndex,
+                charOffset = -1
+            )
+        }
+    }
+
+    private fun findAnchorTitle(html: String?, anchorId: String): String? {
+        if (html.isNullOrBlank() || anchorId.isBlank()) return null
+        return runCatching {
+            val doc = Jsoup.parse(html)
+            val el = doc.select("#${anchorId}, [name=$anchorId]").firstOrNull() ?: return@runCatching null
+            // Use the element's own text if it looks like a heading or meaningful label;
+            // skip generic anchors with empty or very short text.
+            val text = el.text().trim()
+            text.takeIf { it.length in 2..120 }
+        }.getOrNull()
     }
 
     private fun findAnchorCharOffset(html: String?, anchorId: String): Int {
@@ -1752,7 +1597,17 @@ class TextFormatReader @Inject constructor(
 
     private fun isTechnicalMarkdown(raw: String): Boolean {
         val lines = raw.lines()
-        return lines.size >= 3 && lines[0].trim() == "---"
+        if (lines.size < 3 || lines[0].trim() != "---") return false
+        // Look for closing --- within first 30 lines (typical YAML front matter)
+        // and require at least one YAML key-value pair between the markers.
+        for (i in 1 until minOf(30, lines.size)) {
+            if (lines[i].trim() == "---") {
+                // Check that at least one line between markers contains ':'
+                val hasYamlKey = (1 until i).any { lines[it].contains(':') }
+                return hasYamlKey
+            }
+        }
+        return false
     }
 
     private fun extractYamlFrontMatter(raw: String): Pair<Map<String, String>, String> {

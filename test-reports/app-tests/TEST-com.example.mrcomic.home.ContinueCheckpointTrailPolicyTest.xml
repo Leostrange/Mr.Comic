@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.mrcomic.home.ContinueCheckpointTrailPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-12T18:59:57.717Z" hostname="LEOSTRANGE" time="0.011">
+  <properties/>
+  <testcase name="visibleCheckpointTrail_capsHistoryToThreeItems" classname="com.example.mrcomic.home.ContinueCheckpointTrailPolicyTest" time="0.01"/>
+  <testcase name="visibleCheckpointTrail_keepsOnlyRecentActiveLibraryHistory" classname="com.example.mrcomic.home.ContinueCheckpointTrailPolicyTest" time="0.0"/>
+  <testcase name="visibleCheckpointTrail_dropsCheckpointsForTitlesMissingFromLibrary" classname="com.example.mrcomic.home.ContinueCheckpointTrailPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

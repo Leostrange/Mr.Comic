@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:04:50.440Z" hostname="LEOSTRANGE" time="0.053">
+  <properties/>
+  <testcase name="lazyLegacySessionHandleDoesNotLoadUntilRequested" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.005"/>
+  <testcase name="resolveInitialSessionLocatorUsesRequestedLocatorWhenReadiumIsUnavailable" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="resolveReadiumCurrentLocatorKeepsLocatorBackedStateWhenReadiumPublicationExists" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.003"/>
+  <testcase name="resolveInitialSessionLocatorUsesReadiumPathWithoutTouchingLegacyFallback" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="resolveReadiumGoToLocatorKeepsPageOnlyRequestedLocatorWhenReadiumReturnsNull" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <testcase name="readiumEpubSessionUsesHybridLegacyRendererByDefault" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="hybridEpubKeepsPreferenceSyncOnLegacyRenderPath" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <testcase name="resolveInitialSessionLocatorKeepsPageOnlyRequestedLocatorWhenReadiumReturnsNull" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.003"/>
+  <testcase name="resolveInitialSessionLocatorReturnsNullWhenNothingIsAvailable" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <testcase name="resolveReadiumOpenTotalPagesIncludesPageOnlyCurrentLocatorProgress" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.027"/>
+  <testcase name="hybridEpubOpenSeedsFallbackLocatorForFreshStart" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <testcase name="resolveInitialSessionLocatorReturnsNullWhenReadiumCannotResolveRequestedLocator" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="readiumOpenKeepsImageResourceRequestedLocatorWhenExplicitlyResolved" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <testcase name="hybridEpubCurrentLocatorKeepsPageOnlyStateForLegacyRender" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="lazyLegacySessionHandleLoadsOnlyOnceAndCachesSession" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.005"/>
+  <testcase name="resolveInitialSessionLocatorDoesNotSynthesizeLocatorWhenReadiumHasNoTargetYet" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="pureReadiumOpenCanStillUseFallbackOpeningLocator" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="hybridEpubOpenStillPrefersExplicitRequestedLocatorOverFreshStart" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <testcase name="resolveReadiumCurrentLocatorKeepsPageOnlyStateWhenReadiumPublicationExists" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.001"/>
+  <testcase name="hybridEpubOpenUsesFallbackOpeningLocatorForFreshStarts" classname="com.example.engine.epub.readium.ReadiumEpubEnginePolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

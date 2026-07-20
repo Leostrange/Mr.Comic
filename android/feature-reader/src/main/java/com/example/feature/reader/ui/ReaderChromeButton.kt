@@ -6,7 +6,8 @@ internal enum class ReaderChromeButton(val storedValue: String) {
     AUDIO("audio"),
     DIRECTION("direction"),
     TRANSLATE("translate"),
-    BRIGHTNESS("brightness");
+    BRIGHTNESS("brightness"),
+    AUTO_SCROLL("auto_scroll");
 
     companion object {
         val defaultOrder: List<ReaderChromeButton> = listOf(
@@ -15,7 +16,8 @@ internal enum class ReaderChromeButton(val storedValue: String) {
             AUDIO,
             DIRECTION,
             TRANSLATE,
-            BRIGHTNESS
+            BRIGHTNESS,
+            AUTO_SCROLL
         )
 
         val defaultStoredOrder: String = defaultOrder.joinToString(",") { it.storedValue }

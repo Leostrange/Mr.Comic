@@ -28,6 +28,7 @@ dependencies {
     implementation(libs.sevenzipjbinding.android)
     implementation(libs.commons.compress)
     implementation(libs.google.gson)
+    implementation(libs.okhttp)
     // PDF: android.graphics.pdf.PdfRenderer (встроен, внешние lib не нужны)
     implementation(libs.coil.compose)
     testImplementation(libs.test.junit)

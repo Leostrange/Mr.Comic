@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.feature.library.components.LibraryAchievementsTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-07-20T02:03:42.467Z" hostname="LEOSTRANGE" time="0.005">
+  <properties/>
+  <testcase name="rememberedNextUnlockAchievement_keepsRememberedPendingTarget" classname="com.example.feature.library.components.LibraryAchievementsTest" time="0.001"/>
+  <testcase name="computeAchievements_reportsProgressCounters" classname="com.example.feature.library.components.LibraryAchievementsTest" time="0.001"/>
+  <testcase name="nextUnlockAchievement_prefersMostAdvancedVisibleTarget" classname="com.example.feature.library.components.LibraryAchievementsTest" time="0.001"/>
+  <testcase name="rememberedNextUnlockAchievement_fallsBackWhenRememberedTargetIsGone" classname="com.example.feature.library.components.LibraryAchievementsTest" time="0.001"/>
+  <testcase name="questTransitionFeedback_reportsQuestSwitchWhilePreviousIsStillPending" classname="com.example.feature.library.components.LibraryAchievementsTest" time="0.0"/>
+  <testcase name="questTransitionFeedback_reportsCompletedQuestAndNextTarget" classname="com.example.feature.library.components.LibraryAchievementsTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Тестовый HTML</title>
+<style>
+body { font-family: serif; line-height: 1.6; }
+h1 { color: #333; }
+h2 { color: #555; }
+.footnote { font-size: 0.9em; color: #666; }
+</style>
+</head>
+<body>
+<h1>Заголовок уровня 1</h1>
+<p>Это тестовый HTML файл для проверки рендеринга текстовых форматов.</p>
+
+<h2>Заголовок уровня 2</h2>
+<p>Параграф с <strong>жирным</strong> и <em>курсивным</em> текстом.</p>
+
+<h3>Заголовок уровня 3</h3>
+<ul>
+<li>Пункт списка 1</li>
+<li>Пункт списка 2</li>
+<li>Пункт списка 3</li>
+</ul>
+
+<h2>Таблица</h2>
+<table border="1">
+<tr><th>Колонка 1</th><th>Колонка 2</th><th>Колонка 3</th></tr>
+<tr><td>Ячейка 1</td><td>Ячейка 2</td><td>Ячейка 3</td></tr>
+<tr><td>Ячейка 4</td><td>Ячейка 5</td><td>Ячейка 6</td></tr>
+</table>
+
+<h2>Сноски</h2>
+<p>Текст с сноской<sup><a href="#fn1" id="fnref1">[1]</a></sup> и еще одна<sup><a href="#fn2" id="fnref2">[2]</a></sup>.</p>
+
+<div class="footnotes">
+<hr>
+<ol>
+<li id="fn1">Это первая сноска. <a href="#fnref1">↩</a></li>
+<li id="fn2">Это вторая сноска. <a href="#fnref2">↩</a></li>
+</ol>
+</div>
+
+<h2>Цитата</h2>
+<blockquote>
+<p>Это цитата из важного источника.</p>
+</blockquote>
+
+<h2>Код</h2>
+<pre><code>function hello() {
+    console.log("Hello, World!");
+}</code></pre>
+
+</body>
+</html>

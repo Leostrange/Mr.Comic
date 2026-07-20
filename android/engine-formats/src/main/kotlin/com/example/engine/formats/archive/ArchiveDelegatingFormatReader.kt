@@ -50,6 +50,11 @@ class ArchiveDelegatingFormatReader(
 
     override fun rendersHtmlContent(): Boolean = delegate.rendersHtmlContent()
 
+    override fun resolvedContentFormat(): ComicFormat? {
+        delegate
+        return resolvedEntry?.format ?: archiveFormat
+    }
+
     override suspend fun getPageCount(): Int = delegate.getPageCount()
 
     override suspend fun getPage(index: Int): Bitmap? = delegate.getPage(index)
@@ -88,12 +93,34 @@ class ArchiveDelegatingFormatReader(
         val textEntry = resolved.entryName
         val textFormat = resolved.format
         if (resolved.kind == ArchiveContentKind.SINGLE_BOOK && textEntry != null && textFormat != null) {
-            val extracted = extractSingleBookArchive(textEntry)
+            val entryInfo = entries.firstOrNull { it.name == textEntry }
+                ?: entries.firstOrNull { it.name.matchesArchiveEntry(textEntry) }
+            val extracted = entryInfo?.let { extractSingleBookArchive(it) }
             if (extracted != null) {
                 return createTextDelegate(extracted, textFormat)
             }
             Log.w(TAG, "Failed to extract text entry '$textEntry' from archive: $path")
             return errorTextReader("Unable to extract archived book.")
+        }
+        // Fallback: even if classify() didn't return SINGLE_BOOK, check if there's
+        // exactly one text file in the archive. This handles MIXED archives that
+        // contain a text book + cover image, preventing the black-screen raster fallback.
+        val textEntries = entries.filter { ArchiveFormatSupport.isTextEntry(it.name) }
+        if (textEntries.size == 1) {
+            val singleText = textEntries.first()
+            val ext = ArchiveFormatSupport.extensionOf(singleText.name)
+            val format = ArchiveFormatSupport.textFormatForExtension(ext)
+            if (format != null) {
+                val extracted = extractSingleBookArchive(singleText)
+                if (extracted != null) {
+                    resolvedEntry = ArchiveResolvedEntry(
+                        kind = ArchiveContentKind.SINGLE_BOOK,
+                        entryName = singleText.name,
+                        format = format
+                    )
+                    return createTextDelegate(extracted, format)
+                }
+            }
         }
         return createRasterDelegate()
     }
@@ -128,8 +155,8 @@ class ArchiveDelegatingFormatReader(
         override fun close() = Unit
     }
 
-    private fun extractSingleBookArchive(entryName: String): File? {
-        val entryInfo = listArchiveEntries().firstOrNull { it.name == entryName } ?: return null
+    private fun extractSingleBookArchive(entryInfo: ArchiveEntryInfo): File? {
+        val entryName = entryInfo.name
         val extension = ArchiveFormatSupport.extensionOf(entryName).ifBlank { "txt" }
         val cacheName = ArchiveFormatSupport.textCacheFileName(
             prefix = archivePrefix(),
@@ -149,7 +176,7 @@ class ArchiveDelegatingFormatReader(
         cacheRoot.mkdirs()
         val extracted = when (archivePrefix()) {
             "zip" -> extractSingleZipEntry(cacheRoot, entryName)
-            "rar" -> extractSingleRarEntry(cacheRoot, entryName)
+            "rar" -> extractSingleRarEntry(cacheRoot, entryInfo)
             "7z" -> extractSingleSevenZEntry(cacheRoot, entryName)
             "tar" -> extractSingleTarEntry(cacheRoot, entryName)
             else -> false
@@ -302,7 +329,7 @@ class ArchiveDelegatingFormatReader(
                         if (target != null) {
                             target.parentFile?.mkdirs()
                             target.outputStream().use { output ->
-                                tar.copyTo(output, bufferSize = entry.size.toInt().coerceAtMost(8192))
+                                tar.copyTo(output, bufferSize = entry.size.toInt().coerceIn(1, 8192))
                             }
                         }
                     }
@@ -337,8 +364,14 @@ class ArchiveDelegatingFormatReader(
         false
     }
 
-    private fun extractSingleRarEntry(root: File, entryName: String): Boolean = withRarArchive { archive ->
-        val index = findRarEntryIndex(archive, entryName) ?: return@withRarArchive false
+    private fun extractSingleRarEntry(root: File, entryInfo: ArchiveEntryInfo): Boolean = withRarArchive { archive ->
+        val index = entryInfo.index.takeIf { it >= 0 }
+            ?: findRarEntryIndex(archive, entryInfo.name)
+            ?: return@withRarArchive false
+        val entryName = archive.getStringProperty(index, PropID.PATH)
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+            ?: entryInfo.name
         val target = safeEntryFile(root, entryName) ?: return@withRarArchive false
         target.parentFile?.mkdirs()
         val result = target.outputStream().use { output ->
@@ -393,7 +426,7 @@ class ArchiveDelegatingFormatReader(
                             if (target != null) {
                                 target.parentFile?.mkdirs()
                                 target.outputStream().use { output ->
-                                    tar.copyTo(output, bufferSize = entry.size.toInt().coerceAtMost(8192))
+                                    tar.copyTo(output, bufferSize = entry.size.toInt().coerceIn(1, 8192))
                                 }
                                 return@runCatching true
                             }
@@ -495,3 +528,7 @@ private fun Any?.asBooleanFlag(): Boolean = when (this) {
     is String -> equals("true", ignoreCase = true) || equals("1")
     else -> false
 }
+
+private fun String.matchesArchiveEntry(other: String): Boolean =
+    equals(other, ignoreCase = true) ||
+        replace('\\', '/').equals(other.replace('\\', '/'), ignoreCase = true)

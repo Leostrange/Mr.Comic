@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.example.engine.rendering.startup.StartupOptimizerTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:08:24.013Z" hostname="LEOSTRANGE" time="0.555">
+  <properties/>
+  <testcase name="onAppStart_doesNotThrow" classname="com.example.engine.rendering.startup.StartupOptimizerTest" time="0.182"/>
+  <testcase name="onMainActivityReady_withoutOnAppStart_doesNotThrow" classname="com.example.engine.rendering.startup.StartupOptimizerTest" time="0.125"/>
+  <testcase name="multipleStartCycles_doNotThrow" classname="com.example.engine.rendering.startup.StartupOptimizerTest" time="0.137"/>
+  <testcase name="onMainActivityReady_afterOnAppStart_doesNotThrow" classname="com.example.engine.rendering.startup.StartupOptimizerTest" time="0.109"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

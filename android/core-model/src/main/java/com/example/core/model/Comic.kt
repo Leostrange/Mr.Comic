@@ -70,11 +70,20 @@ fun Comic.readingStatus(): ComicReadingStatus {
     val normalizedProgress = readingProgress.coerceIn(0f, 1f)
     val normalizedPageCount = pageCount.coerceAtLeast(0)
     val normalizedCurrentPage = currentPage.coerceAtLeast(0)
-    val completedByProgress = normalizedProgress >= 0.999f
-    val completedByPage = normalizedPageCount > 0 && normalizedCurrentPage >= normalizedPageCount - 1
+    val hasStableReadingSignal = lastReadDate != null ||
+        normalizedCurrentPage > 0 ||
+        storedReaderLocator() != null
+    val progressHasAuthority = normalizedProgress > 0.001f &&
+        (hasStableReadingSignal || normalizedPageCount > 1)
+    val completedByProgress = normalizedProgress >= 0.999f &&
+        (hasStableReadingSignal || normalizedPageCount > 1)
+    val hasReadingActivity = hasStableReadingSignal || progressHasAuthority
+    val completedByPage = hasReadingActivity &&
+        normalizedPageCount > 1 &&
+        normalizedCurrentPage >= normalizedPageCount - 1
     return when {
         isCompleted || completedByProgress || completedByPage -> ComicReadingStatus.COMPLETED
-        normalizedCurrentPage > 0 || normalizedProgress > 0.001f -> ComicReadingStatus.READING
+        hasReadingActivity -> ComicReadingStatus.READING
         else -> ComicReadingStatus.NEW
     }
 }
@@ -82,6 +91,26 @@ fun Comic.readingStatus(): ComicReadingStatus {
 fun Comic.isReadingInProgress(): Boolean = readingStatus() == ComicReadingStatus.READING
 
 fun Comic.isReadCompleted(): Boolean = readingStatus() == ComicReadingStatus.COMPLETED
+
+/**
+ * Converts a zero-based reader page into progress without treating the first page as read.
+ * A one-page or still-unresolved document has no meaningful fractional reading position.
+ */
+fun readingProgressForPage(currentPage: Int, pageCount: Int): Float {
+    if (pageCount <= 1) return 0f
+    val lastPage = pageCount - 1
+    return currentPage.coerceIn(0, lastPage).toFloat() / lastPage.toFloat()
+}
+
+/** Progress suitable for display, including protection from legacy placeholder 100% values. */
+fun Comic.displayReadingProgress(): Float = when (readingStatus()) {
+    ComicReadingStatus.NEW -> 0f
+    ComicReadingStatus.COMPLETED -> 1f
+    ComicReadingStatus.READING -> maxOf(
+        readingProgress.coerceIn(0f, 1f),
+        readingProgressForPage(currentPage, pageCount)
+    )
+}
 
 fun Comic.storedReaderLocator(): ReaderLocator? {
     val href = readerLocatorHref?.takeIf { it.isNotBlank() }
@@ -130,6 +159,9 @@ enum class ComicFormat {
     AZW3,
     DOCX,
     ODT,
+    CHM,
+    XPS,
+    OPDS,
     DJVU,
     FOLDER,
     UNKNOWN
@@ -142,6 +174,7 @@ fun ComicFormat.isHeavyReflowableFormat(): Boolean = when (this) {
     ComicFormat.TXT, ComicFormat.HTML, ComicFormat.MARKDOWN,
     ComicFormat.MOBI, ComicFormat.AZW3,
     ComicFormat.RTF, ComicFormat.DOCX, ComicFormat.ODT,
+    ComicFormat.CHM, ComicFormat.XPS,
     ComicFormat.ZIP, ComicFormat.RAR, ComicFormat.SEVENZ, ComicFormat.TAR -> true
     else -> false
 }
@@ -156,7 +189,9 @@ fun ComicFormat.isTextReadingFormat(): Boolean = when (this) {
     ComicFormat.MOBI,
     ComicFormat.AZW3,
     ComicFormat.DOCX,
-    ComicFormat.ODT -> true
+    ComicFormat.ODT,
+    ComicFormat.CHM,
+    ComicFormat.XPS -> true
     else -> false
 }
 

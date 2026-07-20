@@ -1,5 +1,6 @@
 package com.example.feature.reader.ui
 
+import com.example.feature.reader.domain.enums.ReaderNavigationProgressSource
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

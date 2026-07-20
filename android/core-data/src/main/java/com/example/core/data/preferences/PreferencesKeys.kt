@@ -100,6 +100,17 @@ object PreferencesKeys {
     val TRANSLATION_EXPLAIN_PROVIDER = stringPreferencesKey("translation_explain_provider") // LOCAL/ONLINE
     val TRANSLATION_OPENROUTER_API_KEY = stringPreferencesKey("translation_openrouter_api_key")
     val TRANSLATION_OPENROUTER_MODEL = stringPreferencesKey("translation_openrouter_model")
+    val TRANSLATION_DEEPL_API_KEY = stringPreferencesKey("translation_deepl_api_key")
+    val TRANSLATION_DEEPL_USE_FREE = booleanPreferencesKey("translation_deepl_use_free")
+    val TRANSLATION_GOOGLE_API_KEY = stringPreferencesKey("translation_google_api_key")
+    val TRANSLATION_YANDEX_API_KEY = stringPreferencesKey("translation_yandex_api_key")
+    val TRANSLATION_YANDEX_FOLDER_ID = stringPreferencesKey("translation_yandex_folder_id")
+    val TRANSLATION_ONLINE_PROVIDER_ORDER = stringPreferencesKey("translation_online_provider_order")
+    val CUSTOM_AI_PROVIDERS = stringPreferencesKey("custom_ai_providers")           // JSON array of configs
+    val CUSTOM_AI_SELECTED_PROVIDER = stringPreferencesKey("custom_ai_selected_provider")
+    val CUSTOM_AI_PROVIDER_ORDER = stringPreferencesKey("custom_ai_provider_order") // "id1,id2,..."
+    val TRANSLATION_WIFI_ONLY = booleanPreferencesKey("translation_wifi_only")
+    val TRANSLATION_DAILY_CHAR_LIMIT = intPreferencesKey("translation_daily_char_limit")
     val OCR_LANGUAGE              = stringPreferencesKey("ocr_language")       // JA/ZH/EN/KO/FR/IT/PL/TR/PT
     val OCR_DIALOGUES_ONLY        = booleanPreferencesKey("ocr_dialogues_only")
     val OCR_INCLUDE_SFX           = booleanPreferencesKey("ocr_include_sfx")

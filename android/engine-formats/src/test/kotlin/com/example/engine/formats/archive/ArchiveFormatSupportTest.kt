@@ -93,4 +93,26 @@ class ArchiveFormatSupportTest {
          )
          assertNull(resolved.format)
      }
+
+    // --- Regression: a comic page sequence must not be hijacked by an auxiliary text file (P1-1) ---
+
+    @Test
+    fun comicPageSequenceWithStrayReadmeStaysImageSequence() {
+        val entries = (1..50).map { "%03d.jpg".format(it) } + "readme.txt"
+        assertEquals(ArchiveContentKind.IMAGE_SEQUENCE, ArchiveFormatSupport.classify(entries))
+    }
+
+    @Test
+    fun comicPageSequenceWithStrayAboutHtmlStaysImageSequence() {
+        val entries = listOf("001.jpg", "002.jpg", "003.jpg", "004.jpg", "about.html")
+        assertEquals(ArchiveContentKind.IMAGE_SEQUENCE, ArchiveFormatSupport.classify(entries))
+    }
+
+    @Test
+    fun genuineBookFormatStillWinsOverNumericImages() {
+        // An actual e-book (epub/fb2) accompanied by numbered plate images remains a book —
+        // only auxiliary plain-text formats (txt/html/md) yield to a comic page sequence.
+        val entries = (1..30).map { "%03d.jpg".format(it) } + "book.epub"
+        assertEquals(ArchiveContentKind.SINGLE_BOOK, ArchiveFormatSupport.classify(entries))
+    }
 }
