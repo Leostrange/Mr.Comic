@@ -1,75 +1,58 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-.DS_Store
+# === Gradle ===
+.gradle/
+**/build/
+**/.gradle/
 /build
+
+# === Android Studio / IntelliJ ===
+*.iml
+.idea/
+/local.properties
+local.properties
+.DS_Store
 /captures
 .externalNativeBuild
 .cxx
-local.properties
-**/*.keystore
-!debug.keystore
-.kotlin/
-
-# Build output — все модули
-**/build/
-**/.gradle/
-
-# Android Studio
-*.hprof
 .navigation/
 captures/
 lint/
+*.hprof
 
-# Keystore files
+# === Keystore ===
+*.keystore
+!debug.keystore
 *.jks
 *.ks
 
-# Generated sources (Hilt/KSP)
+# === Generated sources (Hilt/KSP) ===
 **/generated/
+.kotlin/
 
-# Python / dictionary build artifacts
+# === Python / dictionary build artifacts ===
 **/__pycache__/
 *.pyc
 build-dictionary-work/
 Translate/backups/
 Translate/room_build_work/
-Ocr update/
 tmp_freedict/
 
-# Local sample archives
+# === Local sample archives (too large for git) ===
 samples/translation_texts.zip
 samples/translation_texts/udhr_txt_20100325.tar.gz
 Translate/android_reader_dictionary_room_sample_updated_refresh.zip
 
-# Local test books / docs
+# === Local test books / docs ===
 6177.epub
 6177.fb2
 Packt.Mastering.Kotlin.for.Android.14.1837631719.pdf
 
-# Local review / scratch files
+# === Local review / scratch files ===
 old_ComicGridItem.kt
 test.diff
-.qa_run/
-.supergoal/
-.codex/
-.mimocode/
-.re-out/
-.codegraph/
-.kilo/
-.kimi-code/
-.agents/
-_backups/
-Incorrect display/
-Mr.Comic Design System-handoff/
-mr-comic-design-system/
-offline-translation/
-PLAN.md
-photo_*.jpg
+test_files/
+re-out/
+null/
+PowerShell*/
 *.log
 build_output*.txt
 build_debug.txt
@@ -87,18 +70,8 @@ EXCLUDED_NON_CODE_BUILD_ASSETS.json
 session-*.md
 mimo.exe
 nul
-anx-reader-analyzed/
-anx-reader-*.zip
-test_files/
-Screenshots/
-re-out/
-null/
-PowerShell*/
 
-# Media files — too large for git, use GitHub releases instead
-media/
-
-# AI tool configs and agent artifacts
+# === AI tool configs and agent artifacts ===
 .agents/
 .codex/
 .harness/
@@ -106,6 +79,7 @@ media/
 .mcp.json
 .mimocode/
 .planning/
+.qa_run/
 .qa_shots/
 .re-out/
 .supergoal/
@@ -113,33 +87,44 @@ media/
 .kilo/
 .codegraph/
 .claude/
-.qa_run/
+.skills-lock.json
+skills-lock.json
 
-# Screenshots and QA artifacts
-Screenshots/
+# === Reverse engineering / analysis dumps ===
+anx-reader-analyzed/
+anx-reader-*.zip
+re-out/
+.codegraph/
 
-# Internal documentation (not needed for build)
+# === State stores / binary data ===
+data/
+Ocr update/
+
+# === Internal documentation (not needed for build) ===
 CODE_REVIEW_REPORT.md
 CONTRIBUTORS.md
-EXCLUDED_NON_CODE_BUILD_ASSETS.json
 EXTRACTION_TASKLIST.md
-READER_BUG_ANALYSIS_2026-07-17.md
+READER_BUG_ANALYSIS_*.md
 READER_MASTER_BACKLOG.md
 REFACTORING_CONTINUATION_GUIDE.md
 docs/active/
-
-# Internal planning/task docs
+docs/bugs_*.md
+docs/reader_test_*.md
+docs/superpowers/
 plans/
 test-reports/
 PROJECT_CONTEXT_HANDOFF.md
 READER_SETTINGS_SNAPSHOT*.md
 SKILL.md
 TASKLIST_*.md
-session-*.md
-docs/active/
-docs/bugs_*.md
-docs/reader_test_*.md
-docs/superpowers/
+PLAN.md
+photo_*.jpg
 
-# Executables
+# === Media files — too large for git, use GitHub releases instead ===
+media/
+
+# === Duplicate root-level modules (real ones are in android/) ===
+/core-model/
+
+# === Executables ===
 mimo.exe

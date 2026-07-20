@@ -2,8 +2,8 @@
   <h1>Mr.Comic</h1>
 
   <p>
-    <b>Android-reader for comics, manga, webtoons, books, audiobooks, OCR and translation workflows.</b><br>
-    One modular Kotlin app for raster pages, reflowable books, local dictionaries, TTS and customizable reading.
+    <b>Android-ридер для комиксов, манги, вебтунов, книг, аудиокниг с OCR и переводами.</b><br>
+    Модульное Kotlin-приложение: растровые страницы, reflowable-книги, локальные словари, TTS и кастомизация чтения.
   </p>
 
   <p>
@@ -13,149 +13,164 @@
     <img alt="Platform" src="https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white">
     <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7f52ff?style=for-the-badge&logo=kotlin&logoColor=white">
     <img alt="Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285f4?style=for-the-badge&logo=jetpackcompose&logoColor=white">
+    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Leostrange/Mr.Comic/build-apk.yml?style=for-the-badge&label=CI">
     <img alt="License" src="https://img.shields.io/badge/license-source--available-16a34a?style=for-the-badge">
   </p>
 
   <p>
-    <a href="https://github.com/Leostrange/Mr.Comic/releases/tag/v2.1.0"><b>Download release</b></a>
+    <a href="https://github.com/Leostrange/Mr.Comic/releases/tag/v2.1.0"><b>Скачать релиз</b></a>
     ·
-    <a href="docs/README.md">Documentation</a>
+    <a href="docs/README.md">Документация</a>
     ·
-    <a href="THIRD_PARTY_NOTICES.md">Third-party notices</a>
+    <a href="docs/RECOMMENDATIONS.md">Рекомендации по коду</a>
+    ·
+    <a href="THIRD_PARTY_NOTICES.md">Сторонние лицензии</a>
   </p>
 </div>
 
 ---
 
-## About
+## Содержание
 
-Mr.Comic is an Android reader for comics, manga, webtoons, books, audiobooks, OCR-assisted translation, dictionaries and a customizable library UI.
+- [О проекте](#о-проекте)
+- [Возможности](#возможности)
+- [Поддерживаемые форматы](#поддерживаемые-форматы)
+- [Скриншоты](#скриншоты)
+- [Технологии](#технологии)
+- [Структура проекта](#структура-проекта)
+- [Сборка](#сборка)
+- [CI/CD](#cicd)
+- [Лицензия](#лицензия)
 
-The reader is built around separate containers for raster pages, raster vertical feeds, text pages and text vertical feeds. This keeps image archives, PDF/DJVU pages, EPUB/FB2/MOBI/DOCX/ODT books and plain text formats on the rendering path that fits them best.
+---
 
-## What It Does
+## О проекте
 
-<table>
-  <tr>
-    <td><b>Comic and manga reading</b></td>
-    <td>CBR, CBZ, ZIP, RAR, 7Z, TAR, image folders, PDF and DJVU with page and vertical-feed modes.</td>
-  </tr>
-  <tr>
-    <td><b>Book reading</b></td>
-    <td>EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX and ODT with text pagination and webtoon-style flow.</td>
-  </tr>
-  <tr>
-    <td><b>Reader tools</b></td>
-    <td>TOC navigation, bookmarks, progress, quote saving, pop-up footnotes, dictionary lookup, translation and explain actions.</td>
-  </tr>
-  <tr>
-    <td><b>Reading style</b></td>
-    <td>Paper, sepia, newspaper, night ink, OLED black and e-ink presets plus typography controls and custom fonts.</td>
-  </tr>
-  <tr>
-    <td><b>Audio and OCR</b></td>
-    <td>TTS, audiobook playback, media controls, OCR entry points and scanned-page workflows.</td>
-  </tr>
-</table>
+Mr.Comic — Android-ридер для комиксов, манги, вебтунов, книг, аудиокниг с OCR-переводами, словарями и кастомизируемым интерфейсом библиотеки.
 
-## Release v2.1.0
+Ридер построен на отдельных контейнерах для растровых страниц, вертикальных лент, текстовых страниц и вертикального текста. Это позволяет каждому формату использовать оптимальный путь рендеринга.
 
-Current release focus:
+## Возможности
 
-- stabilized text/raster reader separation;
-- improved EPUB close behavior, asset handling and progress calculation;
-- mojibake recovery and language-aware text rendering;
-- archive routing for text books inside ZIP/RAR/7Z/TAR containers;
-- safer footnote parsing, body inset injection and webtoon document building;
-- local/online explain engine provider with OpenRouter integration;
-- expanded unit tests for reader policy, CSS, formats, pagination and import/open routing.
+| Категория | Описание |
+|-----------|----------|
+| **Комиксы и манга** | CBR, CBZ, ZIP, RAR, 7Z, TAR, папки с изображениями, PDF, DJVU — постраничный и вертикальный режимы |
+| **Книги** | EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX, ODT — пагинация и webtoon-поток |
+| **Инструменты чтения** | TOC-навигация, закладки, прогресс, цитаты, сноски, словарный поиск, перевод, LLM-объяснения |
+| **Стили чтения** | Paper, sepia, newspaper, night ink, OLED black, e-ink пресеты + типографика и кастомные шрифты |
+| **Аудио и OCR** | TTS, воспроизведение аудиокниг, медиа-контролы, OCR-входные точки |
+| **Переводы** | Оффлайн-словари (WordNet, JMdict, CC-CEDICT, Kaikki), онлайн-перевод, OpenRouter LLM |
 
-Full notes are in [RELEASE_NOTES.md](RELEASE_NOTES.md).
+## Поддерживаемые форматы
 
-## Supported Formats
+| Категория | Форматы |
+|-----------|---------|
+| Растровые | CBR, CBZ, ZIP, RAR, 7Z, TAR, PDF, DJVU, папки с изображениями |
+| Текстовые | EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX, ODT |
+| Аудио | Локальные аудиокниги через Media3 |
 
-| Type | Formats |
-| --- | --- |
-| Comic/image archives | CBR, CBZ, ZIP, RAR, 7Z, TAR |
-| Documents/pages | PDF, DJVU, image folders |
-| Reflowable books | EPUB, FB2, TXT, HTML, Markdown, RTF, MOBI, AZW3, DOCX, ODT |
-| Audio flows | Local audiobook playback through the library and player UI |
+Архивы классифицируются перед рендерингом: последовательности изображений используют растровые контейнеры; текстовые книги внутри архивов делегируются соответствующему текстовому ридеру.
 
-Archives are classified before rendering. Image sequences use raster containers; single-book text archives delegate to the matching text reader instead of being forced through the raster page loader.
+## Скриншоты
 
-## Technology Stack
+<div align="center">
+  <img src="Screenshots/without-toolbars/Screenshot_2026-06-13-14-57-07-31_2ee52860f948220cf6737cc4d9efb7a7.jpg" width="200" alt="Библиотека">
+  <img src="Screenshots/without-toolbars/Screenshot_2026-06-13-14-57-10-62_2ee52860f948220cf6737cc4d9efb7a7.jpg" width="200" alt="Читалка">
+  <img src="Screenshots/with-toolbars/Screenshot_2026-06-13-15-00-43-95_2ee52860f948220cf6737cc4d9efb7a7.jpg" width="200" alt="С тулбаром">
+  <img src="Screenshots/with-toolbars/Screenshot_2026-06-13-15-00-46-76_2ee52860f948220cf6737cc4d9efb7a7.jpg" width="200" alt="Настройки">
+</div>
 
-| Layer | Used |
-| --- | --- |
-| Language | Kotlin, Java 17 toolchain |
+## Технологии
+
+| Слой | Технологии |
+|------|-----------|
+| Язык | Kotlin, Java 17 toolchain |
 | UI | Jetpack Compose, Material 3 |
-| Architecture | Modular Android app, feature/core/engine modules |
+| Архитектура | Модульное Android-приложение (16 модулей), MVVM + StateFlow |
 | DI | Hilt |
-| Storage | Room, DataStore |
-| Media | Android Media3 |
-| Images | Coil |
-| Networking | Retrofit, OkHttp |
-| Archives | Zip4j, Junrar, Apache Commons Compress |
-| EPUB engine path | Readium-oriented engine module plus format adapters |
-| Build | Gradle wrapper, Android Gradle Plugin |
-| CI | GitHub Actions APK build and unit-test workflow |
+| Хранение | Room (v9, 8 миграций), DataStore |
+| Медиа | Android Media3 |
+| Изображения | Coil |
+| Сеть | Retrofit, OkHttp |
+| Архивы | Zip4j, Junrar, Apache Commons Compress |
+| EPUB | Readium-ориентированный движок + формат-адаптеры |
+| Сборка | Gradle wrapper, AGP 9.2.1, Kotlin 2.2.21 |
+| CI | GitHub Actions (тесты всех модулей + lint + сборка APK) |
 
-## Project Structure
+## Структура проекта
 
 ```text
-android/
-  app/                   Application entry point, navigation, DI root, APK build
-  core-model/            Shared models, format catalog and enums
-  core-data/             Room, DataStore, repositories, migrations
-  core-domain/           Domain logic, translation, dictionary, analytics
-  core-ui/               Theme, design primitives, chrome, shared UI
-  engine-api/            Reader engine boundary interfaces
-  engine-epub-readium/   EPUB/Readium integration layer
-  engine-formats/        Format readers: archives, EPUB, FB2, text, PDF, DJVU, images
-  engine-rendering/      Bitmap cache, preloading, page rendering infrastructure
-  engine-registry/       Engine registration
-  feature-library/       Library, import flows, audiobook player, progress UI
-  feature-reader/        Reader screen, text/raster containers, TTS, controls
-  feature-settings/      Settings and customization screens
-  feature-ocr/           OCR feature module
-  feature-onboarding/    Onboarding and startup flows
-docs/
-  README.md              Documentation map
+├── android/
+│   ├── app/                   → Точка входа, навигация, DI-корень
+│   ├── core-model/            → Общие модели, каталог форматов, enum'ы
+│   ├── core-data/             → Room, DataStore, репозитории, миграции
+│   ├── core-domain/           → Доменная логика, перевод, словари, аналитика
+│   ├── core-ui/               → Тема, дизайн-примитивы, shared UI
+│   ├── engine-api/            → Граничные интерфейсы движков чтения
+│   ├── engine-epub-readium/   → Интеграция EPUB/Readium
+│   ├── engine-formats/        → Ридеры форматов: архивы, EPUB, FB2, PDF, DJVU...
+│   ├── engine-llm/            → LLM-интеграция (OpenRouter)
+│   ├── engine-registry/       → Регистрация и обнаружение движков
+│   ├── engine-rendering/      → Кэш битмапов, предзагрузка, рендеринг
+│   ├── feature-library/       → Библиотека, импорт, аудиоплеер, прогресс
+│   ├── feature-reader/        → Экран чтения, контейнеры, TTS, жесты
+│   ├── feature-settings/      → Настройки и кастомизация
+│   ├── feature-ocr/           → OCR-модуль
+│   └── feature-onboarding/    → Онбординг
+├── docs/                      → Документация и рекомендации
+├── samples/                   → Тестовые файлы форматов
+├── scripts/                   → Вспомогательные скрипты (импорт словарей)
+├── Translate/                 → Скрипты сборки словарей
+└── Screenshots/               → Скриншоты приложения
 ```
 
-## Build And Run
+## Сборка
 
-### Requirements
+### Требования
 
-- Android Studio
-- Android SDK
+- Android Studio (последняя стабильная)
+- Android SDK (compileSdk 37)
 - JDK 17
-- Gradle wrapper from this repository
+- Gradle wrapper из репозитория
 
-On Windows in this repository use `.\gradlew.bat`, not `./gradlew`.
+### Сборка Debug APK
 
-### Build Debug APK
+```bash
+# Linux / macOS
+./gradlew --no-daemon --console=plain :app:assembleDebug
 
-```powershell
+# Windows
 .\gradlew.bat --no-daemon --console=plain :app:assembleDebug
 ```
 
-Output:
+Результат: `android/app/build/outputs/apk/debug/Mr.Comic-debug.apk`
 
-```text
-android/app/build/outputs/apk/debug/Mr.Comic-debug.apk
+### Запуск тестов
+
+```bash
+# Все модули
+./gradlew --no-daemon testDebugUnitTest
+
+# Конкретный модуль
+./gradlew --no-daemon :engine-formats:testDebugUnitTest
+./gradlew --no-daemon :feature-reader:testDebugUnitTest
 ```
 
-### Useful Checks
+## CI/CD
 
-```powershell
-.\gradlew.bat --no-daemon --console=plain :engine-formats:testDebugUnitTest
-.\gradlew.bat --no-daemon --console=plain :feature-reader:testDebugUnitTest
-.\gradlew.bat --no-daemon --console=plain :app:testDebugUnitTest
-```
+GitHub Actions workflow (`.github/workflows/build-apk.yml`):
 
-## License
+| Job | Описание |
+|-----|----------|
+| `unit-tests` | Запуск unit-тестов **всех 16 модулей** |
+| `lint` | Android Lint для `:app` |
+| `build` | Сборка Debug + Release APK (после прохождения тестов и lint) |
+| `python-scripts` | Smoke-тест скриптов сборки словарей |
 
-Mr.Comic source code is published as source-available unless a different license is granted in writing by the project owner. See [LICENSE](LICENSE).
+Триггеры: push в `main`, pull request в `main`, ручной запуск.
 
-Third-party libraries, Android components, dictionaries and bundled assets remain under their own licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+## Лицензия
+
+Исходный код Mr.Comic опубликован как **source-available**. Подробности в [LICENSE](LICENSE).
+
+Сторонние библиотеки, компоненты Android, словари и ассеты остаются под своими лицензиями. См. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
