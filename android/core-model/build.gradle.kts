@@ -4,7 +4,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 android {
-    namespace = "com.example.core.model"
+    namespace = "io.leostrange.mrcomic.core.model"
     compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig { minSdk = libs.versions.minSdk.get().toInt() }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

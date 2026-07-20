@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.ksp)
 }
 android {
-    namespace = "com.example.engine.formats"
+    namespace = "io.leostrange.mrcomic.engine.formats"
     compileSdk = libs.versions.compileSdk.get().toInt()
     ndkVersion = "27.0.12077973"
     defaultConfig {
