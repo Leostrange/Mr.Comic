@@ -1,34 +1,44 @@
-# Mr.Comic Documentation
+# Документация Mr.Comic
 
-This folder contains the working documentation for the Mr.Comic Android reader project.
+## Основные документы
 
-## Start Here
+- [README проекта](../README.md) — обзор, сборка, форматы, скриншоты
+- [Release Notes](../RELEASE_NOTES.md) — история релизов
+- [Рекомендации по коду](RECOMMENDATIONS.md) — детальный code review с 21 рекомендацией
+- [Сторонние лицензии](../THIRD_PARTY_NOTICES.md) — зависимости и ассеты
 
-- [Root README](../README.md) - project overview, build commands, supported formats, and demo media.
-- [Release notes](../RELEASE_NOTES.md) - public release summary and build notes.
-- [Reader QA checklist](active/QA_REGRESSION_CHECKLIST.md) - manual and emulator scenarios for reader regressions.
-- [Format support audit](active/FORMAT_SUPPORT_AUDIT_2026-03-27.md) - supported formats and known format-specific risks.
-- [Reader test progress](reader_test_progress.md) - current testing notes.
+## Архитектура
 
-## Active Engineering Docs
+Проект состоит из 16 Gradle-модулей, организованных по слоям:
 
-- [DJVU renderer research](active/DJVU_RENDERER_RESEARCH.md)
-- [EPUB/DJVU migration tasklist](active/EPUB_DJVU_MIGRATION_TASKLIST.md)
-- [Readium EPUB/DJVU migration plan](active/READIUM_EPUB_DJVU_MIGRATION_PLAN.md)
-- [Settings capability map](active/SETTINGS_CAPABILITY_MAP.md)
-- [Localization audit](active/LOCALIZATION_AUDIT.md)
-- [Translation module task](active/TRANSLATION_MODULE_TZ.md)
-- [Third-party dictionaries](active/THIRD_PARTY_DICTIONARIES.md)
-- [Reader import/open plan](active/READER_IMPORT_OPEN_PLAN.md)
-- [Library background generation task](active/LIBRARY_BACKGROUND_GENERATION_TZ.md)
-- [Library background prompt pack](active/LIBRARY_BACKGROUND_PROMPT_PACK.md)
+```
+core-model → core-data → core-domain → core-ui
+                ↓
+engine-api → engine-formats / engine-epub-readium / engine-llm
+                ↓
+engine-registry → engine-rendering
+                ↓
+feature-library / feature-reader / feature-settings / feature-ocr / feature-onboarding
+                ↓
+              app
+```
 
-## Feature Areas Covered
+## Словари
 
-- Reader architecture and text/raster container separation.
-- Text pagination, vertical feed behavior, safe insets, and reader chrome.
-- CBR/CBZ/PDF/DJVU rendering.
-- EPUB/FB2/MOBI/RTF/DOCX/HTML/Markdown/TXT parsing.
-- OCR and scanned page workflows.
-- Offline translation, online translation boundaries, and dictionaries.
-- Library customization, visual presets, and settings organization.
+Скрипты сборки словарей находятся в `Translate/`:
+
+- `build_dictionary.py` — базовый словарь → SQLite
+- `build_dictionary_full.py` — полный словарь со streaming-парсером
+- `build_dictionary_room.py` — Room-совместимый формат
+- `build_dictionary_shipped_assets.py` — словари для поставки в APK
+
+Импорт FreeDict: `scripts/import_freedict.py`
+
+## Тестовые файлы
+
+`samples/` содержит тестовые файлы для проверки поддержки форматов:
+
+- `format-real-corpus/` — реальные файлы (EPUB, DOCX, ODT, RTF, HTML, TXT, Markdown)
+- `format-test-books/` — тестовые книги
+- `test-archives/` — архивы с книгами внутри (ZIP, TAR, 7Z)
+- `translation_texts/` — тексты для проверки перевода (UDHR на 10 языках)

@@ -1,18 +1,23 @@
-name: Build APK
+name: Build & Test
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -31,17 +36,76 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Unit Tests (engine-formats)
-        run: ./gradlew --no-daemon :engine-formats:testDebugUnitTest
+      - name: Unit Tests (all modules)
+        run: ./gradlew --no-daemon --console=plain testDebugUnitTest
 
-      - name: Unit Tests (feature-reader)
-        run: ./gradlew --no-daemon :feature-reader:testDebugUnitTest
+      - name: Upload test results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: test-results
+          path: android/*/build/reports/tests/
+          if-no-files-found: ignore
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Android Lint
+        run: ./gradlew --no-daemon --console=plain :app:lintDebug
+
+      - name: Upload lint reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: lint-reports
+          path: android/app/build/reports/lint-results-*.html
+          if-no-files-found: ignore
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [unit-tests, lint]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew --no-daemon :app:assembleDebug
+        run: ./gradlew --no-daemon --console=plain :app:assembleDebug
 
       - name: Build Release APK
-        run: ./gradlew --no-daemon :app:assembleRelease
+        run: ./gradlew --no-daemon --console=plain :app:assembleRelease
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v7
@@ -63,3 +127,29 @@ jobs:
           name: MrComic-release-mapping
           path: android/app/build/outputs/mapping/release/*
           if-no-files-found: ignore
+
+  python-scripts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Smoke-test dictionary builders
+        run: |
+          cd Translate
+          python build_dictionary.py --help
+          python build_dictionary_full.py --help
+          python build_dictionary_room.py --help
+          python build_dictionary_shipped_assets.py --help
+
+      - name: Smoke-test FreeDict importer
+        run: |
+          cd scripts
+          python import_freedict.py --help
