@@ -1,6 +1,7 @@
 [versions]
 agp = "9.2.1"
 kotlin = "2.2.21"
+detekt = "1.23.7"
 hilt = "2.59.2"
 ksp = "2.2.21-2.0.5"
 
@@ -147,3 +148,4 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
