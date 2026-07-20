@@ -202,6 +202,7 @@ fun LibraryScreen(
     onSettingsClick: () -> Unit,
     onAudiobookClick: (String) -> Unit,
     onProgressProfileClick: (() -> Unit)? = null,
+    onOpdsCatalogClick: (() -> Unit)? = null,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
