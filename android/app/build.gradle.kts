@@ -25,14 +25,14 @@ val hasCustomSigning = customKeystoreFile.exists() &&
     !signingKeyPassword.isNullOrBlank()
 
 android {
-    namespace = "com.example.mrcomic"
+    namespace = "io.leostrange.mrcomic"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     // APK/AAB output name
     base.archivesName = "Mr.Comic"
 
     defaultConfig {
-        applicationId = "com.example.mrcomic"
+        applicationId = "io.leostrange.mrcomic"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 2

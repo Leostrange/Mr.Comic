@@ -1,7 +1,7 @@
 # Mr.Comic ProGuard Rules
 
 # Keep app entry points
--keep class com.example.mrcomic.** { *; }
+-keep class io.leostrange.mrcomic.** { *; }
 
 # Hilt
 -keepclassmembers,allowobfuscation class * {

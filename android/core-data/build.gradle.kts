@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.androidx.room)
 }
 android {
-    namespace = "com.example.core.data"
+    namespace = "io.leostrange.mrcomic.core.data"
     compileSdk = libs.versions.compileSdk.get().toInt()
     defaultConfig { minSdk = libs.versions.minSdk.get().toInt() }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

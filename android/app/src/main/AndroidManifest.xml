@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <application
-        android:name="com.example.mrcomic.ComicApplication"
+        android:name="io.leostrange.mrcomic.ComicApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -396,7 +396,7 @@
         </service>
 
         <service
-            android:name="com.example.feature.reader.ui.ReaderTtsPlaybackService"
+            android:name="io.leostrange.mrcomic.feature.reader.ui.ReaderTtsPlaybackService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback"
             android:stopWithTask="false" />
