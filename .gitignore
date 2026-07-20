@@ -95,10 +95,38 @@ re-out/
 null/
 PowerShell*/
 
-# Design/media source dumps that are not runtime assets.
-# Keep only the public README demo assets.
-/media/*
-!/media/
-!/media/demo.gif
-!/media/video_2025-09-22_00-33-37.mp4
+# Media files — too large for git, use GitHub releases instead
+media/
+
+# AI tool configs and agent artifacts
+.agents/
+.codex/
+.harness/
+.hermes.md
+.mcp.json
+.mimocode/
+.planning/
+.qa_shots/
+.re-out/
+.supergoal/
+.kimi-code/
+.kilo/
+.codegraph/
+.claude/
+.qa_run/
+
+# Screenshots and QA artifacts
+Screenshots/
+
+# Internal documentation (not needed for build)
+CODE_REVIEW_REPORT.md
+CONTRIBUTORS.md
+EXCLUDED_NON_CODE_BUILD_ASSETS.json
+EXTRACTION_TASKLIST.md
+READER_BUG_ANALYSIS_2026-07-17.md
+READER_MASTER_BACKLOG.md
+REFACTORING_CONTINUATION_GUIDE.md
+docs/active/
+
+# Executables
 mimo.exe

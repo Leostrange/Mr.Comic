@@ -1,6 +1,0 @@
-[mcp_servers.socraticode]
-command = "npx"
-args = [
-    "-y",
-    "socraticode",
-]
