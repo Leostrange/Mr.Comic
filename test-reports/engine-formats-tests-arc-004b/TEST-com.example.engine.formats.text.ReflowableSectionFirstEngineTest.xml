@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.text.ReflowableSectionFirstEngineTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-18T16:02:16.977Z" hostname="LEOSTRANGE" time="0.011">
-  <properties/>
-  <testcase name="sectionsFromHtmlBlocksGroupsByChapterHeadings" classname="com.example.engine.formats.text.ReflowableSectionFirstEngineTest" time="0.004"/>
-  <testcase name="sectionsFromPlainTextAvoidsCharSplitPages" classname="com.example.engine.formats.text.ReflowableSectionFirstEngineTest" time="0.007"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.epub.EpubCssSanitizationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-18T14:39:32.495Z" hostname="LEOSTRANGE" time="0.008">
-  <properties/>
-  <testcase name="assetBackedCssStripsBrokenAndUnsafeFontFaceSources" classname="com.example.engine.formats.epub.EpubCssSanitizationTest" time="0.006"/>
-  <testcase name="assetBackedCssKeepsResolvableRelativeFontFace" classname="com.example.engine.formats.epub.EpubCssSanitizationTest" time="0.002"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.text.pagination.DocumentTextPaginatorTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-18T13:49:07.600Z" hostname="LEOSTRANGE" time="0.029">
-  <properties/>
-  <testcase name="paginateMarkupProducesPagesForEachSection" classname="com.example.engine.formats.text.pagination.DocumentTextPaginatorTest" time="0.015"/>
-  <testcase name="paginatePlainTextIsDeterministic" classname="com.example.engine.formats.text.pagination.DocumentTextPaginatorTest" time="0.008"/>
-  <testcase name="shortTitleSectionIsRepaginatedWithFollowingSection" classname="com.example.engine.formats.text.pagination.DocumentTextPaginatorTest" time="0.005"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

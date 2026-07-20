@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.feature.settings.ui.SettingsImportErrorPresentationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-19T23:44:12.737Z" hostname="LEOSTRANGE" time="0.003">
-  <properties/>
-  <testcase name="normalizeDefaultsToTextForUnknownValues" classname="com.example.feature.settings.ui.SettingsImportErrorPresentationTest" time="0.001"/>
-  <testcase name="normalizeKeepsImageModeCaseInsensitive" classname="com.example.feature.settings.ui.SettingsImportErrorPresentationTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

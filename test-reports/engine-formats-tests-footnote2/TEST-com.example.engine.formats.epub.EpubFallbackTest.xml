@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.epub.EpubFallbackTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-19T14:27:32.529Z" hostname="LEOSTRANGE" time="0.032">
-  <properties/>
-  <testcase name="fallbackWithoutOpfSkipsNavigationAndEmptyNestedPages" classname="com.example.engine.formats.epub.EpubFallbackTest" time="0.032"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

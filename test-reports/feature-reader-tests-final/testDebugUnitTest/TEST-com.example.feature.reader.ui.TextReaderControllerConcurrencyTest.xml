@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.feature.reader.ui.TextReaderControllerConcurrencyTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-19T17:30:51.342Z" hostname="LEOSTRANGE" time="0.033">
-  <properties/>
-  <testcase name="htmlPageCacheSurvivesConcurrentAccessPutAndClear" classname="com.example.feature.reader.ui.TextReaderControllerConcurrencyTest" time="0.03"/>
-  <testcase name="clearHtmlPageCacheConcurrentWithReadsLeavesEmptyCache" classname="com.example.feature.reader.ui.TextReaderControllerConcurrencyTest" time="0.003"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.djvu.DjvuPageDocumentBuilderTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-07-19T13:57:02.358Z" hostname="LEOSTRANGE" time="0.006">
-  <properties/>
-  <testcase name="builder returns original bytes when input is already standalone" classname="com.example.engine.formats.djvu.DjvuPageDocumentBuilderTest" time="0.004"/>
-  <testcase name="builder wraps nested djvu form into standalone document" classname="com.example.engine.formats.djvu.DjvuPageDocumentBuilderTest" time="0.001"/>
-  <testcase name="builder trims trailing pad from nested page chunk" classname="com.example.engine.formats.djvu.DjvuPageDocumentBuilderTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

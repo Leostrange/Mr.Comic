@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.djvu.DjvuProbeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-18T18:28:09.623Z" hostname="LEOSTRANGE" time="0.007">
-  <properties/>
-  <testcase name="probe reports single-page djvu" classname="com.example.engine.formats.djvu.DjvuProbeTest" time="0.006"/>
-  <testcase name="probe counts bundled djvu pages from top-level forms" classname="com.example.engine.formats.djvu.DjvuProbeTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

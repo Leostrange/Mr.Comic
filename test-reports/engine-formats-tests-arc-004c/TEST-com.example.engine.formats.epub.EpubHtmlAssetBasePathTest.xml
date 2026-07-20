@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.epub.EpubHtmlAssetBasePathTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-07-18T14:24:22.011Z" hostname="LEOSTRANGE" time="0.045">
-  <properties/>
-  <testcase name="flatLayoutAssetBasePathResolvesForEachSection" classname="com.example.engine.formats.epub.EpubHtmlAssetBasePathTest" time="0.045"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

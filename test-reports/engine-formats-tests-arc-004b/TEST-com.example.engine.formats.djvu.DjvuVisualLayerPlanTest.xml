@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.engine.formats.djvu.DjvuVisualLayerPlanTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-18T16:02:11.395Z" hostname="LEOSTRANGE" time="0.003">
-  <properties/>
-  <testcase name="extracts simple jpeg visual layer profile" classname="com.example.engine.formats.djvu.DjvuVisualLayerPlanTest" time="0.002"/>
-  <testcase name="extracts composite visual layer profile" classname="com.example.engine.formats.djvu.DjvuVisualLayerPlanTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.core.data.repository.QuoteRepositoryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-12T19:02:01.527Z" hostname="LEOSTRANGE" time="0.432">
-  <properties/>
-  <testcase name="searchQuotes_trimsQueryAndBlankInputFallsBackToAllQuotes" classname="com.example.core.data.repository.QuoteRepositoryTest" time="0.418"/>
-  <testcase name="saveQuote_mergesEquivalentTextIntoSingleStoredRow" classname="com.example.core.data.repository.QuoteRepositoryTest" time="0.012"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

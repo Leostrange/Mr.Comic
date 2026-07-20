@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.example.feature.reader.ui.ReaderChromeComponentsTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-07-19T16:56:03.377Z" hostname="LEOSTRANGE" time="0.009">
-  <properties/>
-  <testcase name="readerNotePanelMaxHeight_scalesAndClampsExpandedPanels" classname="com.example.feature.reader.ui.ReaderChromeComponentsTest" time="0.009"/>
-  <testcase name="readerNotePanelMaxHeight_scalesAndClampsPeekPanels" classname="com.example.feature.reader.ui.ReaderChromeComponentsTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

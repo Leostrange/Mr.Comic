@@ -129,6 +129,8 @@ REFACTORING_CONTINUATION_GUIDE.md
 docs/active/
 
 # Internal planning/task docs
+plans/
+test-reports/
 PROJECT_CONTEXT_HANDOFF.md
 READER_SETTINGS_SNAPSHOT*.md
 SKILL.md
