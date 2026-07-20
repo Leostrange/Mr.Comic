@@ -100,7 +100,7 @@ def write_dictionary_tsv(path: Path, entries: dict[str, tuple[str | None, list[s
 
 def extract_archive(archive_path: Path, destination: Path) -> Path:
     with tarfile.open(archive_path, "r:xz") as tar:
-        tar.extractall(destination)
+        tar.extractall(destination, filter="data")  # CVE-2007-4559 mitigation
     directories = [item for item in destination.iterdir() if item.is_dir()]
     if not directories:
         raise RuntimeError(f"No extracted directory for {archive_path.name}")

@@ -16,7 +16,12 @@ object FormatDetector {
     private val DJVU_SINGLE_MAGIC = "DJVU".encodeToByteArray()
     private val DJVU_MULTI_MAGIC = "DJVM".encodeToByteArray()
 
-    /** Detect by content (magic bytes). Falls back to extension if stream fails. */
+    /**
+     * Detect by content (magic bytes). Falls back to extension if stream fails.
+     *
+     * The stream is NOT consumed — uses mark/reset so callers can reuse it.
+     * If the stream does not support mark, it is wrapped in a [BufferedInputStream].
+     */
     fun detect(stream: InputStream, name: String): ComicFormat {
         return try {
             val extensionFormat = detectByExtension(name)
@@ -24,8 +29,14 @@ object FormatDetector {
                 return extensionFormat
             }
 
+            val buffered = if (stream.markSupported()) stream
+                else java.io.BufferedInputStream(stream, 64 * 1024)
+
+            buffered.mark(64 * 1024)
             val header = ByteArray(64 * 1024)
-            val bytesRead = stream.read(header).coerceAtLeast(0)
+            val bytesRead = buffered.read(header).coerceAtLeast(0)
+            buffered.reset()
+
             val actualHeader = header.copyOf(bytesRead)
             detectByBytes(actualHeader) ?: extensionFormat
         } catch (_: Exception) {

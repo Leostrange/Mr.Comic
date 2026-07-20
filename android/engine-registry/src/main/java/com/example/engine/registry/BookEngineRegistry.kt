@@ -9,8 +9,8 @@ import javax.inject.Singleton
 class BookEngineRegistry @Inject constructor(
     private val engines: Set<@JvmSuppressWildcards BookEngine>
 ) {
-    fun resolve(format: BookFormat): BookEngine {
+    /** Returns the engine for [format], or null if no engine is registered. */
+    fun resolve(format: BookFormat): BookEngine? {
         return engines.firstOrNull { format in it.supportedFormats }
-            ?: error("No engine registered for format: $format")
     }
 }
