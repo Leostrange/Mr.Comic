@@ -33,6 +33,9 @@ dependencies {
     implementation(libs.coil.compose)
     testImplementation(libs.test.junit)
     testImplementation(libs.test.kotlinx.coroutines)
+    androidTestImplementation(libs.test.androidx.junit)
+    androidTestImplementation(libs.test.androidx.runner)
+    androidTestImplementation(libs.test.room)
 }
 
 room {
