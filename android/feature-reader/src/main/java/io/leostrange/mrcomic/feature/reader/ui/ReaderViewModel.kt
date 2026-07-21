@@ -1008,7 +1008,7 @@ class ReaderViewModel @Inject constructor(
                 val startOffset = bodyText.indexOf(text).coerceAtLeast(0)
                 val endOffset = startOffset + text.length
                 textHighlightRepository.saveHighlight(
-                    io.leostrange.mrcomic.core.model.TextHighlight(
+                    io.leostrange.mrcomic.core.data.db.entity.TextHighlight(
                         comicId = comic.id,
                         comicTitle = comic.title ?: "",
                         page = page,

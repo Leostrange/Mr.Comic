@@ -135,7 +135,7 @@ import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicLibraryShelf
 import io.leostrange.mrcomic.core.model.ComicReadingStatus
-import io.leostrange.mrcomic.core.model.SavedQuote
+import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.model.SortOrder
 import io.leostrange.mrcomic.core.model.Audiobook
 import io.leostrange.mrcomic.core.model.isReadCompleted

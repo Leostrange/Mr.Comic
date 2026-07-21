@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.core.model.TextHighlight
+import io.leostrange.mrcomic.core.data.db.entity.TextHighlight
 
 /**
  * Pure JavaScript generator for text highlights in the reader WebView.
