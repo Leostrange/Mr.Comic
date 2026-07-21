@@ -159,6 +159,12 @@ class ReaderViewModel @Inject constructor(
     val readerProgressRecap: SharedFlow<ReaderProgressRecap> = _readerProgressRecap.asSharedFlow()
 
     private val readerPreferences = UserPreferences(context.dataStore)
+    private val settingsController = ReaderSettingsController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        readerPreferences = readerPreferences,
+        dataStore = context.dataStore
+    )
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
     private var activeBookSession: BookSession? = null
@@ -2003,243 +2009,62 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    private fun markReaderPresetCustom() {
-        _uiState.update { ReaderStylePresetReducer.markCustom(it) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name) }
-    }
+    private fun markReaderPresetCustom() = settingsController.markReaderPresetCustom()
 
-    fun applyReadingPreset(preset: ReadingPreset) {
-        if (preset == ReadingPreset.CUSTOM) {
-            markReaderPresetCustom()
-            return
-        }
-        val style = preset.style()
-        _uiState.update { ReaderStylePresetReducer.applyBuiltInPreset(it, preset) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, preset.name)
-            readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, style.immersiveMode)
-            readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
-            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, style.fontFamily)
-            readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, style.lineHeight)
-            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, style.letterSpacing)
-            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, style.wordSpacing)
-            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, style.paragraphSpacing)
-            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, style.textAlignment)
-            readerPreferences.set(PreferencesKeys.TEXT_BOLD, style.textBold)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)
-        }
-    }
+    fun applyReadingPreset(preset: ReadingPreset) = settingsController.applyReadingPreset(preset)
 
     /** Updates font size for text books. */
-    fun setTextFontSize(size: Int) {
-        _uiState.update { ReaderStylePresetReducer.setFontSize(it, size) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, size)
-        }
-    }
+    fun setTextFontSize(size: Int) = settingsController.setTextFontSize(size)
 
     /** Updates color scheme for text books: "DAY" | "SEPIA" | "NIGHT". */
-    fun setTextColorScheme(scheme: String) {
-        _uiState.update { ReaderStylePresetReducer.setColorScheme(it, scheme) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme)
-        }
-    }
+    fun setTextColorScheme(scheme: String) = settingsController.setTextColorScheme(scheme)
 
-    fun setTextCustomTextColor(color: Long?) {
-        _uiState.update { ReaderStylePresetReducer.setCustomTextColor(it, color) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, color)
-        }
-    }
+    fun setTextCustomTextColor(color: Long?) = settingsController.setTextCustomTextColor(color)
 
-    fun setTextCustomBackgroundColor(color: Long?) {
-        _uiState.update { ReaderStylePresetReducer.setCustomBackgroundColor(it, color) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, color)
-        }
-    }
+    fun setTextCustomBackgroundColor(color: Long?) = settingsController.setTextCustomBackgroundColor(color)
 
-    fun setTextCustomAccentColor(color: Long?) {
-        _uiState.update { ReaderStylePresetReducer.setCustomAccentColor(it, color) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, color)
-        }
-    }
+    fun setTextCustomAccentColor(color: Long?) = settingsController.setTextCustomAccentColor(color)
 
     /** Updates font family for text books. */
-    fun setTextFontFamily(family: String) {
-        _uiState.update { ReaderStylePresetReducer.setFontFamily(it, family) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, family)
-        }
-    }
+    fun setTextFontFamily(family: String) = settingsController.setTextFontFamily(family)
 
     /** Updates line height multiplier for text books. */
-    fun setTextLineHeight(height: Float) {
-        _uiState.update { ReaderStylePresetReducer.setLineHeight(it, height) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, height)
-        }
-    }
+    fun setTextLineHeight(height: Float) = settingsController.setTextLineHeight(height)
 
     /** Updates letter spacing for text books in em units. */
-    fun setTextLetterSpacing(spacing: Float) {
-        _uiState.update { ReaderStylePresetReducer.setLetterSpacing(it, spacing) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, spacing)
-        }
-    }
+    fun setTextLetterSpacing(spacing: Float) = settingsController.setTextLetterSpacing(spacing)
 
     /** Updates word spacing for text books in em units. */
-    fun setTextWordSpacing(spacing: Float) {
-        _uiState.update { ReaderStylePresetReducer.setWordSpacing(it, spacing) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, spacing)
-        }
-    }
+    fun setTextWordSpacing(spacing: Float) = settingsController.setTextWordSpacing(spacing)
 
     /** Updates paragraph spacing for text books in em units. */
-    fun setTextParagraphSpacing(spacing: Float) {
-        _uiState.update { ReaderStylePresetReducer.setParagraphSpacing(it, spacing) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, spacing)
-        }
-    }
+    fun setTextParagraphSpacing(spacing: Float) = settingsController.setTextParagraphSpacing(spacing)
 
     /** Updates text alignment for text books: "justify" | "left" | "right" | "center". */
-    fun setTextAlignment(align: String) {
-        _uiState.update { ReaderStylePresetReducer.setAlignment(it, align) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, align)
-        }
-    }
+    fun setTextAlignment(align: String) = settingsController.setTextAlignment(align)
 
     /** Toggles bold text for text books. */
-    fun setTextBold(bold: Boolean) {
-        _uiState.update { ReaderStylePresetReducer.setBold(it, bold) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_BOLD, bold)
-        }
-    }
+    fun setTextBold(bold: Boolean) = settingsController.setTextBold(bold)
 
-    fun saveReaderStylePreset(slot: Int) {
-        val normalizedSlot = slot.coerceIn(1, 3)
-        val existingEntry = ReaderStylePresetEntries.entryAtSlot(
-            _uiState.value.readerStylePresetEntries,
-            normalizedSlot
-        )
-        if (existingEntry != null) {
-            overwriteReaderStylePreset(existingEntry.id)
-        } else {
-            val fallbackName = localizedReaderStyleFallbackName(normalizedSlot)
-            saveCurrentReaderStylePreset(displayName = fallbackName)
-        }
-    }
+    fun saveReaderStylePreset(slot: Int) = settingsController.saveReaderStylePreset(slot)
 
-    fun saveCurrentReaderStylePreset(displayName: String? = null) {
-        val snapshot = _uiState.value.toReaderStylePresetSnapshot(
-            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
-                ?: localizedReaderStyleFallbackName(_uiState.value.readerStylePresetEntries.size + 1)
-        )
-        val updatedEntries = ReaderStylePresetEntries.prepend(
-            entries = _uiState.value.readerStylePresetEntries,
-            entry = ReaderStylePresetEntry(
-                id = "preset_${System.currentTimeMillis()}",
-                snapshot = snapshot
-            )
-        )
-        updateReaderStylePresetEntries(updatedEntries)
-    }
+    fun saveCurrentReaderStylePreset(displayName: String? = null) = settingsController.saveCurrentReaderStylePreset(displayName)
 
-    fun overwriteReaderStylePreset(id: String) {
-        val currentEntries = _uiState.value.readerStylePresetEntries
-        val existing = currentEntries.firstOrNull { it.id == id } ?: return
-        val updatedEntries = ReaderStylePresetEntries.overwrite(
-            entries = currentEntries,
-            id = id,
-            snapshot = _uiState.value.toReaderStylePresetSnapshot(
-                displayName = existing.snapshot.displayName
-            )
-        )
-        updateReaderStylePresetEntries(updatedEntries)
-    }
+    fun overwriteReaderStylePreset(id: String) = settingsController.overwriteReaderStylePreset(id)
 
-    fun applyReaderStylePreset(slot: Int) {
-        val normalizedSlot = slot.coerceIn(1, 3)
-        ReaderStylePresetEntries.entryAtSlot(_uiState.value.readerStylePresetEntries, normalizedSlot)
-            ?.let { applyReaderStylePreset(it.id) }
-    }
+    fun applyReaderStylePreset(slot: Int) = settingsController.applyReaderStylePreset(slot)
 
-    fun applyReaderStylePreset(id: String) {
-        val snapshot = _uiState.value.readerStylePresetEntries
-            .firstOrNull { it.id == id }
-            ?.snapshot
-            ?: return
-        applyReaderStylePresetSnapshot(snapshot)
-    }
+    fun applyReaderStylePreset(id: String) = settingsController.applyReaderStylePreset(id)
 
-    fun clearReaderStylePreset(slot: Int) {
-        val normalizedSlot = slot.coerceIn(1, 3)
-        ReaderStylePresetEntries.entryAtSlot(_uiState.value.readerStylePresetEntries, normalizedSlot)
-            ?.let { deleteReaderStylePreset(it.id) }
-    }
+    fun clearReaderStylePreset(slot: Int) = settingsController.clearReaderStylePreset(slot)
 
-    fun deleteReaderStylePreset(id: String) {
-        updateReaderStylePresetEntries(
-            ReaderStylePresetEntries.delete(_uiState.value.readerStylePresetEntries, id)
-        )
-    }
+    fun deleteReaderStylePreset(id: String) = settingsController.deleteReaderStylePreset(id)
 
-    fun renameReaderStylePreset(id: String, displayName: String) {
-        val updatedEntries = ReaderStylePresetEntries.rename(
-            entries = _uiState.value.readerStylePresetEntries,
-            id = id,
-            displayName = displayName
-        )
-        updateReaderStylePresetEntries(updatedEntries)
-    }
+    fun renameReaderStylePreset(id: String, displayName: String) = settingsController.renameReaderStylePreset(id, displayName)
 
-    fun importReaderStyleFromJson(rawJson: String): String? {
-        val snapshot = parseReaderStylePreset(rawJson) ?: return null
-        applyReaderStylePresetSnapshot(snapshot)
-        return snapshot.displayName?.takeIf { it.isNotBlank() }
-            ?: ReadingPreset.fromStored(snapshot.readerPreset).name
-    }
+    fun importReaderStyleFromJson(rawJson: String): String? = settingsController.importReaderStyleFromJson(rawJson)
 
-    fun resetTextSettings() {
-        _uiState.update { ReaderStylePresetReducer.resetTextSettings(it) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE)
-            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
-            readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY)
-            readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT)
-            readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING)
-            readerPreferences.set(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING)
-            readerPreferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING)
-            readerPreferences.set(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT)
-            readerPreferences.set(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
-            persistNullablePreference(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)
-        }
-    }
+    fun resetTextSettings() = settingsController.resetTextSettings()
 
     private fun localizedReaderStyleFallbackName(index: Int): String = "Style $index"
 
@@ -2561,60 +2386,19 @@ class ReaderViewModel @Inject constructor(
         )
     }
     private var brightnessJob: Job? = null
-    fun setBrightness(value: Float) {
-        markReaderPresetCustom()
-        val safe = if (value <= 0.01f) {
-            -1f
-        } else {
-            value.coerceIn(0.05f, 1f)
-        }
-        _uiState.update { it.copy(brightness = safe) }   // immediate UI update
-        brightnessJob?.cancel()
-        brightnessJob = viewModelScope.launch {
-            delay(300)   // debounce: only write after dragging stops
-            readerPreferences.set(PreferencesKeys.READING_BRIGHTNESS, safe)
-        }
-    }
+    fun setBrightness(value: Float) = settingsController.setBrightness(value)
 
-    fun setKeepScreenOn(enabled: Boolean) {
-        _uiState.update { it.copy(keepScreenOn = enabled) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_KEEP_SCREEN_ON, enabled)
-        }
-    }
+    fun setKeepScreenOn(enabled: Boolean) = settingsController.setKeepScreenOn(enabled)
 
     /** Set auto-scroll speed. 0 disables, positive values = pixels per second. */
-    fun setAutoScrollSpeed(speed: Float) {
-        _uiState.update { it.copy(autoScrollSpeed = speed.coerceIn(0f, 500f)) }
-    }
+    fun setAutoScrollSpeed(speed: Float) = settingsController.setAutoScrollSpeed(speed)
 
     /** Cycle through auto-scroll presets: off → slow → medium → fast → off. */
-    fun cycleAutoScrollSpeed() {
-        val current = _uiState.value.autoScrollSpeed
-        val next = when {
-            current <= 0f -> 30f    // slow
-            current < 60f -> 80f   // medium
-            current < 120f -> 180f // fast
-            else -> 0f             // off
-        }
-        setAutoScrollSpeed(next)
-    }
+    fun cycleAutoScrollSpeed() = settingsController.cycleAutoScrollSpeed()
 
-    fun setScreenTimeoutMode(mode: String) {
-        val resolved = ReaderScreenTimeoutMode.fromStored(mode)
-        _uiState.update { it.copy(screenTimeoutMode = resolved.storedValue) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_SCREEN_TIMEOUT_MODE, resolved.storedValue)
-        }
-    }
+    fun setScreenTimeoutMode(mode: String) = settingsController.setScreenTimeoutMode(mode)
 
-    fun setImmersiveMode(enabled: Boolean) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(immersiveMode = enabled) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, enabled)
-        }
-    }
+    fun setImmersiveMode(enabled: Boolean) = settingsController.setImmersiveMode(enabled)
 
     fun setLandscapeSpreadEnabled(enabled: Boolean) {
         _uiState.update { it.copy(landscapeSpreadEnabled = enabled) }
@@ -2639,320 +2423,61 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun setPageAnimation(animation: String) {
-        markReaderPresetCustom()
-        _uiState.update { it.copy(readerPageAnimation = animation) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, animation)
-        }
-    }
+    fun setPageAnimation(animation: String) = settingsController.setPageAnimation(animation)
 
-    fun setVolumeKeysPagingEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(volumeKeysPagingEnabled = enabled) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_VOLUME_KEYS_PAGING, enabled)
-        }
-    }
+    fun setVolumeKeysPagingEnabled(enabled: Boolean) = settingsController.setVolumeKeysPagingEnabled(enabled)
 
-    fun setTapZoneMode(value: String) {
-        val resolved = ReaderTapZoneMode.fromStored(value)
-        _uiState.update { it.copy(tapZoneMode = resolved.name) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_MODE, resolved.name)
-        }
-    }
+    fun setTapZoneMode(value: String) = settingsController.setTapZoneMode(value)
 
-    fun setTapZoneSwap(enabled: Boolean) {
-        _uiState.update { it.copy(tapZoneSwap = enabled) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_SWAP, enabled)
-        }
-    }
+    fun setTapZoneSwap(enabled: Boolean) = settingsController.setTapZoneSwap(enabled)
 
-    fun setTapZoneAction(position: String, action: String) {
-        val normalizedActionName = normalizeTapZoneActionName(action)
-        val normalizedPosition = position.uppercase()
-        _uiState.update {
-            when (normalizedPosition) {
-                "LEFT" -> it.copy(
-                    tapZoneMode = ReaderTapZoneMode.CUSTOM.name,
-                    tapZoneLeftAction = normalizedActionName
-                )
-                "CENTER" -> it.copy(
-                    tapZoneMode = ReaderTapZoneMode.CUSTOM.name,
-                    tapZoneCenterAction = normalizedActionName
-                )
-                else -> it.copy(
-                    tapZoneMode = ReaderTapZoneMode.CUSTOM.name,
-                    tapZoneRightAction = normalizedActionName
-                )
-            }
-        }
-        val key = when (normalizedPosition) {
-            "LEFT" -> PreferencesKeys.READER_TAP_ZONE_LEFT
-            "CENTER" -> PreferencesKeys.READER_TAP_ZONE_CENTER
-            else -> PreferencesKeys.READER_TAP_ZONE_RIGHT
-        }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.CUSTOM.name)
-            readerPreferences.set(key, normalizedActionName)
-        }
-    }
+    fun setTapZoneAction(position: String, action: String) = settingsController.setTapZoneAction(position, action)
 
-    fun toggleTapZoneDirectionShortcut() {
-        val state = _uiState.value
-        val mode = ReaderTapZoneMode.fromStored(state.tapZoneMode)
-        if (mode == ReaderTapZoneMode.CUSTOM) {
-            val left = state.tapZoneLeftAction
-            val right = state.tapZoneRightAction
-            _uiState.update {
-                it.copy(
-                    tapZoneLeftAction = right,
-                    tapZoneRightAction = left
-                )
-            }
-            viewModelScope.launch {
-                readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_LEFT, right)
-                readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_RIGHT, left)
-            }
-        } else {
-            val nextSwap = !state.tapZoneSwap
-            _uiState.update { it.copy(tapZoneSwap = nextSwap) }
-            viewModelScope.launch {
-                readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_SWAP, nextSwap)
-            }
-        }
-    }
+    fun toggleTapZoneDirectionShortcut() = settingsController.toggleTapZoneDirectionShortcut()
 
-    fun setHeaderSlot(position: String, slot: String) {
-        val normalizedSlot = ReaderInfoSlot.fromStored(slot).name
-        val normalizedPosition = position.uppercase()
-        _uiState.update {
-            when (normalizedPosition) {
-                "LEFT" -> it.copy(headerLeftSlot = normalizedSlot)
-                "CENTER" -> it.copy(headerCenterSlot = normalizedSlot)
-                else -> it.copy(headerRightSlot = normalizedSlot)
-            }
-        }
-        val key = when (normalizedPosition) {
-            "LEFT" -> PreferencesKeys.READER_HEADER_LEFT_SLOT
-            "CENTER" -> PreferencesKeys.READER_HEADER_CENTER_SLOT
-            else -> PreferencesKeys.READER_HEADER_RIGHT_SLOT
-        }
-        viewModelScope.launch {
-            readerPreferences.set(key, normalizedSlot)
-        }
-    }
+    fun setHeaderSlot(position: String, slot: String) = settingsController.setHeaderSlot(position, slot)
 
-    fun setFooterSlot(position: String, slot: String) {
-        val normalizedSlot = ReaderInfoSlot.fromStored(slot).name
-        val normalizedPosition = position.uppercase()
-        _uiState.update {
-            when (normalizedPosition) {
-                "LEFT" -> it.copy(footerLeftSlot = normalizedSlot)
-                "CENTER" -> it.copy(footerCenterSlot = normalizedSlot)
-                else -> it.copy(footerRightSlot = normalizedSlot)
-            }
-        }
-        val key = when (normalizedPosition) {
-            "LEFT" -> PreferencesKeys.READER_FOOTER_LEFT_SLOT
-            "CENTER" -> PreferencesKeys.READER_FOOTER_CENTER_SLOT
-            else -> PreferencesKeys.READER_FOOTER_RIGHT_SLOT
-        }
-        viewModelScope.launch {
-            readerPreferences.set(key, normalizedSlot)
-        }
-    }
+    fun setFooterSlot(position: String, slot: String) = settingsController.setFooterSlot(position, slot)
 
-    fun setHeaderFooterFontSize(size: Int) {
-        val safe = size.coerceIn(10, 20)
-        _uiState.update { it.copy(headerFooterFontSize = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, safe)
-        }
-    }
+    fun setHeaderFooterFontSize(size: Int) = settingsController.setHeaderFooterFontSize(size)
 
-    fun setHeaderFooterVerticalPadding(padding: Int) {
-        val safe = padding.coerceIn(4, 20)
-        _uiState.update { it.copy(headerFooterVerticalPadding = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, safe)
-        }
-    }
+    fun setHeaderFooterVerticalPadding(padding: Int) = settingsController.setHeaderFooterVerticalPadding(padding)
 
-    fun setHeaderFooterLeftPadding(padding: Int) {
-        val safe = padding.coerceIn(8, 32)
-        _uiState.update { it.copy(headerFooterLeftPadding = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, safe)
-        }
-    }
+    fun setHeaderFooterLeftPadding(padding: Int) = settingsController.setHeaderFooterLeftPadding(padding)
 
-    fun setHeaderFooterRightPadding(padding: Int) {
-        val safe = padding.coerceIn(8, 32)
-        _uiState.update { it.copy(headerFooterRightPadding = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, safe)
-        }
-    }
+    fun setHeaderFooterRightPadding(padding: Int) = settingsController.setHeaderFooterRightPadding(padding)
 
-    fun setChromeAutoHideEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(chromeAutoHideEnabled = enabled) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_CHROME_AUTO_HIDE, enabled)
-        }
-    }
+    fun setChromeAutoHideEnabled(enabled: Boolean) = settingsController.setChromeAutoHideEnabled(enabled)
 
-    fun setTopToolbarOpacity(value: Float) {
-        val safe = value.coerceIn(0f, 1.0f)
-        _uiState.update { it.copy(topToolbarOpacity = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
-        }
-    }
+    fun setTopToolbarOpacity(value: Float) = settingsController.setTopToolbarOpacity(value)
 
-    fun setBottomToolbarOpacity(value: Float) {
-        val safe = value.coerceIn(0f, 1.0f)
-        _uiState.update { it.copy(bottomToolbarOpacity = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe)
-        }
-    }
+    fun setBottomToolbarOpacity(value: Float) = settingsController.setBottomToolbarOpacity(value)
 
-    fun setToolbarOpacity(value: Float) {
-        val safe = value.coerceIn(0f, 1.0f)
-        _uiState.update {
-            it.copy(
-                topToolbarOpacity = safe,
-                bottomToolbarOpacity = safe
-            )
-        }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
-            readerPreferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe)
-        }
-    }
+    fun setToolbarOpacity(value: Float) = settingsController.setToolbarOpacity(value)
 
-    fun setToolbarBlur(value: Float) {
-        val safe = value.coerceIn(0f, 1.0f)
-        _uiState.update { it.copy(toolbarBlur = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TOOLBAR_BLUR, safe)
-        }
-    }
+    fun setToolbarBlur(value: Float) = settingsController.setToolbarBlur(value)
 
-    fun setImageScaleMode(value: String) {
-        val resolved = ReaderImageScaleMode.fromStored(value)
-        _uiState.update { it.copy(imageScaleMode = resolved.storedValue) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_IMAGE_SCALE_MODE, resolved.storedValue)
-        }
-    }
+    fun setImageScaleMode(value: String) = settingsController.setImageScaleMode(value)
 
-    fun setImageMarginCropHorizontal(value: Float) {
-        val safe = value.coerceIn(0f, 0.22f)
-        _uiState.update { it.copy(imageMarginCropHorizontal = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, safe)
-        }
-    }
+    fun setImageMarginCropHorizontal(value: Float) = settingsController.setImageMarginCropHorizontal(value)
 
-    fun setImageMarginCropVertical(value: Float) {
-        val safe = value.coerceIn(0f, 0.22f)
-        _uiState.update { it.copy(imageMarginCropVertical = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, safe)
-        }
-    }
+    fun setImageMarginCropVertical(value: Float) = settingsController.setImageMarginCropVertical(value)
 
-    fun setTtsSpeed(value: Float) {
-        val safe = value.coerceIn(0.5f, 2.0f)
-        _uiState.update { it.copy(ttsSpeed = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TTS_SPEED, safe)
-        }
-    }
+    fun setTtsSpeed(value: Float) = settingsController.setTtsSpeed(value)
 
-    fun setTtsProvider(value: String) {
-        val resolved = ReaderTtsProviderType.fromStored(value)
-        _uiState.update { it.copy(ttsProvider = resolved.storedValue) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TTS_PROVIDER, resolved.storedValue)
-        }
-    }
+    fun setTtsProvider(value: String) = settingsController.setTtsProvider(value)
 
-    fun setTtsPitch(value: Float) {
-        val safe = value.coerceIn(0.5f, 2.0f)
-        _uiState.update { it.copy(ttsPitch = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TTS_PITCH, safe)
-        }
-    }
+    fun setTtsPitch(value: Float) = settingsController.setTtsPitch(value)
 
-    fun setTtsVolume(value: Float) {
-        val safe = value.coerceIn(0f, 1.0f)
-        _uiState.update { it.copy(ttsVolume = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TTS_VOLUME, safe)
-        }
-    }
+    fun setTtsVolume(value: Float) = settingsController.setTtsVolume(value)
 
-    fun setTtsVoiceName(value: String?) {
-        _uiState.update { it.copy(ttsVoiceName = value?.takeIf(String::isNotBlank)) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TTS_VOICE_NAME, value.orEmpty())
-        }
-    }
+    fun setTtsVoiceName(value: String?) = settingsController.setTtsVoiceName(value)
 
-    fun setTtsSleepTimerMode(value: String) {
-        val resolved = ReaderTtsSleepTimerMode.fromStored(value)
-        _uiState.update { it.copy(ttsSleepTimerMode = resolved.storedValue) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE, resolved.storedValue)
-        }
-    }
+    fun setTtsSleepTimerMode(value: String) = settingsController.setTtsSleepTimerMode(value)
 
-    fun setChromeIconVisible(icon: String, visible: Boolean) {
-        when (ReaderChromeButton.fromStored(icon) ?: return) {
-            ReaderChromeButton.TOC -> {
-                _uiState.update { it.copy(chromeShowTocIcon = visible) }
-                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_TOC, visible) }
-            }
-            ReaderChromeButton.STYLE -> {
-                _uiState.update { it.copy(chromeShowStyleIcon = true) }
-                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_STYLE, true) }
-            }
-            ReaderChromeButton.AUDIO -> {
-                _uiState.update { it.copy(chromeShowAudioIcon = visible) }
-                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_AUDIO, visible) }
-            }
-            ReaderChromeButton.DIRECTION -> {
-                _uiState.update { it.copy(chromeShowDirectionIcon = visible) }
-                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, visible) }
-            }
-            ReaderChromeButton.TRANSLATE -> {
-                _uiState.update { it.copy(chromeShowTranslateIcon = visible) }
-                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, visible) }
-            }
-            ReaderChromeButton.BRIGHTNESS -> {
-                _uiState.update { it.copy(chromeShowBrightnessIcon = visible) }
-                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, visible) }
-            }
-            ReaderChromeButton.AUTO_SCROLL -> {
-                // Auto-scroll icon visibility is always true; no preference needed.
-            }
-        }
-    }
+    fun setChromeIconVisible(icon: String, visible: Boolean) = settingsController.setChromeIconVisible(icon, visible)
 
-    fun moveChromeIcon(icon: String, delta: Int) {
-        if (delta == 0) return
-        if (ReaderChromeButton.fromStored(icon) == ReaderChromeButton.STYLE) return
-        val updatedOrder = ReaderChromeButton.move(_uiState.value.chromeIconOrder, icon, delta)
-        _uiState.update { it.copy(chromeIconOrder = updatedOrder) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_CHROME_ICON_ORDER, updatedOrder)
-        }
-    }
+    fun moveChromeIcon(icon: String, delta: Int) = settingsController.moveChromeIcon(icon, delta)
 
     private fun saveProgress(
         page: Int,
