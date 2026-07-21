@@ -10,6 +10,7 @@ import io.leostrange.mrcomic.engine.formats.base.renderViewportTarget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -158,8 +159,9 @@ internal class TextReaderOrchestrator(
         if (state.readerContainerKind != ReaderContainerKind.TEXT_PAGE) return
         if (!state.readerRendersHtmlContent) return
 
-        paginationJob?.cancel()
+        val oldJob = paginationJob
         paginationJob = scope.launch(Dispatchers.IO) {
+            oldJob?.cancelAndJoin() // Wait for previous pagination to finish before starting new one
             val (viewportWidthPx, viewportHeightPx) = context.renderViewportTarget()
             val uiSnapshot = getUiState()
             if (uiSnapshot.comic?.id != comicId || !isStillActive()) return@launch

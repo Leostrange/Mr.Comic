@@ -1984,7 +1984,7 @@ class ReaderViewModel @Inject constructor(
         if (pageCount <= 0) return
         val sectionIndex = _uiState.value.currentPage
         val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
-        sectionPageCounts[sectionIndex] = pageCount
+        synchronized(sectionPageCounts) { sectionPageCounts[sectionIndex] = pageCount }
         val progress = EpubProgressCalculator.accumulate(
             sectionPageCounts = snapshotSectionPageCounts(),
             sectionIndex = sectionIndex,

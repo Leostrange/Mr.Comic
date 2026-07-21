@@ -61,13 +61,30 @@ class LayoutUnitTextPaginator : TextPaginator {
         var currentChars = 0
         for (block in blocks) {
             val textLen = block.replace(Regex("<[^>]+>"), " ").trim().length
-            if (currentChars + textLen > charsPerPage && currentChars > 0) {
+            // Split oversized blocks that exceed a full page
+            if (textLen > charsPerPage && currentChars == 0 && textLen > charsPerPage * 1.5) {
+                // Block is 1.5x+ page size — split at sentence boundaries
+                val sentences = splitBlockAtSentences(block, charsPerPage)
+                for (sentence in sentences) {
+                    val sLen = sentence.replace(Regex("<[^>]+>"), " ").trim().length
+                    if (currentChars + sLen > charsPerPage && currentChars > 0) {
+                        pages += wrapPage(currentPage.toString())
+                        currentPage = StringBuilder()
+                        currentChars = 0
+                    }
+                    currentPage.append(sentence)
+                    currentChars += sLen
+                }
+            } else if (currentChars + textLen > charsPerPage && currentChars > 0) {
                 pages += wrapPage(currentPage.toString())
                 currentPage = StringBuilder()
                 currentChars = 0
+                currentPage.append(block)
+                currentChars += textLen
+            } else {
+                currentPage.append(block)
+                currentChars += textLen
             }
-            currentPage.append(block)
-            currentChars += textLen
         }
         if (currentChars > 0) {
             pages += wrapPage(currentPage.toString())
@@ -112,9 +129,47 @@ class LayoutUnitTextPaginator : TextPaginator {
         blocks
     }.getOrElse { emptyList() }
 
+    /**
+     * Splits an oversized block at sentence boundaries to fit within [maxChars].
+     * Falls back to splitting at word boundaries if no sentences are found.
+     */
+    private fun splitBlockAtSentences(block: String, maxChars: Int): List<String> {
+        val textOnly = block.replace(Regex("<[^>]+>"), " ").trim()
+        val sentences = textOnly.split(Regex("(?<=[.!?。！？])\\s+"))
+        if (sentences.size <= 1) {
+            // No sentence breaks — split at word boundaries
+            val words = textOnly.split(Regex("\\s+"))
+            val result = mutableListOf<String>()
+            val current = StringBuilder()
+            for (word in words) {
+                if (current.length + word.length + 1 > maxChars && current.isNotEmpty()) {
+                    result += "<p>${current.toString().trim()}</p>"
+                    current.clear()
+                }
+                if (current.isNotEmpty()) current.append(' ')
+                current.append(word)
+            }
+            if (current.isNotEmpty()) result += "<p>${current.toString().trim()}</p>"
+            return result
+        }
+        // Group sentences into chunks that fit maxChars
+        val result = mutableListOf<String>()
+        val current = StringBuilder()
+        for (sentence in sentences) {
+            if (current.length + sentence.length > maxChars && current.isNotEmpty()) {
+                result += "<p>${current.toString().trim()}</p>"
+                current.clear()
+            }
+            if (current.isNotEmpty()) current.append(' ')
+            current.append(sentence)
+        }
+        if (current.isNotEmpty()) result += "<p>${current.toString().trim()}</p>"
+        return result.ifEmpty { listOf(block) }
+    }
+
     private fun wrapPage(bodyHtml: String): String {
         val safe = bodyHtml.ifBlank { "<p></p>" }
-        return "<div style=\"width:100%;max-width:100%;word-wrap:break-word;overflow-wrap:break-word;\">$safe</div>"
+        return "<div style=\"width:100%;max-width:100%;overflow-wrap:normal;\">$safe</div>"
     }
 
     private fun calculateEstimatedCharsPerPage(constraints: TextPaginationConstraints): Int {
