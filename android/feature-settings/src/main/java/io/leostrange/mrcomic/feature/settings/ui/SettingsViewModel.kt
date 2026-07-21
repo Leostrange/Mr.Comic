@@ -33,6 +33,7 @@ import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.appIconDataStore
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.data.repository.ComicRepository
+import io.leostrange.mrcomic.core.model.repository.BackupRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
@@ -3261,7 +3262,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     private fun settingsRepairSummaryMessage(
-        result: ComicRepository.RepairLibraryAccessResult
+        result: BackupRepository.RepairLibraryAccessResult
     ): String = when (settingsLanguage()) {
         "en" -> when {
             result.repaired > 0 -> buildString {
