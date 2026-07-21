@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.core.domain.translation
 
 import io.leostrange.mrcomic.core.data.db.TranslationCacheDao
-import io.leostrange.mrcomic.core.model.TranslationCacheEntry
+import io.leostrange.mrcomic.core.data.db.entity.TranslationCacheEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 
