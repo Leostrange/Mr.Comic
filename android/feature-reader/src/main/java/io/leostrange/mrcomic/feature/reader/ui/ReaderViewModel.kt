@@ -40,7 +40,8 @@ import io.leostrange.mrcomic.feature.reader.domain.preset.serializeReaderStylePr
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
+import io.leostrange.mrcomic.core.model.repository.ImportRepository
+import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
@@ -124,7 +125,8 @@ internal data class ChapterMilestoneMarker(
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val comicRepository: ComicRepository,
+    private val libraryRepository: LibraryRepository,
+    private val importRepository: ImportRepository,
     private val quoteRepository: QuoteRepository,
     private val textHighlightRepository: io.leostrange.mrcomic.core.data.repository.TextHighlightRepository,
     private val formatFactory: FormatFactory,
@@ -243,7 +245,7 @@ class ReaderViewModel @Inject constructor(
         loadComicJob?.cancel()
         val requestToken = openGuard.nextToken()
         loadComicJob = viewModelScope.launch {
-            val comic = comicRepository.getComicById(comicId)
+            val comic = libraryRepository.getComicById(comicId)
             if (!openGuard.isCurrent(requestToken)) return@launch
             if (comic == null) {
                 val errorMessage = localizedReaderError(::readerComicNotFoundMessage)
@@ -258,8 +260,8 @@ class ReaderViewModel @Inject constructor(
         loadComicJob?.cancel()
         val requestToken = openGuard.nextToken()
         loadComicJob = viewModelScope.launch {
-            val comic = comicRepository.getComicByPath(path) ?: run {
-                comicRepository.addComic(Uri.parse(path))
+            val comic = libraryRepository.getComicByPath(path) ?: run {
+                importRepository.addComic(Uri.parse(path))
             }
             if (!openGuard.isCurrent(requestToken)) return@launch
             if (comic == null) {
@@ -2886,9 +2888,9 @@ class ReaderViewModel @Inject constructor(
             val previousPersistedPage = lastPersistedProgress
                 ?.takeIf { it.comicId == pending.comicId }
                 ?.page
-            val storedPageCount = comicRepository.getComicById(pending.comicId)?.pageCount ?: 0
+            val storedPageCount = libraryRepository.getComicById(pending.comicId)?.pageCount ?: 0
             val safeTotalPages = maxOf(pending.totalPages, storedPageCount).coerceAtLeast(1)
-            comicRepository.updateProgress(
+            libraryRepository.updateProgress(
                 comicId = pending.comicId,
                 currentPage = pending.page,
                 totalPages = safeTotalPages
@@ -2938,7 +2940,7 @@ class ReaderViewModel @Inject constructor(
                 goalProgressDelta = goalProgressDelta
             )
             if (titleCompletionPolicy.shouldComplete) {
-                comicRepository.markCompleted(pending.comicId, completed = true)
+                libraryRepository.markCompleted(pending.comicId, completed = true)
                 _uiState.update { state ->
                     state.copy(
                         comic = state.comic?.copy(

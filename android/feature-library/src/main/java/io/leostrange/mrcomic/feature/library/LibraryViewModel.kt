@@ -10,7 +10,9 @@ import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import androidx.documentfile.provider.DocumentFile
 import io.leostrange.mrcomic.core.data.repository.AudiobookRepository
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
+import io.leostrange.mrcomic.core.model.repository.CoverRepository
+import io.leostrange.mrcomic.core.model.repository.ImportRepository
+import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.AudioChapter
 import io.leostrange.mrcomic.core.model.Audiobook
@@ -198,7 +200,9 @@ private fun normalizeLibraryViewMode(
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val comicRepository: ComicRepository,
+    private val libraryRepository: LibraryRepository,
+    private val importRepository: ImportRepository,
+    private val coverRepository: CoverRepository,
     private val quoteRepository: QuoteRepository,
     private val audiobookRepository: AudiobookRepository,
     private val readerCheckpointStore: ReaderCheckpointStore,
@@ -262,7 +266,7 @@ class LibraryViewModel @Inject constructor(
 
     private fun repairStoredCovers() {
         viewModelScope.launch {
-            runCatching { comicRepository.repairStoredCovers() }
+            runCatching { coverRepository.repairStoredCovers() }
                 .onFailure { error -> Log.w("LibraryViewModel", "Stored cover repair failed", error) }
         }
     }
@@ -502,8 +506,8 @@ class LibraryViewModel @Inject constructor(
                     emit(query)
                 }
                 .flatMapLatest { query ->
-                    val comicsFlow = if (query.isBlank()) comicRepository.getAllComics()
-                    else comicRepository.searchComics(query)
+                    val comicsFlow = if (query.isBlank()) libraryRepository.getAllComics()
+                    else libraryRepository.searchComics(query)
                     val quotesFlow = if (query.isBlank()) quoteRepository.getAllQuotes()
                     else quoteRepository.searchQuotes(query)
                     combine(comicsFlow, quotesFlow) { comics, quotes -> comics to quotes }
@@ -534,7 +538,7 @@ class LibraryViewModel @Inject constructor(
 
     private fun observeLibraryAvailability() {
         viewModelScope.launch {
-            comicRepository.getAllComics()
+            libraryRepository.getAllComics()
                 .catch { error ->
                     Log.w("LibraryViewModel", "Failed to observe full library availability", error)
                 }
@@ -848,7 +852,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                comicRepository.addComic(uri)
+                importRepository.addComic(uri)
             } catch (e: Exception) {
                 Log.e("LibraryViewModel", "Failed to add comic", e)
                 _uiState.update {
@@ -874,7 +878,7 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                comicRepository.addComicsFromDirectory(treeUri)
+                importRepository.addComicsFromDirectory(treeUri)
                 if (_uiState.value.groupByMode == GroupByMode.FOLDER) {
                     openFolder(null)
                 }
@@ -902,7 +906,7 @@ class LibraryViewModel @Inject constructor(
     fun deleteComic(comicId: String) {
         viewModelScope.launch {
             try {
-                comicRepository.deleteComic(comicId)
+                libraryRepository.deleteComic(comicId)
                 readerCheckpointStore.removeComicCheckpoints(comicId)
             } catch (e: Exception) {
                 _uiState.update {
@@ -931,7 +935,7 @@ class LibraryViewModel @Inject constructor(
                     comicFolder == normalizedPath || comicFolder.startsWith("$normalizedPath/")
                 }
                 matchingComics.forEach { comic ->
-                    comicRepository.deleteComic(comic.id)
+                    libraryRepository.deleteComic(comic.id)
                     readerCheckpointStore.removeComicCheckpoints(comic.id)
                 }
                 if (_uiState.value.currentFolderPath == normalizedPath) {
@@ -958,7 +962,7 @@ class LibraryViewModel @Inject constructor(
     fun toggleBookmark(comicId: String) {
         viewModelScope.launch {
             try {
-                comicRepository.toggleBookmark(comicId)
+                libraryRepository.toggleBookmark(comicId)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -980,7 +984,7 @@ class LibraryViewModel @Inject constructor(
     fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String) {
         viewModelScope.launch {
             try {
-                comicRepository.updateComicMeta(comicId, title, tags, libraryShelf)
+                libraryRepository.updateComicMeta(comicId, title, tags, libraryShelf)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -1002,7 +1006,7 @@ class LibraryViewModel @Inject constructor(
     fun markCompleted(comicId: String, completed: Boolean) {
         viewModelScope.launch {
             try {
-                comicRepository.markCompleted(comicId, completed)
+                libraryRepository.markCompleted(comicId, completed)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -1021,7 +1025,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    suspend fun getComicById(id: String): Comic? = comicRepository.getComicById(id)
+    suspend fun getComicById(id: String): Comic? = libraryRepository.getComicById(id)
 
     fun clearError() = _uiState.update { it.copy(error = null) }
 
