@@ -1,6 +1,7 @@
 package io.leostrange.mrcomic.core.domain.translation
 
 import io.leostrange.mrcomic.core.domain.util.Result
+import io.leostrange.mrcomic.core.domain.translation.LlmExplainEngine
 import io.leostrange.mrcomic.core.model.ExplainRequest
 import io.leostrange.mrcomic.core.model.ExplainResult
 import javax.inject.Inject
