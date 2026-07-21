@@ -6,7 +6,7 @@ import android.util.Log
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
+import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -34,7 +34,7 @@ import javax.inject.Singleton
 @Singleton
 class AutoBackupManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val comicRepository: ComicRepository
+    private val libraryRepository: LibraryRepository
 ) {
     companion object {
         private const val TAG = "AutoBackupManager"
@@ -63,7 +63,7 @@ class AutoBackupManager @Inject constructor(
             val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val backupFile = File(backupDir, "mrcomic_backup_$date.json")
 
-            val comics = comicRepository.getAllComics().first()
+            val comics = libraryRepository.getAllComics().first()
             val root = JSONObject().apply {
                 put("version", 1)
                 put("exportedAt", System.currentTimeMillis())
