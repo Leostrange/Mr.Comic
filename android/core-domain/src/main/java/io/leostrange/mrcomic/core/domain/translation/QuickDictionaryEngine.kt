@@ -1,6 +1,9 @@
 package io.leostrange.mrcomic.core.domain.translation
 
 import android.net.ConnectivityManager
+import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
+import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
+import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
 import android.net.NetworkCapabilities
 import android.content.Context
 import io.leostrange.mrcomic.core.domain.util.Result
