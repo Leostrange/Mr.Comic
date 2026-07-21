@@ -42,6 +42,9 @@ import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
+import io.leostrange.mrcomic.engine.formats.base.DocumentKind
+import io.leostrange.mrcomic.engine.formats.base.DocumentSession
+import io.leostrange.mrcomic.engine.formats.base.FormatReaderDocumentSession
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
@@ -170,6 +173,18 @@ class ReaderViewModel @Inject constructor(
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
     private var activeBookSession: BookSession? = null
+
+    /**
+     * Returns the current reader as a [DocumentSession] (new API).
+     * Falls back to wrapping [formatReader] via adapter if no native session exists.
+     */
+    private val documentSession: DocumentSession?
+        get() = activeBookSession as? DocumentSession
+            ?: formatReader?.let { FormatReaderDocumentSession(
+                kind = DocumentKind.REFLOWABLE,
+                format = _uiState.value.comic?.format ?: ComicFormat.UNKNOWN,
+                reader = it
+            ) }
     private val textWebtoonSessionController = TextWebtoonSessionController(viewModelScope)
     private val textReaderOrchestrator = TextReaderOrchestrator(
         TextReaderController(textWebtoonSessionController)
