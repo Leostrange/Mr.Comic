@@ -56,7 +56,7 @@ import io.leostrange.mrcomic.core.model.ReaderTtsConfig
 import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.SavedQuote
+import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.model.TranslationAvailabilitySnapshot
 import io.leostrange.mrcomic.core.model.TranslationServiceConfig
 import io.leostrange.mrcomic.core.model.TranslationTransportPreference

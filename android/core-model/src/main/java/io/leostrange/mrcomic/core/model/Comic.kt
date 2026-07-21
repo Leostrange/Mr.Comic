@@ -1,19 +1,7 @@
 package io.leostrange.mrcomic.core.model
 
-import androidx.room.Entity
-import androidx.room.Index
-import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
-
-@Entity(
-    tableName = "comics",
-    indices = [
-        Index("title"), Index("addedDate"), Index("lastReadDate"), Index("folderId")
-    ]
-)
-@TypeConverters(Converters::class)
 data class Comic(
-    @PrimaryKey val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = java.util.UUID.randomUUID().toString(),
     val title: String = "",
     val path: String = "",
     val format: ComicFormat = ComicFormat.UNKNOWN,

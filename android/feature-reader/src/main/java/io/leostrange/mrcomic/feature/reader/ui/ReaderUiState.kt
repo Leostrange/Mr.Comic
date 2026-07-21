@@ -211,7 +211,7 @@ data class ReaderUiState(
     /** Pending text awaiting highlight color selection. */
     val pendingHighlightText: String? = null,
     /** Highlights for the current page. */
-    val pageHighlights: List<io.leostrange.mrcomic.core.model.TextHighlight> = emptyList(),
+    val pageHighlights: List<io.leostrange.mrcomic.core.data.db.entity.TextHighlight> = emptyList(),
     /** Chapter translation progress (null when not translating). */
     val chapterTranslationProgress: ChapterTranslationProgressUi? = null,
     /** A/B translation comparison results (null when not comparing). */
