@@ -362,6 +362,10 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val preferences = UserPreferences(context.dataStore)
+    private val settingsPreferencesController = SettingsPreferencesController(
+        viewModelScope = viewModelScope,
+        preferences = preferences
+    )
     private val statusState = MutableStateFlow(StatusState())
 
     private suspend fun updateToggleEnabledAt(
@@ -1244,9 +1248,7 @@ class SettingsViewModel @Inject constructor(
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    fun setAppLanguage(code: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.APP_LANGUAGE, normalizeAppLanguageCode(code)) }
-    }
+    fun setAppLanguage(code: String) = settingsPreferencesController.setAppLanguage(code)
 
     /**
      * Applies a theme preset: writes all preset color values and flags into DataStore,
@@ -1452,9 +1454,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, enabled) }
     }
 
-    fun setReaderChromeAutoHide(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.READER_CHROME_AUTO_HIDE, enabled) }
-    }
+    fun setReaderChromeAutoHide(enabled: Boolean) = settingsPreferencesController.setReaderChromeAutoHide(enabled)
 
     fun setReaderTopToolbarOpacity(value: Float) {
         setSlider("readerTopToolbarOpacity") {
@@ -1504,9 +1504,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferences.set(PreferencesKeys.READER_PAGE_SOUND, enabled) }
     }
 
-    fun setReaderEyeRestEnabled(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.READER_EYE_REST_ENABLED, enabled) }
-    }
+    fun setReaderEyeRestEnabled(enabled: Boolean) = settingsPreferencesController.setReaderEyeRestEnabled(enabled)
 
     fun setReaderEyeRestMinutes(minutes: Int) {
         viewModelScope.launch {
@@ -1523,9 +1521,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { preferences.set(PreferencesKeys.READER_PAGE_SOUND_STYLE, style) }
     }
 
-    fun setUiSoundEnabled(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.UI_SOUND_ENABLED, enabled) }
-    }
+    fun setUiSoundEnabled(enabled: Boolean) = settingsPreferencesController.setUiSoundEnabled(enabled)
 
     fun setUiSoundsVolume(vol: Float) {
         setSlider("uiVolume") { preferences.set(PreferencesKeys.UI_SOUNDS_VOLUME, vol.coerceIn(0f, 1f)) }
@@ -1644,13 +1640,9 @@ class SettingsViewModel @Inject constructor(
         setSlider("cornerRadius") { preferences.set(PreferencesKeys.UI_CORNER_RADIUS, radius.coerceIn(0, 32)) }
     }
 
-    fun setPerformanceReducedMotion(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.UI_REDUCED_MOTION, enabled) }
-    }
+    fun setPerformanceReducedMotion(enabled: Boolean) = settingsPreferencesController.setPerformanceReducedMotion(enabled)
 
-    fun setPerformanceReducedVisualEffects(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.UI_REDUCED_VISUAL_EFFECTS, enabled) }
-    }
+    fun setPerformanceReducedVisualEffects(enabled: Boolean) = settingsPreferencesController.setPerformanceReducedVisualEffects(enabled)
 
     fun setPerfProfile(profile: String) {
         viewModelScope.launch {
@@ -1977,29 +1969,17 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setTranslationMode(mode: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_MODE, mode) }
-    }
+    fun setTranslationMode(mode: String) = settingsPreferencesController.setTranslationMode(mode)
 
-    fun setTranslationSourceLanguage(code: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_SOURCE_LANGUAGE, code.uppercase()) }
-    }
+    fun setTranslationSourceLanguage(code: String) = settingsPreferencesController.setTranslationSourceLanguage(code)
 
-    fun setTranslationTargetLanguage(code: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_TARGET_LANGUAGE, code.uppercase()) }
-    }
+    fun setTranslationTargetLanguage(code: String) = settingsPreferencesController.setTranslationTargetLanguage(code)
 
-    fun setTranslationTransport(value: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_TRANSPORT, value.uppercase()) }
-    }
+    fun setTranslationTransport(value: String) = settingsPreferencesController.setTranslationTransport(value)
 
-    fun setTranslationExplainEnabled(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, enabled) }
-    }
+    fun setTranslationExplainEnabled(enabled: Boolean) = settingsPreferencesController.setTranslationExplainEnabled(enabled)
 
-    fun setTranslationExplainProvider(provider: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_EXPLAIN_PROVIDER, provider.uppercase()) }
-    }
+    fun setTranslationExplainProvider(provider: String) = settingsPreferencesController.setTranslationExplainProvider(provider)
 
     fun saveEncryptedOpenRouterApiKey(value: String) {
         viewModelScope.launch {
@@ -2030,9 +2010,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setDeepLUseFreeApi(value: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_DEEPL_USE_FREE, value) }
-    }
+    fun setDeepLUseFreeApi(value: Boolean) = settingsPreferencesController.setDeepLUseFreeApi(value)
 
     fun setGoogleApiKey(value: String) {
         viewModelScope.launch {
@@ -2054,25 +2032,15 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setTranslationWifiOnly(value: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_WIFI_ONLY, value) }
-    }
+    fun setTranslationWifiOnly(value: Boolean) = settingsPreferencesController.setTranslationWifiOnly(value)
 
-    fun setTranslationDailyCharLimit(value: Int) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.TRANSLATION_DAILY_CHAR_LIMIT, value) }
-    }
+    fun setTranslationDailyCharLimit(value: Int) = settingsPreferencesController.setTranslationDailyCharLimit(value)
 
-    fun setOcrLanguage(lang: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.OCR_LANGUAGE, lang) }
-    }
+    fun setOcrLanguage(lang: String) = settingsPreferencesController.setOcrLanguage(lang)
 
-    fun setOcrDialoguesOnly(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.OCR_DIALOGUES_ONLY, enabled) }
-    }
+    fun setOcrDialoguesOnly(enabled: Boolean) = settingsPreferencesController.setOcrDialoguesOnly(enabled)
 
-    fun setOcrIncludeSfx(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.OCR_INCLUDE_SFX, enabled) }
-    }
+    fun setOcrIncludeSfx(enabled: Boolean) = settingsPreferencesController.setOcrIncludeSfx(enabled)
 
     fun setOcrOverlayOpacity(value: Float) {
         setSlider("ocrOverlayOpacity") {
@@ -2086,33 +2054,19 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setOcrOverlayStyle(value: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.OCR_OVERLAY_STYLE, value.uppercase()) }
-    }
+    fun setOcrOverlayStyle(value: String) = settingsPreferencesController.setOcrOverlayStyle(value)
 
-    fun setLibraryCardStyle(style: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, style) }
-    }
+    fun setLibraryCardStyle(style: String) = settingsPreferencesController.setLibraryCardStyle(style)
 
-    fun setLibraryRecentStripPosition(position: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_RECENT_STRIP_POSITION, position) }
-    }
+    fun setLibraryRecentStripPosition(position: String) = settingsPreferencesController.setLibraryRecentStripPosition(position)
 
-    fun setLibraryShowProgress(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SHOW_PROGRESS, enabled) }
-    }
+    fun setLibraryShowProgress(enabled: Boolean) = settingsPreferencesController.setLibraryShowProgress(enabled)
 
-    fun setLibraryShowCoverTitles(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, enabled) }
-    }
+    fun setLibraryShowCoverTitles(enabled: Boolean) = settingsPreferencesController.setLibraryShowCoverTitles(enabled)
 
-    fun setLibraryShowStatusChips(enabled: Boolean) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, enabled) }
-    }
+    fun setLibraryShowStatusChips(enabled: Boolean) = settingsPreferencesController.setLibraryShowStatusChips(enabled)
 
-    fun setLibraryCoverScale(scale: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_COVER_SCALE, scale) }
-    }
+    fun setLibraryCoverScale(scale: String) = settingsPreferencesController.setLibraryCoverScale(scale)
 
     fun setLibraryBackdropStrength(value: Float) {
         setSlider("libraryBackdrop") {
@@ -2428,9 +2382,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setLibraryThumbnailMode(mode: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_THUMBNAIL_MODE, mode) }
-    }
+    fun setLibraryThumbnailMode(mode: String) = settingsPreferencesController.setLibraryThumbnailMode(mode)
 
     fun setLibraryGraphicCoverStyle(style: String) {
         viewModelScope.launch {
@@ -2441,13 +2393,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setLibrarySortOrder(order: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SORT_ORDER, order) }
-    }
+    fun setLibrarySortOrder(order: String) = settingsPreferencesController.setLibrarySortOrder(order)
 
-    fun setLibraryGroupBy(mode: String) {
-        viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_GROUP_BY, mode) }
-    }
+    fun setLibraryGroupBy(mode: String) = settingsPreferencesController.setLibraryGroupBy(mode)
 
     fun setAutoBackupEnabled(enabled: Boolean) {
         viewModelScope.launch {
