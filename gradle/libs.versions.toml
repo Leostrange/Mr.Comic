@@ -133,6 +133,11 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "a
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
 test-mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 test-kotlinx-coroutines = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-android" }
+test-androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-junit" }
+test-androidx-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-junit" }
+test-androidx-rules = { group = "androidx.test", name = "rules", version.ref = "androidx-junit" }
+test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+test-room = { group = "androidx.room", name = "room-testing", version.ref = "room" }
 
 [bundles]
 room = ["androidx-room-runtime", "androidx-room-ktx"]
