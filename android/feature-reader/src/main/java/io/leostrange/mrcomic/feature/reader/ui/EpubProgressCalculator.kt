@@ -52,23 +52,24 @@ internal object EpubProgressCalculator {
         if (sectionPageCounts.isEmpty()) return AccumulatedProgress(0, 0)
         val safePageIndex = sectionPageIndex.coerceAtLeast(0)
         val visitedTotal = sectionPageCounts.values.sum()
-        val averagePageCount = (visitedTotal.toFloat() / sectionPageCounts.size.toFloat())
-            .toInt()
-            .coerceAtLeast(1)
+        // Use median instead of average to avoid outlier influence.
+        // Use the first visited section's count as a stable baseline —
+        // it's always available and doesn't shift as more sections load.
+        val stableEstimate = sectionPageCounts.values.firstOrNull()?.coerceAtLeast(1) ?: 1
         var current = 0
         for (index in 0 until sectionIndex) {
-            current += sectionPageCounts[index] ?: averagePageCount
+            current += sectionPageCounts[index] ?: stableEstimate
         }
         current += safePageIndex
-        // Estimate total pages including unvisited sections to prevent premature 100%.
+        // Estimate total using the stable baseline for unvisited sections.
+        // This prevents the "floating total" where progress jumps backwards
+        // when a new section loads with more pages than the running average.
         val total = if (totalSections > sectionPageCounts.size) {
             val unvisitedSections = totalSections - sectionPageCounts.size
-            visitedTotal + averagePageCount * unvisitedSections
+            visitedTotal + stableEstimate * unvisitedSections
         } else {
             visitedTotal
         }
-        // Clamp current to total — stale sectionPageIndex or prewarmed sections
-        // can push current above the estimated total, causing >100% progress.
         return AccumulatedProgress(
             accumulatedTotalPages = total,
             accumulatedCurrentPage = current.coerceAtMost(total)
