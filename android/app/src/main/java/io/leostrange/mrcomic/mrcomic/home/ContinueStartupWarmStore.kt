@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.home
 
 import android.util.Log
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
+import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpoint
 import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.model.Comic
@@ -28,7 +28,7 @@ internal sealed interface ContinueWarmState {
 
 @Singleton
 class ContinueStartupWarmStore @Inject constructor(
-    private val comicRepository: ComicRepository,
+    private val libraryRepository: LibraryRepository,
     private val readerCheckpointStore: ReaderCheckpointStore
 ) {
     private val mutex = Mutex()
@@ -56,7 +56,7 @@ class ContinueStartupWarmStore @Inject constructor(
             _state.value = try {
                 ContinueWarmState.Ready(
                     ContinueWarmSnapshot(
-                        comics = comicRepository.getAllComics().first(),
+                        comics = libraryRepository.getAllComics().first(),
                         trail = readerCheckpointStore.checkpointTrail.first()
                     )
                 )

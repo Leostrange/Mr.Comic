@@ -26,7 +26,7 @@ import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
+import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.DictionaryEntry
 import io.leostrange.mrcomic.core.model.ExplainRequest
@@ -134,7 +134,7 @@ class OcrViewModel @Inject constructor(
     private val offlineTranslationEngine: OfflineTranslationEngine,
     private val onlineTranslationEngine: OnlineTranslationEngine,
     private val ocrPageCache: OcrPageCache,
-    private val comicRepository: ComicRepository,
+    private val libraryRepository: LibraryRepository,
     @ApplicationContext private val context: Context,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -1218,7 +1218,7 @@ class OcrViewModel @Inject constructor(
         val baseId = buildPageBaseId()
         val sourceFingerprint = when {
             !state.comicId.isNullOrBlank() -> {
-                comicRepository.getComicById(state.comicId)?.let { comic ->
+                libraryRepository.getComicById(state.comicId)?.let { comic ->
                     computeComicSourceFingerprint(comic)
                 } ?: "comic-missing"
             }
