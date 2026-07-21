@@ -407,9 +407,11 @@ private fun extractMobiTextBlocksFast(markup: String): List<MobiTextBlock> {
     }
 
     fun appendPendingFileposAnchors() {
-        while (nextFileposTarget != null && nextFileposTarget!! <= index) {
-            appendRaw("""<span id="mobi-filepos-${nextFileposTarget}"></span>""")
+        var target = nextFileposTarget
+        while (target != null && target <= index) {
+            appendRaw("""<span id="mobi-filepos-$target"></span>""")
             nextFileposTarget = if (fileposTargets.hasNext()) fileposTargets.next() else null
+            target = nextFileposTarget
         }
     }
 
