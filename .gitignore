@@ -64,6 +64,7 @@ screen.png
 qa-*
 mrcomic-*
 reader-qa-artifacts/
+_backups/
 Mr.Comic_v2.1.0_bugfixed_20260609/
 SOURCE_ARCHIVE_MANIFEST*.txt
 EXCLUDED_NON_CODE_BUILD_ASSETS.json
@@ -97,19 +98,16 @@ re-out/
 .codegraph/
 
 # === State stores / binary data ===
-data/
+/data/
 Ocr update/
 
-# === Internal documentation (not needed for build) ===
+# === Internal scratch documentation (not needed for build) ===
 CODE_REVIEW_REPORT.md
 CONTRIBUTORS.md
 EXTRACTION_TASKLIST.md
 READER_BUG_ANALYSIS_*.md
 READER_MASTER_BACKLOG.md
 REFACTORING_CONTINUATION_GUIDE.md
-docs/active/
-docs/bugs_*.md
-docs/reader_test_*.md
 docs/superpowers/
 plans/
 test-reports/
@@ -120,8 +118,8 @@ TASKLIST_*.md
 PLAN.md
 photo_*.jpg
 
-# === Media files — too large for git, use GitHub releases instead ===
-media/
+# === QA screenshots — use GitHub releases or local artifacts instead ===
+Screenshots/
 
 # === Duplicate root-level modules (real ones are in android/) ===
 /core-model/
