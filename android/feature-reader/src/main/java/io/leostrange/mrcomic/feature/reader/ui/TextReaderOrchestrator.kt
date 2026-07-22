@@ -40,6 +40,21 @@ internal class TextReaderOrchestrator(
         cancelPrewarmJob()
     }
 
+    /**
+     * Stops pagination and HTML prewarming before their caches or reader are replaced.
+     *
+     * Merely calling [Job.cancel] leaves a short interval where an old job can still
+     * publish into a new reading session. Opening a book uses this suspend boundary
+     * before it clears caches and closes the old reader.
+     */
+    suspend fun cancelAllJobsAndJoin() {
+        val jobs = listOfNotNull(paginationJob, prewarmJob).distinct()
+        paginationJob = null
+        prewarmJob = null
+        jobs.forEach(Job::cancel)
+        jobs.forEach { it.join() }
+    }
+
     fun resetSessionAndCaches(onClearWebtoonState: () -> Unit) {
         activeSession = null
         controller.clearCaches()
