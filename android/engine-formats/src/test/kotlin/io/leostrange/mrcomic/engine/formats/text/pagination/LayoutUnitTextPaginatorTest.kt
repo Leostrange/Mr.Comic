@@ -38,4 +38,25 @@ class LayoutUnitTextPaginatorTest {
         assertEquals(first.subPages.size, second.subPages.size)
         assertEquals(first.subPages.map { it.html }, second.subPages.map { it.html })
     }
+
+    @Test
+    fun paginatePreservesInlineMarkupWhenSplittingAnOversizedParagraph() {
+        val html = "<p>${"<a href=\"#note-1\">linked sentence.</a> ".repeat(700)}</p>"
+
+        val result = kotlinx.coroutines.runBlocking {
+            paginator.paginate(
+                sectionHtml = html,
+                constraints = TextPaginationConstraints(
+                    viewportWidthPx = 360,
+                    viewportHeightPx = 640
+                )
+            )
+        }
+
+        assertTrue(result.subPageCount > 1)
+        assertTrue(
+            "splitting must not turn links and footnote markers into plain text",
+            result.subPages.all { it.html.contains("href=\"#note-1\"") }
+        )
+    }
 }

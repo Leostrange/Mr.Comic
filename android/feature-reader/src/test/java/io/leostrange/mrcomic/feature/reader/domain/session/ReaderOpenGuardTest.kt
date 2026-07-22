@@ -1,5 +1,8 @@
 package io.leostrange.mrcomic.feature.reader.domain.session
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -51,5 +54,21 @@ class ReaderOpenGuardTest {
             assertFalse("Token $token should be stale", guard.isCurrent(token))
         }
         assertTrue(guard.isCurrent(tokens.last()))
+    }
+
+    @Test
+    fun `concurrent opens issue a unique token for every request`() {
+        val guard = ReaderOpenGuard()
+        val tokens = ConcurrentHashMap.newKeySet<Long>()
+        val executor = Executors.newFixedThreadPool(4)
+
+        repeat(100) {
+            executor.submit { tokens += guard.nextToken() }
+        }
+        executor.shutdown()
+
+        assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
+        assertEquals(100, tokens.size)
+        assertTrue(guard.isCurrent(100L))
     }
 }

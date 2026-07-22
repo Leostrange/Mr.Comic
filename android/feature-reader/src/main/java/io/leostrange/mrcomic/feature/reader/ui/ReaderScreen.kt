@@ -1031,7 +1031,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
         val target = targetPage ?: -1
         pendingPagedLayoutTarget = null
         evaluateJavascript(readerPagedLayoutJs(target)) { rawValue ->
-            val metrics = decodePagedLayoutMetrics(rawValue)
+            val metrics = decodeReaderPagedLayoutMetrics(rawValue)
             if (metrics == null || !metrics.isUsable()) {
                 Log.w(
                     HTML_READER_TAG,
@@ -1096,7 +1096,7 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             return
         }
         evaluateJavascript(readerPagedTurnJs(delta)) { rawValue ->
-            val metrics = decodePagedLayoutMetrics(rawValue)
+            val metrics = decodeReaderPagedLayoutMetrics(rawValue)
             if (metrics == null || !metrics.handled) {
                 pendingPagedLayoutTarget = if (delta < 0) Int.MAX_VALUE else 0
                 post { onBoundary() }
@@ -1105,31 +1105,6 @@ private class ReaderWebView(context: android.content.Context) : WebView(context)
             }
         }
     }
-}
-
-private data class ReaderPagedLayoutMetrics(
-    val handled: Boolean,
-    val pageIndex: Int,
-    val pageCount: Int,
-    val clipHeight: Int,
-    val usableHeight: Int
-) {
-    fun isUsable(): Boolean =
-        handled &&
-            pageCount >= 1 &&
-            clipHeight >= 320 &&
-            usableHeight >= 72
-}
-
-private fun decodePagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetrics? {
-    val m = ReaderHtmlHelpers.decodePagedLayoutMetrics(rawValue) ?: return null
-    return ReaderPagedLayoutMetrics(
-        handled = m.handled,
-        pageIndex = m.pageIndex,
-        pageCount = m.pageCount,
-        clipHeight = m.clipHeight,
-        usableHeight = m.usableHeight
-    )
 }
 
 /**

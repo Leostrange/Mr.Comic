@@ -24,13 +24,16 @@ internal object TextWebtoonDocumentBuilder {
             <style>
               html,body{width:100%;max-width:100%;overflow-x:hidden;}
               body{margin:0;padding:0;box-sizing:border-box;}
-              .mrcomic-text-webtoon-section{
-                display:block;width:100%;max-width:100%;
-                box-sizing:border-box;
-                margin:0;padding:0;
-                line-height:normal;
-              }
-              .mrcomic-text-webtoon-section>*:first-child{margin-top:0!important;}
+               .mrcomic-text-webtoon-section{
+                 display:block;width:100%;max-width:100%;
+                 box-sizing:border-box;
+                 margin:0;padding:0;
+                 line-height:normal;
+               }
+               .mrcomic-text-webtoon-section + .mrcomic-text-webtoon-section{
+                 margin-top:1.25rem;
+               }
+               .mrcomic-text-webtoon-section>*:first-child{margin-top:0!important;}
               .mrcomic-text-webtoon-section>*:last-child{margin-bottom:0!important;}
               .mrcomic-text-webtoon-section img{
                 max-width:100%;height:auto;display:block;

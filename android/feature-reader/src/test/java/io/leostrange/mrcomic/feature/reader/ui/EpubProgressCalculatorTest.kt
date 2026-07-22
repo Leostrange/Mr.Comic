@@ -8,7 +8,7 @@ class EpubProgressCalculatorTest {
     @Test
     fun estimatedTotalPages_preservesFractionalEstimateForUnvisitedSections() {
         assertEquals(
-            12,
+            11,
             EpubProgressCalculator.estimatedTotalPages(
                 sectionPageCounts = mapOf(0 to 2, 1 to 3),
                 totalSections = 5
@@ -44,5 +44,28 @@ class EpubProgressCalculatorTest {
 
         assertEquals(10, progress.accumulatedTotalPages)
         assertEquals(8, progress.accumulatedCurrentPage)
+    }
+
+    @Test
+    fun progressUsesLowestSectionIndexAsStableEstimateRegardlessOfMapOrder() {
+        val loadedFromLastSectionFirst = linkedMapOf(6 to 4, 0 to 2)
+        val loadedFromFirstSectionFirst = linkedMapOf(0 to 2, 6 to 4)
+
+        val first = EpubProgressCalculator.accumulate(
+            sectionPageCounts = loadedFromLastSectionFirst,
+            sectionIndex = 6,
+            sectionPageIndex = 1,
+            totalSections = 10
+        )
+        val second = EpubProgressCalculator.accumulate(
+            sectionPageCounts = loadedFromFirstSectionFirst,
+            sectionIndex = 6,
+            sectionPageIndex = 1,
+            totalSections = 10
+        )
+
+        assertEquals(22, first.accumulatedTotalPages)
+        assertEquals(13, first.accumulatedCurrentPage)
+        assertEquals(first, second)
     }
 }
