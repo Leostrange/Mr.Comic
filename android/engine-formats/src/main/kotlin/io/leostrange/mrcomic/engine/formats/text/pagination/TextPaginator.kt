@@ -62,18 +62,22 @@ class LayoutUnitTextPaginator : TextPaginator {
         for (block in blocks) {
             val textLen = block.replace(Regex("<[^>]+>"), " ").trim().length
             // Split oversized blocks that exceed a full page
-            if (textLen > charsPerPage && currentChars == 0 && textLen > charsPerPage * 1.5) {
-                // Block is 1.5x+ page size — split at sentence boundaries
-                val sentences = splitBlockAtSentences(block, charsPerPage)
-                for (sentence in sentences) {
-                    val sLen = sentence.replace(Regex("<[^>]+>"), " ").trim().length
-                    if (currentChars + sLen > charsPerPage && currentChars > 0) {
+            if (textLen > charsPerPage * 1.5) {
+                if (currentChars > 0) {
+                    pages += wrapPage(currentPage.toString())
+                    currentPage = StringBuilder()
+                    currentChars = 0
+                }
+                val chunks = splitOversizedBlock(block, charsPerPage)
+                for (chunk in chunks) {
+                    val chunkLength = chunk.replace(Regex("<[^>]+>"), " ").trim().length
+                    if (currentChars + chunkLength > charsPerPage && currentChars > 0) {
                         pages += wrapPage(currentPage.toString())
                         currentPage = StringBuilder()
                         currentChars = 0
                     }
-                    currentPage.append(sentence)
-                    currentChars += sLen
+                    currentPage.append(chunk)
+                    currentChars += chunkLength
                 }
             } else if (currentChars + textLen > charsPerPage && currentChars > 0) {
                 pages += wrapPage(currentPage.toString())
@@ -133,7 +137,34 @@ class LayoutUnitTextPaginator : TextPaginator {
      * Splits an oversized block at sentence boundaries to fit within [maxChars].
      * Falls back to splitting at word boundaries if no sentences are found.
      */
-    private fun splitBlockAtSentences(block: String, maxChars: Int): List<String> {
+    private fun splitOversizedBlock(block: String, maxChars: Int): List<String> {
+        splitAtInlineBoundaries(block, maxChars)?.let { return it }
+        return splitPlainTextBlockAtSentences(block, maxChars)
+    }
+
+    /** Keeps anchors, emphasis and footnote markers intact when a paragraph has inline nodes. */
+    private fun splitAtInlineBoundaries(block: String, maxChars: Int): List<String>? = runCatching {
+        val root = Jsoup.parseBodyFragment(block).body().children().firstOrNull() ?: return null
+        if (root.normalName() !in SPLITTABLE_TEXT_TAGS || root.childNodeSize() <= 1) return null
+
+        val chunks = mutableListOf<String>()
+        var current = root.clone().empty()
+        var currentChars = 0
+        root.childNodes().forEach { node ->
+            val nodeChars = Jsoup.parseBodyFragment(node.outerHtml()).text().length
+            if (currentChars > 0 && currentChars + nodeChars > maxChars) {
+                chunks += current.outerHtml()
+                current = root.clone().empty()
+                currentChars = 0
+            }
+            current.appendChild(node.clone())
+            currentChars += nodeChars
+        }
+        if (current.childNodeSize() > 0) chunks += current.outerHtml()
+        chunks.takeIf { it.size > 1 }
+    }.getOrNull()
+
+    private fun splitPlainTextBlockAtSentences(block: String, maxChars: Int): List<String> {
         val textOnly = block.replace(Regex("<[^>]+>"), " ").trim()
         val sentences = textOnly.split(Regex("(?<=[.!?。！？])\\s+"))
         if (sentences.size <= 1) {
@@ -184,6 +215,7 @@ class LayoutUnitTextPaginator : TextPaginator {
     }
 
     companion object {
+        private val SPLITTABLE_TEXT_TAGS = setOf("p", "div", "blockquote")
         private val BLOCK_TAGS = setOf("p", "div", "h1", "h2", "h3", "h4", "h5", "h6",
             "table", "ul", "ol", "li", "blockquote", "pre", "hr", "figure", "section")
     }

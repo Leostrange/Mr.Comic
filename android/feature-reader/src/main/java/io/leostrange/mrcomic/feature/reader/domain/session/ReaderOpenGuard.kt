@@ -1,5 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.domain.session
 
+import java.util.concurrent.atomic.AtomicLong
+
 /**
  * Monotonically increasing token that guards against stale results after
  * a quick sequence of book-open requests.
@@ -10,11 +12,11 @@ package io.leostrange.mrcomic.feature.reader.domain.session
  * exits early without mutating shared state.
  */
 internal class ReaderOpenGuard {
-    private var currentToken: Long = 0L
+    private val currentToken = AtomicLong(0L)
 
     /** Advance the counter and return the new token. */
-    fun nextToken(): Long = ++currentToken
+    fun nextToken(): Long = currentToken.incrementAndGet()
 
     /** `true` when [token] matches the most recently issued token. */
-    fun isCurrent(token: Long): Boolean = token == currentToken
+    fun isCurrent(token: Long): Boolean = token == currentToken.get()
 }

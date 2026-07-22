@@ -57,6 +57,19 @@ class TextWebtoonDocumentBuilderTest {
     }
 
     @Test
+    fun preservesAReadingGapBetweenAdjacentSections() {
+        val result = TextWebtoonDocumentBuilder.build(
+            listOf(
+                CachedHtmlPage(html = "<html><body><p>Chapter one</p></body></html>", assetBasePath = null),
+                CachedHtmlPage(html = "<html><body><p>Chapter two</p></body></html>", assetBasePath = null)
+            )
+        )
+
+        assertTrue(result.html.contains(".mrcomic-text-webtoon-section + .mrcomic-text-webtoon-section"))
+        assertTrue(result.html.contains("margin-top:1.25rem"))
+    }
+
+    @Test
     fun usesFirstPageAssetBasePath() {
         val pages = listOf(
             CachedHtmlPage(html = "<html><body><p>A</p></body></html>", assetBasePath = "OEBPS/chapter1.xhtml"),

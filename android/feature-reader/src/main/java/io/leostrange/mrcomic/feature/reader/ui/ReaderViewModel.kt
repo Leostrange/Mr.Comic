@@ -19,6 +19,7 @@ import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
+import io.leostrange.mrcomic.feature.reader.domain.progress.EpubSectionPageCountStore
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderClosedSessionMetrics
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
@@ -212,17 +213,8 @@ class ReaderViewModel @Inject constructor(
     private val readerSessionCoordinator = ReaderSessionCoordinator()
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
-    /**
-     * Accumulated visual page counts per spine section for EPUB (sectionIndex → pageCount).
-     *
-     * Accessed concurrently: written from [onPagedLayoutPageCountChanged] (WebView callback,
-     * main thread) and iterated from [calculateAccuratePage]/[accumulatedTotalPagesForEpub]
-     * (coroutine progress-save + main). [ConcurrentHashMap] makes individual reads/writes
-     * atomic; iterations use a stable snapshot copy via [snapshotSectionPageCounts] so
-     * accumulation never races with a concurrent put (no ConcurrentModificationException,
-     * no missed pages).
-     */
-    private val sectionPageCounts = java.util.concurrent.ConcurrentHashMap<Int, Int>()
+    /** Measured visual page counts per EPUB spine section. */
+    private val sectionPageCounts = EpubSectionPageCountStore()
 
     /**
      * Total number of sections (spine items) in the book. Set once when the book opens.
@@ -231,9 +223,8 @@ class ReaderViewModel @Inject constructor(
      */
     private var totalBookSections: Int = 0
 
-    /** Returns a stable snapshot copy for accumulation; never expose the live map. */
-    private fun snapshotSectionPageCounts(): Map<Int, Int> =
-        synchronized(sectionPageCounts) { sectionPageCounts.toMap() }
+    /** Returns a stable, section-ordered snapshot for EPUB progress accumulation. */
+    private fun snapshotSectionPageCounts(): Map<Int, Int> = sectionPageCounts.snapshot()
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
     private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
@@ -320,7 +311,7 @@ class ReaderViewModel @Inject constructor(
             }
             eyeRestJob?.cancel()
             highQualityWarmupJob?.cancel()
-            textReaderOrchestrator.cancelPrewarmJob()
+            textReaderOrchestrator.cancelAllJobsAndJoin()
             if (!openGuard.isCurrent(requestToken)) return
             lastRetainedHighQualityPages = emptySet()
             pagePreloader.clearPages()
@@ -379,7 +370,7 @@ class ReaderViewModel @Inject constructor(
             val detectedFormat = prepared.detectedFormat
             val newReader = prepared.reader
             formatReader = newReader
-            sectionPageCounts.clear()
+            sectionPageCounts.reset()
             totalBookSections = prepared.pages.coerceAtLeast(1)
 
             if (formatReader == null) {
@@ -1984,9 +1975,9 @@ class ReaderViewModel @Inject constructor(
         if (pageCount <= 0) return
         val sectionIndex = _uiState.value.currentPage
         val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
-        synchronized(sectionPageCounts) { sectionPageCounts[sectionIndex] = pageCount }
+        val sectionPageCountSnapshot = sectionPageCounts.recordAndSnapshot(sectionIndex, pageCount)
         val progress = EpubProgressCalculator.accumulate(
-            sectionPageCounts = snapshotSectionPageCounts(),
+            sectionPageCounts = sectionPageCountSnapshot,
             sectionIndex = sectionIndex,
             sectionPageIndex = safePageIndex,
             totalSections = totalBookSections

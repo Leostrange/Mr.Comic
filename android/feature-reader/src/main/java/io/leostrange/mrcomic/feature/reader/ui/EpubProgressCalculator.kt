@@ -23,11 +23,11 @@ internal object EpubProgressCalculator {
      */
     fun estimatedTotalPages(sectionPageCounts: Map<Int, Int>, totalSections: Int): Int {
         if (sectionPageCounts.isEmpty()) return 0
-        val visitedPages = sectionPageCounts.values.sum()
-        val visitedSections = sectionPageCounts.size
+        val orderedCounts = orderedSectionPageCounts(sectionPageCounts)
+        val visitedPages = orderedCounts.values.sum()
+        val visitedSections = orderedCounts.size
         if (totalSections <= visitedSections) return visitedPages
-        val averagePagesPerSection = visitedPages.toFloat() / visitedSections.toFloat()
-        return visitedPages + (averagePagesPerSection * (totalSections - visitedSections)).toInt()
+        return visitedPages + stableEstimate(orderedCounts) * (totalSections - visitedSections)
     }
 
     /**
@@ -50,22 +50,20 @@ internal object EpubProgressCalculator {
         totalSections: Int = 0
     ): AccumulatedProgress {
         if (sectionPageCounts.isEmpty()) return AccumulatedProgress(0, 0)
+        val orderedCounts = orderedSectionPageCounts(sectionPageCounts)
         val safePageIndex = sectionPageIndex.coerceAtLeast(0)
-        val visitedTotal = sectionPageCounts.values.sum()
-        // Use median instead of average to avoid outlier influence.
-        // Use the first visited section's count as a stable baseline —
-        // it's always available and doesn't shift as more sections load.
-        val stableEstimate = sectionPageCounts.values.firstOrNull()?.coerceAtLeast(1) ?: 1
+        val visitedTotal = orderedCounts.values.sum()
+        val stableEstimate = stableEstimate(orderedCounts)
         var current = 0
         for (index in 0 until sectionIndex) {
-            current += sectionPageCounts[index] ?: stableEstimate
+            current += orderedCounts[index] ?: stableEstimate
         }
         current += safePageIndex
         // Estimate total using the stable baseline for unvisited sections.
         // This prevents the "floating total" where progress jumps backwards
         // when a new section loads with more pages than the running average.
-        val total = if (totalSections > sectionPageCounts.size) {
-            val unvisitedSections = totalSections - sectionPageCounts.size
+        val total = if (totalSections > orderedCounts.size) {
+            val unvisitedSections = totalSections - orderedCounts.size
             visitedTotal + stableEstimate * unvisitedSections
         } else {
             visitedTotal
@@ -91,15 +89,24 @@ internal object EpubProgressCalculator {
         // Returning sectionIndex (spine index) causes random position on reopen —
         // the stored value is later interpreted as a visual page, not a spine index.
         if (sectionPageCounts.isEmpty()) return 0
-        val avgPages = if (sectionPageCounts.isNotEmpty()) {
-            sectionPageCounts.values.sum().toFloat() / sectionPageCounts.size.toFloat()
-        } else 1f
+        val orderedCounts = orderedSectionPageCounts(sectionPageCounts)
+        val stableEstimate = stableEstimate(orderedCounts)
         var page = 0
         for (i in 0 until sectionIndex) {
-            page += sectionPageCounts[i] ?: avgPages.toInt().coerceAtLeast(1)
+            page += orderedCounts[i] ?: stableEstimate
         }
         return page + sectionPageIndex.coerceAtLeast(0)
     }
+
+    private fun orderedSectionPageCounts(sectionPageCounts: Map<Int, Int>): Map<Int, Int> =
+        sectionPageCounts
+            .asSequence()
+            .filter { (sectionIndex, pageCount) -> sectionIndex >= 0 && pageCount > 0 }
+            .sortedBy { (sectionIndex, _) -> sectionIndex }
+            .associate { (sectionIndex, pageCount) -> sectionIndex to pageCount }
+
+    private fun stableEstimate(orderedCounts: Map<Int, Int>): Int =
+        orderedCounts.values.firstOrNull()?.coerceAtLeast(1) ?: 1
 
     data class AccumulatedProgress(
         val accumulatedTotalPages: Int,
