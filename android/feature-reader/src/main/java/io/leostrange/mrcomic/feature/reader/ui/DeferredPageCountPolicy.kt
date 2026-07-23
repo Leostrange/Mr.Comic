@@ -1,5 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
+import io.leostrange.mrcomic.core.model.ReadingMode
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 
@@ -87,3 +88,17 @@ internal fun shouldApplyDeferredPageCount(
     if (resolvedTotalPages <= 0 || resolvedTotalPages == provisionalPages) return false
     return currentTotalPages <= 1 || currentTotalPages == provisionalPages
 }
+
+/**
+ * Restores the reader's original location only after the authoritative total is known.
+ * A provisional one-page model must never clamp a saved EPUB position to the cover.
+ */
+internal fun deferredResolvedStartPage(
+    requestedPage: Int,
+    mode: ReadingMode,
+    resolvedTotalPages: Int
+): Int = ReaderNavigationPolicy.normalizePage(
+    page = requestedPage,
+    mode = mode,
+    totalPages = resolvedTotalPages
+)

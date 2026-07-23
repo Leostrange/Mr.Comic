@@ -1167,6 +1167,8 @@ internal fun HtmlPageView(
     onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int) -> Unit = { _, _ -> },
     pendingScrollToAnchor: String? = null,
     onConsumeScrollToAnchor: () -> Unit = {},
+    pendingWebtoonSectionIndex: Int? = null,
+    onConsumeWebtoonSection: () -> Unit = {},
     readingMode: ReadingMode,
     autoScrollSpeed: Float = 0f,
     fontSize: Int    = 18,
@@ -1236,6 +1238,8 @@ internal fun HtmlPageView(
     val onInlineNote     = rememberUpdatedState(onInlineFootnote)
     val currentPendingAnchor = rememberUpdatedState(pendingScrollToAnchor)
     val onConsumeAnchor  = rememberUpdatedState(onConsumeScrollToAnchor)
+    val currentPendingWebtoonSection = rememberUpdatedState(pendingWebtoonSectionIndex)
+    val onConsumeWebtoonSectionState = rememberUpdatedState(onConsumeWebtoonSection)
     val currentFs        = rememberUpdatedState(fontSize)
     val currentScheme    = rememberUpdatedState(colorScheme)
     val currentPreset    = rememberUpdatedState(readerPreset)
@@ -1543,6 +1547,31 @@ internal fun HtmlPageView(
                             )
                             onConsumeAnchor.value()
                         }
+                        currentPendingWebtoonSection.value
+                            ?.takeIf { !currentPagedMode.value }
+                            ?.let { sectionIndex ->
+                                // onPageFinished may precede onPageCommitVisible.  Deferring this
+                                // restore keeps markLoadCommitted() from resetting the just-restored
+                                // scroll position to the cover of the stitched document.
+                                val expectedLoadToken = readerView?.activeLoadToken
+                                view.postDelayed({
+                                    if (!shouldRestoreTextWebtoonSection(
+                                            expectedLoadToken = expectedLoadToken,
+                                            activeLoadToken = readerView?.activeLoadToken
+                                        )
+                                    ) {
+                                        return@postDelayed
+                                    }
+                                    view.evaluateJavascript(
+                                        """(function(){try{var target=document.querySelector('.mrcomic-text-webtoon-section[data-mrcomic-page-index=\"$sectionIndex\"]');if(!target)return false;if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(target);}else{target.scrollIntoView({block:'start',inline:'nearest'});}return true;}catch(e){return false;}})()""",
+                                        { didScroll ->
+                                            if (didScroll.trim('"') == "true") {
+                                                onConsumeWebtoonSectionState.value()
+                                            }
+                                        }
+                                    )
+                                }, TEXT_WEBTOON_RESTORE_DELAY_MILLIS)
+                            }
                         view.post {
                             view.requestLayout()
                             view.invalidate()
@@ -2542,6 +2571,8 @@ fun ReaderScreen(
                                 contentBottomInsetPx = textWebtoonBottomInsetCssPx,
                                 pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                 onConsumeScrollToAnchor = viewModel::consumePendingScrollToAnchor,
+                                pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
+                                onConsumeWebtoonSection = viewModel::consumePendingWebtoonSection,
                                 modifier = textWebtoonModifier
                             )
                         }
