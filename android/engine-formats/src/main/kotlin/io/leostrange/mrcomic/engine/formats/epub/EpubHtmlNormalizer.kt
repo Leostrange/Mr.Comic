@@ -105,3 +105,51 @@ internal fun rebuildNormalizedInlinedEpubDocument(html: String, readerCss: Strin
         else -> "<html><head>$readerCss</head><body>$html</body></html>"
     }
 )
+
+internal fun sanitizeInlineEpubCss(css: String): String = EpubCssSanitizer.sanitizeInline(css)
+
+internal fun sanitizeAssetBackedEpubCss(
+    css: String,
+    cssEntryPath: String? = null,
+    assetExists: (String) -> Boolean = { true }
+): String = EpubCssSanitizer.sanitizeAssetBacked(css, cssEntryPath, assetExists)
+
+internal fun prepareAssetBackedEpubDocument(
+    html: String,
+    readerCss: String,
+    xhtmlEntryPath: String? = null,
+    assetExists: (String) -> Boolean = { true }
+): String = runCatching {
+    val strippedHtml = html
+        .replaceFirst(Regex("""^\s*<\?xml[^>]*\?>\s*""", RegexOption.IGNORE_CASE), "")
+        .replace(
+            Regex(
+                """<nav\b[^>]*\bepub:type\s*=\s*["'](?:toc|page-list|landmarks)[^"']*["'][^>]*>.*?</nav>""",
+                setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+            ),
+            ""
+        )
+    val normalized = normalizeInlinedEpubMarkup(simplifySingleImageSvgContent(strippedHtml))
+    val document = Jsoup.parse(normalized)
+    document.outputSettings(Document.OutputSettings().prettyPrint(false))
+    document.select("style").forEach { styleElement ->
+        styleElement.html(
+            sanitizeAssetBackedEpubCss(
+                css = styleElement.data(),
+                cssEntryPath = xhtmlEntryPath,
+                assetExists = assetExists
+            )
+        )
+    }
+    val sourceForRebuild = if (
+        document.body().html().isBlank() &&
+        extractEpubBodyInnerHtmlByTag(normalized) != null
+    ) {
+        normalized
+    } else {
+        document.outerHtml()
+    }
+    rebuildNormalizedInlinedEpubDocument(sourceForRebuild, readerCss)
+}.getOrDefault(
+    rebuildNormalizedInlinedEpubDocument(html, readerCss)
+)

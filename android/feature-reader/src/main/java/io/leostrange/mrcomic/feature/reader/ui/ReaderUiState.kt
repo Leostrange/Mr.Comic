@@ -112,6 +112,7 @@ data class ReaderUiState(
     val textWebtoonHtmlContent: String? = null,
     val textWebtoonHtmlAssetBasePath: String? = null,
     val textWebtoonHtmlPageCount: Int = 0,
+    val pendingWebtoonSectionIndex: Int? = null,
     /** Pre-render candidate for the previous text page. */
     val previousHtmlContent: String? = null,
     val previousHtmlAssetBasePath: String? = null,

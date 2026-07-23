@@ -126,7 +126,7 @@ internal fun readerPagedCoreJs(
       }
       var contentRect=content.getBoundingClientRect();
       var contentHeight=Math.ceil(Math.max(content.scrollHeight||0,content.offsetHeight||0,contentRect.height||0,clipHeight));
-      var sig=['text-page-no-overlap-v7',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign,pageInsetTop,pageInsetBottom].join('|');
+      var sig=['text-page-no-overlap-v8',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign,pageInsetTop,pageInsetBottom].join('|');
       if(existingLayouts&&window.__mrcomicPageBreakSig===sig){
         return existingLayouts;
       }
@@ -276,7 +276,9 @@ internal fun readerPagedCoreJs(
 
       function makeVisibleHeight(pageStart,pageEnd,pageTopInset,pageBottomInset){
         var span=Math.max(1,Number(pageEnd||0)-Number(pageStart||0));
-        var leadingViewportOffset=contentViewportTopOffset+Math.max(0,Number(pageTopInset||0));
+        // content is already positioned at pageInsetTop. Counting both values here
+        // exposes the next page's first line below the bottom shield.
+        var leadingViewportOffset=Math.max(contentViewportTopOffset,Math.max(0,Number(pageTopInset||0)));
         return Math.ceil(Math.max(
           1,
           Math.min(

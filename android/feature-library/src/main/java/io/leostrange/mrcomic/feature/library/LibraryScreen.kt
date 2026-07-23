@@ -155,14 +155,11 @@ import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.locale.libraryBooksSectionLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryFileCountLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryFolderCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryGraphicSectionLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuotePageLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceMissingLabel
-import io.leostrange.mrcomic.core.ui.locale.librarySetCountLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryVolumeCountLabel
 import io.leostrange.mrcomic.core.ui.mascot.MrComicMiniAvatar
 import io.leostrange.mrcomic.core.ui.mascot.MrComicStagePreviewLead
 import io.leostrange.mrcomic.feature.library.components.AchievementId
@@ -186,10 +183,7 @@ import io.leostrange.mrcomic.feature.library.components.nextUnlockAchievement
 import io.leostrange.mrcomic.feature.library.components.questTransitionFeedback
 import io.leostrange.mrcomic.feature.library.components.rememberedNextUnlockAchievement
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 import kotlinx.coroutines.launch
 @Suppress("UNUSED_PARAMETER")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -1900,26 +1894,6 @@ private fun ShelfLine(
     }
 }
 
-private fun folderDescription(folder: LibraryFolderItem, strings: AppStrings): String {
-    val filesText = strings.libraryFileCountLabel(folder.fileCount)
-    val foldersText = when {
-        folder.subfolderCount <= 0 -> ""
-        else -> " • ${strings.libraryFolderCountLabel(folder.subfolderCount)}"
-    }
-    return filesText + foldersText
-}
-
-private fun folderCollectionLabel(strings: AppStrings): String = strings.libraryCollectionLabel
-
-private fun folderVolumesLabel(fileCount: Int, strings: AppStrings): String {
-    return strings.libraryVolumeCountLabel(fileCount)
-}
-
-private fun folderSubcollectionsLabel(subfolderCount: Int, strings: AppStrings): String? {
-    if (subfolderCount <= 0) return null
-    return strings.librarySetCountLabel(subfolderCount)
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FilterSheet(
@@ -2540,13 +2514,6 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
-private fun formatFileSize(bytes: Long): String = when {
-    bytes < 1_024 -> "$bytes B"
-    bytes < 1_048_576 -> "%.1f KB".format(bytes / 1_024.0)
-    bytes < 1_073_741_824L -> "%.1f MB".format(bytes / 1_048_576.0)
-    else -> "%.2f GB".format(bytes / 1_073_741_824.0)
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Строка статистики библиотеки
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2985,32 +2952,6 @@ private fun MrComicStagePreviewCard(
     }
 }
 
-internal fun mrComicUseCompactStagePreview(
-    searchActive: Boolean,
-    hasStagePreview: Boolean,
-    hasQuestFeedback: Boolean
-): Boolean = searchActive && hasStagePreview && hasQuestFeedback
-
-internal fun mrComicShowQuestFeedback(
-    searchActive: Boolean,
-    hasQuestFeedback: Boolean
-): Boolean = hasQuestFeedback && !searchActive
-
-internal fun mrComicShowReadingCalendarCard(
-    searchActive: Boolean,
-    goalState: DailyReadingGoalState,
-    hasStagePreview: Boolean,
-    hasQuestFeedback: Boolean
-): Boolean {
-    if (searchActive || !goalState.enabled || hasStagePreview || hasQuestFeedback) return false
-    return goalState.recentActivity.any { day ->
-        day.pagesRead > 0 || day.goalCompleted || day.minutesRead > 0 || day.completedCheckpoints > 0
-    } || goalState.pagesReadToday > 0 ||
-        goalState.pagesReadThisWeek > 0 ||
-        goalState.currentStreak > 0 ||
-        goalState.isWeeklyPlanCompleted
-}
-
 @Composable
 private fun MrComicQuestFeedbackCard(
     feedback: AchievementQuestTransition,
@@ -3130,17 +3071,6 @@ private fun MrComicQuestFeedbackCard(
             }
         }
     }
-}
-
-internal fun mrComicQuestFeedbackAction(
-    searchActive: Boolean,
-    feedback: AchievementQuestTransition,
-    hintAction: MrComicDiscoveryAction?
-): MrComicDiscoveryAction? {
-    if (searchActive) return null
-    if (feedback.nextAchievementId == null) return null
-    if (hintAction == MrComicDiscoveryAction.OPEN_RECENT) return null
-    return hintAction
 }
 
 @Composable
@@ -3688,18 +3618,6 @@ private fun MrComicQuickActionsCard(
         }
     }
 }
-
-internal fun mrComicShowSearchContextCard(
-    searchActive: Boolean,
-    hasStagePreview: Boolean,
-    hasQuestFeedback: Boolean
-): Boolean = searchActive && !hasStagePreview && !hasQuestFeedback
-
-internal fun mrComicUseCompactSupportCards(
-    searchActive: Boolean,
-    hasStagePreview: Boolean,
-    hasQuestFeedback: Boolean
-): Boolean = searchActive || hasStagePreview || hasQuestFeedback
 
 @Composable
 private fun MrComicSummaryPill(
@@ -4542,19 +4460,6 @@ private fun LibraryPlaceholderLeadIcon(
         neutralIcon = neutralIcon,
         neutralTint = MaterialTheme.colorScheme.primary
     )
-}
-
-private fun formatQuoteDate(timestamp: Long, language: String): String {
-    val pattern = when (language) {
-        "en" -> "MMM d"
-        "ja", "zh", "ko" -> "yyyy-MM-dd"
-        else -> "dd.MM.yyyy"
-    }
-    val locale = when (language) {
-        "ru", "en", "ja", "zh", "ko" -> Locale.forLanguageTag(language)
-        else -> Locale.getDefault()
-    }
-    return SimpleDateFormat(pattern, locale).format(Date(timestamp))
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

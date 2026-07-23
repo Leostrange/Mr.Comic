@@ -270,11 +270,15 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
-    fun readerPagedLayoutJs_includesTopInsetBeforePlacingBottomShield() {
+    fun readerPagedLayoutJs_usesSingleTopInsetBeforePlacingBottomShield() {
         val js = readerPagedLayoutJs(targetPage = 0)
 
         assertTrue(
-            "the visible span must include the inset used to position page content",
+            "the visible span must account for the content offset without adding the same inset twice",
+            js.contains("var leadingViewportOffset=Math.max(contentViewportTopOffset,Math.max(0,Number(pageTopInset||0)));")
+        )
+        assertFalse(
+            "the content offset and page inset must not expose the next page by being summed",
             js.contains("var leadingViewportOffset=contentViewportTopOffset+Math.max(0,Number(pageTopInset||0));")
         )
     }
