@@ -6,25 +6,13 @@ import android.net.Uri
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.FormatReaderWebResource
-import io.leostrange.mrcomic.engine.formats.base.READER_BASE_DOCUMENT_CSS
-import io.leostrange.mrcomic.engine.formats.base.READER_PRESERVE_LAYOUT_DOCUMENT_CSS
 import io.leostrange.mrcomic.engine.formats.base.TocEntry
-import io.leostrange.mrcomic.engine.formats.base.buildUnifiedReaderHtmlDocument
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.commonmark.Extension
-import org.commonmark.ext.autolink.AutolinkExtension
-import org.commonmark.ext.footnotes.FootnotesExtension
-import org.commonmark.ext.gfm.strikethrough.StrikethroughExtension
-import org.commonmark.ext.gfm.tables.TablesExtension
-import org.commonmark.node.Node
-import org.commonmark.parser.Parser
-import org.commonmark.renderer.html.HtmlRenderer
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.jsoup.safety.Safelist
 import java.io.File
 import java.io.InputStream
 import io.leostrange.mrcomic.engine.formats.base.charset.bomLength
@@ -38,39 +26,6 @@ import javax.inject.Inject
 private const val CHARS_PER_PAGE = 4000
 private const val MAX_TEXT_SOURCE_BYTES = 96 * 1024 * 1024
 private const val MAX_SECTION_CHARS = 100_000
-private val MARKDOWN_EXTENSIONS: List<Extension> = listOf(
-    AutolinkExtension.create(),
-    TablesExtension.create(),
-    StrikethroughExtension.create(),
-    FootnotesExtension.create()
-)
-private val MARKDOWN_PARSER: Parser = Parser.builder()
-    .extensions(MARKDOWN_EXTENSIONS)
-    .build()
-private val MARKDOWN_RENDERER: HtmlRenderer = HtmlRenderer.builder()
-    .extensions(MARKDOWN_EXTENSIONS)
-    .escapeHtml(false)
-    .sanitizeUrls(true)
-    .build()
-private val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
-    .addTags(
-        "html", "head", "body", "main", "article", "section", "aside", "header", "footer",
-        "figure", "figcaption", "hr", "table", "thead", "tbody", "tfoot", "tr", "th", "td",
-        "caption", "colgroup", "col", "sup", "sub", "center", "font", "big", "small",
-        "kbd", "details", "summary", "mark", "abbr", "del", "s", "em", "strong",
-        "div", "span"
-    )
-    .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align", "data-mrcomic-pagebreak")
-    .addAttributes("img", "src", "alt", "title", "width", "height", "loading", "align")
-    .addAttributes("a", "href", "name", "target")
-    .addAttributes("font", "size", "face", "color")
-    .addAttributes("th", "colspan", "rowspan")
-    .addAttributes("td", "colspan", "rowspan")
-    .addAttributes("table", "width", "border", "cellpadding", "cellspacing", "align")
-    .addAttributes("col", "span")
-    .addProtocols("a", "href", "http", "https", "mailto", "tel", "file", "content", "#")
-    .addProtocols("img", "src", "http", "https", "file", "content", "data")
-    .preserveRelativeLinks(true)
 // SINGLE_BYTE_TEXT_CHARSETS extracted to TextCharsetUtils.kt
 private val TXT_CHAPTER_PATTERNS = listOf(
     Regex("""(?iu)^(глава|часть|книга|том)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),
@@ -101,45 +56,6 @@ private data class HtmlPageAnchorResult(
     val anchors: List<TxtChapterAnchor>
 )
 
-internal data class ReaderHtmlFootnoteExtraction(
-    val contentHtml: String,
-    val footnoteMap: Map<String, String>
-)
-
-/** Removes only semantic note bodies; references in the reading flow stay intact. */
-internal fun extractReaderHtmlFootnotes(raw: String): ReaderHtmlFootnoteExtraction {
-    val document = Jsoup.parse(raw)
-    document.outputSettings(Document.OutputSettings().prettyPrint(false))
-    val footnoteMap = linkedMapOf<String, String>()
-    val noteBodies = document.allElements.filter(::isReaderHtmlFootnoteBody)
-        .filter { element -> element.parents().none(::isReaderHtmlFootnoteBody) }
-
-    noteBodies.forEach { note ->
-        val anchorId = note.id().trim()
-        val text = note.text().replace(Regex("\\s+"), " ").trim()
-        if (anchorId.isNotBlank() && text.isNotBlank()) {
-            footnoteMap.putIfAbsent(anchorId, text)
-        }
-        note.remove()
-    }
-    return ReaderHtmlFootnoteExtraction(
-        contentHtml = document.outerHtml(),
-        footnoteMap = footnoteMap
-    )
-}
-
-private fun isReaderHtmlFootnoteBody(element: Element): Boolean {
-    val epubTypeTokens = element.attr("epub:type")
-        .lowercase()
-        .split(Regex("\\s+"))
-    val roleTokens = element.attr("role")
-        .lowercase()
-        .split(Regex("\\s+"))
-    return epubTypeTokens.any { it in setOf("footnote", "endnote", "rearnote") } ||
-        roleTokens.any { it in setOf("doc-footnote", "doc-endnote") } ||
-        element.hasAttr("data-footnote-body")
-}
-
 // ── RTF non-content destination groups ────────────────────────────────────────
 private val RTF_SKIP_DESTINATIONS = setOf(
     "fonttbl", "colortbl", "stylesheet", "info", "pict",
@@ -148,223 +64,6 @@ private val RTF_SKIP_DESTINATIONS = setOf(
     "listtable", "listoverridetable", "pgdsctbl", "latentstyles",
     "mmathPr", "fldinst"
 )
-
-private fun isGutenbergHtml(raw: String): Boolean {
-    val lowerRaw = raw.lowercase()
-    // Check for Gutenberg-specific indicators
-    return (
-        // XHTML 1.0 Strict DOCTYPE (common in Gutenberg)
-        lowerRaw.contains("<!doctype html public \"-//w3c//dtd xhtml 1.0 strict//en\"") ||
-        // Direct mention of Gutenberg project
-        lowerRaw.contains("gutenberg") ||
-        // Cover page link (common in Gutenberg)
-        lowerRaw.contains("rel=\"coverpage\"") ||
-        // Typical Gutenberg structure with centered headings and internal anchors
-        (lowerRaw.contains("<h1") && lowerRaw.contains("href=\"#") &&
-         (lowerRaw.contains("text-align:center") || lowerRaw.contains("align=\"center\"")))
-    )
-}
-
-private fun htmlEscapeText(text: String): String = text
-    .replace("&", "&amp;")
-    .replace("<", "&lt;")
-    .replace(">", "&gt;")
-
-private fun preserveGutenbergHtmlDocument(raw: String, baseUrl: String?): String {
-    // For Gutenberg HTML, preserve the complete document structure including head and original styles
-    val normalizedBase = baseUrl.orEmpty()
-
-    // Parse the document while preserving all elements
-    val document = Jsoup.parse(raw, normalizedBase)
-    document.outputSettings(Document.OutputSettings().prettyPrint(false))
-
-    // Clean only dangerous elements, preserve everything else including styles and links
-    document.select(
-        "script, noscript, template, iframe, object, embed, canvas, form, " +
-        "input, button, select, textarea"
-    ).remove()
-
-    // Rebuild the <base> tag from the reader pipeline so file:// and stale external bases
-    // do not override the asset-backed document URL.
-    document.select("head base").remove()
-    if (normalizedBase.isNotEmpty()) {
-        document.head().prependElement("base").attr("href", normalizedBase)
-    }
-
-    // Add minimal reader CSS for mobile optimization without overriding publisher styles
-    val readerCss = """
-        <style>
-        @media screen {
-            html {
-                width: 100%;
-                max-width: 100%;
-                margin: 0;
-                padding: 0;
-                overflow-x: hidden;
-                box-sizing: border-box;
-            }
-            *, *::before, *::after { box-sizing: inherit; }
-            body {
-                margin: 0;
-                padding: 16px 16px 44px;
-                width: 100%;
-                max-width: none;
-                box-sizing: border-box;
-                overflow-wrap: break-word;
-            }
-            img { max-width: 100%; height: auto; display: block; margin: 8px auto; }
-            a:link, a:visited, a:hover, a:active {
-                color: #1a6f9a;
-                text-decoration: underline;
-                text-underline-offset: 0.14em;
-                text-decoration-thickness: 0.08em;
-            }
-        }
-        </style>
-    """.trimIndent()
-
-    // Insert reader CSS after existing head content
-    document.head().append(readerCss)
-
-    return document.outerHtml()
-}
-
-internal fun shouldPreserveHtmlPublisherLayout(raw: String): Boolean {
-    if (isGutenbergHtml(raw)) return true
-    val lowerRaw = raw.lowercase()
-    if (Regex("""<(table|thead|tbody|tfoot|tr|td|th|frameset|frame|svg|canvas)\b""", RegexOption.IGNORE_CASE)
-            .containsMatchIn(raw)
-    ) {
-        return true
-    }
-    if (Regex(
-            """style\s*=\s*["'][^"']*(?:position\s*:|left\s*:|top\s*:|right\s*:|bottom\s*:|float\s*:|display\s*:\s*(?:grid|flex|inline-block|table)|width\s*:\s*\d|height\s*:\s*\d)""",
-            RegexOption.IGNORE_CASE
-        ).containsMatchIn(raw)
-    ) {
-        return true
-    }
-    if ("<body" in lowerRaw && "data-mrcomic-preserve-layout" in lowerRaw) {
-        return true
-    }
-    return false
-}
-
-private fun normalizeReaderHtmlFragment(html: String): String = runCatching {
-    val trimmed = html.trim()
-    if (trimmed.isBlank()) return@runCatching trimmed
-    if (!trimmed.contains("<body", ignoreCase = true) && !trimmed.contains("<html", ignoreCase = true)) {
-        return@runCatching trimmed
-    }
-    val document = Jsoup.parse(trimmed)
-    document.outputSettings(Document.OutputSettings().prettyPrint(false))
-    document.select("body body").forEach { it.unwrap() }
-    document.select("body html").forEach { it.unwrap() }
-    document.body().html().trim().ifBlank { trimmed }
-}.getOrElse { html }
-
-private val DEFAULT_READER_HTML_CSS = READER_BASE_DOCUMENT_CSS
-private val PRESERVE_LAYOUT_HTML_CSS = READER_PRESERVE_LAYOUT_DOCUMENT_CSS
-
-private fun buildReaderHtmlDocument(
-    body: String,
-    baseUrl: String? = null,
-    extraCss: String = "",
-    extraHeadHtml: String = "",
-    baseCss: String = DEFAULT_READER_HTML_CSS,
-    preservePublisherLayout: Boolean = false
-): String {
-    val normalizedBody = normalizeReaderHtmlFragment(body)
-    return buildUnifiedReaderHtmlDocument(
-        body = normalizedBody,
-        baseUrl = baseUrl,
-        extraCss = extraCss,
-        extraHeadHtml = extraHeadHtml,
-        baseCss = baseCss,
-        preservePublisherLayout = preservePublisherLayout
-    )
-}
-
-// Charset/mojibake utilities extracted to TextCharsetUtils.kt
-
-internal fun renderMarkdownToHtmlBlocks(raw: String): List<String> {
-    val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
-    val document = MARKDOWN_PARSER.parse(normalized)
-    val blocks = mutableListOf<String>()
-    var node: Node? = document.firstChild
-    while (node != null) {
-        val rendered = MARKDOWN_RENDERER.render(node).trim()
-        if (rendered.isNotBlank()) {
-            // Sanitize rendered HTML through Jsoup so that escapeHtml(false) does not
-            // let dangerous tags (<script>, <iframe>, etc.) through.
-            blocks += Jsoup.clean(rendered, HTML_READER_SAFE_LIST)
-        }
-        node = node.next
-    }
-    return blocks
-}
-
-internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): String {
-    val normalizedRaw = raw.replace(
-        Regex(
-            """(?is)<(?:mbp:pagebreak|pagebreak)\b[^>]*(?:/?>|>.*?</(?:mbp:pagebreak|pagebreak)>)"""
-        ),
-        """<hr class="mrcomic-pagebreak" data-mrcomic-pagebreak="true"/>"""
-    )
-    val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(normalizedRaw)
-    val baseCss = if (preservePublisherLayout) PRESERVE_LAYOUT_HTML_CSS else DEFAULT_READER_HTML_CSS
-    val normalizedBaseUrl = baseUrl.orEmpty()
-    val document = if (normalizedRaw.contains("<html", ignoreCase = true) ||
-        normalizedRaw.contains("<body", ignoreCase = true) ||
-        normalizedRaw.contains("<head", ignoreCase = true) ||
-        normalizedRaw.contains("<!DOCTYPE", ignoreCase = true)
-    ) {
-        Jsoup.parse(normalizedRaw, normalizedBaseUrl)
-    } else {
-        Jsoup.parseBodyFragment(normalizedRaw, normalizedBaseUrl)
-    }
-    document.outputSettings(Document.OutputSettings().prettyPrint(false))
-    val extractedCss = document.select("style").joinToString("\n") { it.data() }
-    val linkedStylesheets = document.select("link[rel~=(?i)stylesheet][href], link[href$=.css i][href]")
-        .joinToString("\n") { it.outerHtml() }
-    document.select(
-        "script, style, noscript, template, iframe, object, embed, canvas, form, input, button, select, textarea"
-    ).remove()
-    document.select("meta, link").remove()
-
-    val body = document.body()
-    val title = document.title().trim()
-    val cleanedBody = Jsoup.clean(
-        body.html(),
-        normalizedBaseUrl,
-        HTML_READER_SAFE_LIST,
-        Document.OutputSettings().prettyPrint(false)
-    ).trim()
-
-    val titleBlock = title.takeIf {
-        it.isNotBlank() &&
-            !cleanedBody.contains(title, ignoreCase = true) &&
-            !document.body().hasAttr("data-mrcomic-preserve-layout")
-    }
-        ?.let { "<h1>${htmlEscapeText(it)}</h1>" }
-        .orEmpty()
-
-    val content = when {
-        cleanedBody.isNotBlank() -> titleBlock + normalizeReaderHtmlFragment(cleanedBody)
-        body.text().isNotBlank() -> titleBlock + "<p>${htmlEscapeText(body.text())}</p>"
-        title.isNotBlank() -> "<h1>${htmlEscapeText(title)}</h1>"
-        else -> "<p></p>"
-    }
-
-    return buildReaderHtmlDocument(
-        body = content,
-        baseUrl = baseUrl,
-        extraCss = extractedCss,
-        extraHeadHtml = linkedStylesheets,
-        baseCss = baseCss,
-        preservePublisherLayout = preservePublisherLayout
-    )
-}
 
 class TextFormatReader @Inject constructor(
     @ApplicationContext private val context: Context,

@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import kotlin.math.roundToInt
 
 data class ReaderHardwareKeyDecision(
     val consume: Boolean,
@@ -79,6 +80,37 @@ fun readerHtmlModeChangeRequiresPagedLayoutTeardown(
     previousPagedModeScrollLock: Boolean,
     nextPagedModeScrollLock: Boolean
 ): Boolean = previousPagedModeScrollLock && !nextPagedModeScrollLock
+
+fun readerShouldRestoreTextWebtoonSection(
+    previousMode: ReadingMode,
+    nextMode: ReadingMode,
+    readerRendersHtmlContent: Boolean
+): Boolean = readerRendersHtmlContent &&
+    previousMode != ReadingMode.WEBTOON &&
+    nextMode == ReadingMode.WEBTOON
+
+/**
+ * Maps a paged WebView location back to the stitched document used by the vertical reader.
+ *
+ * Some EPUBs expose the whole spine through the first HTML source. In that case the engine
+ * section remains zero while PAGE tracks the visible subpage separately. Using section zero
+ * directly would make PAGE -> WEBTOON jump to the cover, so preserve its relative position.
+ */
+fun readerWebtoonRestoreSectionIndex(
+    engineSectionIndex: Int,
+    pagedSubpageIndex: Int,
+    pagedSubpageCount: Int,
+    totalWebtoonSections: Int
+): Int {
+    val lastSection = (totalWebtoonSections - 1).coerceAtLeast(0)
+    val safeEngineSection = engineSectionIndex.coerceIn(0, lastSection)
+    if (safeEngineSection != 0 || pagedSubpageCount <= 1 || pagedSubpageIndex <= 0) {
+        return safeEngineSection
+    }
+
+    val progress = pagedSubpageIndex.toFloat() / (pagedSubpageCount - 1).toFloat()
+    return (progress * lastSection).roundToInt().coerceIn(0, lastSection)
+}
 
 fun readerChromeRequiresOpaqueSurface(
     preset: ReadingPreset,

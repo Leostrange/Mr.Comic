@@ -84,6 +84,14 @@ class EpubHtmlAssetBasePathTest {
 
             val reader = EpubFormatReader(ContextWrapper(null), tempEpub.absolutePath)
             try {
+                // The first chapter is deliberately larger than the legacy 4,000-character
+                // chunk size. Lightweight section navigation must still resolve index 1 to
+                // chapter two, rather than to a second legacy chunk of chapter one.
+                val firstSectionHtml = reader.getHtmlPage(0)
+                val secondSectionHtml = reader.getHtmlPage(1)
+                assertTrue(firstSectionHtml?.contains("first chapter paragraph") == true)
+                assertTrue(secondSectionHtml?.contains("second chapter paragraph") == true)
+
                 val sections = reader.getTextDocumentSections()
                 assertTrue("Expected at least 2 text sections", sections.size >= 2)
 

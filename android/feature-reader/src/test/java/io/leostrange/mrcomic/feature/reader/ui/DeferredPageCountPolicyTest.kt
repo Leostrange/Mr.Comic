@@ -1,5 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
+import io.leostrange.mrcomic.core.model.ReadingMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -132,5 +133,27 @@ class DeferredPageCountPolicyTest {
         )
 
         assertEquals(true, applies)
+    }
+
+    @Test
+    fun restoresSavedEpubPositionAfterProvisionalCoverPage() {
+        val resolved = deferredResolvedStartPage(
+            requestedPage = 16,
+            mode = ReadingMode.PAGE_LTR,
+            resolvedTotalPages = 26
+        )
+
+        assertEquals(16, resolved)
+    }
+
+    @Test
+    fun clampsSavedPositionOnlyAgainstAuthoritativeTotal() {
+        val resolved = deferredResolvedStartPage(
+            requestedPage = 90,
+            mode = ReadingMode.PAGE_LTR,
+            resolvedTotalPages = 26
+        )
+
+        assertEquals(25, resolved)
     }
 }

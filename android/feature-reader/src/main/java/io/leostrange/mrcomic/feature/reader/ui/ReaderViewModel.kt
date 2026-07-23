@@ -395,8 +395,9 @@ class ReaderViewModel @Inject constructor(
             val requestedPage = pendingRequestedPage
             val shouldDeferCount = prepared.deferPageCount
             val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
+            val requestedStartPage = requestedPage ?: comic.currentPage
             val startPage = normalizePageForMode(
-                page = requestedPage ?: comic.currentPage,
+                page = requestedStartPage,
                 mode = openingMode,
                 totalPages = initialPages
             )
@@ -502,7 +503,7 @@ class ReaderViewModel @Inject constructor(
                     reader = activeReader,
                     requestToken = requestToken,
                     openingMode = openingMode,
-                    startPage = startPage,
+                    requestedStartPage = requestedStartPage,
                     initialPages = initialPages
                 )
             }
@@ -1996,6 +1997,10 @@ class ReaderViewModel @Inject constructor(
         it.copy(pendingScrollToAnchor = null)
     }
 
+    fun consumePendingWebtoonSection() = _uiState.update {
+        it.copy(pendingWebtoonSectionIndex = null)
+    }
+
     /** Dismisses the footnote popup without navigating anywhere. */
     fun dismissFootnote() = _uiState.update {
         it.copy(footnotePopup = null, footnotePresentation = FootnotePresentation.PEEK)
@@ -2208,7 +2213,7 @@ class ReaderViewModel @Inject constructor(
         reader: FormatReader,
         requestToken: Long,
         openingMode: ReadingMode,
-        startPage: Int,
+        requestedStartPage: Int,
         initialPages: Int
     ) {
         deferredPageCountJob?.cancel()
@@ -2244,10 +2249,10 @@ class ReaderViewModel @Inject constructor(
                 Log.d("ReaderVM", "realPages == initialPages ($realPages), skipping update")
                 return@launch
             }
-            val normalizedStartPage = normalizePageForMode(
-                page = startPage,
+            val normalizedStartPage = deferredResolvedStartPage(
+                requestedPage = requestedStartPage,
                 mode = openingMode,
-                totalPages = realPages
+                resolvedTotalPages = realPages
             )
             withContext(Dispatchers.Main) {
                 if (!shouldApplyDeferredPageCount(
@@ -2366,6 +2371,12 @@ class ReaderViewModel @Inject constructor(
             mode = mode,
             totalPages = currentState.totalPages
         )
+        val webtoonRestoreSection = readerWebtoonRestoreSectionIndex(
+            engineSectionIndex = currentState.currentPage,
+            pagedSubpageIndex = currentState.sectionCurrentPage,
+            pagedSubpageCount = currentState.sectionPageCount,
+            totalWebtoonSections = totalBookSections
+        )
         if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
             return
         }
@@ -2373,6 +2384,17 @@ class ReaderViewModel @Inject constructor(
             state.copy(
                 readingMode = mode,
                 currentPage = alignedPage,
+                pendingWebtoonSectionIndex = if (
+                    readerShouldRestoreTextWebtoonSection(
+                        previousMode = currentState.readingMode,
+                        nextMode = mode,
+                        readerRendersHtmlContent = currentState.readerRendersHtmlContent
+                    )
+                ) {
+                    webtoonRestoreSection
+                } else {
+                    state.pendingWebtoonSectionIndex
+                },
                 readerContainerKind = resolveReaderContainerKind(
                     format = state.comic?.format,
                     readingMode = mode,

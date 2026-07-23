@@ -224,6 +224,32 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
+    fun pagedWebtoonSwitchRestoresRelativePositionWhenEngineStaysAtFirstSection() {
+        assertEquals(
+            9,
+            readerWebtoonRestoreSectionIndex(
+                engineSectionIndex = 0,
+                pagedSubpageIndex = 46,
+                pagedSubpageCount = 461,
+                totalWebtoonSections = 91
+            )
+        )
+    }
+
+    @Test
+    fun pagedWebtoonSwitchKeepsKnownEngineSection() {
+        assertEquals(
+            8,
+            readerWebtoonRestoreSectionIndex(
+                engineSectionIndex = 8,
+                pagedSubpageIndex = 46,
+                pagedSubpageCount = 461,
+                totalWebtoonSections = 91
+            )
+        )
+    }
+
+    @Test
     fun leavingPagedHtmlModeRequiresLayoutTeardown() {
         assertTrue(
             readerHtmlModeChangeRequiresPagedLayoutTeardown(
@@ -241,6 +267,31 @@ class ReaderInteractionPolicyTest {
             readerHtmlModeChangeRequiresPagedLayoutTeardown(
                 previousPagedModeScrollLock = false,
                 nextPagedModeScrollLock = false
+            )
+        )
+    }
+
+    @Test
+    fun textPageToWebtoonRequestsSectionRestore() {
+        assertTrue(
+            readerShouldRestoreTextWebtoonSection(
+                previousMode = ReadingMode.PAGE_LTR,
+                nextMode = ReadingMode.WEBTOON,
+                readerRendersHtmlContent = true
+            )
+        )
+        assertFalse(
+            readerShouldRestoreTextWebtoonSection(
+                previousMode = ReadingMode.WEBTOON,
+                nextMode = ReadingMode.WEBTOON,
+                readerRendersHtmlContent = true
+            )
+        )
+        assertFalse(
+            readerShouldRestoreTextWebtoonSection(
+                previousMode = ReadingMode.PAGE_LTR,
+                nextMode = ReadingMode.WEBTOON,
+                readerRendersHtmlContent = false
             )
         )
     }
