@@ -12,7 +12,12 @@ import java.util.concurrent.atomic.AtomicReference
 class TextReaderControllerConcurrencyTest {
 
     private fun newController(): TextReaderController = TextReaderController(
-        TextWebtoonSessionController(kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined))
+        TextWebtoonSessionController(
+            scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+            builder = WebtoonDocumentBuilder { pages ->
+                TextWebtoonCachedDocument(html = pages.joinToString { it.html }, assetBasePath = null)
+            }
+        )
     )
 
     /**
