@@ -21,7 +21,12 @@ class TextReaderNavigationTest {
     @Test
     fun resolveNavigationPagePassthroughWhenPaginationNotReady() {
         val controller = TextReaderController(
-            TextWebtoonSessionController(kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined))
+            TextWebtoonSessionController(
+                scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+                builder = WebtoonDocumentBuilder { pages ->
+                    TextWebtoonCachedDocument(html = pages.joinToString { it.html }, assetBasePath = null)
+                }
+            )
         )
         val state = ReaderUiState(
             readerContainerKind = ReaderContainerKind.TEXT_PAGE,
@@ -41,7 +46,12 @@ class TextReaderNavigationTest {
     @Test
     fun enginePageForUiPagePassthroughWhenPaginationNotReady() {
         val controller = TextReaderController(
-            TextWebtoonSessionController(kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined))
+            TextWebtoonSessionController(
+                scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Unconfined),
+                builder = WebtoonDocumentBuilder { pages ->
+                    TextWebtoonCachedDocument(html = pages.joinToString { it.html }, assetBasePath = null)
+                }
+            )
         )
         val state = ReaderUiState(
             readerContainerKind = ReaderContainerKind.TEXT_PAGE,

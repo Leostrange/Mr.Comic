@@ -79,7 +79,6 @@ internal class TextReaderController(
         state: ReaderUiState,
         isSessionActive: (FormatReader, String) -> Boolean,
         loadPage: suspend (FormatReader, Int) -> CachedHtmlPage?,
-        buildDocument: (List<CachedHtmlPage>) -> TextWebtoonCachedDocument,
         publish: (TextWebtoonCachedDocument, Int) -> Unit
     ) {
         val activeReader = reader ?: return
@@ -93,7 +92,6 @@ internal class TextReaderController(
             existingPageCount = state.textWebtoonHtmlPageCount,
             isSessionActive = { isSessionActive(activeReader, activeComic.id) },
             loadPage = loadPage,
-            buildDocument = buildDocument,
             publish = publish
         )
     }
