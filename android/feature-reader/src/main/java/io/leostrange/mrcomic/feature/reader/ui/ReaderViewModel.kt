@@ -186,7 +186,10 @@ class ReaderViewModel @Inject constructor(
                 format = _uiState.value.comic?.format ?: ComicFormat.UNKNOWN,
                 reader = it
             ) }
-    private val textWebtoonSessionController = TextWebtoonSessionController(viewModelScope)
+    private val textWebtoonSessionController = TextWebtoonSessionController(
+        scope = viewModelScope,
+        builder = WebtoonDocumentBuilder(TextWebtoonDocumentBuilder::build)
+    )
     private val textReaderOrchestrator = TextReaderOrchestrator(
         TextReaderController(textWebtoonSessionController)
     )
@@ -697,7 +700,6 @@ class ReaderViewModel @Inject constructor(
                 formatReader === activeReader && _uiState.value.comic?.id == comicId
             },
             loadPage = { activeReader, pageIndex -> getOrLoadHtmlPage(activeReader, pageIndex) },
-            buildDocument = TextWebtoonDocumentBuilder::build,
             publish = { document, loadedCount ->
                 _uiState.update { current ->
                     if (current.comic?.id != comic.id || formatReader !== reader) {

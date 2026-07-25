@@ -17,9 +17,14 @@ internal data class CachedHtmlPage(
 
 /**
  * Loads and publishes the stitched HTML document used by [ReaderContainerKind.TEXT_WEBTOON].
+ *
+ * @param scope coroutine scope for the loading job.
+ * @param builder strategy for building the HTML document from loaded pages.
+ * @param batchSize number of pages to accumulate before publishing a partial document.
  */
 internal class TextWebtoonSessionController(
     private val scope: CoroutineScope,
+    private val builder: WebtoonDocumentBuilder,
     private val batchSize: Int = TEXT_WEBTOON_DOCUMENT_BATCH_SIZE
 ) {
     private var loadJob: Job? = null
@@ -38,7 +43,6 @@ internal class TextWebtoonSessionController(
         existingPageCount: Int,
         isSessionActive: () -> Boolean,
         loadPage: suspend (FormatReader, Int) -> CachedHtmlPage?,
-        buildDocument: (List<CachedHtmlPage>) -> TextWebtoonCachedDocument,
         publish: (TextWebtoonCachedDocument, Int) -> Unit
     ) {
         if (!readerRendersHtmlContent || totalPages <= 0) return
@@ -51,7 +55,7 @@ internal class TextWebtoonSessionController(
                 if (loadedPages.isEmpty()) return
                 if (!force && loadedPages.size % batchSize != 0) return
                 if (!isSessionActive()) return
-                publish(buildDocument(loadedPages), loadedPages.size)
+                publish(builder.build(loadedPages), loadedPages.size)
             }
 
             for (pageIndex in 0 until totalPages) {
