@@ -198,6 +198,11 @@ class ReaderViewModel @Inject constructor(
         readerPreferences = readerPreferences,
         analyticsTracker = analyticsTracker
     )
+    private val highlightController = ReaderHighlightController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        textHighlightRepository = textHighlightRepository
+    )
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
     private var activeBookSession: BookSession? = null
@@ -1017,68 +1022,12 @@ class ReaderViewModel @Inject constructor(
         translationController.explainSelectedText(selectedText)
     }
 
-    fun highlightSelectedText(selectedText: String) {
-        val normalized = selectedText.trim().replace(Regex("\\s+"), " ")
-        if (normalized.isBlank()) return
-        _uiState.update { it.copy(pendingHighlightText = normalized) }
-    }
-
-    fun confirmHighlight(colorArgb: Int) {
-        val text = _uiState.value.pendingHighlightText ?: return
-        _uiState.update { it.copy(pendingHighlightText = null) }
-        val comic = _uiState.value.comic ?: return
-        val page = _uiState.value.currentPage
-        viewModelScope.launch {
-            runCatching {
-                val html = _uiState.value.currentHtmlContent.orEmpty()
-                val bodyText = html.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ")
-                val startOffset = bodyText.indexOf(text).coerceAtLeast(0)
-                val endOffset = startOffset + text.length
-                textHighlightRepository.saveHighlight(
-                    io.leostrange.mrcomic.core.data.db.entity.TextHighlight(
-                        comicId = comic.id,
-                        comicTitle = comic.title ?: "",
-                        page = page,
-                        text = text,
-                        startOffset = startOffset,
-                        endOffset = endOffset,
-                        colorArgb = colorArgb
-                    )
-                )
-                loadHighlightsForCurrentPage()
-            }.onFailure { e ->
-                Log.w("ReaderVM", "Failed to save highlight", e)
-            }
-        }
-    }
-
-    fun dismissHighlight() {
-        _uiState.update { it.copy(pendingHighlightText = null) }
-    }
-
-    fun deleteHighlight(id: String) {
-        viewModelScope.launch {
-            runCatching {
-                textHighlightRepository.deleteHighlight(id)
-                loadHighlightsForCurrentPage()
-            }
-        }
-    }
-
-    private fun loadHighlightsForCurrentPage() {
-        val comicId = _uiState.value.comic?.id ?: return
-        val page = _uiState.value.currentPage
-        viewModelScope.launch {
-            textHighlightRepository.highlightsForPage(comicId, page).collect { highlights ->
-                _uiState.update { it.copy(pageHighlights = highlights) }
-            }
-        }
-    }
-
-    fun injectHighlightsJs(): String {
-        val highlights = _uiState.value.pageHighlights
-        return HighlightJsGenerator.generate(highlights)
-    }
+    fun highlightSelectedText(selectedText: String) = highlightController.highlightSelectedText(selectedText)
+    fun confirmHighlight(colorArgb: Int) = highlightController.confirmHighlight(colorArgb)
+    fun dismissHighlight() = highlightController.dismissHighlight()
+    fun deleteHighlight(id: String) = highlightController.deleteHighlight(id)
+    private fun loadHighlightsForCurrentPage() = highlightController.loadHighlightsForCurrentPage()
+    fun injectHighlightsJs(): String = highlightController.injectHighlightsJs()
 
     /**
      * Compare translations from multiple engines side by side.
