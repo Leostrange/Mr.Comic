@@ -8,7 +8,10 @@ plugins {
 android {
     namespace = "io.leostrange.mrcomic.feature.reader"
     compileSdk = libs.versions.compileSdk.get().toInt()
-    defaultConfig { minSdk = libs.versions.minSdk.get().toInt() }
+    defaultConfig {
+        minSdk = libs.versions.minSdk.get().toInt()
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
     buildFeatures { compose = true }
@@ -42,4 +45,16 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     testImplementation(libs.test.junit)
     testImplementation(libs.test.kotlinx.coroutines)
+
+    // Instrumented test dependencies (Phase 0: Test Harness)
+    androidTestImplementation(libs.test.androidx.junit)
+    androidTestImplementation(libs.test.androidx.runner)
+    androidTestImplementation(libs.test.espresso.core)
+    androidTestImplementation("androidx.test.espresso:espresso-web:3.6.1")
+    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation(libs.kotlinx.coroutines.android)
+    androidTestImplementation("org.json:json:20240303")
+    androidTestImplementation(libs.test.junit)
+    androidTestImplementation(project(":engine-formats"))
 }
