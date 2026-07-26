@@ -4,8 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
-import io.leostrange.mrcomic.core.data.db.EpubManifestCacheDao
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheDao
+import io.leostrange.mrcomic.engine.api.EpubCacheStore
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
@@ -40,8 +39,8 @@ class ArchiveDelegatingFormatReader(
     private val archiveFormat: ComicFormat,
     private val deviceProfile: RenderDeviceProfile,
     private val bitmapAllocator: BitmapAllocator,
-    private val epubStructureCacheDao: EpubStructureCacheDao,
-    private val epubManifestCacheDao: EpubManifestCacheDao
+    private val epubStructureCache: EpubCacheStore? = null,
+    private val epubManifestCache: EpubCacheStore? = null
 ) : FormatReader {
 
     private val delegate: FormatReader by lazy { createDelegate() }
@@ -126,7 +125,7 @@ class ArchiveDelegatingFormatReader(
     }
 
     private fun createTextDelegate(file: File, format: ComicFormat): FormatReader = when (format) {
-        ComicFormat.EPUB -> EpubFormatReader(context, file.absolutePath, epubStructureCacheDao, epubManifestCacheDao)
+        ComicFormat.EPUB -> EpubFormatReader(context, file.absolutePath, epubStructureCache, epubManifestCache)
         ComicFormat.FB2 -> Fb2FormatReader(context, file.absolutePath)
         ComicFormat.TXT,
         ComicFormat.HTML,

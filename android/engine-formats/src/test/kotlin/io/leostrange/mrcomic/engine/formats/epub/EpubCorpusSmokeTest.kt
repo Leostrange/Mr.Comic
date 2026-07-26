@@ -235,7 +235,7 @@ class EpubCorpusSmokeTest {
         assumeTrue("EPUB sample not available", sample.exists())
 
         val cacheDao = FakeEpubStructureCacheDao()
-        val firstReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath, cacheDao)
+        val firstReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
             assertTrue(firstReader.getPageCount() > 5)
             assertTrue("Expected first EPUB open to persist cache", cacheDao.upsertCount >= 1)
@@ -245,7 +245,7 @@ class EpubCorpusSmokeTest {
         }
 
         val upsertsAfterFirstOpen = cacheDao.upsertCount
-        val secondReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath, cacheDao)
+        val secondReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
         try {
             assertTrue(secondReader.getPageCount() > 5)
             assertTrue("Expected second EPUB open to consult cache", cacheDao.getCount >= 2)
