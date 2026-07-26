@@ -39,12 +39,12 @@ internal class ReaderSettingsController(
     private val viewModelScope: CoroutineScope,
     private val readerPreferences: UserPreferences,
     private val dataStore: androidx.datastore.core.DataStore<Preferences>
-) {
+) : ReaderSettingsActions {
     private var brightnessJob: Job? = null
 
     // ── Typography ────────────────────────────────────────────────────────
 
-    fun setTextFontSize(size: Int) {
+    override fun setTextFontSize(size: Int) {
         _uiState.update { ReaderStylePresetReducer.setFontSize(it, size) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -52,7 +52,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextColorScheme(scheme: String) {
+    override fun setTextColorScheme(scheme: String) {
         _uiState.update { ReaderStylePresetReducer.setColorScheme(it, scheme) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -60,7 +60,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextCustomTextColor(color: Long?) {
+    override fun setTextCustomTextColor(color: Long?) {
         _uiState.update { ReaderStylePresetReducer.setCustomTextColor(it, color) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -68,7 +68,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextCustomBackgroundColor(color: Long?) {
+    override fun setTextCustomBackgroundColor(color: Long?) {
         _uiState.update { ReaderStylePresetReducer.setCustomBackgroundColor(it, color) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -76,7 +76,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextCustomAccentColor(color: Long?) {
+    override fun setTextCustomAccentColor(color: Long?) {
         _uiState.update { ReaderStylePresetReducer.setCustomAccentColor(it, color) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -84,7 +84,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextFontFamily(family: String) {
+    override fun setTextFontFamily(family: String) {
         _uiState.update { ReaderStylePresetReducer.setFontFamily(it, family) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -92,7 +92,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextLineHeight(height: Float) {
+    override fun setTextLineHeight(height: Float) {
         _uiState.update { ReaderStylePresetReducer.setLineHeight(it, height) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -100,7 +100,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextLetterSpacing(spacing: Float) {
+    override fun setTextLetterSpacing(spacing: Float) {
         _uiState.update { ReaderStylePresetReducer.setLetterSpacing(it, spacing) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -108,7 +108,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextWordSpacing(spacing: Float) {
+    override fun setTextWordSpacing(spacing: Float) {
         _uiState.update { ReaderStylePresetReducer.setWordSpacing(it, spacing) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -116,7 +116,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextParagraphSpacing(spacing: Float) {
+    override fun setTextParagraphSpacing(spacing: Float) {
         _uiState.update { ReaderStylePresetReducer.setParagraphSpacing(it, spacing) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -124,7 +124,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextAlignment(align: String) {
+    override fun setTextAlignment(align: String) {
         _uiState.update { ReaderStylePresetReducer.setAlignment(it, align) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -132,7 +132,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTextBold(bold: Boolean) {
+    override fun setTextBold(bold: Boolean) {
         _uiState.update { ReaderStylePresetReducer.setBold(it, bold) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
@@ -140,7 +140,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun resetTextSettings() {
+    override fun resetTextSettings() {
         _uiState.update { ReaderStylePresetReducer.resetTextSettings(it) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name) }
         viewModelScope.launch {
@@ -161,12 +161,12 @@ internal class ReaderSettingsController(
 
     // ── Style presets ─────────────────────────────────────────────────────
 
-    fun markReaderPresetCustom() {
+    override fun markReaderPresetCustom() {
         _uiState.update { ReaderStylePresetReducer.markCustom(it) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name) }
     }
 
-    fun applyReadingPreset(preset: ReadingPreset) {
+    override fun applyReadingPreset(preset: ReadingPreset) {
         if (preset == ReadingPreset.CUSTOM) {
             markReaderPresetCustom()
             return
@@ -191,7 +191,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun saveReaderStylePreset(slot: Int) {
+    override fun saveReaderStylePreset(slot: Int) {
         val normalizedSlot = slot.coerceIn(1, 3)
         val existingEntry = ReaderStylePresetEntries.entryAtSlot(
             _uiState.value.readerStylePresetEntries,
@@ -205,7 +205,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun saveCurrentReaderStylePreset(displayName: String? = null) {
+    override fun saveCurrentReaderStylePreset(displayName: String?) {
         val snapshot = _uiState.value.toReaderStylePresetSnapshot(
             displayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
                 ?: localizedReaderStyleFallbackName(_uiState.value.readerStylePresetEntries.size + 1)
@@ -220,7 +220,7 @@ internal class ReaderSettingsController(
         updateReaderStylePresetEntries(updatedEntries)
     }
 
-    fun overwriteReaderStylePreset(id: String) {
+    override fun overwriteReaderStylePreset(id: String) {
         val currentEntries = _uiState.value.readerStylePresetEntries
         val existing = currentEntries.firstOrNull { it.id == id } ?: return
         val updatedEntries = ReaderStylePresetEntries.overwrite(
@@ -233,13 +233,13 @@ internal class ReaderSettingsController(
         updateReaderStylePresetEntries(updatedEntries)
     }
 
-    fun applyReaderStylePreset(slot: Int) {
+    override fun applyReaderStylePreset(slot: Int) {
         val normalizedSlot = slot.coerceIn(1, 3)
         ReaderStylePresetEntries.entryAtSlot(_uiState.value.readerStylePresetEntries, normalizedSlot)
             ?.let { applyReaderStylePreset(it.id) }
     }
 
-    fun applyReaderStylePreset(id: String) {
+    override fun applyReaderStylePreset(id: String) {
         val snapshot = _uiState.value.readerStylePresetEntries
             .firstOrNull { it.id == id }
             ?.snapshot
@@ -247,19 +247,19 @@ internal class ReaderSettingsController(
         applyReaderStylePresetSnapshot(snapshot)
     }
 
-    fun clearReaderStylePreset(slot: Int) {
+    override fun clearReaderStylePreset(slot: Int) {
         val normalizedSlot = slot.coerceIn(1, 3)
         ReaderStylePresetEntries.entryAtSlot(_uiState.value.readerStylePresetEntries, normalizedSlot)
             ?.let { deleteReaderStylePreset(it.id) }
     }
 
-    fun deleteReaderStylePreset(id: String) {
+    override fun deleteReaderStylePreset(id: String) {
         updateReaderStylePresetEntries(
             ReaderStylePresetEntries.delete(_uiState.value.readerStylePresetEntries, id)
         )
     }
 
-    fun renameReaderStylePreset(id: String, displayName: String) {
+    override fun renameReaderStylePreset(id: String, displayName: String) {
         val updatedEntries = ReaderStylePresetEntries.rename(
             entries = _uiState.value.readerStylePresetEntries,
             id = id,
@@ -268,7 +268,7 @@ internal class ReaderSettingsController(
         updateReaderStylePresetEntries(updatedEntries)
     }
 
-    fun importReaderStyleFromJson(rawJson: String): String? {
+    override fun importReaderStyleFromJson(rawJson: String): String? {
         val snapshot = parseReaderStylePreset(rawJson) ?: return null
         applyReaderStylePresetSnapshot(snapshot)
         return snapshot.displayName?.takeIf { it.isNotBlank() }
@@ -320,7 +320,7 @@ internal class ReaderSettingsController(
 
     // ── Reader chrome ─────────────────────────────────────────────────────
 
-    fun setBrightness(value: Float) {
+    override fun setBrightness(value: Float) {
         markReaderPresetCustom()
         val safe = if (value <= 0.01f) -1f else value.coerceIn(0.05f, 1f)
         _uiState.update { it.copy(brightness = safe) }
@@ -331,18 +331,18 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setKeepScreenOn(enabled: Boolean) {
+    override fun setKeepScreenOn(enabled: Boolean) {
         _uiState.update { it.copy(keepScreenOn = enabled) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_KEEP_SCREEN_ON, enabled)
         }
     }
 
-    fun setAutoScrollSpeed(speed: Float) {
+    override fun setAutoScrollSpeed(speed: Float) {
         _uiState.update { it.copy(autoScrollSpeed = speed.coerceIn(0f, 500f)) }
     }
 
-    fun cycleAutoScrollSpeed() {
+    override fun cycleAutoScrollSpeed() {
         val current = _uiState.value.autoScrollSpeed
         val next = when {
             current <= 0f -> 30f
@@ -353,7 +353,7 @@ internal class ReaderSettingsController(
         setAutoScrollSpeed(next)
     }
 
-    fun setScreenTimeoutMode(mode: String) {
+    override fun setScreenTimeoutMode(mode: String) {
         val resolved = ReaderScreenTimeoutMode.fromStored(mode)
         _uiState.update { it.copy(screenTimeoutMode = resolved.storedValue) }
         viewModelScope.launch {
@@ -361,7 +361,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setImmersiveMode(enabled: Boolean) {
+    override fun setImmersiveMode(enabled: Boolean) {
         markReaderPresetCustom()
         _uiState.update { it.copy(immersiveMode = enabled) }
         viewModelScope.launch {
@@ -369,14 +369,14 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setLandscapeSpreadEnabled(enabled: Boolean) {
+    override fun setLandscapeSpreadEnabled(enabled: Boolean) {
         _uiState.update { it.copy(landscapeSpreadEnabled = enabled) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, enabled)
         }
     }
 
-    fun setPreloadPages(count: Int) {
+    override fun setPreloadPages(count: Int) {
         val safe = count.coerceIn(2, 8)
         _uiState.update { it.copy(preloadPages = safe) }
         viewModelScope.launch {
@@ -384,7 +384,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setPageAnimation(animation: String) {
+    override fun setPageAnimation(animation: String) {
         markReaderPresetCustom()
         _uiState.update { it.copy(readerPageAnimation = animation) }
         viewModelScope.launch {
@@ -392,7 +392,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setVolumeKeysPagingEnabled(enabled: Boolean) {
+    override fun setVolumeKeysPagingEnabled(enabled: Boolean) {
         _uiState.update { it.copy(volumeKeysPagingEnabled = enabled) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_VOLUME_KEYS_PAGING, enabled)
@@ -401,7 +401,7 @@ internal class ReaderSettingsController(
 
     // ── Tap zones ─────────────────────────────────────────────────────────
 
-    fun setTapZoneMode(value: String) {
+    override fun setTapZoneMode(value: String) {
         val resolved = ReaderTapZoneMode.fromStored(value)
         _uiState.update { it.copy(tapZoneMode = resolved.name) }
         viewModelScope.launch {
@@ -409,14 +409,14 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setTapZoneSwap(enabled: Boolean) {
+    override fun setTapZoneSwap(enabled: Boolean) {
         _uiState.update { it.copy(tapZoneSwap = enabled) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_TAP_ZONE_SWAP, enabled)
         }
     }
 
-    fun setTapZoneAction(position: String, action: String) {
+    override fun setTapZoneAction(position: String, action: String) {
         val normalizedActionName = normalizeTapZoneActionName(action)
         val normalizedPosition = position.uppercase()
         _uiState.update {
@@ -437,7 +437,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun toggleTapZoneDirectionShortcut() {
+    override fun toggleTapZoneDirectionShortcut() {
         val state = _uiState.value
         val mode = ReaderTapZoneMode.fromStored(state.tapZoneMode)
         if (mode == ReaderTapZoneMode.CUSTOM) {
@@ -459,7 +459,7 @@ internal class ReaderSettingsController(
 
     // ── Header/footer ─────────────────────────────────────────────────────
 
-    fun setHeaderSlot(position: String, slot: String) {
+    override fun setHeaderSlot(position: String, slot: String) {
         val normalizedSlot = ReaderInfoSlot.fromStored(slot).name
         val normalizedPosition = position.uppercase()
         _uiState.update {
@@ -477,7 +477,7 @@ internal class ReaderSettingsController(
         viewModelScope.launch { readerPreferences.set(key, normalizedSlot) }
     }
 
-    fun setFooterSlot(position: String, slot: String) {
+    override fun setFooterSlot(position: String, slot: String) {
         val normalizedSlot = ReaderInfoSlot.fromStored(slot).name
         val normalizedPosition = position.uppercase()
         _uiState.update {
@@ -495,25 +495,25 @@ internal class ReaderSettingsController(
         viewModelScope.launch { readerPreferences.set(key, normalizedSlot) }
     }
 
-    fun setHeaderFooterFontSize(size: Int) {
+    override fun setHeaderFooterFontSize(size: Int) {
         val safe = size.coerceIn(10, 20)
         _uiState.update { it.copy(headerFooterFontSize = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, safe) }
     }
 
-    fun setHeaderFooterVerticalPadding(padding: Int) {
+    override fun setHeaderFooterVerticalPadding(padding: Int) {
         val safe = padding.coerceIn(4, 20)
         _uiState.update { it.copy(headerFooterVerticalPadding = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, safe) }
     }
 
-    fun setHeaderFooterLeftPadding(padding: Int) {
+    override fun setHeaderFooterLeftPadding(padding: Int) {
         val safe = padding.coerceIn(8, 32)
         _uiState.update { it.copy(headerFooterLeftPadding = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, safe) }
     }
 
-    fun setHeaderFooterRightPadding(padding: Int) {
+    override fun setHeaderFooterRightPadding(padding: Int) {
         val safe = padding.coerceIn(8, 32)
         _uiState.update { it.copy(headerFooterRightPadding = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, safe) }
@@ -521,24 +521,24 @@ internal class ReaderSettingsController(
 
     // ── Chrome visibility ─────────────────────────────────────────────────
 
-    fun setChromeAutoHideEnabled(enabled: Boolean) {
+    override fun setChromeAutoHideEnabled(enabled: Boolean) {
         _uiState.update { it.copy(chromeAutoHideEnabled = enabled) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_AUTO_HIDE, enabled) }
     }
 
-    fun setTopToolbarOpacity(value: Float) {
+    override fun setTopToolbarOpacity(value: Float) {
         val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(topToolbarOpacity = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe) }
     }
 
-    fun setBottomToolbarOpacity(value: Float) {
+    override fun setBottomToolbarOpacity(value: Float) {
         val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(bottomToolbarOpacity = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, safe) }
     }
 
-    fun setToolbarOpacity(value: Float) {
+    override fun setToolbarOpacity(value: Float) {
         val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(topToolbarOpacity = safe, bottomToolbarOpacity = safe) }
         viewModelScope.launch {
@@ -547,7 +547,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun setToolbarBlur(value: Float) {
+    override fun setToolbarBlur(value: Float) {
         val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(toolbarBlur = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TOOLBAR_BLUR, safe) }
@@ -555,19 +555,19 @@ internal class ReaderSettingsController(
 
     // ── Image settings ────────────────────────────────────────────────────
 
-    fun setImageScaleMode(value: String) {
+    override fun setImageScaleMode(value: String) {
         val resolved = ReaderImageScaleMode.fromStored(value)
         _uiState.update { it.copy(imageScaleMode = resolved.storedValue) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_IMAGE_SCALE_MODE, resolved.storedValue) }
     }
 
-    fun setImageMarginCropHorizontal(value: Float) {
+    override fun setImageMarginCropHorizontal(value: Float) {
         val safe = value.coerceIn(0f, 0.22f)
         _uiState.update { it.copy(imageMarginCropHorizontal = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, safe) }
     }
 
-    fun setImageMarginCropVertical(value: Float) {
+    override fun setImageMarginCropVertical(value: Float) {
         val safe = value.coerceIn(0f, 0.22f)
         _uiState.update { it.copy(imageMarginCropVertical = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, safe) }
@@ -575,36 +575,36 @@ internal class ReaderSettingsController(
 
     // ── TTS settings ──────────────────────────────────────────────────────
 
-    fun setTtsSpeed(value: Float) {
+    override fun setTtsSpeed(value: Float) {
         val safe = value.coerceIn(0.5f, 2.0f)
         _uiState.update { it.copy(ttsSpeed = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TTS_SPEED, safe) }
     }
 
-    fun setTtsProvider(value: String) {
+    override fun setTtsProvider(value: String) {
         val resolved = ReaderTtsProviderType.fromStored(value)
         _uiState.update { it.copy(ttsProvider = resolved.storedValue) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TTS_PROVIDER, resolved.storedValue) }
     }
 
-    fun setTtsPitch(value: Float) {
+    override fun setTtsPitch(value: Float) {
         val safe = value.coerceIn(0.5f, 2.0f)
         _uiState.update { it.copy(ttsPitch = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TTS_PITCH, safe) }
     }
 
-    fun setTtsVolume(value: Float) {
+    override fun setTtsVolume(value: Float) {
         val safe = value.coerceIn(0f, 1.0f)
         _uiState.update { it.copy(ttsVolume = safe) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TTS_VOLUME, safe) }
     }
 
-    fun setTtsVoiceName(value: String?) {
+    override fun setTtsVoiceName(value: String?) {
         _uiState.update { it.copy(ttsVoiceName = value?.takeIf(String::isNotBlank)) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TTS_VOICE_NAME, value.orEmpty()) }
     }
 
-    fun setTtsSleepTimerMode(value: String) {
+    override fun setTtsSleepTimerMode(value: String) {
         val resolved = ReaderTtsSleepTimerMode.fromStored(value)
         _uiState.update { it.copy(ttsSleepTimerMode = resolved.storedValue) }
         viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE, resolved.storedValue) }
@@ -612,7 +612,7 @@ internal class ReaderSettingsController(
 
     // ── Chrome icon order ─────────────────────────────────────────────────
 
-    fun setChromeIconVisible(icon: String, visible: Boolean) {
+    override fun setChromeIconVisible(icon: String, visible: Boolean) {
         when (ReaderChromeButton.fromStored(icon) ?: return) {
             ReaderChromeButton.TOC -> {
                 _uiState.update { it.copy(chromeShowTocIcon = visible) }
@@ -642,7 +642,7 @@ internal class ReaderSettingsController(
         }
     }
 
-    fun moveChromeIcon(icon: String, delta: Int) {
+    override fun moveChromeIcon(icon: String, delta: Int) {
         if (delta == 0) return
         if (ReaderChromeButton.fromStored(icon) == ReaderChromeButton.STYLE) return
         val updatedOrder = ReaderChromeButton.move(_uiState.value.chromeIconOrder, icon, delta)
