@@ -12,10 +12,8 @@ import io.leostrange.mrcomic.engine.formats.base.log.safeLogW
 import io.leostrange.mrcomic.engine.formats.base.charset.detectBomCharset
 import io.leostrange.mrcomic.engine.formats.base.charset.hasUtf8Bom
 import io.leostrange.mrcomic.engine.formats.base.charset.isStrictUtf8
-import io.leostrange.mrcomic.core.data.db.EpubManifestCacheDao
-import io.leostrange.mrcomic.core.data.db.EpubManifestCacheEntity
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheDao
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheEntity
+import io.leostrange.mrcomic.engine.api.EpubCacheEntry
+import io.leostrange.mrcomic.engine.api.EpubCacheStore
 import com.google.gson.Gson
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.FormatReaderWebResource
@@ -68,8 +66,8 @@ private inline fun <T> perfPhase(label: String, block: () -> T): T {
 class EpubFormatReader(
     private val context: Context,
     private val path: String,
-    private val structureCacheDao: EpubStructureCacheDao? = null,
-    private val manifestCacheDao: EpubManifestCacheDao? = null
+    private val structureCache: EpubCacheStore? = null,
+    private val manifestCache: EpubCacheStore? = null
 ) : FormatReader, ReflowableTextFormatReader {
 
     override fun rendersHtmlContent(): Boolean = true
@@ -737,134 +735,17 @@ class EpubFormatReader(
         )
     }
 
-    private fun loadManifestFromCache(cacheKey: EpubCacheKey?): ManifestBlueprint? {
-        if (cacheKey == null) return null
-        val cacheDao = manifestCacheDao ?: return null
-        val cachedEntry = runCatching {
-            runBlocking { cacheDao.getByPath(cacheKey.filePath) }
-        }.getOrElse { error ->
-            safeLogW(TAG, "Failed to load EPUB manifest cache", error)
-            null
-        } ?: return null
-        val isContentUri = cacheKey.filePath.startsWith("content://")
-        if (!isContentUri && (cachedEntry.fileSize != cacheKey.fileSize || cachedEntry.lastModified != cacheKey.lastModified)) {
-            return null
-        }
-        return deserializeManifestBlueprint(cachedEntry.payloadJson)
-    }
+    private fun loadManifestFromCache(cacheKey: EpubCacheKey?): ManifestBlueprint? =
+        EpubCacheSerializer.loadManifestFromCache(cacheKey, manifestCache)
 
-    private fun storeManifestInCache(cacheKey: EpubCacheKey?, blueprint: ManifestBlueprint) {
-        if (cacheKey == null || blueprint.manifest.isEmpty() || blueprint.spine.isEmpty()) return
-        val cacheDao = manifestCacheDao ?: return
-        val payloadJson = runCatching { serializeManifestBlueprint(blueprint) }.getOrElse { error ->
-            safeLogW(TAG, "Failed to serialize EPUB manifest cache", error)
-            return
-        }
-        runCatching {
-            runBlocking {
-                cacheDao.upsert(
-                    EpubManifestCacheEntity(
-                        filePath = cacheKey.filePath,
-                        fileSize = cacheKey.fileSize,
-                        lastModified = cacheKey.lastModified,
-                        payloadJson = payloadJson,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                )
-                cacheDao.deleteOlderThan(System.currentTimeMillis() - EPUB_STRUCTURE_CACHE_MAX_AGE_MS)
-            }
-        }.onFailure { error ->
-            safeLogW(TAG, "Failed to persist EPUB manifest cache", error)
-        }
-    }
+    private fun storeManifestInCache(cacheKey: EpubCacheKey?, blueprint: ManifestBlueprint) =
+        EpubCacheSerializer.storeManifestInCache(cacheKey, blueprint, manifestCache)
 
-    private fun loadParsedFromCache(cacheKey: EpubCacheKey?): ParsedEpub? {
-        if (cacheKey == null) return null
-        val cacheDao = structureCacheDao ?: return null
-        val cachedEntry = runCatching {
-            runBlocking { cacheDao.getByPath(cacheKey.filePath) }
-        }.getOrElse { error ->
-            safeLogW(TAG, "Failed to load EPUB structure cache", error)
-            null
-        } ?: return null
-        if (cachedEntry.fileSize != cacheKey.fileSize || cachedEntry.lastModified != cacheKey.lastModified) {
-            return null
-        }
-        return deserializeParsedEpub(cachedEntry.payloadJson)
-    }
+    private fun loadParsedFromCache(cacheKey: EpubCacheKey?): ParsedEpub? =
+        EpubCacheSerializer.loadParsedFromCache(cacheKey, structureCache)
 
-    private fun storeParsedInCache(cacheKey: EpubCacheKey?, parsed: ParsedEpub) {
-        if (cacheKey == null || parsed.pages.isEmpty()) return
-        val cacheDao = structureCacheDao ?: return
-        val payloadJson = runCatching { serializeParsedEpub(parsed) }.getOrElse { error ->
-            safeLogW(TAG, "Failed to serialize EPUB structure cache", error)
-            return
-        }
-        runCatching {
-            runBlocking {
-                cacheDao.upsert(
-                    EpubStructureCacheEntity(
-                        filePath = cacheKey.filePath,
-                        fileSize = cacheKey.fileSize,
-                        lastModified = cacheKey.lastModified,
-                        payloadJson = payloadJson,
-                        updatedAt = System.currentTimeMillis()
-                    )
-                )
-                cacheDao.deleteOlderThan(System.currentTimeMillis() - EPUB_STRUCTURE_CACHE_MAX_AGE_MS)
-            }
-        }.onFailure { error ->
-            safeLogW(TAG, "Failed to persist EPUB structure cache", error)
-        }
-    }
-
-    private fun serializeManifestBlueprint(blueprint: ManifestBlueprint): String = CACHE_GSON.toJson(
-        CachedManifestPayload(
-            version = EPUB_MANIFEST_CACHE_VERSION,
-            manifest = blueprint.manifest,
-            spine = blueprint.spine,
-            ncxId = blueprint.ncxId,
-            opfDir = blueprint.opfDir,
-            flavor = blueprint.flavor,
-            repairFrontMatter = blueprint.repairFrontMatter
-        )
-    )
-
-    private fun deserializeManifestBlueprint(payloadJson: String): ManifestBlueprint? = runCatching {
-        val payload = CACHE_GSON.fromJson(payloadJson, CachedManifestPayload::class.java)
-        if (payload.version != EPUB_MANIFEST_CACHE_VERSION) return@runCatching null
-        if (payload.manifest.isEmpty() || payload.spine.isEmpty()) return@runCatching null
-        ManifestBlueprint(
-            manifest = payload.manifest,
-            spine = payload.spine,
-            ncxId = payload.ncxId,
-            opfDir = payload.opfDir,
-            flavor = payload.flavor.ifBlank { EPUB_FLAVOR_STANDARD },
-            repairFrontMatter = payload.repairFrontMatter
-        )
-    }.getOrElse { error ->
-        safeLogW(TAG, "Failed to deserialize EPUB manifest cache", error)
-        null
-    }
-
-    private fun serializeParsedEpub(parsed: ParsedEpub): String = CACHE_GSON.toJson(
-        CachedParsedEpubPayload(
-            version = EPUB_STRUCTURE_CACHE_VERSION,
-            pages = parsed.pages.map { it.toCachedPage() }
-        )
-    )
-
-    private fun deserializeParsedEpub(payloadJson: String): ParsedEpub? = runCatching {
-        val payload = CACHE_GSON.fromJson(payloadJson, CachedParsedEpubPayload::class.java)
-        if (payload.version != EPUB_STRUCTURE_CACHE_VERSION) return@runCatching null
-        val pages = payload.pages.mapNotNull { it.toEpubPage() }
-        if (pages.isEmpty()) return@runCatching null
-
-        ParsedEpub(pages = pages)
-    }.getOrElse { error ->
-        safeLogW(TAG, "Failed to deserialize EPUB structure cache", error)
-        null
-    }
+    private fun storeParsedInCache(cacheKey: EpubCacheKey?, parsed: ParsedEpub) =
+        EpubCacheSerializer.storeParsedInCache(cacheKey, parsed, structureCache)
 
     // ── Page list construction ────────────────────────────────────────────────
 
