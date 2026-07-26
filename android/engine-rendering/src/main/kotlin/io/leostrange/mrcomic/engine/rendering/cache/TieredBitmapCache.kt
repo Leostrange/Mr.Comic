@@ -31,6 +31,20 @@ class TieredBitmapCache @Inject constructor(
     // L1: LRU memory cache
     private val memCache = object : LruCache<String, CacheEntry>(maxMemoryKb) {
         override fun sizeOf(key: String, value: CacheEntry) = value.sizeKb
+
+        override fun entryRemoved(
+            evicted: Boolean,
+            key: String,
+            oldValue: CacheEntry,
+            newValue: CacheEntry?
+        ) {
+            // Recycle evicted bitmaps to free native memory (especially on pre-O).
+            // Only recycle if the bitmap is not being reused (newValue != oldValue)
+            // and is not already recycled.
+            if (evicted && oldValue.bitmap != newValue?.bitmap && !oldValue.bitmap.isRecycled) {
+                oldValue.bitmap.recycle()
+            }
+        }
     }
 
     fun get(key: String): Bitmap? {
