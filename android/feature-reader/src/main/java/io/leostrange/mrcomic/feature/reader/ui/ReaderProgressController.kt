@@ -27,8 +27,11 @@ import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
 import io.leostrange.mrcomic.feature.reader.domain.progress.EpubSectionPageCountStore
+import io.leostrange.mrcomic.feature.reader.domain.session.ReaderClosedSessionMetrics
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
+import io.leostrange.mrcomic.feature.reader.domain.session.buildReaderClosedAnalyticsEvent
+import io.leostrange.mrcomic.feature.reader.domain.session.shouldRecordReaderSessionMinutes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -345,6 +348,45 @@ internal class ReaderProgressController(
         return EpubProgressCalculator.estimatedTotalPages(
             sectionPageCounts = sectionPageCounts.snapshot(),
             totalSections = totalBookSections
+        )
+    }
+
+    // ── Session lifecycle ──────────────────────────────────────────────────
+
+    fun emitReaderClosed(appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope) {
+        val state = _uiState.value
+        val currentComic = state.comic
+        val closedSession = readerSessionCoordinator.close(
+            currentComicId = currentComic?.id,
+            currentComicCompleted = currentComic?.isCompleted == true,
+            currentPage = state.currentPage
+        )
+            ?: return
+        val session = closedSession.session
+        val sessionMetrics = closedSession.metrics
+        val finishedAtMillis = System.currentTimeMillis()
+        if (shouldRecordReaderSessionMinutes(sessionMetrics)) {
+            appScope.launch {
+                runCatching {
+                    dailyReadingGoalStore.recordSessionMinutes(
+                        durationMillis = finishedAtMillis - session.startedAtMillis,
+                        nowMillis = finishedAtMillis
+                    )
+                }.onFailure { error ->
+                    Log.e("ReaderProgressController", "Failed to record reading session minutes", error)
+                }
+            }
+        }
+        analyticsTracker.track(
+            buildReaderClosedAnalyticsEvent(
+                comicId = session.comicId,
+                format = session.format,
+                totalPages = session.totalPages,
+                readingMode = state.readingMode.name,
+                startedAtMillis = session.startedAtMillis,
+                finishedAtMillis = finishedAtMillis,
+                sessionMetrics = sessionMetrics
+            )
         )
     }
 
