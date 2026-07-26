@@ -739,44 +739,64 @@ class EpubFormatReader(
         flavor: String = EPUB_FLAVOR_STANDARD,
         allowFallback: Boolean = true
     ): List<EpubPage> {
-        // ── First pass: build one EpubPage per spine item ────────────────────────
+        val isSpecialFlavor = flavor in setOf(EPUB_FLAVOR_FB2, EPUB_FLAVOR_CALIBRE, EPUB_FLAVOR_PUBLISHER)
+        val ctx = SpineBuildContext()
+
+        val __t0 = perfNowMs()
+        buildSpinePages(manifest, spine, opfDir, zip, forceWholeHtmlEntries, isSpecialFlavor, ctx)
+        if (isSpecialFlavor) {
+            return if (ctx.rawResult.isNotEmpty()) ctx.rawResult
+            else if (allowFallback) fallbackContentPages(zip) else emptyList()
+        }
+        runCatching { Log.i("EpubPerf", "  phase.spineLoop: ${perfNowMs() - __t0} ms (${ctx.rawResult.size} raw pages)") }
+
+        val __t1 = perfNowMs()
+        val normalized = normalizeNoteSections(ctx.rawResult, zip)
+        runCatching { Log.i("EpubPerf", "  phase.normalize: ${perfNowMs() - __t1} ms") }
+
+        val __t2 = perfNowMs()
+        val merged = mergeTinyPages(normalized, ctx, zip)
+        val filtered = filterZeroWeightPages(merged, ctx)
+        runCatching { Log.i("EpubPerf", "  phase.merge: ${perfNowMs() - __t2} ms") }
+
+        return if (filtered.isNotEmpty()) filtered else if (allowFallback) fallbackContentPages(zip) else emptyList()
+    }
+
+    /** Mutable state shared across [buildPagesFromOpf] phases. */
+    private class SpineBuildContext {
         val rawResult = mutableListOf<EpubPage>()
         val htmlVisibleChars = mutableMapOf<String, Int>()
         val imageOnlyHtmlEntries = mutableSetOf<String>()
         val keepWholeBodyEntries = mutableSetOf<String>()
         val protectedFrontMatterEntries = mutableSetOf<String>()
+    }
 
-        val isSpecialFlavor = flavor in setOf(EPUB_FLAVOR_FB2, EPUB_FLAVOR_CALIBRE, EPUB_FLAVOR_PUBLISHER)
-
-        val __t0 = perfNowMs()
-
+    /** Phase 1: iterate spine items and build raw [EpubPage] list. */
+    private fun buildSpinePages(
+        manifest: Map<String, String>,
+        spine: List<String>,
+        opfDir: String,
+        zip: ZipFile,
+        forceWholeHtmlEntries: Boolean,
+        isSpecialFlavor: Boolean,
+        ctx: SpineBuildContext
+    ) {
         spineLoop@ for (idref in spine) {
             val rawHref = manifest[idref] ?: continue
             val hrefDecoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
             val href = hrefDecoded.substringBefore('#')
             val entry = normalizePath(if (opfDir.isEmpty()) href else "$opfDir/$href")
-            val ext   = entry.substringAfterLast('.', "").lowercase()
+            val ext = entry.substringAfterLast('.', "").lowercase()
             val header = findHeader(zip, entry) ?: continue
             when {
                 ext in IMAGE_EXTENSIONS ->
-                    rawResult.add(EpubPage.Image(entry))
+                    ctx.rawResult.add(EpubPage.Image(entry))
                 ext in XHTML_EXTENSIONS -> {
                     val isProtectedFrontMatter = isProtectedFrontMatterEntry(entry)
-                    if (isProtectedFrontMatter) {
-                        protectedFrontMatterEntries += entry
-                    }
+                    if (isProtectedFrontMatter) ctx.protectedFrontMatterEntries += entry
                     val estimate = if (forceWholeHtmlEntries || isProtectedFrontMatter) {
-                        EpubContentEstimate(
-                            textCharCount = 1,
-                            imageTagCount = 0,
-                            chunkCount = 1,
-                            keepWholeBody = true
-                        )
+                        EpubContentEstimate(1, 0, 1, keepWholeBody = true)
                     } else {
-                        // Always inspect the XHTML body, even for tiny files. Some EPUBs keep
-                        // frontispiece/title/illustration wrappers very small (often just an
-                        // <svg>, <img>, <object> or a short redirect-like body). Treating files
-                        // <=150 bytes as empty dropped valid visual pages from the spine.
                         val __et = perfNowMs()
                         val e = estimateContent(zip, entry)
                         runCatching { Log.i("EpubPerf", "    estimateContent[$entry]: ${perfNowMs() - __et} ms (chunks=${e.chunkCount})") }
@@ -784,36 +804,25 @@ class EpubFormatReader(
                     }
                     val charCount = estimate.textCharCount
                     val imgCount = estimate.imageTagCount
-                    htmlVisibleChars[entry] = charCount.coerceAtLeast(if (imgCount > 0) 1 else 0)
-                    if (charCount == 0 && imgCount > 0) {
-                        imageOnlyHtmlEntries += entry
-                    }
-                    if (estimate.keepWholeBody) {
-                        keepWholeBodyEntries += entry
-                    }
-                    // Skip structurally-empty pages: no text AND no images.
-                    // Image-only wrapper pages (charCount=0, imgCount>0) are kept as a single page.
+                    ctx.htmlVisibleChars[entry] = charCount.coerceAtLeast(if (imgCount > 0) 1 else 0)
+                    if (charCount == 0 && imgCount > 0) ctx.imageOnlyHtmlEntries += entry
+                    if (estimate.keepWholeBody) ctx.keepWholeBodyEntries += entry
                     if (charCount == 0 && imgCount == 0) {
                         if (isSpecialFlavor && header.uncompressedSize > 0) {
-                             // Fallback for special flavors: always include if it has content
-                             rawResult.add(EpubPage.Html(entry, opfDir, 0, 1))
+                            ctx.rawResult.add(EpubPage.Html(entry, opfDir, 0, 1))
                         }
                         continue@spineLoop
                     }
-                    val chunks = estimate.chunkCount
-                    repeat(chunks) { i -> rawResult.add(EpubPage.Html(entry, opfDir, i, chunks)) }
+                    repeat(estimate.chunkCount) { i ->
+                        ctx.rawResult.add(EpubPage.Html(entry, opfDir, i, estimate.chunkCount))
+                    }
                 }
             }
         }
+    }
 
-        if (isSpecialFlavor) {
-            return if (rawResult.isNotEmpty()) rawResult else if (allowFallback) fallbackContentPages(zip) else emptyList()
-        }
-
-        runCatching { Log.i("EpubPerf", "  phase.spineLoop: ${perfNowMs() - __t0} ms (${rawResult.size} raw pages)") }
-        val __t1 = perfNowMs()
-
-        // ── Second pass: normalize note sections and only then merge tiny leftovers ──
+    /** Phase 2: consolidate adjacent note sections into synthetic pages. */
+    private fun normalizeNoteSections(rawResult: List<EpubPage>, zip: ZipFile): List<EpubPage> {
         val normalized = mutableListOf<EpubPage>()
         var i = 0
         while (i < rawResult.size) {
@@ -836,43 +845,47 @@ class EpubFormatReader(
             normalized.add(pg)
             i++
         }
+        return normalized
+    }
 
+    /** Phase 3: merge tiny adjacent pages into larger groups. */
+    private fun mergeTinyPages(
+        normalized: List<EpubPage>,
+        ctx: SpineBuildContext,
+        zip: ZipFile
+    ): List<EpubPage> {
         val merged = mutableListOf<EpubPage>()
         val mergeVisibleCharsLimit = CHUNK_CHARS_PER_PAGE.coerceAtMost(1_900)
-        runCatching { Log.i("EpubPerf", "  phase.normalize: ${perfNowMs() - __t1} ms") }
-        val __t2 = perfNowMs()
 
         fun isMergeSafePage(page: EpubPage.Html): Boolean {
             if (page.totalChunks != 1) return false
             if (isNotesTitlePage(zip, page.entry) || isFootnotePage(zip, page.entry)) return false
-            if (page.entry in imageOnlyHtmlEntries) return false
+            if (page.entry in ctx.imageOnlyHtmlEntries) return false
             if (isTitleOnlySpinePage(zip, page.entry)) return true
-            if (page.entry in keepWholeBodyEntries) return false
-            if (page.entry in protectedFrontMatterEntries) return false
+            if (page.entry in ctx.keepWholeBodyEntries) return false
+            if (page.entry in ctx.protectedFrontMatterEntries) return false
             return true
         }
 
         fun mergeWeight(page: EpubPage.Html): Int =
-            htmlVisibleChars[page.entry]?.coerceAtLeast(if (page.entry in imageOnlyHtmlEntries) 1 else 0)
-                ?: if (page.entry in imageOnlyHtmlEntries) 1 else 0
+            ctx.htmlVisibleChars[page.entry]?.coerceAtLeast(if (page.entry in ctx.imageOnlyHtmlEntries) 1 else 0)
+                ?: if (page.entry in ctx.imageOnlyHtmlEntries) 1 else 0
 
-        i = 0
+        var i = 0
         while (i < normalized.size) {
             val pg = normalized[i]
             if (pg is EpubPage.Html && isMergeSafePage(pg)) {
                 val startWeight = mergeWeight(pg)
-                val startIsImageOnly = pg.entry in imageOnlyHtmlEntries
+                val startIsImageOnly = pg.entry in ctx.imageOnlyHtmlEntries
                 val startIsTitleOnly = isTitleOnlySpinePage(zip, pg.entry)
                 val startIsTinyText = startWeight in 1 until mergeVisibleCharsLimit
                 if (!startIsImageOnly && !startIsTinyText && !startIsTitleOnly) {
-                    merged.add(pg)
-                    i++
-                    continue
+                    merged.add(pg); i++; continue
                 }
                 val mergeLimit = when {
                     startIsImageOnly -> 420
                     startIsTitleOnly -> CHUNK_CHARS_PER_PAGE * 2
-                    pg.entry in keepWholeBodyEntries -> 420
+                    pg.entry in ctx.keepWholeBodyEntries -> 420
                     else -> mergeVisibleCharsLimit
                 }
                 val extras = mutableListOf<String>()
@@ -883,48 +896,40 @@ class EpubFormatReader(
                     val nxt = normalized[j]
                     if (nxt !is EpubPage.Html || !isMergeSafePage(nxt)) break
                     val nxtWeight = mergeWeight(nxt)
-                    val nxtIsImageOnly = nxt.entry in imageOnlyHtmlEntries
+                    val nxtIsImageOnly = nxt.entry in ctx.imageOnlyHtmlEntries
                     val nxtIsTinyText = nxtWeight in 1 until mergeVisibleCharsLimit
                     val needsBodyFollowUp = startIsTitleOnly && !mergedBodyFollowUp
                     if (!nxtIsImageOnly && !nxtIsTinyText) {
                         if (!needsBodyFollowUp) break
                         if (combinedWeight + nxtWeight > mergeLimit) break
-                        extras.add(nxt.entry)
-                        combinedWeight += nxtWeight
-                        mergedBodyFollowUp = true
-                        j++
-                        break
+                        extras.add(nxt.entry); combinedWeight += nxtWeight; mergedBodyFollowUp = true
+                        j++; break
                     }
                     if (combinedWeight + nxtWeight > mergeLimit) break
                     if (extras.size >= 4) break
-                    extras.add(nxt.entry)
-                    combinedWeight += nxtWeight
-                    j++
+                    extras.add(nxt.entry); combinedWeight += nxtWeight; j++
                 }
                 merged.add(pg.copy(extraEntries = extras))
-                i = j
-                continue
+                i = j; continue
             }
-            merged.add(pg)
-            i++
+            merged.add(pg); i++
         }
+        return merged
+    }
 
-        val filtered = merged.filterNot { page ->
+    /** Phase 4: remove pages with zero visible weight. */
+    private fun filterZeroWeightPages(merged: List<EpubPage>, ctx: SpineBuildContext): List<EpubPage> =
+        merged.filterNot { page ->
             when (page) {
                 is EpubPage.Html -> {
-                    if (page.entry in imageOnlyHtmlEntries) return@filterNot false
-                    val primaryWeight = htmlVisibleChars[page.entry] ?: 0
-                    val extraWeight = page.extraEntries.sumOf { htmlVisibleChars[it] ?: 0 }
+                    if (page.entry in ctx.imageOnlyHtmlEntries) return@filterNot false
+                    val primaryWeight = ctx.htmlVisibleChars[page.entry] ?: 0
+                    val extraWeight = page.extraEntries.sumOf { ctx.htmlVisibleChars[it] ?: 0 }
                     primaryWeight + extraWeight <= 0
                 }
                 else -> false
             }
         }
-
-        runCatching { Log.i("EpubPerf", "  phase.merge: ${perfNowMs() - __t2} ms") }
-
-        return if (filtered.isNotEmpty()) filtered else if (allowFallback) fallbackContentPages(zip) else emptyList()
-    }
 
 
     private fun hasExpectedFb2FrontMatter(pages: List<EpubPage>): Boolean {
