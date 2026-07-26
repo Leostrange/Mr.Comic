@@ -158,7 +158,7 @@ class ReaderViewModel @Inject constructor(
     val readerProgressRecap: SharedFlow<ReaderProgressRecap> = _readerProgressRecap.asSharedFlow()
 
     private val readerPreferences = UserPreferences(context.dataStore)
-    private val settingsController = ReaderSettingsController(
+    val settingsController = ReaderSettingsController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
@@ -1332,61 +1332,6 @@ class ReaderViewModel @Inject constructor(
 
     private fun markReaderPresetCustom() = settingsController.markReaderPresetCustom()
 
-    fun applyReadingPreset(preset: ReadingPreset) = settingsController.applyReadingPreset(preset)
-
-    /** Updates font size for text books. */
-    fun setTextFontSize(size: Int) = settingsController.setTextFontSize(size)
-
-    /** Updates color scheme for text books: "DAY" | "SEPIA" | "NIGHT". */
-    fun setTextColorScheme(scheme: String) = settingsController.setTextColorScheme(scheme)
-
-    fun setTextCustomTextColor(color: Long?) = settingsController.setTextCustomTextColor(color)
-
-    fun setTextCustomBackgroundColor(color: Long?) = settingsController.setTextCustomBackgroundColor(color)
-
-    fun setTextCustomAccentColor(color: Long?) = settingsController.setTextCustomAccentColor(color)
-
-    /** Updates font family for text books. */
-    fun setTextFontFamily(family: String) = settingsController.setTextFontFamily(family)
-
-    /** Updates line height multiplier for text books. */
-    fun setTextLineHeight(height: Float) = settingsController.setTextLineHeight(height)
-
-    /** Updates letter spacing for text books in em units. */
-    fun setTextLetterSpacing(spacing: Float) = settingsController.setTextLetterSpacing(spacing)
-
-    /** Updates word spacing for text books in em units. */
-    fun setTextWordSpacing(spacing: Float) = settingsController.setTextWordSpacing(spacing)
-
-    /** Updates paragraph spacing for text books in em units. */
-    fun setTextParagraphSpacing(spacing: Float) = settingsController.setTextParagraphSpacing(spacing)
-
-    /** Updates text alignment for text books: "justify" | "left" | "right" | "center". */
-    fun setTextAlignment(align: String) = settingsController.setTextAlignment(align)
-
-    /** Toggles bold text for text books. */
-    fun setTextBold(bold: Boolean) = settingsController.setTextBold(bold)
-
-    fun saveReaderStylePreset(slot: Int) = settingsController.saveReaderStylePreset(slot)
-
-    fun saveCurrentReaderStylePreset(displayName: String? = null) = settingsController.saveCurrentReaderStylePreset(displayName)
-
-    fun overwriteReaderStylePreset(id: String) = settingsController.overwriteReaderStylePreset(id)
-
-    fun applyReaderStylePreset(slot: Int) = settingsController.applyReaderStylePreset(slot)
-
-    fun applyReaderStylePreset(id: String) = settingsController.applyReaderStylePreset(id)
-
-    fun clearReaderStylePreset(slot: Int) = settingsController.clearReaderStylePreset(slot)
-
-    fun deleteReaderStylePreset(id: String) = settingsController.deleteReaderStylePreset(id)
-
-    fun renameReaderStylePreset(id: String, displayName: String) = settingsController.renameReaderStylePreset(id, displayName)
-
-    fun importReaderStyleFromJson(rawJson: String): String? = settingsController.importReaderStyleFromJson(rawJson)
-
-    fun resetTextSettings() = settingsController.resetTextSettings()
-
     private fun localizedReaderStyleFallbackName(index: Int): String = "Style $index"
 
     private fun updateReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
@@ -1724,19 +1669,6 @@ class ReaderViewModel @Inject constructor(
         )
     }
     private var brightnessJob: Job? = null
-    fun setBrightness(value: Float) = settingsController.setBrightness(value)
-
-    fun setKeepScreenOn(enabled: Boolean) = settingsController.setKeepScreenOn(enabled)
-
-    /** Set auto-scroll speed. 0 disables, positive values = pixels per second. */
-    fun setAutoScrollSpeed(speed: Float) = settingsController.setAutoScrollSpeed(speed)
-
-    /** Cycle through auto-scroll presets: off → slow → medium → fast → off. */
-    fun cycleAutoScrollSpeed() = settingsController.cycleAutoScrollSpeed()
-
-    fun setScreenTimeoutMode(mode: String) = settingsController.setScreenTimeoutMode(mode)
-
-    fun setImmersiveMode(enabled: Boolean) = settingsController.setImmersiveMode(enabled)
 
     fun setLandscapeSpreadEnabled(enabled: Boolean) {
         _uiState.update { it.copy(landscapeSpreadEnabled = enabled) }
@@ -1760,62 +1692,6 @@ class ReaderViewModel @Inject constructor(
             prewarmHtmlPagesAround(_uiState.value.currentPage)
         }
     }
-
-    fun setPageAnimation(animation: String) = settingsController.setPageAnimation(animation)
-
-    fun setVolumeKeysPagingEnabled(enabled: Boolean) = settingsController.setVolumeKeysPagingEnabled(enabled)
-
-    fun setTapZoneMode(value: String) = settingsController.setTapZoneMode(value)
-
-    fun setTapZoneSwap(enabled: Boolean) = settingsController.setTapZoneSwap(enabled)
-
-    fun setTapZoneAction(position: String, action: String) = settingsController.setTapZoneAction(position, action)
-
-    fun toggleTapZoneDirectionShortcut() = settingsController.toggleTapZoneDirectionShortcut()
-
-    fun setHeaderSlot(position: String, slot: String) = settingsController.setHeaderSlot(position, slot)
-
-    fun setFooterSlot(position: String, slot: String) = settingsController.setFooterSlot(position, slot)
-
-    fun setHeaderFooterFontSize(size: Int) = settingsController.setHeaderFooterFontSize(size)
-
-    fun setHeaderFooterVerticalPadding(padding: Int) = settingsController.setHeaderFooterVerticalPadding(padding)
-
-    fun setHeaderFooterLeftPadding(padding: Int) = settingsController.setHeaderFooterLeftPadding(padding)
-
-    fun setHeaderFooterRightPadding(padding: Int) = settingsController.setHeaderFooterRightPadding(padding)
-
-    fun setChromeAutoHideEnabled(enabled: Boolean) = settingsController.setChromeAutoHideEnabled(enabled)
-
-    fun setTopToolbarOpacity(value: Float) = settingsController.setTopToolbarOpacity(value)
-
-    fun setBottomToolbarOpacity(value: Float) = settingsController.setBottomToolbarOpacity(value)
-
-    fun setToolbarOpacity(value: Float) = settingsController.setToolbarOpacity(value)
-
-    fun setToolbarBlur(value: Float) = settingsController.setToolbarBlur(value)
-
-    fun setImageScaleMode(value: String) = settingsController.setImageScaleMode(value)
-
-    fun setImageMarginCropHorizontal(value: Float) = settingsController.setImageMarginCropHorizontal(value)
-
-    fun setImageMarginCropVertical(value: Float) = settingsController.setImageMarginCropVertical(value)
-
-    fun setTtsSpeed(value: Float) = settingsController.setTtsSpeed(value)
-
-    fun setTtsProvider(value: String) = settingsController.setTtsProvider(value)
-
-    fun setTtsPitch(value: Float) = settingsController.setTtsPitch(value)
-
-    fun setTtsVolume(value: Float) = settingsController.setTtsVolume(value)
-
-    fun setTtsVoiceName(value: String?) = settingsController.setTtsVoiceName(value)
-
-    fun setTtsSleepTimerMode(value: String) = settingsController.setTtsSleepTimerMode(value)
-
-    fun setChromeIconVisible(icon: String, visible: Boolean) = settingsController.setChromeIconVisible(icon, visible)
-
-    fun moveChromeIcon(icon: String, delta: Int) = settingsController.moveChromeIcon(icon, delta)
 
     private fun saveProgress(
         page: Int,
