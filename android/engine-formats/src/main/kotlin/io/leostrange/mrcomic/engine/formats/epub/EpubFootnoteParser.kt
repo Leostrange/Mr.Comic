@@ -69,6 +69,61 @@ internal object EpubFootnoteParser {
         return extractItemsFromRegex(rawHtml)
     }
 
+    /**
+     * Extracts footnote items and removes them from the HTML body.
+     * Returns the cleaned HTML (without inline footnote text) and the extracted items.
+     *
+     * This follows the Foliate approach: footnote text is extracted from the main flow
+     * so it doesn't appear inline in the reader. The text is stored separately for popup display.
+     */
+    fun extractAndRemoveFromDom(rawHtml: String): Pair<String, List<EpubFootnoteItem>> {
+        val factory = DocumentBuilderFactory.newInstance().apply {
+            isNamespaceAware = false
+            isExpandEntityReferences = false
+            runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+        }
+        val builder = factory.newDocumentBuilder().apply {
+            setEntityResolver { _, _ -> InputSource(StringReader("")) }
+        }
+        val document = runCatching {
+            builder.parse(InputSource(StringReader(rawHtml)))
+        }.getOrNull() ?: return rawHtml to emptyList()
+
+        val body = document.getElementsByTagName("body").item(0) as? Element
+            ?: return rawHtml to emptyList()
+
+        val result = linkedMapOf<String, EpubFootnoteItem>()
+        val elementsToRemove = mutableListOf<Element>()
+
+        collectElements(body).forEach { element ->
+            val anchorId = element.getAttribute("id").orEmpty().trim()
+            val epubType = element.getAttribute("epub:type").orEmpty().trim().lowercase()
+            val role = element.getAttribute("role").orEmpty().trim().lowercase()
+            val matchesId = noteIdRe.matches(anchorId)
+            val isEpub3Footnote = epubType in epubFootnoteTypes || role in docFootnoteRoles
+            if ((!matchesId && !isEpub3Footnote) || hasNoteLikeAncestor(element)) return@forEach
+            extractItemFromElement(element)?.let { item ->
+                result.putIfAbsent(item.anchorId, item)
+                elementsToRemove.add(element)
+            }
+        }
+
+        // Remove footnote elements from DOM
+        elementsToRemove.forEach { element ->
+            element.parentNode?.removeChild(element)
+        }
+
+        // Serialize back to HTML
+        val serializer = javax.xml.transform.TransformerFactory.newInstance().newTransformer()
+        serializer.setOutputProperty(javax.xml.transform.OutputKeys.OMIT_XML_DECLARATION, "yes")
+        serializer.setOutputProperty(javax.xml.transform.OutputKeys.METHOD, "html")
+        val writer = java.io.StringWriter()
+        serializer.transform(javax.xml.transform.dom.DOMSource(body), javax.xml.transform.stream.StreamResult(writer))
+        val cleanedHtml = writer.toString()
+
+        return cleanedHtml to result.values.toList()
+    }
+
     private fun extractItemsFromDom(rawHtml: String): List<EpubFootnoteItem> {
         val body = parseBodyElement(rawHtml) ?: return emptyList()
         val result = linkedMapOf<String, EpubFootnoteItem>()
