@@ -153,3 +153,11 @@ internal fun prepareAssetBackedEpubDocument(
 }.getOrDefault(
     rebuildNormalizedInlinedEpubDocument(html, readerCss)
 )
+
+/** Extracts the content between <body> and </body> tags. */
+internal fun extractBodyContent(html: String): String = runCatching {
+    val bodyStart = Regex("<body[^>]*>", RegexOption.IGNORE_CASE).find(html)
+        ?.let { it.range.last + 1 } ?: 0
+    val bodyEnd = html.lastIndexOf("</body>").let { if (it < 0) html.length else it }
+    html.substring(bodyStart, bodyEnd.coerceAtLeast(bodyStart))
+}.getOrElse { html }
