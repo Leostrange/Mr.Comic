@@ -215,12 +215,18 @@ class ReaderViewModel @Inject constructor(
     private var deferredPageCountJob: Job? = null
     private var eyeRestJob: Job? = null
     private var highQualityWarmupJob: Job? = null
-    private var progressSaveJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
-    private var pendingProgressSave: PendingProgressSave? = null
-    private var lastPersistedProgress: PersistedProgressMarker? = null
-    private val lastChapterMilestone = AtomicReference<ChapterMilestoneMarker?>(null)
     private val readerSessionCoordinator = ReaderSessionCoordinator()
+    private val progressController = ReaderProgressController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        libraryRepository = libraryRepository,
+        dailyReadingGoalStore = dailyReadingGoalStore,
+        readerCheckpointStore = readerCheckpointStore,
+        analyticsTracker = analyticsTracker,
+        readerSessionCoordinator = readerSessionCoordinator,
+        _readerProgressRecap = _readerProgressRecap
+    )
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
     /** Measured visual page counts per EPUB spine section. */
@@ -292,7 +298,7 @@ class ReaderViewModel @Inject constructor(
     private suspend fun openComic(comic: Comic, sourcePath: String, requestToken: Long) {
         try {
             flushPendingProgressSave()
-            progressSaveJob?.cancel()
+            progressController.progressSaveJob?.cancel()
             tocLoadJob?.cancel()
             deferredTocWarmupJob?.cancel()
             deferredPageCountJob?.cancel()
@@ -374,7 +380,7 @@ class ReaderViewModel @Inject constructor(
                 totalPages = initialPages
             )
             pendingRequestedPage = null
-            lastPersistedProgress = if (requestedPage != null && requestedPage != comic.currentPage) {
+            progressController.lastPersistedProgress = if (requestedPage != null && requestedPage != comic.currentPage) {
                 PersistedProgressMarker(
                     comicId = comic.id,
                     page = normalizePageForMode(
@@ -1760,104 +1766,25 @@ class ReaderViewModel @Inject constructor(
         page: Int,
         progressSource: ReaderNavigationProgressSource
     ) {
-        val comic = _uiState.value.comic ?: return
-        val epubAccumulated = accumulatedTotalPagesForEpub()
-        val totalPages = if (epubAccumulated > 0) epubAccumulated else _uiState.value.totalPages
-        if (!ReaderProgressPolicy.shouldPersist(
-                totalPages = totalPages,
-                isHeavyReflowable = comic.format.isHeavyReflowableFormat(),
-                isEpub = comic.format == ComicFormat.EPUB,
-                epubAccumulatedPages = epubAccumulated,
-                paginatedSectionCount = snapshotSectionPageCounts().size
-            )
-        ) return
-        val accuratePage = ReaderProgressPolicy.pageForPersistence(
-            format = comic.format,
-            readerPage = page,
-            epubAbsolutePage = calculateAccuratePage(page)
+        progressController.saveProgress(
+            page = page,
+            progressSource = progressSource,
+            epubAccumulatedPages = accumulatedTotalPagesForEpub(),
+            sectionPageCountsSnapshot = snapshotSectionPageCounts(),
+            totalBookSections = totalBookSections,
+            calculateAccuratePage = ::calculateAccuratePage
         )
-        val pending = PendingProgressSave(
-            comicId = comic.id,
-            page = accuratePage,
-            totalPages = totalPages,
-            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
-        )
-        if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, accuratePage)) return
-        pendingProgressSave = pending
-        progressSaveJob?.cancel()
-        progressSaveJob = viewModelScope.launch {
-            delay(220)
-            flushPendingProgressSave()
-        }
     }
 
     private fun rememberChapterMilestoneAnchor(page: Int = _uiState.value.currentPage) {
-        val comicId = _uiState.value.comic?.id ?: return
-        val chapter = currentChapterFor(page) ?: return
-        lastChapterMilestone.set(
-            ChapterMilestoneMarker(
-                comicId = comicId,
-                chapterPage = chapter.pageIndex
-            )
-        )
+        progressController.rememberChapterMilestoneAnchor(page, ::currentChapterFor)
     }
 
     private fun maybeEmitChapterMilestone(
         page: Int,
         progressSource: ReaderNavigationProgressSource
     ) {
-        val comic = _uiState.value.comic ?: return
-        val chapter = currentChapterFor(page) ?: return
-        val chapterTitle = chapter.title.trim()
-        if (chapterTitle.isBlank()) return
-        val totalPages = _uiState.value.totalPages
-        val projectedPagesDelta = navigationProgressDelta(
-            previousPersistedPage = lastPersistedProgress
-                ?.takeIf { it.comicId == comic.id }
-                ?.page,
-            newPage = page,
-            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
-        )
-        val marker = ChapterMilestoneMarker(
-            comicId = comic.id,
-            chapterPage = chapter.pageIndex
-        )
-        if (progressSource != ReaderNavigationProgressSource.READING) {
-            lastChapterMilestone.set(marker)
-            return
-        }
-        val previous = lastChapterMilestone.getAndSet(marker)
-        if (previous == marker) return
-        readerSessionCoordinator.recordChapterTransition()
-        viewModelScope.launch {
-            dailyReadingGoalStore.recordCompletedCheckpoint()
-            readerCheckpointStore.recordChapterReached(
-                comicId = comic.id,
-                comicTitle = comic.title,
-                chapterTitle = chapterTitle,
-                page = page
-            )
-            analyticsTracker.track(
-                ReadingAnalyticsEvent.ChapterReached(
-                    comicId = comic.id,
-                    page = page,
-                    chapterTitle = chapterTitle
-                )
-            )
-            if (shouldEmitChapterProgressRecap(page = page, totalPages = totalPages)) {
-                emitProgressRecap(
-                    type = ReaderProgressRecapType.CHAPTER,
-                    comicId = comic.id,
-                    comicTitle = comic.title,
-                    chapterTitle = chapterTitle,
-                    currentPage = page,
-                    totalPages = totalPages,
-                    pagesDelta = projectedPagesDelta,
-                    xpAwarded = projectedPagesDelta,
-                    projectedGoalPagesDelta = projectedPagesDelta
-                )
-            }
-        }
+        progressController.maybeEmitChapterMilestone(page, progressSource, ::currentChapterFor)
     }
 
     private suspend fun emitProgressRecap(
@@ -1871,29 +1798,16 @@ class ReaderViewModel @Inject constructor(
         xpAwarded: Int,
         projectedGoalPagesDelta: Int
     ) {
-        val goalState = dailyReadingGoalStore.goalState
-            .first()
-            .projectReaderProgressRecap(projectedGoalPagesDelta)
-        _readerProgressRecap.emit(
-            ReaderProgressRecap(
-                type = type,
-                comicId = comicId,
-                comicTitle = comicTitle,
-                chapterTitle = chapterTitle,
-                currentPage = currentPage,
-                totalPages = totalPages,
-                pagesDelta = pagesDelta,
-                xpAwarded = xpAwarded,
-                goalEnabled = goalState.enabled,
-                pagesReadToday = goalState.pagesReadToday,
-                targetPages = goalState.targetPages,
-                isDailyGoalComplete = goalState.isCompleted,
-                pagesReadThisWeek = goalState.pagesReadThisWeek,
-                weeklyTargetPages = goalState.weeklyTargetPages,
-                isWeeklyPlanComplete = goalState.isWeeklyPlanCompleted,
-                streakEnabled = goalState.streakEnabled,
-                currentStreak = goalState.currentStreak
-            )
+        progressController.emitProgressRecap(
+            type = type,
+            comicId = comicId,
+            comicTitle = comicTitle,
+            chapterTitle = chapterTitle,
+            currentPage = currentPage,
+            totalPages = totalPages,
+            pagesDelta = pagesDelta,
+            xpAwarded = xpAwarded,
+            projectedGoalPagesDelta = projectedGoalPagesDelta
         )
     }
 
@@ -2131,128 +2045,18 @@ class ReaderViewModel @Inject constructor(
         _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
 
     private fun calculateAccuratePage(sectionIndex: Int): Int {
-        val state = _uiState.value
-        val snapshot = snapshotSectionPageCounts()
-        if (snapshot.isNotEmpty()) {
-            return EpubProgressCalculator.absolutePage(
-                sectionPageCounts = snapshot,
-                sectionIndex = sectionIndex,
-                sectionPageIndex = state.sectionCurrentPage,
-                totalSections = totalBookSections
-            )
-        }
-        // No paginated data yet — return 0 to avoid storing a raw spine index
-        // that would be misinterpreted as a visual page on reopen.
-        return 0
+        return progressController.calculateAccuratePage(sectionIndex, sectionPageCounts, totalBookSections)
     }
 
     private fun accumulatedTotalPagesForEpub(): Int {
-        return EpubProgressCalculator.estimatedTotalPages(
-            sectionPageCounts = snapshotSectionPageCounts(),
-            totalSections = totalBookSections
-        )
+        return progressController.accumulatedTotalPagesForEpub(sectionPageCounts, totalBookSections)
     }
 
     private fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
-        comicId != null && lastPersistedProgress == PersistedProgressMarker(comicId = comicId, page = page)
+        progressController.isProgressAlreadyPersisted(comicId, page)
 
     private suspend fun flushPendingProgressSave() {
-        val pending = pendingProgressSave ?: return
-        pendingProgressSave = null
-        try {
-            val previousPersistedPage = lastPersistedProgress
-                ?.takeIf { it.comicId == pending.comicId }
-                ?.page
-            val storedPageCount = libraryRepository.getComicById(pending.comicId)?.pageCount ?: 0
-            val safeTotalPages = maxOf(pending.totalPages, storedPageCount).coerceAtLeast(1)
-            libraryRepository.updateProgress(
-                comicId = pending.comicId,
-                currentPage = pending.page,
-                totalPages = safeTotalPages
-            )
-            val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
-            val goalProgressDelta = navigationProgressDelta(
-                previousPersistedPage = previousPersistedPage,
-                newPage = pending.page,
-                countsTowardReadingProgress = pending.countsTowardReadingProgress
-            )
-            if (goalProgressDelta > 0) {
-                dailyReadingGoalStore.recordProgressDelta(goalProgressDelta)
-                dailyReadingGoalStore.recordXpDelta(goalProgressDelta)
-                resolveGoalCompletedAnalyticsEvent(
-                    comicId = pending.comicId,
-                    previousState = goalStateBeforeProgress,
-                    currentState = dailyReadingGoalStore.goalState.first()
-                )?.let(analyticsTracker::track)
-                analyticsTracker.track(
-                    ReadingAnalyticsEvent.XpAwarded(
-                        comicId = pending.comicId,
-                        amount = goalProgressDelta,
-                        reason = "pages_read"
-                    )
-                )
-            }
-            analyticsTracker.track(
-                ReadingAnalyticsEvent.ProgressPersisted(
-                    comicId = pending.comicId,
-                    page = pending.page,
-                    totalPages = pending.totalPages
-                )
-            )
-            lastPersistedProgress = PersistedProgressMarker(
-                comicId = pending.comicId,
-                page = pending.page
-            )
-            val currentComic = _uiState.value.comic ?: return
-            val authoritativeTotal = maxOf(pending.totalPages, storedPageCount)
-            val reachedLastPageSafe = authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1
-            val titleCompletionPolicy = resolveTitleCompletionPolicy(
-                reachedLastPage = reachedLastPageSafe,
-                currentComicIdMatches = currentComic.id == pending.comicId,
-                alreadyCompleted = currentComic.isCompleted,
-                countsTowardReadingProgress = pending.countsTowardReadingProgress,
-                sessionManualPageTurns = readerSessionCoordinator.currentManualPageTurns,
-                goalProgressDelta = goalProgressDelta
-            )
-            if (titleCompletionPolicy.shouldComplete) {
-                libraryRepository.markCompleted(pending.comicId, completed = true)
-                _uiState.update { state ->
-                    state.copy(
-                        comic = state.comic?.copy(
-                            isCompleted = true,
-                            readingProgress = 1f
-                        )
-                    )
-                }
-                dailyReadingGoalStore.recordCompletedCheckpoint()
-                analyticsTracker.track(
-                    ReadingAnalyticsEvent.TitleCompleted(
-                        comicId = pending.comicId,
-                        totalPages = pending.totalPages
-                    )
-                )
-                analyticsTracker.track(
-                    ReadingAnalyticsEvent.XpAwarded(
-                        comicId = pending.comicId,
-                        amount = titleCompletionPolicy.bonusXpAwarded,
-                        reason = "title_complete"
-                    )
-                )
-                dailyReadingGoalStore.recordXpDelta(titleCompletionPolicy.bonusXpAwarded)
-                emitProgressRecap(
-                    type = ReaderProgressRecapType.TITLE_COMPLETE,
-                    comicId = pending.comicId,
-                    comicTitle = currentComic.title,
-                    currentPage = pending.page,
-                    totalPages = pending.totalPages,
-                    pagesDelta = titleCompletionPolicy.recapPagesDelta,
-                    xpAwarded = titleCompletionPolicy.recapXpAwarded,
-                    projectedGoalPagesDelta = 0
-                )
-            }
-        } catch (e: Exception) {
-            Log.e("ReaderViewModel", "Failed to save progress", e)
-        }
+        progressController.flushPendingProgressSave()
     }
 
     override fun onCleared() {
@@ -2269,7 +2073,7 @@ class ReaderViewModel @Inject constructor(
         eyeRestJob?.cancel()
         highQualityWarmupJob?.cancel()
         textReaderOrchestrator.cancelAllJobs()
-        progressSaveJob?.cancel()
+        progressController.progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
         brightnessJob?.cancel()
         runCatching { formatReader?.close() }
