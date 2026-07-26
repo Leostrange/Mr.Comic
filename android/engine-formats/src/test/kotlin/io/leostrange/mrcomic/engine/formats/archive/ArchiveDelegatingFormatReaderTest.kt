@@ -34,8 +34,8 @@ class ArchiveDelegatingFormatReaderTest {
             archiveFormat = ComicFormat.ZIP,
             deviceProfile = testRenderDeviceProfile(),
             bitmapAllocator = UnusedBitmapAllocator,
-            epubStructureCacheDao = NoopEpubStructureCacheDao,
-            epubManifestCacheDao = NoopEpubManifestCacheDao
+            epubStructureCache = null,
+            epubManifestCache = null
         )
 
         try {

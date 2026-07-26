@@ -1,9 +1,8 @@
 package io.leostrange.mrcomic.engine.formats.base
 
 import android.content.Context
-import io.leostrange.mrcomic.core.data.db.EpubManifestCacheDao
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheDao
+import io.leostrange.mrcomic.engine.api.EpubCacheStore
 import io.leostrange.mrcomic.engine.formats.archive.ArchiveDelegatingFormatReader
 import io.leostrange.mrcomic.engine.formats.djvu.DjvuFormatReader
 import io.leostrange.mrcomic.engine.formats.djvu.DjvuBackend
@@ -27,10 +26,10 @@ import javax.inject.Singleton
 class FormatFactory @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bitmapAllocator: BitmapAllocator,
-    private val djvuBackend: DjvuBackend,
-    private val epubStructureCacheDao: EpubStructureCacheDao,
-    private val epubManifestCacheDao: EpubManifestCacheDao
+    private val djvuBackend: DjvuBackend
 ) {
+    var epubStructureCache: EpubCacheStore? = null
+    var epubManifestCache: EpubCacheStore? = null
     private val deviceProfile by lazy { context.resolveRenderDeviceProfile() }
 
     fun createReader(path: String, format: ComicFormat): FormatReader? {
@@ -44,7 +43,7 @@ class FormatFactory @Inject constructor(
             ComicFormat.SEVENZ,
             ComicFormat.TAR                  -> archiveDelegatingReader(path, format)
             ComicFormat.PDF                  -> PdfFormatReader(context, path, deviceProfile, bitmapAllocator)
-            ComicFormat.EPUB                 -> EpubFormatReader(context, path, epubStructureCacheDao, epubManifestCacheDao)
+            ComicFormat.EPUB                 -> EpubFormatReader(context, path, epubStructureCache, epubManifestCache)
             ComicFormat.FB2                  -> Fb2FormatReader(context, path)
             ComicFormat.TXT,
             ComicFormat.HTML,
@@ -68,8 +67,8 @@ class FormatFactory @Inject constructor(
             archiveFormat = archiveFormat,
             deviceProfile = deviceProfile,
             bitmapAllocator = bitmapAllocator,
-            epubStructureCacheDao = epubStructureCacheDao,
-            epubManifestCacheDao = epubManifestCacheDao
+            epubStructureCache = epubStructureCache,
+            epubManifestCache = epubManifestCache
         )
 }
 
