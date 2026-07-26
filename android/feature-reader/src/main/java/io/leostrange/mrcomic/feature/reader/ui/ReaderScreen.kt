@@ -1,4 +1,4 @@
-﻿package io.leostrange.mrcomic.feature.reader.ui
+package io.leostrange.mrcomic.feature.reader.ui
 
 import android.app.Activity
 import android.content.Context
@@ -327,7 +327,7 @@ fun ReaderScreen(
         val importedFont = runCatching { ReaderTextFontCatalog.importFont(context, uri) }.getOrNull()
         if (importedFont != null) {
             fontCatalogVersion += 1
-            viewModel.setTextFontFamily(importedFont)
+            viewModel.settingsController.setTextFontFamily(importedFont)
             Toast.makeText(context, importedFont, Toast.LENGTH_SHORT).show()
         } else {
             Toast.makeText(
@@ -342,7 +342,7 @@ fun ReaderScreen(
         if (deleted) {
             fontCatalogVersion += 1
             if (uiState.textFontFamily == fontName) {
-                viewModel.setTextFontFamily("Georgia")
+                viewModel.settingsController.setTextFontFamily("Georgia")
             }
             Toast.makeText(
                 context,
@@ -369,7 +369,7 @@ fun ReaderScreen(
         }.getOrNull()
         val importedStyle = importedStyleResult?.let { raw ->
             if (looksLikeReaderStyleJson(raw)) {
-                viewModel.importReaderStyleFromJson(raw)
+                viewModel.settingsController.importReaderStyleFromJson(raw)
             } else {
                 null
             }
@@ -1250,7 +1250,7 @@ fun ReaderScreen(
                                 uiState = uiState,
                                 isLandscape = supportsLandscapeSpread,
                                 onToggleBookmark = viewModel::toggleBookmark,
-                                onApplyPreset = viewModel::applyReadingPreset,
+                                onApplyPreset = viewModel.settingsController::applyReadingPreset,
                                 onReadingModeChange = viewModel::setReadingMode,
                                 onPageChange = viewModel::navigateTo
                             )
@@ -1338,7 +1338,7 @@ fun ReaderScreen(
                                     onNavigateBack = onNavigateBack,
                                     onToggleToc = viewModel::toggleTocSheet,
                                     onToggleTextSettings = viewModel::toggleTextSettings,
-                                    onSwapDirection = viewModel::toggleTapZoneDirectionShortcut,
+                                    onSwapDirection = viewModel.settingsController::toggleTapZoneDirectionShortcut,
                                     onRequestOcr = {
                                         if (isTextReader) {
                                             showTextTranslationPageSheet = true
@@ -1350,12 +1350,12 @@ fun ReaderScreen(
                                     onToggleTtsControls = {
                                         showReaderAudioSheet = true
                                     },
-                                    onAutoScrollToggle = { viewModel.cycleAutoScrollSpeed() }
+                                    onAutoScrollToggle = { viewModel.settingsController.cycleAutoScrollSpeed() }
                                 )
                                 if (showBrightnessRow) {
                                     ReaderBrightnessRow(
                                         brightness = uiState.brightness,
-                                        onBrightnessChange = viewModel::setBrightness
+                                        onBrightnessChange = viewModel.settingsController::setBrightness
                                     )
                                 }
                             }
@@ -1444,13 +1444,13 @@ fun ReaderScreen(
                 }
             },
             onVoiceNameChange = { value ->
-                viewModel.setTtsVoiceName(value)
+                viewModel.settingsController.setTtsVoiceName(value)
                 ttsController.selectVoice(value)
             },
-            onSpeedChange = viewModel::setTtsSpeed,
-            onPitchChange = viewModel::setTtsPitch,
-            onVolumeChange = viewModel::setTtsVolume,
-            onSleepTimerChange = viewModel::setTtsSleepTimerMode,
+            onSpeedChange = viewModel.settingsController::setTtsSpeed,
+            onPitchChange = viewModel.settingsController::setTtsPitch,
+            onVolumeChange = viewModel.settingsController::setTtsVolume,
+            onSleepTimerChange = viewModel.settingsController::setTtsSleepTimerMode,
             onSpeedRead = if (isTextReader) {{
                 // Extract words from current page HTML for RSVP
                 val pageText = uiState.currentHtmlContent ?: ""
@@ -1475,50 +1475,50 @@ fun ReaderScreen(
                 openControlCenterAtServices = false
                 viewModel.toggleTextSettings()
             },
-            onApplyReadingPreset = viewModel::applyReadingPreset,
-            onFontSizeChange = viewModel::setTextFontSize,
-            onColorSchemeChange = viewModel::setTextColorScheme,
-            onFontFamilyChange = viewModel::setTextFontFamily,
-            onLineHeightChange = viewModel::setTextLineHeight,
-            onLetterSpacingChange = viewModel::setTextLetterSpacing,
-            onWordSpacingChange = viewModel::setTextWordSpacing,
-            onParagraphSpacingChange = viewModel::setTextParagraphSpacing,
-            onTextAlignChange = viewModel::setTextAlignment,
-            onBoldChange = viewModel::setTextBold,
-            onResetStyle = viewModel::resetTextSettings,
+            onApplyReadingPreset = viewModel.settingsController::applyReadingPreset,
+            onFontSizeChange = viewModel.settingsController::setTextFontSize,
+            onColorSchemeChange = viewModel.settingsController::setTextColorScheme,
+            onFontFamilyChange = viewModel.settingsController::setTextFontFamily,
+            onLineHeightChange = viewModel.settingsController::setTextLineHeight,
+            onLetterSpacingChange = viewModel.settingsController::setTextLetterSpacing,
+            onWordSpacingChange = viewModel.settingsController::setTextWordSpacing,
+            onParagraphSpacingChange = viewModel.settingsController::setTextParagraphSpacing,
+            onTextAlignChange = viewModel.settingsController::setTextAlignment,
+            onBoldChange = viewModel.settingsController::setTextBold,
+            onResetStyle = viewModel.settingsController::resetTextSettings,
             onReadingModeChange = viewModel::setReadingMode,
-            onKeepScreenOnChange = viewModel::setKeepScreenOn,
-            onScreenTimeoutChange = viewModel::setScreenTimeoutMode,
-            onImmersiveModeChange = viewModel::setImmersiveMode,
+            onKeepScreenOnChange = viewModel.settingsController::setKeepScreenOn,
+            onScreenTimeoutChange = viewModel.settingsController::setScreenTimeoutMode,
+            onImmersiveModeChange = viewModel.settingsController::setImmersiveMode,
             onLandscapeSpreadChange = viewModel::setLandscapeSpreadEnabled,
             onPreloadPagesChange = viewModel::setPreloadPages,
-            onPageAnimationChange = viewModel::setPageAnimation,
-            onTapZoneModeChange = viewModel::setTapZoneMode,
-            onTapZoneSwapChange = viewModel::setTapZoneSwap,
-            onTapZoneActionChange = viewModel::setTapZoneAction,
-            onVolumePagingChange = viewModel::setVolumeKeysPagingEnabled,
-            onHeaderSlotChange = viewModel::setHeaderSlot,
-            onFooterSlotChange = viewModel::setFooterSlot,
-            onHeaderFooterFontSizeChange = viewModel::setHeaderFooterFontSize,
-            onHeaderFooterVerticalPaddingChange = viewModel::setHeaderFooterVerticalPadding,
-            onHeaderFooterLeftPaddingChange = viewModel::setHeaderFooterLeftPadding,
-            onHeaderFooterRightPaddingChange = viewModel::setHeaderFooterRightPadding,
-            onChromeAutoHideChange = viewModel::setChromeAutoHideEnabled,
-            onToolbarOpacityChange = viewModel::setToolbarOpacity,
-            onToolbarBlurChange = viewModel::setToolbarBlur,
-            onImageScaleModeChange = viewModel::setImageScaleMode,
-            onImageMarginCropHorizontalChange = viewModel::setImageMarginCropHorizontal,
-            onImageMarginCropVerticalChange = viewModel::setImageMarginCropVertical,
-            onChromeIconVisibleChange = viewModel::setChromeIconVisible,
-            onMoveChromeIcon = viewModel::moveChromeIcon,
+            onPageAnimationChange = viewModel.settingsController::setPageAnimation,
+            onTapZoneModeChange = viewModel.settingsController::setTapZoneMode,
+            onTapZoneSwapChange = viewModel.settingsController::setTapZoneSwap,
+            onTapZoneActionChange = viewModel.settingsController::setTapZoneAction,
+            onVolumePagingChange = viewModel.settingsController::setVolumeKeysPagingEnabled,
+            onHeaderSlotChange = viewModel.settingsController::setHeaderSlot,
+            onFooterSlotChange = viewModel.settingsController::setFooterSlot,
+            onHeaderFooterFontSizeChange = viewModel.settingsController::setHeaderFooterFontSize,
+            onHeaderFooterVerticalPaddingChange = viewModel.settingsController::setHeaderFooterVerticalPadding,
+            onHeaderFooterLeftPaddingChange = viewModel.settingsController::setHeaderFooterLeftPadding,
+            onHeaderFooterRightPaddingChange = viewModel.settingsController::setHeaderFooterRightPadding,
+            onChromeAutoHideChange = viewModel.settingsController::setChromeAutoHideEnabled,
+            onToolbarOpacityChange = viewModel.settingsController::setToolbarOpacity,
+            onToolbarBlurChange = viewModel.settingsController::setToolbarBlur,
+            onImageScaleModeChange = viewModel.settingsController::setImageScaleMode,
+            onImageMarginCropHorizontalChange = viewModel.settingsController::setImageMarginCropHorizontal,
+            onImageMarginCropVerticalChange = viewModel.settingsController::setImageMarginCropVertical,
+            onChromeIconVisibleChange = viewModel.settingsController::setChromeIconVisible,
+            onMoveChromeIcon = viewModel.settingsController::moveChromeIcon,
             onImportCustomFont = { fontImportLauncher.launch(arrayOf("*/*")) },
             onDeleteCustomFont = { pendingCustomFontDeletion = it },
             onImportReaderStyle = { readerStyleImportLauncher.launch(arrayOf("application/json", "*/*")) },
             onExportReaderStyle = { readerStyleExportLauncher.launch(readerTypographyExportFileName(uiState)) },
-            onSaveCurrentReaderStylePreset = viewModel::saveCurrentReaderStylePreset,
-            onOverwriteReaderStylePreset = viewModel::overwriteReaderStylePreset,
-            onApplyReaderStylePreset = viewModel::applyReaderStylePreset,
-            onDeleteReaderStylePreset = viewModel::deleteReaderStylePreset,
+            onSaveCurrentReaderStylePreset = viewModel.settingsController::saveCurrentReaderStylePreset,
+            onOverwriteReaderStylePreset = viewModel.settingsController::overwriteReaderStylePreset,
+            onApplyReaderStylePreset = viewModel.settingsController::applyReaderStylePreset,
+            onDeleteReaderStylePreset = viewModel.settingsController::deleteReaderStylePreset,
             onOpenToc = viewModel::toggleTocSheet,
             onToggleBookmark = viewModel::toggleBookmark,
             onRequestOcr = viewModel::requestOcr,
@@ -1527,13 +1527,13 @@ fun ReaderScreen(
             onTtsPrevious = ttsController::previousChunk,
             onTtsNext = ttsController::nextChunk,
             onTtsVoiceNameChange = { value ->
-                viewModel.setTtsVoiceName(value)
+                viewModel.settingsController.setTtsVoiceName(value)
                 ttsController.selectVoice(value)
             },
-            onTtsSpeedChange = viewModel::setTtsSpeed,
-            onTtsPitchChange = viewModel::setTtsPitch,
-            onTtsVolumeChange = viewModel::setTtsVolume,
-            onTtsSleepTimerChange = viewModel::setTtsSleepTimerMode
+            onTtsSpeedChange = viewModel.settingsController::setTtsSpeed,
+            onTtsPitchChange = viewModel.settingsController::setTtsPitch,
+            onTtsVolumeChange = viewModel.settingsController::setTtsVolume,
+            onTtsSleepTimerChange = viewModel.settingsController::setTtsSleepTimerMode
         )
     }
     pendingCustomFontDeletion?.let { fontName ->
