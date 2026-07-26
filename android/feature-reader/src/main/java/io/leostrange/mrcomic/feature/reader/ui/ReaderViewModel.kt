@@ -1133,23 +1133,6 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    private fun markReaderPresetCustom() = settingsController.markReaderPresetCustom()
-
-    private fun localizedReaderStyleFallbackName(index: Int): String = "Style $index"
-
-    private fun updateReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
-        val normalizedEntries = ReaderStylePresetEntries.normalize(entries)
-        _uiState.update { state ->
-            state.copy(
-                readerStylePresetEntries = normalizedEntries,
-                readerStylePresetSlots = ReaderStylePresetEntries.toLegacySlots(normalizedEntries)
-            )
-        }
-        viewModelScope.launch {
-            persistReaderStylePresetEntries(normalizedEntries)
-        }
-    }
-
     private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
         val legacySlots = ReaderStylePresetEntries.toLegacySlots(entries)
         readerPreferences.set(
@@ -1159,23 +1142,6 @@ class ReaderViewModel @Inject constructor(
         readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_1, legacySlots[0].serialized.orEmpty())
         readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_2, legacySlots[1].serialized.orEmpty())
         readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_3, legacySlots[2].serialized.orEmpty())
-    }
-
-    private suspend fun persistNullablePreference(key: Preferences.Key<Long>, value: Long?) {
-        context.dataStore.edit { prefs ->
-            if (value == null) prefs.remove(key) else prefs[key] = value
-        }
-    }
-
-    private fun applyReaderStylePresetSnapshot(snapshot: ReaderStylePresetSnapshot) {
-        _uiState.update { ReaderStylePresetReducer.applySnapshot(it, snapshot) }
-        viewModelScope.launch {
-            persistReaderStylePresetSnapshot(
-                snapshot = snapshot,
-                readerPreferences = readerPreferences,
-                dataStore = context.dataStore
-            )
-        }
     }
 
     // ── Закладки ──────────────────────────────────────────────────────────────
@@ -1337,7 +1303,7 @@ class ReaderViewModel @Inject constructor(
         }
         // Remember portrait-specific mode so we can restore it on landscape→portrait rotation
         rememberPortraitMode(mode)
-        markReaderPresetCustom()
+        settingsController.markReaderPresetCustom()
         applyReadingMode(mode)
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
