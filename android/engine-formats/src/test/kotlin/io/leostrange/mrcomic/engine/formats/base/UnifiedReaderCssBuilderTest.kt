@@ -165,7 +165,7 @@ class UnifiedReaderCssBuilderTest {
     @Test
     fun buildReaderDocumentCss_textAlignOnParagraph() {
         val css = buildReaderDocumentCss(textAlignOnBody = false)
-        assertTrue("text-align on p", css.contains("text-align: justify"))
+        assertTrue("text-align on p uses CSS custom property", css.contains("text-align: var(--mrcomic-text-align)"))
     }
 
     @Test

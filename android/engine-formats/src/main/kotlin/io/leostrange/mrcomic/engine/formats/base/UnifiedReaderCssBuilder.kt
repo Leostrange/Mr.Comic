@@ -26,19 +26,41 @@ internal fun buildReaderDocumentCss(
         "hyphens: manual; -webkit-hyphens: manual; word-break: normal;"
     }
     append("""
+    :root {
+      --mrcomic-font-size: $fontSize;
+      --mrcomic-line-height: $lineHeight;
+      --mrcomic-font-family: Georgia, "Times New Roman", serif;
+      --mrcomic-letter-spacing: 0em;
+      --mrcomic-word-spacing: 0em;
+      --mrcomic-paragraph-spacing: 0.2em;
+      --mrcomic-text-align: ${if (textAlignOnBody) "justify" else "left"};
+      --mrcomic-font-weight: normal;
+      --mrcomic-hyphens: manual;
+      --mrcomic-max-width: $maxWidth;
+      --mrcomic-padding: $padding;
+      --mrcomic-body-margin: $bodyMargin;
+      --mrcomic-heading-font-weight: $headingFontWeight;
+      --mrcomic-heading-line-height: $headingLineHeight;
+      --mrcomic-heading-margin: $headingMargin;
+      --mrcomic-img-margin: $imgMargin;
+      --mrcomic-hr-margin: $hrMargin;
+    }
     body {
-      margin: $bodyMargin;
-      padding: $padding;
-      max-width: $maxWidth;
+      margin: var(--mrcomic-body-margin);
+      padding: var(--mrcomic-padding);
+      max-width: var(--mrcomic-max-width);
       box-sizing: border-box;
-      font-family: Georgia, "Times New Roman", serif;
-      font-size: $fontSize;
-      line-height: $lineHeight;
+      font-family: var(--mrcomic-font-family);
+      font-size: var(--mrcomic-font-size);
+      line-height: var(--mrcomic-line-height);
       color: $bodyColor;
       background: $bodyBackground;
-      ${if (textAlignOnBody) "text-align: justify;" else ""}
+      ${if (textAlignOnBody) "text-align: var(--mrcomic-text-align);" else ""}
       overflow-wrap: break-word;
       word-break: normal;
+      letter-spacing: var(--mrcomic-letter-spacing);
+      word-spacing: var(--mrcomic-word-spacing);
+      font-weight: var(--mrcomic-font-weight);
       $hyphenDecl
     }
     body:not([data-mrcomic-preserve-layout="true"]) * {
@@ -49,8 +71,8 @@ internal fun buildReaderDocumentCss(
     if (includeTypography) {
         append("""
     p, div.paragraph {
-      margin: 0.2em 0;
-      ${if (!textAlignOnBody) "text-align: justify; " else ""}text-indent: 1.5em;
+      margin: var(--mrcomic-paragraph-spacing) 0;
+      ${if (!textAlignOnBody) "text-align: var(--mrcomic-text-align); " else ""}text-indent: 1.5em;
     }
     p:first-child,
     div.paragraph:first-child,
@@ -62,9 +84,9 @@ internal fun buildReaderDocumentCss(
     h1, h2, h3, h4, h5, h6 {
       text-align: center;
       text-indent: 0;
-      font-weight: $headingFontWeight;
-      line-height: $headingLineHeight;
-      margin: $headingMargin;
+      font-weight: var(--mrcomic-heading-font-weight);
+      line-height: var(--mrcomic-heading-line-height);
+      margin: var(--mrcomic-heading-margin);
       $hyphenDecl
     }
     h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -75,7 +97,7 @@ internal fun buildReaderDocumentCss(
     }
 
     append("""
-    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: $imgMargin; page-break-inside: avoid; break-inside: avoid; }
+    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: var(--mrcomic-img-margin); page-break-inside: avoid; break-inside: avoid; }
     a[href] { -webkit-user-select: text; user-select: text; }
     """.trimIndent())
 
@@ -103,7 +125,7 @@ internal fun buildReaderDocumentCss(
     table[border] th, table[border] td { border: 1px solid rgba(120,120,120,0.35); }
     table:not([border]) th, table:not([border]) td { border: none; }
     th { font-weight: 600; }
-    hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: $hrMargin; }
+    hr { border: 0; border-top: 1px solid rgba(120,120,120,0.35); margin: var(--mrcomic-hr-margin); }
     del { opacity: 0.75; }
     .footnotes { margin-top: 1.25rem; font-size: 0.94em; }
     .footnotes ol { padding-left: 1.25rem; }
