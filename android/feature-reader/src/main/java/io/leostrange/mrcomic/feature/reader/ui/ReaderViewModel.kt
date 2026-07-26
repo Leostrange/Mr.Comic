@@ -2090,40 +2090,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun emitReaderClosed() {
-        val state = _uiState.value
-        val currentComic = state.comic
-        val closedSession = readerSessionCoordinator.close(
-            currentComicId = currentComic?.id,
-            currentComicCompleted = currentComic?.isCompleted == true,
-            currentPage = state.currentPage
-        )
-            ?: return
-        val session = closedSession.session
-        val sessionMetrics = closedSession.metrics
-        val finishedAtMillis = System.currentTimeMillis()
-        if (shouldRecordReaderSessionMinutes(sessionMetrics)) {
-            appScope.launch {
-                runCatching {
-                    dailyReadingGoalStore.recordSessionMinutes(
-                        durationMillis = finishedAtMillis - session.startedAtMillis,
-                        nowMillis = finishedAtMillis
-                    )
-                }.onFailure { error ->
-                    Log.e("ReaderViewModel", "Failed to record reading session minutes", error)
-                }
-            }
-        }
-        analyticsTracker.track(
-            buildReaderClosedAnalyticsEvent(
-                comicId = session.comicId,
-                format = session.format,
-                totalPages = session.totalPages,
-                readingMode = state.readingMode.name,
-                startedAtMillis = session.startedAtMillis,
-                finishedAtMillis = finishedAtMillis,
-                sessionMetrics = sessionMetrics
-            )
-        )
+        progressController.emitReaderClosed(appScope)
     }
 
     private suspend fun restoreReaderPreferences() {
