@@ -265,6 +265,31 @@ class ReaderViewModel @Inject constructor(
     private var highQualityWarmupJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
     private val readerSessionCoordinator = ReaderSessionCoordinator()
+    private val navigationController = ReaderNavigationController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        readerSessionCoordinator = readerSessionCoordinator,
+        pagePreloader = pagePreloader,
+        textReaderOrchestrator = textReaderOrchestrator,
+        formatReader = { formatReader },
+        loadPage = { loadPage(it) },
+        prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
+        loadPageTranslationNote = { loadPageTranslationNote(page = it) },
+        saveProgress = { page, source -> saveProgress(page, source) },
+        maybeEmitChapterMilestone = { page, source -> maybeEmitChapterMilestone(page, source) },
+        isProgressAlreadyPersisted = { comicId, page -> isProgressAlreadyPersisted(comicId, page) },
+        scheduleHighQualityWarmup = { scheduleHighQualityWarmup(it) },
+        applyHighQualityRetention = { applyHighQualityRetention(it) },
+        activeComicSupportsBitmapPreload = { activeComicSupportsBitmapPreload() },
+        playPageSound = {
+            if (_uiState.value.pageSoundEnabled) {
+                PageSoundPlayer.play(
+                    context = context,
+                    style = PageSoundStyle.fromStored(_uiState.value.pageSoundStyle)
+                )
+            }
+        }
+    )
     private val progressController = ReaderProgressController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
@@ -802,67 +827,10 @@ class ReaderViewModel @Inject constructor(
     fun navigateTo(
         page: Int,
         progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING
-    ) {
-        val resolvedPage = resolveNavigationPage(page, progressSource)
-        val clamped = normalizePageForMode(
-            page = resolvedPage,
-            mode = _uiState.value.readingMode,
-            totalPages = _uiState.value.totalPages
-        )
-        val previousState = _uiState.value
-        val shouldResetInlineState =
-            previousState.selectedTextActionSheet != null || previousState.selectedTextTranslation != null
-        if (clamped == previousState.currentPage && !shouldResetInlineState) {
-            return
-        }
-        if (countsAsManualPageTurn(progressSource)) {
-            readerSessionCoordinator.recordManualPageTurn()
-        }
-        _uiState.update {
-            val sectionPaging = sectionPagingStateAfterNavigation(
-                previousSection = previousState.currentPage,
-                nextSection = clamped,
-                previousPageCount = previousState.sectionPageCount,
-                previousPageIndex = previousState.sectionCurrentPage
-            )
-            it.copy(
-                currentPage = clamped,
-                sectionPageCount = sectionPaging.pageCount,
-                sectionCurrentPage = sectionPaging.pageIndex,
-                footnotePopup = null,
-                footnotePresentation = FootnotePresentation.PEEK,
-                selectedTextActionSheet = null,
-                selectedTextTranslation = null
-            )
-        }
-        if (_uiState.value.pageSoundEnabled && progressSource == ReaderNavigationProgressSource.READING) {
-            PageSoundPlayer.play(
-                context = context,
-                style = PageSoundStyle.fromStored(_uiState.value.pageSoundStyle)
-            )
-        }
-        syncReaderPosition(
-            page = clamped,
-            mode = _uiState.value.readingMode,
-            persistProgress = true,
-            progressSource = progressSource
-        )
-    }
+    ) = navigationController.navigateTo(page, progressSource)
 
-    fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1, charOffset: Int = -1) {
-        val current = _uiState.value.currentPage
-        if (sectionIndex >= 0 && sectionIndex != current) {
-            _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
-            navigateTo(sectionIndex, progressSource = ReaderNavigationProgressSource.JUMP)
-            return
-        }
-        if (page == current) {
-            _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
-            return
-        }
-        _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
-        navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
-    }
+    fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1, charOffset: Int = -1) =
+        navigationController.navigateToTocEntry(page, anchorId, sectionIndex, charOffset)
 
     fun setHighQualityFocusPages(indices: Set<Int>?) {
         if (!activeComicSupportsHighResZoom()) {
@@ -881,14 +849,8 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    fun nextPage() = navigateTo(
-        _uiState.value.currentPage + pageStepForMode(_uiState.value.readingMode),
-        progressSource = ReaderNavigationProgressSource.READING
-    )
-    fun prevPage() = navigateTo(
-        _uiState.value.currentPage - pageStepForMode(_uiState.value.readingMode),
-        progressSource = ReaderNavigationProgressSource.READING
-    )
+    fun nextPage() = navigationController.nextPage()
+    fun prevPage() = navigationController.prevPage()
 
     fun requestOcr() = ocrController.requestOcr()
 
@@ -1108,13 +1070,8 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun consumePendingScrollToAnchor() = _uiState.update {
-        it.copy(pendingScrollToAnchor = null)
-    }
-
-    fun consumePendingWebtoonSection() = _uiState.update {
-        it.copy(pendingWebtoonSectionIndex = null)
-    }
+    fun consumePendingScrollToAnchor() = navigationController.consumePendingScrollToAnchor()
+    fun consumePendingWebtoonSection() = navigationController.consumePendingWebtoonSection()
 
     /** Dismisses the footnote popup without navigating anywhere. */
     fun dismissFootnote() = footnoteController.dismissFootnote()
@@ -1466,71 +1423,16 @@ class ReaderViewModel @Inject constructor(
         persistProgress: Boolean,
         progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING,
         announceChapterMilestone: Boolean = true
-    ) {
-        val visiblePages = visiblePagesFor(page, mode)
-        visiblePages.forEach { visiblePage ->
-            loadPage(visiblePage)
-        }
-        if (activeComicSupportsBitmapPreload()) {
-            applyHighQualityRetention(visiblePages.toSet())
-            if (mode != ReadingMode.WEBTOON) {
-                formatReader?.let { reader ->
-                    pagePreloader.preloadAround(reader, visiblePages, _uiState.value.totalPages, _uiState.value.preloadPages)
-                }
-                scheduleHighQualityWarmup(page)
-            }
-        } else {
-            applyHighQualityRetention(emptySet())
-            prewarmHtmlPagesAround(page)
-        }
-        loadPageTranslationNote(page = page)
-        if (persistProgress) {
-            saveProgress(page, progressSource)
-        }
-        if (announceChapterMilestone) {
-            maybeEmitChapterMilestone(page, progressSource)
-        }
-    }
+    ) = navigationController.syncReaderPosition(page, mode, persistProgress, progressSource, announceChapterMilestone)
 
-    private fun visiblePagesFor(page: Int, mode: ReadingMode): List<Int> {
-        return ReaderNavigationPolicy.visiblePages(
-            page = page,
-            mode = mode,
-            totalPages = _uiState.value.totalPages
-        )
-    }
-
-    private fun currentChapterFor(page: Int): TocEntry? {
-        return ReaderChapterPolicy.currentChapter(
-            tableOfContents = _uiState.value.tableOfContents,
-            enginePage = enginePageForUiPage(page)
-        )
-    }
-
-    private fun enginePageForUiPage(page: Int): Int =
-        TextReaderNavigation.enginePageForUiPage(
-            state = _uiState.value,
-            controller = textReaderOrchestrator.controller,
-            page = page
-        )
-
-    private fun resolveNavigationPage(
-        page: Int,
-        progressSource: ReaderNavigationProgressSource
-    ): Int = TextReaderNavigation.resolveNavigationPage(
-        state = _uiState.value,
-        controller = textReaderOrchestrator.controller,
-        page = page,
-        progressSource = progressSource
-    )
-
-    private fun normalizePageForMode(
-        page: Int,
-        mode: ReadingMode,
-        totalPages: Int = _uiState.value.totalPages
-    ): Int = ReaderNavigationPolicy.normalizePage(page, mode, totalPages)
-
-    private fun pageStepForMode(mode: ReadingMode): Int = ReaderNavigationPolicy.pageStep(mode)
+    private fun visiblePagesFor(page: Int, mode: ReadingMode): List<Int> = navigationController.visiblePagesFor(page, mode)
+    private fun currentChapterFor(page: Int): TocEntry? = navigationController.currentChapterFor(page)
+    private fun enginePageForUiPage(page: Int): Int = navigationController.enginePageForUiPage(page)
+    private fun resolveNavigationPage(page: Int, progressSource: ReaderNavigationProgressSource): Int =
+        navigationController.resolveNavigationPage(page, progressSource)
+    private fun normalizePageForMode(page: Int, mode: ReadingMode, totalPages: Int = _uiState.value.totalPages): Int =
+        navigationController.normalizePageForMode(page, mode, totalPages)
+    private fun pageStepForMode(mode: ReadingMode): Int = navigationController.pageStepForMode(mode)
 
     private fun effectiveOpeningModeFor(
         format: ComicFormat,
