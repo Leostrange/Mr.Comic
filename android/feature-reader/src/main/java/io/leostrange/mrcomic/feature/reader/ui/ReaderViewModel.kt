@@ -300,6 +300,20 @@ class ReaderViewModel @Inject constructor(
         readerSessionCoordinator = readerSessionCoordinator,
         _readerProgressRecap = _readerProgressRecap
     )
+    private val readingModeController = ReaderReadingModeController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        readerPreferences = readerPreferences,
+        textReaderOrchestrator = textReaderOrchestrator,
+        totalBookSections = { totalBookSections },
+        normalizePageForMode = { page, mode, total -> ReaderNavigationPolicy.normalizePage(page, mode, total) },
+        syncReaderPosition = { page, mode, persist -> navigationController.syncReaderPosition(page, mode, persist) },
+        scheduleTextPagePaginationBuild = { scheduleTextPagePaginationBuild() },
+        isProgressAlreadyPersisted = { comicId, page -> isProgressAlreadyPersisted(comicId, page) },
+        prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
+        activeComicSupportsBitmapPreload = { activeComicSupportsBitmapPreload() },
+        markReaderPresetCustom = { settingsController.markReaderPresetCustom() }
+    )
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
     /** Measured visual page counts per EPUB spine section. */
@@ -317,14 +331,6 @@ class ReaderViewModel @Inject constructor(
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
     private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
-
-    /**
-     * The reading mode to restore when rotating back to portrait.
-     * Updated every time the user manually picks a portrait mode
-     * (PAGE_LTR / PAGE_RTL / WEBTOON).
-     */
-    private var portraitReadingMode: ReadingMode = ReadingMode.PAGE_LTR
-    private var portraitPagedReadingMode: ReadingMode = ReadingMode.PAGE_LTR
 
     init {
         viewModelScope.launch {
@@ -1247,126 +1253,13 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    fun setReadingMode(mode: ReadingMode) {
-        val currentState = _uiState.value
-        val alignedPage = normalizePageForMode(
-            page = currentState.currentPage,
-            mode = mode,
-            totalPages = currentState.totalPages
-        )
-        if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
-            rememberPortraitMode(mode)
-            return
-        }
-        // Remember portrait-specific mode so we can restore it on landscape→portrait rotation
-        rememberPortraitMode(mode)
-        settingsController.markReaderPresetCustom()
-        applyReadingMode(mode)
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
-        }
-    }
-
-    /**
-     * Called from the UI when the viewport changes enough to allow or disallow a
-     * landscape spread. Text books never switch to DUAL_PAGE.
-     */
-    fun onOrientationChanged(
-        useLandscapeSpread: Boolean,
-        isTextReader: Boolean = false
-    ) {
-        _uiState.update { it.copy(isLandscape = useLandscapeSpread) }
-        val currentMode = _uiState.value.readingMode
-        val canAutoLandscapeSpread = _uiState.value.landscapeSpreadEnabled &&
-            ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(portraitReadingMode)
-        if (isTextReader) {
-            if (currentMode == ReadingMode.DUAL_PAGE) {
-                applyReadingMode(portraitPagedReadingMode)
-            }
-            return
-        }
-        if (useLandscapeSpread && canAutoLandscapeSpread && currentMode != ReadingMode.DUAL_PAGE) {
-            applyReadingMode(ReadingMode.DUAL_PAGE)
-        } else if (!useLandscapeSpread && currentMode == ReadingMode.DUAL_PAGE) {
-            applyReadingMode(portraitReadingMode)
-        }
-    }
-
-    private fun applyReadingMode(mode: ReadingMode) {
-        val currentState = _uiState.value
-        val alignedPage = normalizePageForMode(
-            page = currentState.currentPage,
-            mode = mode,
-            totalPages = currentState.totalPages
-        )
-        val webtoonRestoreSection = readerWebtoonRestoreSectionIndex(
-            engineSectionIndex = currentState.currentPage,
-            pagedSubpageIndex = currentState.sectionCurrentPage,
-            pagedSubpageCount = currentState.sectionPageCount,
-            totalWebtoonSections = totalBookSections
-        )
-        if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
-            return
-        }
-        _uiState.update { state ->
-            state.copy(
-                readingMode = mode,
-                currentPage = alignedPage,
-                pendingWebtoonSectionIndex = if (
-                    readerShouldRestoreTextWebtoonSection(
-                        previousMode = currentState.readingMode,
-                        nextMode = mode,
-                        readerRendersHtmlContent = currentState.readerRendersHtmlContent
-                    )
-                ) {
-                    webtoonRestoreSection
-                } else {
-                    state.pendingWebtoonSectionIndex
-                },
-                readerContainerKind = resolveReaderContainerKind(
-                    format = state.comic?.format,
-                    readingMode = mode,
-                    readerRendersHtmlContent = state.readerRendersHtmlContent
-                )
-            )
-        }
-        if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
-            textReaderOrchestrator.clearTextPagePagination()
-            textReaderOrchestrator.cancelPaginationJob()
-        } else if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
-            scheduleTextPagePaginationBuild()
-        }
-        syncReaderPosition(
-            page = alignedPage,
-            mode = mode,
-            persistProgress = !isProgressAlreadyPersisted(_uiState.value.comic?.id, alignedPage),
-            announceChapterMilestone = false
-        )
-    }
+    fun setReadingMode(mode: ReadingMode) = readingModeController.setReadingMode(mode)
+    fun onOrientationChanged(useLandscapeSpread: Boolean, isTextReader: Boolean = false) =
+        readingModeController.onOrientationChanged(useLandscapeSpread, isTextReader)
+    private fun applyReadingMode(mode: ReadingMode) = readingModeController.applyReadingMode(mode)
     private var brightnessJob: Job? = null
-
-    fun setLandscapeSpreadEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(landscapeSpreadEnabled = enabled) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, enabled)
-        }
-        onOrientationChanged(
-            useLandscapeSpread = _uiState.value.isLandscape,
-            isTextReader = _uiState.value.currentHtmlContent != null ||
-                _uiState.value.readerRendersHtmlContent
-        )
-    }
-
-    fun setPreloadPages(count: Int) {
-        val safe = count.coerceIn(2, 8)
-        _uiState.update { it.copy(preloadPages = safe) }
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READER_PRELOAD_PAGES, safe)
-        }
-        if (!activeComicSupportsBitmapPreload()) {
-            prewarmHtmlPagesAround(_uiState.value.currentPage)
-        }
-    }
+    fun setLandscapeSpreadEnabled(enabled: Boolean) = readingModeController.setLandscapeSpreadEnabled(enabled)
+    fun setPreloadPages(count: Int) = readingModeController.setPreloadPages(count)
 
     private fun saveProgress(
         page: Int,
@@ -1437,24 +1330,11 @@ class ReaderViewModel @Inject constructor(
     private fun effectiveOpeningModeFor(
         format: ComicFormat,
         readerRendersHtmlContent: Boolean = format.isTextReadingFormat()
-    ): ReadingMode = ReaderOpeningModePolicy.resolve(
-        readerRendersHtmlContent = readerRendersHtmlContent,
-        currentMode = _uiState.value.readingMode,
-        portraitMode = portraitReadingMode,
-        portraitPagedMode = portraitPagedReadingMode,
-        isLandscape = _uiState.value.isLandscape,
-        landscapeSpreadEnabled = _uiState.value.landscapeSpreadEnabled
-    )
+    ): ReadingMode = readingModeController.effectiveOpeningModeFor(format, readerRendersHtmlContent)
 
     // isOpenRequestCurrent replaced by openGuard.isCurrent()
 
-    private fun rememberPortraitMode(mode: ReadingMode) {
-        if (mode == ReadingMode.DUAL_PAGE) return
-        portraitReadingMode = mode
-        if (mode == ReadingMode.PAGE_LTR || mode == ReadingMode.PAGE_RTL) {
-            portraitPagedReadingMode = mode
-        }
-    }
+    private fun rememberPortraitMode(mode: ReadingMode) = readingModeController.rememberPortraitMode(mode)
 
     private fun applyHighQualityRetention(indices: Set<Int>) {
         if (indices == lastRetainedHighQualityPages) return
