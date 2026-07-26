@@ -1,5 +1,7 @@
 package io.leostrange.mrcomic.engine.formats.epub
 
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser as JsoupXmlParser
 import java.net.URLDecoder
 
 /**
@@ -20,6 +22,54 @@ internal object EpubManifestParser {
         /** id of the NCX (EPUB2) or nav (EPUB3) document, if found. */
         val ncxId: String?
     )
+
+    /**
+     * Parses an OPF document using Jsoup XML parser, falling back to regex
+     * if the Jsoup result is empty.
+     */
+    fun parseOpf(rawOpf: String): OpfManifest {
+        val xmlResult = parseOpfXml(rawOpf)
+        if (xmlResult.manifest.isNotEmpty() && xmlResult.spine.isNotEmpty()) return xmlResult
+        return parseOpfRegex(rawOpf, xmlResult.ncxId)
+    }
+
+    /**
+     * Parses OPF XML using Jsoup to extract manifest, spine, and NCX id.
+     * Returns empty manifest/spine if the XML is malformed.
+     */
+    fun parseOpfXml(rawOpf: String): OpfManifest {
+        val manifest = linkedMapOf<String, String>()
+        val spine = mutableListOf<String>()
+        val document = Jsoup.parse(rawOpf, "", JsoupXmlParser.xmlParser())
+        val spineElement = document.selectFirst("spine")
+        var ncxId = spineElement?.attr("toc")?.trim().takeUnless { it.isNullOrBlank() }
+
+        document.select("manifest > item").forEach { item ->
+            val id = item.attr("id").trim()
+            val href = item.attr("href").trim()
+            if (id.isNotBlank() && href.isNotBlank()) {
+                manifest[id] = href
+                val mediaType = item.attr("media-type").trim()
+                val properties = item.attr("properties").trim()
+                if (mediaType.equals("application/x-dtbncx+xml", ignoreCase = true)) {
+                    ncxId = id
+                }
+                if (properties.contains("nav", ignoreCase = true)) {
+                    ncxId = id
+                }
+            }
+        }
+
+        spineElement?.select("itemref")?.forEach { itemRef ->
+            val idRef = itemRef.attr("idref").trim()
+            val linear = itemRef.attr("linear").trim().ifBlank { "yes" }
+            if (idRef.isNotBlank() && !linear.equals("no", ignoreCase = true)) {
+                spine += idRef
+            }
+        }
+
+        return OpfManifest(manifest = manifest, spine = spine, ncxId = ncxId)
+    }
 
     /**
      * Parses OPF XML using regex to extract manifest, spine, and NCX id.
