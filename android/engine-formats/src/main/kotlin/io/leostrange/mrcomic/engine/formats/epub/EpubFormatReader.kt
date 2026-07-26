@@ -25,9 +25,6 @@ import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.FileHeader
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
-import org.jsoup.nodes.Node
-import org.jsoup.parser.Parser as JsoupXmlParser
 import java.io.File
 import java.io.InputStream
 import java.net.URLDecoder
@@ -87,6 +84,25 @@ class EpubFormatReader(
          */
         private val CSS_INJECT = buildReaderDocumentHead(
             baseCss = EPUB_READER_DOCUMENT_CSS
+        )
+    }
+
+    /** Renders spine items into HTML for the reader. Initialized lazily on first use. */
+    private val htmlRenderer by lazy {
+        EpubHtmlRenderer(
+            contentAnalyzer = contentAnalyzer,
+            findHeader = { zip, entry -> EpubArchiveAccess.findHeader(zip, entry) },
+            detectCharset = { bytes -> detectEpubTextCharset(bytes) },
+            cssInject = CSS_INJECT,
+            prepareDocument = { html, readerCss, xhtmlEntryPath, assetExists ->
+                prepareAssetBackedEpubDocument(html, readerCss, xhtmlEntryPath, assetExists)
+            },
+            sanitizeCss = { css, cssEntryPath, assetExists ->
+                sanitizeAssetBackedEpubCss(css, cssEntryPath, assetExists)
+            },
+            epubMimeTypeFor = { ext -> EpubArchiveAccess.mimeTypeFor(ext) },
+            epubTextEncodingFor = { ext -> EpubArchiveAccess.textEncodingFor(ext) },
+            logW = { tag, msg, e -> safeLogW(tag, msg, e) }
         )
     }
 
@@ -440,148 +456,19 @@ class EpubFormatReader(
         return sections.withSequentialIndices()
     }
 
-    private fun renderImageSpineItemHtml(entry: String, zip: ZipFile): String? {
-        synchronized(htmlCache) { htmlCache["img:$entry"] }?.let { return it }
-        if (findHeader(zip, entry) == null) return null
-        val fileName = entry.substringAfterLast('/')
-        val body = contentAnalyzer.buildSyntheticHtml(
-            content = """<div class="mrcomic-image-page"><img src="$fileName" alt="" /></div>""",
-            includeTitle = false
-        )
-        val html = prepareAssetBackedEpubDocument(
-            html = body,
-            readerCss = CSS_INJECT + """
-                body[data-mrcomic-preserve-layout='true']{margin:0;padding:0;display:flex;align-items:center;justify-content:center;min-height:var(--mrcomic-page-visible-height,100vh);}
-                .mrcomic-image-page{display:flex;align-items:center;justify-content:center;width:100%;min-height:var(--mrcomic-page-visible-height,100vh);}
-                .mrcomic-image-page img{max-width:100%;max-height:var(--mrcomic-page-visible-height,100vh);width:auto;height:auto;object-fit:contain;}
-            """.trimIndent(),
-            xhtmlEntryPath = entry,
-            assetExists = { candidate -> findHeader(zip, candidate) != null }
-        )
-        synchronized(htmlCache) { htmlCache["img:$entry"] = html }
-        return html
-    }
+    private fun renderImageSpineItemHtml(entry: String, zip: ZipFile): String? =
+        htmlRenderer.renderImageSpineItemHtml(entry, zip)
 
-    private fun renderFullSpineItemHtml(page: EpubPage.Html, zip: ZipFile): String? {
-        synchronized(htmlCache) { htmlCache[page.entry] }?.let { return it }
-        val header = findHeader(zip, page.entry) ?: return null
-        val raw = try {
-            zip.getInputStream(header).use { stream ->
-                val bytes = stream.readBytes()
-                detectCharset(bytes).let { charset -> bytes.toString(charset) }
-            }
-        } catch (e: Exception) {
-            safeLogW(TAG, "Failed to read spine item ${page.entry}", e)
-            return null
-        }
-        val html = prepareAssetBackedEpubDocument(
-            html = raw,
-            readerCss = CSS_INJECT,
-            xhtmlEntryPath = page.entry,
-            assetExists = { candidate -> findHeader(zip, candidate) != null }
-        )
-        synchronized(htmlCache) { htmlCache[page.entry] = html }
-        return html
-    }
+    private fun renderFullSpineItemHtml(page: EpubPage.Html, zip: ZipFile): String? =
+        htmlRenderer.renderFullSpineItemHtml(page, zip)
 
-    /** Full spine section HTML including merged [EpubPage.Html.extraEntries] bodies. */
-    private fun renderSpineSectionHtml(page: EpubPage.Html, zip: ZipFile): String? {
-        val cacheKey = buildString {
-            append(page.entry)
-            if (page.extraEntries.isNotEmpty()) {
-                append("|merged:")
-                append(page.extraEntries.joinToString(","))
-            }
-        }
-        synchronized(htmlCache) { htmlCache[cacheKey] }?.let { return it }
-        val firstHtml = renderFullSpineItemHtml(page, zip) ?: return null
-        if (page.extraEntries.isEmpty()) return firstHtml
-        val extraBodies = page.extraEntries.mapNotNull { entry ->
-            renderFullSpineItemHtml(
-                page.copy(entry = entry, extraEntries = emptyList()),
-                zip
-            )?.let { extractWrappedBodyContent(it) }
-        }.filter { it.isNotBlank() }
-        if (extraBodies.isEmpty()) return firstHtml
-        // FOOTNOTE-01: Wrap footnote bodies in a hidden container so they don't
-        // participate in layout, scrollWidth, scrollHeight, or pageCount.
-        // The content is still in the DOM for popup retrieval via getFootnoteText().
-        val hiddenContainer = """<div id="__mrcomic_footnote_storage" style="display:none!important;position:absolute!important;height:0!important;width:0!important;overflow:hidden!important;">""" +
-            extraBodies.joinToString("") +
-            "</div>"
-        val merged = firstHtml.replace(
-            "</body>",
-            hiddenContainer + "</body>",
-            ignoreCase = true
-        )
-        synchronized(htmlCache) { htmlCache[cacheKey] = merged }
-        return merged
-    }
+    private fun renderSpineSectionHtml(page: EpubPage.Html, zip: ZipFile): String? =
+        htmlRenderer.renderSpineSectionHtml(page, zip)
 
     override fun openHtmlAsset(path: String): FormatReaderWebResource? {
-        return try {
-            val zip = ensureZip() ?: return null
-            val normalizedPath = normalizePath(
-                try {
-                    URLDecoder.decode(path.substringBefore('#').substringBefore('?'), "UTF-8")
-                } catch (_: Exception) {
-                    path.substringBefore('#').substringBefore('?')
-                }
-            )
-            val header = findHeader(zip, normalizedPath) ?: return null
-            val bytes = zip.getInputStream(header).use(InputStream::readBytes)
-            val extension = header.fileName.substringAfterLast('.', "").lowercase()
-            when (extension) {
-                "css" -> {
-                    val sanitizedCss = sanitizeAssetBackedEpubCss(
-                        css = bytes.toString(detectCharset(bytes)),
-                        cssEntryPath = header.fileName,
-                        assetExists = { candidate -> findHeader(zip, candidate) != null }
-                    )
-                    FormatReaderWebResource(
-                        mimeType = "text/css",
-                        bytes = sanitizedCss.toByteArray(Charsets.UTF_8),
-                        encoding = "UTF-8"
-                    )
-                }
-                else -> {
-                    val textEncoding = if (epubTextEncodingFor(extension) != null) {
-                        detectCharset(bytes).name()
-                    } else {
-                        null
-                    }
-                    FormatReaderWebResource(
-                        mimeType = epubMimeTypeFor(extension),
-                        bytes = bytes,
-                        encoding = textEncoding
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            safeLogW(TAG, "Failed to open EPUB asset: $path", e)
-            null
-        }
+        val zip = ensureZip() ?: return null
+        return htmlRenderer.renderHtmlAsset(path, zip)
     }
-
-
-
-    private fun extractWrappedBodyContent(html: String): String = runCatching {
-        val document = Jsoup.parse(html)
-        document.outputSettings(Document.OutputSettings().prettyPrint(false))
-        val body = document.body()
-        val content = body.html()
-        if (content.isBlank()) {
-            ""
-        } else {
-            val wrapper = Document("").createElement("section")
-            listOf("class", "style", "lang", "dir", "id").forEach { attr ->
-                body.attr(attr).trim().takeIf { it.isNotBlank() }?.let { wrapper.attr(attr, it) }
-            }
-            wrapper.addClass("epub-merged-section")
-            wrapper.html(content)
-            wrapper.outerHtml()
-        }
-    }.getOrElse { extractBodyContent(html) }
 
     override fun getTableOfContents(): List<TocEntry> = lazyTocEntries
 
@@ -640,6 +527,9 @@ class EpubFormatReader(
         synchronized(htmlCache) { htmlCache.clear() }
         synchronized(textEntryCache) { textEntryCache.clear() }
         synchronized(pageHtmlCache) { pageHtmlCache.clear() }
+        runCatching {
+            synchronized(htmlRenderer.htmlCache) { htmlRenderer.htmlCache.clear() }
+        }
     }
 
     private fun buildPagesFromBlueprint(blueprint: ManifestBlueprint, zip: ZipFile): List<EpubPage> {
@@ -699,6 +589,25 @@ class EpubFormatReader(
 
     private fun storeManifestInCache(cacheKey: EpubCacheKey?, blueprint: ManifestBlueprint) =
         EpubCacheSerializer.storeManifestInCache(cacheKey, blueprint, manifestCache)
+
+    /** Extracts body content and wraps it in a `<section epub-merged-section>` element. */
+    private fun extractWrappedBodyContent(html: String): String = runCatching {
+        val document = Jsoup.parse(html)
+        document.outputSettings(Document.OutputSettings().prettyPrint(false))
+        val body = document.body()
+        val content = body.html()
+        if (content.isBlank()) {
+            ""
+        } else {
+            val wrapper = Document("").createElement("section")
+            listOf("class", "style", "lang", "dir", "id").forEach { attr ->
+                body.attr(attr).trim().takeIf { it.isNotBlank() }?.let { wrapper.attr(attr, it) }
+            }
+            wrapper.addClass("epub-merged-section")
+            wrapper.html(content)
+            wrapper.outerHtml()
+        }
+    }.getOrElse { extractBodyContent(html) }
 
     private fun loadParsedFromCache(cacheKey: EpubCacheKey?): ParsedEpub? =
         EpubCacheSerializer.loadParsedFromCache(cacheKey, structureCache)
