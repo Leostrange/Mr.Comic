@@ -192,6 +192,12 @@ class ReaderViewModel @Inject constructor(
             )
         }
     )
+    private val bookmarkController = ReaderBookmarkController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        readerPreferences = readerPreferences,
+        analyticsTracker = analyticsTracker
+    )
     private val renderProfile = context.resolveRenderDeviceProfile()
     private var formatReader: FormatReader? = null
     private var activeBookSession: BookSession? = null
@@ -1277,63 +1283,12 @@ class ReaderViewModel @Inject constructor(
     // ── Закладки ──────────────────────────────────────────────────────────────
 
     /** Toggles a bookmark on/off for the current page. */
-    fun toggleBookmark() {
-        val page = _uiState.value.currentPage
-        val comicId = _uiState.value.comic?.id ?: return
-        val updated = _uiState.value.bookmarkedPages.toMutableSet()
-        val isNowBookmarked = if (page in updated) {
-            updated.remove(page)
-            false
-        } else {
-            updated.add(page)
-            true
-        }
-        _uiState.update { it.copy(bookmarkedPages = updated) }
-        saveBookmarks(updated)
-        analyticsTracker.track(
-            ReadingAnalyticsEvent.BookmarkToggled(
-                comicId = comicId,
-                page = page,
-                bookmarked = isNowBookmarked
-            )
-        )
-    }
+    fun toggleBookmark() = bookmarkController.toggleBookmark()
 
     /** Removes a specific page bookmark (called from the bookmarks list in TOC). */
-    fun removeBookmark(page: Int) {
-        val updated = _uiState.value.bookmarkedPages.toMutableSet()
-        if (updated.remove(page)) {
-            _uiState.update { it.copy(bookmarkedPages = updated) }
-            saveBookmarks(updated)
-        }
-    }
+    fun removeBookmark(page: Int) = bookmarkController.removeBookmark(page)
 
-    private fun loadBookmarks(comicId: String, totalPages: Int) {
-        viewModelScope.launch {
-            val raw = readerPreferences.get(PreferencesKeys.bookmarks(comicId), "").first()
-            val maxPage = (totalPages - 1).coerceAtLeast(0)
-            val pages = raw
-                .split(",")
-                .mapNotNull { it.trim().toIntOrNull() }
-                .filter { it in 0..maxPage }
-                .toSet()
-            if (_uiState.value.comic?.id != comicId) return@launch
-            _uiState.update { it.copy(bookmarkedPages = pages) }
-            if (pages.joinToString(",") != raw) {
-                saveBookmarksForComic(comicId, pages)
-            }
-        }
-    }
-
-    private fun saveBookmarks(pages: Set<Int>) {
-        val comicId = _uiState.value.comic?.id ?: return
-        saveBookmarksForComic(comicId, pages)
-    }
-
-    private fun saveBookmarksForComic(comicId: String, pages: Set<Int>) {
-        val raw = pages.sorted().joinToString(",")
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.bookmarks(comicId), raw) }
-    }
+    private fun loadBookmarks(comicId: String, totalPages: Int) = bookmarkController.loadBookmarks(comicId, totalPages)
 
     private fun loadPageTranslationNote(
         comicId: String? = _uiState.value.comic?.id,
