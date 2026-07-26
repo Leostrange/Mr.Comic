@@ -255,6 +255,18 @@ class ReaderViewModel @Inject constructor(
      * have no bitmap render path but do provide HTML content via [FormatReader.getHtmlPage].
      */
     private val _webtoonHtmlCache = MutableStateFlow<Map<Int, String>>(emptyMap())
+    private val pageLoader = ReaderPageLoader(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        pagePreloader = pagePreloader,
+        textReaderOrchestrator = textReaderOrchestrator,
+        _webtoonHtmlCache = _webtoonHtmlCache,
+        formatReader = { formatReader },
+        getOrLoadHtmlPage = { reader, index -> getOrLoadHtmlPage(reader, index) },
+        refreshAdjacentHtmlPages = { refreshAdjacentHtmlPages(it) },
+        loadHighlightsForCurrentPage = { loadHighlightsForCurrentPage() },
+        activeBookSession = { activeBookSession }
+    )
 
     fun getWebtoonHtmlPageFlow(index: Int): kotlinx.coroutines.flow.Flow<String?> =
         _webtoonHtmlCache.map { it[index] }.distinctUntilChanged()
@@ -272,7 +284,7 @@ class ReaderViewModel @Inject constructor(
         pagePreloader = pagePreloader,
         textReaderOrchestrator = textReaderOrchestrator,
         formatReader = { formatReader },
-        loadPage = { loadPage(it) },
+        loadPage = { pageLoader.loadPage(it) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
         loadPageTranslationNote = { loadPageTranslationNote(page = it) },
         saveProgress = { page, source -> saveProgress(page, source) },
@@ -656,179 +668,11 @@ class ReaderViewModel @Inject constructor(
         return readerUiText(languageCode)
     }
 
-    fun getPage(index: Int, renderQuality: Int = 1): Bitmap? =
-        pagePreloader.getPage(index, renderQuality)
-
-    /** Flow-based accessor — no polling needed in the UI. */
-    fun getPageFlow(index: Int, renderQuality: Int = 1) =
-        pagePreloader.getPageFlow(index, renderQuality)
-
-    fun loadPage(index: Int, renderQuality: Int = 1) {
-        val comicId = _uiState.value.comic?.id
-        val reader = formatReader
-        viewModelScope.launch {
-            if (reader == null || formatReader !== reader) return@launch
-            // HTML rendering is only the contract for text/reflowable formats.
-            // Raster formats such as DjVu can expose diagnostic/visual HTML, but
-            // the reader must keep them on the bitmap path.
-            if (_uiState.value.readerRendersHtmlContent) {
-                val cachedHtmlPage = runCatching {
-                    getOrLoadHtmlPage(reader, index)
-                }.getOrElse { error ->
-                    Log.e("ReaderViewModel", "Failed to load HTML page $index", error)
-                    if (_uiState.value.currentPage == index) {
-                        CachedHtmlPage(
-                            html = textReaderOrchestrator.loadErrorHtml(index, error),
-                            assetBasePath = null
-                        )
-                    } else {
-                        null
-                    }
-                }
-                if (cachedHtmlPage != null) {
-                    if (
-                        formatReader === reader &&
-                        _uiState.value.comic?.id == comicId &&
-                        _uiState.value.currentPage == index
-                    ) {
-                        _uiState.update {
-                            it.copy(
-                                currentHtmlContent = cachedHtmlPage.html,
-                                htmlAssetBasePath = cachedHtmlPage.assetBasePath,
-                                textWebtoonHtmlContent = if (it.readingMode == ReadingMode.WEBTOON) {
-                                    it.textWebtoonHtmlContent
-                                } else {
-                                    null
-                                },
-                                textWebtoonHtmlAssetBasePath = if (it.readingMode == ReadingMode.WEBTOON) {
-                                    it.textWebtoonHtmlAssetBasePath
-                                } else {
-                                    null
-                                },
-                                textWebtoonHtmlPageCount = if (it.readingMode == ReadingMode.WEBTOON) {
-                                    it.textWebtoonHtmlPageCount
-                                } else {
-                                    0
-                                }
-                            )
-                        }
-                        refreshAdjacentHtmlPages(index)
-                        loadHighlightsForCurrentPage()
-                    }
-                    return@launch
-                }
-                if (_uiState.value.currentPage == index && formatReader === reader && comicId != null) {
-                    Log.w("ReaderViewModel", "Empty HTML for page $index; showing error surface")
-                    _uiState.update {
-                        it.copy(
-                            currentHtmlContent = textReaderOrchestrator.loadErrorHtml(
-                                index,
-                                IllegalStateException("Empty HTML page")
-                            ),
-                            htmlAssetBasePath = null
-                        )
-                    }
-                }
-                return@launch
-            }
-            // Bitmap page (image-based formats)
-            if (renderQuality == 1) {
-                if (formatReader === reader && _uiState.value.comic?.id == comicId && _uiState.value.currentPage == index) {
-                    _uiState.update {
-                        it.copy(
-                            currentHtmlContent = null,
-                            htmlAssetBasePath = null,
-                            previousHtmlContent = null,
-                            previousHtmlAssetBasePath = null,
-                            nextHtmlContent = null,
-                            nextHtmlAssetBasePath = null
-                        )
-                    }
-                }
-            }
-            if (pagePreloader.getPage(index, renderQuality) == null) {
-                pagePreloader.loadPage(reader, index, renderQuality)
-            }
-            // preloadAround is NOT called here — calling it per-item (e.g. from LazyColumn)
-            // would cancel the previous preload job on every item composition, starving
-            // the first pages. Preloading is triggered only from navigateTo / openComic.
-        }
-    }
-
-    fun preloadWebtoonWindow(pages: List<Int>) {
-        val reader = formatReader ?: return
-        val state = _uiState.value
-        if (state.totalPages <= 0 || state.readerRendersHtmlContent) return
-        val validPages = pages
-            .asSequence()
-            .filter { it in 0 until state.totalPages }
-            .distinct()
-            .toList()
-        if (validPages.isEmpty()) return
-
-        validPages.forEach { pageIndex ->
-            viewModelScope.launch {
-                if (formatReader !== reader) return@launch
-                if (pagePreloader.getPage(pageIndex, 1) == null) {
-                    pagePreloader.loadPage(reader, pageIndex, 1)
-                }
-                // HTML fallback for formats (e.g. DjVu) where some pages have no bitmap.
-                if (formatReader !== reader) return@launch
-                if (pagePreloader.getPage(pageIndex, 1) == null &&
-                    _webtoonHtmlCache.value[pageIndex] == null
-                ) {
-                    val html = withContext(Dispatchers.IO) {
-                        runCatching { reader.getHtmlPage(pageIndex) }.getOrNull()
-                    }
-                    if (html != null && formatReader === reader) {
-                        _webtoonHtmlCache.update { it + (pageIndex to html) }
-                    }
-                }
-            }
-        }
-
-        pagePreloader.preloadAround(
-            reader = reader,
-            visiblePages = validPages,
-            totalPages = state.totalPages,
-            preloadAhead = state.preloadPages
-        )
-    }
-
-    fun ensureTextWebtoonDocumentLoaded() {
-        val reader = formatReader ?: return
-        val state = _uiState.value
-        val comic = state.comic ?: return
-        if (state.readerContainerKind != ReaderContainerKind.TEXT_WEBTOON) return
-        textReaderOrchestrator.controller.ensureTextWebtoonDocumentLoaded(
-            scope = viewModelScope,
-            reader = reader,
-            comic = comic,
-            state = state,
-            isSessionActive = { activeReader, comicId ->
-                formatReader === activeReader && _uiState.value.comic?.id == comicId
-            },
-            loadPage = { activeReader, pageIndex -> getOrLoadHtmlPage(activeReader, pageIndex) },
-            publish = { document, loadedCount ->
-                _uiState.update { current ->
-                    if (current.comic?.id != comic.id || formatReader !== reader) {
-                        current
-                    } else if (
-                        current.textWebtoonHtmlContent != null &&
-                        current.textWebtoonHtmlPageCount >= loadedCount
-                    ) {
-                        current
-                    } else {
-                        current.copy(
-                            textWebtoonHtmlContent = document.html,
-                            textWebtoonHtmlAssetBasePath = document.assetBasePath,
-                            textWebtoonHtmlPageCount = loadedCount
-                        )
-                    }
-                }
-            }
-        )
-    }
+    fun getPage(index: Int, renderQuality: Int = 1): Bitmap? = pageLoader.getPage(index, renderQuality)
+    fun getPageFlow(index: Int, renderQuality: Int = 1) = pageLoader.getPageFlow(index, renderQuality)
+    fun loadPage(index: Int, renderQuality: Int = 1) = pageLoader.loadPage(index, renderQuality)
+    fun preloadWebtoonWindow(pages: List<Int>) = pageLoader.preloadWebtoonWindow(pages)
+    fun ensureTextWebtoonDocumentLoaded() = pageLoader.ensureTextWebtoonDocumentLoaded()
 
     fun navigateTo(
         page: Int,
