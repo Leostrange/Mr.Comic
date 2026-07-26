@@ -203,7 +203,31 @@ class ReaderViewModel @Inject constructor(
         viewModelScope = viewModelScope,
         textHighlightRepository = textHighlightRepository
     )
+    private val eyeRestController = ReaderEyeRestController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        readerPreferences = readerPreferences,
+        _eyeRestReminder = _eyeRestReminder
+    )
+    private val saveQuoteController = ReaderSaveQuoteController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        quoteRepository = quoteRepository,
+        analyticsTracker = analyticsTracker,
+        _quoteSaveMessages = _quoteSaveMessages,
+        localizedReaderText = { localizedReaderText() }
+    )
     private val renderProfile = context.resolveRenderDeviceProfile()
+    private val ocrController = ReaderOcrController(
+        _uiState = _uiState,
+        viewModelScope = viewModelScope,
+        pagePreloader = pagePreloader,
+        renderProfile = renderProfile,
+        context = context,
+        _ocrPagePath = _ocrPagePath,
+        getPage = { index, quality -> getPage(index, quality) },
+        formatReader = { formatReader }
+    )
     private var formatReader: FormatReader? = null
     private var activeBookSession: BookSession? = null
 
@@ -238,7 +262,6 @@ class ReaderViewModel @Inject constructor(
     private var tocLoadJob: Job? = null
     private var deferredTocWarmupJob: Job? = null
     private var deferredPageCountJob: Job? = null
-    private var eyeRestJob: Job? = null
     private var highQualityWarmupJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
     private val readerSessionCoordinator = ReaderSessionCoordinator()
@@ -344,7 +367,7 @@ class ReaderViewModel @Inject constructor(
         } catch (e: Exception) {
             if (!openGuard.isCurrent(requestToken)) return
             Log.e("ReaderViewModel", "Failed to open comic", e)
-            eyeRestJob?.cancel()
+            eyeRestController.cancel()
             highQualityWarmupJob?.cancel()
             deferredPageCountJob?.cancel()
             val errorMessage = localizedReaderError(::readerOpenFailedMessage)
@@ -382,7 +405,7 @@ class ReaderViewModel @Inject constructor(
                 selectedTextTranslation = null
             )
         }
-        eyeRestJob?.cancel()
+        eyeRestController.cancel()
         highQualityWarmupJob?.cancel()
         textReaderOrchestrator.cancelAllJobsAndJoin()
         if (!openGuard.isCurrent(requestToken)) return
@@ -867,55 +890,7 @@ class ReaderViewModel @Inject constructor(
         progressSource = ReaderNavigationProgressSource.READING
     )
 
-    /**
-     * Saves the current page bitmap to the app cache directory and emits the file path
-     * via [ocrPagePath] for the OCR screen to consume.
-     */
-    fun requestOcr() {
-        viewModelScope.launch {
-            val pageIndex = _uiState.value.currentPage
-            val comicId = _uiState.value.comic?.id
-            val reader = formatReader ?: return@launch
-            val preferredOcrQualityTier = when (renderProfile.tier) {
-                RenderDeviceTier.HIGH_END -> 3
-                RenderDeviceTier.MID_RANGE -> 2
-                else -> 1
-            }
-            val bitmap = getPage(pageIndex, preferredOcrQualityTier)
-                ?: getPage(pageIndex, 3)
-                ?: getPage(pageIndex, 2)
-                ?: getPage(pageIndex, 1)
-                ?: pagePreloader.loadPage(reader, pageIndex, preferredOcrQualityTier)
-                ?: pagePreloader.loadPage(reader, pageIndex, 3)
-                ?: pagePreloader.loadPage(reader, pageIndex, 2)
-                ?: pagePreloader.loadPage(reader, pageIndex, 1)
-                ?: return@launch
-            try {
-                if (formatReader !== reader || _uiState.value.comic?.id != comicId || _uiState.value.currentPage != pageIndex) {
-                    return@launch
-                }
-                val file = java.io.File.createTempFile(
-                    "ocr_page_${comicId ?: "standalone"}_${pageIndex}_",
-                    ".png",
-                    context.cacheDir
-                )
-                withContext(Dispatchers.IO) {
-                    file.outputStream().use { out ->
-                        bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                    }
-                }
-                _ocrPagePath.emit(
-                    OcrLaunchRequest(
-                        imagePath = file.absolutePath,
-                        comicId = comicId,
-                        page = pageIndex
-                    )
-                )
-            } catch (e: Exception) {
-                Log.e("ReaderViewModel", "Failed to save page for OCR", e)
-            }
-        }
-    }
+    fun requestOcr() = ocrController.requestOcr()
 
     fun requestTextPageTranslation(page: Int = _uiState.value.currentPage) =
         translationController.requestTextPageTranslation(formatReader, page)
@@ -992,25 +967,8 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    fun saveQuoteFromSelectedTextActions() {
-        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
-        dismissSelectedTextActions()
-        saveQuote(
-            text = selectedText,
-            translatedText = null,
-            sourceLanguage = null,
-            targetLanguage = null
-        )
-    }
-
-    fun saveQuoteDirectly(selectedText: String) {
-        saveQuote(
-            text = selectedText,
-            translatedText = null,
-            sourceLanguage = null,
-            targetLanguage = null
-        )
-    }
+    fun saveQuoteFromSelectedTextActions() = saveQuoteController.saveQuoteFromSelectedTextActions()
+    fun saveQuoteDirectly(selectedText: String) = saveQuoteController.saveQuoteDirectly(selectedText)
 
     fun explainFromSelectedTextActions() {
         val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
@@ -1068,16 +1026,7 @@ class ReaderViewModel @Inject constructor(
     fun dismissSelectedTextTranslation() =
         translationController.dismissSelectedTextTranslation()
 
-    fun saveQuoteFromSelectedTextResult() {
-        val state = _uiState.value.selectedTextTranslation ?: return
-        _uiState.update { it.copy(selectedTextTranslation = null) }
-        saveQuote(
-            text = state.originalText,
-            translatedText = state.translatedText.ifBlank { null },
-            sourceLanguage = state.sourceLanguage,
-            targetLanguage = state.targetLanguage
-        )
-    }
+    fun saveQuoteFromSelectedTextResult() = saveQuoteController.saveQuoteFromSelectedTextResult()
 
     fun onCenterTap() {
         _uiState.update { state ->
@@ -1804,7 +1753,7 @@ class ReaderViewModel @Inject constructor(
         loadComicJob?.cancel()
         tocLoadJob?.cancel()
         deferredTocWarmupJob?.cancel()
-        eyeRestJob?.cancel()
+        eyeRestController.cancel()
         highQualityWarmupJob?.cancel()
         textReaderOrchestrator.cancelAllJobs()
         progressController.progressSaveJob?.cancel()
@@ -1841,29 +1790,8 @@ class ReaderViewModel @Inject constructor(
         restartEyeRestTimer()
     }
 
-    fun snoozeEyeRestReminder(minutes: Int = 5) {
-        restartEyeRestTimer(initialDelayMinutes = minutes.coerceAtLeast(1))
-    }
-
-    private fun restartEyeRestTimer(initialDelayMinutes: Int? = null) {
-        eyeRestJob?.cancel()
-        val state = _uiState.value
-        if (!state.eyeRestEnabled || state.eyeRestMinutes <= 0 || state.comic == null || state.isLoading || state.error != null) {
-            return
-        }
-        eyeRestJob = viewModelScope.launch {
-            var nextDelayMinutes = initialDelayMinutes ?: state.eyeRestMinutes
-            while (true) {
-                delay(nextDelayMinutes * 60_000L)
-                val currentState = _uiState.value
-                if (!currentState.eyeRestEnabled || currentState.eyeRestMinutes <= 0 || currentState.comic == null || currentState.isLoading || currentState.error != null) {
-                    break
-                }
-                _eyeRestReminder.emit(currentState.eyeRestMinutes)
-                nextDelayMinutes = currentState.eyeRestMinutes
-            }
-        }
-    }
+    fun snoozeEyeRestReminder(minutes: Int = 5) = eyeRestController.snoozeEyeRestReminder(minutes)
+    private fun restartEyeRestTimer(initialDelayMinutes: Int? = null) = eyeRestController.restartEyeRestTimer(initialDelayMinutes)
 
     private fun detectFormatForPath(path: String): ComicFormat =
         ReaderContentPathResolver.detectFormatForPath(context, path)
@@ -1923,46 +1851,7 @@ class ReaderViewModel @Inject constructor(
     private fun String.countSelectionTokens(): Int =
         SELECTION_TOKEN_REGEX.findAll(this).count().coerceAtLeast(if (isBlank()) 0 else 1)
 
-    private fun saveQuote(
-        text: String,
-        translatedText: String?,
-        sourceLanguage: String?,
-        targetLanguage: String?
-    ) {
-        val comic = _uiState.value.comic ?: return
-        val page = _uiState.value.currentPage
-        viewModelScope.launch {
-            runCatching {
-                quoteRepository.saveQuote(
-                    comic = comic,
-                    page = page,
-                    text = text,
-                    translatedText = translatedText,
-                    sourceLanguage = sourceLanguage,
-                    targetLanguage = targetLanguage
-                )
-            }.onSuccess { result ->
-                val readerText = localizedReaderText()
-                if (result == null) {
-                    _quoteSaveMessages.emit(readerText.quoteSaveFailed)
-                    return@onSuccess
-                }
-                analyticsTracker.track(
-                    ReadingAnalyticsEvent.QuoteSaved(
-                        comicId = comic.id,
-                        page = page,
-                        inserted = result.inserted
-                    )
-                )
-                _quoteSaveMessages.emit(
-                    if (result.inserted) readerText.quoteSaved else readerText.quoteUpdated
-                )
-            }.onFailure { error ->
-                Log.e("ReaderViewModel", "Failed to save quote", error)
-                _quoteSaveMessages.emit(localizedReaderText().quoteSaveFailed)
-            }
-        }
-    }
+
 
     private fun isNetworkAvailable(): Boolean {
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java) ?: return false
