@@ -14,7 +14,7 @@ import io.leostrange.mrcomic.feature.reader.domain.preset.*
  * state model from the ViewModel lifecycle and business logic.
  */
 
-internal data class PreparedReaderOpen(
+data class PreparedReaderOpen(
     val resolvedPath: String,
     val detectedFormat: ComicFormat,
     val contentFormat: ComicFormat,
