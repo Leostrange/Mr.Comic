@@ -151,7 +151,8 @@ class EpubFormatReader(
                     opfText.contains("<meta name=\"calibre:", ignoreCase = true) ||
                     opfText.contains("calibre-ebook.com", ignoreCase = true)
                 val (manifest, spine, ncxId) = runCatching {
-                    parseOpfRegexFallback(opfText)
+                    val r = EpubManifestParser.parseOpfRegex(opfText)
+                    Triple(r.manifest, r.spine, r.ncxId)
                 }.recoverCatching {
                     parseOpf(opfBytes.inputStream())
                 }.getOrElse { error ->
@@ -991,52 +992,7 @@ class EpubFormatReader(
     private fun parseOpf(stream: InputStream): Triple<Map<String, String>, List<String>, String?> {
         val bytes = stream.readBytes()
         val rawOpf = bytes.toString(detectCharset(bytes))
-        return parseOpfFallback(rawOpf)
-    }
-
-    private fun parseOpfFallback(rawOpf: String): Triple<Map<String, String>, List<String>, String?> {
-
-        val manifest = linkedMapOf<String, String>()
-        val spine = mutableListOf<String>()
-        val document = Jsoup.parse(rawOpf, "", JsoupXmlParser.xmlParser())
-        val spineElement = document.selectFirst("spine")
-        var ncxId = spineElement?.attr("toc")?.trim().takeUnless { it.isNullOrBlank() }
-
-        document.select("manifest > item").forEach { item ->
-            val id = item.attr("id").trim()
-            val href = item.attr("href").trim()
-            if (id.isNotBlank() && href.isNotBlank()) {
-                manifest[id] = href
-                val mediaType = item.attr("media-type").trim()
-                val properties = item.attr("properties").trim()
-                if (mediaType.equals("application/x-dtbncx+xml", ignoreCase = true)) {
-                    ncxId = id
-                }
-                if (properties.contains("nav", ignoreCase = true)) {
-                    ncxId = id
-                }
-            }
-        }
-
-        spineElement?.select("itemref")?.forEach { itemRef ->
-            val idRef = itemRef.attr("idref").trim()
-            val linear = itemRef.attr("linear").trim().ifBlank { "yes" }
-            if (idRef.isNotBlank() && !linear.equals("no", ignoreCase = true)) {
-                spine += idRef
-            }
-        }
-
-        if (manifest.isNotEmpty() && spine.isNotEmpty()) {
-            return Triple(manifest, spine, ncxId)
-        }
-        return parseOpfRegexFallback(rawOpf, ncxId)
-    }
-
-    private fun parseOpfRegexFallback(
-        rawOpf: String,
-        existingNcxId: String? = null
-    ): Triple<Map<String, String>, List<String>, String?> {
-        val result = EpubManifestParser.parseOpfRegex(rawOpf, existingNcxId)
+        val result = EpubManifestParser.parseOpf(rawOpf)
         return Triple(result.manifest, result.spine, result.ncxId)
     }
 
