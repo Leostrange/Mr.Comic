@@ -9,10 +9,6 @@ import android.util.Log
 import io.leostrange.mrcomic.engine.formats.base.log.perfNowMs
 import io.leostrange.mrcomic.engine.formats.base.log.safeLogE
 import io.leostrange.mrcomic.engine.formats.base.log.safeLogW
-import io.leostrange.mrcomic.engine.formats.base.charset.detectBomCharset
-import io.leostrange.mrcomic.engine.formats.base.charset.hasUtf8Bom
-import io.leostrange.mrcomic.engine.formats.base.charset.isStrictUtf8
-import io.leostrange.mrcomic.engine.api.EpubCacheEntry
 import io.leostrange.mrcomic.engine.api.EpubCacheStore
 import com.google.gson.Gson
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
@@ -24,7 +20,6 @@ import io.leostrange.mrcomic.engine.formats.text.withSequentialIndices
 import io.leostrange.mrcomic.engine.formats.base.EPUB_READER_DOCUMENT_CSS
 import io.leostrange.mrcomic.engine.formats.base.buildReaderDocumentHead
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import net.lingala.zip4j.model.FileHeader
@@ -32,7 +27,6 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
-import org.jsoup.nodes.TextNode
 import org.jsoup.parser.Parser as JsoupXmlParser
 import java.io.File
 import java.io.InputStream
