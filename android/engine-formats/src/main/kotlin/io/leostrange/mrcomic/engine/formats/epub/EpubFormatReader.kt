@@ -229,6 +229,17 @@ class EpubFormatReader(
     }
 
     private val pages: List<EpubPage> get() = parsed.pages
+    private val tocResolver by lazy {
+        EpubTocResolver(
+            pages = pages,
+            sectionIndexMapper = { legacyIndex -> mapLegacyPageIndexToSectionIndex(legacyIndex) },
+            findHeader = { zip, entry -> EpubArchiveAccess.findHeader(zip, entry) },
+            detectCharset = { bytes -> detectEpubTextCharset(bytes) },
+            textEntryReader = { zip, entry -> contentAnalyzer.readTextEntry(zip, entry) },
+            zipProvider = { ensureZip() },
+            extractChunk = { html, chunkIndex, totalChunks -> extractChunk(html, chunkIndex, totalChunks) }
+        )
+    }
     private val lazyTocEntries: List<TocEntry> by lazy {
         val blueprint = manifestBlueprint ?: return@lazy emptyList()
         runCatching {
@@ -597,35 +608,7 @@ class EpubFormatReader(
     override fun resolveHrefToPage(href: String): Int? {
         val normalizedHref = href.trim()
         if (normalizedHref.isBlank()) return null
-        val hrefWithoutQuery = normalizedHref.substringBefore('?')
-        val filePart = hrefWithoutQuery.substringBefore('#').trim().trimStart('/')
-        val fragment = hrefWithoutQuery.substringAfter('#', "").trim()
-
-        if (fragment.isNotBlank()) {
-            resolveAnchorHrefToPage(filePart, fragment)?.let { return mapLegacyPageIndexToSectionIndex(it) }
-        }
-
-        if (filePart.isBlank()) return null
-        
-        // Try resolved file name first; if not found, search by prefix on all
-        // chunkIndices — not just chunkIndex==0 (P1 #8)
-        val baseResult = resolveFileNameToPageIndex(filePart, parsed.pages)
-            ?.let { mapLegacyPageIndexToSectionIndex(it) }
-        if (baseResult != null) return baseResult
-        
-        // Fallback: search pages whose entries end with this filePart
-        // (handles cases where the same XHTML file appears with different chunk indices)
-        return parsed.pages.indices.firstOrNull { index ->
-            val page = parsed.pages[index]
-            when (page) {
-                is EpubPage.Html -> page.entry.endsWith(filePart, ignoreCase = true) ||
-                    page.extraEntries.any { it.endsWith(filePart, ignoreCase = true) }
-                is EpubPage.SyntheticHtml -> 
-                    page.entry.endsWith(filePart, ignoreCase = true) ||
-                    page.sourceEntries.any { it.endsWith(filePart, ignoreCase = true) }
-                else -> false
-            }
-        }?.let { mapLegacyPageIndexToSectionIndex(it) }
+        return tocResolver.resolveHrefToPage(normalizedHref)
     }
 
     /** Maps legacy char-chunk page indices to spine-level section indices (Moon+ model). */
@@ -696,7 +679,7 @@ class EpubFormatReader(
     ): List<TocEntry> {
         val ncxId = blueprint.ncxId ?: return emptyList()
         val ncxHref = blueprint.manifest[ncxId] ?: return emptyList()
-        return parseToc(zip, blueprint.opfDir, ncxHref, pages)
+        return tocResolver.parseToc(zip, blueprint.opfDir, ncxHref)
     }
 
     private fun currentCacheKey(): EpubCacheKey? {
@@ -933,49 +916,7 @@ class EpubFormatReader(
         }
 
 
-    private fun hasExpectedFb2FrontMatter(pages: List<EpubPage>): Boolean {
-        val coverIndex = resolveFileNameToPageIndex("cover.xhtml", pages)
-        val titleIndex = resolveFileNameToPageIndex("ch1.xhtml", pages)
-        return coverIndex == 0 && titleIndex == 1
-    }
 
-    private fun shouldRepairFrontMatter(
-        opfText: String,
-        manifest: Map<String, String>,
-        spine: List<String>
-    ): Boolean {
-        if (!opfText.contains("cover.xhtml", ignoreCase = true)) return false
-        if (!opfText.contains("ch1.xhtml", ignoreCase = true)) return false
-        val normalizedEntries = spine.mapNotNull { idRef ->
-            manifest[idRef]
-                ?.substringBefore('#')
-                ?.let { rawHref ->
-                    val decoded = try { URLDecoder.decode(rawHref, "UTF-8") } catch (_: Exception) { rawHref }
-                    normalizePath(decoded)
-                }
-        }
-        val coverIndex = normalizedEntries.indexOfFirst { it.endsWith("cover.xhtml", ignoreCase = true) }
-        val titleIndex = normalizedEntries.indexOfFirst { it.endsWith("ch1.xhtml", ignoreCase = true) }
-        if (coverIndex < 0 || titleIndex < 0) return false
-        return coverIndex != 0 || titleIndex != 1
-    }
-
-    private fun detectPublisherEpub(
-        opfText: String,
-        manifest: Map<String, String>,
-        spine: List<String>
-    ): Boolean {
-        val lowerOpf = opfText.lowercase()
-        if ("oreilly" in lowerOpf || "early release" in lowerOpf) return true
-        if (manifest.values.any { href ->
-                href.contains("titlepage", ignoreCase = true) ||
-                    href.contains("copyright-page", ignoreCase = true) ||
-                    href.contains("toc01.html", ignoreCase = true)
-            }) {
-            return true
-        }
-        return spine.size >= 4 && manifest.values.any { it.contains("cover.xhtml", ignoreCase = true) }
-    }
 
     private fun findOpfEntry(zip: ZipFile): String? {
         val containerHeader = zip.getFileHeader("META-INF/container.xml")
@@ -1000,288 +941,6 @@ class EpubFormatReader(
         val rawOpf = bytes.toString(detectCharset(bytes))
         val result = EpubManifestParser.parseOpf(rawOpf)
         return Triple(result.manifest, result.spine, result.ncxId)
-    }
-
-    /**
-     * Parses the NCX (EPUB2) or nav.xhtml (EPUB3) document to build a chapter TOC.
-     * Maps each navPoint's content src to a page index in [pages].
-     */
-    private fun parseToc(
-        zip: ZipFile,
-        opfDir: String,
-        ncxHref: String,
-        pages: List<EpubPage>
-    ): List<TocEntry> {
-        val decoded = try { URLDecoder.decode(ncxHref, "UTF-8") } catch (_: Exception) { ncxHref }
-        val ncxEntry = normalizePath(if (opfDir.isEmpty()) decoded else "$opfDir/$decoded")
-        val header = findHeader(zip, ncxEntry) ?: run {
-            safeLogW(TAG, "TOC file not found: $ncxEntry")
-            return emptyList()
-        }
-
-        return try {
-            val ext = ncxEntry.substringAfterLast('.', "").lowercase()
-            if (ext == "ncx") parseNcx(zip, header, ncxEntry, opfDir, pages)
-            else parseNavXhtml(zip, header, ncxEntry, opfDir, pages)
-        } catch (e: Exception) {
-            safeLogW(TAG, "TOC parse failed for $ncxEntry", e)
-            emptyList()
-        }
-    }
-
-    /** Parse EPUB2 NCX file. */
-    private fun parseNcx(
-        zip: ZipFile,
-        header: FileHeader,
-        ncxEntry: String,
-        opfDir: String,
-        pages: List<EpubPage>
-    ): List<TocEntry> {
-        data class RawNav(val title: String, val src: String, val order: Int)
-
-        val raw = zip.getInputStream(header).use { stream ->
-            val bytes = stream.readBytes()
-            bytes.toString(detectCharset(bytes))
-        }
-        val document = Jsoup.parse(raw, "", JsoupXmlParser.xmlParser())
-        document.outputSettings(Document.OutputSettings().prettyPrint(false))
-
-        val result = document.getElementsByTag("navPoint")
-            .mapNotNull { navPoint ->
-                val title = navPoint.getElementsByTag("text").firstOrNull()
-                    ?.text()
-                    ?.trim()
-                    .orEmpty()
-                val src = navPoint.getElementsByTag("content").firstOrNull()
-                    ?.attr("src")
-                    ?.trim()
-                    .orEmpty()
-                val order = navPoint.attr("playOrder").toIntOrNull() ?: 0
-                if (title.isBlank() || src.isBlank()) null else RawNav(title, src, order)
-            }
-        val ncxDir = ncxEntry.substringBeforeLast('/', "")
-        return result.sortedBy { it.order }.mapNotNull { nav ->
-            // Filter out footnote/note entries from NCX
-            if (isFootnoteTocEntry(nav.src, nav.title)) return@mapNotNull null
-            val href = try { URLDecoder.decode(nav.src, "UTF-8") } catch (_: Exception) { nav.src }
-            srcToPageIndex(href, ncxDir, pages, fallbackBaseDir = opfDir)?.let { TocEntry(nav.title, it) }
-        }
-    }
-
-    /** Parse EPUB3 nav.xhtml file (looks for <nav epub:type="toc"> or first <nav>). */
-    private fun parseNavXhtml(
-        zip: ZipFile,
-        header: FileHeader,
-        navEntry: String,
-        opfDir: String,
-        pages: List<EpubPage>
-    ): List<TocEntry> {
-        val raw = zip.getInputStream(header).use { decodeEpubText(it.readBytes()) }
-        val navDir = navEntry.substringBeforeLast('/', "")
-
-        // Extract all <a href="...">text</a> from the nav document, in order.
-        val linkRe = Regex("""<a\b[^>]+\bhref\s*=\s*["']([^"'#][^"']*)["'][^>]*>(.*?)</a>""",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-        val result = mutableListOf<TocEntry>()
-        for (match in linkRe.findAll(raw)) {
-            val href  = try { URLDecoder.decode(match.groupValues[1], "UTF-8") } catch (_: Exception) { match.groupValues[1] }
-            val title = CHUNK_HTML_TAG_RE.replace(match.groupValues[2], "").trim()
-            if (title.isEmpty()) continue
-            // Filter out footnote/note links that should not appear as chapters
-            if (isFootnoteTocEntry(href, title)) continue
-            val pageIdx = srcToPageIndex(href, navDir, pages, fallbackBaseDir = opfDir) ?: continue
-            result.add(TocEntry(title, pageIdx))
-        }
-        return result
-    }
-
-    /**
-     * Returns true if this TOC entry is a footnote/note reference that should
-     * be filtered out of the chapter list. Common patterns from FB2EPUB and
-     * other converters: FbAutId_*, #fn*, #note*, numeric-only titles, etc.
-     */
-    private fun isFootnoteTocEntry(href: String, title: String): Boolean =
-        EpubFootnoteResolver.isFootnoteTocEntry(href, title)
-
-    /**
-     * Resolves an href (relative to [baseDir]) to the 0-based reader page index
-     * of the first chunk of the matching spine item, or null if not found.
-     */
-    private fun srcToPageIndex(
-        href: String,
-        baseDir: String,
-        pages: List<EpubPage>,
-        fallbackBaseDir: String? = null
-    ): Int? {
-        val filePart = href.substringBefore('#').trim().trimStart('/')
-        if (filePart.isBlank()) return null
-        val legacyIndex = findPageIndexByEntryCandidates(
-            pages = pages,
-            candidates = buildEntryCandidates(filePart, baseDir, fallbackBaseDir)
-        ) ?: return null
-        return mapLegacyPageIndexToSectionIndex(legacyIndex)
-    }
-
-    private fun pageContainsEntry(
-        page: EpubPage,
-        entry: String,
-        suffixMatch: Boolean = false
-    ): Boolean {
-        val htmlPage = page as? EpubPage.Html ?: return false
-        val candidates = buildList {
-            add(htmlPage.entry)
-            addAll(htmlPage.extraEntries)
-        }
-        return candidates.any { candidate ->
-            if (suffixMatch) {
-                candidate.endsWith(entry, ignoreCase = true)
-            } else {
-                candidate.equals(entry, ignoreCase = true)
-            }
-        }
-    }
-
-    private fun resolveFileNameToPageIndex(filePart: String, pages: List<EpubPage>): Int? {
-        return findPageIndexByEntryCandidates(
-            pages = pages,
-            candidates = buildEntryCandidates(filePart)
-        )
-    }
-
-    private fun resolveAnchorHrefToPage(filePart: String, fragment: String): Int? {
-        val decodedFragment = try {
-            URLDecoder.decode(fragment, "UTF-8")
-        } catch (_: Exception) {
-            fragment
-        }.trim()
-        val anchorCandidates = listOf(fragment, decodedFragment)
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-        if (anchorCandidates.isEmpty()) return null
-
-        val entryCandidates = if (filePart.isBlank()) {
-            emptyList()
-        } else {
-            buildEntryCandidates(filePart)
-        }
-
-        return parsed.pages.indices.firstOrNull { index ->
-            val page = parsed.pages[index]
-            (entryCandidates.isEmpty() || pageMatchesEntryCandidates(page, entryCandidates)) &&
-                pageContainsAnyAnchor(page, anchorCandidates)
-        }
-    }
-
-    private fun pageMatchesEntryCandidates(page: EpubPage, candidates: List<String>): Boolean {
-        return candidates.any { candidate ->
-            when (page) {
-                is EpubPage.Html -> pageContainsEntry(page, candidate) ||
-                    pageContainsEntry(page, candidate, suffixMatch = true)
-                is EpubPage.SyntheticHtml ->
-                    page.entry.equals(candidate, ignoreCase = true) ||
-                        page.entry.endsWith(candidate, ignoreCase = true) ||
-                        page.sourceEntries.any { it.equals(candidate, ignoreCase = true) } ||
-                        page.sourceEntries.any { it.endsWith(candidate, ignoreCase = true) }
-                else -> false
-            }
-        }
-    }
-
-    private fun pageContainsAnyAnchor(page: EpubPage, anchors: List<String>): Boolean {
-        return when (page) {
-            is EpubPage.Html -> {
-                val primaryHtml = readTextEntryForPageChunk(page.entry, page.chunkIndex, page.totalChunks)
-                if (primaryHtml != null && htmlContainsAnyAnchor(primaryHtml, anchors)) {
-                    return true
-                }
-                page.extraEntries.any { entry ->
-                    contentAnalyzer.readTextEntry(ensureZip() ?: return@any false, entry)
-                        ?.let { htmlContainsAnyAnchor(it, anchors) }
-                        ?: false
-                }
-            }
-            is EpubPage.SyntheticHtml -> htmlContainsAnyAnchor(page.html, anchors)
-            else -> false
-        }
-    }
-
-    private fun readTextEntryForPageChunk(entry: String, chunkIndex: Int, totalChunks: Int): String? {
-        val zip = ensureZip() ?: return null
-        val raw = contentAnalyzer.readTextEntry(zip, entry) ?: return null
-        return if (totalChunks <= 1) {
-            raw
-        } else {
-            extractChunk(raw, chunkIndex, totalChunks)
-        }
-    }
-
-    private fun htmlContainsAnyAnchor(html: String, anchors: List<String>): Boolean = runCatching {
-        val document = Jsoup.parse(html)
-        document.select("[id], a[name]").any { element ->
-            val id = element.id().trim()
-            val name = element.attr("name").trim()
-            anchors.any { anchor ->
-                id.equals(anchor, ignoreCase = true) || name.equals(anchor, ignoreCase = true)
-            }
-        }
-    }.getOrDefault(false)
-
-    private fun buildEntryCandidates(
-        filePart: String,
-        vararg baseDirs: String?
-    ): List<String> {
-        val normalizedFilePart = normalizePath(filePart.trimStart('/'))
-        val fileNameOnly = normalizedFilePart.substringAfterLast('/')
-        return buildSet {
-            add(normalizedFilePart)
-            if (fileNameOnly.isNotBlank()) add(fileNameOnly)
-            baseDirs.forEach { rawBaseDir ->
-                val trimmedBaseDir = rawBaseDir
-                    ?.trim()
-                    ?.trim('/')
-                    .orEmpty()
-                if (trimmedBaseDir.isNotBlank()) {
-                    add(normalizePath("$trimmedBaseDir/$normalizedFilePart"))
-                    if (fileNameOnly.isNotBlank()) {
-                        add(normalizePath("$trimmedBaseDir/$fileNameOnly"))
-                    }
-                }
-            }
-        }.toList()
-    }
-
-    private fun findPageIndexByEntryCandidates(
-        pages: List<EpubPage>,
-        candidates: List<String>
-    ): Int? {
-        candidates.forEach { candidate ->
-            val exactIdx = pages.indexOfFirst { page ->
-                when (page) {
-                    is EpubPage.Html -> page.chunkIndex == 0 && pageContainsEntry(page, candidate)
-                    is EpubPage.SyntheticHtml -> page.chunkIndex == 0 && (
-                        page.entry.equals(candidate, ignoreCase = true) ||
-                            page.sourceEntries.any { it.equals(candidate, ignoreCase = true) }
-                        )
-                    else -> false
-                }
-            }
-            if (exactIdx >= 0) return exactIdx
-        }
-        candidates.forEach { candidate ->
-            val suffixIdx = pages.indexOfFirst { page ->
-                when (page) {
-                    is EpubPage.Html -> page.chunkIndex == 0 && pageContainsEntry(page, candidate, suffixMatch = true)
-                    is EpubPage.SyntheticHtml -> page.chunkIndex == 0 && (
-                        page.entry.endsWith(candidate, ignoreCase = true) ||
-                            page.sourceEntries.any { it.endsWith(candidate, ignoreCase = true) }
-                        )
-                    else -> false
-                }
-            }
-            if (suffixIdx >= 0) return suffixIdx
-        }
-        return null
     }
 
     private val NAV_FILE_RE = Regex("""(?:toc|nav|navigation|ncx|contents?)""", RegexOption.IGNORE_CASE)
