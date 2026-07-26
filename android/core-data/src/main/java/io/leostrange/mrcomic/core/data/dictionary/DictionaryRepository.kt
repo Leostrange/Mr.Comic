@@ -2,6 +2,8 @@ package io.leostrange.mrcomic.core.data.dictionary
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,7 +31,7 @@ class DictionaryRepository @Inject constructor(
         ): Boolean = size > ROUTE_CACHE_LIMIT
     }
 
-    fun isLookupAvailable(language: String): Boolean {
+    suspend fun isLookupAvailable(language: String): Boolean {
         val normalizedLanguage = language.normalizeLanguageCode() ?: return false
         return daoForLanguage(normalizedLanguage) != null
     }
@@ -120,22 +122,24 @@ class DictionaryRepository @Inject constructor(
         return suggestions
     }
 
-    private fun daoForLanguage(language: String): DictionaryDao? {
+    private suspend fun daoForLanguage(language: String): DictionaryDao? {
         synchronized(daoCache) {
             if (daoCache.containsKey(language)) return daoCache[language]
         }
 
         val config = DictionaryAssetCatalog.configForLanguage(language)
         val dao = if (config != null && hasAsset(config.assetPath)) {
-            val databaseFile = DictionaryAssetExtractor.ensureExtractedDatabase(
-                context = context,
-                config = config,
-            )
-            DictionaryDatabase.fromFile(
-                context = context,
-                databaseFile = databaseFile,
-                databaseName = config.databaseName,
-            ).dictionaryDao()
+            withContext(Dispatchers.IO) {
+                val databaseFile = DictionaryAssetExtractor.ensureExtractedDatabase(
+                    context = context,
+                    config = config,
+                )
+                DictionaryDatabase.fromFile(
+                    context = context,
+                    databaseFile = databaseFile,
+                    databaseName = config.databaseName,
+                ).dictionaryDao()
+            }
         } else {
             null
         }
