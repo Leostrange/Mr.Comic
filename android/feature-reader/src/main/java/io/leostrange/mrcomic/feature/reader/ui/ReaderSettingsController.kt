@@ -34,7 +34,7 @@ import kotlinx.coroutines.launch
  * Extracted from ReaderViewModel to reduce its size.
  * Each setter updates [_uiState] immediately and persists to [readerPreferences] asynchronously.
  */
-internal class ReaderSettingsController(
+class ReaderSettingsController(
     private val _uiState: MutableStateFlow<ReaderUiState>,
     private val viewModelScope: CoroutineScope,
     private val readerPreferences: UserPreferences,
