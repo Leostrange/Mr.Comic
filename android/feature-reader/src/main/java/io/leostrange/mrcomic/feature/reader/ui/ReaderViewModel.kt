@@ -9,7 +9,6 @@ import android.net.Uri
 import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.emptyPreferences
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,11 +30,8 @@ import io.leostrange.mrcomic.feature.reader.ui.preset.ReaderStylePresetReducer
 import io.leostrange.mrcomic.feature.reader.ui.preset.toReaderStylePresetSnapshot
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntries
-import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSlot
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
-import io.leostrange.mrcomic.feature.reader.domain.preset.migrateLegacyReaderStyleSlotsToEntries
 import io.leostrange.mrcomic.feature.reader.domain.preset.parseReaderStylePreset
-import io.leostrange.mrcomic.feature.reader.domain.preset.parseReaderStylePresetEntries
 import io.leostrange.mrcomic.feature.reader.domain.preset.serializeReaderStylePresetEntries
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
@@ -55,7 +51,6 @@ import io.leostrange.mrcomic.core.model.ExplainRequest
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ReaderInfoSlot
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.ReaderScreenTimeoutMode
 import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
 import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
@@ -90,7 +85,6 @@ import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.resolveBestSingleWordDictionaryMatch
 import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.util.Result
-import io.leostrange.mrcomic.core.domain.util.normalizeTapZoneActionName
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
 
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
@@ -2592,244 +2586,82 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    private suspend fun readReaderPreferencesSnapshot(): Preferences =
-        context.dataStore.data
-            .catch { exception ->
-                if (exception is IOException) {
-                    emit(emptyPreferences())
-                } else {
-                    throw exception
-                }
-            }
-            .first()
-
     private suspend fun restoreReaderPreferences() {
-        val preferences = readReaderPreferencesSnapshot()
-        fun <T> pref(key: Preferences.Key<T>, defaultValue: T): T = preferences[key] ?: defaultValue
-
-        val storedMode = pref(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name)
-        val mode = runCatching { ReadingMode.valueOf(storedMode) }.getOrDefault(ReadingMode.PAGE_LTR)
-        rememberPortraitMode(mode)
-        val brightness = pref(PreferencesKeys.READING_BRIGHTNESS, -1f).let { stored ->
-            if (stored < 0f) -1f else stored.coerceIn(0.05f, 1f)
-        }
-        val keepScreenOn = pref(PreferencesKeys.READER_KEEP_SCREEN_ON, false)
-        val screenTimeoutMode = ReaderScreenTimeoutMode.fromStored(
-            pref(
-                PreferencesKeys.READER_SCREEN_TIMEOUT_MODE,
-                ReaderScreenTimeoutMode.SYSTEM.storedValue
-            )
-        )
-        val landscapeSpreadEnabled = pref(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, true)
-        val animation    = pref(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE")
-        val pageSound    = pref(PreferencesKeys.READER_PAGE_SOUND, false)
-        val soundStyle   = pref(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER")
-        val immersive    = pref(PreferencesKeys.READER_IMMERSIVE_MODE, false)
-        val chromeAutoHideEnabled = pref(PreferencesKeys.READER_CHROME_AUTO_HIDE, true)
-        val topToolbarOpacity = pref(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).coerceIn(0f, 1.0f)
-        val bottomToolbarOpacity = pref(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).coerceIn(0f, 1.0f)
-        val toolbarBlur = pref(PreferencesKeys.READER_TOOLBAR_BLUR, READER_TOOLBAR_DEFAULT_BLUR).coerceIn(0f, 1f)
-        val imageScaleMode = ReaderImageScaleMode.fromStored(
-            pref(
-                PreferencesKeys.READER_IMAGE_SCALE_MODE,
-                ReaderImageScaleMode.FIT_WIDTH.storedValue
-            )
-        )
-        val imageMarginCropHorizontal = pref(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
-            DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL
-        ).coerceIn(0f, 0.22f)
-        val imageMarginCropVertical = pref(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
-            DEFAULT_IMAGE_MARGIN_CROP_VERTICAL
-        ).coerceIn(0f, 0.22f)
-        val preload      = pref(
-            PreferencesKeys.READER_PRELOAD_PAGES,
-            renderProfile.defaultPreloadPages
-        )
-            .coerceIn(2, 8)
-            .coerceAtMost(renderProfile.maxPreloadPages)
-        // Text reader settings
-        val fontSize     = pref(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE).coerceIn(12, 32)
-        val colorScheme  = pref(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
-        val customTextColor = pref(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE)
-            .takeUnless { it == Long.MIN_VALUE }
-        val customBackgroundColor = pref(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE)
-            .takeUnless { it == Long.MIN_VALUE }
-        val customAccentColor = pref(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE)
-            .takeUnless { it == Long.MIN_VALUE }
-        val fontFamily   = pref(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY)
-        val lineHeight   = pref(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT).coerceIn(1.0f, 3.0f)
-        val letterSpacing = pref(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING).coerceIn(0f, 0.2f)
-        val wordSpacing  = pref(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING).coerceIn(0f, 0.6f)
-        val paragraphSpacing = pref(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING).coerceIn(0.1f, 1.2f)
-        val alignment    = pref(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT)
-        val bold         = pref(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD)
-        val tapZoneMode = ReaderTapZoneMode.fromStored(
-            pref(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name)
-        )
-        val tapZoneSwap = pref(PreferencesKeys.READER_TAP_ZONE_SWAP, false)
-        val volumeKeysPagingEnabled = pref(PreferencesKeys.READER_VOLUME_KEYS_PAGING, false)
-        val ttsProvider = ReaderTtsProviderType.fromStored(
-            pref(
-                PreferencesKeys.READER_TTS_PROVIDER,
-                ReaderTtsProviderType.SYSTEM.storedValue
-            )
-        )
-        val ttsSpeed = pref(PreferencesKeys.READER_TTS_SPEED, 1.0f).coerceIn(0.5f, 2.0f)
-        val ttsPitch = pref(PreferencesKeys.READER_TTS_PITCH, 1.0f).coerceIn(0.5f, 2.0f)
-        val ttsVolume = pref(PreferencesKeys.READER_TTS_VOLUME, 1.0f).coerceIn(0f, 1.0f)
-        val ttsVoiceName = pref(PreferencesKeys.READER_TTS_VOICE_NAME, "").ifBlank { null }
-        val ttsSleepTimerMode = ReaderTtsSleepTimerMode.fromStored(
-            pref(
-                PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE,
-                ReaderTtsSleepTimerMode.OFF.storedValue
-            )
-        )
-        val tapZoneLeft = normalizeTapZoneActionName(
-            pref(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name)
-        )
-        val tapZoneCenter = normalizeTapZoneActionName(
-            pref(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name)
-        )
-        val tapZoneRight = normalizeTapZoneActionName(
-            pref(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name)
-        )
-        val headerLeftSlot = ReaderInfoSlot.fromStored(
-            pref(PreferencesKeys.READER_HEADER_LEFT_SLOT, ReaderInfoSlot.BOOK_TITLE.name)
-        )
-        val headerCenterSlot = ReaderInfoSlot.fromStored(
-            pref(PreferencesKeys.READER_HEADER_CENTER_SLOT, ReaderInfoSlot.NONE.name)
-        )
-        val headerRightSlot = ReaderInfoSlot.fromStored(
-            pref(PreferencesKeys.READER_HEADER_RIGHT_SLOT, ReaderInfoSlot.TIME.name)
-        )
-        val footerLeftSlot = ReaderInfoSlot.fromStored(
-            pref(PreferencesKeys.READER_FOOTER_LEFT_SLOT, ReaderInfoSlot.CHAPTER_TITLE.name)
-        )
-        val footerCenterSlot = ReaderInfoSlot.fromStored(
-            pref(PreferencesKeys.READER_FOOTER_CENTER_SLOT, ReaderInfoSlot.PAGE.name)
-        )
-        val footerRightSlot = ReaderInfoSlot.fromStored(
-            pref(PreferencesKeys.READER_FOOTER_RIGHT_SLOT, ReaderInfoSlot.PROGRESS.name)
-        )
-        val headerFooterFontSize = pref(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, 12).coerceIn(10, 20)
-        val headerFooterVerticalPadding = pref(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, 6).coerceIn(4, 20)
-        val headerFooterLeftPadding = pref(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, 16).coerceIn(8, 32)
-        val headerFooterRightPadding = pref(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, 16).coerceIn(8, 32)
-        val eyeRestEnabled = pref(PreferencesKeys.READER_EYE_REST_ENABLED, false)
-        val eyeRestMinutes = pref(PreferencesKeys.READER_EYE_REST_MINUTES, 20).coerceIn(10, 60)
-        val mascotUiEnabled = pref(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true)
-        val chromeIconOrder = ReaderChromeButton.normalizeStoredOrder(
-            pref(
-                PreferencesKeys.READER_CHROME_ICON_ORDER,
-                ReaderChromeButton.defaultStoredOrder
-            )
-        )
-        val chromeShowTocIcon = pref(PreferencesKeys.READER_CHROME_SHOW_TOC, true)
-        val chromeShowStyleIcon = pref(PreferencesKeys.READER_CHROME_SHOW_STYLE, true)
-        val chromeShowAudioIcon = pref(PreferencesKeys.READER_CHROME_SHOW_AUDIO, true)
-        val chromeShowDirectionIcon = pref(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, true)
-        val chromeShowTranslateIcon = pref(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true)
-        val chromeShowBrightnessIcon = pref(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true)
-        val legacyReaderStylePresetSlots = listOf(
-            ReaderStylePresetSlot(1, pref(PreferencesKeys.READER_STYLE_PRESET_1, "").ifBlank { null }),
-            ReaderStylePresetSlot(2, pref(PreferencesKeys.READER_STYLE_PRESET_2, "").ifBlank { null }),
-            ReaderStylePresetSlot(3, pref(PreferencesKeys.READER_STYLE_PRESET_3, "").ifBlank { null })
-        )
-        val savedReaderStylePresetEntries = parseReaderStylePresetEntries(
-            pref(PreferencesKeys.READER_STYLE_PRESET_LIST, "")
-        )
-        val readerStylePresetEntries = savedReaderStylePresetEntries.ifEmpty {
-            migrateLegacyReaderStyleSlotsToEntries(legacyReaderStylePresetSlots)
-        }
-        val readerStylePresetSlots = if (readerStylePresetEntries.isNotEmpty()) {
-            ReaderStylePresetEntries.toLegacySlots(readerStylePresetEntries)
-        } else {
-            legacyReaderStylePresetSlots
-        }
-        val readerPreset = ReadingPreset.fromStored(
-            pref(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-        )
+        val p = ReaderPreferenceRestorer.restore(context, renderProfile)
+        rememberPortraitMode(p.mode)
         _uiState.update { state ->
             val effectiveMode = if (
-                state.isLandscape && ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(mode)
-            ) {
-                ReadingMode.DUAL_PAGE
-            } else {
-                mode
-            }
+                state.isLandscape && ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(p.mode)
+            ) ReadingMode.DUAL_PAGE else p.mode
             state.copy(
-                readingMode      = effectiveMode,
-                chromeState      = ReaderChromeState.HIDDEN,
-                brightness       = brightness,
-                keepScreenOn     = keepScreenOn,
-                screenTimeoutMode = screenTimeoutMode.storedValue,
-                landscapeSpreadEnabled = landscapeSpreadEnabled,
-                readerPageAnimation = if (renderProfile.disableAnimations) "NONE" else animation,
-                pageSoundEnabled = pageSound,
-                pageSoundStyle   = soundStyle,
-                immersiveMode    = immersive,
-                chromeAutoHideEnabled = chromeAutoHideEnabled,
-                topToolbarOpacity = topToolbarOpacity,
-                bottomToolbarOpacity = bottomToolbarOpacity,
-                toolbarBlur = toolbarBlur,
-                imageScaleMode = imageScaleMode.storedValue,
-                imageMarginCropHorizontal = imageMarginCropHorizontal,
-                imageMarginCropVertical = imageMarginCropVertical,
-                preloadPages     = preload,
-                textFontSize     = fontSize,
-                textColorScheme  = colorScheme,
-                textCustomTextColor = customTextColor,
-                textCustomBackgroundColor = customBackgroundColor,
-                textCustomAccentColor = customAccentColor,
-                textFontFamily   = fontFamily,
-                textLineHeight   = lineHeight,
-                textLetterSpacing = letterSpacing,
-                textWordSpacing  = wordSpacing,
-                textParagraphSpacing = paragraphSpacing,
-                textAlignment    = alignment,
-                textBold         = bold,
-                readerStylePresetEntries = readerStylePresetEntries,
-                readerStylePresetSlots = readerStylePresetSlots,
-                tapZoneMode      = tapZoneMode.name,
-                tapZoneSwap      = tapZoneSwap,
-                volumeKeysPagingEnabled = volumeKeysPagingEnabled,
-                ttsProvider = ttsProvider.storedValue,
-                ttsSpeed = ttsSpeed,
-                ttsPitch = ttsPitch,
-                ttsVolume = ttsVolume,
-                ttsVoiceName = ttsVoiceName,
-                ttsSleepTimerMode = ttsSleepTimerMode.storedValue,
-                tapZoneLeftAction = tapZoneLeft,
-                tapZoneCenterAction = tapZoneCenter,
-                tapZoneRightAction = tapZoneRight,
-                headerLeftSlot   = headerLeftSlot.name,
-                headerCenterSlot = headerCenterSlot.name,
-                headerRightSlot  = headerRightSlot.name,
-                footerLeftSlot   = footerLeftSlot.name,
-                footerCenterSlot = footerCenterSlot.name,
-                footerRightSlot  = footerRightSlot.name,
-                headerFooterFontSize = headerFooterFontSize,
-                headerFooterVerticalPadding = headerFooterVerticalPadding,
-                headerFooterLeftPadding = headerFooterLeftPadding,
-                headerFooterRightPadding = headerFooterRightPadding,
-                readerPreset     = readerPreset.name,
-                eyeRestEnabled   = eyeRestEnabled,
-                eyeRestMinutes   = eyeRestMinutes,
-                mascotUiEnabled  = mascotUiEnabled,
-                chromeIconOrder = chromeIconOrder,
-                chromeShowTocIcon = chromeShowTocIcon,
-                chromeShowStyleIcon = chromeShowStyleIcon,
-                chromeShowAudioIcon = chromeShowAudioIcon,
-                chromeShowDirectionIcon = chromeShowDirectionIcon,
-                chromeShowTranslateIcon = chromeShowTranslateIcon,
-                chromeShowBrightnessIcon = chromeShowBrightnessIcon
+                readingMode = effectiveMode,
+                chromeState = ReaderChromeState.HIDDEN,
+                brightness = p.brightness,
+                keepScreenOn = p.keepScreenOn,
+                screenTimeoutMode = p.screenTimeoutMode,
+                landscapeSpreadEnabled = p.landscapeSpreadEnabled,
+                readerPageAnimation = if (renderProfile.disableAnimations) "NONE" else p.animation,
+                pageSoundEnabled = p.pageSound,
+                pageSoundStyle = p.soundStyle,
+                immersiveMode = p.immersive,
+                chromeAutoHideEnabled = p.chromeAutoHideEnabled,
+                topToolbarOpacity = p.topToolbarOpacity,
+                bottomToolbarOpacity = p.bottomToolbarOpacity,
+                toolbarBlur = p.toolbarBlur,
+                imageScaleMode = p.imageScaleMode.storedValue,
+                imageMarginCropHorizontal = p.imageMarginCropHorizontal,
+                imageMarginCropVertical = p.imageMarginCropVertical,
+                preloadPages = p.preload,
+                textFontSize = p.fontSize,
+                textColorScheme = p.colorScheme,
+                textCustomTextColor = p.customTextColor,
+                textCustomBackgroundColor = p.customBackgroundColor,
+                textCustomAccentColor = p.customAccentColor,
+                textFontFamily = p.fontFamily,
+                textLineHeight = p.lineHeight,
+                textLetterSpacing = p.letterSpacing,
+                textWordSpacing = p.wordSpacing,
+                textParagraphSpacing = p.paragraphSpacing,
+                textAlignment = p.alignment,
+                textBold = p.bold,
+                readerStylePresetEntries = p.readerStylePresetEntries,
+                readerStylePresetSlots = p.readerStylePresetSlots,
+                tapZoneMode = p.tapZoneMode.name,
+                tapZoneSwap = p.tapZoneSwap,
+                volumeKeysPagingEnabled = p.volumeKeysPagingEnabled,
+                ttsProvider = p.ttsProvider.storedValue,
+                ttsSpeed = p.ttsSpeed,
+                ttsPitch = p.ttsPitch,
+                ttsVolume = p.ttsVolume,
+                ttsVoiceName = p.ttsVoiceName,
+                ttsSleepTimerMode = p.ttsSleepTimerMode.storedValue,
+                tapZoneLeftAction = p.tapZoneLeft,
+                tapZoneCenterAction = p.tapZoneCenter,
+                tapZoneRightAction = p.tapZoneRight,
+                headerLeftSlot = p.headerLeftSlot.name,
+                headerCenterSlot = p.headerCenterSlot.name,
+                headerRightSlot = p.headerRightSlot.name,
+                footerLeftSlot = p.footerLeftSlot.name,
+                footerCenterSlot = p.footerCenterSlot.name,
+                footerRightSlot = p.footerRightSlot.name,
+                headerFooterFontSize = p.headerFooterFontSize,
+                headerFooterVerticalPadding = p.headerFooterVerticalPadding,
+                headerFooterLeftPadding = p.headerFooterLeftPadding,
+                headerFooterRightPadding = p.headerFooterRightPadding,
+                readerPreset = p.readerPreset.name,
+                eyeRestEnabled = p.eyeRestEnabled,
+                eyeRestMinutes = p.eyeRestMinutes,
+                mascotUiEnabled = p.mascotUiEnabled,
+                chromeIconOrder = p.chromeIconOrder,
+                chromeShowTocIcon = p.chromeShowTocIcon,
+                chromeShowStyleIcon = p.chromeShowStyleIcon,
+                chromeShowAudioIcon = p.chromeShowAudioIcon,
+                chromeShowDirectionIcon = p.chromeShowDirectionIcon,
+                chromeShowTranslateIcon = p.chromeShowTranslateIcon,
+                chromeShowBrightnessIcon = p.chromeShowBrightnessIcon
             )
         }
-        if (savedReaderStylePresetEntries.isEmpty() && readerStylePresetEntries.isNotEmpty()) {
-            persistReaderStylePresetEntries(readerStylePresetEntries)
-        }
+        if (p.needsPersistStylePresets) persistReaderStylePresetEntries(p.readerStylePresetEntries)
         restartEyeRestTimer()
     }
 
