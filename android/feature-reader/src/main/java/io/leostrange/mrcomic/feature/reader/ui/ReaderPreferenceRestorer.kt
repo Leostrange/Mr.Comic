@@ -24,7 +24,10 @@ import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntri
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSlot
 import io.leostrange.mrcomic.feature.reader.domain.preset.migrateLegacyReaderStyleSlotsToEntries
 import io.leostrange.mrcomic.feature.reader.domain.preset.parseReaderStylePresetEntries
+import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 
 /**
  * Reads all reader preferences from DataStore and returns them as a snapshot.
@@ -299,6 +302,96 @@ internal object ReaderPreferenceRestorer {
             readerPreset = readerPreset,
             needsPersistStylePresets = savedReaderStylePresetEntries.isEmpty() && readerStylePresetEntries.isNotEmpty()
         )
+    }
+
+    /**
+     * Applies restored preferences to the reader UI state.
+     *
+     * @param p The restored preferences snapshot.
+     * @param uiState The mutable UI state to update.
+     * @param isLandscape Whether the device is in landscape orientation.
+     * @param supportsAutomaticLandscapeSpread Whether the current mode supports auto landscape spread.
+     * @param disableAnimations Whether animations are disabled by the device profile.
+     */
+    fun applyTo(
+        p: RestoredPreferences,
+        uiState: MutableStateFlow<ReaderUiState>,
+        isLandscape: Boolean,
+        supportsAutomaticLandscapeSpread: Boolean,
+        disableAnimations: Boolean
+    ) {
+        val effectiveMode = if (
+            isLandscape && supportsAutomaticLandscapeSpread
+        ) ReadingMode.DUAL_PAGE else p.mode
+        uiState.update { state ->
+            state.copy(
+                readingMode = effectiveMode,
+                chromeState = ReaderChromeState.HIDDEN,
+                brightness = p.brightness,
+                keepScreenOn = p.keepScreenOn,
+                screenTimeoutMode = p.screenTimeoutMode,
+                landscapeSpreadEnabled = p.landscapeSpreadEnabled,
+                readerPageAnimation = if (disableAnimations) "NONE" else p.animation,
+                pageSoundEnabled = p.pageSound,
+                pageSoundStyle = p.soundStyle,
+                immersiveMode = p.immersive,
+                chromeAutoHideEnabled = p.chromeAutoHideEnabled,
+                topToolbarOpacity = p.topToolbarOpacity,
+                bottomToolbarOpacity = p.bottomToolbarOpacity,
+                toolbarBlur = p.toolbarBlur,
+                imageScaleMode = p.imageScaleMode.storedValue,
+                imageMarginCropHorizontal = p.imageMarginCropHorizontal,
+                imageMarginCropVertical = p.imageMarginCropVertical,
+                preloadPages = p.preload,
+                textFontSize = p.fontSize,
+                textColorScheme = p.colorScheme,
+                textCustomTextColor = p.customTextColor,
+                textCustomBackgroundColor = p.customBackgroundColor,
+                textCustomAccentColor = p.customAccentColor,
+                textFontFamily = p.fontFamily,
+                textLineHeight = p.lineHeight,
+                textLetterSpacing = p.letterSpacing,
+                textWordSpacing = p.wordSpacing,
+                textParagraphSpacing = p.paragraphSpacing,
+                textAlignment = p.alignment,
+                textBold = p.bold,
+                readerStylePresetEntries = p.readerStylePresetEntries,
+                readerStylePresetSlots = p.readerStylePresetSlots,
+                tapZoneMode = p.tapZoneMode.name,
+                tapZoneSwap = p.tapZoneSwap,
+                volumeKeysPagingEnabled = p.volumeKeysPagingEnabled,
+                ttsProvider = p.ttsProvider.storedValue,
+                ttsSpeed = p.ttsSpeed,
+                ttsPitch = p.ttsPitch,
+                ttsVolume = p.ttsVolume,
+                ttsVoiceName = p.ttsVoiceName,
+                ttsSleepTimerMode = p.ttsSleepTimerMode.storedValue,
+                tapZoneLeftAction = p.tapZoneLeft,
+                tapZoneCenterAction = p.tapZoneCenter,
+                tapZoneRightAction = p.tapZoneRight,
+                headerLeftSlot = p.headerLeftSlot.name,
+                headerCenterSlot = p.headerCenterSlot.name,
+                headerRightSlot = p.headerRightSlot.name,
+                footerLeftSlot = p.footerLeftSlot.name,
+                footerCenterSlot = p.footerCenterSlot.name,
+                footerRightSlot = p.footerRightSlot.name,
+                headerFooterFontSize = p.headerFooterFontSize,
+                headerFooterVerticalPadding = p.headerFooterVerticalPadding,
+                headerFooterLeftPadding = p.headerFooterLeftPadding,
+                headerFooterRightPadding = p.headerFooterRightPadding,
+                readerPreset = p.readerPreset.name,
+                eyeRestEnabled = p.eyeRestEnabled,
+                eyeRestMinutes = p.eyeRestMinutes,
+                mascotUiEnabled = p.mascotUiEnabled,
+                chromeIconOrder = p.chromeIconOrder,
+                chromeShowTocIcon = p.chromeShowTocIcon,
+                chromeShowStyleIcon = p.chromeShowStyleIcon,
+                chromeShowAudioIcon = p.chromeShowAudioIcon,
+                chromeShowDirectionIcon = p.chromeShowDirectionIcon,
+                chromeShowTranslateIcon = p.chromeShowTranslateIcon,
+                chromeShowBrightnessIcon = p.chromeShowBrightnessIcon
+            )
+        }
     }
 
     private suspend fun readPreferencesSnapshot(context: Context): Preferences =

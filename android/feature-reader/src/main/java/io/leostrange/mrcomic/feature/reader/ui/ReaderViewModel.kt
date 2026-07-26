@@ -2129,78 +2129,13 @@ class ReaderViewModel @Inject constructor(
     private suspend fun restoreReaderPreferences() {
         val p = ReaderPreferenceRestorer.restore(context, renderProfile)
         rememberPortraitMode(p.mode)
-        _uiState.update { state ->
-            val effectiveMode = if (
-                state.isLandscape && ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(p.mode)
-            ) ReadingMode.DUAL_PAGE else p.mode
-            state.copy(
-                readingMode = effectiveMode,
-                chromeState = ReaderChromeState.HIDDEN,
-                brightness = p.brightness,
-                keepScreenOn = p.keepScreenOn,
-                screenTimeoutMode = p.screenTimeoutMode,
-                landscapeSpreadEnabled = p.landscapeSpreadEnabled,
-                readerPageAnimation = if (renderProfile.disableAnimations) "NONE" else p.animation,
-                pageSoundEnabled = p.pageSound,
-                pageSoundStyle = p.soundStyle,
-                immersiveMode = p.immersive,
-                chromeAutoHideEnabled = p.chromeAutoHideEnabled,
-                topToolbarOpacity = p.topToolbarOpacity,
-                bottomToolbarOpacity = p.bottomToolbarOpacity,
-                toolbarBlur = p.toolbarBlur,
-                imageScaleMode = p.imageScaleMode.storedValue,
-                imageMarginCropHorizontal = p.imageMarginCropHorizontal,
-                imageMarginCropVertical = p.imageMarginCropVertical,
-                preloadPages = p.preload,
-                textFontSize = p.fontSize,
-                textColorScheme = p.colorScheme,
-                textCustomTextColor = p.customTextColor,
-                textCustomBackgroundColor = p.customBackgroundColor,
-                textCustomAccentColor = p.customAccentColor,
-                textFontFamily = p.fontFamily,
-                textLineHeight = p.lineHeight,
-                textLetterSpacing = p.letterSpacing,
-                textWordSpacing = p.wordSpacing,
-                textParagraphSpacing = p.paragraphSpacing,
-                textAlignment = p.alignment,
-                textBold = p.bold,
-                readerStylePresetEntries = p.readerStylePresetEntries,
-                readerStylePresetSlots = p.readerStylePresetSlots,
-                tapZoneMode = p.tapZoneMode.name,
-                tapZoneSwap = p.tapZoneSwap,
-                volumeKeysPagingEnabled = p.volumeKeysPagingEnabled,
-                ttsProvider = p.ttsProvider.storedValue,
-                ttsSpeed = p.ttsSpeed,
-                ttsPitch = p.ttsPitch,
-                ttsVolume = p.ttsVolume,
-                ttsVoiceName = p.ttsVoiceName,
-                ttsSleepTimerMode = p.ttsSleepTimerMode.storedValue,
-                tapZoneLeftAction = p.tapZoneLeft,
-                tapZoneCenterAction = p.tapZoneCenter,
-                tapZoneRightAction = p.tapZoneRight,
-                headerLeftSlot = p.headerLeftSlot.name,
-                headerCenterSlot = p.headerCenterSlot.name,
-                headerRightSlot = p.headerRightSlot.name,
-                footerLeftSlot = p.footerLeftSlot.name,
-                footerCenterSlot = p.footerCenterSlot.name,
-                footerRightSlot = p.footerRightSlot.name,
-                headerFooterFontSize = p.headerFooterFontSize,
-                headerFooterVerticalPadding = p.headerFooterVerticalPadding,
-                headerFooterLeftPadding = p.headerFooterLeftPadding,
-                headerFooterRightPadding = p.headerFooterRightPadding,
-                readerPreset = p.readerPreset.name,
-                eyeRestEnabled = p.eyeRestEnabled,
-                eyeRestMinutes = p.eyeRestMinutes,
-                mascotUiEnabled = p.mascotUiEnabled,
-                chromeIconOrder = p.chromeIconOrder,
-                chromeShowTocIcon = p.chromeShowTocIcon,
-                chromeShowStyleIcon = p.chromeShowStyleIcon,
-                chromeShowAudioIcon = p.chromeShowAudioIcon,
-                chromeShowDirectionIcon = p.chromeShowDirectionIcon,
-                chromeShowTranslateIcon = p.chromeShowTranslateIcon,
-                chromeShowBrightnessIcon = p.chromeShowBrightnessIcon
-            )
-        }
+        ReaderPreferenceRestorer.applyTo(
+            p = p,
+            uiState = _uiState,
+            isLandscape = _uiState.value.isLandscape,
+            supportsAutomaticLandscapeSpread = ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(p.mode),
+            disableAnimations = renderProfile.disableAnimations
+        )
         if (p.needsPersistStylePresets) persistReaderStylePresetEntries(p.readerStylePresetEntries)
         restartEyeRestTimer()
     }
