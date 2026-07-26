@@ -38,7 +38,6 @@ import java.io.File
 import java.io.InputStream
 import java.net.URLDecoder
 import java.nio.charset.Charset
-import java.util.Base64
 
 /**
  * Elapsed-time source for perf instrumentation. Uses [System.nanoTime] (monotonic, JVM-portable)
