@@ -88,12 +88,6 @@ class EpubFormatReader(
         private val CACHE_GSON = Gson()
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
         private val XHTML_EXTENSIONS = setOf("xhtml", "html", "htm")
-        private val IMG_SRC_RE    = Regex("""(<img\b[^>]*?\bsrc\s*=\s*["'])([^"']+)(["'][^>]*?>)""", RegexOption.IGNORE_CASE)
-        private val XLINK_HREF_RE = Regex("""(<image\b[^>]*?\b(?:xlink:)?href\s*=\s*["'])([^"']+)(["'][^>]*?/?>)""", RegexOption.IGNORE_CASE)
-        private val CSS_LINK_RE   = Regex(
-            """<link\b(?=[^>]*\brel\s*=\s*["'][^"']*stylesheet[^"']*["'])[^>]*\bhref\s*=\s*["']([^"']+)["'][^>]*?/?>""",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        )
         /**
          * Viewport meta + minimal reader CSS injected at the end of <head>.
          * Low-specificity selectors ensure publisher CSS wins for custom elements;
@@ -1510,84 +1504,6 @@ class EpubFormatReader(
                 }
             )
         }
-    }
-
-    // ── HTML image + CSS inlining ─────────────────────────────────────────────
-
-    private fun inlineImages(html: String, xhtmlEntry: String, opfDir: String, zip: ZipFile): String {
-        val xhtmlDir = xhtmlEntry.substringBeforeLast('/', "")
-        val strippedHtml = html
-            .replaceFirst(Regex("""^\s*<\?xml[^>]*\?>\s*""", RegexOption.IGNORE_CASE), "")
-            // Strip EPUB nav page-list sections (contain page number anchors like 1, 2, … 65).
-            // These appear in nav.xhtml spine items and render as a raw list of numbers.
-            .replace(
-                Regex("""<nav\b[^>]*\bepub:type\s*=\s*["']page-list["'][^>]*>.*?</nav>""",
-                    setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)),
-                ""
-            )
-
-        fun resolveHeader(src: String, baseDir: String = xhtmlDir): FileHeader? {
-            if (src.startsWith("data:") || src.startsWith("http")) return null
-            val decoded = try { URLDecoder.decode(src, "UTF-8") } catch (_: Exception) { src }
-            val entry = normalizePath(
-                if (decoded.startsWith("/")) decoded.trimStart('/')
-                else if (baseDir.isEmpty()) decoded else "$baseDir/$decoded"
-            )
-            return findHeader(zip, entry)
-        }
-
-        fun resolveAndEncode(src: String, baseDir: String = xhtmlDir): String? {
-            val header = resolveHeader(src, baseDir) ?: return null
-            val ext  = header.fileName.substringAfterLast('.', "jpeg").lowercase()
-            val mime = when (ext) {
-                "png"  -> "image/png"; "gif" -> "image/gif"; "webp" -> "image/webp"
-                "svg"  -> "image/svg+xml"
-                "otf"  -> "font/otf"
-                "ttf"  -> "font/ttf"
-                "woff" -> "font/woff"
-                "woff2" -> "font/woff2"
-                else   -> "image/jpeg"
-            }
-            return try {
-                val bytes = zip.getInputStream(header).use { it.readBytes() }
-                "data:$mime;base64,${Base64.getEncoder().encodeToString(bytes)}"
-            } catch (_: Exception) { null }
-        }
-
-        // Step 1: Inline linked CSS stylesheets as <style> blocks
-        val inlinedCssEntries = mutableSetOf<String>()
-        var result = CSS_LINK_RE.replace(strippedHtml) { mr ->
-            val header = resolveHeader(mr.groupValues[1]) ?: return@replace ""
-            if (!inlinedCssEntries.add(header.fileName.lowercase())) return@replace ""
-            try {
-                val cssBytes = zip.getInputStream(header).use { it.readBytes() }
-                val cssDir = header.fileName.substringBeforeLast('/', "")
-                val css = cssBytes.toString(detectCharset(cssBytes))
-                val sanitizedCss = sanitizeInlineEpubCss(css).replace(
-                    Regex("""url\((['"]?)([^'")]+)\1\)""", RegexOption.IGNORE_CASE)
-                ) { urlMatch ->
-                    val rawUrl = urlMatch.groupValues[2].trim()
-                    resolveAndEncode(rawUrl, cssDir)?.let { encoded -> "url('$encoded')" } ?: urlMatch.value
-                }
-                "<style>$sanitizedCss</style>"
-            } catch (_: Exception) { "" }
-        }
-
-        // Step 2: Inline <img src> and <image xlink:href> as base64 data URIs
-        result = IMG_SRC_RE.replace(result) { m ->
-            val dataUri = resolveAndEncode(m.groupValues[2]) ?: return@replace m.value
-            "${m.groupValues[1]}$dataUri${m.groupValues[3]}"
-        }
-        result = XLINK_HREF_RE.replace(result) { m ->
-            val dataUri = resolveAndEncode(m.groupValues[2]) ?: return@replace m.value
-            "${m.groupValues[1]}$dataUri${m.groupValues[3]}"
-        }
-        result = simplifySingleImageSvgContent(result)
-        result = normalizeInlinedEpubMarkup(result)
-
-        // Step 3: rebuild into a normalized HTML5 document with preserved publisher
-        // styles/body attributes. This avoids WebView edge-cases on malformed FB2EPUB XHTML.
-        return rebuildNormalizedInlinedEpubDocument(result, CSS_INJECT)
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
