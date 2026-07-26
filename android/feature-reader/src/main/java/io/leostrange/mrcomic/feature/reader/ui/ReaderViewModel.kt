@@ -139,6 +139,7 @@ class ReaderViewModel @Inject constructor(
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val readerCheckpointStore: ReaderCheckpointStore,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
+    private val readerBookPreparer: ReaderBookPreparer,
     private val appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -327,50 +328,12 @@ class ReaderViewModel @Inject constructor(
             closeReaderResources()
 
             if (!openGuard.isCurrent(requestToken)) return
-            val prepared = withContext(Dispatchers.IO) {
-                val resolvedPath = resolveReadablePath(comic, sourcePath)
-                    ?: throw java.io.FileNotFoundException("Reader source is not readable: $sourcePath")
-                // Re-detect by extension when stored format might be wrong (e.g. EPUB stored as CBZ
-                // because magic bytes of EPUB == ZIP). Extension is always more reliable than magic.
-                val detectedFormat = when (comic.format) {
-                    ComicFormat.UNKNOWN, ComicFormat.CBZ, ComicFormat.ZIP -> {
-                        val byPath = detectFormatForPath(resolvedPath)
-                        if (byPath != ComicFormat.UNKNOWN) byPath else comic.format
-                    }
-                    else -> comic.format
-                }
-                val newReader = if (detectedFormat.isTextReadingFormat()) {
-                    openTextFormatReader(comic, resolvedPath, detectedFormat)
-                } else {
-                    formatFactory.createReader(resolvedPath, detectedFormat)
-                }
-                val readerRendersHtmlContent =
-                    newReader?.rendersHtmlContent() == true || detectedFormat.isTextReadingFormat()
-                val contentFormat = newReader?.resolvedContentFormat() ?: detectedFormat
-                val deferPageCount = shouldDeferReaderPageCount(
-                    readerRendersHtmlContent = readerRendersHtmlContent,
-                    contentFormat = contentFormat
-                )
-                val pages = if (deferPageCount) {
-                    1
-                } else {
-                    try {
-                        newReader?.getPageCount() ?: 0
-                    } catch (t: Throwable) {
-                        newReader?.close()
-                        throw t
-                    }
-                }
-                PreparedReaderOpen(
-                    resolvedPath = resolvedPath,
-                    detectedFormat = detectedFormat,
-                    contentFormat = contentFormat,
-                    reader = newReader,
-                    pages = pages,
-                    readerRendersHtmlContent = readerRendersHtmlContent,
-                    deferPageCount = deferPageCount
-                )
-            }
+            val prepared = readerBookPreparer.prepare(
+                context = context,
+                comic = comic,
+                sourcePath = sourcePath,
+                textFormatReaderOpener = ::openTextFormatReader,
+            )
             if (!openGuard.isCurrent(requestToken)) {
                 prepared.reader?.close()
                 return
