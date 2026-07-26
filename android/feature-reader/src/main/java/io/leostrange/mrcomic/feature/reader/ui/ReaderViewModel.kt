@@ -5,8 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Environment
-import android.provider.DocumentsContract
+
 import android.util.Log
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -93,9 +92,8 @@ import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.domain.util.normalizeTapZoneActionName
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-import io.leostrange.mrcomic.engine.formats.base.FormatDetector
+
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.epub.EpubReadablePath
 import io.leostrange.mrcomic.engine.formats.base.LegacyFormatSessionAccess
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.api.OpenBookRequest
@@ -2859,150 +2857,29 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun detectFormatForPath(path: String): ComicFormat {
-        val byExtension = FormatDetector.detectByExtension(path)
-        if (byExtension != ComicFormat.UNKNOWN) return byExtension
+    private fun detectFormatForPath(path: String): ComicFormat =
+        ReaderContentPathResolver.detectFormatForPath(context, path)
 
-        return try {
-            val uri = Uri.parse(path)
-            if (uri.scheme == "content") {
-                context.contentResolver.openInputStream(uri)?.use { stream ->
-                    FormatDetector.detect(stream, path)
-                } ?: ComicFormat.UNKNOWN
-            } else {
-                val file = java.io.File(path)
-                if (!file.exists()) {
-                    ComicFormat.UNKNOWN
-                } else {
-                    file.inputStream().use { stream ->
-                        FormatDetector.detect(stream, file.name)
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            Log.w("ReaderViewModel", "Fallback format detection failed for $path", e)
-            ComicFormat.UNKNOWN
-        }
-    }
+    private fun resolveReadablePath(comic: Comic, fallbackPath: String): String? =
+        ReaderContentPathResolver.resolveReadablePath(context, comic, fallbackPath)
 
-    private fun resolveReadablePath(comic: Comic, fallbackPath: String): String? {
-        val treeUri = comic.treeUri
-        val documentId = comic.documentId
-        if (!treeUri.isNullOrBlank() && !documentId.isNullOrBlank() &&
-            DocumentsContract.isTreeUri(Uri.parse(treeUri))
-        ) {
-            runCatching {
-                DocumentsContract.buildDocumentUriUsingTree(Uri.parse(treeUri), documentId).toString()
-            }.getOrNull()?.takeIf(::hasReadAccess)?.let { resolvedUri ->
-                cacheContentUriForEpub(comic, resolvedUri)?.let { return it }
-                return resolvedUri
-            }
-        }
+    private fun cacheContentUriForEpub(comic: Comic, contentUri: String): String? =
+        ReaderContentPathResolver.cacheContentUriForEpub(context, comic, contentUri)
 
-        if (!fallbackPath.startsWith("content://")) {
-            val normalizedPath = fallbackPath.removePrefix("file://")
-            EpubReadablePath.ensureLocal(context, normalizedPath)?.let { return it }
-            if (isLocalFileReadable(normalizedPath)) return java.io.File(normalizedPath).absolutePath
-            val sourceUri = comic.treeUri
-            if (!sourceUri.isNullOrBlank() && !DocumentsContract.isTreeUri(Uri.parse(sourceUri)) && hasReadAccess(sourceUri)) {
-                return sourceUri
-            }
-            resolveReadablePathFromPersistedPermissions(comic)?.let { return it }
-            return null
-        }
-        if (hasReadAccess(fallbackPath)) {
-            cacheContentUriForEpub(comic, fallbackPath)?.let { return it }
-            return fallbackPath
-        }
+    private fun resolveReadablePathFromPersistedPermissions(comic: Comic): String? =
+        ReaderContentPathResolver.resolveReadablePathFromPersistedPermissions(context, comic)
 
-        val sourceUri = comic.treeUri
-        if (!sourceUri.isNullOrBlank() && !DocumentsContract.isTreeUri(Uri.parse(sourceUri)) && hasReadAccess(sourceUri)) {
-            return sourceUri
-        }
+    private fun isDocumentInsideTree(treeDocumentId: String, documentId: String): Boolean =
+        ReaderContentPathResolver.isDocumentInsideTree(treeDocumentId, documentId)
 
-        if (treeUri.isNullOrBlank() || documentId.isNullOrBlank()) {
-            return resolveReadablePathFromPersistedPermissions(comic)
-        }
+    private fun documentIdToExternalPath(documentId: String): String? =
+        ReaderContentPathResolver.documentIdToExternalPath(documentId)
 
-        return runCatching {
-            val rebuilt = DocumentsContract.buildDocumentUriUsingTree(Uri.parse(treeUri), documentId).toString()
-            if (hasReadAccess(rebuilt)) rebuilt else null
-        }.getOrElse {
-            resolveReadablePathFromPersistedPermissions(comic)
-        }
-    }
+    private fun isLocalFileReadable(path: String): Boolean =
+        ReaderContentPathResolver.isLocalFileReadable(path)
 
-    private fun cacheContentUriForEpub(comic: Comic, contentUri: String): String? {
-        if (!contentUri.startsWith("content://")) return null
-        val format = comic.format
-        if (format != ComicFormat.EPUB && format != ComicFormat.UNKNOWN) return null
-        return EpubReadablePath.ensureLocalFromContentUri(context, contentUri)
-    }
-
-    private fun resolveReadablePathFromPersistedPermissions(comic: Comic): String? {
-        val documentId = comic.documentId?.trim().orEmpty()
-        if (documentId.isBlank()) return null
-
-        context.contentResolver.persistedUriPermissions
-            .asSequence()
-            .map { it.uri }
-            .forEach { grantedUri ->
-                runCatching {
-                    when {
-                        DocumentsContract.isTreeUri(grantedUri) &&
-                            isDocumentInsideTree(DocumentsContract.getTreeDocumentId(grantedUri), documentId) -> {
-                            val rebuilt = DocumentsContract.buildDocumentUriUsingTree(grantedUri, documentId).toString()
-                            if (hasReadAccess(rebuilt)) return rebuilt
-                        }
-
-                        DocumentsContract.isDocumentUri(context, grantedUri) &&
-                            DocumentsContract.getDocumentId(grantedUri) == documentId &&
-                            hasReadAccess(grantedUri.toString()) -> {
-                            return grantedUri.toString()
-                        }
-                    }
-                }
-            }
-
-        return documentIdToExternalPath(documentId)?.takeIf(::isLocalFileReadable)
-    }
-
-    private fun isDocumentInsideTree(treeDocumentId: String, documentId: String): Boolean {
-        val normalizedTreeId = treeDocumentId.trim().removeSuffix("/")
-        val normalizedDocumentId = documentId.trim()
-        return normalizedDocumentId == normalizedTreeId ||
-            normalizedDocumentId.startsWith("$normalizedTreeId/")
-    }
-
-    private fun documentIdToExternalPath(documentId: String): String? {
-        val separatorIndex = documentId.indexOf(':')
-        if (separatorIndex <= 0 || separatorIndex >= documentId.lastIndex) return null
-        val volume = documentId.substring(0, separatorIndex)
-        val relativePath = documentId.substring(separatorIndex + 1).trim().removePrefix("/")
-        if (relativePath.isBlank()) return null
-        return when {
-            volume.equals("primary", ignoreCase = true) -> {
-                java.io.File(Environment.getExternalStorageDirectory(), relativePath).absolutePath
-            }
-            else -> null
-        }
-    }
-
-    private fun isLocalFileReadable(path: String): Boolean {
-        return runCatching {
-            java.io.File(path).let { file ->
-                file.exists() && file.isFile && file.canRead()
-            }
-        }.getOrDefault(false)
-    }
-
-    private fun hasReadAccess(path: String): Boolean {
-        return try {
-            context.contentResolver.openInputStream(Uri.parse(path))?.use { true } ?: false
-        } catch (_: Exception) {
-            false
-        }
-    }
+    private fun hasReadAccess(path: String): Boolean =
+        ReaderContentPathResolver.hasReadAccess(context, path)
 
     private suspend fun resolveTranslationTargetLanguage(): String {
         return resolveTranslationSettings().targetLanguage
