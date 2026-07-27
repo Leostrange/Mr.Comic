@@ -3,6 +3,7 @@ package io.leostrange.mrcomic.engine.formats.djvu
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
+import android.util.Log
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -15,6 +16,10 @@ class DjvuFormatReader(
     private val path: String,
     private val backend: DjvuBackend
 ) : FormatReader {
+
+    private companion object {
+        private const val TAG = "DjvuFormatReader"
+    }
 
     private val openMutex = Mutex()
     private val probeMutex = Mutex()
@@ -32,9 +37,17 @@ class DjvuFormatReader(
 
     override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? =
         withContext(Dispatchers.IO) {
-            val currentDocument = ensureDocument() ?: return@withContext null
+            val currentDocument = ensureDocument()
+            if (currentDocument == null) {
+                Log.w(TAG, "getPage($index): ensureDocument() returned null — backend open failed or unavailable")
+                return@withContext null
+            }
             if (index < 0) return@withContext null
-            currentDocument.renderPage(index, renderQuality)
+            val bitmap = currentDocument.renderPage(index, renderQuality)
+            if (bitmap == null) {
+                Log.w(TAG, "getPage($index, q=$renderQuality): renderPage returned null — format unsupported or decode failed")
+            }
+            bitmap
         }
 
     override suspend fun getHtmlPage(index: Int): String? = withContext(Dispatchers.IO) {
@@ -101,7 +114,11 @@ class DjvuFormatReader(
         return openMutex.withLock {
             if (isClosed) return@withLock null
             document?.let { return@withLock it }
-            backend.open(path)?.also { document = it }
+            val opened = backend.open(path)
+            if (opened == null) {
+                Log.w(TAG, "backend.open() returned null for path=${path.take(80)}, backend=${backend.status.backendName}, status=${backend.status}")
+            }
+            opened?.also { document = it }
         }
     }
 

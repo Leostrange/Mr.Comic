@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.EOFException
 import java.io.File
@@ -23,6 +24,10 @@ class StructuredDjvuBackend @Inject constructor(
     @ApplicationContext private val context: Context
 ) : DjvuBackend {
 
+    private companion object {
+        private const val TAG = "StructuredDjvuBackend"
+    }
+
     private val nativeRenderer = DjvuLibreNativeRenderer()
 
     override val status: DjvuBackendStatus = DjvuBackendStatus.Available(
@@ -31,9 +36,15 @@ class StructuredDjvuBackend @Inject constructor(
     )
 
     override suspend fun open(path: String): DjvuDocument? {
-        val probe = openInputStream(path)?.use(DjvuProbe::probe) ?: return null
+        val probe = openInputStream(path)?.use(DjvuProbe::probe)
+        if (probe == null) {
+            Log.w(TAG, "open: DjvuProbe.probe returned null — file unreadable or not DjVu. path=${path.take(80)}")
+            return null
+        }
+        Log.d(TAG, "open: probe OK — formType=${probe.formType}, pages=${probe.pageCount}, chunks=${probe.topLevelChunkIds}")
         val rangeReader = createRangeReader(path)
         val nativeDocument = openNativeDocument(path)
+        Log.d(TAG, "open: native renderer=${nativeDocument.document != null}, backend=${status.backendName}")
         return StructuredDjvuDocument(
             fileName = resolveFileName(path),
             probe = probe,
@@ -110,7 +121,10 @@ class StructuredDjvuBackend @Inject constructor(
 
     private fun openNativeDocument(path: String): NativeDjvuOpenResult {
         nativeRenderer.open(path)?.let { return NativeDjvuOpenResult(it) }
-        if (!path.startsWith("content://")) return NativeDjvuOpenResult(null)
+        if (!path.startsWith("content://")) {
+            Log.d(TAG, "openNativeDocument: native renderer returned null for file path (native available=${nativeRenderer.isAvailable})")
+            return NativeDjvuOpenResult(null)
+        }
 
         val tempDir = File(context.cacheDir, "djvu_native").apply { mkdirs() }
         val tempFile = File(tempDir, "native_${path.hashCode()}_${System.currentTimeMillis()}.djvu")
@@ -118,11 +132,14 @@ class StructuredDjvuBackend @Inject constructor(
             context.contentResolver.openInputStream(Uri.parse(path))?.use { input ->
                 tempFile.outputStream().use { output -> input.copyTo(output) }
             } ?: return NativeDjvuOpenResult(null)
+            val result = nativeRenderer.open(tempFile.absolutePath)
+            Log.d(TAG, "openNativeDocument: content URI temp copy → native=${result != null}")
             NativeDjvuOpenResult(
-                document = nativeRenderer.open(tempFile.absolutePath),
+                document = result,
                 tempFile = tempFile
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.w(TAG, "openNativeDocument: content URI native open failed", e)
             runCatching { tempFile.delete() }
             NativeDjvuOpenResult(null)
         }
@@ -146,6 +163,10 @@ private class StructuredDjvuDocument(
     private val pageSourceLoader: suspend (DjvuPlaceholderPage) -> DjvuPageSource?,
     private val closeAction: () -> Unit = {}
 ) : DjvuDocument {
+
+    private companion object {
+        private const val TAG = "StructuredDjvuBackend"
+    }
 
     // Page sources and render plans can hold large byte arrays. Keep only the
     // current page and immediate neighbors warm; analysis caches store light
@@ -180,9 +201,14 @@ private class StructuredDjvuDocument(
         // ── Path 2: BG44 (IW44 wavelet background) ───────────────────────────
         if (bitmapRoute?.hasIw44Background == true) {
             val source = bitmapRoute.pageSource
-            if (source == null) return null
+            if (source == null) {
+                Log.w(TAG, "renderPage($index): IW44 detected but pageSource is null")
+                return null
+            }
             return extractIw44Bitmap(source.documentBytes, renderQuality)
         }
+        Log.w(TAG, "renderPage($index): no render path — native=${nativeDocument != null}, " +
+            "route=${bitmapRoute != null}, renderable=${renderableRenderPlan != null}, iw44=${bitmapRoute?.hasIw44Background}")
         return null
     }
 
