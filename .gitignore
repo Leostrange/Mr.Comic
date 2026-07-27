@@ -120,6 +120,7 @@ photo_*.jpg
 
 # === QA screenshots — use GitHub releases or local artifacts instead ===
 Screenshots/
+/media/
 
 # === Duplicate root-level modules (real ones are in android/) ===
 /core-model/
