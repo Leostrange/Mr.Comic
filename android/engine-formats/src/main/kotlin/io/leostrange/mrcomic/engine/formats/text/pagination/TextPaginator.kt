@@ -62,7 +62,7 @@ class LayoutUnitTextPaginator : TextPaginator {
         for (block in blocks) {
             val textLen = block.replace(Regex("<[^>]+>"), " ").trim().length
             // Split oversized blocks that exceed a full page
-            if (textLen > charsPerPage * 1.5) {
+            if (textLen > charsPerPage) {
                 if (currentChars > 0) {
                     pages += wrapPage(currentPage.toString())
                     currentPage = StringBuilder()
