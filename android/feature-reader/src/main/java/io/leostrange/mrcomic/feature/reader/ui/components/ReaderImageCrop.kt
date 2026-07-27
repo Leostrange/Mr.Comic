@@ -52,6 +52,9 @@ internal fun CroppedBitmapImage(
             this.contentDescription = contentDescription
         }
     ) {
+        // Guard: the bitmap may have been recycled by TieredBitmapCache LRU eviction
+        // between composition and draw. Skip drawing to avoid Canvas crash.
+        if (bitmap.isRecycled) return@Canvas
         val srcSize = androidx.compose.ui.geometry.Size(
             sourceRect.width.toFloat().coerceAtLeast(1f),
             sourceRect.height.toFloat().coerceAtLeast(1f)
