@@ -62,12 +62,16 @@ fun shouldUseKotlinTextPagePagination(
 ): Boolean = false
 
 fun shouldDeferReaderPageCount(
-    readerRendersHtmlContent: Boolean,
-    contentFormat: ComicFormat?
+    @Suppress("UNUSED_PARAMETER") readerRendersHtmlContent: Boolean,
+    @Suppress("UNUSED_PARAMETER") contentFormat: ComicFormat?
 ): Boolean {
-    val resolvedFormat = contentFormat ?: ComicFormat.UNKNOWN
-    return readerRendersHtmlContent &&
-        (resolvedFormat.isHeavyReflowableFormat() || resolvedFormat == ComicFormat.EPUB)
+    // Always defer page count resolution to avoid blocking the UI.
+    // For EPUB/heavy reflowable: Readium parsing is expensive.
+    // For raster (CBZ/CBR/PDF/DjVu): archive scanning + file copy for
+    //   content:// URIs can take 10+ seconds on large files.
+    // The deferred page count job resolves the real count in the background
+    // once the first page is already visible.
+    return true
 }
 
 /**

@@ -2,6 +2,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -227,13 +228,27 @@ class ReaderContentPolicyTest {
                 contentFormat = ComicFormat.EPUB
             )
         )
-        assertEquals(
-            false,
-            shouldDeferReaderPageCount(
-                readerRendersHtmlContent = false,
-                contentFormat = ComicFormat.ZIP
+    }
+
+    @Test
+    fun allFormatsDeferReaderPageCount() {
+        // All formats now defer page count to avoid blocking the UI.
+        // Raster formats (CBZ/CBR/PDF/DjVu) may have slow archive scanning
+        // or content:// URI file copy that blocks the open flow.
+        listOf(
+            ComicFormat.ZIP, ComicFormat.CBZ, ComicFormat.CBR,
+            ComicFormat.PDF, ComicFormat.DJVU, ComicFormat.EPUB,
+            ComicFormat.TXT, ComicFormat.UNKNOWN
+        ).forEach { format ->
+            assertEquals(
+                "format=$format",
+                true,
+                shouldDeferReaderPageCount(
+                    readerRendersHtmlContent = format.isTextReadingFormat(),
+                    contentFormat = format
+                )
             )
-        )
+        }
     }
 
     @Test
