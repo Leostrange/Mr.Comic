@@ -178,10 +178,10 @@ class ReaderViewModel @Inject constructor(
         readerPreferences = readerPreferences,
         context = context
     )
-    private val footnoteController = ReaderFootnoteController(
+    internal val footnoteController = ReaderFootnoteController(
         _uiState = _uiState,
         formatReader = { formatReader },
-        navigateTo = { page, source -> navigateTo(page, progressSource = source) },
+        navigateTo = { page, source -> navigationController.navigateTo(page, progressSource = source) },
         enginePageForUiPage = { page -> enginePageForUiPage(page) },
         shouldBlockInlineHtmlChapterNavigation = { containerKind, readingMode, hrefFilePart, currentAssetBasePath ->
             shouldBlockInlineHtmlChapterNavigation(
@@ -192,24 +192,24 @@ class ReaderViewModel @Inject constructor(
             )
         }
     )
-    private val bookmarkController = ReaderBookmarkController(
+    internal val bookmarkController = ReaderBookmarkController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
         analyticsTracker = analyticsTracker
     )
-    private val highlightController = ReaderHighlightController(
+    internal val highlightController = ReaderHighlightController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         textHighlightRepository = textHighlightRepository
     )
-    private val eyeRestController = ReaderEyeRestController(
+    internal val eyeRestController = ReaderEyeRestController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
         _eyeRestReminder = _eyeRestReminder
     )
-    private val saveQuoteController = ReaderSaveQuoteController(
+    internal val saveQuoteController = ReaderSaveQuoteController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         quoteRepository = quoteRepository,
@@ -218,7 +218,7 @@ class ReaderViewModel @Inject constructor(
         localizedReaderText = { localizedReaderText() }
     )
     private val renderProfile = context.resolveRenderDeviceProfile()
-    private val ocrController = ReaderOcrController(
+    internal val ocrController = ReaderOcrController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         pagePreloader = pagePreloader,
@@ -255,7 +255,7 @@ class ReaderViewModel @Inject constructor(
      * have no bitmap render path but do provide HTML content via [FormatReader.getHtmlPage].
      */
     private val _webtoonHtmlCache = MutableStateFlow<Map<Int, String>>(emptyMap())
-    private val pageLoader = ReaderPageLoader(
+    internal val pageLoader = ReaderPageLoader(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         pagePreloader = pagePreloader,
@@ -277,7 +277,7 @@ class ReaderViewModel @Inject constructor(
     private var highQualityWarmupJob: Job? = null
     private var pageTranslationNoteJob: Job? = null
     private val readerSessionCoordinator = ReaderSessionCoordinator()
-    private val navigationController = ReaderNavigationController(
+    internal val navigationController = ReaderNavigationController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         readerSessionCoordinator = readerSessionCoordinator,
@@ -312,7 +312,7 @@ class ReaderViewModel @Inject constructor(
         readerSessionCoordinator = readerSessionCoordinator,
         _readerProgressRecap = _readerProgressRecap
     )
-    private val readingModeController = ReaderReadingModeController(
+    internal val readingModeController = ReaderReadingModeController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
@@ -511,12 +511,12 @@ class ReaderViewModel @Inject constructor(
         val shouldDeferCount = prepared.deferPageCount
         val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
         val requestedStartPage = requestedPage ?: comic.currentPage
-        val startPage = normalizePageForMode(requestedStartPage, openingMode, initialPages)
+        val startPage = navigationController.normalizePageForMode(requestedStartPage, openingMode, initialPages)
         pendingRequestedPage = null
         progressController.lastPersistedProgress = PersistedProgressMarker(
             comicId = comic.id,
             page = if (requestedPage != null && requestedPage != comic.currentPage) {
-                normalizePageForMode(comic.currentPage, openingMode, initialPages)
+                navigationController.normalizePageForMode(comic.currentPage, openingMode, initialPages)
             } else startPage
         )
         return OpeningConfig(
@@ -646,7 +646,7 @@ class ReaderViewModel @Inject constructor(
         scheduleDeferredTocWarmup()
         loadBookmarks(comic.id, initialPages)
         loadPageTranslationNote(comic.id, startPage)
-        restartEyeRestTimer()
+        eyeRestController.restartEyeRestTimer()
     }
 
     private suspend fun localizedReaderError(messageProvider: (String) -> String): String {
@@ -672,15 +672,6 @@ class ReaderViewModel @Inject constructor(
     fun getPageFlow(index: Int, renderQuality: Int = 1) = pageLoader.getPageFlow(index, renderQuality)
     fun loadPage(index: Int, renderQuality: Int = 1) = pageLoader.loadPage(index, renderQuality)
     fun preloadWebtoonWindow(pages: List<Int>) = pageLoader.preloadWebtoonWindow(pages)
-    fun ensureTextWebtoonDocumentLoaded() = pageLoader.ensureTextWebtoonDocumentLoaded()
-
-    fun navigateTo(
-        page: Int,
-        progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING
-    ) = navigationController.navigateTo(page, progressSource)
-
-    fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1, charOffset: Int = -1) =
-        navigationController.navigateToTocEntry(page, anchorId, sectionIndex, charOffset)
 
     fun setHighQualityFocusPages(indices: Set<Int>?) {
         if (!activeComicSupportsHighResZoom()) {
@@ -698,11 +689,6 @@ class ReaderViewModel @Inject constructor(
             normalized ?: visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode).toSet()
         )
     }
-
-    fun nextPage() = navigationController.nextPage()
-    fun prevPage() = navigationController.prevPage()
-
-    fun requestOcr() = ocrController.requestOcr()
 
     fun requestTextPageTranslation(page: Int = _uiState.value.currentPage) =
         translationController.requestTextPageTranslation(formatReader, page)
@@ -779,9 +765,6 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    fun saveQuoteFromSelectedTextActions() = saveQuoteController.saveQuoteFromSelectedTextActions()
-    fun saveQuoteDirectly(selectedText: String) = saveQuoteController.saveQuoteDirectly(selectedText)
-
     fun explainFromSelectedTextActions() {
         val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
         dismissSelectedTextActions()
@@ -792,12 +775,7 @@ class ReaderViewModel @Inject constructor(
         translationController.explainSelectedText(selectedText)
     }
 
-    fun highlightSelectedText(selectedText: String) = highlightController.highlightSelectedText(selectedText)
-    fun confirmHighlight(colorArgb: Int) = highlightController.confirmHighlight(colorArgb)
-    fun dismissHighlight() = highlightController.dismissHighlight()
-    fun deleteHighlight(id: String) = highlightController.deleteHighlight(id)
     private fun loadHighlightsForCurrentPage() = highlightController.loadHighlightsForCurrentPage()
-    fun injectHighlightsJs(): String = highlightController.injectHighlightsJs()
 
     /**
      * Compare translations from multiple engines side by side.
@@ -837,8 +815,6 @@ class ReaderViewModel @Inject constructor(
 
     fun dismissSelectedTextTranslation() =
         translationController.dismissSelectedTextTranslation()
-
-    fun saveQuoteFromSelectedTextResult() = saveQuoteController.saveQuoteFromSelectedTextResult()
 
     fun onCenterTap() {
         _uiState.update { state ->
@@ -892,11 +868,6 @@ class ReaderViewModel @Inject constructor(
       *  - `chapter.xhtml` — navigate to the page for that file
       *  - `chapter.xhtml#fragment` — navigate to page for that file; footnote lookup for fragment
      */
-     fun onAnchorClick(href: String) = footnoteController.onAnchorClick(href)
-
-    /** Shows a footnote popup directly from inline EPUB metadata like anchor title="...". */
-    fun showInlineFootnote(text: String) = footnoteController.showInlineFootnote(text)
-
     fun onPagedLayoutPageCountChanged(pageCount: Int, pageIndex: Int = 0) {
         // This callback reports visual subpages inside the currently loaded HTML
         // section as calculated by the WebView JS pagination engine.
@@ -920,17 +891,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun consumePendingScrollToAnchor() = navigationController.consumePendingScrollToAnchor()
-    fun consumePendingWebtoonSection() = navigationController.consumePendingWebtoonSection()
-
-    /** Dismisses the footnote popup without navigating anywhere. */
-    fun dismissFootnote() = footnoteController.dismissFootnote()
-
     fun openHtmlAsset(path: String) = formatReader?.openHtmlAsset(path)
-
-    fun expandFootnote() = footnoteController.expandFootnote()
-
-    fun collapseFootnote() = footnoteController.collapseFootnote()
 
     /** Opens/closes the text reader settings bottom sheet. */
     fun toggleTextSettings() = _uiState.update {
@@ -952,12 +913,6 @@ class ReaderViewModel @Inject constructor(
     }
 
     // ── Закладки ──────────────────────────────────────────────────────────────
-
-    /** Toggles a bookmark on/off for the current page. */
-    fun toggleBookmark() = bookmarkController.toggleBookmark()
-
-    /** Removes a specific page bookmark (called from the bookmarks list in TOC). */
-    fun removeBookmark(page: Int) = bookmarkController.removeBookmark(page)
 
     private fun loadBookmarks(comicId: String, totalPages: Int) = bookmarkController.loadBookmarks(comicId, totalPages)
 
@@ -1097,14 +1052,7 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    fun setReadingMode(mode: ReadingMode) = readingModeController.setReadingMode(mode)
-    fun onOrientationChanged(useLandscapeSpread: Boolean, isTextReader: Boolean = false) =
-        readingModeController.onOrientationChanged(useLandscapeSpread, isTextReader)
-    private fun applyReadingMode(mode: ReadingMode) = readingModeController.applyReadingMode(mode)
     private var brightnessJob: Job? = null
-    fun setLandscapeSpreadEnabled(enabled: Boolean) = readingModeController.setLandscapeSpreadEnabled(enabled)
-    fun setPreloadPages(count: Int) = readingModeController.setPreloadPages(count)
-
     private fun saveProgress(
         page: Int,
         progressSource: ReaderNavigationProgressSource
@@ -1165,11 +1113,6 @@ class ReaderViewModel @Inject constructor(
     private fun visiblePagesFor(page: Int, mode: ReadingMode): List<Int> = navigationController.visiblePagesFor(page, mode)
     private fun currentChapterFor(page: Int): TocEntry? = navigationController.currentChapterFor(page)
     private fun enginePageForUiPage(page: Int): Int = navigationController.enginePageForUiPage(page)
-    private fun resolveNavigationPage(page: Int, progressSource: ReaderNavigationProgressSource): Int =
-        navigationController.resolveNavigationPage(page, progressSource)
-    private fun normalizePageForMode(page: Int, mode: ReadingMode, totalPages: Int = _uiState.value.totalPages): Int =
-        navigationController.normalizePageForMode(page, mode, totalPages)
-    private fun pageStepForMode(mode: ReadingMode): Int = navigationController.pageStepForMode(mode)
 
     private fun effectiveOpeningModeFor(
         format: ComicFormat,
@@ -1177,8 +1120,6 @@ class ReaderViewModel @Inject constructor(
     ): ReadingMode = readingModeController.effectiveOpeningModeFor(format, readerRendersHtmlContent)
 
     // isOpenRequestCurrent replaced by openGuard.isCurrent()
-
-    private fun rememberPortraitMode(mode: ReadingMode) = readingModeController.rememberPortraitMode(mode)
 
     private fun applyHighQualityRetention(indices: Set<Int>) {
         if (indices == lastRetainedHighQualityPages) return
@@ -1370,7 +1311,7 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun restoreReaderPreferences() {
         val p = ReaderPreferenceRestorer.restore(context, renderProfile)
-        rememberPortraitMode(p.mode)
+        readingModeController.rememberPortraitMode(p.mode)
         ReaderPreferenceRestorer.applyTo(
             p = p,
             uiState = _uiState,
@@ -1379,11 +1320,8 @@ class ReaderViewModel @Inject constructor(
             disableAnimations = renderProfile.disableAnimations
         )
         if (p.needsPersistStylePresets) persistReaderStylePresetEntries(p.readerStylePresetEntries)
-        restartEyeRestTimer()
+        eyeRestController.restartEyeRestTimer()
     }
-
-    fun snoozeEyeRestReminder(minutes: Int = 5) = eyeRestController.snoozeEyeRestReminder(minutes)
-    private fun restartEyeRestTimer(initialDelayMinutes: Int? = null) = eyeRestController.restartEyeRestTimer(initialDelayMinutes)
 
     private fun detectFormatForPath(path: String): ComicFormat =
         ReaderContentPathResolver.detectFormatForPath(context, path)
