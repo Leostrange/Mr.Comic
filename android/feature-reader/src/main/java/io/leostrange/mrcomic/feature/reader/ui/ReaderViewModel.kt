@@ -244,7 +244,7 @@ class ReaderViewModel @Inject constructor(
             ) }
     private val textWebtoonSessionController = TextWebtoonSessionController(
         scope = viewModelScope,
-        builder = WebtoonDocumentBuilder(TextWebtoonDocumentBuilder::build)
+        builder = TextWebtoonDocumentBuilder
     )
     private val textReaderOrchestrator = TextReaderOrchestrator(
         TextReaderController(textWebtoonSessionController)

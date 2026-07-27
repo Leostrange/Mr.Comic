@@ -8,4 +8,14 @@ package io.leostrange.mrcomic.feature.reader.ui
  */
 internal fun interface WebtoonDocumentBuilder {
     fun build(pages: List<CachedHtmlPage>): TextWebtoonCachedDocument
+
+    /**
+     * Append new pages to an existing HTML document without full rebuild.
+     * Default falls back to [build] (rebuilds from scratch).
+     */
+    fun appendPages(
+        existingHtml: String,
+        newPages: List<CachedHtmlPage>,
+        startIndex: Int
+    ): TextWebtoonCachedDocument = build(newPages)
 }
