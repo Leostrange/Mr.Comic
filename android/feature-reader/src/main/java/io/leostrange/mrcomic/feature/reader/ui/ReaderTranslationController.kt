@@ -928,10 +928,10 @@ internal class ReaderTranslationController(
         }.joinToString("\n")
     }
 
-    private fun String.countSelectionTokens(): Int =
+    internal fun String.countSelectionTokens(): Int =
         SELECTION_TOKEN_REGEX.findAll(this).count().coerceAtLeast(if (isBlank()) 0 else 1)
 
-    private companion object {
+    internal companion object {
         val SELECTION_TOKEN_REGEX = "[\\p{L}\\p{N}]+".toRegex()
     }
 }

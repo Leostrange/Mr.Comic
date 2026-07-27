@@ -1,37 +1,22 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.graphics.Bitmap
 import android.net.Uri
-
 import android.util.Log
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.core.text.HtmlCompat
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
-import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
 import io.leostrange.mrcomic.feature.reader.domain.progress.EpubSectionPageCountStore
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
-import io.leostrange.mrcomic.feature.reader.domain.session.ReaderClosedSessionMetrics
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
-import io.leostrange.mrcomic.feature.reader.domain.session.buildReaderClosedAnalyticsEvent
-import io.leostrange.mrcomic.feature.reader.domain.session.shouldRecordReaderSessionMinutes
-import io.leostrange.mrcomic.feature.reader.ui.preset.applyReaderStylePreset
-import io.leostrange.mrcomic.feature.reader.ui.preset.persistReaderStylePresetSnapshot
-import io.leostrange.mrcomic.feature.reader.ui.preset.ReaderStylePresetReducer
-import io.leostrange.mrcomic.feature.reader.ui.preset.toReaderStylePresetSnapshot
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntries
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
-import io.leostrange.mrcomic.feature.reader.domain.preset.parseReaderStylePreset
 import io.leostrange.mrcomic.feature.reader.domain.preset.serializeReaderStylePresetEntries
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
@@ -46,59 +31,31 @@ import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.BookSource
 import io.leostrange.mrcomic.core.model.storedReaderLocator
-import io.leostrange.mrcomic.core.model.DictionaryEntry
-import io.leostrange.mrcomic.core.model.ExplainRequest
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.ReaderInfoSlot
-import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
-import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
-import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
-import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
-import io.leostrange.mrcomic.core.model.TranslationServiceConfig
 import io.leostrange.mrcomic.core.model.supportsHighResZoomTiers
-import io.leostrange.mrcomic.core.model.isTextReadingFormat
-import io.leostrange.mrcomic.core.model.isHeavyReflowableFormat
-import io.leostrange.mrcomic.core.model.TranslationMode
-import io.leostrange.mrcomic.core.model.TranslationRequest
-import io.leostrange.mrcomic.core.model.TranslationRoutingRequest
-import io.leostrange.mrcomic.core.model.TranslationSourceType
-import io.leostrange.mrcomic.core.model.TranslationTransportPreference
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
+import io.leostrange.mrcomic.core.domain.translation.LanguageDetector
 import io.leostrange.mrcomic.core.domain.translation.LlmExplainEngine
-import io.leostrange.mrcomic.core.domain.translation.SingleWordDictionaryMatch
-import io.leostrange.mrcomic.core.domain.translation.TranslationBackendUnavailableException
-import io.leostrange.mrcomic.core.domain.translation.hasMeaningfulTranslationFor
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.domain.translation.LookupRouter
+import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
+import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
-import io.leostrange.mrcomic.core.ui.locale.normalizeTranslationLanguageCode
-import io.leostrange.mrcomic.core.ui.locale.supportedTranslationLanguageCodes
-import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.core.domain.translation.LookupRouter
-import io.leostrange.mrcomic.core.domain.translation.LanguageDetector
-import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
-import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
-import io.leostrange.mrcomic.core.domain.translation.resolveBestSingleWordDictionaryMatch
 import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.LegacyFormatSessionAccess
+import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.api.OpenBookRequest
 import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
 import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.leostrange.mrcomic.core.model.LanguageDetectionResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -106,9 +63,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.IOException
-import java.util.Locale
-import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 
 
@@ -164,6 +118,7 @@ class ReaderViewModel @Inject constructor(
         readerPreferences = readerPreferences,
         dataStore = context.dataStore
     )
+    internal val chromeController = ReaderChromeController(_uiState = _uiState)
     internal val translationController = ReaderTranslationController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
@@ -182,7 +137,7 @@ class ReaderViewModel @Inject constructor(
         _uiState = _uiState,
         formatReader = { formatReader },
         navigateTo = { page, source -> navigationController.navigateTo(page, progressSource = source) },
-        enginePageForUiPage = { page -> enginePageForUiPage(page) },
+        enginePageForUiPage = { page -> navigationController.enginePageForUiPage(page) },
         shouldBlockInlineHtmlChapterNavigation = { containerKind, readingMode, hrefFilePart, currentAssetBasePath ->
             shouldBlockInlineHtmlChapterNavigation(
                 containerKind ?: return@ReaderFootnoteController true,
@@ -264,7 +219,7 @@ class ReaderViewModel @Inject constructor(
         formatReader = { formatReader },
         getOrLoadHtmlPage = { reader, index -> getOrLoadHtmlPage(reader, index) },
         refreshAdjacentHtmlPages = { refreshAdjacentHtmlPages(it) },
-        loadHighlightsForCurrentPage = { loadHighlightsForCurrentPage() },
+        loadHighlightsForCurrentPage = { highlightController.loadHighlightsForCurrentPage() },
         activeBookSession = { activeBookSession }
     )
 
@@ -506,7 +461,7 @@ class ReaderViewModel @Inject constructor(
     ): OpeningConfig? {
         if (!openGuard.isCurrent(requestToken)) return null
         val readerRendersHtmlContent = prepared.readerRendersHtmlContent
-        val openingMode = effectiveOpeningModeFor(prepared.detectedFormat, readerRendersHtmlContent)
+        val openingMode = readingModeController.effectiveOpeningModeFor(prepared.detectedFormat, readerRendersHtmlContent)
         val requestedPage = pendingRequestedPage
         val shouldDeferCount = prepared.deferPageCount
         val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
@@ -605,7 +560,7 @@ class ReaderViewModel @Inject constructor(
         activeReader: FormatReader,
         config: OpeningConfig
     ) {
-        val visiblePages = visiblePagesFor(config.startPage, config.openingMode)
+        val visiblePages = navigationController.visiblePagesFor(config.startPage, config.openingMode)
         if (!config.shouldDeferCount) {
             formatReader?.takeUnless { config.readerRendersHtmlContent }?.let { reader ->
                 pagePreloader.preloadAround(reader, visiblePages, prepared.pages, _uiState.value.preloadPages)
@@ -683,7 +638,7 @@ class ReaderViewModel @Inject constructor(
             ?.takeIf { it.isNotEmpty() }
 
         applyHighQualityRetention(
-            normalized ?: visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode).toSet()
+            normalized ?: navigationController.visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode).toSet()
         )
     }
 
@@ -698,7 +653,7 @@ class ReaderViewModel @Inject constructor(
         val reader = formatReader ?: return
         val comicId = _uiState.value.comic?.id ?: return
         val readingMode = _uiState.value.readingMode
-        val targetPages = visiblePagesFor(page, readingMode)
+        val targetPages = navigationController.visiblePagesFor(page, readingMode)
 
         highQualityWarmupJob?.cancel()
         highQualityWarmupJob = viewModelScope.launch {
@@ -706,7 +661,7 @@ class ReaderViewModel @Inject constructor(
             if (formatReader !== reader) return@launch
             if (_uiState.value.comic?.id != comicId) return@launch
             if (_uiState.value.readingMode != readingMode) return@launch
-            if (visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode) != targetPages) return@launch
+            if (navigationController.visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode) != targetPages) return@launch
             targetPages.forEach { targetPage ->
                 if (pagePreloader.getPage(targetPage, warmupTier) == null) {
                     pagePreloader.loadPage(reader, targetPage, warmupTier)
@@ -722,13 +677,13 @@ class ReaderViewModel @Inject constructor(
         if (normalizedText.isBlank()) return
 
         viewModelScope.launch {
-            val translationSettings = resolveTranslationSettings()
+            translationController.resolveTranslationSettings()
             val canExplainSelection = true
             _uiState.update {
                 it.copy(
                     selectedTextActionSheet = SelectedTextActionSheetState(
                         originalText = normalizedText,
-                        canUseDictionary = normalizedText.countSelectionTokens() == 1,
+                        canUseDictionary = with(translationController) { normalizedText.countSelectionTokens() == 1 },
                         canExplain = canExplainSelection
                     ),
                     selectedTextTranslation = null
@@ -768,50 +723,21 @@ class ReaderViewModel @Inject constructor(
         translationController.explainSelectedText(selectedText)
     }
 
-    private fun loadHighlightsForCurrentPage() = highlightController.loadHighlightsForCurrentPage()
+    fun onCenterTap() = chromeController.onCenterTap()
 
-    fun onCenterTap() {
-        _uiState.update { state ->
-            state.copy(
-                chromeState = when (state.chromeState) {
-                    ReaderChromeState.HIDDEN -> ReaderChromeState.EXPANDED
-                    ReaderChromeState.EXPANDED -> ReaderChromeState.HIDDEN
-                }
-            )
-        }
-    }
+    fun toggleChromeUi() = chromeController.toggleChromeUi()
 
-    fun toggleChromeUi() {
-        _uiState.update { state ->
-            state.copy(
-                chromeState = if (state.chromeState == ReaderChromeState.HIDDEN) {
-                    ReaderChromeState.EXPANDED
-                } else {
-                    ReaderChromeState.HIDDEN
-                }
-            )
-        }
-    }
+    fun hideChrome() = chromeController.hideChrome()
 
-    fun hideChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
+    fun showMinimalChrome() = chromeController.showMinimalChrome()
 
-    fun showMinimalChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
-
-    fun showExpandedChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.EXPANDED) }
+    fun showExpandedChrome() = chromeController.showExpandedChrome()
 
     /** Opens/closes the table-of-contents bottom sheet. */
-    fun toggleTocSheet() {
-        val shouldOpen = !_uiState.value.showTocSheet
-        _uiState.update {
-            it.copy(
-                showTocSheet = !it.showTocSheet,
-                chromeState = ReaderChromeState.EXPANDED
-            )
-        }
-        if (shouldOpen && _uiState.value.tableOfContents.isEmpty()) {
-            loadToc(force = true)
-        }
-    }
+    fun toggleTocSheet() = chromeController.toggleTocSheet(
+        hasTableOfContents = _uiState.value.tableOfContents.isNotEmpty(),
+        loadToc = { loadToc(force = true) }
+    )
 
     /**
       * Called by the WebView JS bridge when the user taps an anchor link.
@@ -848,12 +774,7 @@ class ReaderViewModel @Inject constructor(
     fun openHtmlAsset(path: String) = formatReader?.openHtmlAsset(path)
 
     /** Opens/closes the text reader settings bottom sheet. */
-    fun toggleTextSettings() = _uiState.update {
-        it.copy(
-            showTextSettings = !it.showTextSettings,
-            chromeState = ReaderChromeState.EXPANDED
-        )
-    }
+    fun toggleTextSettings() = chromeController.toggleTextSettings()
 
     private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
         val legacySlots = ReaderStylePresetEntries.toLegacySlots(entries)
@@ -958,7 +879,7 @@ class ReaderViewModel @Inject constructor(
                     )
                 }
                 readerSessionCoordinator.updateTotalPages(realPages)
-                val visiblePages = visiblePagesFor(normalizedStartPage, openingMode)
+                val visiblePages = navigationController.visiblePagesFor(normalizedStartPage, openingMode)
                 reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->
                     pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)
                 }
@@ -1022,14 +943,14 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun rememberChapterMilestoneAnchor(page: Int = _uiState.value.currentPage) {
-        progressController.rememberChapterMilestoneAnchor(page, ::currentChapterFor)
+        progressController.rememberChapterMilestoneAnchor(page, navigationController::currentChapterFor)
     }
 
     private fun maybeEmitChapterMilestone(
         page: Int,
         progressSource: ReaderNavigationProgressSource
     ) {
-        progressController.maybeEmitChapterMilestone(page, progressSource, ::currentChapterFor)
+        progressController.maybeEmitChapterMilestone(page, progressSource, navigationController::currentChapterFor)
     }
 
     private suspend fun emitProgressRecap(
@@ -1055,23 +976,6 @@ class ReaderViewModel @Inject constructor(
             projectedGoalPagesDelta = projectedGoalPagesDelta
         )
     }
-
-    private fun syncReaderPosition(
-        page: Int,
-        mode: ReadingMode,
-        persistProgress: Boolean,
-        progressSource: ReaderNavigationProgressSource = ReaderNavigationProgressSource.READING,
-        announceChapterMilestone: Boolean = true
-    ) = navigationController.syncReaderPosition(page, mode, persistProgress, progressSource, announceChapterMilestone)
-
-    private fun visiblePagesFor(page: Int, mode: ReadingMode): List<Int> = navigationController.visiblePagesFor(page, mode)
-    private fun currentChapterFor(page: Int): TocEntry? = navigationController.currentChapterFor(page)
-    private fun enginePageForUiPage(page: Int): Int = navigationController.enginePageForUiPage(page)
-
-    private fun effectiveOpeningModeFor(
-        format: ComicFormat,
-        readerRendersHtmlContent: Boolean = format.isTextReadingFormat()
-    ): ReadingMode = readingModeController.effectiveOpeningModeFor(format, readerRendersHtmlContent)
 
     // isOpenRequestCurrent replaced by openGuard.isCurrent()
 
@@ -1203,7 +1107,7 @@ class ReaderViewModel @Inject constructor(
             comicId = comicId,
             centerPage = centerPage,
             getUiState = { _uiState.value },
-            visiblePagesFor = ::visiblePagesFor,
+            visiblePagesFor = navigationController::visiblePagesFor,
             isStillActive = { formatReader === reader && _uiState.value.comic?.id == comicId },
             loadPage = { pageIndex -> getOrLoadHtmlPage(reader, pageIndex) },
             onPagePrewarmed = { refreshAdjacentHtmlPages() },
@@ -1235,7 +1139,7 @@ class ReaderViewModel @Inject constructor(
         // touch Room/DataStore/engine registry — all independent of the resources torn down below —
         // so completing them slightly after onCleared returns is safe. Previously three runBlocking
         // calls here caused an ANR on slow storage.
-        emitReaderClosed()
+        progressController.emitReaderClosed(appScope)
         super.onCleared()
         loadComicJob?.cancel()
         tocLoadJob?.cancel()
@@ -1259,10 +1163,6 @@ class ReaderViewModel @Inject constructor(
         clearHtmlPageCache()
     }
 
-    private fun emitReaderClosed() {
-        progressController.emitReaderClosed(appScope)
-    }
-
     private suspend fun restoreReaderPreferences() {
         val p = ReaderPreferenceRestorer.restore(context, renderProfile)
         readingModeController.rememberPortraitMode(p.mode)
@@ -1277,76 +1177,5 @@ class ReaderViewModel @Inject constructor(
         eyeRestController.restartEyeRestTimer()
     }
 
-    private fun detectFormatForPath(path: String): ComicFormat =
-        ReaderContentPathResolver.detectFormatForPath(context, path)
-
-    private fun resolveReadablePath(comic: Comic, fallbackPath: String): String? =
-        ReaderContentPathResolver.resolveReadablePath(context, comic, fallbackPath)
-
-    private fun cacheContentUriForEpub(comic: Comic, contentUri: String): String? =
-        ReaderContentPathResolver.cacheContentUriForEpub(context, comic, contentUri)
-
-    private fun resolveReadablePathFromPersistedPermissions(comic: Comic): String? =
-        ReaderContentPathResolver.resolveReadablePathFromPersistedPermissions(context, comic)
-
-    private fun isDocumentInsideTree(treeDocumentId: String, documentId: String): Boolean =
-        ReaderContentPathResolver.isDocumentInsideTree(treeDocumentId, documentId)
-
-    private fun documentIdToExternalPath(documentId: String): String? =
-        ReaderContentPathResolver.documentIdToExternalPath(documentId)
-
-    private fun isLocalFileReadable(path: String): Boolean =
-        ReaderContentPathResolver.isLocalFileReadable(path)
-
-    private fun hasReadAccess(path: String): Boolean =
-        ReaderContentPathResolver.hasReadAccess(context, path)
-
-    private suspend fun resolveTranslationTargetLanguage(): String {
-        return resolveTranslationSettings().targetLanguage
-    }
-
-    private suspend fun resolveTranslationSettings(): TranslationServiceConfig {
-        val appLanguage = normalizeAppLanguageCode(
-            readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
-        )
-        val rawTargetLanguage = readerPreferences.get(PreferencesKeys.TRANSLATION_TARGET_LANGUAGE, "APP").first()
-        val rawSourceLanguage = readerPreferences.get(PreferencesKeys.TRANSLATION_SOURCE_LANGUAGE, "AUTO").first()
-        val rawTransport = readerPreferences.get(
-            PreferencesKeys.TRANSLATION_TRANSPORT,
-            TranslationTransportPreference.AUTO.name
-        ).first()
-        val explainEnabled = readerPreferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, false).first()
-
-        val targetLanguage = normalizeTranslationLanguageCode(rawTargetLanguage)
-            ?: appLanguage
-            ?: "ru"
-
-        val sourceLanguage = normalizeTranslationLanguageCode(rawSourceLanguage)
-
-        return TranslationServiceConfig.fromStored(
-            mode = null,
-            sourceLanguage = sourceLanguage,
-            targetLanguage = targetLanguage,
-            preferredTransport = rawTransport,
-            explainEnabled = explainEnabled
-        )
-    }
-
-    private fun String.countSelectionTokens(): Int =
-        SELECTION_TOKEN_REGEX.findAll(this).count().coerceAtLeast(if (isBlank()) 0 else 1)
-
-
-
-    private fun isNetworkAvailable(): Boolean {
-        val connectivityManager = context.getSystemService(ConnectivityManager::class.java) ?: return false
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
-            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-    }
-
-    private companion object {
-        val SELECTION_TOKEN_REGEX = "[\\p{L}\\p{N}]+".toRegex()
-    }
 }
 
