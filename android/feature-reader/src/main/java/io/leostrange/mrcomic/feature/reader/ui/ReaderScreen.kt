@@ -900,13 +900,13 @@ fun ReaderScreen(
                                     }
                                 },
                                 onTranslateSelection = { selectedText ->
-                                    viewModel.translateSelectedText(
+                                    viewModel.translationController.translateSelectedText(
                                         selectedText = selectedText,
                                         preferDictionary = false
                                     )
                                 },
                                 onDictionarySelection = { selectedText ->
-                                    viewModel.translateSelectedText(
+                                    viewModel.translationController.translateSelectedText(
                                         selectedText = selectedText,
                                         preferDictionary = true
                                     )
@@ -914,8 +914,8 @@ fun ReaderScreen(
                                 onExplainSelection = viewModel::explainSelectedTextDirect,
                                 onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
                                 onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
-                                onTranslateChapter = { viewModel.translateCurrentChapter() },
-                                onCompareTranslations = { text -> viewModel.compareTranslations(text) },
+                                onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
+                                onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
                                 highlightsJs = viewModel.highlightController.injectHighlightsJs(),
                                 fontSize = uiState.textFontSize,
                                 readerPreset = activeReaderPreset,
@@ -977,13 +977,13 @@ fun ReaderScreen(
                                         viewModel.onPagedLayoutPageCountChanged(pageCount, pageIndex)
                                     },
                                     onTranslateSelection = { selectedText ->
-                                        viewModel.translateSelectedText(
+                                        viewModel.translationController.translateSelectedText(
                                             selectedText = selectedText,
                                             preferDictionary = false
                                         )
                                     },
                                     onDictionarySelection = { selectedText ->
-                                        viewModel.translateSelectedText(
+                                        viewModel.translationController.translateSelectedText(
                                             selectedText = selectedText,
                                             preferDictionary = true
                                         )
@@ -991,8 +991,8 @@ fun ReaderScreen(
                                     onExplainSelection = viewModel::explainSelectedTextDirect,
                                     onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
                                     onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
-                                onTranslateChapter = { viewModel.translateCurrentChapter() },
-                                onCompareTranslations = { text -> viewModel.compareTranslations(text) },
+                                onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
+                                onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
                                     highlightsJs = viewModel.highlightController.injectHighlightsJs(),
                                     fontSize = uiState.textFontSize,
                                     colorScheme = uiState.textColorScheme,

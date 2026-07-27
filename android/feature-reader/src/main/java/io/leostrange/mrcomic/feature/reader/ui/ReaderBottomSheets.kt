@@ -91,7 +91,7 @@ internal fun ReaderBottomSheets(
             onDismiss = { onShowTextTranslationPageSheetChange(false) },
             onTranslatePage = { page ->
                 onShowTextTranslationPageSheetChange(false)
-                viewModel.requestTextPageTranslation(page)
+                viewModel.translationController.requestTextPageTranslation(viewModel.formatReader, page)
             }
         )
     }
@@ -278,17 +278,17 @@ internal fun ReaderBottomSheets(
     uiState.translationComparison?.let { comparison ->
         TranslationComparisonSheet(
             comparison = comparison,
-            onDismiss = viewModel::dismissTranslationComparison
+            onDismiss = { viewModel.translationController.dismissTranslationComparison() }
         )
     }
     uiState.selectedTextTranslation?.let { translationState ->
         SelectedTextTranslationSheet(
             state = translationState,
-            onDismiss = viewModel::dismissSelectedTextTranslation,
-            onDictionary = viewModel::openDictionaryForSelectedText,
-            onTranslateAsPhrase = viewModel::translateSelectedTextAsPhrase,
+            onDismiss = { viewModel.translationController.dismissSelectedTextTranslation() },
+            onDictionary = { viewModel.translationController.openDictionaryForSelectedText() },
+            onTranslateAsPhrase = { viewModel.translationController.translateSelectedTextAsPhrase() },
             onExplain = viewModel::explainSelectedTextFromResult,
-            onTransportChange = viewModel::translateSelectedTextWithTransport,
+            onTransportChange = { viewModel.translationController.translateSelectedTextWithTransport(it) },
             onCopy = { text ->
                 clipboardManager.setText(AnnotatedString(text))
             },
