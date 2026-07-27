@@ -93,15 +93,15 @@ fun PageView(
     ) { (page, dual) ->
         val rightPage = (page + 1).takeIf { dual && it < uiState.totalPages }
 
-        val leftBitmap by viewModel.getPageFlow(page).collectAsState(initial = viewModel.getPage(page))
-        val rightBitmap by viewModel.getPageFlow(rightPage ?: -1)
-            .collectAsState(initial = rightPage?.let { viewModel.getPage(it) })
+        val leftBitmap by viewModel.pageLoader.getPageFlow(page).collectAsState(initial = viewModel.pageLoader.getPage(page))
+        val rightBitmap by viewModel.pageLoader.getPageFlow(rightPage ?: -1)
+            .collectAsState(initial = rightPage?.let { viewModel.pageLoader.getPage(it) })
 
         LaunchedEffect(page) {
-            if (viewModel.getPage(page) == null) viewModel.loadPage(page)
+            if (viewModel.pageLoader.getPage(page) == null) viewModel.pageLoader.loadPage(page)
         }
         LaunchedEffect(rightPage) {
-            if (rightPage != null && viewModel.getPage(rightPage) == null) viewModel.loadPage(rightPage)
+            if (rightPage != null && viewModel.pageLoader.getPage(rightPage) == null) viewModel.pageLoader.loadPage(rightPage)
         }
 
         ReaderPageGestureSurface(
