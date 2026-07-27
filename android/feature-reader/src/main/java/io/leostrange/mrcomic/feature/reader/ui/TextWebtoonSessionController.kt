@@ -18,12 +18,16 @@ internal data class CachedHtmlPage(
 /**
  * Loads and publishes the stitched HTML document used by [ReaderContainerKind.TEXT_WEBTOON].
  *
- * Uses incremental building: the first batch builds the full document, subsequent batches
- * append new sections to the existing HTML, avoiding O(N²) rebuild cost.
+ * Uses a two-phase publish strategy to minimize WebView reloads:
+ * - **Phase 1 (preview):** After the first batch of pages, build and publish an initial
+ *   document so the user sees content immediately.
+ * - **Phase 2 (background):** Continue loading remaining pages silently. Only publish
+ *   once at the end when ALL pages are loaded, avoiding intermediate WebView reloads
+ *   that cause jank on large books.
  *
  * @param scope coroutine scope for the loading job.
  * @param builder strategy for building the HTML document from loaded pages.
- * @param batchSize number of pages to accumulate before publishing a partial document.
+ * @param batchSize number of pages in the initial preview batch.
  */
 internal class TextWebtoonSessionController(
     private val scope: CoroutineScope,
@@ -54,38 +58,26 @@ internal class TextWebtoonSessionController(
         loadJob?.cancel()
         loadJob = scope.launch {
             val loadedPages = ArrayList<CachedHtmlPage>(totalPages.coerceAtMost(256))
-            var lastPublishedDocument: TextWebtoonCachedDocument? = null
-
-            suspend fun publishLoadedDocument(force: Boolean = false) {
-                if (loadedPages.isEmpty()) return
-                if (!force && loadedPages.size % batchSize != 0) return
-                if (!isSessionActive()) return
-
-                val document = if (lastPublishedDocument == null) {
-                    // First batch: build full document
-                    builder.build(loadedPages)
-                } else {
-                    // Subsequent batches: append only new pages
-                    val prevCount = loadedPages.size - batchSize
-                    val newPages = loadedPages.subList(prevCount, loadedPages.size)
-                    builder.appendPages(
-                        existingHtml = lastPublishedDocument!!.html,
-                        newPages = newPages,
-                        startIndex = prevCount
-                    )
-                }
-                lastPublishedDocument = document
-                publish(document, loadedPages.size)
-            }
+            var previewPublished = false
 
             for (pageIndex in 0 until totalPages) {
                 if (!isSessionActive()) return@launch
                 val page = loadPage(reader, pageIndex) ?: continue
                 loadedPages += page
-                publishLoadedDocument()
+
+                // Phase 1: publish preview after first batch so user sees content immediately
+                if (!previewPublished && loadedPages.size >= batchSize) {
+                    previewPublished = true
+                    val document = builder.build(loadedPages)
+                    publish(document, loadedPages.size)
+                }
             }
+
             if (loadedPages.isEmpty() || !isSessionActive()) return@launch
-            publishLoadedDocument(force = true)
+
+            // Phase 2: publish final document with ALL pages (single WebView reload)
+            val finalDocument = builder.build(loadedPages)
+            publish(finalDocument, loadedPages.size)
         }
     }
 
