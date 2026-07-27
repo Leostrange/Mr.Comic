@@ -7,8 +7,8 @@
   </p>
 
   <p>
-    <a href="https://github.com/Leostrange/Mr.Comic/releases/tag/v2.1.0">
-      <img alt="Release" src="https://img.shields.io/badge/release-v2.1.0-2563eb?style=for-the-badge">
+    <a href="CHANGELOG.md">
+      <img alt="Release" src="https://img.shields.io/badge/release-v2.2.0-2563eb?style=for-the-badge">
     </a>
     <img alt="Platform" src="https://img.shields.io/badge/platform-Android-3ddc84?style=for-the-badge&logo=android&logoColor=white">
     <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7f52ff?style=for-the-badge&logo=kotlin&logoColor=white">
@@ -33,6 +33,7 @@
 ## Содержание
 
 - [О проекте](#о-проекте)
+- [Что изменилось в 2.2.0](#что-изменилось-в-220)
 - [Возможности](#возможности)
 - [Поддерживаемые форматы](#поддерживаемые-форматы)
 - [Технологии](#технологии)
@@ -48,6 +49,21 @@
 Mr.Comic — Android-ридер для комиксов, манги, вебтунов, книг, аудиокниг с OCR-переводами, словарями и кастомизируемым интерфейсом библиотеки.
 
 Ридер построен на отдельных контейнерах для растровых страниц, вертикальных лент, текстовых страниц и вертикального текста. Это позволяет каждому формату использовать оптимальный путь рендеринга.
+
+## Что изменилось в 2.2.0
+
+Версия 2.2.0 — крупное техническое обновление ридера: исправлены критичные баги чтения, ускорены горячие пути и разложены большие классы на отдельные контроллеры.
+
+| Направление | Главное |
+|-------------|---------|
+| **Стабильность чтения** | Исправлены P0/P1-регрессии: белая вспышка WebView при смене стиля, переполнение страниц в `TextPaginator`, нестабильный EPUB-прогресс, race/null-safety проблемы. |
+| **Производительность** | Webtoon-документ строится инкрементально, bitmap-кэш освобождает вытесненные изображения, словарные операции перенесены на IO dispatcher. |
+| **EPUB** | `EpubFormatReader` декомпозирован на специализированные модули: cache serializer, page resolver, HTML chunker/renderer, TOC resolver, archive manager и spine builder. |
+| **Reader UI** | `ReaderViewModel` и `ReaderScreen` разнесены на контроллеры и composable-компоненты: навигация, прогресс, настройки, сноски, перевод, OCR, закладки, WebView. |
+| **Архитектура** | Добавлены `EpubCacheStore`, KMP `shared`-слой, adapter-подход для Room-кэшей и подготовка к более чистым engine boundaries. |
+| **Тесты** | Добавлены регрессионные тесты для P0-фиксов, EPUB cache/page resolver, пагинации, footnotes, progress persistence и reader harness. |
+
+Полный список изменений: [CHANGELOG.md](CHANGELOG.md).
 
 ## Возможности
 
