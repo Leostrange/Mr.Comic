@@ -421,7 +421,7 @@ fun ReaderScreen(
     // Text books stay in portrait; image-based readers can opt into landscape spreads
     // only when the actual screen width is large enough.
     LaunchedEffect(supportsLandscapeSpread, isTextReader) {
-        viewModel.onOrientationChanged(
+        viewModel.readingModeController.onOrientationChanged(
             useLandscapeSpread = supportsLandscapeSpread,
             isTextReader = isTextReader
         )
@@ -662,8 +662,8 @@ fun ReaderScreen(
     ) {
         { action ->
             when (action) {
-                ReaderTapZoneAction.PREVIOUS_PAGE -> viewModel.prevPage()
-                ReaderTapZoneAction.NEXT_PAGE -> viewModel.nextPage()
+                ReaderTapZoneAction.PREVIOUS_PAGE -> viewModel.navigationController.prevPage()
+                ReaderTapZoneAction.NEXT_PAGE -> viewModel.navigationController.nextPage()
                 ReaderTapZoneAction.MENU,
                 ReaderTapZoneAction.TOGGLE_UI -> {
                     showBrightnessRow = false
@@ -671,12 +671,12 @@ fun ReaderScreen(
                 }
                 ReaderTapZoneAction.PREVIOUS_CHAPTER -> {
                     previousReaderChapterPage(uiState.tableOfContents, uiState.currentPage)?.let { page ->
-                        viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
+                        viewModel.navigationController.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
                     }
                 }
                 ReaderTapZoneAction.NEXT_CHAPTER -> {
                     nextReaderChapterPage(uiState.tableOfContents, uiState.currentPage)?.let { page ->
-                        viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
+                        viewModel.navigationController.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
                     }
                 }
                 ReaderTapZoneAction.NONE -> Unit
@@ -691,8 +691,8 @@ fun ReaderScreen(
         if (now - lastHardwarePageTurnMs < 280L) return@rememberUpdatedState
         lastHardwarePageTurnMs = now
         when {
-            step < 0 -> viewModel.prevPage()
-            step > 0 -> viewModel.nextPage()
+            step < 0 -> viewModel.navigationController.prevPage()
+            step > 0 -> viewModel.navigationController.nextPage()
         }
     }
 
@@ -750,7 +750,7 @@ fun ReaderScreen(
         if (uiState.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON &&
             uiState.currentHtmlContent != null
         ) {
-            viewModel.ensureTextWebtoonDocumentLoaded()
+            viewModel.pageLoader.ensureTextWebtoonDocumentLoaded()
         }
     }
 
@@ -891,12 +891,12 @@ fun ReaderScreen(
                                 onLeftTap = {},
                                 onRightTap = {},
                                 onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                                onAnchorClick = viewModel::onAnchorClick,
-                                onInlineFootnote = viewModel::showInlineFootnote,
+                                onAnchorClick = { viewModel.footnoteController.onAnchorClick(it) },
+                                onInlineFootnote = { viewModel.footnoteController.showInlineFootnote(it) },
                                 onVerticalBoundaryNavigation = { pageStep ->
                                     when {
-                                        pageStep < 0 -> viewModel.prevPage()
-                                        pageStep > 0 -> viewModel.nextPage()
+                                        pageStep < 0 -> viewModel.navigationController.prevPage()
+                                        pageStep > 0 -> viewModel.navigationController.nextPage()
                                     }
                                 },
                                 onTranslateSelection = { selectedText ->
@@ -912,11 +912,11 @@ fun ReaderScreen(
                                     )
                                 },
                                 onExplainSelection = viewModel::explainSelectedTextDirect,
-                                onSaveQuoteSelection = viewModel::saveQuoteDirectly,
-                                onHighlightSelection = { selectedText -> viewModel.highlightSelectedText(selectedText) },
+                                onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
+                                onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
                                 onTranslateChapter = { viewModel.translateCurrentChapter() },
                                 onCompareTranslations = { text -> viewModel.compareTranslations(text) },
-                                highlightsJs = viewModel.injectHighlightsJs(),
+                                highlightsJs = viewModel.highlightController.injectHighlightsJs(),
                                 fontSize = uiState.textFontSize,
                                 readerPreset = activeReaderPreset,
                                 fontFamily = resolvedTextFont.familyName,
@@ -934,9 +934,9 @@ fun ReaderScreen(
                                 contentTopInsetPx = textWebtoonTopInsetCssPx,
                                 contentBottomInsetPx = textWebtoonBottomInsetCssPx,
                                 pendingScrollToAnchor = uiState.pendingScrollToAnchor,
-                                onConsumeScrollToAnchor = viewModel::consumePendingScrollToAnchor,
+                                onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                 pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
-                                onConsumeWebtoonSection = viewModel::consumePendingWebtoonSection,
+                                onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
                                 modifier = textWebtoonModifier
                             )
                         }
@@ -965,12 +965,12 @@ fun ReaderScreen(
                                         }
                                     },
                                     onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                                    onAnchorClick = viewModel::onAnchorClick,
-                                    onInlineFootnote = viewModel::showInlineFootnote,
+                                    onAnchorClick = { viewModel.footnoteController.onAnchorClick(it) },
+                                    onInlineFootnote = { viewModel.footnoteController.showInlineFootnote(it) },
                                     onVerticalBoundaryNavigation = { pageStep ->
                                         when {
-                                            pageStep < 0 -> viewModel.prevPage()
-                                            pageStep > 0 -> viewModel.nextPage()
+                                            pageStep < 0 -> viewModel.navigationController.prevPage()
+                                            pageStep > 0 -> viewModel.navigationController.nextPage()
                                         }
                                     },
                                     onPagedLayoutPageCountChanged = { pageCount, pageIndex ->
@@ -989,11 +989,11 @@ fun ReaderScreen(
                                         )
                                     },
                                     onExplainSelection = viewModel::explainSelectedTextDirect,
-                                    onSaveQuoteSelection = viewModel::saveQuoteDirectly,
-                                    onHighlightSelection = { selectedText -> viewModel.highlightSelectedText(selectedText) },
+                                    onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
+                                    onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
                                 onTranslateChapter = { viewModel.translateCurrentChapter() },
                                 onCompareTranslations = { text -> viewModel.compareTranslations(text) },
-                                    highlightsJs = viewModel.injectHighlightsJs(),
+                                    highlightsJs = viewModel.highlightController.injectHighlightsJs(),
                                     fontSize = uiState.textFontSize,
                                     colorScheme = uiState.textColorScheme,
                                     readerPreset = activeReaderPreset,
@@ -1012,7 +1012,7 @@ fun ReaderScreen(
                                     contentTopInsetPx = textContentTopInsetCssPx,
                                     contentBottomInsetPx = textContentBottomInsetCssPx,
                                     pendingScrollToAnchor = uiState.pendingScrollToAnchor,
-                                    onConsumeScrollToAnchor = viewModel::consumePendingScrollToAnchor,
+                                    onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                     modifier = textReaderModifier
                                 )
                             }
@@ -1153,9 +1153,9 @@ fun ReaderScreen(
                             text = popup.text,
                             colorScheme = uiState.textColorScheme,
                             expanded = uiState.footnotePresentation == FootnotePresentation.EXPANDED,
-                            onDismiss = viewModel::dismissFootnote,
-                            onExpand = viewModel::expandFootnote,
-                            onCollapse = viewModel::collapseFootnote,
+                            onDismiss = { viewModel.footnoteController.dismissFootnote() },
+                            onExpand = { viewModel.footnoteController.expandFootnote() },
+                            onCollapse = { viewModel.footnoteController.collapseFootnote() },
                             chromeReservedDp = if (uiState.chromeState == ReaderChromeState.HIDDEN) 0 else 64,
                             modifier = Modifier
                                 .padding(horizontal = if (uiState.chromeState == ReaderChromeState.HIDDEN) 12.dp else 0.dp)
@@ -1181,10 +1181,10 @@ fun ReaderScreen(
                             ReaderChromeState.EXPANDED -> ReaderExpandedBottomPanel(
                                 uiState = uiState,
                                 isLandscape = supportsLandscapeSpread,
-                                onToggleBookmark = viewModel::toggleBookmark,
+                                onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
                                 onApplyPreset = viewModel.settingsController::applyReadingPreset,
-                                onReadingModeChange = viewModel::setReadingMode,
-                                onPageChange = viewModel::navigateTo
+                                onReadingModeChange = viewModel.readingModeController::setReadingMode,
+                                onPageChange = { viewModel.navigationController.navigateTo(it) }
                             )
 
                             else -> Unit
@@ -1275,7 +1275,7 @@ fun ReaderScreen(
                                         if (isTextReader) {
                                             showTextTranslationPageSheet = true
                                         } else {
-                                            viewModel.requestOcr()
+                                            viewModel.ocrController.requestOcr()
                                         }
                                     },
                                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow },

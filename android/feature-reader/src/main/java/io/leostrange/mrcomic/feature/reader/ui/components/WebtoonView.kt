@@ -98,7 +98,7 @@ fun WebtoonView(
     LaunchedEffect(listState, uiState.comic?.id) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { index -> viewModel.navigateTo(index, ReaderNavigationProgressSource.JUMP) }
+            .collect { index -> viewModel.navigationController.navigateTo(index, ReaderNavigationProgressSource.JUMP) }
     }
 
     // External page change (e.g. bottom bar slider) в†’ scroll the list.
