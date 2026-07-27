@@ -40,6 +40,26 @@ class LayoutUnitTextPaginatorTest {
     }
 
     @Test
+    fun paginateSplitsBlocksBetweenOneAndOnePointFivePageSize() {
+        // A block that exceeds charsPerPage but is < 1.5x should still be split.
+        // Small viewport → small charsPerPage → easier to exceed.
+        // With 360x640, fontSizeSp=18, lineHeight=1.6:
+        //   lineHeightPx=28, linesPerPage=22, charsPerLine≈35, charsPerPage≈588
+        // Create a block with ~700 chars (> 1x but < 1.5x of 588).
+        val bigParagraph = "word ".repeat(140) // ~700 chars
+        val html = "<p>$bigParagraph</p>"
+        val constraints = TextPaginationConstraints(
+            viewportWidthPx = 360,
+            viewportHeightPx = 640,
+            fontSizeSp = 18,
+            lineHeight = 1.6f
+        )
+        val result = kotlinx.coroutines.runBlocking { paginator.paginate(html, constraints) }
+
+        assertTrue("blocks exceeding page size should produce multiple sub-pages", result.subPageCount > 1)
+    }
+
+    @Test
     fun paginatePreservesInlineMarkupWhenSplittingAnOversizedParagraph() {
         val html = "<p>${"<a href=\"#note-1\">linked sentence.</a> ".repeat(700)}</p>"
 
