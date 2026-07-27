@@ -1,8 +1,8 @@
 package io.leostrange.mrcomic.engine.formats.base
 
 internal fun buildReaderDocumentCss(
-    maxWidth: String = "720px",
-    padding: String = "0 1.5em",
+    maxWidth: String = "960px",
+    padding: String = "0 0.75em",
     bodyMargin: String = "0 auto",
     fontSize: String = "18px",
     lineHeight: String = "1.6",
@@ -116,7 +116,7 @@ internal fun buildReaderDocumentCss(
     code { font-family: "JetBrains Mono", "Cascadia Code", Consolas, monospace; }
     ul, ol { padding-left: 1.5rem; margin: 0.8em 0; }
     li + li { margin-top: 0.25rem; }
-    table { width: 100%; max-width: 100%; border-collapse: collapse; margin: 1rem 0; table-layout: fixed; }
+    table { width: 100%; max-width: 100%; border-collapse: collapse; margin: 1rem 0; table-layout: auto; }
     table.auto-layout { table-layout: auto; }
     .table-wrapper, .mrcomic-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .mrcomic-table-scroll table { border-collapse: collapse; margin: 0.8em 0; table-layout: auto; width: auto; max-width: 100%; }

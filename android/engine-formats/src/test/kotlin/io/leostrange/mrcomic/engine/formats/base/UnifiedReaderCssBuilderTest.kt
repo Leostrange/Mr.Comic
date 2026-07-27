@@ -9,8 +9,8 @@ class UnifiedReaderCssBuilderTest {
     @Test
     fun baseDocumentCss_containsBodyDefaults() {
         val css = READER_BASE_DOCUMENT_CSS
-        assertTrue("max-width: 720px", css.contains("max-width: 720px"))
-        assertTrue("padding: 0 1.5em", css.contains("padding: 0 1.5em"))
+        assertTrue("max-width: 960px", css.contains("max-width: 960px"))
+        assertTrue("padding: 0 0.75em", css.contains("padding: 0 0.75em"))
         assertTrue("font-size: 18px", css.contains("font-size: 18px"))
         assertTrue("line-height: 1.6", css.contains("line-height: 1.6"))
         assertTrue("text-align: justify", css.contains("text-align: justify"))
