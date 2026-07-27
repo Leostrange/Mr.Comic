@@ -18,6 +18,9 @@ internal data class CachedHtmlPage(
 /**
  * Loads and publishes the stitched HTML document used by [ReaderContainerKind.TEXT_WEBTOON].
  *
+ * Uses incremental building: the first batch builds the full document, subsequent batches
+ * append new sections to the existing HTML, avoiding O(N²) rebuild cost.
+ *
  * @param scope coroutine scope for the loading job.
  * @param builder strategy for building the HTML document from loaded pages.
  * @param batchSize number of pages to accumulate before publishing a partial document.
@@ -51,11 +54,28 @@ internal class TextWebtoonSessionController(
         loadJob?.cancel()
         loadJob = scope.launch {
             val loadedPages = ArrayList<CachedHtmlPage>(totalPages.coerceAtMost(256))
+            var lastPublishedDocument: TextWebtoonCachedDocument? = null
+
             suspend fun publishLoadedDocument(force: Boolean = false) {
                 if (loadedPages.isEmpty()) return
                 if (!force && loadedPages.size % batchSize != 0) return
                 if (!isSessionActive()) return
-                publish(builder.build(loadedPages), loadedPages.size)
+
+                val document = if (lastPublishedDocument == null) {
+                    // First batch: build full document
+                    builder.build(loadedPages)
+                } else {
+                    // Subsequent batches: append only new pages
+                    val prevCount = loadedPages.size - batchSize
+                    val newPages = loadedPages.subList(prevCount, loadedPages.size)
+                    builder.appendPages(
+                        existingHtml = lastPublishedDocument!!.html,
+                        newPages = newPages,
+                        startIndex = prevCount
+                    )
+                }
+                lastPublishedDocument = document
+                publish(document, loadedPages.size)
             }
 
             for (pageIndex in 0 until totalPages) {

@@ -660,7 +660,6 @@ internal fun HtmlPageView(
                     ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
                 }
             }
-            webView.setBackgroundColor(bgColor)
             val currentSource = pageSource ?: return@AndroidView
             val cached = webView.activeLoadToken
             if (cached != currentSource.loadToken) {
