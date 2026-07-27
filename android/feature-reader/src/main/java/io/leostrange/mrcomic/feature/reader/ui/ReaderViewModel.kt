@@ -164,7 +164,7 @@ class ReaderViewModel @Inject constructor(
         readerPreferences = readerPreferences,
         dataStore = context.dataStore
     )
-    private val translationController = ReaderTranslationController(
+    internal val translationController = ReaderTranslationController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         languageDetector = languageDetector,
@@ -228,7 +228,7 @@ class ReaderViewModel @Inject constructor(
         getPage = { index, quality -> getPage(index, quality) },
         formatReader = { formatReader }
     )
-    private var formatReader: FormatReader? = null
+    internal var formatReader: FormatReader? = null
     private var activeBookSession: BookSession? = null
 
     /**
@@ -690,9 +690,6 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    fun requestTextPageTranslation(page: Int = _uiState.value.currentPage) =
-        translationController.requestTextPageTranslation(formatReader, page)
-
     private fun scheduleHighQualityWarmup(page: Int) {
         if (!activeComicSupportsHighResZoom()) return
         val warmupTier = when (renderProfile.tier) {
@@ -750,19 +747,13 @@ class ReaderViewModel @Inject constructor(
     fun translateFromSelectedTextActions() {
         val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
         dismissSelectedTextActions()
-        translateSelectedText(
-            selectedText = selectedText,
-            preferDictionary = false
-        )
+        translationController.translateSelectedText(selectedText, preferDictionary = false)
     }
 
     fun openDictionaryFromSelectedTextActions() {
         val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
         dismissSelectedTextActions()
-        translateSelectedText(
-            selectedText = selectedText,
-            preferDictionary = true
-        )
+        translationController.translateSelectedText(selectedText, preferDictionary = true)
     }
 
     fun explainFromSelectedTextActions() {
@@ -775,46 +766,12 @@ class ReaderViewModel @Inject constructor(
         translationController.explainSelectedText(selectedText)
     }
 
-    private fun loadHighlightsForCurrentPage() = highlightController.loadHighlightsForCurrentPage()
-
-    /**
-     * Compare translations from multiple engines side by side.
-     */
-    fun compareTranslations(selectedText: String) =
-        translationController.compareTranslations(selectedText)
-
-    fun dismissTranslationComparison() =
-        translationController.dismissTranslationComparison()
-
-    /**
-     * Translate the current page/chapter text using the unified TranslatorEngine.
-     * Splits text into paragraphs, translates sequentially, reports progress.
-     */
-    fun translateCurrentChapter() =
-        translationController.translateCurrentChapter()
-
-    fun translateSelectedText(
-        selectedText: String,
-        preferredTransport: TranslationTransportPreference? = null,
-        preferDictionary: Boolean = true
-    ) = translationController.translateSelectedText(selectedText, preferredTransport, preferDictionary)
-
-    fun translateSelectedTextWithTransport(preferredTransport: TranslationTransportPreference) =
-        translationController.translateSelectedTextWithTransport(preferredTransport)
-
-    fun translateSelectedTextAsPhrase() =
-        translationController.translateSelectedTextAsPhrase()
-
-    fun openDictionaryForSelectedText() =
-        translationController.openDictionaryForSelectedText()
-
     fun explainSelectedTextFromResult() {
         val selectedText = _uiState.value.selectedTextTranslation?.originalText ?: return
         translationController.explainSelectedText(selectedText)
     }
 
-    fun dismissSelectedTextTranslation() =
-        translationController.dismissSelectedTextTranslation()
+    private fun loadHighlightsForCurrentPage() = highlightController.loadHighlightsForCurrentPage()
 
     fun onCenterTap() {
         _uiState.update { state ->
