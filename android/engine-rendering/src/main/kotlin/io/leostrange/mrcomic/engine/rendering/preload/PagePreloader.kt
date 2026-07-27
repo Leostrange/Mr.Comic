@@ -60,8 +60,13 @@ class PagePreloader @Inject constructor(
     fun getPageFlow(index: Int, renderQuality: Int = 1): Flow<Bitmap?> =
         _loadedPages.map { map ->
             activeReaderToken?.let { readerToken ->
-                map[PageCacheKey(readerToken, index, renderQuality)]
+                val candidate = map[PageCacheKey(readerToken, index, renderQuality)]
                     ?: cache.get(cacheKey(readerToken, index, renderQuality))
+                // TieredBitmapCache.entryRemoved() recycles evicted bitmaps for native
+                // memory reclamation, but _loadedPages may still hold a reference to the
+                // same Bitmap object.  Discard recycled bitmaps so the UI never tries to
+                // draw them — that causes a silent black frame or a Canvas drawBitmap crash.
+                candidate?.takeUnless { it.isRecycled }
             }
         }.distinctUntilChanged()
 
