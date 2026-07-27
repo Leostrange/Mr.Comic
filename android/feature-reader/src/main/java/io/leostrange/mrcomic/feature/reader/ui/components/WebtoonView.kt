@@ -86,8 +86,8 @@ fun WebtoonView(
         val initialWindow = (uiState.currentPage - webtoonPreloadBehind).coerceAtLeast(0)..
             (uiState.currentPage + webtoonPreloadAhead).coerceAtMost(uiState.totalPages - 1)
         val pages = initialWindow.toList()
-        pages.forEach { page -> viewModel.loadPage(page) }
-        viewModel.preloadWebtoonWindow(pages)
+        pages.forEach { page -> viewModel.pageLoader.loadPage(page) }
+        viewModel.pageLoader.preloadWebtoonWindow(pages)
     }
 
     // User scrolled the list в†’ update the ViewModel's current page.
@@ -110,7 +110,7 @@ fun WebtoonView(
             val start = (uiState.currentPage - webtoonPreloadBehind).coerceAtLeast(0)
             val end = (uiState.currentPage + webtoonPreloadAhead).coerceAtMost(uiState.totalPages - 1)
             val pages = (start..end).toList()
-            pages.forEach { page -> viewModel.loadPage(page) }
+            pages.forEach { page -> viewModel.pageLoader.loadPage(page) }
         }
     }
 
@@ -131,7 +131,7 @@ fun WebtoonView(
             // Debounce so fast flings don't cancel and restart the preload job on every frame.
             .debounce(80L)
             .collect { pages ->
-                viewModel.preloadWebtoonWindow(pages)
+                viewModel.pageLoader.preloadWebtoonWindow(pages)
             }
     }
 
@@ -149,10 +149,10 @@ fun WebtoonView(
     ) {
         items(uiState.totalPages) { pageIndex ->
             // Collect from StateFlow вЂ” no polling, immediate update when bitmap is ready
-            val bitmap by viewModel.getPageFlow(pageIndex).collectAsState(initial = viewModel.getPage(pageIndex))
+            val bitmap by viewModel.pageLoader.getPageFlow(pageIndex).collectAsState(initial = viewModel.pageLoader.getPage(pageIndex))
             val htmlPage by viewModel.getWebtoonHtmlPageFlow(pageIndex).collectAsState(initial = null)
             LaunchedEffect(uiState.comic?.id, pageIndex) {
-                viewModel.loadPage(pageIndex)
+                viewModel.pageLoader.loadPage(pageIndex)
             }
             Box(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),

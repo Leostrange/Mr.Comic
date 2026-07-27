@@ -611,7 +611,7 @@ class ReaderViewModel @Inject constructor(
                 pagePreloader.preloadAround(reader, visiblePages, prepared.pages, _uiState.value.preloadPages)
             }
         }
-        visiblePages.forEach { loadPage(it) }
+        visiblePages.forEach { pageLoader.loadPage(it) }
         if (config.readerRendersHtmlContent) {
             prewarmHtmlPagesAround(config.startPage, delayMillis = 180L)
             if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
@@ -669,9 +669,6 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun getPage(index: Int, renderQuality: Int = 1): Bitmap? = pageLoader.getPage(index, renderQuality)
-    fun getPageFlow(index: Int, renderQuality: Int = 1) = pageLoader.getPageFlow(index, renderQuality)
-    fun loadPage(index: Int, renderQuality: Int = 1) = pageLoader.loadPage(index, renderQuality)
-    fun preloadWebtoonWindow(pages: List<Int>) = pageLoader.preloadWebtoonWindow(pages)
 
     fun setHighQualityFocusPages(indices: Set<Int>?) {
         if (!activeComicSupportsHighResZoom()) {
@@ -966,7 +963,7 @@ class ReaderViewModel @Inject constructor(
                     pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)
                 }
                 visiblePages.forEach { visiblePage ->
-                    loadPage(visiblePage)
+                    pageLoader.loadPage(visiblePage)
                 }
                 if (_uiState.value.readerRendersHtmlContent) {
                     prewarmHtmlPagesAround(normalizedStartPage, delayMillis = 0L)
