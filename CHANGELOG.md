@@ -7,6 +7,7 @@
 - **P0: Белая вспышка при смене стиля** — убран `setBackgroundColor` из update-блока `HtmlPageView`; теперь фон меняется только через JS `textSettingsJs`, без мерцания нативного WebView между обновлениями CSS.
 - **P0: O(N²) пересборка вебтун-документа** — `TextWebtoonSessionController` перешёл на инкрементальное построение: первая порция — полная сборка, последующие — `appendPages()` без пересборки всего DOM. 200-страничная книга: ~17 rebuilds всех страниц → 1 build + 16 appends.
 - **P0: Переполнение страниц в TextPaginator** — порог сплита снижен с `charsPerPage × 1.5` до `charsPerPage`. Блоки между 1× и 1.5× размера страницы раньше перетекали в следующую без разбиения.
+- **P0: Crash на рекликлованном битмапе в `CroppedBitmapImage`** — `TieredBitmapCache` рекликлует битмапы при LRU-eviction, но Compose Canvas всё ещё держит ссылку на `ImageBitmap`. Добавлена проверка `bitmap.isRecycled` в draw-блоке перед `drawImage`.
 - **P1: Нестабильная оценка прогресса EPUB** — `EpubProgressCalculator` перешёл на стабильную оценку вместо скользящего среднего.
 - **P0/P1: Регрессии пагинатора, word-wrap, race condition, null safety** — комплексный набор исправлений в блоке рендеринга текста.
 - **Критично: thread-safety, stream consumption, path traversal, crash on missing engine** — исправления безопасности и стабильности в форматных ридерах.
