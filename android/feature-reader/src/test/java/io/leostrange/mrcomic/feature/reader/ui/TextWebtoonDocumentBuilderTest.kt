@@ -108,6 +108,43 @@ class TextWebtoonDocumentBuilderTest {
         assertTrue(result.html.contains("data-mrcomic-text-webtoon-document"))
     }
 
+    @Test
+    fun appendPagesInsertsBeforeCloseBody() {
+        val initial = TextWebtoonDocumentBuilder.build(
+            listOf(
+                CachedHtmlPage(html = "<html><body><p>Page 1</p></body></html>", assetBasePath = null)
+            )
+        )
+        val newPages = listOf(
+            CachedHtmlPage(html = "<html><body><p>Page 2</p></body></html>", assetBasePath = null),
+            CachedHtmlPage(html = "<html><body><p>Page 3</p></body></html>", assetBasePath = null)
+        )
+        val result = TextWebtoonDocumentBuilder.appendPages(initial.html, newPages, startIndex = 1)
+        assertTrue(result.html.contains("Page 1"))
+        assertTrue(result.html.contains("Page 2"))
+        assertTrue(result.html.contains("Page 3"))
+        assertTrue(result.html.contains("data-mrcomic-page-index=\"1\""))
+        assertTrue(result.html.contains("data-mrcomic-page-index=\"2\""))
+        assertTrue(result.html.contains("</body>"))
+    }
+
+    @Test
+    fun appendPagesPreservesExistingContent() {
+        val initial = TextWebtoonDocumentBuilder.build(
+            listOf(
+                CachedHtmlPage(html = "<html><head><style>.x{}</style></head><body><p>A</p></body></html>", assetBasePath = null)
+            )
+        )
+        val result = TextWebtoonDocumentBuilder.appendPages(
+            initial.html,
+            listOf(CachedHtmlPage(html = "<html><body><p>B</p></body></html>", assetBasePath = null)),
+            startIndex = 1
+        )
+        assertTrue("original CSS preserved", result.html.contains(".x{}"))
+        assertTrue("original content preserved", result.html.contains(">A<"))
+        assertTrue("new content appended", result.html.contains(">B<"))
+    }
+
     private fun assertEquals(expected: Any?, actual: Any?) {
         org.junit.Assert.assertEquals(expected, actual)
     }
