@@ -442,41 +442,28 @@ fun ReaderScreen(
         }
     }
 
+    val tapZoneMode = ReaderTapZoneMode.fromStored(uiState.tapZoneMode)
     val tapZoneLayout = remember(
-        uiState.tapZoneMode,
-        uiState.tapZoneSwap,
-        uiState.tapZoneLeftAction,
-        uiState.tapZoneCenterAction,
-        uiState.tapZoneRightAction,
-        uiState.readingMode
+        uiState.tapZoneMode, uiState.tapZoneSwap, uiState.tapZoneLeftAction,
+        uiState.tapZoneCenterAction, uiState.tapZoneRightAction, uiState.readingMode
     ) {
         resolveReaderTapZoneLayout(
-            mode = ReaderTapZoneMode.fromStored(uiState.tapZoneMode),
-            readingMode = uiState.readingMode,
-            swapped = uiState.tapZoneSwap,
-            leftAction = uiState.tapZoneLeftAction,
-            centerAction = uiState.tapZoneCenterAction,
+            mode = tapZoneMode, readingMode = uiState.readingMode, swapped = uiState.tapZoneSwap,
+            leftAction = uiState.tapZoneLeftAction, centerAction = uiState.tapZoneCenterAction,
             rightAction = uiState.tapZoneRightAction
         )
     }
     val directionShortcutActive = remember(
-        uiState.tapZoneMode,
-        uiState.tapZoneSwap,
-        uiState.tapZoneLeftAction,
-        uiState.tapZoneCenterAction,
-        uiState.tapZoneRightAction,
-        uiState.readingMode
+        uiState.tapZoneMode, uiState.tapZoneSwap, uiState.tapZoneLeftAction,
+        uiState.tapZoneCenterAction, uiState.tapZoneRightAction, uiState.readingMode
     ) {
-        when (ReaderTapZoneMode.fromStored(uiState.tapZoneMode)) {
+        when (tapZoneMode) {
             ReaderTapZoneMode.SIMPLE -> uiState.tapZoneSwap
             ReaderTapZoneMode.CUSTOM -> {
-                val defaultLayout = resolveReaderSimpleTapZoneLayout(
-                    readingMode = uiState.readingMode,
-                    swapped = false
-                )
-                uiState.tapZoneLeftAction == defaultLayout.right.name &&
-                    uiState.tapZoneCenterAction == defaultLayout.center.name &&
-                    uiState.tapZoneRightAction == defaultLayout.left.name
+                val default = resolveReaderSimpleTapZoneLayout(readingMode = uiState.readingMode, swapped = false)
+                uiState.tapZoneLeftAction == default.right.name &&
+                    uiState.tapZoneCenterAction == default.center.name &&
+                    uiState.tapZoneRightAction == default.left.name
             }
         }
     }
@@ -487,52 +474,21 @@ fun ReaderScreen(
             currentPage = uiState.currentPage
         )
     }
+    fun resolveOverlayLine(left: String, center: String, right: String) =
+        resolveReaderInfoOverlayLine(
+            startSlot = left, centerSlot = center, endSlot = right,
+            comicTitle = uiState.comic?.title, chapterTitle = currentChapterTitle,
+            clockText = clockText, currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages, readingMode = uiState.readingMode
+        )
     val headerOverlayLine = remember(
-        uiState.headerLeftSlot,
-        uiState.headerCenterSlot,
-        uiState.headerRightSlot,
-        uiState.comic?.title,
-        currentChapterTitle,
-        clockText,
-        uiState.currentPage,
-        uiState.totalPages,
-        uiState.readingMode
-    ) {
-        resolveReaderInfoOverlayLine(
-            startSlot = uiState.headerLeftSlot,
-            centerSlot = uiState.headerCenterSlot,
-            endSlot = uiState.headerRightSlot,
-            comicTitle = uiState.comic?.title,
-            chapterTitle = currentChapterTitle,
-            clockText = clockText,
-            currentPage = uiState.currentPage,
-            totalPages = uiState.totalPages,
-            readingMode = uiState.readingMode
-        )
-    }
+        uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot,
+        uiState.comic?.title, currentChapterTitle, clockText, uiState.currentPage, uiState.totalPages, uiState.readingMode
+    ) { resolveOverlayLine(uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot) }
     val footerOverlayLine = remember(
-        uiState.footerLeftSlot,
-        uiState.footerCenterSlot,
-        uiState.footerRightSlot,
-        uiState.comic?.title,
-        currentChapterTitle,
-        clockText,
-        uiState.currentPage,
-        uiState.totalPages,
-        uiState.readingMode
-    ) {
-        resolveReaderInfoOverlayLine(
-            startSlot = uiState.footerLeftSlot,
-            centerSlot = uiState.footerCenterSlot,
-            endSlot = uiState.footerRightSlot,
-            comicTitle = uiState.comic?.title,
-            chapterTitle = currentChapterTitle,
-            clockText = clockText,
-            currentPage = uiState.currentPage,
-            totalPages = uiState.totalPages,
-            readingMode = uiState.readingMode
-        )
-    }
+        uiState.footerLeftSlot, uiState.footerCenterSlot, uiState.footerRightSlot,
+        uiState.comic?.title, currentChapterTitle, clockText, uiState.currentPage, uiState.totalPages, uiState.readingMode
+    ) { resolveOverlayLine(uiState.footerLeftSlot, uiState.footerCenterSlot, uiState.footerRightSlot) }
     val showHeaderFooterOverlay = !uiState.chromeAutoHideEnabled &&
         uiState.chromeState == ReaderChromeState.HIDDEN &&
         !uiState.showTextSettings &&
@@ -541,13 +497,8 @@ fun ReaderScreen(
     var measuredFooterOverlayPx by remember { mutableIntStateOf(0) }
     var measuredTopChromePx by remember { mutableIntStateOf(0) }
     var measuredBottomChromePx by remember { mutableIntStateOf(0) }
-    // Stable chrome reserve is keyed only on chromeAutoHideEnabled, not on comic id.
-    // Removing the comic id prevents a viewport height jump on every book open: the first
-    // chrome measurement raised topChromeReservePx from 0 -> N, shifting the text content.
-    // Carrying over the last-known chrome height avoids this because the toolbar height is
-    // determined by the app layout, not by which book is open.
-    // Initialize with a reasonable default (~56dp typical toolbar) to prevent the
-    // one-frame viewport miscalculation when chrome is visible on first render.
+    // Stable chrome reserve: keyed on chromeAutoHideEnabled only (not comic id) to prevent
+    // viewport height jump on every book open. Defaults ~56dp/48dp to avoid first-frame miscalc.
     val defaultTopChromeReservePx = with(density) { 56.dp.roundToPx() }
     val defaultBottomChromeReservePx = with(density) { 48.dp.roundToPx() }
     var stableTopChromeReservePx by remember {
@@ -556,9 +507,7 @@ fun ReaderScreen(
     var stableBottomChromeReservePx by remember {
         mutableIntStateOf(defaultBottomChromeReservePx)
     }
-    // Baseline reserves persist regardless of auto-hide mode. WEBTOON text mode needs these
-    // even when chrome is hidden so content keeps a safe bottom gutter instead of sticking to
-    // the screen edge or rendering beneath translucent bars.
+    // Baseline reserves persist regardless of auto-hide mode (WEBTOON text mode needs them).
     var baselineTopChromeReservePx by remember {
         mutableIntStateOf(0)
     }
@@ -576,13 +525,12 @@ fun ReaderScreen(
             .coerceAtLeast(8)
     }
     val maxStableTopChromeReservePx = with(density) { 96.dp.roundToPx() }
-    val estimatedHeaderOverlayContentPx = with(density) {
+    val estimatedOverlayContentPx = with(density) {
         readerHeaderFooterReservedHeightDp(
             fontSizeSp = uiState.headerFooterFontSize,
             verticalPaddingDp = uiState.headerFooterVerticalPadding
         ).roundToPx()
     }
-    val estimatedFooterOverlayContentPx = estimatedHeaderOverlayContentPx
     // This describes panels that are physically drawn over the WebView. Auto-hide
     // changes whether they are normally hidden; it must not make a currently
     // expanded toolbar invisible to the inset calculation.
@@ -601,7 +549,7 @@ fun ReaderScreen(
         ).coerceAtMost(maxStableTopChromeReservePx)
         else -> maxOf(
             (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0),
-            estimatedHeaderOverlayContentPx
+            estimatedOverlayContentPx
         )
     }
     val measuredBottomReservePx = when {
@@ -611,7 +559,7 @@ fun ReaderScreen(
         )
         else -> maxOf(
             (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
-            estimatedFooterOverlayContentPx
+            estimatedOverlayContentPx
         )
     }
     SideEffect {
@@ -623,11 +571,11 @@ fun ReaderScreen(
         }
         if (uiState.chromeAutoHideEnabled) {
             val overlayTop = maxOf(
-                estimatedHeaderOverlayContentPx,
+                estimatedOverlayContentPx,
                 (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0)
             )
             val overlayBottom = maxOf(
-                estimatedFooterOverlayContentPx,
+                estimatedOverlayContentPx,
                 (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
             )
             if (overlayTop > stableTopChromeReservePx) {
@@ -653,12 +601,12 @@ fun ReaderScreen(
     // measuredTopReservePx has a real value it wins via maxOf, so the over-reserve
     // (toolbar height vs strip height) is automatically corrected within one frame.
     val autoHideTopChromeReservePx = maxOf(
-        estimatedHeaderOverlayContentPx,
+        estimatedOverlayContentPx,
         stableTopChromeReservePx,
         (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0)
     )
     val autoHideBottomChromeReservePx = maxOf(
-        estimatedFooterOverlayContentPx,
+        estimatedOverlayContentPx,
         stableBottomChromeReservePx,
         (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
     )
