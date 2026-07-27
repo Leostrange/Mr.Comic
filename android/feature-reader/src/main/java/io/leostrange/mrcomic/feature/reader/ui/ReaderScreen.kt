@@ -1369,274 +1369,41 @@ fun ReaderScreen(
         }
     }
 
-    // в”Ђв”Ђ РћРіР»Р°РІР»РµРЅРёРµ (ModalBottomSheet) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-    if (uiState.showTocSheet) {
-        TocBottomSheet(
-            entries = uiState.tableOfContents,
-            currentPage = uiState.currentPage,
-            bookmarkedPages = uiState.bookmarkedPages,
-            readerPreset = activeReaderPreset,
-            toolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f),
-            toolbarBlur = uiState.toolbarBlur,
-    resolveDisplayPage = viewModel::tocDisplayPage,
-    onNavigate = { entry ->
-        viewModel.navigateToTocEntry(
-            page = entry.pageIndex,
-            anchorId = entry.anchorId ?: "",
-            sectionIndex = entry.sectionIndex,
-            charOffset = entry.charOffset
-        )
-        viewModel.toggleTocSheet()
-    },
-            onRemoveBookmark = viewModel::removeBookmark,
-            onDismiss = viewModel::toggleTocSheet
-        )
-    }
-
-    if (showTextTranslationPageSheet && isTextReader) {
-        TextPageTranslationSheet(
-            entries = uiState.tableOfContents,
-            currentPage = uiState.currentPage,
-            totalPages = uiState.totalPages,
-            onDismiss = { showTextTranslationPageSheet = false },
-            onTranslatePage = { page ->
-                showTextTranslationPageSheet = false
-                viewModel.requestTextPageTranslation(page)
-            }
-        )
-    }
-
-    // RSVP speed reading overlay
-    if (showRsvpOverlay && rsvpWords.isNotEmpty()) {
-        io.leostrange.mrcomic.feature.reader.ui.rsvp.RsvpOverlay(
-            words = rsvpWords,
-            onClose = { showRsvpOverlay = false },
-            onFinished = { showRsvpOverlay = false }
-        )
-    }
-
-    if (showReaderAudioSheet && isTextReader) {
-        ReaderAudioSheet(
-            title = uiState.comic?.title.orEmpty(),
-            chapterTitle = currentChapterTitle,
-            tocEntries = uiState.tableOfContents,
-            currentPage = uiState.currentPage,
-            runtimeState = ttsRuntimeState,
-            speed = uiState.ttsSpeed,
-            pitch = uiState.ttsPitch,
-            volume = uiState.ttsVolume,
-            sleepTimerMode = uiState.ttsSleepTimerMode,
-            onDismiss = { showReaderAudioSheet = false },
-            onTogglePlayback = ttsController::togglePlayback,
-            onPrevious = ttsController::previousChunk,
-            onNext = ttsController::nextChunk,
-            onStop = {
-                ttsController.stop()
-                showReaderAudioSheet = false
-            },
-            onNavigateToPage = { page ->
-                if (page == uiState.currentPage) {
-                    ttsController.restartFromBeginning()
-                } else {
-                    pendingTtsRestartTargetPage = page
-                    ttsController.stop()
-                    viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
-                }
-            },
-            onVoiceNameChange = { value ->
-                viewModel.settingsController.setTtsVoiceName(value)
-                ttsController.selectVoice(value)
-            },
-            onSpeedChange = viewModel.settingsController::setTtsSpeed,
-            onPitchChange = viewModel.settingsController::setTtsPitch,
-            onVolumeChange = viewModel.settingsController::setTtsVolume,
-            onSleepTimerChange = viewModel.settingsController::setTtsSleepTimerMode,
-            onSpeedRead = if (isTextReader) {{
-                // Extract words from current page HTML for RSVP
-                val pageText = uiState.currentHtmlContent ?: ""
-                val words = io.leostrange.mrcomic.feature.reader.ui.rsvp.extractWordsForRsvp(pageText)
-                if (words.isNotEmpty()) {
-                    rsvpWords = words
-                    showRsvpOverlay = true
-                }
-            }} else null
-        )
-    }
-
-    // в”Ђв”Ђ РќР°СЃС‚СЂРѕР№РєРё С‚РµРєСЃС‚Р° (ModalBottomSheet) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-    if (uiState.showTextSettings) {
-        ReaderControlCenterSheet(
-            uiState = uiState,
-            isTextReader = isTextReader,
-            ttsRuntimeState = ttsRuntimeState,
-            fontCatalogVersion = fontCatalogVersion,
-            openAtServicesTab = openControlCenterAtServices,
-            onDismiss = {
-                openControlCenterAtServices = false
-                viewModel.toggleTextSettings()
-            },
-            onApplyReadingPreset = viewModel.settingsController::applyReadingPreset,
-            onFontSizeChange = viewModel.settingsController::setTextFontSize,
-            onColorSchemeChange = viewModel.settingsController::setTextColorScheme,
-            onFontFamilyChange = viewModel.settingsController::setTextFontFamily,
-            onLineHeightChange = viewModel.settingsController::setTextLineHeight,
-            onLetterSpacingChange = viewModel.settingsController::setTextLetterSpacing,
-            onWordSpacingChange = viewModel.settingsController::setTextWordSpacing,
-            onParagraphSpacingChange = viewModel.settingsController::setTextParagraphSpacing,
-            onTextAlignChange = viewModel.settingsController::setTextAlignment,
-            onBoldChange = viewModel.settingsController::setTextBold,
-            onResetStyle = viewModel.settingsController::resetTextSettings,
-            onReadingModeChange = viewModel::setReadingMode,
-            onKeepScreenOnChange = viewModel.settingsController::setKeepScreenOn,
-            onScreenTimeoutChange = viewModel.settingsController::setScreenTimeoutMode,
-            onImmersiveModeChange = viewModel.settingsController::setImmersiveMode,
-            onLandscapeSpreadChange = viewModel::setLandscapeSpreadEnabled,
-            onPreloadPagesChange = viewModel::setPreloadPages,
-            onPageAnimationChange = viewModel.settingsController::setPageAnimation,
-            onTapZoneModeChange = viewModel.settingsController::setTapZoneMode,
-            onTapZoneSwapChange = viewModel.settingsController::setTapZoneSwap,
-            onTapZoneActionChange = viewModel.settingsController::setTapZoneAction,
-            onVolumePagingChange = viewModel.settingsController::setVolumeKeysPagingEnabled,
-            onHeaderSlotChange = viewModel.settingsController::setHeaderSlot,
-            onFooterSlotChange = viewModel.settingsController::setFooterSlot,
-            onHeaderFooterFontSizeChange = viewModel.settingsController::setHeaderFooterFontSize,
-            onHeaderFooterVerticalPaddingChange = viewModel.settingsController::setHeaderFooterVerticalPadding,
-            onHeaderFooterLeftPaddingChange = viewModel.settingsController::setHeaderFooterLeftPadding,
-            onHeaderFooterRightPaddingChange = viewModel.settingsController::setHeaderFooterRightPadding,
-            onChromeAutoHideChange = viewModel.settingsController::setChromeAutoHideEnabled,
-            onToolbarOpacityChange = viewModel.settingsController::setToolbarOpacity,
-            onToolbarBlurChange = viewModel.settingsController::setToolbarBlur,
-            onImageScaleModeChange = viewModel.settingsController::setImageScaleMode,
-            onImageMarginCropHorizontalChange = viewModel.settingsController::setImageMarginCropHorizontal,
-            onImageMarginCropVerticalChange = viewModel.settingsController::setImageMarginCropVertical,
-            onChromeIconVisibleChange = viewModel.settingsController::setChromeIconVisible,
-            onMoveChromeIcon = viewModel.settingsController::moveChromeIcon,
-            onImportCustomFont = { fontImportLauncher.launch(arrayOf("*/*")) },
-            onDeleteCustomFont = { pendingCustomFontDeletion = it },
-            onImportReaderStyle = { readerStyleImportLauncher.launch(arrayOf("application/json", "*/*")) },
-            onExportReaderStyle = { readerStyleExportLauncher.launch(readerTypographyExportFileName(uiState)) },
-            onSaveCurrentReaderStylePreset = viewModel.settingsController::saveCurrentReaderStylePreset,
-            onOverwriteReaderStylePreset = viewModel.settingsController::overwriteReaderStylePreset,
-            onApplyReaderStylePreset = viewModel.settingsController::applyReaderStylePreset,
-            onDeleteReaderStylePreset = viewModel.settingsController::deleteReaderStylePreset,
-            onOpenToc = viewModel::toggleTocSheet,
-            onToggleBookmark = viewModel::toggleBookmark,
-            onRequestOcr = viewModel::requestOcr,
-            onTtsTogglePlayback = ttsController::togglePlayback,
-            onTtsStop = ttsController::stop,
-            onTtsPrevious = ttsController::previousChunk,
-            onTtsNext = ttsController::nextChunk,
-            onTtsVoiceNameChange = { value ->
-                viewModel.settingsController.setTtsVoiceName(value)
-                ttsController.selectVoice(value)
-            },
-            onTtsSpeedChange = viewModel.settingsController::setTtsSpeed,
-            onTtsPitchChange = viewModel.settingsController::setTtsPitch,
-            onTtsVolumeChange = viewModel.settingsController::setTtsVolume,
-            onTtsSleepTimerChange = viewModel.settingsController::setTtsSleepTimerMode
-        )
-    }
-    pendingCustomFontDeletion?.let { fontName ->
-        AlertDialog(
-            onDismissRequest = { pendingCustomFontDeletion = null },
-            confirmButton = {
-                TextButton(onClick = {
-                    pendingCustomFontDeletion = null
-                    deleteCustomFont(fontName)
-                }) {
-                    Text(if (strings.languageCode == "ru") "РЈРґР°Р»РёС‚СЊ" else "Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingCustomFontDeletion = null }) {
-                    Text(if (strings.languageCode == "ru") "РћС‚РјРµРЅР°" else "Cancel")
-                }
-            },
-            title = {
-                Text(if (strings.languageCode == "ru") "РЈРґР°Р»РёС‚СЊ С€СЂРёС„С‚?" else "Delete font?")
-            },
-            text = {
-                Text(
-                    if (strings.languageCode == "ru") {
-                        "РЁСЂРёС„С‚ \"$fontName\" Р±СѓРґРµС‚ СѓРґР°Р»С‘РЅ РёР· РїСЂРёР»РѕР¶РµРЅРёСЏ. Р•СЃР»Рё РѕРЅ РІС‹Р±СЂР°РЅ СЃРµР№С‡Р°СЃ, С‡С‚РµРЅРёРµ РІРµСЂРЅС‘С‚СЃСЏ РЅР° Georgia."
-                    } else {
-                        "Font \"$fontName\" will be removed from the app. If it is currently selected, reading will fall back to Georgia."
-                    }
-                )
-            }
-        )
-    }
-    uiState.selectedTextActionSheet?.let { actionState ->
-        SelectedTextActionSheet(
-            state = actionState,
-            onDismiss = viewModel::dismissSelectedTextActions,
-            onTranslate = viewModel::translateFromSelectedTextActions,
-            onDictionary = viewModel::openDictionaryFromSelectedTextActions,
-            onExplain = viewModel::explainFromSelectedTextActions,
-            onSaveQuote = viewModel::saveQuoteFromSelectedTextActions
-        )
-    }
-    uiState.pendingHighlightText?.let { highlightText ->
-        HighlightColorPickerSheet(
-            text = highlightText,
-            onColorSelected = { color -> viewModel.confirmHighlight(color) },
-            onDismiss = viewModel::dismissHighlight
-        )
-    }
-    uiState.chapterTranslationProgress?.let { progress ->
-        ChapterTranslationProgressBar(progress = progress)
-    }
-    uiState.translationComparison?.let { comparison ->
-        TranslationComparisonSheet(
-            comparison = comparison,
-            onDismiss = viewModel::dismissTranslationComparison
-        )
-    }
-    uiState.selectedTextTranslation?.let { translationState ->
-        SelectedTextTranslationSheet(
-            state = translationState,
-            onDismiss = viewModel::dismissSelectedTextTranslation,
-            onDictionary = viewModel::openDictionaryForSelectedText,
-            onTranslateAsPhrase = viewModel::translateSelectedTextAsPhrase,
-            onExplain = viewModel::explainSelectedTextFromResult,
-            onTransportChange = viewModel::translateSelectedTextWithTransport,
-            onCopy = { text ->
-                clipboardManager.setText(AnnotatedString(text))
-            },
-            onSaveQuote = viewModel::saveQuoteFromSelectedTextResult
-        )
-    }
-    if (quoteSavePopupVisible) {
-        ImageMessagePopup(
-            drawableId = R.drawable.reader_quote_saved_popup,
-            contentDescription = readerText.quoteSaved,
-            config = ImageMessagePopupConfig(durationSeconds = 3),
-            eventToken = quoteSavePopupToken,
-            onDismiss = { quoteSavePopupVisible = false }
-        )
-    }
-    eyeRestReminderMinutes?.let {
-        AlertDialog(
-            onDismissRequest = { eyeRestReminderMinutes = null },
-            title = { Text(readerText.eyeRestTitle) },
-            text = { Text(readerText.eyeRestMessage) },
-            confirmButton = {
-                TextButton(onClick = { eyeRestReminderMinutes = null }) {
-                    Text(readerText.eyeRestDismiss)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        eyeRestReminderMinutes = null
-                        viewModel.snoozeEyeRestReminder()
-                    }
-                ) {
-                    Text(readerText.eyeRestSnooze)
-                }
-            }
-        )
-    }
+    ReaderBottomSheets(
+        uiState = uiState,
+        viewModel = viewModel,
+        isTextReader = isTextReader,
+        ttsRuntimeState = ttsRuntimeState,
+        ttsController = ttsController,
+        activeReaderPreset = activeReaderPreset,
+        currentChapterTitle = currentChapterTitle,
+        clipboardManager = clipboardManager,
+        readerText = readerText,
+        fontCatalogVersion = fontCatalogVersion,
+        openControlCenterAtServices = openControlCenterAtServices,
+        onOpenControlCenterAtServicesChange = { openControlCenterAtServices = it },
+        showTextTranslationPageSheet = showTextTranslationPageSheet,
+        onShowTextTranslationPageSheetChange = { showTextTranslationPageSheet = it },
+        showRsvpOverlay = showRsvpOverlay,
+        onShowRsvpOverlayChange = { showRsvpOverlay = it },
+        rsvpWords = rsvpWords,
+        onRsvpWordsChange = { rsvpWords = it },
+        showReaderAudioSheet = showReaderAudioSheet,
+        onShowReaderAudioSheetChange = { showReaderAudioSheet = it },
+        pendingTtsRestartTargetPage = pendingTtsRestartTargetPage,
+        onPendingTtsRestartTargetPageChange = { pendingTtsRestartTargetPage = it },
+        pendingCustomFontDeletion = pendingCustomFontDeletion,
+        onPendingCustomFontDeletionChange = { pendingCustomFontDeletion = it },
+        quoteSavePopupVisible = quoteSavePopupVisible,
+        onQuoteSavePopupVisibleChange = { quoteSavePopupVisible = it },
+        quoteSavePopupToken = quoteSavePopupToken,
+        eyeRestReminderMinutes = eyeRestReminderMinutes,
+        onEyeRestReminderMinutesChange = { eyeRestReminderMinutes = it },
+        onLaunchFontImport = { fontImportLauncher.launch(arrayOf("*/*")) },
+        onLaunchStyleImport = { readerStyleImportLauncher.launch(arrayOf("application/json", "*/*")) },
+        onLaunchStyleExport = { readerStyleExportLauncher.launch(readerTypographyExportFileName(uiState)) },
+        onDeleteCustomFont = deleteCustomFont,
+    )
 }
 }
 
