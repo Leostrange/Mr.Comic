@@ -70,7 +70,7 @@ internal fun ReaderBottomSheets(
             toolbarBlur = uiState.toolbarBlur,
             resolveDisplayPage = viewModel::tocDisplayPage,
             onNavigate = { entry ->
-                viewModel.navigateToTocEntry(
+                viewModel.navigationController.navigateToTocEntry(
                     page = entry.pageIndex,
                     anchorId = entry.anchorId ?: "",
                     sectionIndex = entry.sectionIndex,
@@ -78,7 +78,7 @@ internal fun ReaderBottomSheets(
                 )
                 viewModel.toggleTocSheet()
             },
-            onRemoveBookmark = viewModel::removeBookmark,
+            onRemoveBookmark = { viewModel.bookmarkController.removeBookmark(it) },
             onDismiss = viewModel::toggleTocSheet
         )
     }
@@ -130,7 +130,7 @@ internal fun ReaderBottomSheets(
                 } else {
                     onPendingTtsRestartTargetPageChange(page)
                     ttsController.stop()
-                    viewModel.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
+                    viewModel.navigationController.navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
                 }
             },
             onVoiceNameChange = { value ->
@@ -175,12 +175,12 @@ internal fun ReaderBottomSheets(
             onTextAlignChange = viewModel.settingsController::setTextAlignment,
             onBoldChange = viewModel.settingsController::setTextBold,
             onResetStyle = viewModel.settingsController::resetTextSettings,
-            onReadingModeChange = viewModel::setReadingMode,
+            onReadingModeChange = viewModel.readingModeController::setReadingMode,
             onKeepScreenOnChange = viewModel.settingsController::setKeepScreenOn,
             onScreenTimeoutChange = viewModel.settingsController::setScreenTimeoutMode,
             onImmersiveModeChange = viewModel.settingsController::setImmersiveMode,
-            onLandscapeSpreadChange = viewModel::setLandscapeSpreadEnabled,
-            onPreloadPagesChange = viewModel::setPreloadPages,
+            onLandscapeSpreadChange = viewModel.readingModeController::setLandscapeSpreadEnabled,
+            onPreloadPagesChange = viewModel.readingModeController::setPreloadPages,
             onPageAnimationChange = viewModel.settingsController::setPageAnimation,
             onTapZoneModeChange = viewModel.settingsController::setTapZoneMode,
             onTapZoneSwapChange = viewModel.settingsController::setTapZoneSwap,
@@ -209,8 +209,8 @@ internal fun ReaderBottomSheets(
             onApplyReaderStylePreset = viewModel.settingsController::applyReaderStylePreset,
             onDeleteReaderStylePreset = viewModel.settingsController::deleteReaderStylePreset,
             onOpenToc = viewModel::toggleTocSheet,
-            onToggleBookmark = viewModel::toggleBookmark,
-            onRequestOcr = viewModel::requestOcr,
+            onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
+            onRequestOcr = { viewModel.ocrController.requestOcr() },
             onTtsTogglePlayback = ttsController::togglePlayback,
             onTtsStop = ttsController::stop,
             onTtsPrevious = ttsController::previousChunk,
@@ -262,14 +262,14 @@ internal fun ReaderBottomSheets(
             onTranslate = viewModel::translateFromSelectedTextActions,
             onDictionary = viewModel::openDictionaryFromSelectedTextActions,
             onExplain = viewModel::explainFromSelectedTextActions,
-            onSaveQuote = viewModel::saveQuoteFromSelectedTextActions
+            onSaveQuote = { viewModel.saveQuoteController.saveQuoteFromSelectedTextActions() }
         )
     }
     uiState.pendingHighlightText?.let { highlightText ->
         HighlightColorPickerSheet(
             text = highlightText,
-            onColorSelected = { color -> viewModel.confirmHighlight(color) },
-            onDismiss = viewModel::dismissHighlight
+            onColorSelected = { color -> viewModel.highlightController.confirmHighlight(color) },
+            onDismiss = { viewModel.highlightController.dismissHighlight() }
         )
     }
     uiState.chapterTranslationProgress?.let { progress ->
@@ -292,7 +292,7 @@ internal fun ReaderBottomSheets(
             onCopy = { text ->
                 clipboardManager.setText(AnnotatedString(text))
             },
-            onSaveQuote = viewModel::saveQuoteFromSelectedTextResult
+            onSaveQuote = { viewModel.saveQuoteController.saveQuoteFromSelectedTextResult() }
         )
     }
     if (quoteSavePopupVisible) {
@@ -318,7 +318,7 @@ internal fun ReaderBottomSheets(
                 TextButton(
                     onClick = {
                         onEyeRestReminderMinutesChange(null)
-                        viewModel.snoozeEyeRestReminder()
+                        viewModel.eyeRestController.snoozeEyeRestReminder()
                     }
                 ) {
                     Text(readerText.eyeRestSnooze)
