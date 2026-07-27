@@ -872,7 +872,13 @@ fun ReaderScreen(
                         .fillMaxSize()
                         .then(
                             if (uiState.immersiveMode) {
-                                Modifier
+                                // In immersive mode system bars are hidden, but
+                                // transient bars appear on swipe.  Use safeDrawing
+                                // insets which always include the display cutout
+                                // and a minimum safe area even when bars are hidden.
+                                Modifier.windowInsetsPadding(
+                                    WindowInsets.safeDrawing
+                                )
                             } else {
                                 Modifier
                                     .statusBarsPadding()
