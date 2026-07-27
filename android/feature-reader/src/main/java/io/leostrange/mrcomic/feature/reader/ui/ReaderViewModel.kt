@@ -599,7 +599,7 @@ class ReaderViewModel @Inject constructor(
     private fun schedulePostOpenTasks(comic: Comic, startPage: Int, initialPages: Int) {
         scheduleHighQualityWarmup(startPage)
         scheduleDeferredTocWarmup()
-        loadBookmarks(comic.id, initialPages)
+        bookmarkController.loadBookmarks(comic.id, initialPages)
         loadPageTranslationNote(comic.id, startPage)
         eyeRestController.restartEyeRestTimer()
     }
@@ -789,8 +789,6 @@ class ReaderViewModel @Inject constructor(
 
     // ── Закладки ──────────────────────────────────────────────────────────────
 
-    private fun loadBookmarks(comicId: String, totalPages: Int) = bookmarkController.loadBookmarks(comicId, totalPages)
-
     private fun loadPageTranslationNote(
         comicId: String? = _uiState.value.comic?.id,
         page: Int = _uiState.value.currentPage
@@ -892,7 +890,7 @@ class ReaderViewModel @Inject constructor(
                         scheduleTextPagePaginationBuild()
                     }
                 }
-                loadBookmarks(comic.id, realPages)
+                bookmarkController.loadBookmarks(comic.id, realPages)
             }
         }
     }
