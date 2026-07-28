@@ -817,6 +817,10 @@ internal fun HtmlPageView(
         },
         onRelease = { webView ->
             autoScrollScrollLambda.value = null
+            webView.evaluateJavascript(
+                """(function(){try{if(window.__mrcomicSectionObserver){window.__mrcomicSectionObserver.disconnect();window.__mrcomicSectionObserver=null;}}catch(e){}})()""",
+                null
+            )
             webView.removeJavascriptInterface("_NativeReader")
             (webView.parent as? android.view.ViewGroup)?.removeView(webView)
             webView.stopLoading()
