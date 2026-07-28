@@ -63,24 +63,35 @@ internal class ReaderProgressController(
     internal var lastPersistedProgress: PersistedProgressMarker? = null
     internal val lastChapterMilestone = AtomicReference<ChapterMilestoneMarker?>()
 
+    /** Measured visual page counts per EPUB spine section. */
+    internal val sectionPageCounts = EpubSectionPageCountStore()
+
+    /**
+     * Total number of sections (spine items) in the book. Set once when the book opens.
+     * Used by [accumulatedTotalPagesForEpub] to estimate total visual pages including
+     * unvisited sections, preventing premature 100% progress display.
+     */
+    internal var totalBookSections: Int = 0
+
+    /** Returns a stable, section-ordered snapshot for EPUB progress accumulation. */
+    internal fun snapshotSectionPageCounts(): Map<Int, Int> = sectionPageCounts.snapshot()
+
     // ── Progress persistence ───────────────────────────────────────────────
 
     fun saveProgress(
         page: Int,
         progressSource: ReaderNavigationProgressSource,
-        epubAccumulatedPages: Int,
-        sectionPageCountsSnapshot: Map<Int, Int>,
-        totalBookSections: Int,
-        calculateAccuratePage: (Int) -> Int,
     ) {
         val comic = _uiState.value.comic ?: return
+        val epubAccumulatedPages = accumulatedTotalPagesForEpub()
+        val sectionSnapshot = sectionPageCounts.snapshot()
         val totalPages = if (epubAccumulatedPages > 0) epubAccumulatedPages else _uiState.value.totalPages
         if (!ReaderProgressPolicy.shouldPersist(
                 totalPages = totalPages,
                 isHeavyReflowable = comic.format.isHeavyReflowableFormat(),
                 isEpub = comic.format == ComicFormat.EPUB,
                 epubAccumulatedPages = epubAccumulatedPages,
-                paginatedSectionCount = sectionPageCountsSnapshot.size
+                paginatedSectionCount = sectionSnapshot.size
             )
         ) return
         val accuratePage = ReaderProgressPolicy.pageForPersistence(
@@ -321,11 +332,7 @@ internal class ReaderProgressController(
 
     // ── Epub page calculation ──────────────────────────────────────────────
 
-    fun calculateAccuratePage(
-        sectionIndex: Int,
-        sectionPageCounts: EpubSectionPageCountStore,
-        totalBookSections: Int
-    ): Int {
+    fun calculateAccuratePage(sectionIndex: Int): Int {
         val state = _uiState.value
         val snapshot = sectionPageCounts.snapshot()
         if (snapshot.isNotEmpty()) {
@@ -341,10 +348,7 @@ internal class ReaderProgressController(
         return 0
     }
 
-    fun accumulatedTotalPagesForEpub(
-        sectionPageCounts: EpubSectionPageCountStore,
-        totalBookSections: Int
-    ): Int {
+    fun accumulatedTotalPagesForEpub(): Int {
         return EpubProgressCalculator.estimatedTotalPages(
             sectionPageCounts = sectionPageCounts.snapshot(),
             totalSections = totalBookSections
