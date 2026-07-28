@@ -647,8 +647,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun toggleChromeUi() = chromeController.toggleChromeUi()
-
     /** Opens/closes the table-of-contents bottom sheet. */
     fun toggleTocSheet() = chromeController.toggleTocSheet(
         hasTableOfContents = _uiState.value.tableOfContents.isNotEmpty(),
@@ -681,13 +679,6 @@ class ReaderViewModel @Inject constructor(
             )
         }
     }
-
-    fun openHtmlAsset(path: String) = formatReader?.openHtmlAsset(path)
-
-    /** Opens/closes the text reader settings bottom sheet. */
-    fun toggleTextSettings() = chromeController.toggleTextSettings()
-
-    // ── Закладки ──────────────────────────────────────────────────────────────
 
     private fun loadPageTranslationNote(
         comicId: String? = _uiState.value.comic?.id,
