@@ -162,7 +162,7 @@ internal fun ReaderBottomSheets(
             openAtServicesTab = openControlCenterAtServices,
             onDismiss = {
                 onOpenControlCenterAtServicesChange(false)
-                viewModel.toggleTextSettings()
+                viewModel.chromeController.toggleTextSettings()
             },
             onApplyReadingPreset = viewModel.settingsController::applyReadingPreset,
             onFontSizeChange = viewModel.settingsController::setTextFontSize,
