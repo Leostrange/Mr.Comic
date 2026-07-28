@@ -184,6 +184,7 @@ internal fun HtmlPageView(
     onConsumeScrollToAnchor: () -> Unit = {},
     pendingWebtoonSectionIndex: Int? = null,
     onConsumeWebtoonSection: () -> Unit = {},
+    onTextWebtoonVisibleSectionChanged: (Int) -> Unit = {},
     readingMode: ReadingMode,
     autoScrollSpeed: Float = 0f,
     fontSize: Int    = 18,
@@ -255,6 +256,7 @@ internal fun HtmlPageView(
     val onConsumeAnchor  = rememberUpdatedState(onConsumeScrollToAnchor)
     val currentPendingWebtoonSection = rememberUpdatedState(pendingWebtoonSectionIndex)
     val onConsumeWebtoonSectionState = rememberUpdatedState(onConsumeWebtoonSection)
+    val onVisibleSectionChanged = rememberUpdatedState(onTextWebtoonVisibleSectionChanged)
     val currentFs        = rememberUpdatedState(fontSize)
     val currentScheme    = rememberUpdatedState(colorScheme)
     val currentPreset    = rememberUpdatedState(readerPreset)
@@ -393,6 +395,11 @@ internal fun HtmlPageView(
                                 context.startActivity(intent)
                             } catch (_: Exception) {}
                         }
+                    }
+
+                    @JavascriptInterface
+                    fun onVisibleSectionChanged(sectionIndex: Int) {
+                        post { onVisibleSectionChanged.value(sectionIndex) }
                     }
 
                 }, "_NativeReader")
@@ -584,6 +591,15 @@ internal fun HtmlPageView(
                                     )
                                 }, TEXT_WEBTOON_RESTORE_DELAY_MILLIS)
                             }
+                        // Inject IntersectionObserver for text WEBTOON section tracking.
+                        // Reports the currently visible section index back to the native
+                        // reader so WEBTOON → PAGE mode switch restores the correct position.
+                        if (!currentPagedMode.value) {
+                            view.evaluateJavascript(
+                                """(function(){try{if(window.__mrcomicSectionObserver)return;var sections=document.querySelectorAll('.mrcomic-text-webtoon-section[data-mrcomic-page-index]');if(!sections.length)return;window.__mrcomicSectionObserver=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){var idx=parseInt(e.target.getAttribute('data-mrcomic-page-index'),10);if(!isNaN(idx)&&window._NativeReader){window._NativeReader.onVisibleSectionChanged(idx);}}});},{root:null,threshold:0.1});sections.forEach(function(s){window.__mrcomicSectionObserver.observe(s);});}catch(e){}})()""",
+                                null
+                            )
+                        }
                         view.post {
                             view.requestLayout()
                             view.invalidate()

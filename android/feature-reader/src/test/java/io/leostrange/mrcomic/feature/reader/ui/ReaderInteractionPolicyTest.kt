@@ -295,4 +295,25 @@ class ReaderInteractionPolicyTest {
             )
         )
     }
+
+    @Test
+    fun readerPageFromWebtoonSection_mapsDirectly() {
+        // Most EPUBs: each section maps 1:1 to a page
+        assertEquals(5, readerPageFromWebtoonSection(webtoonSectionIndex = 5, totalPagedPages = 20))
+    }
+
+    @Test
+    fun readerPageFromWebtoonSection_clampsToMax() {
+        assertEquals(19, readerPageFromWebtoonSection(webtoonSectionIndex = 25, totalPagedPages = 20))
+    }
+
+    @Test
+    fun readerPageFromWebtoonSection_clampsNegative() {
+        assertEquals(0, readerPageFromWebtoonSection(webtoonSectionIndex = -3, totalPagedPages = 20))
+    }
+
+    @Test
+    fun readerPageFromWebtoonSection_zeroPages() {
+        assertEquals(0, readerPageFromWebtoonSection(webtoonSectionIndex = 5, totalPagedPages = 0))
+    }
 }

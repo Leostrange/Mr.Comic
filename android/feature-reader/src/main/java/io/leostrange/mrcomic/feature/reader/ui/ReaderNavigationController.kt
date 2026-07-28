@@ -183,4 +183,16 @@ internal class ReaderNavigationController(
     fun consumePendingWebtoonSection() {
         _uiState.update { it.copy(pendingWebtoonSectionIndex = null) }
     }
+
+    /**
+     * Last visible section index reported by the text WEBTOON IntersectionObserver.
+     * Used by [ReaderReadingModeController.applyReadingMode] to restore position
+     * when switching WEBTOON → PAGE for text formats.
+     */
+    var lastTextWebtoonVisibleSection: Int? = null
+        private set
+
+    fun updateTextWebtoonVisibleSection(sectionIndex: Int) {
+        lastTextWebtoonVisibleSection = sectionIndex
+    }
 }
