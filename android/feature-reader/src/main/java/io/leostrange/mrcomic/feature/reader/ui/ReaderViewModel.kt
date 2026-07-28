@@ -242,7 +242,7 @@ class ReaderViewModel @Inject constructor(
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         scheduleHighQualityWarmup = { scheduleHighQualityWarmup(it) },
         applyHighQualityRetention = { applyHighQualityRetention(it) },
-        activeComicSupportsBitmapPreload = { activeComicSupportsBitmapPreload() },
+        activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
         playPageSound = {
             if (_uiState.value.pageSoundEnabled) {
                 PageSoundPlayer.play(
@@ -273,7 +273,7 @@ class ReaderViewModel @Inject constructor(
         scheduleTextPagePaginationBuild = { scheduleTextPagePaginationBuild() },
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
-        activeComicSupportsBitmapPreload = { activeComicSupportsBitmapPreload() },
+        activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
         markReaderPresetCustom = { settingsController.markReaderPresetCustom() }
     )
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
@@ -340,7 +340,7 @@ class ReaderViewModel @Inject constructor(
             applyOpeningState(comic, prepared, config)
             startReaderSession(comic, config)
             if (!openGuard.isCurrent(requestToken)) return
-            syncEngineTextLayer(config.readerRendersHtmlContent)
+            if (config.readerRendersHtmlContent) formatReader?.let { syncBookEngineTextLayer(it) }
             loadInitialPages(comic, prepared, activeReader, config)
             scheduleDeferredPageCountIfNeeded(comic, activeReader, prepared, config, requestToken)
             schedulePostOpenTasks(comic, config.startPage, config.initialPages)
@@ -531,12 +531,6 @@ class ReaderViewModel @Inject constructor(
         )
     }
 
-    private fun syncEngineTextLayer(readerRendersHtmlContent: Boolean) {
-        formatReader?.let { reader ->
-            if (readerRendersHtmlContent) syncBookEngineTextLayer(reader)
-        }
-    }
-
     /** Phase 6a: Load visible pages and warmup. */
     private fun loadInitialPages(
         comic: Comic,
@@ -610,7 +604,7 @@ class ReaderViewModel @Inject constructor(
     fun getPage(index: Int, renderQuality: Int = 1): Bitmap? = pageLoader.getPage(index, renderQuality)
 
     fun setHighQualityFocusPages(indices: Set<Int>?) {
-        if (!activeComicSupportsHighResZoom()) {
+        if (!(_uiState.value.comic?.format?.supportsHighResZoomTiers() == true)) {
             applyHighQualityRetention(emptySet())
             return
         }
@@ -627,7 +621,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun scheduleHighQualityWarmup(page: Int) {
-        if (!activeComicSupportsHighResZoom()) return
+        if (!(_uiState.value.comic?.format?.supportsHighResZoomTiers() == true)) return
         val warmupTier = when (renderProfile.tier) {
             RenderDeviceTier.HIGH_END -> 3
             RenderDeviceTier.MID_RANGE -> 2
@@ -896,9 +890,6 @@ class ReaderViewModel @Inject constructor(
         lastRetainedHighQualityPages = indices
     }
 
-    private fun activeComicSupportsBitmapPreload(): Boolean =
-        !_uiState.value.readerRendersHtmlContent
-
     private fun clearHtmlPageCache() {
         textReaderOrchestrator.resetSessionAndCaches {
             _webtoonHtmlCache.value = emptyMap()
@@ -980,8 +971,8 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
-        val previous = getCachedHtmlPage(centerPage - 1)
-        val next = getCachedHtmlPage(centerPage + 1)
+        val previous = textReaderOrchestrator.controller.cachedHtmlPage(centerPage - 1)
+        val next = textReaderOrchestrator.controller.cachedHtmlPage(centerPage + 1)
         _uiState.update { state ->
             if (state.currentHtmlContent == null && state.currentPage != centerPage) {
                 state
@@ -995,9 +986,6 @@ class ReaderViewModel @Inject constructor(
             }
         }
     }
-
-    private fun getCachedHtmlPage(index: Int): CachedHtmlPage? =
-        textReaderOrchestrator.controller.cachedHtmlPage(index)
 
     private suspend fun getOrLoadHtmlPage(reader: FormatReader, index: Int): CachedHtmlPage? =
         textReaderOrchestrator.loadHtmlPage(
@@ -1025,9 +1013,6 @@ class ReaderViewModel @Inject constructor(
             delayMillis = delayMillis
         )
     }
-
-    private fun activeComicSupportsHighResZoom(): Boolean =
-        _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
 
     override fun onCleared() {
         // Snapshot the pending IO work, then run it on an application-scoped coroutine so leaving
