@@ -85,7 +85,14 @@ internal object ReflowableDocumentBuilder {
             .split(Regex("\n\\s*\n"))
             .mapNotNull { part ->
                 val trimmed = part.trim()
-                if (trimmed.isBlank()) null else "<p>${escapeHtml(trimmed).replace("\n", "<br/>")}</p>"
+                if (trimmed.isBlank()) null else {
+                    // Collapse single newlines within a paragraph into spaces.
+                    // Prose text wraps at ~70-80 chars per line; single newlines
+                    // are visual, not semantic.  Double newlines (the split
+                    // boundary above) are the real paragraph breaks.
+                    val merged = trimmed.replace(Regex("\\s*\\n\\s*"), " ")
+                    "<p>${escapeHtml(merged)}</p>"
+                }
             }
             .ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
     }
