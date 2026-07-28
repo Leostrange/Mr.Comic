@@ -1,7 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
@@ -9,7 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
-import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
@@ -175,7 +173,7 @@ class ReaderViewModel @Inject constructor(
         renderProfile = renderProfile,
         context = context,
         _ocrPagePath = _ocrPagePath,
-        getPage = { index, quality -> getPage(index, quality) },
+        getPage = { index, quality -> pageLoader.getPage(index, quality) },
         formatReader = { formatReader }
     )
     internal var formatReader: FormatReader? = null
@@ -237,11 +235,16 @@ class ReaderViewModel @Inject constructor(
         loadPage = { pageLoader.loadPage(it) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
         loadPageTranslationNote = { loadPageTranslationNote(page = it) },
-        saveProgress = { page, source -> saveProgress(page, source) },
+        saveProgress = { page, source -> progressController.saveProgress(page, source) },
         maybeEmitChapterMilestone = { page, source -> maybeEmitChapterMilestone(page, source) },
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         scheduleHighQualityWarmup = { scheduleHighQualityWarmup(it) },
-        applyHighQualityRetention = { applyHighQualityRetention(it) },
+        applyHighQualityRetention = { indices ->
+            if (indices != lastRetainedHighQualityPages) {
+                pagePreloader.retainHighQualityPages(indices)
+                lastRetainedHighQualityPages = indices
+            }
+        },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
         playPageSound = {
             if (_uiState.value.pageSoundEnabled) {
@@ -340,7 +343,18 @@ class ReaderViewModel @Inject constructor(
             applyOpeningState(comic, prepared, config)
             startReaderSession(comic, config)
             if (!openGuard.isCurrent(requestToken)) return
-            if (config.readerRendersHtmlContent) formatReader?.let { syncBookEngineTextLayer(it) }
+            if (config.readerRendersHtmlContent) formatReader?.let { reader ->
+                textReaderOrchestrator.syncBookEngineTextLayer(
+                    scope = viewModelScope,
+                    reader = reader,
+                    bookSession = activeBookSession,
+                    isStillActive = { formatReader === reader },
+                    onTocUpdated = { entries ->
+                        _uiState.update { it.copy(tableOfContents = entries) }
+                        progressController.rememberChapterMilestoneAnchor(_uiState.value.currentPage) { p -> navigationController.currentChapterFor(p) }
+                    }
+                )
+            }
             loadInitialPages(comic, prepared, activeReader, config)
             scheduleDeferredPageCountIfNeeded(comic, activeReader, prepared, config, requestToken)
             schedulePostOpenTasks(comic, config.startPage, config.initialPages)
@@ -582,6 +596,10 @@ class ReaderViewModel @Inject constructor(
         eyeRestController.restartEyeRestTimer()
     }
 
+    private fun maybeEmitChapterMilestone(page: Int, progressSource: ReaderNavigationProgressSource) {
+        progressController.maybeEmitChapterMilestone(page, progressSource, navigationController::currentChapterFor)
+    }
+
     private suspend fun localizedReaderError(messageProvider: (String) -> String): String {
         val languageCode = normalizeAppLanguageCode(
             readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
@@ -599,25 +617,6 @@ class ReaderViewModel @Inject constructor(
             readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
         )
         return readerUiText(languageCode)
-    }
-
-    fun getPage(index: Int, renderQuality: Int = 1): Bitmap? = pageLoader.getPage(index, renderQuality)
-
-    fun setHighQualityFocusPages(indices: Set<Int>?) {
-        if (!(_uiState.value.comic?.format?.supportsHighResZoomTiers() == true)) {
-            applyHighQualityRetention(emptySet())
-            return
-        }
-        val totalPages = _uiState.value.totalPages
-        val normalized = indices
-            ?.asSequence()
-            ?.filter { it in 0 until totalPages }
-            ?.toSet()
-            ?.takeIf { it.isNotEmpty() }
-
-        applyHighQualityRetention(
-            normalized ?: navigationController.visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode).toSet()
-        )
     }
 
     private fun scheduleHighQualityWarmup(page: Int) {
@@ -648,15 +647,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun onCenterTap() = chromeController.onCenterTap()
-
     fun toggleChromeUi() = chromeController.toggleChromeUi()
-
-    fun hideChrome() = chromeController.hideChrome()
-
-    fun showMinimalChrome() = chromeController.showMinimalChrome()
-
-    fun showExpandedChrome() = chromeController.showExpandedChrome()
 
     /** Opens/closes the table-of-contents bottom sheet. */
     fun toggleTocSheet() = chromeController.toggleTocSheet(
@@ -665,13 +656,8 @@ class ReaderViewModel @Inject constructor(
     )
 
     /**
-      * Called by the WebView JS bridge when the user taps an anchor link.
-      *
-      * [href] may be:
-      *  - a bare anchor id (`FbAutId_1`, `note_42`) — footnote lookup
-      *  - `#fragment` — footnote lookup by fragment
-      *  - `chapter.xhtml` — navigate to the page for that file
-      *  - `chapter.xhtml#fragment` — navigate to page for that file; footnote lookup for fragment
+     * Called by the WebView JS bridge when the paged layout engine reports
+     * the number of visual subpages inside the currently loaded HTML section.
      */
     fun onPagedLayoutPageCountChanged(pageCount: Int, pageIndex: Int = 0) {
         // This callback reports visual subpages inside the currently loaded HTML
@@ -822,72 +808,8 @@ class ReaderViewModel @Inject constructor(
             val toc = textReaderOrchestrator.resolveTableOfContents(reader, bookSession)
             if (formatReader !== reader) return@launch
             _uiState.update { it.copy(tableOfContents = toc) }
-            rememberChapterMilestoneAnchor()
+            progressController.rememberChapterMilestoneAnchor(_uiState.value.currentPage) { p -> navigationController.currentChapterFor(p) }
         }
-    }
-
-    private fun syncBookEngineTextLayer(reader: FormatReader) {
-        textReaderOrchestrator.syncBookEngineTextLayer(
-            scope = viewModelScope,
-            reader = reader,
-            bookSession = activeBookSession,
-            isStillActive = { formatReader === reader },
-            onTocUpdated = { entries ->
-                _uiState.update { it.copy(tableOfContents = entries) }
-                rememberChapterMilestoneAnchor()
-            }
-        )
-    }
-
-    private var brightnessJob: Job? = null
-    private fun saveProgress(
-        page: Int,
-        progressSource: ReaderNavigationProgressSource
-    ) {
-        progressController.saveProgress(page = page, progressSource = progressSource)
-    }
-
-    private fun rememberChapterMilestoneAnchor(page: Int = _uiState.value.currentPage) {
-        progressController.rememberChapterMilestoneAnchor(page, navigationController::currentChapterFor)
-    }
-
-    private fun maybeEmitChapterMilestone(
-        page: Int,
-        progressSource: ReaderNavigationProgressSource
-    ) {
-        progressController.maybeEmitChapterMilestone(page, progressSource, navigationController::currentChapterFor)
-    }
-
-    private suspend fun emitProgressRecap(
-        type: ReaderProgressRecapType,
-        comicId: String,
-        comicTitle: String,
-        chapterTitle: String? = null,
-        currentPage: Int,
-        totalPages: Int,
-        pagesDelta: Int,
-        xpAwarded: Int,
-        projectedGoalPagesDelta: Int
-    ) {
-        progressController.emitProgressRecap(
-            type = type,
-            comicId = comicId,
-            comicTitle = comicTitle,
-            chapterTitle = chapterTitle,
-            currentPage = currentPage,
-            totalPages = totalPages,
-            pagesDelta = pagesDelta,
-            xpAwarded = xpAwarded,
-            projectedGoalPagesDelta = projectedGoalPagesDelta
-        )
-    }
-
-    // isOpenRequestCurrent replaced by openGuard.isCurrent()
-
-    private fun applyHighQualityRetention(indices: Set<Int>) {
-        if (indices == lastRetainedHighQualityPages) return
-        pagePreloader.retainHighQualityPages(indices)
-        lastRetainedHighQualityPages = indices
     }
 
     private fun clearHtmlPageCache() {
@@ -1030,7 +952,6 @@ class ReaderViewModel @Inject constructor(
         textReaderOrchestrator.cancelAllJobs()
         progressController.progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
-        brightnessJob?.cancel()
         runCatching { formatReader?.close() }
         formatReader = null
         appScope.launch {
