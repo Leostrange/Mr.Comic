@@ -710,6 +710,18 @@ fun ReaderScreen(
         }
     }
 
+    // Re-hide system bars after ModalBottomSheet dismisses in immersive mode.
+    // The sheet's scrim interaction can trigger transient system bar appearance;
+    // re-asserting the hidden state prevents bars from sticking visible.
+    LaunchedEffect(uiState.immersiveMode, uiState.showTocSheet, uiState.showTextSettings) {
+        if (uiState.immersiveMode && !uiState.showTocSheet && !uiState.showTextSettings) {
+            val window = (context as? Activity)?.window
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window?.insetsController?.hide(android.view.WindowInsets.Type.systemBars())
+            }
+        }
+    }
+
     // Reading area uses reader-specific MaterialTheme (background, text colors).
     // Chrome overlays (top/bottom bars, sheets) use the inherited app MaterialTheme.
     MaterialTheme(colorScheme = readerColorScheme) {
