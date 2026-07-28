@@ -814,6 +814,9 @@ fun ReaderScreen(
                                 paragraphSpacing = uiState.textParagraphSpacing,
                                 textAlign = uiState.textAlignment,
                                 bold = uiState.textBold,
+                                overrideTextColor = readerColorOverrideHex(uiState.textCustomTextColor),
+                                overrideBackgroundColor = readerColorOverrideHex(uiState.textCustomBackgroundColor),
+                                overrideAccentColor = readerColorOverrideHex(uiState.textCustomAccentColor),
                                 translateActionLabel = readerText.selectionTranslateAction,
                                 dictionaryActionLabel = readerText.openDictionary,
                                 explainActionLabel = readerText.selectionExplainAction,
@@ -892,6 +895,9 @@ fun ReaderScreen(
                                     paragraphSpacing = uiState.textParagraphSpacing,
                                     textAlign = uiState.textAlignment,
                                     bold = uiState.textBold,
+                                    overrideTextColor = readerColorOverrideHex(uiState.textCustomTextColor),
+                                    overrideBackgroundColor = readerColorOverrideHex(uiState.textCustomBackgroundColor),
+                                    overrideAccentColor = readerColorOverrideHex(uiState.textCustomAccentColor),
                                     translateActionLabel = readerText.selectionTranslateAction,
                                     dictionaryActionLabel = readerText.openDictionary,
                                     explainActionLabel = readerText.selectionExplainAction,
@@ -945,7 +951,7 @@ fun ReaderScreen(
                 val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
                 val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
                 val chromeSurface = readerPanelSurfaceColor(
-                    base = MaterialTheme.colorScheme.surface,
+                    base = inheritedColorScheme.surface,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.06f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
                     minAlpha = if (forceOpaqueChromeSurface) {
                         1f
@@ -954,7 +960,7 @@ fun ReaderScreen(
                     }
                 )
                 val overlaySurface = readerPanelSurfaceColor(
-                    base = MaterialTheme.colorScheme.surface,
+                    base = inheritedColorScheme.surface,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.03f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
                     minAlpha = if (forceOpaqueChromeSurface) {
                         1f
