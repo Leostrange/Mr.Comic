@@ -10,7 +10,6 @@ import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
-import io.leostrange.mrcomic.feature.reader.domain.progress.EpubSectionPageCountStore
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
@@ -272,7 +271,7 @@ class ReaderViewModel @Inject constructor(
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
         textReaderOrchestrator = textReaderOrchestrator,
-        totalBookSections = { totalBookSections },
+        totalBookSections = { progressController.totalBookSections },
         normalizePageForMode = { page, mode, total -> ReaderNavigationPolicy.normalizePage(page, mode, total) },
         syncReaderPosition = { page, mode, persist -> navigationController.syncReaderPosition(page, mode, persist) },
         scheduleTextPagePaginationBuild = { scheduleTextPagePaginationBuild() },
@@ -283,18 +282,7 @@ class ReaderViewModel @Inject constructor(
     )
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
-    /** Measured visual page counts per EPUB spine section. */
-    private val sectionPageCounts = EpubSectionPageCountStore()
 
-    /**
-     * Total number of sections (spine items) in the book. Set once when the book opens.
-     * Used by [accumulatedTotalPagesForEpub] to estimate total visual pages including
-     * unvisited sections, preventing premature 100% progress display.
-     */
-    private var totalBookSections: Int = 0
-
-    /** Returns a stable, section-ordered snapshot for EPUB progress accumulation. */
-    private fun snapshotSectionPageCounts(): Map<Int, Int> = sectionPageCounts.snapshot()
     private val encodedUri: String? = savedStateHandle["uri"]
     private val encodedComicId: String? = savedStateHandle["comicId"]
     private var pendingRequestedPage: Int? = savedStateHandle.get<Int>("page")?.takeIf { it >= 0 }
@@ -430,8 +418,8 @@ class ReaderViewModel @Inject constructor(
             prepared.reader?.close(); return null
         }
         formatReader = prepared.reader
-        sectionPageCounts.reset()
-        totalBookSections = prepared.pages.coerceAtLeast(1)
+        progressController.sectionPageCounts.reset()
+        progressController.totalBookSections = prepared.pages.coerceAtLeast(1)
         if (formatReader == null) {
             val errorMessage = localizedReaderError { language ->
                 readerUnsupportedFormatMessage(prepared.detectedFormat.name, language)
@@ -754,12 +742,12 @@ class ReaderViewModel @Inject constructor(
         if (pageCount <= 0) return
         val sectionIndex = _uiState.value.currentPage
         val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
-        val sectionPageCountSnapshot = sectionPageCounts.recordAndSnapshot(sectionIndex, pageCount)
+        val sectionPageCountSnapshot = progressController.sectionPageCounts.recordAndSnapshot(sectionIndex, pageCount)
         val progress = EpubProgressCalculator.accumulate(
             sectionPageCounts = sectionPageCountSnapshot,
             sectionIndex = sectionIndex,
             sectionPageIndex = safePageIndex,
-            totalSections = totalBookSections
+            totalSections = progressController.totalBookSections
         )
         _uiState.update {
             it.copy(
@@ -869,7 +857,7 @@ class ReaderViewModel @Inject constructor(
                         resolvedTotalPages = realPages
                     )
                 ) return@withContext
-                totalBookSections = realPages.coerceAtLeast(1)
+                progressController.totalBookSections = realPages.coerceAtLeast(1)
                 _uiState.update {
                     it.copy(
                         totalPages = realPages,
@@ -930,14 +918,7 @@ class ReaderViewModel @Inject constructor(
         page: Int,
         progressSource: ReaderNavigationProgressSource
     ) {
-        progressController.saveProgress(
-            page = page,
-            progressSource = progressSource,
-            epubAccumulatedPages = accumulatedTotalPagesForEpub(),
-            sectionPageCountsSnapshot = snapshotSectionPageCounts(),
-            totalBookSections = totalBookSections,
-            calculateAccuratePage = ::calculateAccuratePage
-        )
+        progressController.saveProgress(page = page, progressSource = progressSource)
     }
 
     private fun rememberChapterMilestoneAnchor(page: Int = _uiState.value.currentPage) {
@@ -1115,14 +1096,6 @@ class ReaderViewModel @Inject constructor(
 
     private fun activeComicSupportsHighResZoom(): Boolean =
         _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
-
-    private fun calculateAccuratePage(sectionIndex: Int): Int {
-        return progressController.calculateAccuratePage(sectionIndex, sectionPageCounts, totalBookSections)
-    }
-
-    private fun accumulatedTotalPagesForEpub(): Int {
-        return progressController.accumulatedTotalPagesForEpub(sectionPageCounts, totalBookSections)
-    }
 
     private fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
         progressController.isProgressAlreadyPersisted(comicId, page)
