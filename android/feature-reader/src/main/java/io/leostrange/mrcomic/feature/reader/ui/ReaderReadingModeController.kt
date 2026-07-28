@@ -26,7 +26,8 @@ internal class ReaderReadingModeController(
     private val isProgressAlreadyPersisted: (String?, Int) -> Boolean,
     private val prewarmHtmlPagesAround: (Int) -> Unit,
     private val activeComicSupportsBitmapPreload: () -> Boolean,
-    private val markReaderPresetCustom: () -> Unit
+    private val markReaderPresetCustom: () -> Unit,
+    private val getLastTextWebtoonSection: () -> Int? = { null }
 ) {
     var portraitReadingMode: ReadingMode = ReadingMode.PAGE_LTR
     var portraitPagedReadingMode: ReadingMode = ReadingMode.PAGE_LTR
@@ -73,8 +74,21 @@ internal class ReaderReadingModeController(
 
     fun applyReadingMode(mode: ReadingMode) {
         val currentState = _uiState.value
+        // When switching WEBTOON → PAGE for text formats, use the last visible webtoon
+        // section to restore the correct paged position instead of the stale currentPage.
+        val pageForAlignment = if (
+            currentState.readingMode == ReadingMode.WEBTOON &&
+            mode != ReadingMode.WEBTOON &&
+            currentState.readerRendersHtmlContent
+        ) {
+            getLastTextWebtoonSection()
+                ?.let { readerPageFromWebtoonSection(it, currentState.totalPages) }
+                ?: currentState.currentPage
+        } else {
+            currentState.currentPage
+        }
         val alignedPage = normalizePageForMode(
-            currentState.currentPage,
+            pageForAlignment,
             mode,
             currentState.totalPages
         )

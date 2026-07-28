@@ -827,6 +827,7 @@ fun ReaderScreen(
                                 onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                 pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
                                 onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
+                                onTextWebtoonVisibleSectionChanged = { viewModel.navigationController.updateTextWebtoonVisibleSection(it) },
                                 modifier = textWebtoonModifier
                             )
                         }

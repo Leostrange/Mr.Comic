@@ -277,7 +277,8 @@ class ReaderViewModel @Inject constructor(
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
-        markReaderPresetCustom = { settingsController.markReaderPresetCustom() }
+        markReaderPresetCustom = { settingsController.markReaderPresetCustom() },
+        getLastTextWebtoonSection = { navigationController.lastTextWebtoonVisibleSection }
     )
     private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
