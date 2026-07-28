@@ -13,10 +13,6 @@ import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
-import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry
-import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntries
-import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
-import io.leostrange.mrcomic.feature.reader.domain.preset.serializeReaderStylePresetEntries
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
@@ -711,17 +707,6 @@ class ReaderViewModel @Inject constructor(
     /** Opens/closes the text reader settings bottom sheet. */
     fun toggleTextSettings() = chromeController.toggleTextSettings()
 
-    private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
-        val legacySlots = ReaderStylePresetEntries.toLegacySlots(entries)
-        readerPreferences.set(
-            PreferencesKeys.READER_STYLE_PRESET_LIST,
-            serializeReaderStylePresetEntries(entries)
-        )
-        readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_1, legacySlots[0].serialized.orEmpty())
-        readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_2, legacySlots[1].serialized.orEmpty())
-        readerPreferences.set(PreferencesKeys.READER_STYLE_PRESET_3, legacySlots[2].serialized.orEmpty())
-    }
-
     // ── Закладки ──────────────────────────────────────────────────────────────
 
     private fun loadPageTranslationNote(
@@ -1084,7 +1069,7 @@ class ReaderViewModel @Inject constructor(
             supportsAutomaticLandscapeSpread = ReaderOpeningModePolicy.supportsAutomaticLandscapeSpread(p.mode),
             disableAnimations = renderProfile.disableAnimations
         )
-        if (p.needsPersistStylePresets) persistReaderStylePresetEntries(p.readerStylePresetEntries)
+        if (p.needsPersistStylePresets) settingsController.persistReaderStylePresetEntries(p.readerStylePresetEntries)
         eyeRestController.restartEyeRestTimer()
     }
 
