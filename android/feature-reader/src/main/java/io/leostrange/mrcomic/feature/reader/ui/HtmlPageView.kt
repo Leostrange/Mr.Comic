@@ -739,8 +739,11 @@ internal fun HtmlPageView(
                 paragraphSpacing,
                 textAlign,
                 bold,
-                topPaddingPx,
-                bottomPaddingPx,
+                // In paged mode CSS padding is 0 — exclude chrome-dependent
+                // padding from the signature to prevent unnecessary JS
+                // re-evaluation when chrome visibility toggles.
+                if (pagedMode) 0 else topPaddingPx,
+                if (pagedMode) 0 else bottomPaddingPx,
                 horizontalPaddingPx,
                 maxWidthPx,
                 pagedMode,
