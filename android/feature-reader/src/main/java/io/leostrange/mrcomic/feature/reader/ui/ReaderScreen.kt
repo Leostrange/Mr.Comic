@@ -135,7 +135,7 @@ fun ReaderScreen(
         WebViewAssetLoader.Builder()
             .addPathHandler(
                 HTML_READER_ASSET_PATH,
-                ReaderFormatAssetPathHandler { path -> viewModel.openHtmlAsset(path) }
+                ReaderFormatAssetPathHandler { path -> viewModel.formatReader?.openHtmlAsset(path) }
             )
             .addPathHandler(
                 READER_USER_FONT_ASSET_PATH,
@@ -546,7 +546,7 @@ fun ReaderScreen(
                 ReaderTapZoneAction.MENU,
                 ReaderTapZoneAction.TOGGLE_UI -> {
                     showBrightnessRow = false
-                    viewModel.toggleChromeUi()
+                    viewModel.chromeController.toggleChromeUi()
                 }
                 ReaderTapZoneAction.PREVIOUS_CHAPTER -> {
                     previousReaderChapterPage(uiState.tableOfContents, uiState.currentPage)?.let { page ->
@@ -1154,7 +1154,7 @@ fun ReaderScreen(
                                     autoScrollActive = uiState.autoScrollSpeed > 0f,
                                     onNavigateBack = onNavigateBack,
                                     onToggleToc = viewModel::toggleTocSheet,
-                                    onToggleTextSettings = viewModel::toggleTextSettings,
+                                    onToggleTextSettings = { viewModel.chromeController.toggleTextSettings() },
                                     onSwapDirection = viewModel.settingsController::toggleTapZoneDirectionShortcut,
                                     onRequestOcr = {
                                         if (isTextReader) {
