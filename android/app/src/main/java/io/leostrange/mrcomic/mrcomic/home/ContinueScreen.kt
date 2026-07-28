@@ -915,7 +915,7 @@ private fun WeeklyReadingPlanChip(
 ) {
     MrComicCardSurface(
         shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.42f)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.ACCENT)
     ) {
         Row(
             modifier = Modifier
@@ -974,7 +974,7 @@ private fun ReadingCalendarStrip(
     val goalDays = goalState.recentActivity.count { it.goalCompleted }
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Column(
             modifier = Modifier
@@ -1085,7 +1085,7 @@ private fun DailyReadingGoalChip(
 ) {
     Surface(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Row(
             modifier = Modifier
@@ -1139,7 +1139,7 @@ private fun ReaderCompanionCard(
 ) {
     MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.ACCENT)
     ) {
         Row(
             modifier = Modifier
@@ -1173,7 +1173,7 @@ private fun ReaderCompanionCard(
                     Spacer(Modifier.height(8.dp))
                     MrComicCardSurface(
                         shape = RoundedCornerShape(14.dp),
-                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.NEUTRAL)
                     ) {
                         Column(
                             modifier = Modifier
@@ -1232,7 +1232,7 @@ private fun MascotStagePreviewCard(
 ) {
     MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.68f)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.ACCENT)
     ) {
         Row(
             modifier = Modifier
@@ -1284,7 +1284,7 @@ private fun CheckpointRecapChip(
 
     MrComicCardSurface(
         shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f)
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Row(
             modifier = Modifier
@@ -1380,7 +1380,7 @@ private fun ContinueLoadingState() {
     val language = LocalStrings.current.languageCode
     MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
@@ -1426,7 +1426,7 @@ private fun EmptyContinueState(
 ) {
     MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -1463,7 +1463,7 @@ private fun EmptyContinueReadingState(
 ) {
     MrComicCardSurface(
         modifier = Modifier.fillMaxWidth(),
-        containerColor = MaterialTheme.colorScheme.surfaceVariant
+        containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
