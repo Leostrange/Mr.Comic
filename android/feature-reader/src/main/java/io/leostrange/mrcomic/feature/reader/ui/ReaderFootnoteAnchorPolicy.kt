@@ -11,11 +11,11 @@ import java.net.URLDecoder
 internal object ReaderFootnoteAnchorPolicy {
 
     private val markerPattern = Regex(
-        """\b(footnote|note|notebody|rearnote|endnote|fnote|noteref|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)\b""",
+        """\b(footnote|note|notebody|rearnote|endnote|fnote|noteref|fnt|backnote|supnote|text-fn|pagenote|annref|annotation)(?=[-_\s]|$)""",
         RegexOption.IGNORE_CASE
     )
     private val identifierPattern = Regex(
-        """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id)[-_]?\d+$""",
+        """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id|fbanchor)[-_]?\d*$""",
         RegexOption.IGNORE_CASE
     )
 
