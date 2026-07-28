@@ -290,7 +290,7 @@ class ReaderSettingsController(
         }
     }
 
-    private suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
+    internal suspend fun persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
         val legacySlots = ReaderStylePresetEntries.toLegacySlots(entries)
         readerPreferences.set(
             PreferencesKeys.READER_STYLE_PRESET_LIST,
