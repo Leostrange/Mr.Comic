@@ -31,6 +31,10 @@ class ReaderFootnoteAnchorPolicyTest {
         assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("note-1"))
         assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("FbAutId_42"))
         assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("endnote12"))
+        assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("note_1"))
+        assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("fn_1"))
+        assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("note"))
+        assertTrue(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("fn"))
         assertFalse(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("chapter-1"))
         assertFalse(ReaderFootnoteAnchorPolicy.isFootnoteAnchor("contents"))
     }
