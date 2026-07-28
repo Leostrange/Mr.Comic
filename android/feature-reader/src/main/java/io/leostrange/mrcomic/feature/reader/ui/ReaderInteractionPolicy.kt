@@ -112,6 +112,23 @@ fun readerWebtoonRestoreSectionIndex(
     return (progress * lastSection).roundToInt().coerceIn(0, lastSection)
 }
 
+/**
+ * Reverse of [readerWebtoonRestoreSectionIndex]: maps a visible WEBTOON section index
+ * back to a paged engine section index for position restoration when switching
+ * WEBTOON → PAGE.
+ *
+ * For most EPUBs each section maps 1:1 to a page, so the section index IS the page.
+ * For EPUBs where the first section contains all content (single-spine),
+ * this returns the section index directly — the subpage within that section
+ * is not tracked and the user will land at the section start.
+ */
+fun readerPageFromWebtoonSection(
+    webtoonSectionIndex: Int,
+    totalPagedPages: Int
+): Int {
+    return webtoonSectionIndex.coerceIn(0, (totalPagedPages - 1).coerceAtLeast(0))
+}
+
 fun readerChromeRequiresOpaqueSurface(
     preset: ReadingPreset,
     isTextReader: Boolean
