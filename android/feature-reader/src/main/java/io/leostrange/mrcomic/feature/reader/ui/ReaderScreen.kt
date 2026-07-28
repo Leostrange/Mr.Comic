@@ -710,8 +710,10 @@ fun ReaderScreen(
         }
     }
 
+    // Reading area uses reader-specific MaterialTheme (background, text colors).
+    // Chrome overlays (top/bottom bars, sheets) use the inherited app MaterialTheme.
     MaterialTheme(colorScheme = readerColorScheme) {
-        Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         when {
             uiState.isLoading -> {
                 CircularProgressIndicator(
@@ -934,7 +936,7 @@ fun ReaderScreen(
                     }
                 }
 
-                // Р Р°СЃС‡РµС‚ С†РІРµС‚Р° РґР»СЏ РїР°РЅРµР»РµР№ (Р·Р°С‚РµРјРЅРµРЅРёРµ РјРµРЅСЋ)
+                // Chrome surface calculations
                 val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
                 val forceOpaqueChromeSurface = readerChromeRequiresOpaqueSurface(
                     preset = activeReaderPreset,
