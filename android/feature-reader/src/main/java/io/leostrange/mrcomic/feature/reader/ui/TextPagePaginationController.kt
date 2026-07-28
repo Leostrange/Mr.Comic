@@ -109,10 +109,14 @@ private suspend fun loadEngineSectionsFromHtmlPages(
 
 internal fun ReaderUiState.textPagePaginationKey(
     viewportWidthPx: Int,
-    viewportHeightPx: Int
+    viewportHeightPx: Int,
+    systemTopInsetPx: Int = 0,
+    systemBottomInsetPx: Int = 0
 ): String = listOf(
     viewportWidthPx,
     viewportHeightPx,
+    systemTopInsetPx,
+    systemBottomInsetPx,
     textFontSize,
     textLineHeight,
     textLetterSpacing,
@@ -123,10 +127,14 @@ internal fun ReaderUiState.textPagePaginationKey(
 
 internal fun ReaderUiState.toTextPaginationConstraints(
     viewportWidthPx: Int,
-    viewportHeightPx: Int
+    viewportHeightPx: Int,
+    systemTopInsetPx: Int = 0,
+    systemBottomInsetPx: Int = 0
 ): TextPaginationConstraints = TextPaginationConstraints(
     viewportWidthPx = viewportWidthPx.coerceAtLeast(320),
     viewportHeightPx = viewportHeightPx.coerceAtLeast(480),
+    contentTopInsetPx = systemTopInsetPx,
+    contentBottomInsetPx = systemBottomInsetPx,
     fontSizeSp = textFontSize,
     lineHeight = textLineHeight,
     letterSpacingEm = textLetterSpacing,
