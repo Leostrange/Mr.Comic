@@ -243,7 +243,7 @@ class ReaderViewModel @Inject constructor(
         loadPageTranslationNote = { loadPageTranslationNote(page = it) },
         saveProgress = { page, source -> saveProgress(page, source) },
         maybeEmitChapterMilestone = { page, source -> maybeEmitChapterMilestone(page, source) },
-        isProgressAlreadyPersisted = { comicId, page -> isProgressAlreadyPersisted(comicId, page) },
+        isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         scheduleHighQualityWarmup = { scheduleHighQualityWarmup(it) },
         applyHighQualityRetention = { applyHighQualityRetention(it) },
         activeComicSupportsBitmapPreload = { activeComicSupportsBitmapPreload() },
@@ -275,7 +275,7 @@ class ReaderViewModel @Inject constructor(
         normalizePageForMode = { page, mode, total -> ReaderNavigationPolicy.normalizePage(page, mode, total) },
         syncReaderPosition = { page, mode, persist -> navigationController.syncReaderPosition(page, mode, persist) },
         scheduleTextPagePaginationBuild = { scheduleTextPagePaginationBuild() },
-        isProgressAlreadyPersisted = { comicId, page -> isProgressAlreadyPersisted(comicId, page) },
+        isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
         activeComicSupportsBitmapPreload = { activeComicSupportsBitmapPreload() },
         markReaderPresetCustom = { settingsController.markReaderPresetCustom() }
@@ -363,7 +363,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Phase 1: Cancel all pending work and reset transient state. */
     private suspend fun resetForBookOpen(requestToken: Long) {
-        flushPendingProgressSave()
+        progressController.flushPendingProgressSave()
         progressController.progressSaveJob?.cancel()
         tocLoadJob?.cancel()
         deferredTocWarmupJob?.cancel()
@@ -1097,13 +1097,6 @@ class ReaderViewModel @Inject constructor(
     private fun activeComicSupportsHighResZoom(): Boolean =
         _uiState.value.comic?.format?.supportsHighResZoomTiers() == true
 
-    private fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
-        progressController.isProgressAlreadyPersisted(comicId, page)
-
-    private suspend fun flushPendingProgressSave() {
-        progressController.flushPendingProgressSave()
-    }
-
     override fun onCleared() {
         // Snapshot the pending IO work, then run it on an application-scoped coroutine so leaving
         // the reader never blocks the main thread. These paths (progress save, session close) only
@@ -1124,7 +1117,7 @@ class ReaderViewModel @Inject constructor(
         runCatching { formatReader?.close() }
         formatReader = null
         appScope.launch {
-            runCatching { flushPendingProgressSave() }
+            runCatching { progressController.flushPendingProgressSave() }
                 .onFailure { Log.e("ReaderViewModel", "Failed to flush progress on close", it) }
             runCatching { closeActiveBookSession() }
                 .onFailure { Log.w(TAG, "Failed to close book session on close", it) }
