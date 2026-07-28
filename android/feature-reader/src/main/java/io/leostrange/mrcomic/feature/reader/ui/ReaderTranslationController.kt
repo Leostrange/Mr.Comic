@@ -928,6 +928,39 @@ internal class ReaderTranslationController(
         }.joinToString("\n")
     }
 
+    // ── Selected text action handlers ─────────────────────────────────────
+
+    fun dismissSelectedTextActions() {
+        _uiState.update { it.copy(selectedTextActionSheet = null) }
+    }
+
+    fun translateFromSelectedTextActions() {
+        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
+        dismissSelectedTextActions()
+        translateSelectedText(selectedText, preferDictionary = false)
+    }
+
+    fun openDictionaryFromSelectedTextActions() {
+        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
+        dismissSelectedTextActions()
+        translateSelectedText(selectedText, preferDictionary = true)
+    }
+
+    fun explainFromSelectedTextActions() {
+        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
+        dismissSelectedTextActions()
+        explainSelectedText(selectedText)
+    }
+
+    fun explainSelectedTextDirect(selectedText: String) {
+        explainSelectedText(selectedText)
+    }
+
+    fun explainSelectedTextFromResult() {
+        val selectedText = _uiState.value.selectedTextTranslation?.originalText ?: return
+        explainSelectedText(selectedText)
+    }
+
     internal fun String.countSelectionTokens(): Int =
         SELECTION_TOKEN_REGEX.findAll(this).count().coerceAtLeast(if (isBlank()) 0 else 1)
 
