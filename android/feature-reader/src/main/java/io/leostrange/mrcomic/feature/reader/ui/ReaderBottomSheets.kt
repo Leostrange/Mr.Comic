@@ -258,10 +258,10 @@ internal fun ReaderBottomSheets(
     uiState.selectedTextActionSheet?.let { actionState ->
         SelectedTextActionSheet(
             state = actionState,
-            onDismiss = viewModel::dismissSelectedTextActions,
-            onTranslate = viewModel::translateFromSelectedTextActions,
-            onDictionary = viewModel::openDictionaryFromSelectedTextActions,
-            onExplain = viewModel::explainFromSelectedTextActions,
+            onDismiss = viewModel.translationController::dismissSelectedTextActions,
+            onTranslate = viewModel.translationController::translateFromSelectedTextActions,
+            onDictionary = viewModel.translationController::openDictionaryFromSelectedTextActions,
+            onExplain = viewModel.translationController::explainFromSelectedTextActions,
             onSaveQuote = { viewModel.saveQuoteController.saveQuoteFromSelectedTextActions() }
         )
     }
@@ -287,7 +287,7 @@ internal fun ReaderBottomSheets(
             onDismiss = { viewModel.translationController.dismissSelectedTextTranslation() },
             onDictionary = { viewModel.translationController.openDictionaryForSelectedText() },
             onTranslateAsPhrase = { viewModel.translationController.translateSelectedTextAsPhrase() },
-            onExplain = viewModel::explainSelectedTextFromResult,
+            onExplain = viewModel.translationController::explainSelectedTextFromResult,
             onTransportChange = { viewModel.translationController.translateSelectedTextWithTransport(it) },
             onCopy = { text ->
                 clipboardManager.setText(AnnotatedString(text))

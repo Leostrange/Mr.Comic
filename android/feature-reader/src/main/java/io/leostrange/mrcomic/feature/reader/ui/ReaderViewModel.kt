@@ -658,59 +658,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun showSelectedTextActions(selectedText: String) {
-        val normalizedText = selectedText
-            .trim()
-            .replace(Regex("\\s+"), " ")
-        if (normalizedText.isBlank()) return
-
-        viewModelScope.launch {
-            translationController.resolveTranslationSettings()
-            val canExplainSelection = true
-            _uiState.update {
-                it.copy(
-                    selectedTextActionSheet = SelectedTextActionSheetState(
-                        originalText = normalizedText,
-                        canUseDictionary = with(translationController) { normalizedText.countSelectionTokens() == 1 },
-                        canExplain = canExplainSelection
-                    ),
-                    selectedTextTranslation = null
-                )
-            }
-        }
-    }
-
-    fun dismissSelectedTextActions() {
-        _uiState.update { it.copy(selectedTextActionSheet = null) }
-    }
-
-    fun translateFromSelectedTextActions() {
-        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
-        dismissSelectedTextActions()
-        translationController.translateSelectedText(selectedText, preferDictionary = false)
-    }
-
-    fun openDictionaryFromSelectedTextActions() {
-        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
-        dismissSelectedTextActions()
-        translationController.translateSelectedText(selectedText, preferDictionary = true)
-    }
-
-    fun explainFromSelectedTextActions() {
-        val selectedText = _uiState.value.selectedTextActionSheet?.originalText ?: return
-        dismissSelectedTextActions()
-        translationController.explainSelectedText(selectedText)
-    }
-
-    fun explainSelectedTextDirect(selectedText: String) {
-        translationController.explainSelectedText(selectedText)
-    }
-
-    fun explainSelectedTextFromResult() {
-        val selectedText = _uiState.value.selectedTextTranslation?.originalText ?: return
-        translationController.explainSelectedText(selectedText)
-    }
-
     fun onCenterTap() = chromeController.onCenterTap()
 
     fun toggleChromeUi() = chromeController.toggleChromeUi()

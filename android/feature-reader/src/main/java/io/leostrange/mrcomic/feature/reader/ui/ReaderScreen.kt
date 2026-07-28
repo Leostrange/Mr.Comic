@@ -917,7 +917,7 @@ fun ReaderScreen(
                                         preferDictionary = true
                                     )
                                 },
-                                onExplainSelection = viewModel::explainSelectedTextDirect,
+                                onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
                                 onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
                                 onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
                                 onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
@@ -994,7 +994,7 @@ fun ReaderScreen(
                                             preferDictionary = true
                                         )
                                     },
-                                    onExplainSelection = viewModel::explainSelectedTextDirect,
+                                    onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
                                     onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
                                     onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
                                 onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
