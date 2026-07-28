@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 
 /**
@@ -189,11 +190,40 @@ internal fun readerMaterialColorScheme(
         }.copy(error = fallback.error, onError = fallback.onError)
     }
 
-    return baseScheme.copy(
+    val withAlpha = baseScheme.copy(
         surface = baseScheme.surface.copy(alpha = surfaceAlpha),
         surfaceVariant = baseScheme.surfaceVariant.copy(alpha = surfaceAlpha),
         surfaceContainer = baseScheme.surfaceContainer.copy(alpha = surfaceAlpha),
         surfaceContainerLow = baseScheme.surfaceContainerLow.copy(alpha = surfaceAlpha),
         surfaceContainerHigh = baseScheme.surfaceContainerHigh.copy(alpha = surfaceAlpha)
     )
+
+    // Contrast guards: ensure readable foreground colors against their backgrounds.
+    // WCAG AA requires ≥ 4.5:1 for normal text; we use 3:1 as a floor to avoid
+    // forcing pure black/white on borderline cases.
+    return withAlpha.copy(
+        onBackground = ensureContrast(withAlpha.onBackground, withAlpha.background),
+        onSurface = ensureContrast(withAlpha.onSurface, withAlpha.surface),
+        onSurfaceVariant = ensureContrast(withAlpha.onSurfaceVariant, withAlpha.surfaceVariant)
+    )
+}
+
+/**
+ * Returns [foreground] if it has sufficient contrast against [background];
+ * otherwise falls back to black or white, whichever has higher contrast.
+ */
+private fun ensureContrast(
+    foreground: Color,
+    background: Color,
+    minRatio: Float = 3f
+): Color {
+    val bgLum = background.luminance().coerceIn(0.001f, 0.999f)
+    val fgLum = foreground.luminance().coerceIn(0.001f, 0.999f)
+    val ratio = if (bgLum > fgLum) (bgLum + 0.05f) / (fgLum + 0.05f)
+                else (fgLum + 0.05f) / (bgLum + 0.05f)
+    if (ratio >= minRatio) return foreground
+    // Pick the higher-contrast fallback
+    val blackRatio = (bgLum + 0.05f) / (0.0f + 0.05f)
+    val whiteRatio = (1.0f + 0.05f) / (bgLum + 0.05f)
+    return if (blackRatio >= whiteRatio) Color.Black else Color.White
 }
