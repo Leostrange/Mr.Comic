@@ -633,94 +633,18 @@ fun ReaderScreen(
         }
     }
 
-    // РџСЂРёРјРµРЅСЏРµРј СЏСЂРєРѕСЃС‚СЊ СЌРєСЂР°РЅР° С‡РµСЂРµР· WindowManager
-    DisposableEffect(uiState.brightness, context) {
-        val activity = context as? Activity
-        val window = activity?.window
-        window?.attributes = window?.attributes?.apply {
-            screenBrightness = if (uiState.brightness >= 0f)
-                uiState.brightness.coerceIn(0.01f, 1f)
-            else
-                WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-        }
-        onDispose {
-            // Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј СЃРёСЃС‚РµРјРЅСѓСЋ СЏСЂРєРѕСЃС‚СЊ РїСЂРё Р·Р°РєСЂС‹С‚РёРё СЂРёРґРµСЂР°
-            window?.attributes = window?.attributes?.apply {
-                screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-            }
-        }
-    }
-
-    DisposableEffect(uiState.keepScreenOn, context) {
-        val window = (context as? Activity)?.window
-        if (uiState.keepScreenOn) {
-            window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        } else {
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-        onDispose {
-            // Р’СЃРµРіРґР° СЃРЅРёРјР°РµРј С„Р»Р°Рі РїСЂРё Р·Р°РєСЂС‹С‚РёРё СЂРёРґРµСЂР°, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ С‚РµРєСѓС‰РµРіРѕ Р·РЅР°С‡РµРЅРёСЏ.
-            window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        }
-    }
-
-
-    // Immersive / fullscreen mode вЂ” hides system bars while reading
-    DisposableEffect(uiState.immersiveMode, context) {
-        val window = (context as? Activity)?.window
-        if (uiState.immersiveMode) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.apply {
-                    hide(android.view.WindowInsets.Type.systemBars())
-                    systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                )
-            }
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.show(android.view.WindowInsets.Type.systemBars())
-            } else {
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            }
-        }
-        onDispose {
-            // Restore system bars when leaving the reader.
-            // Must reset systemBarsBehavior before showing bars; otherwise the
-            // BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE flag persists into the next
-            // screen (recent-apps panel, home screen) causing a UI flash.
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.apply {
-                    systemBarsBehavior = WindowInsetsController.BEHAVIOR_DEFAULT
-                    show(android.view.WindowInsets.Type.systemBars())
-                }
-            } else {
-                @Suppress("DEPRECATION")
-                window?.decorView?.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
-            }
-        }
-    }
+    // Screen brightness, keep-screen-on, and immersive mode
+    ReaderBrightnessEffect(brightness = uiState.brightness, context = context)
+    ReaderKeepScreenOnEffect(keepScreenOn = uiState.keepScreenOn, context = context)
+    ReaderImmersiveModeEffect(immersiveMode = uiState.immersiveMode, context = context)
 
     // Re-hide system bars after ModalBottomSheet dismisses in immersive mode.
-    // The sheet's scrim interaction can trigger transient system bar appearance;
-    // re-asserting the hidden state prevents bars from sticking visible.
-    LaunchedEffect(uiState.immersiveMode, uiState.showTocSheet, uiState.showTextSettings) {
-        if (uiState.immersiveMode && !uiState.showTocSheet && !uiState.showTextSettings) {
-            val window = (context as? Activity)?.window
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                window?.insetsController?.hide(android.view.WindowInsets.Type.systemBars())
-            }
-        }
-    }
+    ReaderImmersiveModeRehideEffect(
+        immersiveMode = uiState.immersiveMode,
+        showTocSheet = uiState.showTocSheet,
+        showTextSettings = uiState.showTextSettings,
+        context = context
+    )
 
     // Reading area uses reader-specific MaterialTheme (background, text colors).
     // Chrome overlays (top/bottom bars, sheets) use the inherited app MaterialTheme.
