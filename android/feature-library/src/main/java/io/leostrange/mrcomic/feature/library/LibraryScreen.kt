@@ -483,6 +483,15 @@ fun LibraryScreen(
         Box(
             modifier = Modifier.fillMaxSize()
         ) {
+            // Indeterminate linear progress when importing files into non-empty library
+            if (uiState.isLoading) {
+                androidx.compose.material3.LinearProgressIndicator(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .padding(top = padding.calculateTopPadding())
+                )
+            }
             LibraryBackground(
                 backgroundStyle = uiState.backgroundStyle,
                 backgroundImageUri = uiState.backgroundImageUri,
