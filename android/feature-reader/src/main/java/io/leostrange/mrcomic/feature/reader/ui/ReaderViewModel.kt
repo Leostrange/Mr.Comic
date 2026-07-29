@@ -22,8 +22,6 @@ import io.leostrange.mrcomic.engine.formats.base.FormatReaderDocumentSession
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.core.model.BookSource
-import io.leostrange.mrcomic.core.model.storedReaderLocator
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.supportsHighResZoomTiers
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
@@ -40,10 +38,8 @@ import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.LegacyFormatSessionAccess
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
 import io.leostrange.mrcomic.engine.api.BookSession
-import io.leostrange.mrcomic.engine.api.OpenBookRequest
 import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
 import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
@@ -176,15 +172,18 @@ class ReaderViewModel @Inject constructor(
         getPage = { index, quality -> pageLoader.getPage(index, quality) },
         formatReader = { formatReader }
     )
-    internal var formatReader: FormatReader? = null
-    private var activeBookSession: BookSession? = null
+    internal var formatReader: FormatReader?
+        get() = sessionManager.formatReader
+        set(value) { sessionManager.setFormatReader(value) }
+    private val activeBookSession: BookSession?
+        get() = sessionManager.activeBookSession
 
     /**
      * Returns the current reader as a [DocumentSession] (new API).
      * Falls back to wrapping [formatReader] via adapter if no native session exists.
      */
     private val documentSession: DocumentSession?
-        get() = activeBookSession as? DocumentSession
+        get() = sessionManager.activeBookSession as? DocumentSession
             ?: formatReader?.let { FormatReaderDocumentSession(
                 kind = DocumentKind.REFLOWABLE,
                 format = _uiState.value.comic?.format ?: ComicFormat.UNKNOWN,
@@ -196,6 +195,11 @@ class ReaderViewModel @Inject constructor(
     )
     private val textReaderOrchestrator = TextReaderOrchestrator(
         TextReaderController(textWebtoonSessionController)
+    )
+    private val sessionManager = ReaderBookSessionManager(
+        bookEngineRegistry = bookEngineRegistry,
+        formatFactory = formatFactory,
+        textReaderOrchestrator = textReaderOrchestrator
     )
 
     /**
@@ -409,7 +413,7 @@ class ReaderViewModel @Inject constructor(
         lastRetainedHighQualityPages = emptySet()
         pagePreloader.clearPages()
         clearHtmlPageCache()
-        closeReaderResources()
+        sessionManager.closeReaderResources()
     }
 
     /** Phase 2: Prepare the book via [ReaderBookPreparer]. Returns null on error. */
@@ -423,7 +427,7 @@ class ReaderViewModel @Inject constructor(
             context = context,
             comic = comic,
             sourcePath = sourcePath,
-            textFormatReaderOpener = ::openTextFormatReader,
+            textFormatReaderOpener = sessionManager::openTextFormatReader,
         )
         if (!openGuard.isCurrent(requestToken)) {
             prepared.reader?.close(); return null
@@ -832,58 +836,6 @@ class ReaderViewModel @Inject constructor(
         textReaderOrchestrator.controller.clearTextPagePagination()
     }
 
-    private suspend fun openTextFormatReader(
-        comic: Comic,
-        resolvedPath: String,
-        detectedFormat: ComicFormat
-    ): FormatReader? {
-        closeActiveBookSession()
-        return runCatching {
-            val engine = bookEngineRegistry.resolve(detectedFormat)
-                ?: return@runCatching null
-            val bookSource = if (resolvedPath.startsWith("content://")) {
-                BookSource.ContentUri(resolvedPath)
-            } else {
-                BookSource.FilePath(resolvedPath)
-            }
-            val session = engine.open(
-                OpenBookRequest(
-                    bookId = comic.id,
-                    format = detectedFormat,
-                    source = bookSource,
-                    initialLocator = comic.storedReaderLocator()
-                )
-            )
-            activeBookSession = session
-            when (session) {
-                is LegacyFormatSessionAccess -> session.loadLegacyReader()
-                else -> formatFactory.createReader(resolvedPath, detectedFormat)
-            }
-        }.getOrElse { error ->
-            Log.w(TAG, "BookEngine open failed for $detectedFormat; falling back to FormatFactory", error)
-            activeBookSession = null
-            formatFactory.createReader(resolvedPath, detectedFormat)
-        }
-    }
-
-    private suspend fun closeActiveBookSession() {
-        val session = activeBookSession ?: return
-        activeBookSession = null
-        textReaderOrchestrator.activeSession = null
-        runCatching {
-            bookEngineRegistry.resolve(session.format)?.close(session.sessionId)
-        }.onFailure { error ->
-            Log.w(TAG, "Failed to close BookEngine session ${session.sessionId}", error)
-        }
-    }
-
-    private fun closeReaderResources() {
-        textReaderOrchestrator.cancelWebtoonLoad()
-        runCatching { formatReader?.close() }
-        formatReader = null
-        viewModelScope.launch { closeActiveBookSession() }
-    }
-
     private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
         val previous = textReaderOrchestrator.controller.cachedHtmlPage(centerPage - 1)
         val next = textReaderOrchestrator.controller.cachedHtmlPage(centerPage + 1)
@@ -944,12 +896,11 @@ class ReaderViewModel @Inject constructor(
         textReaderOrchestrator.cancelAllJobs()
         progressController.progressSaveJob?.cancel()
         pageTranslationNoteJob?.cancel()
-        runCatching { formatReader?.close() }
-        formatReader = null
+        sessionManager.closeReaderResources()
         appScope.launch {
             runCatching { progressController.flushPendingProgressSave() }
                 .onFailure { Log.e("ReaderViewModel", "Failed to flush progress on close", it) }
-            runCatching { closeActiveBookSession() }
+            runCatching { sessionManager.closeBookSessionAsync() }
                 .onFailure { Log.w(TAG, "Failed to close book session on close", it) }
         }
         pagePreloader.cancelPreload()
