@@ -32,14 +32,12 @@ lint/
 **/__pycache__/
 *.pyc
 build-dictionary-work/
-Translate/backups/
-Translate/room_build_work/
 tmp_freedict/
 
-# === Local sample archives (too large for git) ===
-samples/translation_texts.zip
-samples/translation_texts/udhr_txt_20100325.tar.gz
-Translate/android_reader_dictionary_room_sample_updated_refresh.zip
+# === Removed modules and tooling ===
+/shared/
+/samples/
+/Translate/
 
 # === Local test books / docs ===
 6177.epub

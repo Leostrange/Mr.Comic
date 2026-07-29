@@ -37,4 +37,3 @@ include(":feature-reader");     project(":feature-reader").projectDir     = file
 include(":feature-settings");   project(":feature-settings").projectDir   = file("android/feature-settings")
 include(":feature-ocr");        project(":feature-ocr").projectDir        = file("android/feature-ocr")
 include(":feature-onboarding"); project(":feature-onboarding").projectDir = file("android/feature-onboarding")
-include(":shared");             project(":shared").projectDir             = file("shared")
