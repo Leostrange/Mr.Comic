@@ -277,7 +277,7 @@ class ReaderViewModel @Inject constructor(
         totalBookSections = { progressController.totalBookSections },
         normalizePageForMode = { page, mode, total -> ReaderNavigationPolicy.normalizePage(page, mode, total) },
         syncReaderPosition = { page, mode, persist -> navigationController.syncReaderPosition(page, mode, persist) },
-        scheduleTextPagePaginationBuild = { scheduleTextPagePaginationBuild() },
+        scheduleTextPagePaginationBuild = { textReaderOrchestrator.controller.clearTextPagePagination() },
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
@@ -301,35 +301,36 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun loadComicById(comicId: String) {
-        loadComicJob?.cancel()
-        val requestToken = openGuard.nextToken()
-        loadComicJob = viewModelScope.launch {
-            val comic = libraryRepository.getComicById(comicId)
-            if (!openGuard.isCurrent(requestToken)) return@launch
-            if (comic == null) {
-                val errorMessage = localizedReaderError(::readerComicNotFoundMessage)
-                _uiState.update { it.copy(error = errorMessage, isLoading = false) }
-                return@launch
-            }
-            openComic(comic, comic.path, requestToken)
-        }
-    }
+    private fun loadComicById(comicId: String) =
+        loadComicFromSource(
+            fetchComic = { libraryRepository.getComicById(comicId) },
+            sourcePath = { it.path },
+            errorProvider = ::readerComicNotFoundMessage
+        )
 
-    private fun loadComic(path: String) {
+    private fun loadComic(path: String) =
+        loadComicFromSource(
+            fetchComic = { libraryRepository.getComicByPath(path) ?: importRepository.addComic(Uri.parse(path)) },
+            sourcePath = { path },
+            errorProvider = ::readerComicLookupFailedMessage
+        )
+
+    private fun loadComicFromSource(
+        fetchComic: suspend () -> Comic?,
+        sourcePath: (Comic) -> String,
+        errorProvider: (String) -> String
+    ) {
         loadComicJob?.cancel()
         val requestToken = openGuard.nextToken()
         loadComicJob = viewModelScope.launch {
-            val comic = libraryRepository.getComicByPath(path) ?: run {
-                importRepository.addComic(Uri.parse(path))
-            }
-            if (!openGuard.isCurrent(requestToken)) return@launch
-            if (comic == null) {
-                val errorMessage = localizedReaderError(::readerComicLookupFailedMessage)
-                _uiState.update { it.copy(error = errorMessage, isLoading = false) }
+            val comic = fetchComic() ?: run {
+                if (openGuard.isCurrent(requestToken)) {
+                    val errorMessage = localizedReaderError(errorProvider)
+                    _uiState.update { it.copy(error = errorMessage, isLoading = false) }
+                }
                 return@launch
             }
-            openComic(comic, path, requestToken)
+            openComic(comic, sourcePath(comic), requestToken)
         }
     }
 
@@ -567,7 +568,7 @@ class ReaderViewModel @Inject constructor(
         if (config.readerRendersHtmlContent) {
             prewarmHtmlPagesAround(config.startPage, delayMillis = 180L)
             if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
-                scheduleTextPagePaginationBuild()
+                textReaderOrchestrator.controller.clearTextPagePagination()
             }
         }
     }
@@ -605,24 +606,13 @@ class ReaderViewModel @Inject constructor(
         progressController.maybeEmitChapterMilestone(page, progressSource, navigationController::currentChapterFor)
     }
 
-    private suspend fun localizedReaderError(messageProvider: (String) -> String): String {
-        val languageCode = normalizeAppLanguageCode(
-            readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
-        )
-        return messageProvider(languageCode)
-    }
+    private suspend fun readerLanguageCode(): String =
+        normalizeAppLanguageCode(readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first())
 
-    private suspend fun currentReaderUiLanguage(): String =
-        normalizeAppLanguageCode(
-            readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
-        )
+    private suspend fun localizedReaderError(messageProvider: (String) -> String): String =
+        messageProvider(readerLanguageCode())
 
-    private suspend fun localizedReaderText(): ReaderUiText {
-        val languageCode = normalizeAppLanguageCode(
-            readerPreferences.get(PreferencesKeys.APP_LANGUAGE, "ru").first()
-        )
-        return readerUiText(languageCode)
-    }
+    private suspend fun localizedReaderText(): ReaderUiText = readerUiText(readerLanguageCode())
 
     private fun scheduleHighQualityWarmup(page: Int) {
         if (!(_uiState.value.comic?.format?.supportsHighResZoomTiers() == true)) return
@@ -783,7 +773,7 @@ class ReaderViewModel @Inject constructor(
                 if (_uiState.value.readerRendersHtmlContent) {
                     prewarmHtmlPagesAround(normalizedStartPage, delayMillis = 0L)
                     if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
-                        scheduleTextPagePaginationBuild()
+                        textReaderOrchestrator.controller.clearTextPagePagination()
                     }
                 }
                 bookmarkController.loadBookmarks(comic.id, realPages)
@@ -827,14 +817,6 @@ class ReaderViewModel @Inject constructor(
             controller = textReaderOrchestrator.controller,
             enginePageIndex = enginePageIndex
         )
-
-    private fun scheduleTextPagePaginationBuild() {
-        // All text formats now use WebView JS viewport pagination (pixel-precise
-        // TreeWalker + getClientRects()). The Kotlin char-split paginator is retired;
-        // clear any stale snapshot so isTextPagePaginationReady() stays false and
-        // loadHtmlPage() always returns the full section HTML for the WebView to paginate.
-        textReaderOrchestrator.controller.clearTextPagePagination()
-    }
 
     private fun refreshAdjacentHtmlPages(centerPage: Int = _uiState.value.currentPage) {
         val previous = textReaderOrchestrator.controller.cachedHtmlPage(centerPage - 1)
