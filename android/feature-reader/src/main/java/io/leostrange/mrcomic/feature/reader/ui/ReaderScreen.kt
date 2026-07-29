@@ -11,15 +11,11 @@ import android.view.Menu
 import android.view.View
 import android.view.WindowInsetsController
 import android.view.WindowManager
-import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import androidx.compose.foundation.background
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -39,9 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -50,7 +43,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -912,221 +904,57 @@ fun ReaderScreen(
                     )
                 }
 
-                if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .onGloballyPositioned { measuredHeaderOverlayPx = it.size.height },
-                        shape = RoundedCornerShape(0.dp),
-                        color = overlaySurface
-                    ) {
-                        ReaderHeaderFooterTextRow(
-                            line = headerOverlayLine,
-                            fontSizeSp = uiState.headerFooterFontSize,
-                            leftPaddingDp = uiState.headerFooterLeftPadding,
-                            rightPaddingDp = uiState.headerFooterRightPadding,
-                            verticalPaddingDp = uiState.headerFooterVerticalPadding,
-                            textColor = overlayTextStyle.textColor,
-                            textShadow = overlayTextStyle.textShadow,
-                            modifier = Modifier
-                                .statusBarsPadding()
-                                .displayCutoutPadding()
-                        )
-                    }
-                }
-
-                // РќРёР¶РЅСЏСЏ РѕР±Р»Р°СЃС‚СЊ: РРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹Рµ РїР°РЅРµР»Рё (Р·Р°РјРµС‚РєРё, СЃРЅРѕСЃРєРё) Рё РўСѓР»Р±Р°СЂ
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .onGloballyPositioned { measuredBottomChromePx = it.size.height }
-                ) {
-                    // Р¤РѕРЅРѕРІС‹Р№ СЃР»РѕР№ СЃ СЂР°Р·РјС‹С‚РёРµРј вЂ” РЅРµ Р·Р°С‚СЂР°РіРёРІР°РµС‚ РєРѕРЅС‚РµРЅС‚ (РёРєРѕРЅРєРё/С‚РµРєСЃС‚)
-                    if (uiState.chromeState == ReaderChromeState.EXPANDED) {
-                        Spacer(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .then(
-                                    if (effectiveToolbarBlur > 0.01f)
-                                        Modifier.blur(
-                                            radius = (effectiveToolbarBlur * 8f).dp,
-                                            edgeTreatment = BlurredEdgeTreatment.Unbounded
-                                        )
-                                    else Modifier
-                                )
-                                .background(chromeSurface)
-                        )
-                    }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (uiState.chromeState == ReaderChromeState.EXPANDED) {
-                                Modifier.navigationBarsPadding()
-                            } else {
-                                Modifier
-                            }
-                        ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    uiState.pageTranslationNote?.let { note ->
-                        SavedPageNoteCard(
-                            note = note,
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
-                    }
-
-                    uiState.footnotePopup?.let { popup ->
-                        ReaderNotePanel(
-                            text = popup.text,
-                            colorScheme = uiState.textColorScheme,
-                            expanded = uiState.footnotePresentation == FootnotePresentation.EXPANDED,
-                            onDismiss = { viewModel.footnoteController.dismissFootnote() },
-                            onExpand = { viewModel.footnoteController.expandFootnote() },
-                            onCollapse = { viewModel.footnoteController.collapseFootnote() },
-                            chromeReservedDp = if (uiState.chromeState == ReaderChromeState.HIDDEN) 0 else 64,
-                            modifier = Modifier
-                                .padding(horizontal = if (uiState.chromeState == ReaderChromeState.HIDDEN) 12.dp else 0.dp)
-                                .then(
-                                    if (uiState.chromeState == ReaderChromeState.HIDDEN) {
-                                        Modifier.navigationBarsPadding()
-                                    } else {
-                                        Modifier
-                                    }
-                                ),
-                            palette = { scheme -> colorSchemePaletteForPreset(scheme, activeReaderPreset) }
-                        )
-                    }
-
-                    // РќРёР¶РЅСЏСЏ РїР°РЅРµР»СЊ РїСЂРѕРіСЂРµСЃСЃР°/СѓРїСЂР°РІР»РµРЅРёСЏ - СЃРєСЂС‹РІР°РµРј, РµСЃР»Рё РѕС‚РєСЂС‹С‚С‹ РЅР°СЃС‚СЂРѕР№РєРё РёР»Рё РѕРіР»Р°РІР»РµРЅРёРµ
-                    if (
-                        uiState.chromeState != ReaderChromeState.HIDDEN &&
-                        !uiState.showTextSettings &&
-                        !uiState.showTocSheet &&
-                        uiState.footnotePresentation != FootnotePresentation.EXPANDED
-                    ) {
-                        when (uiState.chromeState) {
-                            ReaderChromeState.EXPANDED -> ReaderExpandedBottomPanel(
-                                uiState = uiState,
-                                isLandscape = supportsLandscapeSpread,
-                                onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
-                                onApplyPreset = viewModel.settingsController::applyReadingPreset,
-                                onReadingModeChange = viewModel.readingModeController::setReadingMode,
-                                onPageChange = { viewModel.navigationController.navigateTo(it) }
-                            )
-
-                            else -> Unit
-                        }
-                    } else if (uiState.chromeState == ReaderChromeState.HIDDEN) {
-                        if (showHeaderFooterOverlay && footerOverlayLine.hasVisibleContent) {
-                            Surface(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .onGloballyPositioned { measuredFooterOverlayPx = it.size.height },
-                                shape = RoundedCornerShape(0.dp),
-                                color = overlaySurface
-                            ) {
-                                ReaderHeaderFooterTextRow(
-                                    line = footerOverlayLine,
-                                    fontSizeSp = uiState.headerFooterFontSize,
-                                    leftPaddingDp = uiState.headerFooterLeftPadding,
-                                    rightPaddingDp = uiState.headerFooterRightPadding,
-                                    verticalPaddingDp = uiState.headerFooterVerticalPadding,
-                                    textColor = overlayTextStyle.textColor,
-                                    textShadow = overlayTextStyle.textShadow,
-                                    modifier = Modifier.navigationBarsPadding()
-                                )
-                            }
+                ReaderTopChromeBar(
+                    uiState = uiState,
+                    chromeSurface = chromeSurface,
+                    effectiveToolbarBlur = effectiveToolbarBlur,
+                    overlaySurface = overlaySurface,
+                    overlayTextStyle = overlayTextStyle,
+                    activeReaderPreset = activeReaderPreset,
+                    isTextReader = isTextReader,
+                    directionShortcutActive = directionShortcutActive,
+                    showBrightnessRow = showBrightnessRow,
+                    showHeaderFooterOverlay = showHeaderFooterOverlay,
+                    headerOverlayLine = headerOverlayLine,
+                    onHeaderMeasured = { measuredHeaderOverlayPx = it },
+                    onTopMeasured = { measuredTopChromePx = it },
+                    onNavigateBack = onNavigateBack,
+                    onToggleToc = { viewModel.toggleTocSheet() },
+                    onToggleTextSettings = { viewModel.chromeController.toggleTextSettings() },
+                    onSwapDirection = { viewModel.settingsController.toggleTapZoneDirectionShortcut() },
+                    onRequestOcr = {
+                        if (isTextReader) {
+                            showTextTranslationPageSheet = true
                         } else {
-                            Spacer(Modifier.navigationBarsPadding())
+                            viewModel.ocrController.requestOcr()
                         }
-                    }
-                }
-                } // Box (РЅРёР¶РЅСЏСЏ РѕР±Р»Р°СЃС‚СЊ)
+                    },
+                    onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
+                    onToggleTtsControls = { showReaderAudioSheet = true },
+                    onAutoScrollToggle = { viewModel.settingsController.cycleAutoScrollSpeed() },
+                    onBrightnessChange = { viewModel.settingsController.setBrightness(it) }
+                )
 
-                // Р’РµСЂС…РЅРёРµ РёРЅСЃС‚СЂСѓРјРµРЅС‚С‹ - СЃРєСЂС‹РІР°РµРј, РµСЃР»Рё РѕС‚РєСЂС‹С‚С‹ РЅР°СЃС‚СЂРѕР№РєРё РёР»Рё РѕРіР»Р°РІР»РµРЅРёРµ
-                if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .onGloballyPositioned { measuredTopChromePx = it.size.height }
-                    ) {
-                        // Р¤РѕРЅРѕРІС‹Р№ СЃР»РѕР№ СЃ СЂР°Р·РјС‹С‚РёРµРј вЂ” РёРєРѕРЅРєРё Рё С‚РµРєСЃС‚ РѕСЃС‚Р°СЋС‚СЃСЏ С‡С‘С‚РєРёРјРё
-                        Spacer(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .then(
-                                    if (effectiveToolbarBlur > 0.01f)
-                                        Modifier.blur(
-                                            radius = (effectiveToolbarBlur * 8f).dp,
-                                            edgeTreatment = BlurredEdgeTreatment.Unbounded
-                                        )
-                                    else Modifier
-                                )
-                                .background(chromeSurface)
-                        )
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .displayCutoutPadding()
-                        ) {
-                        when (uiState.chromeState) {
-                            ReaderChromeState.EXPANDED -> {
-                                ReaderExpandedBar(
-                                    title = uiState.comic?.title.orEmpty(),
-                                    canShowToc = uiState.tableOfContents.isNotEmpty() || uiState.bookmarkedPages.isNotEmpty(),
-                                    showTextSettings = true,
-                                    showOcrAction = true,
-                                    canSwapDirection = uiState.readingMode == ReadingMode.PAGE_LTR ||
-                                        uiState.readingMode == ReadingMode.PAGE_RTL,
-                                    directionShortcutActive = directionShortcutActive,
-                                    showBrightnessRow = showBrightnessRow,
-                                    useDirectActions = isTextReader,
-                                    chromeIconOrder = uiState.chromeIconOrder,
-                                    // Raster containers: hide TOC and AUDIO icons —
-                                    // they have no meaning for image-only formats.
-                                    showTocIcon = uiState.chromeShowTocIcon && isTextReader,
-                                    showTextSettingsIcon = uiState.chromeShowStyleIcon,
-                                    showAudioIcon = uiState.chromeShowAudioIcon && isTextReader,
-                                    showDirectionIcon = uiState.chromeShowDirectionIcon,
-                                    showTranslateIcon = uiState.chromeShowTranslateIcon,
-                                    showBrightnessIcon = uiState.chromeShowBrightnessIcon,
-                                    showAutoScrollIcon = true,
-                                    autoScrollActive = uiState.autoScrollSpeed > 0f,
-                                    onNavigateBack = onNavigateBack,
-                                    onToggleToc = viewModel::toggleTocSheet,
-                                    onToggleTextSettings = { viewModel.chromeController.toggleTextSettings() },
-                                    onSwapDirection = viewModel.settingsController::toggleTapZoneDirectionShortcut,
-                                    onRequestOcr = {
-                                        if (isTextReader) {
-                                            showTextTranslationPageSheet = true
-                                        } else {
-                                            viewModel.ocrController.requestOcr()
-                                        }
-                                    },
-                                    onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
-                                    onToggleTtsControls = {
-                                        showReaderAudioSheet = true
-                                    },
-                                    onAutoScrollToggle = { viewModel.settingsController.cycleAutoScrollSpeed() }
-                                )
-                                if (showBrightnessRow) {
-                                    ReaderBrightnessRow(
-                                        brightness = uiState.brightness,
-                                        onBrightnessChange = viewModel.settingsController::setBrightness
-                                    )
-                                }
-                            }
-
-                            else -> Unit
-                        }
-                        }
-                    }
-                }
+                ReaderBottomChromePanel(
+                    uiState = uiState,
+                    chromeSurface = chromeSurface,
+                    overlaySurface = overlaySurface,
+                    effectiveToolbarBlur = effectiveToolbarBlur,
+                    overlayTextStyle = overlayTextStyle,
+                    activeReaderPreset = activeReaderPreset,
+                    supportsLandscapeSpread = supportsLandscapeSpread,
+                    showHeaderFooterOverlay = showHeaderFooterOverlay,
+                    footerOverlayLine = footerOverlayLine,
+                    onBottomMeasured = { measuredBottomChromePx = it },
+                    onFooterMeasured = { measuredFooterOverlayPx = it },
+                    onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
+                    onApplyPreset = { viewModel.settingsController.applyReadingPreset(it) },
+                    onReadingModeChange = { viewModel.readingModeController.setReadingMode(it) },
+                    onPageChange = { viewModel.navigationController.navigateTo(it) },
+                    onDismissFootnote = { viewModel.footnoteController.dismissFootnote() },
+                    onExpandFootnote = { viewModel.footnoteController.expandFootnote() },
+                    onCollapseFootnote = { viewModel.footnoteController.collapseFootnote() }
+                )
             }
         }
     }
