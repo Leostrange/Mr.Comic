@@ -16,14 +16,10 @@ import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
-import io.leostrange.mrcomic.engine.formats.base.DocumentKind
-import io.leostrange.mrcomic.engine.formats.base.DocumentSession
-import io.leostrange.mrcomic.engine.formats.base.FormatReaderDocumentSession
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.supportsHighResZoomTiers
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.LanguageDetector
 import io.leostrange.mrcomic.core.domain.translation.LlmExplainEngine
@@ -38,7 +34,6 @@ import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
 import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
@@ -48,10 +43,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 
@@ -178,17 +171,6 @@ class ReaderViewModel @Inject constructor(
     private val activeBookSession: BookSession?
         get() = sessionManager.activeBookSession
 
-    /**
-     * Returns the current reader as a [DocumentSession] (new API).
-     * Falls back to wrapping [formatReader] via adapter if no native session exists.
-     */
-    private val documentSession: DocumentSession?
-        get() = sessionManager.activeBookSession as? DocumentSession
-            ?: formatReader?.let { FormatReaderDocumentSession(
-                kind = DocumentKind.REFLOWABLE,
-                format = _uiState.value.comic?.format ?: ComicFormat.UNKNOWN,
-                reader = it
-            ) }
     private val textWebtoonSessionController = TextWebtoonSessionController(
         scope = viewModelScope,
         builder = TextWebtoonDocumentBuilder
@@ -224,10 +206,14 @@ class ReaderViewModel @Inject constructor(
         _webtoonHtmlCache.map { it[index] }.distinctUntilChanged()
     private var loadComicJob: Job? = null
     private var tocLoadJob: Job? = null
-    private var deferredTocWarmupJob: Job? = null
-    private var deferredPageCountJob: Job? = null
-    private var highQualityWarmupJob: Job? = null
-    private var pageTranslationNoteJob: Job? = null
+    private val warmupController = ReaderWarmupController(
+        scope = viewModelScope,
+        pagePreloader = pagePreloader
+    )
+    private val deferredTasks = ReaderDeferredTasks(
+        scope = viewModelScope,
+        readerPreferences = readerPreferences
+    )
     private val readerSessionCoordinator = ReaderSessionCoordinator()
     internal val navigationController = ReaderNavigationController(
         _uiState = _uiState,
@@ -238,17 +224,12 @@ class ReaderViewModel @Inject constructor(
         formatReader = { formatReader },
         loadPage = { pageLoader.loadPage(it) },
         prewarmHtmlPagesAround = { prewarmHtmlPagesAround(it) },
-        loadPageTranslationNote = { loadPageTranslationNote(page = it) },
+        loadPageTranslationNote = { schedulePageTranslationNote(it) },
         saveProgress = { page, source -> progressController.saveProgress(page, source) },
         maybeEmitChapterMilestone = { page, source -> maybeEmitChapterMilestone(page, source) },
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         scheduleHighQualityWarmup = { scheduleHighQualityWarmup(it) },
-        applyHighQualityRetention = { indices ->
-            if (indices != lastRetainedHighQualityPages) {
-                pagePreloader.retainHighQualityPages(indices)
-                lastRetainedHighQualityPages = indices
-            }
-        },
+        applyHighQualityRetention = { warmupController.applyRetention(it) },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
         playPageSound = {
             if (_uiState.value.pageSoundEnabled) {
@@ -284,7 +265,6 @@ class ReaderViewModel @Inject constructor(
         markReaderPresetCustom = { settingsController.markReaderPresetCustom() },
         getLastTextWebtoonSection = { navigationController.lastTextWebtoonVisibleSection }
     )
-    private var lastRetainedHighQualityPages: Set<Int> = emptySet()
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
 
     private val encodedUri: String? = savedStateHandle["uri"]
@@ -295,25 +275,25 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             restoreReaderPreferences()
             when {
-                !encodedComicId.isNullOrBlank() -> loadComicById(Uri.decode(encodedComicId))
-                !encodedUri.isNullOrBlank() -> loadComic(Uri.decode(encodedUri))
+                !encodedComicId.isNullOrBlank() -> {
+                    val id = Uri.decode(encodedComicId)
+                    loadComicFromSource(
+                        fetchComic = { libraryRepository.getComicById(id) },
+                        sourcePath = { it.path },
+                        errorProvider = ::readerComicNotFoundMessage
+                    )
+                }
+                !encodedUri.isNullOrBlank() -> {
+                    val path = Uri.decode(encodedUri)
+                    loadComicFromSource(
+                        fetchComic = { libraryRepository.getComicByPath(path) ?: importRepository.addComic(Uri.parse(path)) },
+                        sourcePath = { path },
+                        errorProvider = ::readerComicLookupFailedMessage
+                    )
+                }
             }
         }
     }
-
-    private fun loadComicById(comicId: String) =
-        loadComicFromSource(
-            fetchComic = { libraryRepository.getComicById(comicId) },
-            sourcePath = { it.path },
-            errorProvider = ::readerComicNotFoundMessage
-        )
-
-    private fun loadComic(path: String) =
-        loadComicFromSource(
-            fetchComic = { libraryRepository.getComicByPath(path) ?: importRepository.addComic(Uri.parse(path)) },
-            sourcePath = { path },
-            errorProvider = ::readerComicLookupFailedMessage
-        )
 
     private fun loadComicFromSource(
         fetchComic: suspend () -> Comic?,
@@ -370,8 +350,8 @@ class ReaderViewModel @Inject constructor(
             if (!openGuard.isCurrent(requestToken)) return
             Log.e("ReaderViewModel", "Failed to open comic", e)
             eyeRestController.cancel()
-            highQualityWarmupJob?.cancel()
-            deferredPageCountJob?.cancel()
+            warmupController.cancel()
+            deferredTasks.cancelAll()
             val errorMessage = localizedReaderError(::readerOpenFailedMessage)
             _uiState.update { it.copy(error = errorMessage, isLoading = false) }
         }
@@ -382,8 +362,7 @@ class ReaderViewModel @Inject constructor(
         progressController.flushPendingProgressSave()
         progressController.progressSaveJob?.cancel()
         tocLoadJob?.cancel()
-        deferredTocWarmupJob?.cancel()
-        deferredPageCountJob?.cancel()
+        deferredTasks.cancelAll()
         if (!openGuard.isCurrent(requestToken)) return
         _uiState.update {
             it.copy(
@@ -408,10 +387,9 @@ class ReaderViewModel @Inject constructor(
             )
         }
         eyeRestController.cancel()
-        highQualityWarmupJob?.cancel()
+        warmupController.cancel()
         textReaderOrchestrator.cancelAllJobsAndJoin()
         if (!openGuard.isCurrent(requestToken)) return
-        lastRetainedHighQualityPages = emptySet()
         pagePreloader.clearPages()
         clearHtmlPageCache()
         sessionManager.closeReaderResources()
@@ -582,28 +560,83 @@ class ReaderViewModel @Inject constructor(
         requestToken: Long
     ) {
         if (config.shouldDeferCount) {
-            scheduleDeferredPageCountResolution(
+            deferredTasks.scheduleDeferredPageCountResolution(
                 comic = comic,
                 reader = activeReader,
                 requestToken = requestToken,
                 openingMode = config.openingMode,
                 requestedStartPage = config.requestedStartPage,
-                initialPages = config.initialPages
+                initialPages = config.initialPages,
+                openGuard = openGuard,
+                isReaderCurrent = { formatReader === activeReader },
+                currentTotalPages = { _uiState.value.totalPages },
+                onResolved = { realPages, normalizedStartPage, resolvedComic ->
+                    applyDeferredPageCount(realPages, normalizedStartPage, resolvedComic, activeReader, config.openingMode)
+                }
             )
         }
     }
 
+    /** Applies the resolved deferred page count to UI state and triggers follow-up work. */
+    private suspend fun applyDeferredPageCount(
+        realPages: Int,
+        normalizedStartPage: Int,
+        comic: Comic,
+        reader: FormatReader,
+        openingMode: ReadingMode
+    ) {
+        progressController.totalBookSections = realPages.coerceAtLeast(1)
+        _uiState.update { it.copy(totalPages = realPages, currentPage = normalizedStartPage) }
+        readerSessionCoordinator.updateTotalPages(realPages)
+        val visiblePages = navigationController.visiblePagesFor(normalizedStartPage, openingMode)
+        reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->
+            pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)
+        }
+        visiblePages.forEach { pageLoader.loadPage(it) }
+        if (_uiState.value.readerRendersHtmlContent) {
+            prewarmHtmlPagesAround(normalizedStartPage, delayMillis = 0L)
+            if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
+                textReaderOrchestrator.controller.clearTextPagePagination()
+            }
+        }
+        bookmarkController.loadBookmarks(comic.id, realPages)
+    }
+
     /** Phase 7: Schedule post-open tasks (warmup, TOC, bookmarks, etc.). */
     private fun schedulePostOpenTasks(comic: Comic, startPage: Int, initialPages: Int) {
-        scheduleHighQualityWarmup(startPage)
-        scheduleDeferredTocWarmup()
+        warmupController.scheduleWarmup(
+            page = startPage,
+            renderTier = renderProfile.tier,
+            getFormatReader = { formatReader },
+            supportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
+            getComicId = { _uiState.value.comic?.id },
+            getReadingMode = { _uiState.value.readingMode },
+            getCurrentPage = { _uiState.value.currentPage },
+            visiblePagesFor = { p, mode -> navigationController.visiblePagesFor(p, mode) }
+        )
+        deferredTasks.scheduleDeferredTocWarmup(
+            getFormatReader = { formatReader },
+            isTocEmpty = { _uiState.value.tableOfContents.isEmpty() },
+            loadToc = { loadToc(force = false) }
+        )
         bookmarkController.loadBookmarks(comic.id, initialPages)
-        loadPageTranslationNote(comic.id, startPage)
+        schedulePageTranslationNote(startPage)
         eyeRestController.restartEyeRestTimer()
     }
 
     private fun maybeEmitChapterMilestone(page: Int, progressSource: ReaderNavigationProgressSource) {
         progressController.maybeEmitChapterMilestone(page, progressSource, navigationController::currentChapterFor)
+    }
+
+    private fun schedulePageTranslationNote(page: Int) {
+        deferredTasks.loadPageTranslationNote(
+            comicId = _uiState.value.comic?.id,
+            page = page,
+            currentComicId = { _uiState.value.comic?.id },
+            currentPage = { _uiState.value.currentPage },
+            onLoaded = { note -> _uiState.update { it.copy(pageTranslationNote = note) } },
+            clearNote = { _uiState.update { it.copy(pageTranslationNote = null) } }
+        )
     }
 
     private suspend fun readerLanguageCode(): String =
@@ -614,32 +647,18 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun localizedReaderText(): ReaderUiText = readerUiText(readerLanguageCode())
 
+    /** Helper to avoid circular reference in navigationController constructor. */
     private fun scheduleHighQualityWarmup(page: Int) {
-        if (!(_uiState.value.comic?.format?.supportsHighResZoomTiers() == true)) return
-        val warmupTier = when (renderProfile.tier) {
-            RenderDeviceTier.HIGH_END -> 3
-            RenderDeviceTier.MID_RANGE -> 2
-            else -> null
-        } ?: return
-
-        val reader = formatReader ?: return
-        val comicId = _uiState.value.comic?.id ?: return
-        val readingMode = _uiState.value.readingMode
-        val targetPages = navigationController.visiblePagesFor(page, readingMode)
-
-        highQualityWarmupJob?.cancel()
-        highQualityWarmupJob = viewModelScope.launch {
-            delay(180)
-            if (formatReader !== reader) return@launch
-            if (_uiState.value.comic?.id != comicId) return@launch
-            if (_uiState.value.readingMode != readingMode) return@launch
-            if (navigationController.visiblePagesFor(_uiState.value.currentPage, _uiState.value.readingMode) != targetPages) return@launch
-            targetPages.forEach { targetPage ->
-                if (pagePreloader.getPage(targetPage, warmupTier) == null) {
-                    pagePreloader.loadPage(reader, targetPage, warmupTier)
-                }
-            }
-        }
+        warmupController.scheduleWarmup(
+            page = page,
+            renderTier = renderProfile.tier,
+            getFormatReader = { formatReader },
+            supportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
+            getComicId = { _uiState.value.comic?.id },
+            getReadingMode = { _uiState.value.readingMode },
+            getCurrentPage = { _uiState.value.currentPage },
+            visiblePagesFor = { p, mode -> navigationController.visiblePagesFor(p, mode) }
+        )
     }
 
     /** Opens/closes the table-of-contents bottom sheet. */
@@ -672,112 +691,6 @@ class ReaderViewModel @Inject constructor(
                 epubAccumulatedTotalPages = progress.accumulatedTotalPages,
                 epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
             )
-        }
-    }
-
-    private fun loadPageTranslationNote(
-        comicId: String? = _uiState.value.comic?.id,
-        page: Int = _uiState.value.currentPage
-    ) {
-        val resolvedComicId = comicId ?: return
-        pageTranslationNoteJob?.cancel()
-        _uiState.update { it.copy(pageTranslationNote = null) }
-        pageTranslationNoteJob = viewModelScope.launch {
-            val note = readerPreferences.get(PreferencesKeys.translationNote(resolvedComicId, page), "").first()
-            if (_uiState.value.comic?.id != resolvedComicId || _uiState.value.currentPage != page) return@launch
-            _uiState.update { it.copy(pageTranslationNote = note.ifBlank { null }) }
-        }
-    }
-
-    private fun scheduleDeferredTocWarmup(delayMillis: Long = 450L) {
-        val reader = formatReader ?: return
-        deferredTocWarmupJob?.cancel()
-        deferredTocWarmupJob = viewModelScope.launch {
-            delay(delayMillis)
-            if (formatReader !== reader) return@launch
-            if (_uiState.value.tableOfContents.isNotEmpty()) return@launch
-            loadToc(force = false)
-        }
-    }
-
-    private fun scheduleDeferredPageCountResolution(
-        comic: Comic,
-        reader: FormatReader,
-        requestToken: Long,
-        openingMode: ReadingMode,
-        requestedStartPage: Int,
-        initialPages: Int
-    ) {
-        deferredPageCountJob?.cancel()
-        deferredPageCountJob = viewModelScope.launch(Dispatchers.IO) {
-            // loadPage() publishes the first HTML section asynchronously. EPUB readers
-            // serialize section access, so starting a whole-book count immediately can
-            // take that lock first and leave the reader blank for the entire count.
-            delay(DEFERRED_PAGE_COUNT_START_DELAY_MILLIS)
-            val retryResult = resolveDeferredPageCountWithRetries(
-                provisionalPages = initialPages,
-                maxRetries = DEFERRED_PAGE_COUNT_MAX_RETRIES,
-                retryDelayMillis = DEFERRED_PAGE_COUNT_RETRY_DELAY_MILLIS,
-                pageCount = reader::getPageCount
-            )
-            val realPages = when (val resolution = retryResult.resolution) {
-                is DeferredPageCountResolution.Resolved -> resolution.totalPages
-                is DeferredPageCountResolution.RetryRequired -> {
-                    Log.w(
-                        "ReaderVM",
-                        "Deferred page count failed after ${retryResult.attempts} attempts; " +
-                            "keeping provisional=${resolution.provisionalPages}, " +
-                            "format=${_uiState.value.comic?.format}",
-                        retryResult.lastFailure
-                    )
-                    return@launch
-                }
-            }
-            Log.d("ReaderVM", "scheduleDeferredPageCountResolution: initial=$initialPages, real=$realPages, format=${_uiState.value.comic?.format}")
-            if (!openGuard.isCurrent(requestToken)) return@launch
-            if (formatReader !== reader) return@launch
-            if (realPages <= 0) return@launch
-            if (realPages == initialPages) {
-                Log.d("ReaderVM", "realPages == initialPages ($realPages), skipping update")
-                return@launch
-            }
-            val normalizedStartPage = deferredResolvedStartPage(
-                requestedPage = requestedStartPage,
-                mode = openingMode,
-                resolvedTotalPages = realPages
-            )
-            withContext(Dispatchers.Main) {
-                if (!shouldApplyDeferredPageCount(
-                        openRequestCurrent = openGuard.isCurrent(requestToken),
-                        readerCurrent = formatReader === reader,
-                        currentTotalPages = _uiState.value.totalPages,
-                        provisionalPages = initialPages,
-                        resolvedTotalPages = realPages
-                    )
-                ) return@withContext
-                progressController.totalBookSections = realPages.coerceAtLeast(1)
-                _uiState.update {
-                    it.copy(
-                        totalPages = realPages,
-                        currentPage = normalizedStartPage
-                    )
-                }
-                readerSessionCoordinator.updateTotalPages(realPages)
-                val visiblePages = navigationController.visiblePagesFor(normalizedStartPage, openingMode)
-                reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->
-                    pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)
-                }
-                visiblePages.forEach { visiblePage ->
-                    pageLoader.loadPage(visiblePage)
-                }
-                if (_uiState.value.readerRendersHtmlContent) {
-                    prewarmHtmlPagesAround(normalizedStartPage, delayMillis = 0L)
-                    if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
-                        textReaderOrchestrator.controller.clearTextPagePagination()
-                    }
-                }
-                bookmarkController.loadBookmarks(comic.id, realPages)
-            }
         }
     }
 
@@ -872,12 +785,11 @@ class ReaderViewModel @Inject constructor(
         super.onCleared()
         loadComicJob?.cancel()
         tocLoadJob?.cancel()
-        deferredTocWarmupJob?.cancel()
+        deferredTasks.cancelAll()
         eyeRestController.cancel()
-        highQualityWarmupJob?.cancel()
+        warmupController.cancel()
         textReaderOrchestrator.cancelAllJobs()
         progressController.progressSaveJob?.cancel()
-        pageTranslationNoteJob?.cancel()
         sessionManager.closeReaderResources()
         appScope.launch {
             runCatching { progressController.flushPendingProgressSave() }
