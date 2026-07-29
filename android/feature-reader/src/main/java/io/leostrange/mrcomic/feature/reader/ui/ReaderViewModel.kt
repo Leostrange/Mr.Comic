@@ -18,7 +18,6 @@ import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.LanguageDetector
@@ -31,7 +30,6 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
 import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
-import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.api.BookSession
@@ -83,7 +81,6 @@ class ReaderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
-    /** Emits the current page payload saved for OCR. One-shot event. */
     private val _ocrPagePath = MutableSharedFlow<OcrLaunchRequest>(extraBufferCapacity = 1)
     val ocrPagePath: SharedFlow<OcrLaunchRequest> = _ocrPagePath.asSharedFlow()
     private val _eyeRestReminder = MutableSharedFlow<Int>(extraBufferCapacity = 1)
@@ -184,10 +181,6 @@ class ReaderViewModel @Inject constructor(
         textReaderOrchestrator = textReaderOrchestrator
     )
 
-    /**
-     * Per-page HTML cache for WEBTOON mode — used for formats (DjVu) where some pages
-     * have no bitmap render path but do provide HTML content via [FormatReader.getHtmlPage].
-     */
     private val _webtoonHtmlCache = MutableStateFlow<Map<Int, String>>(emptyMap())
     internal val pageLoader = ReaderPageLoader(
         _uiState = _uiState,
@@ -424,7 +417,6 @@ class ReaderViewModel @Inject constructor(
         return prepared
     }
 
-    /** Phase 3 configuration result. */
     private data class OpeningConfig(
         val readerRendersHtmlContent: Boolean,
         val openingMode: ReadingMode,
@@ -577,7 +569,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /** Applies the resolved deferred page count to UI state and triggers follow-up work. */
     private suspend fun applyDeferredPageCount(
         realPages: Int,
         normalizedStartPage: Int,
@@ -602,18 +593,8 @@ class ReaderViewModel @Inject constructor(
         bookmarkController.loadBookmarks(comic.id, realPages)
     }
 
-    /** Phase 7: Schedule post-open tasks (warmup, TOC, bookmarks, etc.). */
     private fun schedulePostOpenTasks(comic: Comic, startPage: Int, initialPages: Int) {
-        warmupController.scheduleWarmup(
-            page = startPage,
-            renderTier = renderProfile.tier,
-            getFormatReader = { formatReader },
-            supportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
-            getComicId = { _uiState.value.comic?.id },
-            getReadingMode = { _uiState.value.readingMode },
-            getCurrentPage = { _uiState.value.currentPage },
-            visiblePagesFor = { p, mode -> navigationController.visiblePagesFor(p, mode) }
-        )
+        warmupAroundPage(startPage)
         deferredTasks.scheduleDeferredTocWarmup(
             getFormatReader = { formatReader },
             isTocEmpty = { _uiState.value.tableOfContents.isEmpty() },
@@ -648,7 +629,9 @@ class ReaderViewModel @Inject constructor(
     private suspend fun localizedReaderText(): ReaderUiText = readerUiText(readerLanguageCode())
 
     /** Helper to avoid circular reference in navigationController constructor. */
-    private fun scheduleHighQualityWarmup(page: Int) {
+    private fun scheduleHighQualityWarmup(page: Int) = warmupAroundPage(page)
+
+    private fun warmupAroundPage(page: Int) {
         warmupController.scheduleWarmup(
             page = page,
             renderTier = renderProfile.tier,
@@ -667,10 +650,6 @@ class ReaderViewModel @Inject constructor(
         loadToc = { loadToc(force = true) }
     )
 
-    /**
-     * Called by the WebView JS bridge when the paged layout engine reports
-     * the number of visual subpages inside the currently loaded HTML section.
-     */
     fun onPagedLayoutPageCountChanged(pageCount: Int, pageIndex: Int = 0) {
         // This callback reports visual subpages inside the currently loaded HTML
         // section as calculated by the WebView JS pagination engine.
