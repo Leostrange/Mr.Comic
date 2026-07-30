@@ -4,7 +4,6 @@ import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.isArchiveFormat
 import io.leostrange.mrcomic.core.model.isGraphicReaderFormat
-import io.leostrange.mrcomic.core.model.isHeavyReflowableFormat
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
 
 enum class ReaderContainerKind {

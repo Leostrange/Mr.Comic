@@ -1,7 +1,5 @@
 package io.leostrange.mrcomic.core.domain.translation
 
-import io.leostrange.mrcomic.core.model.TranslationProviderType
-
 /**
  * Unified translation interface that all translation engines implement.
  *

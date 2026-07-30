@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -33,7 +31,6 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,7 +66,6 @@ import io.leostrange.mrcomic.core.domain.analytics.resolveMascotStageArchive
 import io.leostrange.mrcomic.core.domain.analytics.resolveMascotStageTimeline
 import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
@@ -79,18 +75,11 @@ import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.mascot.MrComicStageArchivePortrait
 import io.leostrange.mrcomic.core.ui.mascot.MrComicMiniAvatar
-import io.leostrange.mrcomic.core.ui.mascot.MrComicMascotSurfaceMode
-import io.leostrange.mrcomic.core.ui.mascot.resolveMrComicMascotSurfaceMode
-import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
 import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
 import io.leostrange.mrcomic.feature.library.components.AchievementStrings
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievement
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievementsRow
 import io.leostrange.mrcomic.feature.library.components.computeAchievements
-import java.text.SimpleDateFormat
-import java.util.GregorianCalendar
-import java.util.Locale
-import java.util.TimeZone
 
 // Data classes and strings extracted to MrComicProgressStrings.kt
 

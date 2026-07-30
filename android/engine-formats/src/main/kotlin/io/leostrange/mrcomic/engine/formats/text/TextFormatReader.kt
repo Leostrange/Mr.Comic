@@ -15,10 +15,6 @@ import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import java.io.File
 import java.io.InputStream
-import io.leostrange.mrcomic.engine.formats.base.charset.bomLength
-import io.leostrange.mrcomic.engine.formats.base.charset.detectBomCharset
-import io.leostrange.mrcomic.engine.formats.base.charset.isStrictUtf8
-import io.leostrange.mrcomic.engine.formats.base.charset.looksLikeUtf16
 import java.nio.charset.Charset
 import java.net.URLDecoder
 import javax.inject.Inject

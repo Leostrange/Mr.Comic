@@ -1,10 +1,8 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset

@@ -7,7 +7,6 @@ import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.domain.translation.ExplainProviderSupplier
 import io.leostrange.mrcomic.core.domain.translation.LlmExplainEngine
 import io.leostrange.mrcomic.translation.LlmPoweredExplainEngine
-import io.leostrange.mrcomic.translation.OpenRouterExplainEngine
 import dagger.Binds
 import dagger.Module
 import dagger.Provides

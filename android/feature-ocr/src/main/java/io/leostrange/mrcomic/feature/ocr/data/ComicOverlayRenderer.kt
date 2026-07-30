@@ -10,7 +10,6 @@ import android.graphics.Typeface
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.min
-import kotlin.math.sqrt
 
 /**
  * Renders translated text over speech bubbles on comic pages.

@@ -16,8 +16,6 @@ import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.resolveReaderSimpleTapZoneLayout
-import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntries
