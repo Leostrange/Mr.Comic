@@ -27,8 +27,6 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -63,7 +61,6 @@ import io.leostrange.mrcomic.core.model.ReaderInfoSlot
 import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.model.ReaderScreenTimeoutMode
-import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset

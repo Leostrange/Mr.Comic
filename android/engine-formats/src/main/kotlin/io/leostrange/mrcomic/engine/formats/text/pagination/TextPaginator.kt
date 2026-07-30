@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.engine.formats.text.pagination
 
-import io.leostrange.mrcomic.engine.formats.text.ReflowableDocumentBuilder
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser

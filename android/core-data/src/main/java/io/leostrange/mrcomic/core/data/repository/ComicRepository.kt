@@ -36,7 +36,6 @@ import net.sf.sevenzipjbinding.ExtractOperationResult
 import net.sf.sevenzipjbinding.IInArchive
 import net.sf.sevenzipjbinding.PropID
 import net.sf.sevenzipjbinding.SevenZip
-import net.sf.sevenzipjbinding.SevenZipException
 import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream
 import net.lingala.zip4j.ZipFile
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
@@ -44,7 +43,6 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.xmlpull.v1.XmlPullParser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import java.io.Closeable
 import java.io.File
 import java.io.InputStream
 import java.io.PushbackReader
@@ -53,7 +51,6 @@ import java.io.Reader
 import java.net.URLDecoder
 import java.nio.charset.Charset
 import java.security.MessageDigest
-import java.util.zip.ZipInputStream
 import kotlin.math.min
 import kotlin.math.roundToInt
 import io.leostrange.mrcomic.core.model.repository.BackupRepository

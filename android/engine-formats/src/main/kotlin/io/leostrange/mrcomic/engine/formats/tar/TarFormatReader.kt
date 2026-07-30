@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.engine.formats.tar
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator

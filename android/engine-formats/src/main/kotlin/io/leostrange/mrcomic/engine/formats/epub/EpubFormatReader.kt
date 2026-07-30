@@ -24,7 +24,6 @@ import net.lingala.zip4j.model.FileHeader
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
-import java.net.URLDecoder
 
 /**
  * TEMP perf instrumentation: logs elapsed ms of a phase on the EPUB open path.

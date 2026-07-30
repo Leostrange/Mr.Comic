@@ -5,29 +5,15 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
-import android.view.ActionMode
-import android.view.KeyEvent
-import android.view.Menu
 import android.view.View
-import android.view.WindowInsetsController
-import android.view.WindowManager
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.BrightnessHigh
-import androidx.compose.material.icons.filled.BrightnessLow
-import androidx.compose.material.icons.filled.BrightnessMedium
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,22 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.Hyphens
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.webkit.JavascriptInterface
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.webkit.WebSettings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -61,11 +35,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.webkit.WebViewAssetLoader
-import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.ReaderInfoSlot
 import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
 import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
@@ -75,23 +47,11 @@ import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
 import io.leostrange.mrcomic.feature.reader.R
 import io.leostrange.mrcomic.feature.reader.ui.components.PageView
 import io.leostrange.mrcomic.feature.reader.ui.components.TextContainer
-import io.leostrange.mrcomic.feature.reader.ui.components.ReaderBottomBar
 import io.leostrange.mrcomic.feature.reader.ui.components.WebtoonView
-import io.leostrange.mrcomic.feature.reader.ui.gesture.PagedGestureAction
-import io.leostrange.mrcomic.feature.reader.ui.gesture.PagedGesturePolicy
 import io.leostrange.mrcomic.feature.reader.ui.geometry.ReaderViewportGeometry
-import io.leostrange.mrcomic.feature.reader.ui.gesture.ReaderColorScheme
-import io.leostrange.mrcomic.feature.reader.ui.gesture.ReaderHtmlHelpers
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -106,10 +66,6 @@ import kotlin.math.roundToInt
  * The guard flag prevents double-registration across multiple onPageFinished calls.
  */
 // WebView JS constants extracted to ReaderWebViewJavaScript.kt
-
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

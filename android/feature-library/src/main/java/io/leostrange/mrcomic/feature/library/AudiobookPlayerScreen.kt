@@ -74,7 +74,6 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSlider
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
-import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
 import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)

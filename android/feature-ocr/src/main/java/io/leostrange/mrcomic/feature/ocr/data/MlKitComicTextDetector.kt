@@ -5,7 +5,6 @@ import io.leostrange.mrcomic.core.domain.translation.ComicTextDetector
 import io.leostrange.mrcomic.core.domain.translation.LanguageDetector
 import io.leostrange.mrcomic.core.domain.util.Result as DomainResult
 import io.leostrange.mrcomic.core.model.OcrBlock
-import io.leostrange.mrcomic.core.model.OcrBlockType
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer

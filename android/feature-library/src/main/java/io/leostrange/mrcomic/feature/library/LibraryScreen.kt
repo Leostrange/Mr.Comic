@@ -27,11 +27,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -60,13 +58,11 @@ import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -107,7 +103,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -125,7 +120,6 @@ import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotContext
-import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotMood
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotState
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotFocusText
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodHeadline
@@ -144,10 +138,8 @@ import io.leostrange.mrcomic.core.model.libraryShelfCategory
 import io.leostrange.mrcomic.core.model.readingStatus
 import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer
 import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
-import io.leostrange.mrcomic.core.ui.library.RootChromeTone
 import io.leostrange.mrcomic.core.ui.library.LibraryShelfBar
 import io.leostrange.mrcomic.core.ui.library.libraryCardElevation
-import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillBorder
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
@@ -163,25 +155,18 @@ import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceMissingLabel
 import io.leostrange.mrcomic.core.ui.mascot.MrComicMiniAvatar
 import io.leostrange.mrcomic.core.ui.mascot.MrComicStagePreviewLead
 import io.leostrange.mrcomic.feature.library.components.AchievementId
-import io.leostrange.mrcomic.feature.library.components.AchievementQuestFeedbackTone
 import io.leostrange.mrcomic.feature.library.components.AchievementQuestTransition
 import io.leostrange.mrcomic.feature.library.components.AchievementStrings
-import io.leostrange.mrcomic.feature.library.components.ComicCoverTreatment
 import io.leostrange.mrcomic.feature.library.components.ComicGridItem
 import io.leostrange.mrcomic.feature.library.components.libraryGridCoverRatio
 import io.leostrange.mrcomic.feature.library.components.CoverArt
 import io.leostrange.mrcomic.feature.library.components.FolderBackgroundStack
 import io.leostrange.mrcomic.feature.library.components.FolderCoverTreatment
-import io.leostrange.mrcomic.feature.library.components.FormatBadge
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievement
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievementsRow
 import io.leostrange.mrcomic.feature.library.components.LibraryTopBar
 import io.leostrange.mrcomic.feature.library.components.computeAchievements
-import io.leostrange.mrcomic.feature.library.components.formatLabel
-import io.leostrange.mrcomic.feature.library.components.isGraphicVolumeFormat
-import io.leostrange.mrcomic.feature.library.components.nextUnlockAchievement
 import io.leostrange.mrcomic.feature.library.components.questTransitionFeedback
-import io.leostrange.mrcomic.feature.library.components.rememberedNextUnlockAchievement
 import java.io.File
 import java.util.Calendar
 import kotlinx.coroutines.launch
@@ -3436,7 +3421,6 @@ private fun MrComicQuestStepRow(
 }
 
 // Mr.Comic mascot strings and quest logic extracted to MrComicStrings.kt
-
 
 @Composable
 private fun MrComicRecentCard(

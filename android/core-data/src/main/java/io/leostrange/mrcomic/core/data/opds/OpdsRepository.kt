@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.core.data.opds
 
 import android.content.Context
 import android.util.Log
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.OpdsCatalogSource
 import io.leostrange.mrcomic.core.model.OpdsEntry
 import io.leostrange.mrcomic.core.model.OpdsFeed

@@ -71,7 +71,6 @@ import androidx.compose.ui.window.DialogProperties
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
 import io.leostrange.mrcomic.engine.formats.base.TocEntry
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)

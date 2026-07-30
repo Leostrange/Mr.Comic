@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextOverflow
 import io.leostrange.mrcomic.core.model.*
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.feature.reader.ui.ReaderUiText
 import io.leostrange.mrcomic.core.ui.theme.*
 import io.leostrange.mrcomic.engine.formats.base.TocEntry
 

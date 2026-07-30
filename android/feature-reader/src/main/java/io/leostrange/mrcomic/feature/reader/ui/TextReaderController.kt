@@ -1,9 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
 
 /**
  * Text/HTML reader responsibilities extracted from [ReaderViewModel].

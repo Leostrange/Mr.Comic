@@ -1,7 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.supportsHighResZoomTiers
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader

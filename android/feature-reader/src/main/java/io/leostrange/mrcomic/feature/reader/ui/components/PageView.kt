@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.requiredHeight
-import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,8 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.FilterQuality
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -43,7 +39,6 @@ import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
 import io.leostrange.mrcomic.feature.reader.ui.ReaderViewModel
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 @Composable
 fun PageView(

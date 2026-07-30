@@ -15,9 +15,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.FlowRow
@@ -33,8 +30,6 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.automirrored.filled.VolumeDown
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -72,15 +67,12 @@ import io.leostrange.mrcomic.core.model.TranslationTransportPreference
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicCompactValueRow
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicLibraryPresetCard
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
@@ -100,7 +92,6 @@ import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
-import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
 import io.leostrange.mrcomic.core.ui.library.rootChromeTextFieldColors
 import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
@@ -108,7 +99,6 @@ import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.locale.ocrSourceLanguageOptions
 import io.leostrange.mrcomic.core.ui.locale.translationLanguageOptions
 import io.leostrange.mrcomic.core.ui.sound.UIFeedback
-import io.leostrange.mrcomic.core.ui.tts.SystemTtsVoiceOption
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
@@ -121,7 +111,6 @@ import io.leostrange.mrcomic.feature.reader.ui.components.ImageMessagePopup
 import io.leostrange.mrcomic.feature.reader.ui.components.ImageMessagePopupConfig
 import java.util.Locale
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 
 // ──────────── Navigation model ────────────
 
@@ -129,7 +118,6 @@ private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
 
 private fun nextSettingsUiEventToken(currentToken: Int): Int =
     if (currentToken == Int.MAX_VALUE) 1 else currentToken + 1
-
 
 private data class MainMenuText(
     val searchPlaceholder: String,
@@ -3683,7 +3671,6 @@ private fun SettingsStudioOverviewCard(
 
 // ──────────── Appearance section ────────────
 
-
 @Composable
 private fun AppearanceSection(
     uiState: SettingsUiState,
@@ -6490,7 +6477,6 @@ private fun ReaderTextStyleCard(
 }
 
 // ──────────── Library section ────────────
-
 
 @Composable
 private fun LibrarySection(

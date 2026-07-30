@@ -27,7 +27,6 @@ import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
 import io.leostrange.mrcomic.feature.reader.domain.progress.EpubSectionPageCountStore
-import io.leostrange.mrcomic.feature.reader.domain.session.ReaderClosedSessionMetrics
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.buildReaderClosedAnalyticsEvent

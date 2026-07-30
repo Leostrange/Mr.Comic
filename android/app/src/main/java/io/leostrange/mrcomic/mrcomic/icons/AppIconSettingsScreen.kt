@@ -25,7 +25,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
 import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
 import io.leostrange.mrcomic.ui.appIconDescription
 import io.leostrange.mrcomic.ui.appIconName
