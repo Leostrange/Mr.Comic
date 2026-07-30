@@ -184,8 +184,37 @@ internal class SpineBuilder(
                         j++
                     }
                     if (group.size > 1) {
-                        // Create merged synthetic pages                        merged.addAll(contentAnalyzer.buildSyntheticNotePages(pg.entry, group, zip))
+                        // Create merged synthetic pages
+                        merged.addAll(contentAnalyzer.buildSyntheticNotePages(pg.entry, group, zip))
                         i = j
+                        continue
+                    }
+                }
+                // Title-only page followed by a body page — prepend title into body.
+                // This handles pages in keepWholeBodyEntries (e.g. FB2EPUB span-wrapped titles)
+                // that are too small to stand alone as a page.
+                if (charCount in 1..CHUNK_CHARS_PER_PAGE / 4 &&
+                    contentAnalyzer.isTitleOnlySpinePage(zip, pg.entry)
+                ) {
+                    val nextPg = normalized.getOrNull(i + 1)
+                    if (nextPg is EpubPage.Html && nextPg.totalChunks == 1) {
+                        val titleBody = contentAnalyzer.readTextEntry(zip, pg.entry)
+                            ?.let { extractBodyContent(it) } ?: ""
+                        val bodyHtml = contentAnalyzer.readTextEntry(zip, nextPg.entry) ?: ""
+                        val bodyContent = extractBodyContent(bodyHtml)
+                        val mergedHtml = contentAnalyzer.buildSyntheticHtml(
+                            titleBody + bodyContent, includeTitle = false
+                        )
+                        merged.add(
+                            EpubPage.SyntheticHtml(
+                                entry = nextPg.entry,
+                                html = mergedHtml,
+                                chunkIndex = 0,
+                                totalChunks = 1,
+                                sourceEntries = listOf(pg.entry, nextPg.entry)
+                            )
+                        )
+                        i += 2 // skip both title and body pages
                         continue
                     }
                 }
