@@ -1,14 +1,12 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.util.Log
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

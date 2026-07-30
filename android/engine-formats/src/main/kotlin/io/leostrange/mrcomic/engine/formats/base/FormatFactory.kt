@@ -10,11 +10,7 @@ import io.leostrange.mrcomic.engine.formats.epub.EpubFormatReader
 import io.leostrange.mrcomic.engine.formats.fb2.Fb2FormatReader
 import io.leostrange.mrcomic.engine.formats.folder.FolderFormatReader
 import io.leostrange.mrcomic.engine.formats.pdf.PdfFormatReader
-import io.leostrange.mrcomic.engine.formats.rar.RarFormatReader
-import io.leostrange.mrcomic.engine.formats.sevenz.SevenZFormatReader
-import io.leostrange.mrcomic.engine.formats.tar.TarFormatReader
 import io.leostrange.mrcomic.engine.formats.text.TextFormatReader
-import io.leostrange.mrcomic.engine.formats.zip.ZipFormatReader
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import java.net.URLDecoder

@@ -24,8 +24,6 @@ import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.domain.analytics.calculateMascotProgress
-import io.leostrange.mrcomic.core.domain.util.LibraryViewModeKey
-import io.leostrange.mrcomic.core.domain.util.normalizeLibraryViewModeKey
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicLibraryShelf
 import io.leostrange.mrcomic.core.model.ComicFormat
@@ -36,7 +34,6 @@ import io.leostrange.mrcomic.core.model.isReadCompleted
 import io.leostrange.mrcomic.core.model.isReadingInProgress
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import io.leostrange.mrcomic.core.model.libraryShelfCategory
-import io.leostrange.mrcomic.core.model.storedReaderLocator
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR

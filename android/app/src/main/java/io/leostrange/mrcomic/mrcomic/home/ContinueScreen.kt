@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -71,7 +70,6 @@ import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.analytics.calculateMascotProgress
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodHeadline
 import io.leostrange.mrcomic.core.domain.analytics.resolveGamificationMetricsSnapshot
-import io.leostrange.mrcomic.core.domain.analytics.resolveMascotStagePreview
 import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
@@ -87,7 +85,6 @@ import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
 import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer
 import io.leostrange.mrcomic.core.ui.library.RootChromePanelShape
-import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
 import io.leostrange.mrcomic.core.ui.library.RootChromeTone
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -104,7 +101,6 @@ import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
 import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
-import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
 import io.leostrange.mrcomic.ui.ContinueScreenText
 import io.leostrange.mrcomic.ui.continueScreenText
 import dagger.hilt.android.qualifiers.ApplicationContext

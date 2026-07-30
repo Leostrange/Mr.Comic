@@ -1,13 +1,11 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**

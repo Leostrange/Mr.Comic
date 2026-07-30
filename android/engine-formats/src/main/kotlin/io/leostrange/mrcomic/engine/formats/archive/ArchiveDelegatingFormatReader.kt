@@ -18,8 +18,6 @@ import io.leostrange.mrcomic.engine.formats.sevenz.SevenZFormatReader
 import io.leostrange.mrcomic.engine.formats.tar.TarFormatReader
 import io.leostrange.mrcomic.engine.formats.text.TextFormatReader
 import io.leostrange.mrcomic.engine.formats.zip.ZipFormatReader
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import net.lingala.zip4j.ZipFile
 import net.sf.sevenzipjbinding.ExtractOperationResult
 import net.sf.sevenzipjbinding.IInArchive

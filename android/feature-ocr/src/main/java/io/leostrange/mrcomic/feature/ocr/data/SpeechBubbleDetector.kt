@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.feature.ocr.data
 
 import android.graphics.Bitmap
 import android.graphics.Rect
-import android.util.Log
 import javax.inject.Inject
 import javax.inject.Singleton
 

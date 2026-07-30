@@ -1,7 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.util.Log
-import androidx.datastore.preferences.core.stringPreferencesKey
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.model.Comic

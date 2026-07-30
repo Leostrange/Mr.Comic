@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,7 +44,6 @@ import io.leostrange.mrcomic.core.model.SortOrder
 import io.leostrange.mrcomic.core.ui.library.RootChromeTone
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
 import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
-import io.leostrange.mrcomic.core.ui.library.rootChromeStableTopBarInsets
 import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.feature.library.GroupByMode

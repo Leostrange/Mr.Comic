@@ -8,7 +8,6 @@ import io.leostrange.mrcomic.core.model.TranslationProviderType
 import io.leostrange.mrcomic.core.model.TranslationSourceType
 import io.leostrange.mrcomic.engine.llm.LlmEngine
 import javax.inject.Inject
-import javax.inject.Named
 import javax.inject.Singleton
 
 /**

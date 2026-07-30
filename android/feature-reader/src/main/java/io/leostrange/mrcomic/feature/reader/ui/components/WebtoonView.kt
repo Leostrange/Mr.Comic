@@ -1,4 +1,4 @@
-﻿package io.leostrange.mrcomic.feature.reader.ui.components
+package io.leostrange.mrcomic.feature.reader.ui.components
 
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState

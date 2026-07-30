@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
 import net.lingala.zip4j.ZipFile
-import net.lingala.zip4j.model.FileHeader
 import java.io.File
 
 /**

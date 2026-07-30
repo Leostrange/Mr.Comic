@@ -4,7 +4,6 @@ import android.content.Context
 import android.hardware.display.DisplayManager
 import android.os.Build
 import android.view.Display
-import android.content.pm.PackageManager
 import androidx.compose.runtime.compositionLocalOf
 
 /**

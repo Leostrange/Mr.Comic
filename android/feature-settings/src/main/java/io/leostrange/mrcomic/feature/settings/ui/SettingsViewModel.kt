@@ -7,9 +7,6 @@ import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.util.Base64
 import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.Preferences
@@ -114,18 +111,10 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.URLDecoder
-import java.security.KeyStore
 import java.util.Locale
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
 import javax.inject.Inject
 
-
-
 // Preset data classes and parsing extracted to SettingsPresets.kt
-
 
 data class SettingsUiState(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
