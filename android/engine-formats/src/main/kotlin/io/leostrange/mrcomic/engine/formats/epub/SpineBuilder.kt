@@ -191,8 +191,10 @@ internal class SpineBuilder(
                     }
                 }
                 // Title-only page followed by a body page — prepend title into body.
-                // This handles pages in keepWholeBodyEntries (e.g. FB2EPUB span-wrapped titles)
-                // that are too small to stand alone as a page.
+                // Intentionally broad: runs for ALL tiny title-only pages, including those in
+                // keepWholeBodyEntries (e.g. FB2EPUB span-wrapped titles). A page containing
+                // only a chapter heading (<160 chars, no body paragraphs) should never be a
+                // standalone reader page — it always merges into the following body page.
                 if (charCount in 1..CHUNK_CHARS_PER_PAGE / 4 &&
                     contentAnalyzer.isTitleOnlySpinePage(zip, pg.entry)
                 ) {
