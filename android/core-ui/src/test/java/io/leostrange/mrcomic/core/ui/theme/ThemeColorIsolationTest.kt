@@ -1,9 +1,12 @@
 package io.leostrange.mrcomic.core.ui.theme
 
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicColorTokens
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ThemeColorIsolationTest {
@@ -100,5 +103,90 @@ class ThemeColorIsolationTest {
         assertEquals(blueBackground.surfaceVariant, greenBackground.surfaceVariant)
         assertEquals(blueBackground.surfaceContainer, greenBackground.surfaceContainer)
         assertEquals(blueBackground.surfaceContainerHigh, greenBackground.surfaceContainerHigh)
+    }
+
+    /**
+     * Surface containers must not leak accent tint from a custom background.
+     * When customBackgroundColor is a saturated color AND surfaceOpacity < 1 (triggering
+     * the surface recalculation), surfaceContainer* should be neutral — derived from
+     * the base surface, not from the accent-tinted background.
+     */
+    @Test
+    fun customBackgroundDoesNotTintSurfaceContainers() {
+        val base = lightColorScheme(
+            surface = Color(0xFFFFFFFF),
+            background = Color(0xFFF7F3EE)
+        )
+        // Bright green background + low opacity triggers surface recalculation
+        val result = applyCustomThemeColors(
+            baseColorScheme = base,
+            themeConfig = ThemeConfig(
+                customBackgroundColor = 0xFF1B5E20,  // saturated green
+                surfaceOpacity = 0.85f
+            ),
+            isDarkTheme = false
+        )
+        // surfaceContainer should be close to white (from surface), not green-tinted
+        val containerLuminance = result.surfaceContainer.luminance()
+        assertTrue(
+            "surfaceContainer luminance $containerLuminance should be > 0.7 (neutral light)",
+            containerLuminance > 0.7f
+        )
+        // Background should be green
+        assertTrue(
+            "background should be dark green",
+            result.background.luminance() < 0.2f
+        )
+    }
+
+    /**
+     * Dark mode: surface containers must stay neutral when background is accent-tinted.
+     */
+    @Test
+    fun darkModeCustomBackgroundDoesNotTintSurfaceContainers() {
+        val base = darkColorScheme(
+            surface = Color(0xFF151C24),
+            background = Color(0xFF10161D)
+        )
+        val result = applyCustomThemeColors(
+            baseColorScheme = base,
+            themeConfig = ThemeConfig(
+                customBackgroundColor = 0xFF6A1B9A,  // saturated purple
+                surfaceOpacity = 0.8f
+            ),
+            isDarkTheme = true
+        )
+        // Surface containers should be dark/neutral, not purple-tinted
+        val containerLuminance = result.surfaceContainer.luminance()
+        assertTrue(
+            "dark surfaceContainer luminance $containerLuminance should be < 0.15 (neutral dark)",
+            containerLuminance < 0.15f
+        )
+    }
+
+    /**
+     * Custom primary color's onPrimary must have WCAG AA contrast (≥ 4.5:1).
+     * Tests a bright yellow primary where old luminance threshold (0.58) would give
+     * black text (correct) and a mid-lavender where old threshold gave wrong result.
+     */
+    @Test
+    fun customPrimaryOnContrastMeetsWcag() {
+        val base = lightColorScheme()
+
+        // Bright yellow — luminance > 0.18 → onPrimary should be black
+        val yellow = applyCustomThemeColors(
+            baseColorScheme = base,
+            themeConfig = ThemeConfig(customPrimaryColor = 0xFFFFEB3B),  // Material yellow
+            isDarkTheme = false
+        )
+        assertEquals(Color(0xFF000000), yellow.onPrimary)
+
+        // Deep purple — luminance < 0.18 → onPrimary should be white
+        val purple = applyCustomThemeColors(
+            baseColorScheme = base,
+            themeConfig = ThemeConfig(customPrimaryColor = 0xFF4A148C),  // Material deep purple
+            isDarkTheme = false
+        )
+        assertEquals(Color(0xFFFFFFFF), purple.onPrimary)
     }
 }
