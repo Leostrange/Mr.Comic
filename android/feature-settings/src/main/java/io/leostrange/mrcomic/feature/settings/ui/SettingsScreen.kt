@@ -4311,6 +4311,40 @@ private fun ThemePreviewCard(
                         .background(onPreviewSurface.copy(alpha = 0.14f))
                 )
             }
+            // surfaceContainer preview — nested card
+            val previewSurfaceContainer = lerp(
+                previewSurface, if (isDarkPreview) Color.Black else Color.White,
+                if (isDarkPreview) 0.4f else 0.2f
+            ).let { anchor -> lerp(anchor, previewSurface, if (isDarkPreview) 0.62f else 0.78f) }
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = previewSurfaceContainer
+            ) {
+                Text(
+                    strings.previewCard,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onPreviewSurface,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                )
+            }
+            // error preview
+            val previewError = if (isDarkPreview) Color(0xFFF2B8B5) else Color(0xFFBA1A1A)
+            val previewErrorContainer = if (isDarkPreview) Color(0xFF93000A) else Color(0xFFFFDAD6)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = previewErrorContainer
+                ) {
+                    Text(
+                        "⚠",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = previewError,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = previewSecondaryContainer
