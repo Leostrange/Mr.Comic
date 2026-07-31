@@ -121,6 +121,7 @@ import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotContext
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotState
+import io.leostrange.mrcomic.core.ui.designsystem.mrComicCompletedColor
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotFocusText
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodHeadline
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodLabel
@@ -2557,7 +2558,7 @@ private fun LibraryStatsBar(
         if (completedCount > 0) {
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFF4CAF50).copy(alpha = 0.15f)
+                color = mrComicCompletedColor().copy(alpha = 0.15f)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
@@ -2568,7 +2569,7 @@ private fun LibraryStatsBar(
                     Text(
                         text = "$completedCount $completedLabel",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF4CAF50)
+                        color = mrComicCompletedColor()
                     )
                 }
             }
