@@ -4171,7 +4171,7 @@ private fun AppearanceSection(
 // ──────────── Live preview card ────────────
 
 private fun Color.contentColorForPreview(): Color =
-    if (luminance() > 0.56f) Color(0xFF171717) else Color(0xFFF8F7F3)
+    if (luminance() > 0.18f) Color(0xFF000000) else Color(0xFFFFFFFF)
 
 @Composable
 private fun ThemePreviewCard(
@@ -4206,10 +4206,10 @@ private fun ThemePreviewCard(
     val previewSecondaryContainer = uiState.customSecondaryColor?.let {
         lerp(previewSurface, previewSecondary, if (isDarkPreview) 0.34f else 0.18f)
     } ?: currentScheme.secondaryContainer.copy(alpha = 1f)
-    val onPreview = if (previewBackground.luminance() > 0.45f) {
-        Color(0xFF1F1B16)
+    val onPreview = if (previewBackground.luminance() > 0.18f) {
+        Color(0xFF000000)
     } else {
-        Color(0xFFF4F1ED)
+        Color(0xFFFFFFFF)
     }
     val onPreviewSurface = previewSurface.contentColorForPreview()
     val mutedPreview = if (previewBackground.luminance() > 0.45f) {
@@ -4415,7 +4415,7 @@ private fun ThemePreviewCard(
                     modifier = Modifier.height(36.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
                         containerColor = previewPrimary,
-                        contentColor = if (previewPrimary.luminance() > 0.5f) Color.Black else Color.White
+                        contentColor = if (previewPrimary.luminance() > 0.18f) Color.Black else Color.White
                     )
                 ) {
                     Text(strings.previewButton)
