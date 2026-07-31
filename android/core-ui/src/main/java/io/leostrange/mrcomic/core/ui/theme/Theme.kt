@@ -39,8 +39,13 @@ data class ThemeConfig(
     val surfaceOpacity: Float = 1f
 )
 
-private fun Color.contentColorForBackground(): Color =
-    if (luminance() > 0.58f) Color(0xFF171717) else Color(0xFFF8F7F3)
+/**
+ * WCAG-aware contrast color selection.
+ * At luminance ≈ 0.18 both black and white give ~4.5:1 contrast ratio (WCAG AA).
+ * Above 0.18 → dark text is preferred; below → light text.
+ */
+private fun Color.contrastingOnColor(): Color =
+    if (luminance() > 0.18f) Color(0xFF000000) else Color(0xFFFFFFFF)
 
 private fun deriveContainerColor(base: Color, background: Color, isDark: Boolean): Color =
     lerp(background, base, if (isDark) 0.34f else 0.18f)
@@ -62,11 +67,18 @@ internal fun applyCustomThemeColors(
     var result = baseColorScheme
     val backgroundColor = themeConfig.customBackgroundColor?.let(::argbLongToThemeColor) ?: result.background
     val surfaceBaseColor = themeConfig.customSurfaceColor?.let(::argbLongToThemeColor) ?: result.surface
-    val surfaceAnchorBackground = baseColorScheme.background
+    // Neutral anchor for surface container hierarchy — derived from surface, not background.
+    // Prevents accent-tinted background (dynamic colors or customBackgroundColor) from leaking
+    // into surfaceContainer*, surfaceDim, and surfaceBright via lerp().
+    val surfaceAnchorBackground = lerp(
+        baseColorScheme.surface,
+        if (isDarkTheme) Color.Black else Color.White,
+        if (isDarkTheme) 0.4f else 0.2f
+    )
     val surfaceAlpha = themeConfig.surfaceOpacity.coerceIn(0.35f, 1f)
     val effectiveSurface = surfaceBaseColor.copy(alpha = surfaceAlpha)
-    val onBackground = backgroundColor.contentColorForBackground()
-    val onSurface = surfaceBaseColor.contentColorForBackground()
+    val onBackground = backgroundColor.contrastingOnColor()
+    val onSurface = surfaceBaseColor.contrastingOnColor()
 
     // Stored as unsigned ARGB (toUInt().toLong()), reconstruct via toInt() for Color(Int) constructor.
     themeConfig.customPrimaryColor?.let {
@@ -74,9 +86,9 @@ internal fun applyCustomThemeColors(
         val primaryContainer = deriveContainerColor(primary, backgroundColor, isDarkTheme)
         result = result.copy(
             primary = primary,
-            onPrimary = primary.contentColorForBackground(),
+            onPrimary = primary.contrastingOnColor(),
             primaryContainer = primaryContainer,
-            onPrimaryContainer = primaryContainer.contentColorForBackground()
+            onPrimaryContainer = primaryContainer.contrastingOnColor()
         )
     }
     themeConfig.customSecondaryColor?.let {
@@ -84,9 +96,9 @@ internal fun applyCustomThemeColors(
         val secondaryContainer = deriveContainerColor(secondary, backgroundColor, isDarkTheme)
         result = result.copy(
             secondary = secondary,
-            onSecondary = secondary.contentColorForBackground(),
+            onSecondary = secondary.contrastingOnColor(),
             secondaryContainer = secondaryContainer,
-            onSecondaryContainer = secondaryContainer.contentColorForBackground()
+            onSecondaryContainer = secondaryContainer.contrastingOnColor()
         )
     }
     if (themeConfig.customBackgroundColor != null) {
@@ -123,7 +135,7 @@ internal fun applyCustomThemeColors(
             surfaceContainerHighest = surfaceContainerHighest,
             onSurface = onSurface,
             surfaceVariant = surfaceVariant,
-            onSurfaceVariant = surfaceVariant.contentColorForBackground()
+            onSurfaceVariant = surfaceVariant.contrastingOnColor()
         )
     }
     return result
