@@ -512,14 +512,32 @@ fun ReaderScreen(
     }
 
     val latestVolumeKeysPagingEnabled by rememberUpdatedState(uiState.volumeKeysPagingEnabled)
+    val latestReadingMode by rememberUpdatedState(uiState.readingMode)
+    // Text paged reader: volume buttons should turn visual pages within the section
+    // instead of jumping whole sections. TextContainer registers this callback when active.
+    var pagedColumnTurn by remember { mutableStateOf<((Int) -> Unit)?>(null) }
+    val latestPagedColumnTurn by rememberUpdatedState(pagedColumnTurn)
+    // Clear stale callback when switching away from TEXT_PAGE mode.
+    LaunchedEffect(uiState.readerContainerKind) {
+        if (uiState.readerContainerKind != ReaderContainerKind.TEXT_PAGE) {
+            pagedColumnTurn = null
+        }
+    }
     var lastHardwarePageTurnMs by remember { mutableLongStateOf(0L) }
     val latestHandleHardwarePageTurn by rememberUpdatedState<(Int) -> Unit> { step ->
         val now = android.os.SystemClock.uptimeMillis()
         if (now - lastHardwarePageTurnMs < 280L) return@rememberUpdatedState
         lastHardwarePageTurnMs = now
-        when {
-            step < 0 -> viewModel.navigationController.prevPage()
-            step > 0 -> viewModel.navigationController.nextPage()
+        // In text paged mode, turn visual pages within the WebView section first;
+        // only advance to the next section when at the last visual page.
+        val textPageTurn = latestPagedColumnTurn
+        if (textPageTurn != null && uiState.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
+            textPageTurn(step)
+        } else {
+            when {
+                step < 0 -> viewModel.navigationController.prevPage()
+                step > 0 -> viewModel.navigationController.nextPage()
+            }
         }
     }
 
@@ -527,7 +545,8 @@ fun ReaderScreen(
         readerHardwareKeyHost?.setReaderHardwareKeyHandler { event ->
             val decision = resolveReaderHardwareKeyDecision(
                 event = event,
-                volumePagingEnabled = latestVolumeKeysPagingEnabled
+                volumePagingEnabled = latestVolumeKeysPagingEnabled,
+                readingMode = latestReadingMode
             )
             if (!decision.consume) {
                 return@setReaderHardwareKeyHandler false
@@ -791,6 +810,7 @@ fun ReaderScreen(
                                     contentBottomInsetPx = textContentBottomInsetCssPx,
                                     pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                     onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
+                                    onRegisterPageTurner = { pagedColumnTurn = it },
                                     modifier = textReaderModifier
                                 )
                             }
@@ -835,8 +855,11 @@ fun ReaderScreen(
                 )
                 val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
                 val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
+                // Comic/raster mode always uses the reader's dark surface for chrome;
+                // text mode keeps the inherited app surface so presets (sepia, newspaper) affect chrome too.
+                val chromeBaseColor = if (isTextReader) inheritedColorScheme.surface else readerColorScheme.surface
                 val chromeSurface = readerPanelSurfaceColor(
-                    base = inheritedColorScheme.surface,
+                    base = chromeBaseColor,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.06f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
                     minAlpha = if (forceOpaqueChromeSurface) {
                         1f
@@ -845,7 +868,7 @@ fun ReaderScreen(
                     }
                 )
                 val overlaySurface = readerPanelSurfaceColor(
-                    base = inheritedColorScheme.surface,
+                    base = chromeBaseColor,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.03f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
                     minAlpha = if (forceOpaqueChromeSurface) {
                         1f

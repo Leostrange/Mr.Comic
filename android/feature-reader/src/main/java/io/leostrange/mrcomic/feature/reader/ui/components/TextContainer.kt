@@ -55,6 +55,7 @@ fun TextContainer(
     dictionaryActionLabel: String,
     explainActionLabel: String,
     saveQuoteActionLabel: String,
+    onRegisterPageTurner: ((Int) -> Unit) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     HtmlPageView(
@@ -104,6 +105,7 @@ fun TextContainer(
         dictionaryActionLabel = dictionaryActionLabel,
         explainActionLabel = explainActionLabel,
         saveQuoteActionLabel = saveQuoteActionLabel,
+        onRegisterPageTurner = onRegisterPageTurner,
         modifier = modifier
     )
 }
