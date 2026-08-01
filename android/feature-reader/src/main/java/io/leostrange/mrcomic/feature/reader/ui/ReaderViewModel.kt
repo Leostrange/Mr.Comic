@@ -197,6 +197,13 @@ class ReaderViewModel @Inject constructor(
 
     fun getWebtoonHtmlPageFlow(index: Int): kotlinx.coroutines.flow.Flow<String?> =
         _webtoonHtmlCache.map { it[index] }.distinctUntilChanged()
+
+    /** Clears the current error and retries loading the given bitmap page. */
+    fun retryLoadPage(page: Int) {
+        _uiState.update { it.copy(error = null) }
+        pageLoader.loadPage(page)
+    }
+
     private var loadComicJob: Job? = null
     private var tocLoadJob: Job? = null
     private val warmupController = ReaderWarmupController(

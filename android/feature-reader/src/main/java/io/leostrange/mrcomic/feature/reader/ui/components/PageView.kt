@@ -18,11 +18,16 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,6 +38,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
@@ -133,13 +139,34 @@ fun PageView(
                     }
                 }
             } else {
-                PagePane(
-                    bitmap = leftBitmap,
-                    contentDescription = "Page ${page + 1}",
-                    imageScaleMode = imageScaleMode,
-                    crop = imageCrop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                val pageError = uiState.error
+                if (leftBitmap == null && pageError != null) {
+                    // Error surface: show message + retry instead of infinite spinner
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = pageError,
+                                color = Color.White.copy(alpha = 0.8f),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(onClick = { viewModel.retryLoadPage(page) }) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                } else {
+                    PagePane(
+                        bitmap = leftBitmap,
+                        contentDescription = "Page ${page + 1}",
+                        imageScaleMode = imageScaleMode,
+                        crop = imageCrop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
     }

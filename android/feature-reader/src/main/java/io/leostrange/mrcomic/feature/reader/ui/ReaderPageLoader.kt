@@ -108,13 +108,29 @@ internal class ReaderPageLoader(
                             previousHtmlContent = null,
                             previousHtmlAssetBasePath = null,
                             nextHtmlContent = null,
-                            nextHtmlAssetBasePath = null
+                            nextHtmlAssetBasePath = null,
+                            error = null
                         )
                     }
                 }
             }
             if (pagePreloader.getPage(index, renderQuality) == null) {
-                pagePreloader.loadPage(reader, index, renderQuality)
+                val bitmap = try {
+                    pagePreloader.loadPage(reader, index, renderQuality)
+                } catch (e: Throwable) {
+                    Log.e("ReaderViewModel", "Failed to load bitmap page $index", e)
+                    null
+                }
+                // Surface bitmap load failure to the UI so PageView can show an error
+                // surface instead of an infinite spinner.
+                if (bitmap == null && renderQuality == 1 &&
+                    formatReader() === reader && _uiState.value.comic?.id == comicId &&
+                    _uiState.value.currentPage == index
+                ) {
+                    _uiState.update {
+                        it.copy(error = "Failed to render page ${index + 1}")
+                    }
+                }
             }
         }
     }
