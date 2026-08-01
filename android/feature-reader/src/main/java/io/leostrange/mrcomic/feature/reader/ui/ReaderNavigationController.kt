@@ -65,7 +65,8 @@ internal class ReaderNavigationController(
                 footnotePopup = null,
                 footnotePresentation = FootnotePresentation.PEEK,
                 selectedTextActionSheet = null,
-                selectedTextTranslation = null
+                selectedTextTranslation = null,
+                error = null
             )
         }
         if (progressSource == ReaderNavigationProgressSource.READING) {
