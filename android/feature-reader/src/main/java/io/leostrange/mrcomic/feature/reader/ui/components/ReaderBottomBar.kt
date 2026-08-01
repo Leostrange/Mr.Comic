@@ -39,8 +39,20 @@ fun ReaderBottomBar(
     val compactImageLayout = isLandscape && !isTextBook
     val showPageCountText = true
     val showSectionPage = sectionPageCount > 0 && isTextBook
-    val effectiveTotalPages = if (epubAccumulatedTotalPages > 0) epubAccumulatedTotalPages else totalPages
-    val effectiveCurrentPage = if (epubAccumulatedTotalPages > 0) epubAccumulatedCurrentPage else currentPage
+    // For text books with section paging: show section-local values so the counter
+    // and slider stay in sync (both advance only on section boundary, not per visual page).
+    // For image-based comics or EPUBs without section paging: use book-wide accumulated values.
+    val useSectionLocal = isTextBook && sectionPageCount > 0
+    val effectiveTotalPages = when {
+        useSectionLocal -> totalPages
+        epubAccumulatedTotalPages > 0 -> epubAccumulatedTotalPages
+        else -> totalPages
+    }
+    val effectiveCurrentPage = when {
+        useSectionLocal -> currentPage
+        epubAccumulatedTotalPages > 0 -> epubAccumulatedCurrentPage
+        else -> currentPage
+    }
     val bookProgress = if (effectiveTotalPages > 0) ((effectiveCurrentPage + 1) * 100f / effectiveTotalPages).toInt() else 0
 
     Column(
@@ -100,14 +112,10 @@ fun ReaderBottomBar(
             Spacer(Modifier.height(12.dp))
             if (showPageCountText) {
                 val counterText = when {
-                    epubAccumulatedTotalPages > 0 && chapterTitle != null ->
-                        "$chapterTitle (${epubAccumulatedCurrentPage + 1}/$epubAccumulatedTotalPages)"
-                    epubAccumulatedTotalPages > 0 ->
-                        "${epubAccumulatedCurrentPage + 1} / $epubAccumulatedTotalPages"
                     chapterTitle != null ->
-                        "$chapterTitle (${currentPage + 1}/$totalPages)"
+                        "$chapterTitle (${effectiveCurrentPage + 1}/$effectiveTotalPages)"
                     else ->
-                        "${currentPage + 1} / $totalPages"
+                        "${effectiveCurrentPage + 1} / $effectiveTotalPages"
                 }
                 Text(
                     text = counterText,
