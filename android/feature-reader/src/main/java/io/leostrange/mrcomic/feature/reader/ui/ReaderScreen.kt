@@ -857,7 +857,7 @@ fun ReaderScreen(
                 val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
                 // Comic/raster mode always uses the reader's dark surface for chrome;
                 // text mode keeps the inherited app surface so presets (sepia, newspaper) affect chrome too.
-                val chromeBaseColor = if (isTextReader) inheritedColorScheme.surface else readerColorScheme.surface
+                val chromeBaseColor = readerColorScheme.surface
                 val chromeSurface = readerPanelSurfaceColor(
                     base = chromeBaseColor,
                     emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.06f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
