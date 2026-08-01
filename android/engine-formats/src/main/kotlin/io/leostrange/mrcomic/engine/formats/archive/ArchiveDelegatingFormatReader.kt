@@ -89,7 +89,7 @@ class ArchiveDelegatingFormatReader(
         resolvedEntry = resolved
         val textEntry = resolved.entryName
         val textFormat = resolved.format
-        if (resolved.kind == ArchiveContentKind.SINGLE_BOOK && textEntry != null && textFormat != null) {
+        if ((resolved.kind == ArchiveContentKind.SINGLE_BOOK || resolved.kind == ArchiveContentKind.MIXED) && textEntry != null && textFormat != null) {
             val entryInfo = entries.firstOrNull { it.name == textEntry }
                 ?: entries.firstOrNull { it.name.matchesArchiveEntry(textEntry) }
             val extracted = entryInfo?.let { extractSingleBookArchive(it) }

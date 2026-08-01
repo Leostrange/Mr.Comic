@@ -28,7 +28,6 @@ android {
 dependencies {
     implementation(project(":engine-api"))
     implementation(project(":core-model"))
-    implementation(project(":core-data"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.documentfile)
     implementation(libs.zip4j)
