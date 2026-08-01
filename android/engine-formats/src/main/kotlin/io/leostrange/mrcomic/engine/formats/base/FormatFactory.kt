@@ -16,16 +16,17 @@ import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import java.net.URLDecoder
 import java.util.Locale
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
 class FormatFactory @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bitmapAllocator: BitmapAllocator,
-    private val djvuBackend: DjvuBackend
+    private val djvuBackend: DjvuBackend,
+    @Named("epubStructureCache") private val epubStructureCache: EpubCacheStore?,
+    @Named("epubManifestCache") private val epubManifestCache: EpubCacheStore?
 ) {
-    var epubStructureCache: EpubCacheStore? = null
-    var epubManifestCache: EpubCacheStore? = null
     private val deviceProfile by lazy { context.resolveRenderDeviceProfile() }
 
     fun createReader(path: String, format: ComicFormat): FormatReader? {

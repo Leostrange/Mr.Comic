@@ -1,8 +1,8 @@
 package io.leostrange.mrcomic.engine.formats.epub
 
 import android.content.ContextWrapper
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheDao
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheEntity
+import io.leostrange.mrcomic.engine.api.EpubCacheEntry
+import io.leostrange.mrcomic.engine.api.EpubCacheStore
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -13,17 +13,17 @@ import java.io.File
 
 class EpubCorpusSmokeTest {
 
-    private class FakeEpubStructureCacheDao : EpubStructureCacheDao {
-        var stored: EpubStructureCacheEntity? = null
+    private class FakeEpubCacheStore : EpubCacheStore {
+        var stored: EpubCacheEntry? = null
         var getCount: Int = 0
         var upsertCount: Int = 0
 
-        override suspend fun getByPath(filePath: String): EpubStructureCacheEntity? {
+        override suspend fun getByPath(filePath: String): EpubCacheEntry? {
             getCount++
             return stored?.takeIf { it.filePath == filePath }
         }
 
-        override suspend fun upsert(entry: EpubStructureCacheEntity) {
+        override suspend fun upsert(entry: EpubCacheEntry) {
             upsertCount++
             stored = entry
         }
@@ -234,8 +234,8 @@ class EpubCorpusSmokeTest {
         val sample = locateSample("vibe.coding.the.future.of.programming.epub")
         assumeTrue("EPUB sample not available", sample.exists())
 
-        val cacheDao = FakeEpubStructureCacheDao()
-        val firstReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        val cacheDao = FakeEpubCacheStore()
+        val firstReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath, structureCache = cacheDao)
         try {
             assertTrue(firstReader.getPageCount() > 5)
             assertTrue("Expected first EPUB open to persist cache", cacheDao.upsertCount >= 1)
@@ -245,7 +245,7 @@ class EpubCorpusSmokeTest {
         }
 
         val upsertsAfterFirstOpen = cacheDao.upsertCount
-        val secondReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath)
+        val secondReader = EpubFormatReader(ContextWrapper(null), sample.absolutePath, structureCache = cacheDao)
         try {
             assertTrue(secondReader.getPageCount() > 5)
             assertTrue("Expected second EPUB open to consult cache", cacheDao.getCount >= 2)
