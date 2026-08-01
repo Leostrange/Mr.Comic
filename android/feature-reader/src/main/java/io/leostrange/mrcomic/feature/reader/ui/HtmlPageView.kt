@@ -208,6 +208,7 @@ internal fun HtmlPageView(
     explainActionLabel: String,
     saveQuoteActionLabel: String,
     highlightsJs: String = "",
+    onRegisterPageTurner: ((Int) -> Unit) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -361,7 +362,11 @@ internal fun HtmlPageView(
                 addJavascriptInterface(object {
                     @JavascriptInterface
                     fun onTap(xPercent: Float) {
-                        post { dispatchReaderTap(xPercent) }
+                        post {
+                            if (!readerWebView.consumeNativeTapIfPresent()) {
+                                dispatchReaderTap(xPercent)
+                            }
+                        }
                     }
 
                     @JavascriptInterface
@@ -661,6 +666,16 @@ internal fun HtmlPageView(
             }
             webView.onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
             webView.onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged
+            // Register page turner for hardware volume buttons in text paged mode.
+            // The lambda turns a visual page column; on boundary it calls
+            // onVerticalBoundaryNavigation which navigates to the next/prev section.
+            if (pagedMode) {
+                onRegisterPageTurner { step ->
+                    webView.turnPagedColumn(step, {
+                        onVerticalBoundaryNavigation(step)
+                    }, onPagedLayoutPageCountChanged)
+                }
+            }
             webView.translateSelectionLabel = translateActionLabel
             webView.dictionarySelectionLabel = dictionaryActionLabel
             webView.explainSelectionLabel = explainActionLabel
