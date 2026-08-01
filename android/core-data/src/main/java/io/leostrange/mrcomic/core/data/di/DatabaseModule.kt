@@ -5,8 +5,12 @@ import androidx.room.Room
 import io.leostrange.mrcomic.core.data.db.AppDatabase
 import io.leostrange.mrcomic.core.data.db.AppDatabaseMigrations
 import io.leostrange.mrcomic.core.data.db.AudiobookDao
+import io.leostrange.mrcomic.core.data.db.EpubManifestCacheAdapter
 import io.leostrange.mrcomic.core.data.db.EpubManifestCacheDao
+import io.leostrange.mrcomic.core.data.db.EpubStructureCacheAdapter
 import io.leostrange.mrcomic.core.data.db.EpubStructureCacheDao
+import io.leostrange.mrcomic.engine.api.EpubCacheStore
+import javax.inject.Named
 import io.leostrange.mrcomic.core.data.db.QuoteDao
 import io.leostrange.mrcomic.core.data.db.TextHighlightDao
 import io.leostrange.mrcomic.core.data.db.TranslationCacheDao
@@ -56,6 +60,18 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideEpubManifestCacheDao(db: AppDatabase): EpubManifestCacheDao = db.epubManifestCacheDao()
+
+    @Provides
+    @Singleton
+    @Named("epubStructureCache")
+    fun provideEpubStructureCache(dao: EpubStructureCacheDao): EpubCacheStore =
+        EpubStructureCacheAdapter(dao)
+
+    @Provides
+    @Singleton
+    @Named("epubManifestCache")
+    fun provideEpubManifestCache(dao: EpubManifestCacheDao): EpubCacheStore =
+        EpubManifestCacheAdapter(dao)
 
     @Provides
     @Singleton

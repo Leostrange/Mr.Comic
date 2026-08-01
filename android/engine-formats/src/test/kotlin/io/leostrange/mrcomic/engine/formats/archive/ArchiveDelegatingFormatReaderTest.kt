@@ -2,10 +2,6 @@ package io.leostrange.mrcomic.engine.formats.archive
 
 import android.content.ContextWrapper
 import android.graphics.Bitmap
-import io.leostrange.mrcomic.core.data.db.EpubManifestCacheDao
-import io.leostrange.mrcomic.core.data.db.EpubManifestCacheEntity
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheDao
-import io.leostrange.mrcomic.core.data.db.EpubStructureCacheEntity
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile
@@ -74,18 +70,6 @@ class ArchiveDelegatingFormatReaderTest {
             error("Bitmap allocation is not expected for text archive tests")
 
         override fun release(bitmap: Bitmap) = Unit
-    }
-
-    private object NoopEpubStructureCacheDao : EpubStructureCacheDao {
-        override suspend fun getByPath(filePath: String): EpubStructureCacheEntity? = null
-        override suspend fun upsert(entry: EpubStructureCacheEntity) = Unit
-        override suspend fun deleteOlderThan(updatedBefore: Long) = Unit
-    }
-
-    private object NoopEpubManifestCacheDao : EpubManifestCacheDao {
-        override suspend fun getByPath(filePath: String): EpubManifestCacheEntity? = null
-        override suspend fun upsert(entry: EpubManifestCacheEntity) = Unit
-        override suspend fun deleteOlderThan(updatedBefore: Long) = Unit
     }
 
     private fun testRenderDeviceProfile(): RenderDeviceProfile = RenderDeviceProfile(
