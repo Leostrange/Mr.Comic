@@ -24,6 +24,7 @@ import net.lingala.zip4j.model.FileHeader
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
+import kotlin.concurrent.thread
 
 /**
  * TEMP perf instrumentation: logs elapsed ms of a phase on the EPUB open path.
@@ -81,7 +82,7 @@ class EpubFormatReader(
     }
 
     /** Renders spine items into HTML for the reader. Initialized lazily on first use. */
-    private val htmlRenderer by lazy {
+    private val htmlRenderer by lazy(LazyThreadSafetyMode.NONE) {
         EpubHtmlRenderer(
             contentAnalyzer = contentAnalyzer,
             findHeader = { zip, entry -> EpubArchiveAccess.findHeader(zip, entry) },
@@ -100,7 +101,7 @@ class EpubFormatReader(
     }
 
     /** Manages ZIP file lifecycle. Initialized lazily on first use. */
-    private val archiveManager by lazy {
+    private val archiveManager by lazy(LazyThreadSafetyMode.NONE) {
         EpubArchiveManager(
             context = context,
             path = path,
@@ -110,7 +111,7 @@ class EpubFormatReader(
     }
 
     /** Builds spine pages from OPF manifest data. Initialized lazily on first use. */
-    private val spineBuilder by lazy {
+    private val spineBuilder by lazy(LazyThreadSafetyMode.NONE) {
         SpineBuilder(
             contentAnalyzer = contentAnalyzer,
             findHeader = { zip, entry -> EpubArchiveAccess.findHeader(zip, entry) },
@@ -142,7 +143,7 @@ class EpubFormatReader(
     private val footnotePageCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
     private val titleOnlySpinePageCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
-    private val contentAnalyzer by lazy {
+    private val contentAnalyzer by lazy(LazyThreadSafetyMode.NONE) {
         EpubContentAnalyzer(
             textEntryCache = textEntryCache,
             titleOnlySpinePageCache = titleOnlySpinePageCache,
@@ -157,7 +158,7 @@ class EpubFormatReader(
         )
     }
 
-    private val manifestBlueprint: ManifestBlueprint? by lazy {
+    private val manifestBlueprint: ManifestBlueprint? by lazy(LazyThreadSafetyMode.NONE) {
         try {
             val cacheKey = currentCacheKey()
             EpubCacheSerializer.loadManifestFromCache(cacheKey, manifestCache)?.let { return@lazy it }
@@ -214,7 +215,11 @@ class EpubFormatReader(
                     },
                     repairFrontMatter = repairFrontMatter
                 )
-                EpubCacheSerializer.storeManifestInCache(cacheKey, blueprint, manifestCache)
+                // Fire-and-forget: don't block the open path waiting for
+                // JSON serialization + Room insert. (§3 latency)
+                thread(isDaemon = true, name = "epub-cache-manifest") {
+                    EpubCacheSerializer.storeManifestInCache(cacheKey, blueprint, manifestCache)
+                }
                 perfPhase("manifestBuilt(spine=${blueprint.spine.size})") { }
                 blueprint
             } else {
@@ -226,7 +231,7 @@ class EpubFormatReader(
         }
     }
 
-    private val parsed: ParsedEpub by lazy {
+    private val parsed: ParsedEpub by lazy(LazyThreadSafetyMode.NONE) {
         try {
             val cacheKey = currentCacheKey()
             EpubCacheSerializer.loadParsedFromCache(cacheKey, structureCache)?.let { return@lazy it }
@@ -256,7 +261,11 @@ class EpubFormatReader(
                 fallbackPages
             }
             val parsed = ParsedEpub(pages = pages)
-            perfPhase("storeParsedInCache(pages=${pages.size})") { EpubCacheSerializer.storeParsedInCache(cacheKey, parsed, structureCache) }
+            // Fire-and-forget: don't block the open path waiting for
+            // JSON serialization + Room insert. (§3 latency)
+            thread(isDaemon = true, name = "epub-cache-structure") {
+                EpubCacheSerializer.storeParsedInCache(cacheKey, parsed, structureCache)
+            }
             parsed
         } catch (e: Exception) {
             safeLogE(TAG, "Failed to build EPUB page list", e)
@@ -270,7 +279,7 @@ class EpubFormatReader(
     }
 
     private val pages: List<EpubPage> get() = parsed.pages
-    private val tocResolver by lazy {
+    private val tocResolver by lazy(LazyThreadSafetyMode.NONE) {
         EpubTocResolver(
             pages = pages,
             sectionIndexMapper = { legacyIndex -> mapLegacyPageIndexToSectionIndex(legacyIndex) },
@@ -281,7 +290,7 @@ class EpubFormatReader(
             extractChunk = { html, chunkIndex, totalChunks -> extractChunk(html, chunkIndex, totalChunks) }
         )
     }
-    private val lazyTocEntries: List<TocEntry> by lazy {
+    private val lazyTocEntries: List<TocEntry> by lazy(LazyThreadSafetyMode.NONE) {
         val blueprint = manifestBlueprint ?: return@lazy emptyList()
         runCatching {
             val zip = archiveManager.ensureZip() ?: return@runCatching emptyList()
@@ -293,7 +302,7 @@ class EpubFormatReader(
             emptyList()
         }
     }
-    private val footnoteMap: Map<String, String> by lazy {
+    private val footnoteMap: Map<String, String> by lazy(LazyThreadSafetyMode.NONE) {
         val blueprint = manifestBlueprint ?: return@lazy emptyMap()
         runCatching {
             val zip = archiveManager.ensureZip() ?: return@runCatching emptyMap()
@@ -409,7 +418,7 @@ class EpubFormatReader(
      * Lightweight section index. Unlike [textDocumentSections], this never reads XHTML.
      * It keeps the reader's section coordinate space available during the first paint.
      */
-    private val textSectionPages: List<EpubPage> by lazy {
+    private val textSectionPages: List<EpubPage> by lazy(LazyThreadSafetyMode.NONE) {
         val seenSpineKeys = mutableSetOf<String>()
         pages.filter { page ->
             when (page) {
@@ -420,7 +429,7 @@ class EpubFormatReader(
         }
     }
 
-    private val textDocumentSections: List<TextDocumentSection> by lazy {
+    private val textDocumentSections: List<TextDocumentSection> by lazy(LazyThreadSafetyMode.NONE) {
         perfPhase("buildTextDocumentSections") { buildTextDocumentSections() }
     }
 

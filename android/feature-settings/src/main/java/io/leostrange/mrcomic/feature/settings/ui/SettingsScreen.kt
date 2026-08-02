@@ -5563,14 +5563,10 @@ private fun ReaderModeCard(
     SettingsCard(title = strings.readingModeCard) {
         ChipRow {
             MrComicFilterChip(
-                selected = uiState.readingMode == ReadingMode.PAGE_LTR,
+                selected = uiState.readingMode == ReadingMode.PAGE_LTR ||
+                        uiState.readingMode == ReadingMode.PAGE_RTL,
                 onClick = { viewModel.setReadingMode(ReadingMode.PAGE_LTR) },
                 label = { Text(readerModeSettingsLabel(strings.languageCode, ReadingMode.PAGE_LTR)) }
-            )
-            MrComicFilterChip(
-                selected = uiState.readingMode == ReadingMode.PAGE_RTL,
-                onClick = { viewModel.setReadingMode(ReadingMode.PAGE_RTL) },
-                label = { Text(readerModeSettingsLabel(strings.languageCode, ReadingMode.PAGE_RTL)) }
             )
             MrComicFilterChip(
                 selected = uiState.readingMode == ReadingMode.WEBTOON,

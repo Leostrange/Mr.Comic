@@ -201,7 +201,12 @@ class PagePreloader @Inject constructor(
         return deferred.await()
     }
 
-    fun cancelPreload() { preloadJob?.cancel() }
+    fun cancelPreload() {
+        preloadJob?.cancel()
+        // Cancel in-flight decode jobs so orphaned Deferred instances
+        // don't continue consuming semaphore permits. (P1-7)
+        cancelInFlightLoads()
+    }
 
     fun getPage(index: Int, renderQuality: Int = 1): Bitmap? =
         activeReaderToken?.let { readerToken ->
@@ -328,12 +333,18 @@ class PagePreloader @Inject constructor(
     /**
      * Releases a bitmap with a grace period delay. This prevents the "trying to use a recycled bitmap"
      * crash if a draw call is mid-execution when the page is evicted during scrolling.
+     *
+     * Guards against double-recycle: checks [Bitmap.isRecycled] before and after the delay
+     * so concurrent release / draw-completion never releases an already-freed bitmap. (P2-2)
      */
     private fun releaseWithDelay(bitmap: Bitmap) {
+        if (bitmap.isRecycled) return
         scope.launch {
             withContext(NonCancellable) {
                 delay(1000)
-                bitmapAllocator.release(bitmap)
+                if (!bitmap.isRecycled) {
+                    bitmapAllocator.release(bitmap)
+                }
             }
         }
     }

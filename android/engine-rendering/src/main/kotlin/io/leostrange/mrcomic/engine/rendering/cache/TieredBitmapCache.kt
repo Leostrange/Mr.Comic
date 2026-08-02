@@ -58,7 +58,10 @@ class TieredBitmapCache @Inject constructor(
 
     fun put(key: String, bitmap: Bitmap) {
         val sizeKb = bitmap.safeSizeKb()
-        if (sizeKb < maxMemoryKb / 3) {
+        // Allow large pages (up to half the memory budget) to be cached.
+        // Previously only pages < maxMemoryKb/3 were cached, discarding
+        // large spreads that would then be re-decoded on every visit. (P2-3)
+        if (sizeKb < maxMemoryKb / 2) {
             memCache.put(key, CacheEntry(bitmap = bitmap, sizeKb = sizeKb))
         }
     }

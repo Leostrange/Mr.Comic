@@ -61,8 +61,7 @@ internal class DjvuIw44Decoder {
             // First chunk: parse image parameters
             if (payload.size < pos + 5) return false
             val version    = payload[pos++].toInt() and 0xFF
-            val colorMode  = version and 0x77       // bits 0,1,4,5,6
-            isGrayscale    = (colorMode and 0x77) == 0
+            isGrayscale    = (version and 0x0F) < 4  // djvulibre: color if low nibble >= 4
             val wInBlocks  = ((payload[pos].toInt() and 0xFF) shl 8) or
                               (payload[pos + 1].toInt() and 0xFF)
             pos += 2

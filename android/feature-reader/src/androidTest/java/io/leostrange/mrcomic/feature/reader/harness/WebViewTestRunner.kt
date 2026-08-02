@@ -8,6 +8,7 @@ import android.webkit.WebViewClient
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Инфраструктура для запуска тестов в реальном WebView.
@@ -16,62 +17,68 @@ import java.util.concurrent.TimeUnit
 class WebViewTestRunner(private val context: Context) {
 
     private var webView: WebView? = null
-    private val pageLoadedLatch = CountDownLatch(1)
     private var lastPageCount = 0
     private var lastPageIndex = 0
+
+    private val instrumentation
+        get() = InstrumentationRegistry.getInstrumentation()
 
     val jsBridge = "MrComicTestBridge"
 
     fun createWebView(): WebView {
-        val wv = WebView(context).apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.allowFileAccess = true
-            addJavascriptInterface(object {
-                @android.webkit.JavascriptInterface
-                fun onPageCountChanged(count: Int) {
-                    lastPageCount = count
-                }
+        val reference = AtomicReference<WebView>()
+        instrumentation.runOnMainSync {
+            val wv = WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.allowFileAccess = true
+                addJavascriptInterface(object {
+                    @android.webkit.JavascriptInterface
+                    fun onPageCountChanged(count: Int) {
+                        lastPageCount = count
+                    }
 
-                @android.webkit.JavascriptInterface
-                fun onSelectionChanged(text: String) { /* no-op for now */ }
+                    @android.webkit.JavascriptInterface
+                    fun onSelectionChanged(text: String) { /* no-op for now */ }
 
-                @android.webkit.JavascriptInterface
-                fun onProgressChanged(page: Int, total: Int, percentage: Double) {
-                    lastPageIndex = page
-                }
-            }, jsBridge)
-
-            webViewClient = object : WebViewClient() {
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    pageLoadedLatch.countDown()
-                }
+                    @android.webkit.JavascriptInterface
+                    fun onProgressChanged(page: Int, total: Int, percentage: Double) {
+                        lastPageIndex = page
+                    }
+                }, jsBridge)
             }
+            reference.set(wv)
+            webView = wv
         }
-        webView = wv
-        return wv
+        return reference.get()
     }
 
     fun loadHtml(html: String, baseUrl: String = "file:///android_asset/") {
         val latch = CountDownLatch(1)
-        webView?.post {
+        instrumentation.runOnMainSync {
+            webView?.webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    latch.countDown()
+                }
+            }
             webView?.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
         }
-        // Wait for page load
-        pageLoadedLatch.await(10, TimeUnit.SECONDS)
-        // Extra wait for WebView rendering
+        check(latch.await(10, TimeUnit.SECONDS)) { "WebView did not finish loading HTML within 10 seconds" }
+        // Allow layout and pagination scripts to settle after the navigation callback.
         Thread.sleep(500)
     }
 
     fun executeJs(script: String): String {
-        var result = ""
+        val result = AtomicReference("")
         val latch = CountDownLatch(1)
-        webView?.evaluateJavascript(script) { value ->
-            result = value?.removeSurrounding("\"") ?: ""
-            latch.countDown()
+        instrumentation.runOnMainSync {
+            webView?.evaluateJavascript(script) { value ->
+                result.set(value?.removeSurrounding("\"") ?: "")
+                latch.countDown()
+            } ?: latch.countDown()
         }
-        latch.await(5, TimeUnit.SECONDS)
-        return result
+        check(latch.await(5, TimeUnit.SECONDS)) { "WebView JavaScript did not return within 5 seconds" }
+        return result.get()
     }
 
     fun getPageCount(): Int = lastPageCount
@@ -128,11 +135,14 @@ class WebViewTestRunner(private val context: Context) {
     }
 
     fun captureScreenshot(): Bitmap {
-        val wv = webView ?: throw IllegalStateException("WebView not created")
-        val bitmap = Bitmap.createBitmap(wv.width, wv.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        wv.draw(canvas)
-        return bitmap
+        val reference = AtomicReference<Bitmap>()
+        instrumentation.runOnMainSync {
+            val wv = webView ?: throw IllegalStateException("WebView not created")
+            val bitmap = Bitmap.createBitmap(wv.width, wv.height, Bitmap.Config.ARGB_8888)
+            wv.draw(Canvas(bitmap))
+            reference.set(bitmap)
+        }
+        return reference.get()
     }
 
     fun getVisibleText(): String {
@@ -149,7 +159,10 @@ class WebViewTestRunner(private val context: Context) {
     }
 
     fun destroy() {
-        webView?.destroy()
-        webView = null
+        instrumentation.runOnMainSync {
+            webView?.stopLoading()
+            webView?.destroy()
+            webView = null
+        }
     }
 }

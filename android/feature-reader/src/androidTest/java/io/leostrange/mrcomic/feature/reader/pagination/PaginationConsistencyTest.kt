@@ -34,8 +34,8 @@ class PaginationConsistencyTest {
 
     @After
     fun tearDown() {
-        runner.destroy()
-        tempDir.deleteRecursively()
+        if (::runner.isInitialized) runner.destroy()
+        if (::tempDir.isInitialized) tempDir.deleteRecursively()
     }
 
     @Test

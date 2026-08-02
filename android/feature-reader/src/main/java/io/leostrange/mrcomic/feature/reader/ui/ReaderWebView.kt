@@ -90,6 +90,8 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
     private var nativePagedEdgeTapXPercent: Float? = null
     private var nativePagedGestureMoved: Boolean = false
     private var pagedDragSuppressesSelection: Boolean = false
+    /** Guard: when native touch handler resolved a TAP, suppress the duplicate JS onTap callback. */
+    @Volatile private var nativeTapConsumed: Boolean = false
     /** Set by JS touchstart when the touch target is a clickable link/footnote. */
     @Volatile var touchStartedOnLink: Boolean = false
     private var touchStartedAtTopBoundary: Boolean = false
@@ -210,6 +212,7 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                             clearReaderSelection()
                             restorePagedDragSelection()
                             suppressNextReaderClick()
+                            nativeTapConsumed = true
                             nativePagedGestureMoved = false
                             nativePagedEdgeTapXPercent = null
                             onNativePagedTapRequest?.invoke(0.1f)
@@ -219,6 +222,7 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                             clearReaderSelection()
                             restorePagedDragSelection()
                             suppressNextReaderClick()
+                            nativeTapConsumed = true
                             nativePagedGestureMoved = false
                             nativePagedEdgeTapXPercent = null
                             onNativePagedTapRequest?.invoke(0.9f)
@@ -293,6 +297,19 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                 isHapticFeedbackEnabled = enabled
             }
         }
+    }
+
+    /**
+     * Returns true if the native touch handler already consumed this tap,
+     * and resets the flag. The JS [onTap] interface should skip dispatching
+     * when this returns true — prevents the double-page-advance bug.
+     */
+    fun consumeNativeTapIfPresent(): Boolean {
+        if (nativeTapConsumed) {
+            nativeTapConsumed = false
+            return true
+        }
+        return false
     }
 
     fun suppressNextReaderClick() {

@@ -46,7 +46,8 @@ object FormatDetector {
 
     fun detectByExtension(name: String): ComicFormat {
         return when (name.lowercase().substringAfterLast('.')) {
-            "cbz", "zip" -> ComicFormat.CBZ
+            "cbz"        -> ComicFormat.CBZ
+            "zip"        -> ComicFormat.ZIP
             "cbr", "rar" -> ComicFormat.CBR
             "cb7", "7z"  -> ComicFormat.SEVENZ
             "cbt", "tar" -> ComicFormat.TAR
@@ -70,7 +71,7 @@ object FormatDetector {
 
     private fun detectByBytes(header: ByteArray): ComicFormat? {
         return when {
-            header.startsWith(ZIP_MAGIC) -> detectZipContainer(header) ?: ComicFormat.CBZ
+            header.startsWith(ZIP_MAGIC) -> detectZipContainer(header) ?: ComicFormat.ZIP
             header.startsWith(RAR4_MAGIC) || header.startsWith(RAR5_MAGIC) -> ComicFormat.CBR
             header.startsWith(PDF_MAGIC)  -> ComicFormat.PDF
             header.startsWith(SEVENZ_MAGIC) -> ComicFormat.SEVENZ

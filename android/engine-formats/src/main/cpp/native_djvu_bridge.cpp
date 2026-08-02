@@ -225,12 +225,12 @@ NativeDoc* asDoc(jlong handle) {
 } // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativeIsAvailable(JNIEnv*, jobject) {
+Java_io_leostrange_mrcomic_engine_formats_djvu_NativeDjvuBridge_nativeIsAvailable(JNIEnv*, jobject) {
     return loadSymbols() ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativeOpen(JNIEnv* env, jobject, jstring path) {
+Java_io_leostrange_mrcomic_engine_formats_djvu_NativeDjvuBridge_nativeOpen(JNIEnv* env, jobject, jstring path) {
     if (!loadSymbols() || !path) return 0;
 
     const char* utfPath = env->GetStringUTFChars(path, nullptr);
@@ -260,13 +260,13 @@ Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativeOpen(JNIEnv* env, jo
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativePageCount(JNIEnv*, jobject, jlong handle) {
+Java_io_leostrange_mrcomic_engine_formats_djvu_NativeDjvuBridge_nativePageCount(JNIEnv*, jobject, jlong handle) {
     NativeDoc* nativeDoc = asDoc(handle);
     return nativeDoc ? nativeDoc->pageCount : 0;
 }
 
 extern "C" JNIEXPORT jintArray JNICALL
-Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativePageInfo(JNIEnv* env, jobject, jlong handle, jint pageIndex) {
+Java_io_leostrange_mrcomic_engine_formats_djvu_NativeDjvuBridge_nativePageInfo(JNIEnv* env, jobject, jlong handle, jint pageIndex) {
     NativeDoc* nativeDoc = asDoc(handle);
     if (!loadSymbols() || !nativeDoc || pageIndex < 0 || pageIndex >= nativeDoc->pageCount) return nullptr;
 
@@ -291,7 +291,7 @@ Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativePageInfo(JNIEnv* env
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativeRenderPage(
+Java_io_leostrange_mrcomic_engine_formats_djvu_NativeDjvuBridge_nativeRenderPage(
     JNIEnv* env,
     jobject,
     jlong handle,
@@ -360,7 +360,7 @@ Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativeRenderPage(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_engine_formats_djvu_NativeDjvuBridge_nativeClose(JNIEnv*, jobject, jlong handle) {
+Java_io_leostrange_mrcomic_engine_formats_djvu_NativeDjvuBridge_nativeClose(JNIEnv*, jobject, jlong handle) {
     if (!loadSymbols()) return;
     closeDoc(asDoc(handle));
 }
