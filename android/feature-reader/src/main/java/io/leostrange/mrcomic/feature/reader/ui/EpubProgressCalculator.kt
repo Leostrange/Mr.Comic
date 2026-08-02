@@ -105,8 +105,10 @@ internal object EpubProgressCalculator {
             .sortedBy { (sectionIndex, _) -> sectionIndex }
             .associate { (sectionIndex, pageCount) -> sectionIndex to pageCount }
 
-    private fun stableEstimate(orderedCounts: Map<Int, Int>): Int =
-        orderedCounts.values.firstOrNull()?.coerceAtLeast(1) ?: 1
+    private fun stableEstimate(orderedCounts: Map<Int, Int>): Int {
+        if (orderedCounts.isEmpty()) return 1
+        return (orderedCounts.values.sum() / orderedCounts.size).coerceAtLeast(1)
+    }
 
     data class AccumulatedProgress(
         val accumulatedTotalPages: Int,

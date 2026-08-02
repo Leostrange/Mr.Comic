@@ -395,16 +395,34 @@ class ArchiveDelegatingFormatReader(
 
     private fun extractSingleSevenZEntry(root: File, entryName: String): Boolean = runCatching {
         SevenZFile(archiveSourceFile()).use { sevenZ ->
-            val entry = sevenZ.entries.firstOrNull { e ->
-                !e.isDirectory && (e.name.equals(entryName, ignoreCase = true) ||
-                    e.name?.replace('\\', '/')?.equals(entryName.replace('\\', '/'), ignoreCase = true) == true)
-            } ?: return@use false
-            val target = safeEntryFile(root, entry.name ?: return@use false) ?: return@use false
-            target.parentFile?.mkdirs()
-            sevenZ.getInputStream(entry).use { input ->
-                target.outputStream().use { output -> input.copyTo(output) }
+            // Read through the archive sequentially instead of resolving an entry from
+            // `entries` and opening a random-access stream. Sequential access is required
+            // for solid 7z blocks, which is the common case for small text archives.
+            var entry = sevenZ.nextEntry
+            while (entry != null) {
+                val name = entry.name.orEmpty()
+                if (!entry.isDirectory &&
+                    (name.equals(entryName, ignoreCase = true) ||
+                        name.replace('\\', '/').equals(entryName.replace('\\', '/'), ignoreCase = true))
+                ) {
+                    val target = safeEntryFile(root, name) ?: return@use false
+                    target.parentFile?.mkdirs()
+                    target.outputStream().use { output ->
+                        val buffer = ByteArray(DEFAULT_ARCHIVE_COPY_BUFFER_SIZE)
+                        while (true) {
+                            val read = sevenZ.read(buffer)
+                            if (read < 0) break
+                            if (read > 0) output.write(buffer, 0, read)
+                        }
+                    }
+                    return@use true
+                }
+                // A non-matching entry is decompressed/discarded so the nextEntry call
+                // can advance correctly through a solid block.
+                while (sevenZ.read() >= 0) Unit
+                entry = sevenZ.nextEntry
             }
-            true
+            false
         }
     }.getOrElse {
         Log.w(TAG, "Failed to extract single 7z entry: $path ($entryName)", it)
@@ -516,6 +534,7 @@ class ArchiveDelegatingFormatReader(
 
     private companion object {
         const val TAG = "ArchiveDelegatingReader"
+        const val DEFAULT_ARCHIVE_COPY_BUFFER_SIZE = 8192
     }
 }
 

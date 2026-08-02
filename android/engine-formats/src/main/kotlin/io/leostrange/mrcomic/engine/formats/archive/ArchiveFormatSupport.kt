@@ -31,29 +31,63 @@ object ArchiveFormatSupport {
      * "Real" e-book formats that own an archive's content — distinct from auxiliary plain-text
      * files (txt/html/md) that may merely accompany a comic page sequence (readme, about, notes).
      * A comic page sequence yields to these but not to auxiliary text.
+     *
+     * BUG-ARCHIVE-TEXT: before 2026-08-02 md/html/htm/xhtml/txt/text/markdown were absent,
+     * so book.md + numbered plates classified as IMAGE_SEQUENCE (raster fallback → black screen).
      */
     private val bookPrimaryFormats: Set<String> =
-        setOf("epub", "fb2", "mobi", "prc", "azw", "azw3", "kf8", "docx", "odt", "rtf")
+        setOf("epub", "fb2", "mobi", "prc", "azw", "azw3", "kf8", "docx", "odt", "rtf",
+              "md", "markdown", "html", "htm", "xhtml", "txt", "text")
 
     val naturalPathComparator: Comparator<String> = Comparator { left, right ->
         compareNatural(left, right)
     }
 
-    /** Comparator that sorts primary book formats (epub, fb2, mobi, etc.) before plain text. */
-    private val primaryBookFormatComparator = Comparator<String> { left, right ->
-        val leftPrimary = extensionOf(left) in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
-        val rightPrimary = extensionOf(right) in setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf")
+    private val preferredTextEntryComparator = Comparator<String> { left, right ->
+        val leftAuxiliary = isAuxiliaryTextEntry(left)
+        val rightAuxiliary = isAuxiliaryTextEntry(right)
         when {
-            leftPrimary && !rightPrimary -> -1
-            !leftPrimary && rightPrimary -> 1
-            else -> 0
+            leftAuxiliary && !rightAuxiliary -> 1
+            !leftAuxiliary && rightAuxiliary -> -1
+            else -> {
+                val leftPriority = textFormatPriority(extensionOf(left))
+                val rightPriority = textFormatPriority(extensionOf(right))
+                leftPriority.compareTo(rightPriority).takeIf { it != 0 }
+                    ?: naturalPathComparator.compare(left, right)
+            }
         }
     }
 
-    private val preferredTextEntryComparator = Comparator<String> { left, right ->
-        val primaryOrder = primaryBookFormatComparator.compare(left, right)
-        if (primaryOrder != 0) primaryOrder else naturalPathComparator.compare(left, right)
+    private val auxiliaryTextStemPattern = Regex(
+        """(?i)^(readme|read-me|about|info|information|license|licence|notes?|description|changes?|changelog|notice|credits?)$"""
+    )
+
+    private fun isAuxiliaryTextEntry(name: String): Boolean {
+        val stem = name.substringAfterLast('/').substringAfterLast('\\')
+            .substringBeforeLast('.', missingDelimiterValue = "")
+            .trim()
+        return auxiliaryTextStemPattern.matches(stem)
     }
+
+    private fun textFormatPriority(extension: String): Int = when (extension.lowercase(Locale.US)) {
+        "epub" -> 0
+        "fb2" -> 1
+        "mobi", "prc" -> 2
+        "azw", "azw3", "kf8" -> 3
+        "docx" -> 4
+        "odt" -> 5
+        "rtf" -> 6
+        "md", "markdown" -> 10
+        "html", "htm", "xhtml" -> 11
+        "txt", "text" -> 12
+        else -> 100
+    }
+
+    private fun isGenuineBookTextEntry(name: String): Boolean =
+        extensionOf(name) in bookPrimaryFormats && !isAuxiliaryTextEntry(name)
+
+    private fun isGenuineBookFormatEntry(name: String): Boolean =
+        extensionOf(name) in setOf("epub", "fb2", "mobi", "prc", "azw", "azw3", "kf8", "docx", "odt", "rtf")
 
     fun classify(fileNames: List<String>): ArchiveContentKind {
         val textEntries = fileNames.filter(::isTextEntry)
@@ -63,12 +97,12 @@ object ArchiveFormatSupport {
         val hasOnlyCoverImages = imageEntries.isEmpty() || imageEntries.all(::isBookCoverImageEntry)
         val hasComicPageImageSequence = imageEntries.size >= 2 && imageEntries.all(::isComicPageImageEntry)
         val hasDominantTextEntry = textEntries.isNotEmpty() &&
-            textEntries.any { isDominantBookEntry(it, textEntries, imageEntries) }
+            textEntries.any { isDominantBookEntry(it, textEntries) }
         // A genuine comic page sequence (≥2 sequentially-numbered images) must not be reclassified
         // as a book just because an auxiliary text file (readme.txt, about.html, notes.md) sits
         // alongside it — otherwise every comic page is dropped and only the readme is rendered.
         // Real e-book formats (epub/fb2/mobi/…) still win, since numbered plates can belong to a book.
-        val hasBookFormatTextEntry = textEntries.any { extensionOf(it) in bookPrimaryFormats }
+        val hasBookFormatTextEntry = textEntries.any(::isGenuineBookTextEntry)
         val comicSequenceDominates = hasComicPageImageSequence && !hasBookFormatTextEntry
         return when {
             comicSequenceDominates ->
@@ -94,31 +128,24 @@ object ArchiveFormatSupport {
      */
     private fun isDominantBookEntry(
         entry: String,
-        allTextEntries: List<String>,
-        imageEntries: List<String>
+        allTextEntries: List<String>
     ): Boolean {
         val ext = extensionOf(entry)
-        val primaryFormats = setOf("epub", "fb2", "mobi", "azw3", "docx", "odt", "rtf", "txt", "html", "htm", "xhtml", "md", "markdown")
-        // Primary book formats that typically own all other content in the archive
-        if (ext !in primaryFormats) return false
-        // Non-book text files (readme, license, etc.) shouldn't prevent book detection
-        val nonBookTextEntries = allTextEntries.filter {
-            val e = extensionOf(it)
-            e !in primaryFormats
-        }
+        if (ext !in bookPrimaryFormats) return false
+        if (isAuxiliaryTextEntry(entry) && !isGenuineBookFormatEntry(entry)) return false
         // If there's only one primary book file, treat it as dominant even if
         // there are minor text files (readme, license) alongside it
-        val primaryBookCount = allTextEntries.count {
-            val e = extensionOf(it)
-            e in primaryFormats
-        }
+        val primaryBookCount = allTextEntries.count(::isGenuineBookTextEntry)
         if (primaryBookCount == 1) return true
         return false
     }
 
     fun resolveSingleBookTextEntry(fileNames: List<String>): ArchiveResolvedEntry {
         val kind = classify(fileNames)
-        if (kind != ArchiveContentKind.SINGLE_BOOK) {
+        // Allow MIXED so archives with book + images/auxiliary texts can be resolved.
+        // Without this, a ZIP with .fb2 + cover.jpg + readme.txt falls through to raster
+        // even though the archive is clearly a book container.
+        if (kind != ArchiveContentKind.SINGLE_BOOK && kind != ArchiveContentKind.MIXED) {
             return ArchiveResolvedEntry(kind = kind)
         }
         // Prefer primary book formats (epub, fb2, mobi, etc.) over plain text (txt, html)

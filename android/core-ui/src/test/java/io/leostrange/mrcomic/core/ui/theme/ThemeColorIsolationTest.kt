@@ -27,8 +27,12 @@ class ThemeColorIsolationTest {
         assertEquals(Color(0xFFFFFFFF), ThemePreset.EINK.previewColors().bg)
     }
 
+    /**
+     * When customBackgroundColor is set, surface family IS recalculated from
+     * neutral anchor (BUG-2 fix). Primary/secondary remain unchanged.
+     */
     @Test
-    fun customBackgroundDoesNotMutateSurfaceOrControlColors() {
+    fun customBackgroundRecalculatesSurfaceFamilyFromNeutralAnchor() {
         val base = lightColorScheme(
             primary = Color(0xFF1565C0),
             secondary = Color(0xFF6A4C93),
@@ -45,13 +49,22 @@ class ThemeColorIsolationTest {
             isDarkTheme = false
         )
 
+        // Background is overridden
         assertEquals(Color(0xFF0D47A1), result.background)
+        // Primary/secondary are NOT affected by custom background
         assertEquals(base.primary, result.primary)
         assertEquals(base.secondary, result.secondary)
-        assertEquals(base.surface, result.surface)
-        assertEquals(base.surfaceVariant, result.surfaceVariant)
-        assertEquals(base.surfaceContainer, result.surfaceContainer)
-        assertEquals(base.surfaceContainerHigh, result.surfaceContainerHigh)
+        // Surface family IS recalculated — verify they changed
+        // (surfaceContainer from neutral anchor differs from original beige-tinted base)
+        assertTrue(
+            "surfaceContainer should differ from base after recalculation",
+            result.surfaceContainer != base.surfaceContainer
+        )
+        // Recalculated surface containers should be neutral (high luminance)
+        assertTrue(
+            "surfaceContainer should be neutral light",
+            result.surfaceContainer.luminance() > 0.8f
+        )
     }
 
     @Test
@@ -70,8 +83,14 @@ class ThemeColorIsolationTest {
         assertEquals(Color(0xFF0000FF), result.background)
     }
 
+    /**
+     * Surface family is recalculated when customBackgroundColor is set (BUG-2 fix).
+     * Different custom backgrounds produce the same surface containers when
+     * base surface and surfaceOpacity are identical — containers are derived
+     * from neutral anchor (base surface), not from the custom background.
+     */
     @Test
-    fun surfaceOpacityDoesNotRecalculateSurfaceFamilyFromCustomBackground() {
+    fun surfaceFamilyIsNeutralRegardlessOfCustomBackgroundTint() {
         val base = lightColorScheme(
             background = Color(0xFFF7F3EE),
             surface = Color(0xFFFFFFFF),

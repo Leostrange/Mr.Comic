@@ -427,7 +427,9 @@ fun ReaderBrightnessRow(
             colors = SliderDefaults.colors(
                 thumbColor = MaterialTheme.colorScheme.primary,
                 activeTrackColor = MaterialTheme.colorScheme.primary,
-                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                activeTickColor = MaterialTheme.colorScheme.onPrimary,
+                inactiveTickColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.36f)
             )
         )
         Icon(

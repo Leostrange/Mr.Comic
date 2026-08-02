@@ -54,9 +54,7 @@ internal fun textSettingsJs(
     val quoteColor = if (isNightTheme) "#c9c9c9" else "#555555"
     // RTL: flip text-align and set direction on body
     val effectiveDirection = if (isRtl) "rtl" else "ltr"
-    val effectiveAlign = if (pagedMode && align.equals("justify", ignoreCase = true)) {
-        if (isRtl) "right" else "left"
-    } else if (isRtl) {
+    val effectiveAlign = if (isRtl) {
         when (align) {
             "left" -> "right"
             "right" -> "left"
@@ -297,13 +295,13 @@ internal fun textSettingsJs(
         mrcomicPagedContent.style.transformOrigin='0 0';
         mrcomicPagedContent.style.webkitTransformOrigin='0 0';
         mrcomicPagedContent.style.willChange='transform';
-        document.body.style.setProperty('text-align','left','important');
+        document.body.style.setProperty('text-align','$effectiveAlign','important');
         document.body.style.setProperty('text-align-last','auto','important');
         document.body.style.setProperty('padding-top','0px','important');
         document.body.style.setProperty('padding-bottom','0px','important');
         try{
           Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6'),function(el){
-            el.style.setProperty('text-align','left','important');
+            el.style.setProperty('text-align','$effectiveAlign','important');
             el.style.setProperty('text-align-last','auto','important');
           });
         }catch(e){}

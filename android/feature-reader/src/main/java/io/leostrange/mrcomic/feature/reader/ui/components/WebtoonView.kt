@@ -13,7 +13,6 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,9 +57,9 @@ fun WebtoonView(
     // Key listState on comic id so that chapter changes reset the scroll position
     // instead of retaining the stale position from the previous chapter.
     val comicId = uiState.comic?.id
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = uiState.currentPage
-    )
+    val listState = remember(comicId) {
+        LazyListState(firstVisibleItemIndex = uiState.currentPage)
+    }
     LaunchedEffect(comicId) {
         listState.scrollToItem(uiState.currentPage)
     }

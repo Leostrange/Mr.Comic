@@ -37,9 +37,9 @@ fun currentReaderChapterTitle(
     ?.trim()
     ?.takeIf { it.isNotBlank() }
 
-fun readerVolumePagingStep(keyCode: Int): Int? = when (keyCode) {
-    KeyEvent.KEYCODE_VOLUME_UP -> -1
-    KeyEvent.KEYCODE_VOLUME_DOWN -> 1
+fun readerVolumePagingStep(keyCode: Int, readingMode: ReadingMode = ReadingMode.PAGE_LTR): Int? = when (keyCode) {
+    KeyEvent.KEYCODE_VOLUME_UP -> if (readingMode == ReadingMode.PAGE_RTL) 1 else -1
+    KeyEvent.KEYCODE_VOLUME_DOWN -> if (readingMode == ReadingMode.PAGE_RTL) -1 else 1
     else -> null
 }
 
@@ -185,10 +185,11 @@ fun readerPagedNextStartAfterFittedLine(
 
 fun resolveReaderHardwareKeyDecision(
     event: KeyEvent,
-    volumePagingEnabled: Boolean
+    volumePagingEnabled: Boolean,
+    readingMode: ReadingMode = ReadingMode.PAGE_LTR
 ): ReaderHardwareKeyDecision {
     if (!volumePagingEnabled) return ReaderHardwareKeyDecision(consume = false)
-    val pageStep = readerVolumePagingStep(event.keyCode) ?: return ReaderHardwareKeyDecision(consume = false)
+    val pageStep = readerVolumePagingStep(event.keyCode, readingMode) ?: return ReaderHardwareKeyDecision(consume = false)
     return when (event.action) {
         KeyEvent.ACTION_DOWN -> {
             if (event.repeatCount == 0) {

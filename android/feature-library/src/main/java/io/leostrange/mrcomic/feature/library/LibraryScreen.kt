@@ -795,7 +795,18 @@ fun LibraryScreen(
                                         uiState = uiState,
                                         onComicClick = { onComicClick(it.id) },
                                         onComicLongClick = { selectedComicId = it.id },
-                                        onFolderClick = { viewModel.openFolderSheet(it.path) },
+                                        onFolderClick = { folder ->
+                                            if (folder.fileCount == 1 && folder.subfolderCount == 0) {
+                                                val singleComic = uiState.comics.find { it.folderId == folder.path }
+                                                if (singleComic != null) {
+                                                    onComicClick(singleComic.id)
+                                                } else {
+                                                    viewModel.openFolderSheet(folder.path)
+                                                }
+                                            } else {
+                                                viewModel.openFolderSheet(folder.path)
+                                            }
+                                        },
                                         onFolderLongClick = { folderToDelete = it },
                                         onAudiobookClick = { onAudiobookClick(it.id) },
                                         onAudiobookLongClick = { audiobookToDelete = it }
@@ -873,7 +884,18 @@ fun LibraryScreen(
                                         uiState = uiState,
                                         onComicClick = { onComicClick(it.id) },
                                         onComicLongClick = { selectedComicId = it.id },
-                                        onFolderClick = { viewModel.openFolderSheet(it.path) },
+                                        onFolderClick = { folder ->
+                                            if (folder.fileCount == 1 && folder.subfolderCount == 0) {
+                                                val singleComic = uiState.comics.find { it.folderId == folder.path }
+                                                if (singleComic != null) {
+                                                    onComicClick(singleComic.id)
+                                                } else {
+                                                    viewModel.openFolderSheet(folder.path)
+                                                }
+                                            } else {
+                                                viewModel.openFolderSheet(folder.path)
+                                            }
+                                        },
                                         onFolderLongClick = { folderToDelete = it },
                                         onAudiobookClick = { onAudiobookClick(it.id) },
                                         onAudiobookLongClick = { audiobookToDelete = it }
@@ -940,7 +962,18 @@ fun LibraryScreen(
                                                     shelfStyle = uiState.shelfStyle,
                                                     shelfDepth = uiState.shelfDepth,
                                                     cardShadow = uiState.cardShadow,
-                                                    onClick = { viewModel.openFolderSheet(item.path) },
+                                                    onClick = {
+                                                        if (item.fileCount == 1 && item.subfolderCount == 0) {
+                                                            val singleComic = uiState.comics.find { it.folderId == item.path }
+                                                            if (singleComic != null) {
+                                                                onComicClick(singleComic.id)
+                                                            } else {
+                                                                viewModel.openFolderSheet(item.path)
+                                                            }
+                                                        } else {
+                                                            viewModel.openFolderSheet(item.path)
+                                                        }
+                                                    },
                                                     onLongClick = { folderToDelete = item }
                                                 )
                                             }
@@ -1348,7 +1381,22 @@ fun LibraryScreen(
                                                 shelfStyle = uiState.shelfStyle,
                                                 shelfDepth = uiState.shelfDepth,
                                                 cardShadow = uiState.cardShadow,
-                                                onClick = { viewModel.openFolderSheet(item.path) },
+                                                onClick = {
+                                                    if (item.fileCount == 1 && item.subfolderCount == 0) {
+                                                        val singleComic = uiState.folderSheetItems
+                                                            .filterIsInstance<LibraryComicItem>()
+                                                            .find { it.comic.folderId == item.path }
+                                                            ?.comic
+                                                        if (singleComic != null) {
+                                                            viewModel.dismissFolderSheet()
+                                                            onComicClick(singleComic.id)
+                                                        } else {
+                                                            viewModel.openFolderSheet(item.path)
+                                                        }
+                                                    } else {
+                                                        viewModel.openFolderSheet(item.path)
+                                                    }
+                                                },
                                                 onLongClick = { folderToDelete = item }
                                             )
                                         }
