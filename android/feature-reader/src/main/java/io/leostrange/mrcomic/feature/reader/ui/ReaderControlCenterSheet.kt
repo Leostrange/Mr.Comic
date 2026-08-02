@@ -351,12 +351,13 @@ private fun ReaderReadingTab(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf(
                     io.leostrange.mrcomic.core.model.ReadingMode.PAGE_LTR to strings.readingModeLtr,
-                    io.leostrange.mrcomic.core.model.ReadingMode.PAGE_RTL to strings.readingModeRtl,
                     io.leostrange.mrcomic.core.model.ReadingMode.WEBTOON to strings.readingModeWebtoon
                 ).forEach { (mode, label) ->
                     item(mode.name) {
                         ReaderChoiceChip(
-                            selected = uiState.readingMode == mode,
+                            selected = uiState.readingMode == mode ||
+                                    (mode == io.leostrange.mrcomic.core.model.ReadingMode.PAGE_LTR &&
+                                            uiState.readingMode == io.leostrange.mrcomic.core.model.ReadingMode.PAGE_RTL),
                             onClick = { onReadingModeChange(mode) },
                             label = { Text(label, style = MaterialTheme.typography.labelSmall) }
                         )
@@ -1071,174 +1072,176 @@ private fun ReaderStyleTab(
                 }
             }
         }
-        item { ReaderSectionTitle(readerText.fontTitle) }
-        item {
-            ReaderOutlinedActionButton(
-                onClick = onImportCustomFont,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(readerText.importFontAction)
-            }
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+        if (isTextReader) {
+            item { ReaderSectionTitle(readerText.fontTitle) }
+            item {
                 ReaderOutlinedActionButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onImportReaderStyle
+                    onClick = onImportCustomFont,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(readerImportStyleAction(strings.languageCode))
-                }
-                ReaderOutlinedActionButton(
-                    modifier = Modifier.weight(1f),
-                    onClick = onExportReaderStyle
-                ) {
-                    Text(readerExportStyleAction(strings.languageCode))
+                    Text(readerText.importFontAction)
                 }
             }
-        }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ReaderOutlinedActionButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onImportReaderStyle
+                    ) {
+                        Text(readerImportStyleAction(strings.languageCode))
+                    }
+                    ReaderOutlinedActionButton(
+                        modifier = Modifier.weight(1f),
+                        onClick = onExportReaderStyle
+                    ) {
+                        Text(readerExportStyleAction(strings.languageCode))
+                    }
+                }
+            }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(
+                        availableFonts.sortedWith(
+                            compareByDescending<String> { font -> uiState.textFontFamily == font }
+                                .thenBy { font -> font.lowercase(java.util.Locale.getDefault()) }
+                        )
+                    ) { font ->
+                        ReaderChoiceChip(
+                            selected = (uiState.textFontFamily == font) || (uiState.textFontFamily !in availableFonts && font == "Georgia"),
+                            onClick = { onFontFamilyChange(font) },
+                            label = { Text(font) }
+                        )
+                    }
+                }
+            }
+            item { ReaderSectionTitle("${readerImportedFontsTitle(strings.languageCode)} (${importedFonts.size})") }
+            if (importedFonts.isEmpty()) {
+                item {
+                    Text(
+                        text = readerImportedFontsEmpty(strings.languageCode),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
                 items(
-                    availableFonts.sortedWith(
+                    importedFonts.sortedWith(
                         compareByDescending<String> { font -> uiState.textFontFamily == font }
                             .thenBy { font -> font.lowercase(java.util.Locale.getDefault()) }
-                    )
+                    ),
+                    key = { it }
                 ) { font ->
-                    ReaderChoiceChip(
-                        selected = (uiState.textFontFamily == font) || (uiState.textFontFamily !in availableFonts && font == "Georgia"),
-                        onClick = { onFontFamilyChange(font) },
-                        label = { Text(font) }
-                    )
-                }
-            }
-        }
-        item { ReaderSectionTitle("${readerImportedFontsTitle(strings.languageCode)} (${importedFonts.size})") }
-        if (importedFonts.isEmpty()) {
-            item {
-                Text(
-                    text = readerImportedFontsEmpty(strings.languageCode),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        } else {
-            items(
-                importedFonts.sortedWith(
-                    compareByDescending<String> { font -> uiState.textFontFamily == font }
-                        .thenBy { font -> font.lowercase(java.util.Locale.getDefault()) }
-                ),
-                key = { it }
-            ) { font ->
-                ReaderSettingsCard(selected = uiState.textFontFamily == font) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ReaderSettingsCard(selected = uiState.textFontFamily == font) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = font,
-                                style = MaterialTheme.typography.bodySmall,
-                                fontWeight = if (uiState.textFontFamily == font) FontWeight.SemiBold else FontWeight.Normal
-                            )
-                            if (uiState.textFontFamily == font) {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
                                 Text(
-                                    text = readerImportedFontsActive(strings.languageCode),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary
+                                    text = font,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = if (uiState.textFontFamily == font) FontWeight.SemiBold else FontWeight.Normal
                                 )
+                                if (uiState.textFontFamily == font) {
+                                    Text(
+                                        text = readerImportedFontsActive(strings.languageCode),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
-                        }
-                        ReaderOutlinedActionButton(
-                            onClick = { onDeleteCustomFont(font) }
-                        ) {
-                            Text(readerDeleteFontAction(strings.languageCode))
+                            ReaderOutlinedActionButton(
+                                onClick = { onDeleteCustomFont(font) }
+                            ) {
+                                Text(readerDeleteFontAction(strings.languageCode))
+                            }
                         }
                     }
                 }
             }
-        }
-        item {
-            ReaderSliderRow(
-                title = readerFontSizeLabel(uiState.textFontSize, strings.languageCode),
-                valueText = "${uiState.textFontSize}sp",
-                value = uiState.textFontSize.toFloat(),
-                valueRange = 12f..32f,
-                steps = 19,
-                onValueChange = { onFontSizeChange(it.toInt()) }
-            )
-        }
-        item {
-            ReaderSwitchRow(
-                title = readerText.boldFont,
-                checked = uiState.textBold,
-                onCheckedChange = onBoldChange
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerLineHeightLabel((uiState.textLineHeight * 100).toInt(), strings.languageCode),
-                valueText = "${(uiState.textLineHeight * 100).toInt()}%",
-                value = uiState.textLineHeight,
-                valueRange = 1.0f..3.0f,
-                steps = 19,
-                onValueChange = onLineHeightChange
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerLetterSpacingLabel(uiState.textLetterSpacing, strings.languageCode),
-                valueText = "${"%.2f".format(java.util.Locale.US, uiState.textLetterSpacing)}em",
-                value = uiState.textLetterSpacing,
-                valueRange = 0f..0.2f,
-                steps = 19,
-                onValueChange = onLetterSpacingChange
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerWordSpacingLabel(uiState.textWordSpacing, strings.languageCode),
-                valueText = "${"%.2f".format(java.util.Locale.US, uiState.textWordSpacing)}em",
-                value = uiState.textWordSpacing,
-                valueRange = 0f..0.6f,
-                steps = 23,
-                onValueChange = onWordSpacingChange
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerParagraphSpacingLabel(uiState.textParagraphSpacing, strings.languageCode),
-                valueText = "${"%.2f".format(java.util.Locale.US, uiState.textParagraphSpacing)}em",
-                value = uiState.textParagraphSpacing,
-                valueRange = 0.1f..1.2f,
-                steps = 21,
-                onValueChange = onParagraphSpacingChange
-            )
-        }
-        item { ReaderSectionTitle(readerText.textAlignTitle) }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                listOf(
-                    "justify" to readerText.alignJustify,
-                    "left" to readerText.alignLeft,
-                    "right" to readerText.alignRight,
-                    "center" to readerText.alignCenter
-                ).forEach { (id, label) ->
-                    ReaderChoiceChip(
-                        modifier = Modifier.weight(1f),
-                        selected = uiState.textAlignment == id,
-                        onClick = { onTextAlignChange(id) },
-                        label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-                    )
+            item {
+                ReaderSliderRow(
+                    title = readerFontSizeLabel(uiState.textFontSize, strings.languageCode),
+                    valueText = "${uiState.textFontSize}sp",
+                    value = uiState.textFontSize.toFloat(),
+                    valueRange = 12f..32f,
+                    steps = 19,
+                    onValueChange = { onFontSizeChange(it.toInt()) }
+                )
+            }
+            item {
+                ReaderSwitchRow(
+                    title = readerText.boldFont,
+                    checked = uiState.textBold,
+                    onCheckedChange = onBoldChange
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerLineHeightLabel((uiState.textLineHeight * 100).toInt(), strings.languageCode),
+                    valueText = "${(uiState.textLineHeight * 100).toInt()}%",
+                    value = uiState.textLineHeight,
+                    valueRange = 1.0f..3.0f,
+                    steps = 19,
+                    onValueChange = onLineHeightChange
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerLetterSpacingLabel(uiState.textLetterSpacing, strings.languageCode),
+                    valueText = "${"%.2f".format(java.util.Locale.US, uiState.textLetterSpacing)}em",
+                    value = uiState.textLetterSpacing,
+                    valueRange = 0f..0.2f,
+                    steps = 19,
+                    onValueChange = onLetterSpacingChange
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerWordSpacingLabel(uiState.textWordSpacing, strings.languageCode),
+                    valueText = "${"%.2f".format(java.util.Locale.US, uiState.textWordSpacing)}em",
+                    value = uiState.textWordSpacing,
+                    valueRange = 0f..0.6f,
+                    steps = 23,
+                    onValueChange = onWordSpacingChange
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerParagraphSpacingLabel(uiState.textParagraphSpacing, strings.languageCode),
+                    valueText = "${"%.2f".format(java.util.Locale.US, uiState.textParagraphSpacing)}em",
+                    value = uiState.textParagraphSpacing,
+                    valueRange = 0.1f..1.2f,
+                    steps = 21,
+                    onValueChange = onParagraphSpacingChange
+                )
+            }
+            item { ReaderSectionTitle(readerText.textAlignTitle) }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(
+                        "justify" to readerText.alignJustify,
+                        "left" to readerText.alignLeft,
+                        "right" to readerText.alignRight,
+                        "center" to readerText.alignCenter
+                    ).forEach { (id, label) ->
+                        ReaderChoiceChip(
+                            modifier = Modifier.weight(1f),
+                            selected = uiState.textAlignment == id,
+                            onClick = { onTextAlignChange(id) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+                        )
+                    }
                 }
             }
         }

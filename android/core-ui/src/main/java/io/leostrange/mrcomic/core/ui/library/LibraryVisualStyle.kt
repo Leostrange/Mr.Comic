@@ -1238,7 +1238,7 @@ fun LibraryBackdropLayer(
 ) {
     val performanceHints = LocalPerformanceUiHints.current
     val normalizedStyle = remember(backgroundStyle) { normalizeLibraryBackgroundStyle(backgroundStyle) }
-    val variant = remember(colorScheme) { resolveLibraryBackdropVariant(colorScheme) }
+    val variant = resolveLibraryBackdropVariant(colorScheme)
     val effectiveBackdropStrength = if (performanceHints.reducedVisualEffects) {
         backdropStrength.coerceIn(0f, 1f) * 0.35f
     } else {

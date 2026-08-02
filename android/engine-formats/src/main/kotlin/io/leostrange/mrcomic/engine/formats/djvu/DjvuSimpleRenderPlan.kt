@@ -7,7 +7,9 @@ data class DjvuSimpleRenderPlan(
 private val DJVU_DOCUMENT_MAGIC = "AT&TFORM".encodeToByteArray()
 private val DJVU_FORM_TYPE = "DJVU"
 private val BGJP_CHUNK_ID = "BGjp"
-private val SAFE_NON_RENDER_CHUNKS = setOf("INFO", "TXTa", "TXTz", "ANTa", "ANTz")
+private val SAFE_NON_RENDER_CHUNKS = setOf(
+    "INFO", "TXTa", "TXTz", "ANTa", "ANTz", "Smmr", "INCL"
+)
 
 internal fun extractSimpleRenderPlan(documentBytes: ByteArray): DjvuSimpleRenderPlan? {
     if (!documentBytes.startsWith(DJVU_DOCUMENT_MAGIC)) return null

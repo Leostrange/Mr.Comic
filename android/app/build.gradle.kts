@@ -84,6 +84,12 @@ android {
         noCompress += listOf("db", "sqlite", "sqlite3", "dbpack")
     }
     packaging {
+        jniLibs {
+            // Extract .so files at install time to avoid 16KB page alignment issues
+            // on Android 15+ devices. Third-party native libraries (libdjvu, 7z, ONNX)
+            // are not yet 16KB-aligned; this restores pre-AGP-9 behavior.
+            useLegacyPackaging = true
+        }
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "META-INF/DEPENDENCIES"

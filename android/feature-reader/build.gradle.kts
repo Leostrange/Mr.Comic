@@ -39,6 +39,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
     testImplementation("org.json:json:20240303")
+    testImplementation(libs.jsoup)
     implementation(libs.google.hilt.android)
     ksp(libs.google.hilt.compiler)
     implementation(libs.coil.compose)

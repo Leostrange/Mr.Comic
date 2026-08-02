@@ -107,7 +107,8 @@ internal fun applyCustomThemeColors(
             onBackground = onBackground
         )
     }
-    if (themeConfig.customSurfaceColor != null || themeConfig.surfaceOpacity < 0.999f) {
+    if (themeConfig.customSurfaceColor != null || themeConfig.surfaceOpacity < 0.999f
+        || themeConfig.customBackgroundColor != null) {
         val surfaceVariant = lerp(effectiveSurface, onSurface, if (isDarkTheme) 0.14f else 0.08f)
             .copy(alpha = surfaceAlpha)
         val surfaceDim = lerp(surfaceAnchorBackground, surfaceBaseColor, if (isDarkTheme) 0.78f else 0.9f)

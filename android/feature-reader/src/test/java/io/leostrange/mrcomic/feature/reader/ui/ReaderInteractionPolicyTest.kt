@@ -38,9 +38,13 @@ class ReaderInteractionPolicyTest {
 
     @Test
     fun volumePagingStepUsesUpForPreviousAndDownForNext() {
-        assertEquals(-1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_UP))
-        assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN))
-        assertNull(readerVolumePagingStep(KeyEvent.KEYCODE_MENU))
+        // LTR mode: UP = previous (-1), DOWN = next (+1)
+        assertEquals(-1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_UP, ReadingMode.PAGE_LTR))
+        assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN, ReadingMode.PAGE_LTR))
+        assertNull(readerVolumePagingStep(KeyEvent.KEYCODE_MENU, ReadingMode.PAGE_LTR))
+        // RTL mode: UP = next (+1), DOWN = previous (-1)
+        assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_UP, ReadingMode.PAGE_RTL))
+        assertEquals(-1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN, ReadingMode.PAGE_RTL))
     }
 
     @Test

@@ -47,7 +47,7 @@ class EpubProgressCalculatorTest {
     }
 
     @Test
-    fun progressUsesLowestSectionIndexAsStableEstimateRegardlessOfMapOrder() {
+    fun progressUsesAverageSectionPageCountAsStableEstimateRegardlessOfMapOrder() {
         val loadedFromLastSectionFirst = linkedMapOf(6 to 4, 0 to 2)
         val loadedFromFirstSectionFirst = linkedMapOf(0 to 2, 6 to 4)
 
@@ -64,8 +64,11 @@ class EpubProgressCalculatorTest {
             totalSections = 10
         )
 
-        assertEquals(22, first.accumulatedTotalPages)
-        assertEquals(13, first.accumulatedCurrentPage)
+        // Stable estimate is now the average of visited sections: (2+4)/2 = 3.
+        // total = visitedTotal(6) + estimate(3) * unvisited(8) = 30.
+        // current = sections 0..5: 2 + 3*5 = 17, + sectionPageIndex(1) = 18.
+        assertEquals(30, first.accumulatedTotalPages)
+        assertEquals(18, first.accumulatedCurrentPage)
         assertEquals(first, second)
     }
 }
