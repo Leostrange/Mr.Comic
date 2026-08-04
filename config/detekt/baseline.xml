@@ -1,0 +1,280 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:SettingsAiServicesStatusPolicy.kt$internal fun resolveSettingsMachineTranslationStatusKind( uiState: SettingsUiState ): SettingsMachineTranslationStatusKind</ID>
+    <ID>CyclomaticComplexMethod:SettingsAppearanceSection.kt$@Composable internal fun AppearanceSection( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel, currentPage: AppearanceSettingsPage, onPageChange: (AppearanceSettingsPage) -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SettingsAppearanceSection.kt$internal fun appearancePageDescription( page: AppearanceSettingsPage, text: AppearanceSectionText, language: String ): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsAppearanceSection.kt$internal fun appearancePageNavItems( text: AppearanceSectionText, language: String ): List&lt;AppearanceSettingsNavItem&gt;</ID>
+    <ID>CyclomaticComplexMethod:SettingsAppearanceSection.kt$internal fun settingsLibraryViewLabel(language: String, mode: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsAppearanceTheme.kt$@Composable internal fun ThemePreviewCard( uiState: SettingsUiState, strings: AppStrings )</ID>
+    <ID>CyclomaticComplexMethod:SettingsFontStrings.kt$internal fun readerChromeSlotPickerTitle(language: String, target: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLabelFunctions.kt$internal fun libraryCardStyleLabel(style: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLabelFunctions.kt$internal fun readerTextSchemeLabel(language: String, scheme: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLabelFunctions.kt$internal fun readingPresetQuickLabel(strings: AppStrings, preset: ReadingPreset): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLabelFunctions.kt$internal fun uiDensityLabel(language: String, scale: Float): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibraryCards.kt$@Composable internal fun LibraryLayoutCard( uiState: SettingsUiState, strings: AppStrings, libraryText: LibrarySectionText, viewModel: SettingsViewModel, title: String = libraryText.displayCard )</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibraryPreviews.kt$@Composable internal fun LibraryPreviewVolume( title: String, accent: Color, isGraphic: Boolean, cardStyle: String, coverScaleMode: String, graphicCoverStyle: String = "POSTER", isSquare: Boolean, shadow: Float, titleScale: Float, titleLines: Int, cardStroke: Float, cardCornerRadius: Int, titlePanelOpacity: Float, showProgress: Boolean, modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibrarySection.kt$@Composable internal fun LibraryAccessCard( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel )</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibrarySection.kt$internal fun graphicCoverStyleOptionLabel(style: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibrarySection.kt$internal fun libraryBackgroundStyleLabel(style: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibrarySection.kt$internal fun libraryGroupByLabel(groupBy: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibrarySection.kt$internal fun libraryShelfStyleLabel(style: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsLibrarySection.kt$internal fun librarySortOrderLabel(sortOrder: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsMenuText.kt$internal fun settingsSectionMeta( section: SettingsSection, language: String, strings: AppStrings ): SettingsSectionMeta</ID>
+    <ID>CyclomaticComplexMethod:SettingsReadAloudSection.kt$@Composable internal fun ReadAloudSection( uiState: SettingsUiState, viewModel: SettingsViewModel, strings: AppStrings, modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReadAloudStrings.kt$internal fun readAloudSleepTimerLabel(mode: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderCards.kt$@Composable internal fun ReaderHeaderFooterSettingsCard( uiState: SettingsUiState, language: String, viewModel: SettingsViewModel )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderCards.kt$@Composable internal fun ReaderLandscapeSpreadCard( uiState: SettingsUiState, language: String, viewModel: SettingsViewModel )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderCards.kt$@Composable internal fun ReaderPagingSettingsCard( uiState: SettingsUiState, language: String, viewModel: SettingsViewModel )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderCards.kt$@Composable internal fun ReaderStylePresetCard( slot: ReaderStylePresetSlot, strings: AppStrings, text: ReaderStyleSettingsText, isActive: Boolean, onSave: () -&gt; Unit, onApply: () -&gt; Unit, onClear: () -&gt; Unit, onRename: (String) -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderCards.kt$@Composable internal fun ReaderTextStyleCard( uiState: SettingsUiState, strings: AppStrings, styleText: ReaderStyleSettingsText, viewModel: SettingsViewModel, fontCatalogVersion: Int = 0, onImportCustomFont: () -&gt; Unit = {}, onImportReaderStyle: () -&gt; Unit = {}, onExportReaderStyle: () -&gt; Unit = {}, onDeleteCustomFont: (String) -&gt; Unit = {} )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderLabels.kt$internal fun readerImageScaleModeLabel(mode: ReaderImageScaleMode, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderLabels.kt$internal fun readerInfoSlotLabel(language: String, slot: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderLabels.kt$internal fun readerScreenTimeoutLabel(mode: String, language: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderLabels.kt$internal fun readerTapZoneActionLabel(language: String, action: String): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderPreviews.kt$@Composable internal fun ReaderPageLayoutPreviewCard( uiState: SettingsUiState, strings: AppStrings )</ID>
+    <ID>CyclomaticComplexMethod:SettingsReaderText.kt$internal fun readerModeSettingsLabel(language: String, mode: ReadingMode): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreen.kt$@Composable private fun SettingsMainMenu( uiState: SettingsUiState, strings: AppStrings, onSectionClick: (SettingsSection) -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen( onAppIconSettingsClick: () -&gt; Unit, onBackClick: (() -&gt; Unit)? = null, viewModel: SettingsViewModel = hiltViewModel() )</ID>
+    <ID>CyclomaticComplexMethod:SettingsSyncSection.kt$@Composable internal fun SyncPopupSettingsCard( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel )</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModel.kt$SettingsViewModel$fun importProgress(uri: Uri)</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModel.kt$SettingsViewModel$private suspend fun resolveSettingsTranslationAvailabilityState( translationConfig: TranslationServiceConfig, appLanguage: String, networkAvailable: Boolean ): SettingsTranslationAvailabilityState</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModelBackup.kt$internal fun SettingsViewModel.parseBackupComicFormat(raw: String, path: String): ComicFormat</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModelBackup.kt$internal suspend fun SettingsViewModel.parseImportedReaderTypography(json: JSONObject): ImportedReaderTypographyPreset?</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModelMessages.kt$internal fun SettingsViewModel.settingsImportSummaryMessage( restored: Int, updated: Int, skipped: Int, restoredSettings: Int, restoredQuotes: Int, updatedQuotes: Int, unresolvedAccess: Int ): String</ID>
+    <ID>CyclomaticComplexMethod:SettingsViewModelMessages.kt$internal fun SettingsViewModel.settingsRepairSummaryMessage( result: BackupRepository.RepairLibraryAccessResult ): String</ID>
+    <ID>ImplicitDefaultLocale:SettingsViewModelHelpers.kt$String.format("%.1f KB", kb)</ID>
+    <ID>ImplicitDefaultLocale:SettingsViewModelHelpers.kt$String.format("%.1f MB", mb)</ID>
+    <ID>ImplicitDefaultLocale:SettingsViewModelHelpers.kt$String.format("%.2f GB", gb)</ID>
+    <ID>LargeClass:SettingsViewModel.kt$SettingsViewModel : ViewModel</ID>
+    <ID>LongMethod:PerformanceDetailSection.kt$@Composable internal fun DetailedPerformanceSection( uiState: SettingsUiState, viewModel: SettingsViewModel, language: String, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:PerformanceDetailSection.kt$private fun perfText(language: String): PerfSettingsText</ID>
+    <ID>LongMethod:SettingsAboutSection.kt$@Composable internal fun AboutSection( strings: AppStrings, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsAboutSection.kt$internal fun aboutSectionText(language: String): AboutSectionText</ID>
+    <ID>LongMethod:SettingsAppearanceSection.kt$@Composable internal fun AppThemePresetCard( slot: AppThemePresetSlot, strings: AppStrings, text: AppThemePresetText, isActive: Boolean, onSave: () -&gt; Unit, onApply: () -&gt; Unit, onClear: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsAppearanceSection.kt$@Composable internal fun AppearanceSection( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel, currentPage: AppearanceSettingsPage, onPageChange: (AppearanceSettingsPage) -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsAppearanceSection.kt$internal fun appearanceSectionText(language: String): AppearanceSectionText</ID>
+    <ID>LongMethod:SettingsAppearanceTheme.kt$@Composable internal fun ThemePreviewCard( uiState: SettingsUiState, strings: AppStrings )</ID>
+    <ID>LongMethod:SettingsLibraryCards.kt$@Composable internal fun LibraryCardsStyleCard( uiState: SettingsUiState, strings: AppStrings, libraryText: LibrarySectionText, viewModel: SettingsViewModel, title: String = libraryText.cardsCard )</ID>
+    <ID>LongMethod:SettingsLibraryCards.kt$@Composable internal fun LibraryLayoutCard( uiState: SettingsUiState, strings: AppStrings, libraryText: LibrarySectionText, viewModel: SettingsViewModel, title: String = libraryText.displayCard )</ID>
+    <ID>LongMethod:SettingsLibraryPresets.kt$@Composable internal fun FlowRowScope.LibraryQuickPresetTile( title: String, subtitle: String, accent: Color, snapshot: LibraryThemePresetSnapshot, selected: Boolean, onClick: () -&gt; Unit )</ID>
+    <ID>LongMethod:SettingsLibraryPresets.kt$@Composable internal fun LibraryThemePresetCard( slot: LibraryThemePresetSlot, slotLabelPrefix: String, appLanguage: String, saveLabel: String, applyLabel: String, clearLabel: String, emptyLabel: String, onSave: () -&gt; Unit, onApply: () -&gt; Unit, onClear: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsLibraryPreviews.kt$@Composable internal fun LibraryPreviewFolder( title: String, cardStyle: String, isSquare: Boolean, shadow: Float, titleScale: Float, titleLines: Int, cardStroke: Float, cardCornerRadius: Int, titlePanelOpacity: Float, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsLibraryPreviews.kt$@Composable internal fun LibraryPreviewVolume( title: String, accent: Color, isGraphic: Boolean, cardStyle: String, coverScaleMode: String, graphicCoverStyle: String = "POSTER", isSquare: Boolean, shadow: Float, titleScale: Float, titleLines: Int, cardStroke: Float, cardCornerRadius: Int, titlePanelOpacity: Float, showProgress: Boolean, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsLibraryPreviews.kt$@Composable internal fun LibraryStylePreview( uiState: SettingsUiState, libraryText: LibrarySectionText, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsLibrarySection.kt$internal fun libraryBackgroundStyleLabel(style: String, language: String): String</ID>
+    <ID>LongMethod:SettingsLibrarySection.kt$internal fun libraryShelfStyleLabel(style: String, language: String): String</ID>
+    <ID>LongMethod:SettingsMenuText.kt$internal fun librarySectionText(language: String): LibrarySectionText</ID>
+    <ID>LongMethod:SettingsMenuText.kt$internal fun settingsSectionItems( uiState: SettingsUiState, strings: AppStrings ): List&lt;SettingsMainMenuSectionItem&gt;</ID>
+    <ID>LongMethod:SettingsReadAloudSection.kt$@Composable internal fun ReadAloudSection( uiState: SettingsUiState, viewModel: SettingsViewModel, strings: AppStrings, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsReaderCards.kt$@Composable internal fun ReaderHeaderFooterSettingsCard( uiState: SettingsUiState, language: String, viewModel: SettingsViewModel )</ID>
+    <ID>LongMethod:SettingsReaderCards.kt$@Composable internal fun ReaderPagingSettingsCard( uiState: SettingsUiState, language: String, viewModel: SettingsViewModel )</ID>
+    <ID>LongMethod:SettingsReaderCards.kt$@Composable internal fun ReaderProgressCard( uiState: SettingsUiState, readingGoalText: ReadingGoalSettingsText, streakPolicyText: StreakPolicySettingsText, streakProgressText: String, viewModel: SettingsViewModel )</ID>
+    <ID>LongMethod:SettingsReaderCards.kt$@Composable internal fun ReaderStylePresetCard( slot: ReaderStylePresetSlot, strings: AppStrings, text: ReaderStyleSettingsText, isActive: Boolean, onSave: () -&gt; Unit, onApply: () -&gt; Unit, onClear: () -&gt; Unit, onRename: (String) -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsReaderCards.kt$@Composable internal fun ReaderTextStyleCard( uiState: SettingsUiState, strings: AppStrings, styleText: ReaderStyleSettingsText, viewModel: SettingsViewModel, fontCatalogVersion: Int = 0, onImportCustomFont: () -&gt; Unit = {}, onImportReaderStyle: () -&gt; Unit = {}, onExportReaderStyle: () -&gt; Unit = {}, onDeleteCustomFont: (String) -&gt; Unit = {} )</ID>
+    <ID>LongMethod:SettingsReaderPreviews.kt$@Composable internal fun ReaderHeaderFooterPreviewCard( uiState: SettingsUiState, language: String )</ID>
+    <ID>LongMethod:SettingsReaderPreviews.kt$@Composable internal fun ReaderPageLayoutPreviewCard( uiState: SettingsUiState, strings: AppStrings )</ID>
+    <ID>LongMethod:SettingsReaderSection.kt$@Composable internal fun ReaderSection( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel, currentPage: ReaderSettingsPage, onPageChange: (ReaderSettingsPage) -&gt; Unit, fontCatalogVersion: Int = 0, onImportCustomFont: () -&gt; Unit = {}, onImportReaderStyle: () -&gt; Unit = {}, onExportReaderStyle: () -&gt; Unit = {}, onDeleteCustomFont: (String) -&gt; Unit = {}, onOpenTranslationSettings: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongMethod:SettingsReaderText.kt$internal fun readerStyleSettingsText(language: String): ReaderStyleSettingsText</ID>
+    <ID>LongMethod:SettingsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable fun SettingsScreen( onAppIconSettingsClick: () -&gt; Unit, onBackClick: (() -&gt; Unit)? = null, viewModel: SettingsViewModel = hiltViewModel() )</ID>
+    <ID>LongMethod:SettingsServiceText.kt$internal fun aiServicesOverviewText(language: String): AiServicesOverviewText</ID>
+    <ID>LongMethod:SettingsServiceText.kt$internal fun translationSectionText(language: String): TranslationSectionText</ID>
+    <ID>LongMethod:SettingsSyncSection.kt$@Composable internal fun SyncPopupSettingsCard( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel )</ID>
+    <ID>LongMethod:SettingsViewModel.kt$SettingsViewModel$fun applyLibraryZonePreset(style: String)</ID>
+    <ID>LongMethod:SettingsViewModelBackup.kt$internal suspend fun SettingsViewModel.parseImportedReaderTypography(json: JSONObject): ImportedReaderTypographyPreset?</ID>
+    <ID>LongParameterList:SettingsLibraryPresets.kt$( slot: LibraryThemePresetSlot, slotLabelPrefix: String, appLanguage: String, saveLabel: String, applyLabel: String, clearLabel: String, emptyLabel: String, onSave: () -&gt; Unit, onApply: () -&gt; Unit, onClear: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:SettingsLibraryPreviews.kt$( title: String, accent: Color, isGraphic: Boolean, cardStyle: String, coverScaleMode: String, graphicCoverStyle: String = "POSTER", isSquare: Boolean, shadow: Float, titleScale: Float, titleLines: Int, cardStroke: Float, cardCornerRadius: Int, titlePanelOpacity: Float, showProgress: Boolean, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:SettingsLibraryPreviews.kt$( title: String, cardStyle: String, isSquare: Boolean, shadow: Float, titleScale: Float, titleLines: Int, cardStroke: Float, cardCornerRadius: Int, titlePanelOpacity: Float, modifier: Modifier = Modifier )</ID>
+    <ID>LongParameterList:SettingsReaderSection.kt$( uiState: SettingsUiState, strings: AppStrings, viewModel: SettingsViewModel, currentPage: ReaderSettingsPage, onPageChange: (ReaderSettingsPage) -&gt; Unit, fontCatalogVersion: Int = 0, onImportCustomFont: () -&gt; Unit = {}, onImportReaderStyle: () -&gt; Unit = {}, onExportReaderStyle: () -&gt; Unit = {}, onDeleteCustomFont: (String) -&gt; Unit = {}, onOpenTranslationSettings: () -&gt; Unit, modifier: Modifier = Modifier )</ID>
+    <ID>LoopWithTooManyJumpStatements:SettingsPresets.kt$for</ID>
+    <ID>LoopWithTooManyJumpStatements:SettingsViewModel.kt$SettingsViewModel$for</ID>
+    <ID>MagicNumber:PerformanceDetailSection.kt$1024f</ID>
+    <ID>MagicNumber:PerformanceDetailSection.kt$5_000L</ID>
+    <ID>MagicNumber:SettingsAiServicesStatusPolicy.kt$24</ID>
+    <ID>MagicNumber:SettingsAppearanceSection.kt$0.72f</ID>
+    <ID>MagicNumber:SettingsAppearanceSection.kt$0.82f</ID>
+    <ID>MagicNumber:SettingsAppearanceSection.kt$0.85f</ID>
+    <ID>MagicNumber:SettingsAppearanceSection.kt$1.15f</ID>
+    <ID>MagicNumber:SettingsAppearanceSection.kt$1.3f</ID>
+    <ID>MagicNumber:SettingsAppearanceSection.kt$100</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.18f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.2f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.34f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.36f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.45f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.4f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.62f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.78f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.82f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0.92f</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFF000000</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFF0A0A0A</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFF121216</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFF1B1B1F</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFF6B6259</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFF93000A</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFFBA1A1A</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFFC6C1BC</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFFF2B8B5</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFFF7F3EE</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFFFFDAD6</ID>
+    <ID>MagicNumber:SettingsAppearanceTheme.kt$0xFFFFFFFF</ID>
+    <ID>MagicNumber:SettingsImportValidation.kt$1024</ID>
+    <ID>MagicNumber:SettingsImportValidation.kt$8</ID>
+    <ID>MagicNumber:SettingsLabelFunctions.kt$0.85f</ID>
+    <ID>MagicNumber:SettingsLabelFunctions.kt$0.96f</ID>
+    <ID>MagicNumber:SettingsLabelFunctions.kt$1.04f</ID>
+    <ID>MagicNumber:SettingsLabelFunctions.kt$1.15f</ID>
+    <ID>MagicNumber:SettingsLibraryCards.kt$3</ID>
+    <ID>MagicNumber:SettingsLibraryCards.kt$4</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.05f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.18f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.1f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.22f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.2f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.36f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.42f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.64f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.66f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.68f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.69f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.72f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.78f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.82f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$0.85f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$1.18f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$1.3f</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$24</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$3</ID>
+    <ID>MagicNumber:SettingsLibraryPreviews.kt$6</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.01f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.05f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.1f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.2</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.2f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.35f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.6f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.82f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0.85f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$0xFF000000L</ID>
+    <ID>MagicNumber:SettingsPresets.kt$1.18f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$1.2f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$1.3f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$1.8</ID>
+    <ID>MagicNumber:SettingsPresets.kt$12</ID>
+    <ID>MagicNumber:SettingsPresets.kt$16</ID>
+    <ID>MagicNumber:SettingsPresets.kt$18</ID>
+    <ID>MagicNumber:SettingsPresets.kt$3.0f</ID>
+    <ID>MagicNumber:SettingsPresets.kt$32</ID>
+    <ID>MagicNumber:SettingsPresets.kt$7</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0.05f</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0.2f</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0.55f</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0.5f</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0.72f</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0.9f</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0xFF000000</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0xFF2B2118</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0xFF7B5C34</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0xFFF2F5F7</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0xFFF4ECD8</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$0xFFF6F1E7</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$10</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$100</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$20</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$30</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$40</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$45</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$50</ID>
+    <ID>MagicNumber:SettingsReaderCards.kt$60</ID>
+    <ID>MagicNumber:SettingsReaderLabels.kt$0.22f</ID>
+    <ID>MagicNumber:SettingsReaderLabels.kt$100f</ID>
+    <ID>MagicNumber:SettingsReaderPreviews.kt$100</ID>
+    <ID>MagicNumber:SettingsReaderText.kt$100</ID>
+    <ID>MagicNumber:SettingsSyncSection.kt$100</ID>
+    <ID>MagicNumber:SettingsTextToSpeechPreviewController.kt$SettingsTextToSpeechPreviewController$0.5f</ID>
+    <ID>MagicNumber:SettingsTranslationSection.kt$0.85f</ID>
+    <ID>MagicNumber:SettingsTranslationSection.kt$1.15f</ID>
+    <ID>MagicNumber:SettingsTranslationSection.kt$1.3f</ID>
+    <ID>MagicNumber:SettingsTranslationSection.kt$100</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.01f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.05f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.08f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.12f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.16f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.18f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.1f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.22f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.24f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.28f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.2f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.32f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.34f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.36f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.3f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.42f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.44f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.45f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.46f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.48f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.4f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.52f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.54f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.56f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.58f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.5f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.62f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.64f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.6f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.78f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.82f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$0.85f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$1.18f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$1.2f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$1.3f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$1.8f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$10</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$12</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$18</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$20</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$200</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$24</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$256</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$3</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$3.0f</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$300</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$32</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$4</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$5</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$512</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$6</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$60</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$64</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$8</ID>
+    <ID>MagicNumber:SettingsViewModel.kt$SettingsViewModel$80</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$0.01f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$0.05f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$0.1f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$0.2f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$0.6f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$1.2f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$1.8f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$12</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$18</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$3.0f</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$32</ID>
+    <ID>MagicNumber:SettingsViewModelBackup.kt$5</ID>
+    <ID>MagicNumber:SettingsViewModelHelpers.kt$1024</ID>
+    <ID>MagicNumber:SettingsViewModelHelpers.kt$1024.0</ID>
+    <ID>MagicNumber:SettingsViewModelHelpers.kt$3</ID>
+    <ID>MatchingDeclarationName:SettingsAboutSection.kt$AboutSectionText</ID>
+    <ID>MatchingDeclarationName:SettingsPopupPreferences.kt$SettingsImageMessagePopupPosition</ID>
+    <ID>ReturnCount:SettingsViewModelBackup.kt$internal fun SettingsViewModel.resolveBackupSourcePath(comic: Comic): String</ID>
+    <ID>ThrowsCount:SettingsImportValidation.kt$internal fun Uri.readAcceptedSettingsImportText(context: Context): String</ID>
+    <ID>TooManyFunctions:SettingsViewModel.kt$SettingsViewModel : ViewModel</ID>
+    <ID>UnusedParameter:SettingsLibrarySection.kt$onPageChange: (LibrarySettingsPage) -&gt; Unit</ID>
+    <ID>UnusedPrivateProperty:SettingsAppearanceTheme.kt$val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent</ID>
+    <ID>UseCheckOrError:SettingsImportValidation.kt$throw IllegalStateException("Failed to read the file")</ID>
+  </CurrentIssues>
+</SmellBaseline>

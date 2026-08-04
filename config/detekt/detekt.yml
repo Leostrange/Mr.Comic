@@ -24,8 +24,9 @@ complexity:
 
 style:
   MaxLineLength:
-    active: true
-    maxLineLength: 140
+    active: false
+  WildcardImport:
+    active: false
   MagicNumber:
     active: true
     ignorePropertyDeclaration: true
@@ -33,12 +34,6 @@ style:
   ReturnCount:
     active: true
     max: 4
-  NestedBlockDepth:
-    active: true
-    threshold: 5
-  MaxLineLength:
-    active: true
-    maxLineLength: 140
 
 naming:
   PackageNaming:

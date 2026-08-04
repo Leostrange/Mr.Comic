@@ -1,24 +1,33 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.FlowRowScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,12 +36,24 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCompactValueRow
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
+import io.leostrange.mrcomic.core.ui.library.RootChromePanelShape
+import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
+import io.leostrange.mrcomic.core.ui.library.RootChromeTone
+import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
+import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
+import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
+import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.sound.UIFeedback
 
@@ -214,4 +235,242 @@ internal fun SettingsPickerDialog(
             }
         }
     )
+}
+
+// ──────────── Shared navigation & overview components ────────────
+// Phase U (2026-08-04): extracted from SettingsScreen.kt.
+
+@Composable
+internal fun SettingsNavItem(
+    icon: ImageVector,
+    title: String,
+    description: String? = null,
+    summary: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = { UIFeedback.playTransition(); onClick() })
+            .padding(vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            color = rootChromeIconContainerColor(MaterialTheme.colorScheme),
+            shape = CircleShape
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(10.dp).size(18.dp)
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            description?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            summary?.let {
+                Spacer(Modifier.height(6.dp))
+                MrComicPill(
+                    containerColor = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true),
+                    contentColor = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true)
+                    )
+                }
+            }
+        }
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+internal fun SettingsCompactSummaryCard(
+    title: String,
+    hint: String,
+    items: List<Pair<String, String>>
+) {
+    SettingsCard(title = title) {
+        Text(
+            text = hint,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        items.forEachIndexed { index, (label, value) ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                MrComicPill(
+                    containerColor = rootChromePillContainerColor(MaterialTheme.colorScheme, selected = true),
+                    contentColor = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = rootChromePillContentColor(MaterialTheme.colorScheme, selected = true)
+                    )
+                }
+            }
+            if (index != items.lastIndex) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                )
+            }
+        }
+    }
+}
+
+internal data class SettingsStudioOverviewItem(
+    val icon: ImageVector,
+    val title: String,
+    val description: String,
+    val summary: String? = null,
+    val onClick: () -> Unit
+)
+
+@Composable
+internal fun SettingsStudioOverviewCard(
+    title: String,
+    hint: String,
+    summaryItems: List<Pair<String, String>>,
+    sectionsTitle: String,
+    sections: List<SettingsStudioOverviewItem>
+) {
+    SettingsCard(title = title) {
+        Text(
+            text = hint,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (summaryItems.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                summaryItems.forEach { (label, value) ->
+                    Surface(
+                        shape = RootChromePillShape,
+                        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = value,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = sectionsTitle,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        sections.forEachIndexed { index, item ->
+            SettingsNavItem(
+                icon = item.icon,
+                title = item.title,
+                description = item.description,
+                summary = item.summary,
+                onClick = item.onClick
+            )
+            if (index != sections.lastIndex) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 56.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun SettingsPreviewBanner(
+    title: String,
+    subtitle: String,
+    details: String,
+    modifier: Modifier = Modifier
+) {
+    MrComicCardSurface(
+        modifier = modifier.fillMaxWidth(),
+        cornerRadius = 16.dp,
+        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.18f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = details,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
 }
