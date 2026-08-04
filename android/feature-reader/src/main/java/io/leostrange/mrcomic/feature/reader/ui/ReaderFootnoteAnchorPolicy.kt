@@ -15,7 +15,7 @@ internal object ReaderFootnoteAnchorPolicy {
         RegexOption.IGNORE_CASE
     )
     private val identifierPattern = Regex(
-        """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id|fbanchor)[-_]?\d*$""",
+        """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id|fbanchor|ref|kobo-side-note)[-_]?\d*$""",
         RegexOption.IGNORE_CASE
     )
 
@@ -32,7 +32,8 @@ internal object ReaderFootnoteAnchorPolicy {
         }.getOrDefault(withoutBridge)
     }
 
-    fun lookupCandidates(cleanHref: String, fragment: String): List<String> {
+    fun lookupCandidates(rawHref: String, fragment: String): List<String> {
+        val cleanHref = normalize(rawHref)
         val noHash = cleanHref.trim().trimStart('#')
         val fragmentWithoutHash = fragment.trim().trimStart('#')
         return listOf(
