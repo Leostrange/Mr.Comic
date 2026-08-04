@@ -243,12 +243,15 @@ class DetailProgressAndCompletionTest {
     // ── shouldComplete: refuse to complete a book that's only been opened ─
 
     @Test
-    fun doNotCompleteBeforeManualPageTurn() {
-        // A user opened a book and immediately scrolled to the last page
-        // (e.g. via TOC). Without any manual page turn the reader must not
-        // silently mark the book as read.
-        assertFalse(
-            "shouldComplete must refuse if the user has not turned any page yet",
+    fun completeWhenReadingProgressCountsEvenWithoutExplicitManualTurns() {
+        // When the navigation source counts toward reading progress (e.g.
+        // the reader turned pages as part of normal reading), a zero manual-page
+        // turn count is still a valid completion and must not be blocked.
+        // Pure "open-and-jump-to-last-page-via-TOC" navigations never set
+        // countsTowardReadingProgress=true, so the guard is the navigation
+        // source, not the manual turn counter.
+        assertTrue(
+            "shouldComplete must allow completion when countsTowardReadingProgress is true",
             ReaderProgressPolicy.shouldComplete(
                 reachedLastPage = true,
                 currentComicIdMatches = true,
