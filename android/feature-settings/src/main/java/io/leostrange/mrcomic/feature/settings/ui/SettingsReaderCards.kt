@@ -53,7 +53,7 @@ import java.util.Locale
  */
 
 /* ──── SETTINGS_READER_MIN_TOOLBAR_OPACITY (const) ──── */
-private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
+internal const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
 
 /* ──── ReaderLandscapeSpreadCard ──── */
 @Composable

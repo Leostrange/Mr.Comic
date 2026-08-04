@@ -82,6 +82,7 @@ private fun nextSettingsUiEventToken(currentToken: Int): Int =
 @Composable
 fun SettingsScreen(
     onAppIconSettingsClick: () -> Unit,
+    @Suppress("unused") onProgressProfileClick: () -> Unit = {},
     onBackClick: (() -> Unit)? = null,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
