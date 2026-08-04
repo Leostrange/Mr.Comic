@@ -7,9 +7,8 @@ plugins {
     alias(libs.plugins.detekt)
 }
 detekt {
-    buildUponDefaultConfig = true
+    buildUponDefaultConfig = false
     config.setFrom(rootProject.files("config/detekt/detekt.yml"))
-    baseline = rootProject.file("config/detekt/baseline.xml")
 }
 android {
     namespace = "io.leostrange.mrcomic.feature.settings"

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.detekt)
 }
 
 val localProps = Properties().apply {
@@ -95,6 +96,11 @@ android {
             excludes += "META-INF/DEPENDENCIES"
         }
     }
+}
+
+detekt {
+    buildUponDefaultConfig = false
+    config.setFrom(rootProject.files("config/detekt/detekt.yml"))
 }
 
 dependencies {
