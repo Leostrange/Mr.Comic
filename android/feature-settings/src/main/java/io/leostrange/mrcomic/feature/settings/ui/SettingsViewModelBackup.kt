@@ -5,7 +5,10 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
 import android.content.Context
+import android.net.Uri
+import android.os.Environment
 import android.provider.DocumentsContract
+import android.util.Log
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -28,8 +31,12 @@ import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreferencesRepository
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
 import io.leostrange.mrcomic.core.ui.theme.style
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -543,3 +550,230 @@ import java.util.Locale
         return sizeBefore
     }
 
+
+// ── Phase X: backup/cache/repair orchestrators ────────────────────
+internal fun SettingsViewModel.setAutoBackupEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferences.set(PreferencesKeys.AUTO_BACKUP_ENABLED, enabled)
+            // Immediately create a backup when user enables the feature so they see it works.
+            if (enabled) autoBackupToDocuments()
+        }
+    }
+
+    /**
+     * Writes library progress JSON to
+     * `Documents/MrComic/mrcomic_backup_<date>.json`.
+     * Called on: (a) enable toggle, (b) app lifecycle onStop via [triggerAutoBackupIfEnabled].
+     */
+internal suspend fun SettingsViewModel.autoBackupToDocuments() = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        try {
+            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val backupDir = File(docsDir, "MrComic").apply { mkdirs() }
+            if (!backupDir.exists()) return@withContext  // no external storage
+
+            val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                .format(java.util.Date())
+            val backupFile = File(backupDir, "mrcomic_backup_$date.json")
+
+            val comics = comicRepository.getAllComics().first()
+            val quotes = quoteRepository.getAllQuotes().first()
+            val root = buildBackupJson(comics, quotes)
+            backupFile.writeText(root.toString(2), Charsets.UTF_8)
+            Log.i("SettingsVM", "Auto-backup written: ${backupFile.absolutePath}")
+        } catch (e: Exception) {
+            Log.w("SettingsVM", "Auto-backup failed", e)
+        }
+    }
+
+    // ── Cache ────────────────────────────────────────────────────────────────
+
+internal fun SettingsViewModel.clearImageCache() {
+        if (statusState.value.isClearingCache) return
+        statusState.update { it.copy(isClearingCache = true, message = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            val removedBytes = removeCacheDir("covers") +
+                removeCacheDir("cbz_cache") +
+                removeCacheDir("rar_cache") +
+                removeCacheDir("import_tmp") +
+                removeCacheDir("epub_cache")
+            val message = if (removedBytes > 0L) settingsCacheClearedMessage(removedBytes) else settingsCacheAlreadyEmptyMessage()
+            statusState.update { it.copy(isClearingCache = false, message = message) }
+        }
+    }
+
+internal fun SettingsViewModel.consumeCacheMessage() {
+        statusState.update { it.copy(message = null) }
+    }
+
+internal fun SettingsViewModel.consumePendingLibraryRepairLaunch() {
+        statusState.update { it.copy(pendingLibraryRepairLaunchToken = 0L) }
+    }
+
+    // ── Export / Import reading progress ─────────────────────────────────────
+
+internal fun SettingsViewModel.exportProgress(uri: Uri) {
+        if (statusState.value.isExporting) return
+        statusState.update { it.copy(isExporting = true, message = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val comics = comicRepository.getAllComics().first()
+                val quotes = quoteRepository.getAllQuotes().first()
+                val root = buildBackupJson(comics, quotes)
+
+                context.contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(root.toString(2).toByteArray(Charsets.UTF_8))
+                }
+                statusState.update {
+                    it.copy(
+                        isExporting = false,
+                        message = settingsExportSuccessMessage(comics.size)
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsVM", "Export failed", e)
+                statusState.update {
+                    it.copy(isExporting = false, message = settingsExportFailedMessage(e.localizedMessage))
+                }
+            }
+        }
+    }
+
+internal fun SettingsViewModel.importProgress(uri: Uri) {
+        if (statusState.value.isImporting) return
+        statusState.update { it.copy(isImporting = true, message = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val jsonString = uri.readAcceptedSettingsImportText(context)
+
+                val root = JSONObject(jsonString)
+                val entries = root.getJSONArray("entries")
+                var updated = 0
+                var restored = 0
+                var skipped = 0
+                var unresolvedAccess = 0
+                var restoredQuotes = 0
+                var updatedQuotes = 0
+                val restoredMainPreferences = restorePreferencesFromBackup(root.optJSONObject("preferences"))
+                val restoredThemePreferences = restoreThemePreferencesFromBackup(root.optJSONObject("themePreferences"))
+                val restoredAppIcon = restoreAppIconFromBackup(root.optJSONObject("appIcon"))
+                val restoredSettings = restoredMainPreferences + restoredThemePreferences + restoredAppIcon
+
+                for (i in 0 until entries.length()) {
+                    val entry = entries.getJSONObject(i)
+                    val backupComic = parseComicBackupEntry(entry)
+                    if (backupComic == null) {
+                        skipped++
+                        continue
+                    }
+
+                    val result = comicRepository.restoreComicFromBackup(backupComic)
+                    if (result != null) {
+                        if (result.inserted) {
+                            restored++
+                        } else {
+                            updated++
+                        }
+                        if (!result.isReadable) {
+                            unresolvedAccess++
+                        }
+                    } else {
+                        skipped++
+                    }
+                }
+
+                val quotes = root.optJSONArray("quotes")
+                if (quotes != null) {
+                    for (i in 0 until quotes.length()) {
+                        val quoteEntry = quotes.optJSONObject(i) ?: continue
+                        val quote = parseQuoteBackupEntry(quoteEntry) ?: continue
+                        val result = quoteRepository.restoreQuoteFromBackup(quote)
+                        if (result.inserted) restoredQuotes++ else updatedQuotes++
+                    }
+                }
+
+                val message = settingsImportSummaryMessage(
+                    restored = restored,
+                    updated = updated,
+                    skipped = skipped,
+                    restoredSettings = restoredSettings,
+                    restoredQuotes = restoredQuotes,
+                    updatedQuotes = updatedQuotes,
+                    unresolvedAccess = unresolvedAccess
+                )
+                statusState.update {
+                    it.copy(
+                        isImporting = false,
+                        pendingLibraryRepairLaunchToken = if (unresolvedAccess > 0) System.currentTimeMillis() else 0L,
+                        message = message
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsVM", "Import failed", e)
+                statusState.update {
+                    it.copy(isImporting = false, message = settingsImportFailureMessage(e))
+                }
+            }
+        }
+    }
+
+internal fun SettingsViewModel.repairLibraryAccess(treeUri: Uri) {
+        if (statusState.value.isRepairingLibraryAccess) return
+        statusState.update { it.copy(isRepairingLibraryAccess = true, message = null) }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val result = comicRepository.repairLibraryAccess(treeUri)
+                val message = settingsRepairSummaryMessage(result)
+                statusState.update {
+                    it.copy(
+                        isRepairingLibraryAccess = false,
+                        message = message
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("SettingsVM", "Repair library access failed", e)
+                statusState.update {
+                    it.copy(
+                        isRepairingLibraryAccess = false,
+                        message = settingsRepairFailedMessage(e.localizedMessage)
+                    )
+                }
+            }
+        }
+    }
+
+
+internal fun SettingsViewModel.setSettingsImportErrorPresentation(value: String) = viewModelScope.launch {
+        preferences.set(
+            PreferencesKeys.SETTINGS_IMPORT_ERROR_PRESENTATION,
+            normalizeSettingsImportErrorPresentation(value)
+        )
+    }
+
+internal fun SettingsViewModel.setImageMessagePopupPosition(value: String) = viewModelScope.launch {
+        preferences.set(
+            PreferencesKeys.IMAGE_MESSAGE_POPUP_POSITION,
+            normalizeSettingsImageMessagePopupPosition(value)
+        )
+    }
+
+internal fun SettingsViewModel.setImageMessagePopupFreeMove(enabled: Boolean) = viewModelScope.launch {
+        preferences.set(PreferencesKeys.IMAGE_MESSAGE_POPUP_FREE_MOVE, enabled)
+    }
+
+internal fun SettingsViewModel.setImageMessagePopupSizeScale(value: Float) {
+        setSlider("imageMessagePopupSizeScale") {
+            preferences.set(
+                PreferencesKeys.IMAGE_MESSAGE_POPUP_SIZE_SCALE,
+                clampSettingsImageMessagePopupScale(value)
+            )
+        }
+    }
+
+internal fun SettingsViewModel.setImageMessagePopupDurationSeconds(value: Int) {
+        setSlider("imageMessagePopupDurationSeconds") {
+            preferences.set(
+                PreferencesKeys.IMAGE_MESSAGE_POPUP_DURATION_SECONDS,
+                clampSettingsImageMessagePopupDurationSeconds(value)
+            )
+        }
+    }
