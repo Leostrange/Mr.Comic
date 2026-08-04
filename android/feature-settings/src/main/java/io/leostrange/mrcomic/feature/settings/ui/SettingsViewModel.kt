@@ -130,7 +130,7 @@ import javax.inject.Inject
 // Internal state for all async operations to avoid exceeding combine()'s 5-flow limit
 // StatusState (data class) → SettingsUiState.kt (Phase K 2026-08-03)
 // SettingsTranslationAvailabilityState (data class) → SettingsUiState.kt (Phase K 2026-08-03)
-private const val SETTINGS_READER_MIN_TOOLBAR_OPACITY = 0.72f
+// SETTINGS_READER_MIN_TOOLBAR_OPACITY → SettingsReaderCards.kt
 // SETTINGS_READER_DEFAULT_TOOLBAR_BLUR (const) → SettingsUiState.kt (Phase K 2026-08-03)
 // SettingsSecretStore extracted to SettingsSecretStore.kt
 
@@ -154,7 +154,7 @@ class SettingsViewModel @Inject constructor(
         viewModelScope = viewModelScope,
         preferences = preferences
     )
-    private val statusState = MutableStateFlow(StatusState())
+    internal val statusState = MutableStateFlow(StatusState())
 
     private suspend fun updateToggleEnabledAt(
         key: Preferences.Key<Long>,
@@ -173,133 +173,28 @@ class SettingsViewModel @Inject constructor(
         sliderJobs[key] = viewModelScope.launch { delay(300); block() }
     }
 
-    private val baseUiStateLeftCore = combine(
-        themePreferencesRepository.themeConfig,
-        themePreferencesRepository.themePreset,
-        preferences.get(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name).map { stored ->
-            runCatching { ReadingMode.valueOf(stored) }.getOrDefault(ReadingMode.PAGE_LTR)
-        },
-        preferences.get(PreferencesKeys.READING_BRIGHTNESS, -1f).map { stored ->
-            if (stored < 0f) -1f else stored.coerceIn(0.05f, 1f)
-        },
-        preferences.get(PreferencesKeys.READER_KEEP_SCREEN_ON, false)
-    ) { themeConfig, preset, readingMode, brightness, keepScreenOn ->
-        listOf(themeConfig, preset, readingMode, brightness, keepScreenOn)
-    }
+    private val baseUiStateLeftCore = createBaseUiStateLeftCore()
 
-    private val baseUiStateLeft = combine(
-        baseUiStateLeftCore,
-        preferences.get(
-            PreferencesKeys.READER_SCREEN_TIMEOUT_MODE,
-            ReaderScreenTimeoutMode.SYSTEM.storedValue
-        ).map { ReaderScreenTimeoutMode.fromStored(it).storedValue }
-    ) { left, screenTimeoutMode ->
-        left + screenTimeoutMode
-    }
+    private val baseUiStateLeft = createBaseUiStateLeft()
 
-    private val baseUiState = combine(
-        baseUiStateLeft,
-        preferences.get(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, true)
-    ) { left, landscapeSpreadEnabled ->
-        val themeConfig = left[0] as io.leostrange.mrcomic.core.ui.theme.ThemeConfig
-        val preset = left[1] as ThemePreset
-        val readingMode = left[2] as ReadingMode
-        val brightness = left[3] as Float
-        val keepScreenOn = left[4] as Boolean
-        val screenTimeoutMode = left[5] as String
-        SettingsUiState(
-            themeMode = themeConfig.themeMode,
-            useDynamicColor = themeConfig.useDynamicColor,
-            useAmoledDark = themeConfig.useAmoledDark,
-            themePreset = preset.name,
-            readingMode = readingMode,
-            brightness = brightness,
-            keepScreenOnInReader = keepScreenOn,
-            readerScreenTimeoutMode = screenTimeoutMode,
-            readerLandscapeSpreadEnabled = landscapeSpreadEnabled,
-            customPrimaryColor = themeConfig.customPrimaryColor,
-            customSecondaryColor = themeConfig.customSecondaryColor,
-            customBackgroundColor = themeConfig.customBackgroundColor,
-            customSurfaceColor = themeConfig.customSurfaceColor,
-            surfaceOpacity = themeConfig.surfaceOpacity
-        )
-    }
+    private val baseUiState = createBaseUiState()
 
     // Extras 1: библиотека + базовые настройки ридера
-    private val extrasFlow1a = combine(
-        preferences.get(PreferencesKeys.LIBRARY_GRID_COLUMNS, 3).map { it.coerceIn(2, 4) },
-        preferences.get(PreferencesKeys.LIBRARY_VIEW_MODE, ""),
-        preferences.get(PreferencesKeys.LIBRARY_VIEW_GRID, true)
-    ) { columns, viewMode, viewGrid ->
-        listOf<Any>(
-            columns,
-            normalizeLibraryViewModeKey(viewMode, if (viewGrid) LibraryViewModeKey.GRID else LibraryViewModeKey.LIST).name
-        )
-    }
+    private val extrasFlow1a = createExtrasFlow1a()
 
-    private val extrasFlow1 = combine(
-        extrasFlow1a,
-        preferences.get(PreferencesKeys.READER_PRELOAD_PAGES, 3).map { it.coerceIn(2, 8) },
-        preferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false),
-        preferences.get(PreferencesKeys.READER_PAGE_ANIMATION, "SLIDE")
-    ) { libraryLayout, preload, immersive, animation ->
-        listOf<Any>(
-            libraryLayout[0] as Int,
-            libraryLayout[1] as String,
-            preload,
-            immersive,
-            animation
-        )
-    }
+    private val extrasFlow1 = createExtrasFlow1()
 
-    private val extrasFlow1b = combine(
-        preferences.get(PreferencesKeys.READER_CHROME_AUTO_HIDE, true),
-        preferences.get(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).map { it.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f) },
-        preferences.get(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).map { it.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f) },
-        preferences.get(PreferencesKeys.READER_TOOLBAR_BLUR, SETTINGS_READER_DEFAULT_TOOLBAR_BLUR).map { it.coerceIn(0f, 1f) }
-    ) { autoHide, topOpacity, bottomOpacity, toolbarBlur ->
-        listOf<Any>(autoHide, topOpacity, bottomOpacity, toolbarBlur)
-    }
+    private val extrasFlow1b = createExtrasFlow1b()
 
-    private val extrasFlow2a = combine(
-        preferences.get(PreferencesKeys.APP_LANGUAGE, "ru").map(::normalizeAppLanguageCode),
-        preferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            .map { ReadingPreset.fromStored(it).name },
-        preferences.get(PreferencesKeys.UI_FONT_SCALE, 1.0f),
-        preferences.get(PreferencesKeys.UI_DENSITY_SCALE, 1.0f).map { it.coerceIn(0.82f, 1.18f) },
-        preferences.get(PreferencesKeys.UI_CORNER_RADIUS, 12).map { it.coerceIn(0, 32) }
-    ) { lang, readerPreset, fontScale, uiDensityScale, cornerRadius ->
-        listOf<Any>(lang, readerPreset, fontScale, uiDensityScale, cornerRadius)
-    }
+    private val extrasFlow2a = createExtrasFlow2a()
 
-    private val extrasFlow2b = combine(
-        preferences.get(PreferencesKeys.UI_REDUCED_MOTION, false),
-        preferences.get(PreferencesKeys.UI_REDUCED_VISUAL_EFFECTS, false)
-    ) { reducedMotion, reducedEffects ->
-        listOf<Any>(reducedMotion, reducedEffects)
-    }
+    private val extrasFlow2b = createExtrasFlow2b()
 
-    private val extrasFlow2 = combine(extrasFlow2a, extrasFlow2b) { left, right -> left + right }
+    private val extrasFlow2 = createExtrasFlow2()
 
-    private val extrasFlow12 = combine(extrasFlow1, extrasFlow1b, extrasFlow2) { e1, e1b, e2 -> e1 + e1b + e2 }
+    private val extrasFlow12 = createExtrasFlow12()
 
-    private val translationConfigFlow = combine(
-        preferences.get(PreferencesKeys.TRANSLATION_MODE, "OFF"),
-        preferences.get(PreferencesKeys.TRANSLATION_SOURCE_LANGUAGE, "AUTO"),
-        preferences.get(PreferencesKeys.TRANSLATION_TARGET_LANGUAGE, "APP"),
-        preferences.get(PreferencesKeys.TRANSLATION_TRANSPORT, TranslationTransportPreference.AUTO.name),
-        preferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_ENABLED, false),
-        preferences.get(PreferencesKeys.TRANSLATION_EXPLAIN_PROVIDER, "LOCAL")
-    ) { values: Array<Any> ->
-        TranslationServiceConfig.fromStored(
-            mode = values[0] as String,
-            sourceLanguage = values[1] as String,
-            targetLanguage = values[2] as String,
-            preferredTransport = values[3] as String,
-            explainEnabled = values[4] as Boolean,
-            explainProvider = values[5] as String
-        )
-    }
+    private val translationConfigFlow = createTranslationConfigFlow()
 
     private val appLanguageFlow = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
         .map(::normalizeAppLanguageCode)
@@ -354,591 +249,98 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    private val extrasFlow3a2 = combine(
-        preferences.get(PreferencesKeys.OCR_DIALOGUES_ONLY, false),
-        preferences.get(PreferencesKeys.OCR_INCLUDE_SFX, true)
-    ) { ocrDialoguesOnly, ocrIncludeSfx ->
-        listOf<Any>(
-            ocrDialoguesOnly,
-            ocrIncludeSfx
-        )
-    }
+    private val extrasFlow3a2 = createExtrasFlow3a2()
 
-    private val extrasFlow3a3 = combine(
-        preferences.get(PreferencesKeys.OCR_OVERLAY_OPACITY, 0.85f).map { it.coerceIn(0.45f, 1.0f) },
-        preferences.get(PreferencesKeys.OCR_OVERLAY_FONT_SCALE, 1.0f).map { it.coerceIn(0.85f, 1.3f) },
-        preferences.get(PreferencesKeys.OCR_OVERLAY_STYLE, "AUTO")
-    ) { overlayOpacity, overlayFontScale, overlayStyle ->
-        listOf<Any>(overlayOpacity, overlayFontScale, overlayStyle)
-    }
+    private val extrasFlow3a3 = createExtrasFlow3a3()
 
-    private val extrasFlow3b = combine(
-        preferences.get(PreferencesKeys.OCR_LANGUAGE, "JA"),
-        preferences.get(PreferencesKeys.AUTO_BACKUP_ENABLED, false),
-        preferences.get(PreferencesKeys.READER_PAGE_SOUND, false),
-        preferences.get(PreferencesKeys.LIBRARY_TILE_SIZE_DP, 150)
-    ) { ocrLanguage, autoBackup, pageSound, tileSize ->
-        listOf<Any>(ocrLanguage, autoBackup, pageSound, tileSize)
-    }
+    private val extrasFlow3b = createExtrasFlow3b()
 
-    private val extrasFlow3 = combine(translationConfigFlow, extrasFlow3a2, extrasFlow3a3, extrasFlow3b) { translationConfig, middle, overlay, right ->
-        listOf<Any>(translationConfig) + middle + overlay + right
-    }
+    private val extrasFlow3 = createExtrasFlow3()
 
-    private val extrasFlow4 = combine(
-        preferences.get(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER"),
-        preferences.get(PreferencesKeys.UI_SOUND_ENABLED, false),
-        preferences.get(PreferencesKeys.UI_SOUNDS_VOLUME, 0.6f).map { it.coerceIn(0f, 1f) },
-        preferences.get(PreferencesKeys.LIBRARY_CARD_STYLE, DEFAULT_LIBRARY_CARD_STYLE),
-        preferences.get(PreferencesKeys.LIBRARY_RECENT_STRIP_POSITION, "TOP")
-    ) { soundStyle, uiSoundEnabled, uiSoundsVolume, libraryCardStyle, libraryRecentStripPosition ->
-        listOf<Any>(soundStyle, uiSoundEnabled, uiSoundsVolume, libraryCardStyle, libraryRecentStripPosition)
-    }
+    private val extrasFlow4 = createExtrasFlow4()
 
-    private val extrasFlow5 = combine(
-        preferences.get(PreferencesKeys.LIBRARY_SHOW_PROGRESS, true),
-        preferences.get(PreferencesKeys.LIBRARY_COVER_SCALE, DEFAULT_LIBRARY_COVER_SCALE),
-        preferences.get(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, DEFAULT_LIBRARY_BACKDROP_STRENGTH).map { it.coerceIn(0f, 1f) },
-        preferences.get(PreferencesKeys.LIBRARY_SORT_ORDER, "DATE_ADDED_DESC"),
-        preferences.get(PreferencesKeys.LIBRARY_GROUP_BY, "FOLDER")
-    ) { libraryShowProgress, libraryCoverScale, libraryBackdropStrength, librarySortOrder, libraryGroupBy ->
-        listOf<Any>(
-            libraryShowProgress,
-            libraryCoverScale,
-            libraryBackdropStrength,
-            librarySortOrder,
-            libraryGroupBy
-        )
-    }
+    private val extrasFlow5 = createExtrasFlow5()
 
-    private val extrasFlow6a = combine(
-        preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, DEFAULT_LIBRARY_BACKGROUND_STYLE),
-        preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_IMAGE_URI, ""),
-        preferences.get(PreferencesKeys.LIBRARY_SHELF_STYLE, DEFAULT_LIBRARY_SHELF_STYLE),
-        preferences.get(PreferencesKeys.LIBRARY_THUMBNAIL_MODE, DEFAULT_LIBRARY_THUMBNAIL_MODE),
-        preferences.get(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE)
-    ) { backgroundStyle, backgroundImageUri, shelfStyle, thumbnailMode, graphicCoverStyle ->
-        listOf<Any>(backgroundStyle, backgroundImageUri, shelfStyle, thumbnailMode, graphicCoverStyle)
-    }
+    private val extrasFlow6a = createExtrasFlow6a()
 
-    private val extrasFlow6b = combine(
-        preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, DEFAULT_LIBRARY_BACKGROUND_BLUR).map { it.coerceIn(0f, 1f) },
-        preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, DEFAULT_LIBRARY_BACKGROUND_VEIL).map { it.coerceIn(0f, 1f) },
-        preferences.get(PreferencesKeys.LIBRARY_SHELF_DEPTH, DEFAULT_LIBRARY_SHELF_DEPTH).map { it.coerceIn(0f, 1f) },
-        preferences.get(PreferencesKeys.LIBRARY_CARD_SHADOW, DEFAULT_LIBRARY_CARD_SHADOW).map { it.coerceIn(0f, 1f) }
-    ) { backgroundBlur, backgroundVeil, shelfDepth, cardShadow ->
-        listOf<Any>(backgroundBlur, backgroundVeil, shelfDepth, cardShadow)
-    }
+    private val extrasFlow6b = createExtrasFlow6b()
 
-    private val extrasFlow6e = combine(
-        preferences.get(PreferencesKeys.LIBRARY_TITLE_SCALE, DEFAULT_LIBRARY_TITLE_SCALE).map { it.coerceIn(0.85f, 1.3f) },
-        preferences.get(PreferencesKeys.LIBRARY_TITLE_LINES, DEFAULT_LIBRARY_TITLE_LINES).map { it.coerceIn(1, 3) },
-        preferences.get(PreferencesKeys.LIBRARY_CARD_STROKE, DEFAULT_LIBRARY_CARD_STROKE).map { it.coerceIn(0f, 1f) },
-        preferences.get(PreferencesKeys.LIBRARY_CARD_CORNER_RADIUS, DEFAULT_LIBRARY_CARD_CORNER_RADIUS).map { it.coerceIn(6, 24) },
-        preferences.get(PreferencesKeys.LIBRARY_TITLE_PANEL_OPACITY, DEFAULT_LIBRARY_TITLE_PANEL_OPACITY).map { it.coerceIn(0.18f, 0.78f) }
-    ) { titleScale, titleLines, cardStroke, cardCornerRadius, titlePanelOpacity ->
-        listOf<Any>(titleScale, titleLines, cardStroke, cardCornerRadius, titlePanelOpacity)
-    }
+    private val extrasFlow6e = createExtrasFlow6e()
 
-    private val extrasFlow6c = combine(
-        preferences.get(PreferencesKeys.LIBRARY_THEME_PRESET_1, ""),
-        preferences.get(PreferencesKeys.LIBRARY_THEME_PRESET_2, ""),
-        preferences.get(PreferencesKeys.LIBRARY_THEME_PRESET_3, "")
-    ) { preset1, preset2, preset3 ->
-        listOf<Any>(
-            LibraryThemePresetSlot(index = 1, serialized = preset1.ifBlank { null }),
-            LibraryThemePresetSlot(index = 2, serialized = preset2.ifBlank { null }),
-            LibraryThemePresetSlot(index = 3, serialized = preset3.ifBlank { null })
-        )
-    }
+    private val extrasFlow6c = createExtrasFlow6c()
 
-    private val extrasFlow6d = combine(
-        preferences.get(PreferencesKeys.APP_THEME_PRESET_1, ""),
-        preferences.get(PreferencesKeys.APP_THEME_PRESET_2, ""),
-        preferences.get(PreferencesKeys.APP_THEME_PRESET_3, "")
-    ) { preset1, preset2, preset3 ->
-        listOf<Any>(
-            AppThemePresetSlot(index = 1, serialized = preset1.ifBlank { null }),
-            AppThemePresetSlot(index = 2, serialized = preset2.ifBlank { null }),
-            AppThemePresetSlot(index = 3, serialized = preset3.ifBlank { null })
-        )
-    }
+    private val extrasFlow6d = createExtrasFlow6d()
 
-    private val readerStylePresetSlotsFlow = combine(
-        preferences.get(PreferencesKeys.READER_STYLE_PRESET_1, ""),
-        preferences.get(PreferencesKeys.READER_STYLE_PRESET_2, ""),
-        preferences.get(PreferencesKeys.READER_STYLE_PRESET_3, "")
-    ) { preset1, preset2, preset3 ->
-        listOf(
-            ReaderStylePresetSlot(index = 1, serialized = preset1.ifBlank { null }),
-            ReaderStylePresetSlot(index = 2, serialized = preset2.ifBlank { null }),
-            ReaderStylePresetSlot(index = 3, serialized = preset3.ifBlank { null })
-        )
-    }
+    private val readerStylePresetSlotsFlow = createReaderStylePresetSlotsFlow()
 
-    private val readerStylePresetEntriesFlow = combine(
-        preferences.get(PreferencesKeys.READER_STYLE_PRESET_LIST, ""),
-        readerStylePresetSlotsFlow
-    ) { serializedList, slots ->
-        parseReaderStylePresetEntries(serializedList).ifEmpty {
-            migrateLegacyReaderStyleSlotsToEntries(slots)
-        }
-    }
+    private val readerStylePresetEntriesFlow = createReaderStylePresetEntriesFlow()
 
-    private val extrasFlow345 = combine(extrasFlow3, extrasFlow4, extrasFlow5) { e3, e4, e5 -> e3 + e4 + e5 }
-    private val extrasFlow6 = combine(extrasFlow6a, extrasFlow6b, extrasFlow6c, extrasFlow6e) { left, middle, right, style ->
-        left + middle + right + style
-    }
-    private val extrasFlow3456 = combine(extrasFlow345, extrasFlow6, extrasFlow6d) { left, middle, right ->
-        left + middle + right
-    }
-    private val extrasFlow7a = combine(
-        preferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false),
-        preferences.get(PreferencesKeys.READER_EYE_REST_MINUTES, 20).map { it.coerceIn(10, 60) },
-        preferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true),
-        preferences.get(PreferencesKeys.MASCOT_QUEST_PROMPTS_ENABLED, true)
-    ) { eyeRestEnabled, eyeRestMinutes, mascotRecapEnabled, questPromptsEnabled ->
-        listOf<Any>(
-            eyeRestEnabled,
-            eyeRestMinutes,
-            mascotRecapEnabled,
-            questPromptsEnabled
-        )
-    }
+    private val extrasFlow345 = createExtrasFlow345()
+    private val extrasFlow6 = createExtrasFlow6()
+    private val extrasFlow3456 = createExtrasFlow3456()
+    private val extrasFlow7a = createExtrasFlow7a()
 
-    private val extrasFlow7b1a = combine(
-        preferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).map { it.coerceIn(12, 32) },
-        preferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY"),
-        preferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia")
-    ) { textFontSize, textColorScheme, textFontFamily ->
-        listOf<Any>(
-            textFontSize,
-            textColorScheme,
-            textFontFamily
-        )
-    }
+    private val extrasFlow7b1a = createExtrasFlow7b1a()
 
-    private val extrasFlow7b1b = combine(
-        preferences.get(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE),
-        preferences.get(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE),
-        preferences.get(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE)
-    ) { textCustomTextColor: Long, textCustomBackgroundColor: Long, textCustomAccentColor: Long ->
-        listOf<Any?>(
-            textCustomTextColor.takeUnless { it == Long.MIN_VALUE },
-            textCustomBackgroundColor.takeUnless { it == Long.MIN_VALUE },
-            textCustomAccentColor.takeUnless { it == Long.MIN_VALUE }
-        )
-    }
+    private val extrasFlow7b1b = createExtrasFlow7b1b()
 
-    private val extrasFlow7b1 = combine(extrasFlow7b1a, extrasFlow7b1b) { left: List<Any>, right: List<Any?> ->
-        left + right
-    }
+    private val extrasFlow7b1 = createExtrasFlow7b1()
 
-    private val extrasFlow7b2a = combine(
-        preferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).map { it.coerceIn(1.0f, 3.0f) },
-        preferences.get(PreferencesKeys.TEXT_LETTER_SPACING, 0f).map { it.coerceIn(0f, 0.2f) },
-        preferences.get(PreferencesKeys.TEXT_WORD_SPACING, 0f).map { it.coerceIn(0f, 0.6f) }
-    ) { textLineHeight, textLetterSpacing, textWordSpacing ->
-        listOf<Any>(
-            textLineHeight,
-            textLetterSpacing,
-            textWordSpacing
-        )
-    }
+    private val extrasFlow7b2a = createExtrasFlow7b2a()
 
-    private val extrasFlow7b2b = combine(
-        preferences.get(PreferencesKeys.TEXT_PARAGRAPH_SPACING, 0.2f).map { it.coerceIn(0.1f, 1.2f) },
-        preferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify"),
-        preferences.get(PreferencesKeys.TEXT_BOLD, false)
-    ) { textParagraphSpacing, textAlignment, textBold ->
-        listOf<Any>(
-            textParagraphSpacing,
-            textAlignment,
-            textBold
-        )
-    }
+    private val extrasFlow7b2b = createExtrasFlow7b2b()
 
-    private val extrasFlow7b2 = combine(extrasFlow7b2a, extrasFlow7b2b) { left, right -> left + right }
-    private val extrasFlow7b = combine(extrasFlow7b1, extrasFlow7b2) { left: List<Any?>, right: List<Any> -> left + right }
-    private val extrasFlow7c1a = combine(
-        preferences.get(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name)
-            .map { ReaderTapZoneMode.fromStored(it).name },
-        preferences.get(PreferencesKeys.READER_TAP_ZONE_SWAP, false),
-        preferences.get(PreferencesKeys.READER_VOLUME_KEYS_PAGING, false)
-    ) { mode, swap, volumeKeysPaging ->
-        listOf<Any>(mode, swap, volumeKeysPaging)
-    }
+    private val extrasFlow7b2 = createExtrasFlow7b2()
+    private val extrasFlow7b = createExtrasFlow7b()
+    private val extrasFlow7c1a = createExtrasFlow7c1a()
 
-    private val extrasFlow7c1b = combine(
-        preferences.get(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name)
-            .map { normalizeTapZoneActionName(it) },
-        preferences.get(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name)
-            .map { normalizeTapZoneActionName(it) },
-        preferences.get(PreferencesKeys.READER_TAP_ZONE_RIGHT, ReaderTapZoneAction.NEXT_PAGE.name)
-            .map { normalizeTapZoneActionName(it) }
-    ) { leftAction, centerAction, rightAction ->
-        listOf<Any>(leftAction, centerAction, rightAction)
-    }
-    private val extrasFlow7c1 = combine(extrasFlow7c1a, extrasFlow7c1b) { left, right -> left + right }
+    private val extrasFlow7c1b = createExtrasFlow7c1b()
+    private val extrasFlow7c1 = createExtrasFlow7c1()
 
-    private val extrasFlow7c2a = combine(
-        preferences.get(PreferencesKeys.READER_HEADER_LEFT_SLOT, ReaderInfoSlot.BOOK_TITLE.name)
-            .map { ReaderInfoSlot.fromStored(it).name },
-        preferences.get(PreferencesKeys.READER_HEADER_CENTER_SLOT, ReaderInfoSlot.NONE.name)
-            .map { ReaderInfoSlot.fromStored(it).name },
-        preferences.get(PreferencesKeys.READER_HEADER_RIGHT_SLOT, ReaderInfoSlot.TIME.name)
-            .map { ReaderInfoSlot.fromStored(it).name },
-    ) { headerLeft, headerCenter, headerRight ->
-        listOf<Any>(headerLeft, headerCenter, headerRight)
-    }
+    private val extrasFlow7c2a = createExtrasFlow7c2a()
 
-    private val extrasFlow7c2b = combine(
-        preferences.get(PreferencesKeys.READER_FOOTER_LEFT_SLOT, ReaderInfoSlot.CHAPTER_TITLE.name)
-            .map { ReaderInfoSlot.fromStored(it).name },
-        preferences.get(PreferencesKeys.READER_FOOTER_CENTER_SLOT, ReaderInfoSlot.PAGE.name)
-            .map { ReaderInfoSlot.fromStored(it).name },
-        preferences.get(PreferencesKeys.READER_FOOTER_RIGHT_SLOT, ReaderInfoSlot.PROGRESS.name)
-            .map { ReaderInfoSlot.fromStored(it).name }
-    ) { footerLeft, footerCenter, footerRight ->
-        listOf<Any>(footerLeft, footerCenter, footerRight)
-    }
+    private val extrasFlow7c2b = createExtrasFlow7c2b()
 
-    private val extrasFlow7c3 = combine(
-        preferences.get(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, 12).map { it.coerceIn(10, 20) },
-        preferences.get(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, 6).map { it.coerceIn(4, 20) },
-        preferences.get(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, 16).map { it.coerceIn(8, 32) },
-        preferences.get(PreferencesKeys.READER_HEADER_FOOTER_RIGHT_PADDING, 16).map { it.coerceIn(8, 32) }
-    ) { fontSize, verticalPadding, leftPadding, rightPadding ->
-        listOf<Any>(fontSize, verticalPadding, leftPadding, rightPadding)
-    }
+    private val extrasFlow7c3 = createExtrasFlow7c3()
 
-    private val extrasFlow7c2 = combine(extrasFlow7c2a, extrasFlow7c2b) { left, right -> left + right }
-    private val extrasFlow7c = combine(extrasFlow7c1, extrasFlow7c2, extrasFlow7c3) { left, middle, right ->
-        left + middle + right
-    }
-    private val extrasFlow7 = combine(extrasFlow7a, extrasFlow7b, extrasFlow7c) { left: List<Any>, middle: List<Any?>, right: List<Any> ->
-        left + middle + right
-    }
+    private val extrasFlow7c2 = createExtrasFlow7c2()
+    private val extrasFlow7c = createExtrasFlow7c()
+    private val extrasFlow7 = createExtrasFlow7()
 
-    private val readerTtsFlowA = combine(
-        preferences.get(
-            PreferencesKeys.READER_TTS_PROVIDER,
-            ReaderTtsProviderType.SYSTEM.storedValue
-        ),
-        preferences.get(PreferencesKeys.READER_TTS_SPEED, 1.0f).map { it.coerceIn(0.5f, 2.0f) },
-        preferences.get(PreferencesKeys.READER_TTS_PITCH, 1.0f).map { it.coerceIn(0.5f, 2.0f) }
-    ) { provider, speed, pitch ->
-        listOf<Any>(provider, speed, pitch)
-    }
+    private val readerTtsFlowA = createReaderTtsFlowA()
 
-    private val readerTtsFlowB = combine(
-        preferences.get(PreferencesKeys.READER_TTS_VOLUME, 1.0f).map { it.coerceIn(0f, 1.0f) },
-        preferences.get(PreferencesKeys.READER_TTS_VOICE_NAME, "").map { it.ifBlank { null } },
-        preferences.get(
-            PreferencesKeys.READER_TTS_SLEEP_TIMER_MODE,
-            ReaderTtsSleepTimerMode.OFF.storedValue
-        )
-    ) { volume, voiceName, sleepTimerMode ->
-        listOf<Any>(volume, voiceName ?: "", sleepTimerMode)
-    }
+    private val readerTtsFlowB = createReaderTtsFlowB()
 
-    private val readerTtsFlow = combine(readerTtsFlowA, readerTtsFlowB) { left, right ->
-        ReaderTtsConfig.fromStored(
-            provider = left[0] as String,
-            speed = left[1] as Float,
-            pitch = left[2] as Float,
-            volume = right[0] as Float,
-            voiceName = right[1] as String,
-            sleepTimerMode = right[2] as String
-        )
-    }
+    private val readerTtsFlow = createReaderTtsFlow()
 
-    private val perfFlow = combine(
-        preferences.get(PerformancePreferencesKeys.PERF_PROFILE, PerformanceDefaults.PROFILE),
-        preferences.get(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerformanceDefaults.RENDER_QUALITY),
-        preferences.get(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, PerformanceDefaults.COVER_CACHE_MB),
-        preferences.get(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, PerformanceDefaults.PAGE_CACHE_COUNT),
-        preferences.get(PerformancePreferencesKeys.PERF_FTS_SEARCH_ENABLED, PerformanceDefaults.FTS_SEARCH),
-        preferences.get(PerformancePreferencesKeys.PERF_STARTUP_PRELOAD_ENABLED, PerformanceDefaults.STARTUP_PRELOAD),
-        preferences.get(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, PerformanceDefaults.REDUCED_ANIM)
-    ) { values ->
-        val profile = values[0] as String
-        val renderQuality = values[1] as String
-        val coverCacheMb = values[2] as Int
-        val pageCacheCount = values[3] as Int
-        val ftsEnabled = values[4] as Boolean
-        val startupPreload = values[5] as Boolean
-        val reducedAnim = values[6] as Boolean
-        { state: SettingsUiState ->
+    private val perfFlow = createPerfFlow()
+
+    private val combinedSettingsUiState: Flow<SettingsUiState> = createCombinedSettingsUiState()
+        .combine(dailyReadingGoalStore.goalState) { state: SettingsUiState, goalState ->
             state.copy(
-                perfProfile = profile,
-                perfRenderQuality = renderQuality,
-                perfCoverCacheMb = coverCacheMb,
-                perfPageCacheCount = pageCacheCount,
-                perfFtsSearchEnabled = ftsEnabled,
-                perfStartupPreloadEnabled = startupPreload,
-                perfReducedAnimations = reducedAnim
+                dailyReadingGoalEnabled = goalState.enabled,
+                dailyReadingGoalTargetPages = goalState.targetPages,
+                dailyReadingGoalProgressPages = goalState.pagesReadToday,
+                dailyReadingWeekProgressPages = goalState.pagesReadThisWeek,
+                dailyReadingWeekTargetPages = goalState.weeklyTargetPages,
+                dailyReadingWeekCompletedDays = goalState.completedDaysThisWeek,
+                dailyReadingRecentActiveDays = goalState.recentActivity.count { it.pagesRead > 0 },
+                dailyReadingRecentGoalDays = goalState.recentActivity.count { it.goalCompleted },
+                dailyReadingStreakEnabled = goalState.streakEnabled,
+                dailyReadingGraceEnabled = goalState.graceEnabled,
+                dailyReadingCurrentStreak = goalState.currentStreak,
+                dailyReadingBestStreak = goalState.bestStreak,
+                dailyReadingGraceDaysRemainingThisWeek = goalState.graceDaysRemainingThisWeek
+            )
+        }.combine(comicRepository.getAllComics()) { state: SettingsUiState, comics: List<Comic> ->
+            state.copy(
+                totalComics       = comics.size,
+                completedComics   = comics.count { it.isCompleted },
+                bookmarkedComics  = comics.count { it.isBookmarked },
+                rawAuthors        = comics.map { it.author },
+                rawGenres         = comics.map { it.genre }
             )
         }
-    }
-
-    private val combinedSettingsUiState: Flow<SettingsUiState> = combine(
-        baseUiState,
-        extrasFlow12,
-        extrasFlow3456,
-        extrasFlow7,
-        statusState,
-    ) { state: SettingsUiState, e12: List<Any>, e345: List<Any>, e7: List<Any?>, status: StatusState ->
-        state.copy(
-            libraryGridColumns   = e12[0] as Int,
-            libraryViewMode      = e12[1] as String,
-            libraryViewGrid      = (e12[1] as String) == "GRID",
-            readerPreloadPages   = e12[2] as Int,
-            readerImmersiveMode  = e12[3] as Boolean,
-            readerPageAnimation  = e12[4] as String,
-            readerChromeAutoHide = e12[5] as Boolean,
-            readerTopToolbarOpacity = e12[6] as Float,
-            readerBottomToolbarOpacity = e12[7] as Float,
-            readerToolbarBlur    = e12[8] as Float,
-            appLanguage          = e12[9] as String,
-            readerPreset         = e12[10] as String,
-            uiFontScale          = e12[11] as Float,
-            uiDensityScale       = e12[12] as Float,
-            uiCornerRadius       = e12[13] as Int,
-            performanceReducedMotion = e12[14] as Boolean,
-            performanceReducedVisualEffects = e12[15] as Boolean,
-            translationConfig    = e345[0] as TranslationServiceConfig,
-            ocrDialoguesOnly     = e345[1] as Boolean,
-            ocrIncludeSfx        = e345[2] as Boolean,
-            ocrOverlayOpacity    = e345[3] as Float,
-            ocrOverlayFontScale  = e345[4] as Float,
-            ocrOverlayStyle      = e345[5] as String,
-            ocrLanguage          = e345[6] as String,
-            autoBackupEnabled    = e345[7] as Boolean,
-            isClearingCache      = status.isClearingCache,
-            isExporting          = status.isExporting,
-            isImporting          = status.isImporting,
-            isRepairingLibraryAccess = status.isRepairingLibraryAccess,
-            pendingLibraryRepairLaunchToken = status.pendingLibraryRepairLaunchToken,
-            cacheMessage         = status.message,
-            readerPageSound      = e345[8] as Boolean,
-            libraryTileSize      = e345[9] as Int,
-            readerPageSoundStyle = e345[10] as String,
-            uiSoundEnabled       = e345[11] as Boolean,
-            uiSoundsVolume       = e345[12] as Float,
-            libraryCardStyle     = e345[13] as String,
-            libraryRecentStripPosition = e345[14] as String,
-            libraryShowProgress  = e345[15] as Boolean,
-            libraryCoverScale    = e345[16] as String,
-            libraryBackdropStrength = e345[17] as Float,
-            librarySortOrder     = e345[18] as String,
-            libraryGroupBy       = e345[19] as String,
-            libraryBackgroundStyle = normalizeLibraryBackgroundStyle(e345[20] as String),
-            libraryBackgroundImageUri = (e345[21] as String).ifBlank { null },
-            libraryShelfStyle    = normalizeLibraryShelfStyle(e345[22] as String),
-            libraryThumbnailMode = e345[23] as String,
-            libraryGraphicCoverStyle = normalizeLibraryGraphicCoverStyle(e345[24] as String),
-            libraryBackgroundBlur = e345[25] as Float,
-            libraryBackgroundVeil = e345[26] as Float,
-            libraryShelfDepth = e345[27] as Float,
-            libraryCardShadow = e345[28] as Float,
-            libraryTitleScale = e345[32] as Float,
-            libraryTitleLines = e345[33] as Int,
-            libraryCardStroke = e345[34] as Float,
-            libraryCardCornerRadius = e345[35] as Int,
-            libraryTitlePanelOpacity = e345[36] as Float,
-            appThemePresetSlots = listOf(
-                e345[37] as AppThemePresetSlot,
-                e345[38] as AppThemePresetSlot,
-                e345[39] as AppThemePresetSlot
-            ),
-            libraryThemePresetSlots = listOf(
-                e345[29] as LibraryThemePresetSlot,
-                e345[30] as LibraryThemePresetSlot,
-                e345[31] as LibraryThemePresetSlot
-            ),
-            readerEyeRestEnabled = e7[0] as Boolean,
-            readerEyeRestMinutes = e7[1] as Int,
-            mascotRecapEnabled = e7[2] as Boolean,
-            questPromptsEnabled = e7[3] as Boolean,
-            textFontSize = e7[4] as Int,
-            textColorScheme = e7[5] as String,
-            textFontFamily = e7[6] as String,
-            textCustomTextColor = e7[7] as Long?,
-            textCustomBackgroundColor = e7[8] as Long?,
-            textCustomAccentColor = e7[9] as Long?,
-            textLineHeight = e7[10] as Float,
-            textLetterSpacing = e7[11] as Float,
-            textWordSpacing = e7[12] as Float,
-            textParagraphSpacing = e7[13] as Float,
-            textAlignment = e7[14] as String,
-            textBold = e7[15] as Boolean,
-            readerTapZoneMode = e7[16] as String,
-            readerTapZoneSwap = e7[17] as Boolean,
-            readerVolumeKeysPaging = e7[18] as Boolean,
-            readerTapZoneLeftAction = e7[19] as String,
-            readerTapZoneCenterAction = e7[20] as String,
-            readerTapZoneRightAction = e7[21] as String,
-            readerHeaderLeftSlot = e7[22] as String,
-            readerHeaderCenterSlot = e7[23] as String,
-            readerHeaderRightSlot = e7[24] as String,
-            readerFooterLeftSlot = e7[25] as String,
-            readerFooterCenterSlot = e7[26] as String,
-            readerFooterRightSlot = e7[27] as String,
-            readerHeaderFooterFontSize = e7[28] as Int,
-            readerHeaderFooterVerticalPadding = e7[29] as Int,
-            readerHeaderFooterLeftPadding = e7[30] as Int,
-            readerHeaderFooterRightPadding = e7[31] as Int
-        )
-    }.combine(readerTtsFlow) { state: SettingsUiState, tts: ReaderTtsConfig ->
-        state.copy(
-            readerTtsConfig = tts
-        )
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_OPENROUTER_API_KEY, "")
-    ) { state: SettingsUiState, storedOpenRouterApiKey: String ->
-        state.copy(openRouterApiKey = SettingsSecretStore.decryptOrLegacy(storedOpenRouterApiKey))
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_OPENROUTER_MODEL, "openrouter/auto")
-    ) { state: SettingsUiState, openRouterModel: String ->
-        state.copy(openRouterModel = openRouterModel.ifBlank { "openrouter/auto" })
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_DEEPL_API_KEY, "")
-    ) { state: SettingsUiState, storedDeepLKey: String ->
-        state.copy(deeplApiKey = SettingsSecretStore.decryptOrLegacy(storedDeepLKey))
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_DEEPL_USE_FREE, true)
-    ) { state: SettingsUiState, deeplUseFree: Boolean ->
-        state.copy(deeplUseFreeApi = deeplUseFree)
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_GOOGLE_API_KEY, "")
-    ) { state: SettingsUiState, storedGoogleKey: String ->
-        state.copy(googleApiKey = SettingsSecretStore.decryptOrLegacy(storedGoogleKey))
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_YANDEX_API_KEY, "")
-    ) { state: SettingsUiState, storedYandexKey: String ->
-        state.copy(yandexApiKey = SettingsSecretStore.decryptOrLegacy(storedYandexKey))
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_YANDEX_FOLDER_ID, "")
-    ) { state: SettingsUiState, yandexFolderId: String ->
-        state.copy(yandexFolderId = yandexFolderId)
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_WIFI_ONLY, false)
-    ) { state: SettingsUiState, wifiOnly: Boolean ->
-        state.copy(translationWifiOnly = wifiOnly)
-    }.combine(
-        preferences.get(PreferencesKeys.TRANSLATION_DAILY_CHAR_LIMIT, 100_000)
-    ) { state: SettingsUiState, dailyLimit: Int ->
-        state.copy(translationDailyCharLimit = dailyLimit)
-    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_COVER_TITLES, true)) { state: SettingsUiState, showCoverTitles: Boolean ->
-        state.copy(libraryShowCoverTitles = showCoverTitles)
-    }.combine(preferences.get(PreferencesKeys.LIBRARY_SHOW_STATUS_CHIPS, true)) { state: SettingsUiState, showStatusChips: Boolean ->
-        state.copy(libraryShowStatusChips = showStatusChips)
-    }.combine(
-        preferences.get(PreferencesKeys.APP_VIDEO_SPLASH_ENABLED, !context.isEInkDevice())
-    ) { state: SettingsUiState, appVideoSplashEnabled: Boolean ->
-        state.copy(appVideoSplashEnabled = appVideoSplashEnabled)
-    }.combine(dailyReadingGoalStore.goalState) { state: SettingsUiState, goalState ->
-        state.copy(
-            dailyReadingGoalEnabled = goalState.enabled,
-            dailyReadingGoalTargetPages = goalState.targetPages,
-            dailyReadingGoalProgressPages = goalState.pagesReadToday,
-            dailyReadingWeekProgressPages = goalState.pagesReadThisWeek,
-            dailyReadingWeekTargetPages = goalState.weeklyTargetPages,
-            dailyReadingWeekCompletedDays = goalState.completedDaysThisWeek,
-            dailyReadingRecentActiveDays = goalState.recentActivity.count { it.pagesRead > 0 },
-            dailyReadingRecentGoalDays = goalState.recentActivity.count { it.goalCompleted },
-            dailyReadingStreakEnabled = goalState.streakEnabled,
-            dailyReadingGraceEnabled = goalState.graceEnabled,
-            dailyReadingCurrentStreak = goalState.currentStreak,
-            dailyReadingBestStreak = goalState.bestStreak,
-            dailyReadingGraceDaysRemainingThisWeek = goalState.graceDaysRemainingThisWeek
-        )
-    }.combine(comicRepository.getAllComics()) { state: SettingsUiState, comics: List<Comic> ->
-        state.copy(
-            totalComics       = comics.size,
-            completedComics   = comics.count { it.isCompleted },
-            bookmarkedComics  = comics.count { it.isBookmarked },
-            rawAuthors        = comics.map { it.author },
-            rawGenres         = comics.map { it.genre }
-        )
-    }.combine(perfFlow) { state: SettingsUiState, applyPerf: (SettingsUiState) -> SettingsUiState ->
-        applyPerf(state)
-    }.combine(
-        preferences.get(
-            PreferencesKeys.READER_IMAGE_SCALE_MODE,
-            ReaderImageScaleMode.defaultFor(null).storedValue
-        ).map { ReaderImageScaleMode.fromStored(it).storedValue }
-    ) { state: SettingsUiState, imageScaleMode: String ->
-        state.copy(readerImageScaleMode = imageScaleMode)
-    }.combine(
-        preferences.get(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
-            0f
-        ).map { it.coerceIn(0f, 0.22f) }
-    ) { state: SettingsUiState, horizontalCrop: Float ->
-        state.copy(readerImageMarginCropHorizontal = horizontalCrop)
-    }.combine(
-        preferences.get(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
-            0f
-        ).map { it.coerceIn(0f, 0.22f) }
-    ) { state: SettingsUiState, verticalCrop: Float ->
-        state.copy(readerImageMarginCropVertical = verticalCrop)
-    }.combine(
-        preferences.get(PreferencesKeys.APP_NAV_TRANSITION_STYLE, "FADE")
-    ) { state: SettingsUiState, appNavTransitionStyle: String ->
-        state.copy(appNavTransitionStyle = appNavTransitionStyle)
-    }.combine(readerStylePresetEntriesFlow) { state: SettingsUiState, readerStylePresetEntries: List<ReaderStylePresetEntry> ->
-        state.copy(
-            readerStylePresetEntries = readerStylePresetEntries,
-            readerStylePresetSlots = (1..3).map { index ->
-                ReaderStylePresetSlot(
-                    index = index,
-                    serialized = readerStylePresetEntries.getOrNull(index - 1)?.snapshot?.serialize()
-                )
-            }
-        )
-    }.combine(
-        preferences.get(
-            PreferencesKeys.SETTINGS_IMPORT_ERROR_PRESENTATION,
-            SettingsImportErrorPresentation.TEXT
-        )
-    ) { state: SettingsUiState, presentation: String ->
-        state.copy(
-            settingsImportErrorPresentation = normalizeSettingsImportErrorPresentation(presentation)
-        )
-    }.combine(
-        preferences.get(
-            PreferencesKeys.IMAGE_MESSAGE_POPUP_POSITION,
-            SettingsImageMessagePopupPosition.CENTER
-        )
-    ) { state: SettingsUiState, position: String ->
-        state.copy(
-            imageMessagePopupPosition = normalizeSettingsImageMessagePopupPosition(position)
-        )
-    }.combine(
-        preferences.get(PreferencesKeys.IMAGE_MESSAGE_POPUP_FREE_MOVE, false)
-    ) { state: SettingsUiState, freeMove: Boolean ->
-        state.copy(imageMessagePopupFreeMove = freeMove)
-    }.combine(
-        preferences.get(PreferencesKeys.IMAGE_MESSAGE_POPUP_SIZE_SCALE, 1f)
-            .map(::clampSettingsImageMessagePopupScale)
-    ) { state: SettingsUiState, scale: Float ->
-        state.copy(imageMessagePopupSizeScale = scale)
-    }.combine(
-        preferences.get(PreferencesKeys.IMAGE_MESSAGE_POPUP_DURATION_SECONDS, 0)
-            .map(::clampSettingsImageMessagePopupDurationSeconds)
-    ) { state: SettingsUiState, durationSeconds: Int ->
-        state.copy(imageMessagePopupDurationSeconds = durationSeconds)
-    }.combine(
-        translationAvailabilityFlow
-    ) { state: SettingsUiState, availabilityState: SettingsTranslationAvailabilityState ->
-        state.copy(
-            translationAvailability = availabilityState.snapshot,
-            translationAvailabilityPairKnown = availabilityState.pairKnown
-        )
-    }
 
     val uiState: StateFlow<SettingsUiState> = combinedSettingsUiState.stateIn(
         scope = viewModelScope,
@@ -964,7 +366,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun resolveSettingsTranslationAvailabilityState(
+    internal suspend fun resolveSettingsTranslationAvailabilityState(
         translationConfig: TranslationServiceConfig,
         appLanguage: String,
         networkAvailable: Boolean
@@ -1028,7 +430,7 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    private fun resolveSettingsNetworkAvailable(
+    internal fun resolveSettingsNetworkAvailable(
         connectivityManager: ConnectivityManager
     ): Boolean {
         val network = connectivityManager.activeNetwork ?: return false
