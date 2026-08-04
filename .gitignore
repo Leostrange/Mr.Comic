@@ -125,3 +125,11 @@ Screenshots/
 
 # === Executables ===
 mimo.exe
+.freebuff/
+
+# === AI tool directories ===
+.qoder/
+.mrcomic-mockups/
+
+# === Detekt baselines (per-module) ===
+**/detekt-baseline.xml
