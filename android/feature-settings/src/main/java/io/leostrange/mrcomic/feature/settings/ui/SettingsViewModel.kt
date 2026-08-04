@@ -199,55 +199,9 @@ class SettingsViewModel @Inject constructor(
     private val appLanguageFlow = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
         .map(::normalizeAppLanguageCode)
 
-    private val networkAvailableFlow: Flow<Boolean> = callbackFlow {
-        val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
-        if (connectivityManager == null) {
-            trySend(false)
-            close()
-            return@callbackFlow
-        }
+    private val networkAvailableFlow = createNetworkAvailableFlow()
 
-        fun emitCurrent() {
-            trySend(resolveSettingsNetworkAvailable(connectivityManager))
-        }
-
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) = emitCurrent()
-
-            override fun onLost(network: Network) = emitCurrent()
-
-            override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) =
-                emitCurrent()
-
-            override fun onUnavailable() = emitCurrent()
-        }
-
-        emitCurrent()
-        val registered = runCatching {
-            connectivityManager.registerDefaultNetworkCallback(callback)
-        }.isSuccess
-        if (!registered) {
-            close()
-            return@callbackFlow
-        }
-        awaitClose {
-            runCatching { connectivityManager.unregisterNetworkCallback(callback) }
-        }
-    }.distinctUntilChanged()
-
-    private val translationAvailabilityFlow: Flow<SettingsTranslationAvailabilityState> = combine(
-        translationConfigFlow,
-        appLanguageFlow,
-        networkAvailableFlow
-    ) { translationConfig, appLanguage, networkAvailable ->
-        Triple(translationConfig, appLanguage, networkAvailable)
-    }.mapLatest { (translationConfig, appLanguage, networkAvailable) ->
-        resolveSettingsTranslationAvailabilityState(
-            translationConfig = translationConfig,
-            appLanguage = appLanguage,
-            networkAvailable = networkAvailable
-        )
-    }
+    private val translationAvailabilityFlow = createTranslationAvailabilityFlow()
 
     private val extrasFlow3a2 = createExtrasFlow3a2()
 
