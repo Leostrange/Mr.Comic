@@ -1,0 +1,333 @@
+// Phase M (2026-08-03): превью-карточки вынесены из SettingsReaderSection.kt.
+
+@file:OptIn(
+    androidx.compose.foundation.layout.ExperimentalLayoutApi::class,
+    androidx.compose.foundation.ExperimentalFoundationApi::class
+)
+
+package io.leostrange.mrcomic.feature.settings.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
+import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
+import io.leostrange.mrcomic.core.ui.locale.AppStrings
+import io.leostrange.mrcomic.core.ui.theme.style
+
+/**
+ * Reader preview cards (Phase M, 2026-08-03): pure visual composables
+ * with no ViewModel dependency — text appearance, page layout, header/footer,
+ * and paging previews. Moved from SettingsReaderSection.kt; behavior is unchanged.
+ */
+
+/* ──── ReaderTextAppearancePreviewCard ──── */
+@Composable
+internal fun ReaderTextAppearancePreviewCard(
+    uiState: SettingsUiState,
+    strings: AppStrings
+) {
+    val align = when (uiState.textAlignment) {
+        "left" -> Alignment.Start
+        "right" -> Alignment.End
+        "center" -> Alignment.CenterHorizontally
+        else -> Alignment.Start
+    }
+    SettingsCard(title = strings.preview) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            MrComicCardSurface(
+                shape = MaterialTheme.shapes.large,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = strings.readerTextPreviewTitle,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = if (uiState.textBold) FontWeight.Bold else FontWeight.SemiBold,
+                            fontSize = (uiState.textFontSize + 2).sp
+                        )
+                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = align
+                    ) {
+                        Text(
+                            text = strings.readerTextPreviewDescription,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = uiState.textFontSize.sp,
+                                lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
+                                fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                        )
+                    }
+                }
+            }
+            Text(
+                text = "${uiState.textFontFamily} · ${readerTextSchemeLabel(strings.languageCode, uiState.textColorScheme)} · ${readerTextLineHeightLabel((uiState.textLineHeight * 100).toInt(), strings.languageCode)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/* ──── ReaderPageLayoutPreviewCard ──── */
+@Composable
+internal fun ReaderPageLayoutPreviewCard(
+    uiState: SettingsUiState,
+    strings: AppStrings
+) {
+    SettingsCard(
+        title = when (strings.languageCode) {
+            "en" -> "Layout preview"
+            "ja" -> "レイアウトのプレビュー"
+            "zh" -> "布局预览"
+            "ko" -> "레이아웃 미리보기"
+            else -> "Предпросмотр макета"
+        }
+    ) {
+        val previewShape = MaterialTheme.shapes.large
+        MrComicCardSurface(
+            modifier = Modifier
+                .fillMaxWidth(),
+            shape = previewShape,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        when (uiState.readingMode) {
+                            ReadingMode.DUAL_PAGE -> when (strings.languageCode) {
+                                "en" -> "Two-page spread"
+                                "ja" -> "見開き"
+                                "zh" -> "双页展开"
+                                "ko" -> "양면 펼침"
+                                else -> "Разворот"
+                            }
+                            else -> readerModeSettingsLabel(strings.languageCode, uiState.readingMode)
+                        },
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    MrComicPill(
+                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = if (uiState.readerLandscapeSpreadEnabled) {
+                                when (strings.languageCode) {
+                                    "en" -> "Landscape spread on"
+                                    "ja" -> "横見開きオン"
+                                    "zh" -> "横屏展开开启"
+                                    "ko" -> "가로 펼침 켜짐"
+                                    else -> "Разворот в ландшафте включён"
+                                }
+                            } else {
+                                when (strings.languageCode) {
+                                    "en" -> "Single page only"
+                                    "ja" -> "単ページ固定"
+                                    "zh" -> "仅单页"
+                                    "ko" -> "단일 페이지"
+                                    else -> "Только одна страница"
+                                }
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+                MrComicProgressLine(
+                    progress = { (uiState.readerPreloadPages - 2).toFloat() / 6f },
+                    modifier = Modifier.fillMaxWidth(),
+                    trackColor = MaterialTheme.colorScheme.surface,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = when (strings.languageCode) {
+                        "en" -> "Preload: ${uiState.readerPreloadPages} pages nearby. Text readers stay calm, image readers can open as LTR, RTL, or webtoon."
+                        "ja" -> "プリロード: 近傍 ${uiState.readerPreloadPages} ページ。テキストは落ち着いたまま、画像リーダーは LTR / RTL / webtoon を切り替えられます。"
+                        "zh" -> "预加载：附近 ${uiState.readerPreloadPages} 页。文本阅读保持稳定，图片阅读可切换 LTR / RTL / webtoon。"
+                        "ko" -> "프리로드: 주변 ${uiState.readerPreloadPages} 페이지. 텍스트 리더는 차분하게 유지되고, 이미지 리더는 LTR / RTL / 웹툰을 전환할 수 있습니다."
+                        else -> "Прелоад: рядом ${uiState.readerPreloadPages} страниц. Текстовый ридер остаётся спокойным, а графический можно открыть как LTR, RTL или webtoon."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/* ──── ReaderHeaderFooterPreviewCard ──── */
+@Composable
+internal fun ReaderHeaderFooterPreviewCard(
+    uiState: SettingsUiState,
+    language: String
+) {
+    SettingsCard(
+        title = when (language) {
+            "en" -> "Compact header and footer preview"
+            "ja" -> "ヘッダーとフッターのプレビュー"
+            "zh" -> "页眉页脚预览"
+            "ko" -> "헤더·푸터 미리보기"
+            else -> "Компактный preview колонтитулов"
+        }
+    ) {
+        MrComicCardSurface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+        ) {
+            Column(
+                modifier = Modifier.padding(
+                    start = uiState.readerHeaderFooterLeftPadding.dp,
+                    end = uiState.readerHeaderFooterRightPadding.dp,
+                    top = uiState.readerHeaderFooterVerticalPadding.dp + 4.dp,
+                    bottom = uiState.readerHeaderFooterVerticalPadding.dp + 4.dp
+                )
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        readerInfoSlotPreviewValue(language, uiState.readerHeaderLeftSlot),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = uiState.readerHeaderFooterFontSize.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        readerInfoSlotPreviewValue(language, uiState.readerHeaderCenterSlot),
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = uiState.readerHeaderFooterFontSize.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        readerInfoSlotPreviewValue(language, uiState.readerHeaderRightSlot),
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.End,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = uiState.readerHeaderFooterFontSize.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.height(30.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                Spacer(Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        readerInfoSlotPreviewValue(language, uiState.readerFooterLeftSlot),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = uiState.readerHeaderFooterFontSize.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        readerInfoSlotPreviewValue(language, uiState.readerFooterCenterSlot),
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = uiState.readerHeaderFooterFontSize.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        readerInfoSlotPreviewValue(language, uiState.readerFooterRightSlot),
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.End,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = uiState.readerHeaderFooterFontSize.sp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
+
+/* ──── ReaderPagingPreviewCard ──── */
+@Composable
+internal fun ReaderPagingPreviewCard(
+    uiState: SettingsUiState,
+    language: String
+) {
+    val layout = resolveReaderTapZoneLayout(
+        mode = ReaderTapZoneMode.fromStored(uiState.readerTapZoneMode),
+        readingMode = uiState.readingMode,
+        swapped = uiState.readerTapZoneSwap,
+        leftAction = uiState.readerTapZoneLeftAction,
+        centerAction = uiState.readerTapZoneCenterAction,
+        rightAction = uiState.readerTapZoneRightAction
+    )
+    SettingsCard(
+        title = when (language) {
+            "en" -> "Tap zones preview"
+            "ja" -> "タップゾーンのプレビュー"
+            "zh" -> "点击区域预览"
+            "ko" -> "탭 영역 미리보기"
+            else -> "Preview зон листания"
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f))
+        ) {
+            listOf(
+                readerTapZoneActionLabel(language, layout.left.name),
+                readerTapZoneActionLabel(language, layout.center.name),
+                readerTapZoneActionLabel(language, layout.right.name)
+            ).forEachIndexed { index, label ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .background(
+                            if (index == 1) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (index == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (index != 2) {
+                    VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
+                }
+            }
+        }
+    }
+}
+
