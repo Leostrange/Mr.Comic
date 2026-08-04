@@ -14,10 +14,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import android.net.Uri
-import android.os.Environment
 import android.provider.DocumentsContract
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -100,7 +97,6 @@ import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.core.ui.theme.toConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -111,17 +107,18 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
+import java.util.Locale
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.URLDecoder
-import java.util.Locale
 import javax.inject.Inject
 
 // Preset data classes and parsing extracted to SettingsPresets.kt
@@ -140,8 +137,8 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     @ApplicationContext internal val context: Context,
     internal val themePreferencesRepository: ThemePreferencesRepository,
-    private val comicRepository: ComicRepository,
-    private val quoteRepository: QuoteRepository,
+    internal val comicRepository: ComicRepository,
+    internal val quoteRepository: QuoteRepository,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val dictionaryEngine: DictionaryEngine,
@@ -168,7 +165,7 @@ class SettingsViewModel @Inject constructor(
 
     // Debounce jobs for continuous slider inputs — avoids a DataStore write on every drag tick.
     private val sliderJobs = mutableMapOf<String, Job>()
-    private fun setSlider(key: String, block: suspend () -> Unit) {
+    internal fun setSlider(key: String, block: suspend () -> Unit) {
         sliderJobs[key]?.cancel()
         sliderJobs[key] = viewModelScope.launch { delay(300); block() }
     }
@@ -1230,232 +1227,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun saveLibraryThemePreset(slot: Int) {
-        val snapshot = uiState.value.toLibraryThemePresetSnapshot()
-        viewModelScope.launch {
-            preferences.set(libraryThemePresetKey(slot), snapshot.serialize())
-        }
-    }
-
-    fun applyLibraryThemePreset(slot: Int) {
-        val snapshot = parseLibraryThemePreset(
-            uiState.value.libraryThemePresetSlots.firstOrNull { it.index == slot }?.serialized
-        ) ?: return
-        viewModelScope.launch {
-            applyLibraryPresetSnapshot(snapshot)
-        }
-    }
-
-    fun clearLibraryThemePreset(slot: Int) {
-        viewModelScope.launch {
-            preferences.set(libraryThemePresetKey(slot), "")
-        }
-    }
-
-    fun saveAppThemePreset(slot: Int) {
-        val snapshot = uiState.value.toAppThemePresetSnapshot()
-        viewModelScope.launch {
-            preferences.set(appThemePresetKey(slot), snapshot.serialize())
-        }
-    }
-
-    fun applyAppThemePreset(slot: Int) {
-        val snapshot = parseAppThemePreset(
-            uiState.value.appThemePresetSlots.firstOrNull { it.index == slot }?.serialized
-        ) ?: return
-        viewModelScope.launch {
-            applyAppThemePresetSnapshot(snapshot)
-        }
-    }
-
-    fun clearAppThemePreset(slot: Int) {
-        viewModelScope.launch {
-            preferences.set(appThemePresetKey(slot), "")
-        }
-    }
-
-    fun saveReaderStylePreset(slot: Int) {
-        val normalizedSlot = slot.coerceIn(1, 3)
-        val existingEntry = uiState.value.readerStylePresetEntries.getOrNull(normalizedSlot - 1)
-        if (existingEntry != null) {
-            overwriteReaderStylePreset(existingEntry.id)
-        } else {
-            saveCurrentReaderStylePreset(displayName = settingsReaderStyleFallbackName(normalizedSlot))
-        }
-    }
-
-    fun applyReaderStylePreset(slot: Int) {
-        uiState.value.readerStylePresetEntries.getOrNull(slot.coerceIn(1, 3) - 1)?.let {
-            applyReaderStylePreset(it.id)
-        }
-    }
-
-    fun clearReaderStylePreset(slot: Int) {
-        uiState.value.readerStylePresetEntries.getOrNull(slot.coerceIn(1, 3) - 1)?.let {
-            deleteReaderStylePreset(it.id)
-        }
-    }
-
-    fun renameReaderStylePreset(slot: Int, displayName: String) {
-        uiState.value.readerStylePresetEntries.getOrNull(slot.coerceIn(1, 3) - 1)?.let {
-            renameReaderStylePreset(it.id, displayName)
-        }
-    }
-
-    fun saveCurrentReaderStylePreset(displayName: String? = null) {
-        val snapshot = uiState.value.toReaderStylePresetSnapshot(
-            displayName = displayName?.trim()?.takeIf { it.isNotEmpty() }
-                ?: settingsReaderStyleFallbackName(uiState.value.readerStylePresetEntries.size + 1)
-        )
-        val updatedEntries = listOf(
-            ReaderStylePresetEntry(
-                id = "preset_${System.currentTimeMillis()}",
-                snapshot = snapshot
-            )
-        ) + uiState.value.readerStylePresetEntries
-        viewModelScope.launch { persistReaderStylePresetEntries(updatedEntries) }
-    }
-
-    fun overwriteReaderStylePreset(id: String) {
-        val existing = uiState.value.readerStylePresetEntries.firstOrNull { it.id == id } ?: return
-        val updatedEntries = uiState.value.readerStylePresetEntries.map { entry ->
-            if (entry.id == id) {
-                entry.copy(
-                    snapshot = uiState.value.toReaderStylePresetSnapshot(
-                        displayName = existing.snapshot.displayName
-                    )
-                )
-            } else {
-                entry
-            }
-        }
-        viewModelScope.launch { persistReaderStylePresetEntries(updatedEntries) }
-    }
-
-    fun applyReaderStylePreset(id: String) {
-        val snapshot = uiState.value.readerStylePresetEntries
-            .firstOrNull { it.id == id }
-            ?.snapshot
-            ?: return
-        viewModelScope.launch { applyReaderStylePresetSnapshot(snapshot) }
-    }
-
-    fun deleteReaderStylePreset(id: String) {
-        viewModelScope.launch {
-            persistReaderStylePresetEntries(
-                uiState.value.readerStylePresetEntries.filterNot { it.id == id }
-            )
-        }
-    }
-
-    fun renameReaderStylePreset(id: String, displayName: String) {
-        val trimmed = displayName.trim()
-        val updatedEntries = uiState.value.readerStylePresetEntries.map { entry ->
-            if (entry.id == id) {
-                entry.copy(
-                    snapshot = entry.snapshot.copy(
-                        displayName = trimmed.takeIf { it.isNotEmpty() }
-                    )
-                )
-            } else {
-                entry
-            }
-        }
-        viewModelScope.launch { persistReaderStylePresetEntries(updatedEntries) }
-    }
-
-    fun applyLibraryZonePreset(style: String) {
-        viewModelScope.launch {
-            when (normalizeLibraryBackgroundStyle(style)) {
-                "DARK_STUDY" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "DARK_STUDY")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "WALNUT")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "SHOWCASE")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "INK")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.58f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.18f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.46f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.62f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.64f)
-                }
-                "LIGHT_GREENHOUSE" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "LIGHT_GREENHOUSE")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "OAK")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "BALANCED")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "MINIMAL")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.4f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.08f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.24f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.28f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.44f)
-                }
-                "SCIENCE_LAB" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "SCIENCE_LAB")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "GLASS")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "SHOWCASE")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "POSTER")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.54f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.24f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.32f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.5f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.56f)
-                }
-                "CITY_LIBRARY" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "CITY_LIBRARY")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "STEEL")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "BALANCED")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "POSTER")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.44f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.12f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.28f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.42f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.52f)
-                }
-                "LIQUID_GLASS" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "LIQUID_GLASS")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "FROST")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "SHOWCASE")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "MINIMAL")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.48f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.42f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.18f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.22f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.34f)
-                }
-                "MIDNIGHT_MICA" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "MIDNIGHT_MICA")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "ALUMINUM")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "BALANCED")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "INK")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.36f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.22f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.22f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.18f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.3f)
-                }
-                "SUNSET_HAZE" -> {
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, "SUNSET_HAZE")
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, "FLOAT")
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, "SHOWCASE")
-                    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, "POSTER")
-                    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, 0.4f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, 0.18f)
-                    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, 0.16f)
-                    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, 0.2f)
-                    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, 0.18f)
-                }
-                else -> Unit
-            }
-        }
-    }
-
-    fun applyLibraryLookPreset(presetId: String) {
-        viewModelScope.launch {
-            val preset = libraryQuickPresetSpec(presetId) ?: return@launch
-            applyLibraryPresetSnapshot(preset.snapshot, preset.useAmoledDark)
-        }
-    }
-
+    // Phase Y (2026-08-04): preset functions → SettingsViewModelPresets.kt.
     fun setLibraryBackgroundVeil(value: Float) {
         setSlider("libraryVeil") {
             preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, value.coerceIn(0f, 1f))
@@ -1541,230 +1313,5 @@ class SettingsViewModel @Inject constructor(
 
     fun setLibraryGroupBy(mode: String) = settingsPreferencesController.setLibraryGroupBy(mode)
 
-    fun setAutoBackupEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            preferences.set(PreferencesKeys.AUTO_BACKUP_ENABLED, enabled)
-            // Immediately create a backup when user enables the feature so they see it works.
-            if (enabled) autoBackupToDocuments()
-        }
-    }
-
-    /**
-     * Writes library progress JSON to
-     * `Documents/MrComic/mrcomic_backup_<date>.json`.
-     * Called on: (a) enable toggle, (b) app lifecycle onStop via [triggerAutoBackupIfEnabled].
-     */
-    suspend fun autoBackupToDocuments() = kotlinx.coroutines.withContext(Dispatchers.IO) {
-        try {
-            val docsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val backupDir = File(docsDir, "MrComic").apply { mkdirs() }
-            if (!backupDir.exists()) return@withContext  // no external storage
-
-            val date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                .format(java.util.Date())
-            val backupFile = File(backupDir, "mrcomic_backup_$date.json")
-
-            val comics = comicRepository.getAllComics().first()
-            val quotes = quoteRepository.getAllQuotes().first()
-            val root = buildBackupJson(comics, quotes)
-            backupFile.writeText(root.toString(2), Charsets.UTF_8)
-            Log.i("SettingsVM", "Auto-backup written: ${backupFile.absolutePath}")
-        } catch (e: Exception) {
-            Log.w("SettingsVM", "Auto-backup failed", e)
-        }
-    }
-
-    // ── Cache ────────────────────────────────────────────────────────────────
-
-    fun clearImageCache() {
-        if (statusState.value.isClearingCache) return
-        statusState.update { it.copy(isClearingCache = true, message = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            val removedBytes = removeCacheDir("covers") +
-                removeCacheDir("cbz_cache") +
-                removeCacheDir("rar_cache") +
-                removeCacheDir("import_tmp") +
-                removeCacheDir("epub_cache")
-            val message = if (removedBytes > 0L) settingsCacheClearedMessage(removedBytes) else settingsCacheAlreadyEmptyMessage()
-            statusState.update { it.copy(isClearingCache = false, message = message) }
-        }
-    }
-
-    fun consumeCacheMessage() {
-        statusState.update { it.copy(message = null) }
-    }
-
-    fun consumePendingLibraryRepairLaunch() {
-        statusState.update { it.copy(pendingLibraryRepairLaunchToken = 0L) }
-    }
-
-    // ── Export / Import reading progress ─────────────────────────────────────
-
-    fun exportProgress(uri: Uri) {
-        if (statusState.value.isExporting) return
-        statusState.update { it.copy(isExporting = true, message = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val comics = comicRepository.getAllComics().first()
-                val quotes = quoteRepository.getAllQuotes().first()
-                val root = buildBackupJson(comics, quotes)
-
-                context.contentResolver.openOutputStream(uri)?.use { out ->
-                    out.write(root.toString(2).toByteArray(Charsets.UTF_8))
-                }
-                statusState.update {
-                    it.copy(
-                        isExporting = false,
-                        message = settingsExportSuccessMessage(comics.size)
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("SettingsVM", "Export failed", e)
-                statusState.update {
-                    it.copy(isExporting = false, message = settingsExportFailedMessage(e.localizedMessage))
-                }
-            }
-        }
-    }
-
-    fun importProgress(uri: Uri) {
-        if (statusState.value.isImporting) return
-        statusState.update { it.copy(isImporting = true, message = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val jsonString = uri.readAcceptedSettingsImportText(context)
-
-                val root = JSONObject(jsonString)
-                val entries = root.getJSONArray("entries")
-                var updated = 0
-                var restored = 0
-                var skipped = 0
-                var unresolvedAccess = 0
-                var restoredQuotes = 0
-                var updatedQuotes = 0
-                val restoredMainPreferences = restorePreferencesFromBackup(root.optJSONObject("preferences"))
-                val restoredThemePreferences = restoreThemePreferencesFromBackup(root.optJSONObject("themePreferences"))
-                val restoredAppIcon = restoreAppIconFromBackup(root.optJSONObject("appIcon"))
-                val restoredSettings = restoredMainPreferences + restoredThemePreferences + restoredAppIcon
-
-                for (i in 0 until entries.length()) {
-                    val entry = entries.getJSONObject(i)
-                    val backupComic = parseComicBackupEntry(entry)
-                    if (backupComic == null) {
-                        skipped++
-                        continue
-                    }
-
-                    val result = comicRepository.restoreComicFromBackup(backupComic)
-                    if (result != null) {
-                        if (result.inserted) {
-                            restored++
-                        } else {
-                            updated++
-                        }
-                        if (!result.isReadable) {
-                            unresolvedAccess++
-                        }
-                    } else {
-                        skipped++
-                    }
-                }
-
-                val quotes = root.optJSONArray("quotes")
-                if (quotes != null) {
-                    for (i in 0 until quotes.length()) {
-                        val quoteEntry = quotes.optJSONObject(i) ?: continue
-                        val quote = parseQuoteBackupEntry(quoteEntry) ?: continue
-                        val result = quoteRepository.restoreQuoteFromBackup(quote)
-                        if (result.inserted) restoredQuotes++ else updatedQuotes++
-                    }
-                }
-
-                val message = settingsImportSummaryMessage(
-                    restored = restored,
-                    updated = updated,
-                    skipped = skipped,
-                    restoredSettings = restoredSettings,
-                    restoredQuotes = restoredQuotes,
-                    updatedQuotes = updatedQuotes,
-                    unresolvedAccess = unresolvedAccess
-                )
-                statusState.update {
-                    it.copy(
-                        isImporting = false,
-                        pendingLibraryRepairLaunchToken = if (unresolvedAccess > 0) System.currentTimeMillis() else 0L,
-                        message = message
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("SettingsVM", "Import failed", e)
-                statusState.update {
-                    it.copy(isImporting = false, message = settingsImportFailureMessage(e))
-                }
-            }
-        }
-    }
-
-    fun repairLibraryAccess(treeUri: Uri) {
-        if (statusState.value.isRepairingLibraryAccess) return
-        statusState.update { it.copy(isRepairingLibraryAccess = true, message = null) }
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val result = comicRepository.repairLibraryAccess(treeUri)
-                val message = settingsRepairSummaryMessage(result)
-                statusState.update {
-                    it.copy(
-                        isRepairingLibraryAccess = false,
-                        message = message
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("SettingsVM", "Repair library access failed", e)
-                statusState.update {
-                    it.copy(
-                        isRepairingLibraryAccess = false,
-                        message = settingsRepairFailedMessage(e.localizedMessage)
-                    )
-                }
-            }
-        }
-    }
-
-
-    fun setSettingsImportErrorPresentation(value: String) = viewModelScope.launch {
-        preferences.set(
-            PreferencesKeys.SETTINGS_IMPORT_ERROR_PRESENTATION,
-            normalizeSettingsImportErrorPresentation(value)
-        )
-    }
-
-    fun setImageMessagePopupPosition(value: String) = viewModelScope.launch {
-        preferences.set(
-            PreferencesKeys.IMAGE_MESSAGE_POPUP_POSITION,
-            normalizeSettingsImageMessagePopupPosition(value)
-        )
-    }
-
-    fun setImageMessagePopupFreeMove(enabled: Boolean) = viewModelScope.launch {
-        preferences.set(PreferencesKeys.IMAGE_MESSAGE_POPUP_FREE_MOVE, enabled)
-    }
-
-    fun setImageMessagePopupSizeScale(value: Float) {
-        setSlider("imageMessagePopupSizeScale") {
-            preferences.set(
-                PreferencesKeys.IMAGE_MESSAGE_POPUP_SIZE_SCALE,
-                clampSettingsImageMessagePopupScale(value)
-            )
-        }
-    }
-
-    fun setImageMessagePopupDurationSeconds(value: Int) {
-        setSlider("imageMessagePopupDurationSeconds") {
-            preferences.set(
-                PreferencesKeys.IMAGE_MESSAGE_POPUP_DURATION_SECONDS,
-                clampSettingsImageMessagePopupDurationSeconds(value)
-            )
-        }
-    }
-
+    // Phase X (2026-08-04): backup/cache/repair → SettingsViewModelBackup.kt.
 }
