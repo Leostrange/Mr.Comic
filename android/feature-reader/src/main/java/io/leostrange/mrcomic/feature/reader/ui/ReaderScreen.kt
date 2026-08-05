@@ -731,6 +731,7 @@ fun ReaderScreen(
                                 pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
                                 onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
                                 onTextWebtoonVisibleSectionChanged = { viewModel.navigationController.updateTextWebtoonVisibleSection(it) },
+                                sectionCharacterOffset = uiState.sectionCharacterOffset,
                                 modifier = textWebtoonModifier
                             )
                         }
@@ -767,8 +768,8 @@ fun ReaderScreen(
                                             pageStep > 0 -> viewModel.navigationController.nextPage()
                                         }
                                     },
-                                    onPagedLayoutPageCountChanged = { pageCount, pageIndex ->
-                                        viewModel.onPagedLayoutPageCountChanged(pageCount, pageIndex)
+                                    onPagedLayoutPageCountChanged = { pageCount, pageIndex, charOffset ->
+                                        viewModel.onPagedLayoutPageCountChanged(pageCount, pageIndex, charOffset)
                                     },
                                     onTranslateSelection = { selectedText ->
                                         viewModel.translationController.translateSelectedText(
@@ -811,6 +812,7 @@ fun ReaderScreen(
                                     pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                     onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                     onRegisterPageTurner = { pagedColumnTurn = it },
+                                    sectionCharacterOffset = uiState.sectionCharacterOffset,
                                     modifier = textReaderModifier
                                 )
                             }

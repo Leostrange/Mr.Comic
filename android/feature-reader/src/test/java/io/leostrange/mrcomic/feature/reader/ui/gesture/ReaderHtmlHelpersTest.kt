@@ -64,13 +64,14 @@ class ReaderHtmlHelpersTest {
 
     @Test
     fun decodePagedLayoutMetrics_validJson() {
-        val raw = """{"handled":true,"pageIndex":5,"pageCount":20,"clipHeight":800,"usableHeight":700}"""
+        val raw = """{"handled":true,"pageIndex":5,"pageCount":20,"characterOffset":1234,"clipHeight":800,"usableHeight":700}"""
         val metrics = ReaderHtmlHelpers.decodePagedLayoutMetrics(raw)
 
         assertNotNull(metrics)
         assertEquals(true, metrics!!.handled)
         assertEquals(5, metrics.pageIndex)
         assertEquals(20, metrics.pageCount)
+        assertEquals(1234, metrics.characterOffset)
         assertEquals(800, metrics.clipHeight)
         assertEquals(700, metrics.usableHeight)
     }
@@ -95,6 +96,14 @@ class ReaderHtmlHelpersTest {
     @Test
     fun decodePagedLayoutMetrics_invalidJsonReturnsNull() {
         assertNull(ReaderHtmlHelpers.decodePagedLayoutMetrics("not json"))
+    }
+
+    @Test
+    fun decodePagedLayoutMetrics_clampsNegativeCharacterOffset() {
+        val metrics = ReaderHtmlHelpers.decodePagedLayoutMetrics("""{"characterOffset":-10}""")
+
+        assertNotNull(metrics)
+        assertEquals(0, metrics!!.characterOffset)
     }
 
     @Test

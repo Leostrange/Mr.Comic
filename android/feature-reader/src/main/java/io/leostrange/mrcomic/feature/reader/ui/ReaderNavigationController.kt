@@ -62,6 +62,7 @@ internal class ReaderNavigationController(
                 currentPage = clamped,
                 sectionPageCount = sectionPaging.pageCount,
                 sectionCurrentPage = sectionPaging.pageIndex,
+                sectionCharacterOffset = if (previousState.currentPage != clamped) 0 else it.sectionCharacterOffset,
                 footnotePopup = null,
                 footnotePresentation = FootnotePresentation.PEEK,
                 selectedTextActionSheet = null,

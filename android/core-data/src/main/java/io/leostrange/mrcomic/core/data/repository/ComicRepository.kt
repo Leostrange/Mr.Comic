@@ -294,7 +294,7 @@ class ComicRepository @Inject constructor(
         )
     }
 
-    override suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int) {
+    override suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int, characterOffset: Int?) {
         // Guard: totalPages <= 1 means the book hasn't been properly paginated yet.
         // Saving progress here would produce 100% (page 0 of 1 = 100%).
         // This applies to all reflowable formats during initial load before
@@ -303,7 +303,14 @@ class ComicRepository @Inject constructor(
         val maxPage = (totalPages - 1).coerceAtLeast(0)
         val safePage = currentPage.coerceIn(0, maxPage)
         val progress = readingProgressForPage(safePage, totalPages)
-        comicDao.updateProgress(comicId, safePage, progress.coerceIn(0f, 1f), System.currentTimeMillis(), totalPages.coerceAtLeast(0))
+        comicDao.updateProgress(
+            comicId,
+            safePage,
+            progress.coerceIn(0f, 1f),
+            System.currentTimeMillis(),
+            totalPages.coerceAtLeast(0),
+            characterOffset
+        )
     }
 
     override suspend fun repairLibraryAccess(treeUri: Uri): BackupRepository.RepairLibraryAccessResult = withContext(Dispatchers.IO) {

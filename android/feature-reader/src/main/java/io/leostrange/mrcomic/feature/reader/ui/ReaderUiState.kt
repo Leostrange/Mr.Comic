@@ -169,6 +169,8 @@ data class ReaderUiState(
     val sectionPageCount: Int = 0,
     /** Current visual page index within the current spine section (0-based). */
     val sectionCurrentPage: Int = 0,
+    /** Character offset at the start of the current visual page, reported by WebView pagination. */
+    val sectionCharacterOffset: Int = 0,
     /** Accumulated total visual pages across all visited EPUB sections (0 when not EPUB or no data). */
     val epubAccumulatedTotalPages: Int = 0,
     /** Accumulated current visual page position across all visited EPUB sections. */
@@ -294,7 +296,8 @@ internal data class PendingProgressSave(
     val comicId: String,
     val page: Int,
     val totalPages: Int,
-    val countsTowardReadingProgress: Boolean
+    val countsTowardReadingProgress: Boolean,
+    val characterOffset: Int? = null
 )
 
 internal data class PersistedProgressMarker(

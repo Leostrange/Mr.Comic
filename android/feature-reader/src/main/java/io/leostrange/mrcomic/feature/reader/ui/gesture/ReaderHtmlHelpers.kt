@@ -48,6 +48,7 @@ internal object ReaderHtmlHelpers {
         val handled: Boolean = false,
         val pageIndex: Int = 0,
         val pageCount: Int = 1,
+        val characterOffset: Int = 0,
         val clipHeight: Int = 0,
         val usableHeight: Int = 0
     )
@@ -59,6 +60,7 @@ internal object ReaderHtmlHelpers {
             handled = json.optBoolean("handled", false),
             pageIndex = json.optInt("pageIndex", 0).coerceAtLeast(0),
             pageCount = json.optInt("pageCount", 1).coerceAtLeast(1),
+            characterOffset = json.optInt("characterOffset", 0).coerceAtLeast(0),
             clipHeight = json.optInt("clipHeight", 0).coerceAtLeast(0),
             usableHeight = json.optInt("usableHeight", 0).coerceAtLeast(0)
         )

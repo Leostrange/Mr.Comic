@@ -100,9 +100,11 @@ internal fun textSettingsJs(
           ${if (maxWidthPx > 0) "\"body:not([data-mrcomic-preserve-layout='true']){max-width:${maxWidthPx}px !important;margin-left:auto !important;margin-right:auto !important;}\"+" else ""}
           "body:not([data-mrcomic-preserve-layout='true']),body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) span,body:not([data-mrcomic-preserve-layout='true']) li{white-space:normal !important;overflow-wrap:normal !important;word-break:normal !important;hyphens:manual !important;-webkit-hyphens:manual !important;max-width:100% !important;min-width:0 !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) li{width:auto !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) li{orphans:2 !important;widows:2 !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) h1,body:not([data-mrcomic-preserve-layout='true']) h2,body:not([data-mrcomic-preserve-layout='true']) h3,body:not([data-mrcomic-preserve-layout='true']) h4,body:not([data-mrcomic-preserve-layout='true']) h5,body:not([data-mrcomic-preserve-layout='true']) h6{page-break-after:avoid !important;page-break-inside:avoid !important;}"+
-          "body:not([data-mrcomic-preserve-layout='true']) img,body:not([data-mrcomic-preserve-layout='true']) figure,body:not([data-mrcomic-preserve-layout='true']) table{page-break-inside:avoid !important;break-inside:avoid !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) li,body:not([data-mrcomic-preserve-layout='true']) blockquote,body:not([data-mrcomic-preserve-layout='true']) dd{orphans:2 !important;widows:2 !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) h1,body:not([data-mrcomic-preserve-layout='true']) h2,body:not([data-mrcomic-preserve-layout='true']) h3,body:not([data-mrcomic-preserve-layout='true']) h4,body:not([data-mrcomic-preserve-layout='true']) h5,body:not([data-mrcomic-preserve-layout='true']) h6{page-break-after:avoid !important;break-after:avoid-page !important;page-break-inside:avoid !important;break-inside:avoid !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) blockquote,body:not([data-mrcomic-preserve-layout='true']) figure,body:not([data-mrcomic-preserve-layout='true']) table,body:not([data-mrcomic-preserve-layout='true']) dt,body:not([data-mrcomic-preserve-layout='true']) dd{page-break-inside:avoid !important;break-inside:avoid !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) .mrcomic-footnote-block{break-inside:avoid !important;page-break-inside:avoid !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) img,body:not([data-mrcomic-preserve-layout='true']) video,body:not([data-mrcomic-preserve-layout='true']) canvas,body:not([data-mrcomic-preserve-layout='true']) figure,body:not([data-mrcomic-preserve-layout='true']) table{page-break-inside:avoid !important;break-inside:avoid !important;}"+
           "aside[epub\\:type='footnote'],aside[epub\\:type='rearnote'],aside[epub\\:type='endnote'],"+
           "[role='doc-footnote'],[role='doc-endnote'],"+
           "aside.footnote,aside.endnote,aside.rearnote,"+
@@ -141,6 +143,8 @@ internal fun textSettingsJs(
           var nc='$noteColor';
           var sel='a.fn,a.fnt,a.footnote-ref,a.noteref,a.doc-noteref,a.doc-fn,a.doc-backref,a.backnote,a.supnote,a.text-fn,a.pagenote,a.annref,a.annotation,a[role="doc-noteref"],a[role="noteref"],a[role="footnote"],a[role="doc-fn"],a[role="doc-backref"],a[data-footnote-id],a[data-footnote],a[data-type="annotation"],a[href*="fbanchor://"],a[href^="noteref:"],a[href*="FbAutId_"],a[href^="#fn"],a[href^="#fnt"],a[href^="#note"],a[href^="#footnote"],a[href^="#endnote"],a[href^="#rearnote"],a[href^="#text-fn"],a[href^="#pagenote"],a[href^="#ann"],a[href^="#annotation"],a[href^="#sup"],a[href^="#back"],a[href^="#docx-footnote"],a[href*="filepos"],a[href*="#filepos"],a[epub\\:type~="noteref"],a[epub\\:type~="footnote"],a[epub\\:type~="annref"],a[epub\\:type~="annotation"]';
           function paintNoteRef(a){
+            var block=a.closest&&a.closest('p,li,blockquote,dd');
+            if(block)block.classList.add('mrcomic-footnote-block');
             a.style.setProperty('color',nc,'important');
             a.style.setProperty('font-weight','bold','important');
             a.style.setProperty('text-decoration','none','important');
