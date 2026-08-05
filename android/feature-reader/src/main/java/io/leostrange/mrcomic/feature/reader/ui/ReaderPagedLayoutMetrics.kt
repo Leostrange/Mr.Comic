@@ -7,6 +7,7 @@ internal data class ReaderPagedLayoutMetrics(
     val handled: Boolean,
     val pageIndex: Int,
     val pageCount: Int,
+    val characterOffset: Int,
     val clipHeight: Int,
     val usableHeight: Int
 ) {
@@ -24,6 +25,7 @@ internal fun decodeReaderPagedLayoutMetrics(rawValue: String?): ReaderPagedLayou
         handled = metrics.handled,
         pageIndex = metrics.pageIndex,
         pageCount = metrics.pageCount,
+        characterOffset = metrics.characterOffset,
         clipHeight = metrics.clipHeight,
         usableHeight = metrics.usableHeight
     )

@@ -664,11 +664,69 @@ internal fun readerPagedCoreJs(
     applyPage(target,pages);      var charPos=0;
       try{
         var fullText=(content.innerText||body.innerText||'');
-        var pageStartY=Math.round(Number((pages[target]||pages[0]||{}).start||0));
-        var contentFullHeight=Math.max(1,Math.ceil(content.scrollHeight||content.offsetHeight||contentHeight));
-        var charRatio=contentFullHeight>0?Math.min(1,Math.max(0,pageStartY/contentFullHeight)):0;
-        charPos=Math.round(charRatio*fullText.length);
-      }catch(e){}
+        var targetPageLayout=pages[target]||pages[0]||{};
+        var pageStartY=Math.round(Number(targetPageLayout.start||0));
+        var characterCursor=0;
+        var visibleContentRect=content.getBoundingClientRect();
+        var range=document.createRange();
+        var walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT,{
+          acceptNode:function(node){
+            return node&&node.nodeValue?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT;
+          }
+        });
+        var node;
+        while((node=walker.nextNode())){
+          var nodeValue=node.nodeValue||'';
+          if(!nodeValue.length)continue;
+          range.selectNodeContents(node);
+          var rects=range.getClientRects();
+          var nodeContainsBoundary=false;
+          for(var rectIndex=0;rectIndex<rects.length;rectIndex++){
+            var textRect=rects[rectIndex];
+            // applyPage() translates the content by -pageStartY. Convert the
+            // visible rect back into the untransformed document coordinate
+            // before comparing it with the stored page boundary.
+            var relativeBottom=(textRect.bottom||0)-visibleContentRect.top;
+            if(relativeBottom>pageStartY+1){
+              nodeContainsBoundary=true;
+              break;
+            }
+          }
+          if(!nodeContainsBoundary){
+            characterCursor+=nodeValue.length;
+            continue;
+          }
+          // Find the first character crossing the boundary instead of assigning
+          // an average number of characters to each line rect. This keeps the
+          // offset stable for wrapped text and mixed-size inline elements.
+          var low=0;
+          var high=nodeValue.length;
+          while(low<high){
+            var mid=Math.floor((low+high)/2);
+            range.setStart(node,mid);
+            range.setEnd(node,Math.min(nodeValue.length,mid+1));
+            var charRect=range.getBoundingClientRect();
+            var charBottom=(charRect.bottom||0)-visibleContentRect.top;
+            if(charBottom>pageStartY+1){
+              high=mid;
+            }else{
+              low=mid+1;
+            }
+          }
+          charPos=characterCursor+low;
+          throw {name:'__mrcomicCharacterOffsetFound'};
+        }
+        charPos=Math.min(fullText.length,characterCursor);
+        range.detach&&range.detach();
+      }catch(e){
+        if(!e||e.name!=='__mrcomicCharacterOffsetFound'){
+          var contentFullHeight=Math.max(1,Math.ceil(content.scrollHeight||content.offsetHeight||contentHeight));
+          var charRatio=contentFullHeight>0?Math.min(1,Math.max(0,pageStartY/contentFullHeight)):0;
+          charPos=Math.round(charRatio*fullText.length);
+        }
+        try{range&&range.detach&&range.detach();}catch(ignore){}
+      }
+      charPos=Math.max(0,Math.min(fullText.length,charPos));
       return JSON.stringify({
       handled:true,
       pageIndex:target,
@@ -794,6 +852,36 @@ internal fun readerPagedCssColumnTurnJs(delta: Int): String = """
   }catch(e){
     return JSON.stringify({handled:false,pageIndex:0,pageCount:1,error:String(e)});
   }
+})();
+""".trimIndent()
+
+/**
+ * Find the page that contains the given character offset.
+ *
+ * Uses a proportional estimate (ratio of characterOffset to total text length)
+ * to find the approximate Y position, then selects the nearest page boundary.
+ * Returns the page index; the caller applies the page via applyPagedLayout.
+ */
+internal fun readerScrollToCharacterOffsetJs(characterOffset: Int): String = """
+(function(){
+  try{
+    var pages=window.__mrcomicPageLayouts;
+    if(!pages||!pages.length)return 0;
+    var content=document.getElementById('__mrcomic_paged_content')||document.body;
+    var fullText=(content.innerText||document.body.innerText||'');
+    if(!fullText.length)return 0;
+    var safeOffset=Math.max(0,Math.min(fullText.length,${characterOffset}||0));
+    var ratio=safeOffset/fullText.length;
+    var contentHeight=window.__mrcomicPagedContentHeight||Math.ceil(content.scrollHeight||content.offsetHeight||0);
+    if(contentHeight<=0)return 0;
+    var estimatedY=Math.round(ratio*contentHeight);
+    var bestPage=0;
+    for(var i=0;i<pages.length;i++){
+      if((pages[i].start||0)<=estimatedY)bestPage=i;
+      else break;
+    }
+    return bestPage;
+  }catch(e){return -1;}
 })();
 """.trimIndent()
 

@@ -383,7 +383,8 @@ class ReaderViewModel @Inject constructor(
                 footnotePopup = null,
                 footnotePresentation = FootnotePresentation.PEEK,
                 selectedTextActionSheet = null,
-                selectedTextTranslation = null
+                selectedTextTranslation = null,
+                sectionCharacterOffset = 0
             )
         }
         eyeRestController.cancel()
@@ -495,7 +496,8 @@ class ReaderViewModel @Inject constructor(
                 nextHtmlContent = null,
                 nextHtmlAssetBasePath = null,
                 selectedTextActionSheet = null,
-                selectedTextTranslation = null
+                selectedTextTranslation = null,
+                sectionCharacterOffset = 0
             )
         }
     }
@@ -657,12 +659,17 @@ class ReaderViewModel @Inject constructor(
         loadToc = { loadToc(force = true) }
     )
 
-    fun onPagedLayoutPageCountChanged(pageCount: Int, pageIndex: Int = 0) {
+    fun onPagedLayoutPageCountChanged(
+        pageCount: Int,
+        pageIndex: Int = 0,
+        characterOffset: Int = 0
+    ) {
         // This callback reports visual subpages inside the currently loaded HTML
         // section as calculated by the WebView JS pagination engine.
         if (pageCount <= 0) return
         val sectionIndex = _uiState.value.currentPage
         val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
+        val safeCharacterOffset = characterOffset.coerceAtLeast(0)
         val sectionPageCountSnapshot = progressController.sectionPageCounts.recordAndSnapshot(sectionIndex, pageCount)
         val progress = EpubProgressCalculator.accumulate(
             sectionPageCounts = sectionPageCountSnapshot,
@@ -674,6 +681,7 @@ class ReaderViewModel @Inject constructor(
             it.copy(
                 sectionPageCount = pageCount,
                 sectionCurrentPage = safePageIndex,
+                sectionCharacterOffset = safeCharacterOffset,
                 epubAccumulatedTotalPages = progress.accumulatedTotalPages,
                 epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
             )
