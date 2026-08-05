@@ -490,6 +490,143 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun readerPagedLayoutJs_orphanGuardMovesShortTrailingBlockToNextPage() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "orphan guard must only fire for trailing blocks after a filled page",
+            js.contains("orphanGuardStart>current+lineHeight*1.1")
+        )
+        assertTrue(
+            "blocks of up to 3.0 line heights must not be left as page-tail orphans",
+            js.contains("endBottom-orphanGuardStart<=lineHeight*3.0")
+        )
+        assertTrue(
+            "the page must roll back to the last fully-fitted fragment",
+            js.contains("backupBottom=fitted.bottom")
+        )
+        assertTrue(
+            "the next page must start at the orphaned block so it is not split",
+            js.contains("nextStart=orphanGuardStart;")
+        )
+        assertTrue(
+            "rollback only when the trimmed page still fills at least 65%",
+            js.contains("pageFillRatio>=0.65")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_clampsOversizedMediaToPageBounds() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "media taller than usable height must be detected",
+            js.contains("mediaHeight>usableHeight*1.05")
+        )
+        assertTrue(
+            "clamping applies to raster media only",
+            js.contains("/^(IMG|SVG|VIDEO|CANVAS)$/i.test(el.tagName)")
+        )
+        assertTrue(
+            "oversized media must be constrained to the usable page height",
+            js.contains("el.style.setProperty('max-height',Math.floor(usableHeight)+'px','important')")
+        )
+        assertTrue(
+            "media must keep aspect ratio while shrinking",
+            js.contains("el.style.setProperty('object-fit','contain','important')")
+        )
+        assertTrue(
+            "clamped media must not stretch to full width",
+            js.contains("el.style.setProperty('width','auto','important')")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_reportsCharacterOffsetInResult() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "page result must expose a character offset",
+            js.contains("characterOffset:charPos")
+        )
+        assertTrue(
+            "offset lookup must walk text nodes",
+            js.contains("document.createTreeWalker(content,NodeFilter.SHOW_TEXT")
+        )
+        assertTrue(
+            "offset lookup must binary-search the boundary character",
+            js.contains("var mid=Math.floor((low+high)/2)")
+        )
+        assertTrue(
+            "offset must be clamped to the full text length",
+            js.contains("charPos=Math.max(0,Math.min(fullText.length,charPos))")
+        )
+    }
+
+    @Test
+    fun readerScrollToCharacterOffsetJs_estimatesPageFromCharacterRatio() {
+        val offset = 1234
+        val js = readerScrollToCharacterOffsetJs(characterOffset = offset)
+
+        assertTrue(
+            "offset must be clamped into the document",
+            js.contains("Math.max(0,Math.min(fullText.length,$offset||0))")
+        )
+        assertTrue(
+            "page estimate must use the character ratio",
+            js.contains("var ratio=safeOffset/fullText.length")
+        )
+        assertTrue(
+            "ratio must map onto content height",
+            js.contains("var estimatedY=Math.round(ratio*contentHeight)")
+        )
+        assertTrue(
+            "nearest page before the estimated Y must be chosen",
+            js.contains("if((pages[i].start||0)<=estimatedY)bestPage=i")
+        )
+    }
+
+    @Test
+    fun textSettingsJs_breakInsideRulesPreventFootnoteAndQuoteSplits() {
+        val js = textSettingsJs(
+            fontSize = 18,
+            bg = "#fafafa",
+            fg = "#1a1a1a"
+        )
+
+        assertTrue(
+            "footnote blocks must never split across pages",
+            js.contains(".mrcomic-footnote-block{break-inside:avoid !important;page-break-inside:avoid !important;}")
+        )
+        assertTrue(
+            "headings must stay with following content",
+            js.contains("break-after:avoid-page !important")
+        )
+        assertTrue(
+            "blockquotes, figures, tables, dt and dd must not split",
+            js.contains("dd{page-break-inside:avoid !important;break-inside:avoid !important;}")
+        )
+        assertTrue(
+            "widow/orphan CSS must cover paragraphs and list items",
+            js.contains("orphans:2 !important;widows:2 !important")
+        )
+        assertTrue(
+            "footnote asides must be hidden from the flow",
+            js.contains("aside[epub\\\\:type='footnote'],aside[epub\\\\:type='rearnote']")
+        )
+    }
+
+    @Test
+    fun readerPagedTurnJs_reportsCharacterOffsetThroughSharedCore() {
+        val js = readerPagedTurnJs(delta = 1)
+
+        assertTrue(
+            "page turn must also expose the character offset of the new page",
+            js.contains("characterOffset:charPos")
+        )
+    }
+
+    @Test
     fun readerSelectionOverlayColor_validColor() {
         val rgba = readerSelectionOverlayColor("#1a6f9a", 0.3f)
         assertTrue("rgba format", rgba.startsWith("rgba("))
