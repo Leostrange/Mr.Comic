@@ -2,6 +2,7 @@ package io.leostrange.mrcomic
 
 import android.app.Application
 import android.content.ComponentCallbacks2
+import android.util.Log
 import io.leostrange.mrcomic.core.data.preferences.PerformanceDefaults
 import io.leostrange.mrcomic.core.data.preferences.PerformancePreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
@@ -23,6 +24,7 @@ import javax.inject.Inject
 
 @HiltAndroidApp
 class ComicApplication : Application() {
+    companion object { private const val TAG = "ComicApp" }
 
     var splashPlayedInProcess: Boolean = false
 
@@ -54,12 +56,12 @@ class ComicApplication : Application() {
                     .first()
             }.getOrDefault(true)
             if (preloadEnabled) {
-                try { continueStartupWarmStore.warmUp() } catch (_: Exception) {}
+                try { continueStartupWarmStore.warmUp() } catch (e: Exception) { Log.w(TAG, "Startup warm failed", e) }
             }
         }
         applicationScope.launch {
-            try { appIconManager.ensureIconConsistency() } catch (_: Exception) {}
-            try { autoBackupManager.maybeBackupOnStartup() } catch (_: Exception) {}
+            try { appIconManager.ensureIconConsistency() } catch (e: Exception) { Log.w(TAG, "Icon consistency check failed", e) }
+            try { autoBackupManager.maybeBackupOnStartup() } catch (e: Exception) { Log.w(TAG, "Auto-backup startup failed", e) }
         }
     }
 
