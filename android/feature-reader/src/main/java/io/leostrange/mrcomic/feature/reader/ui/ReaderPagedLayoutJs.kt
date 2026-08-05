@@ -187,13 +187,19 @@ internal fun readerPagedCoreJs(
           }
         }
         range.detach&&range.detach();
-      }catch(e){}
-      try{
+      }catch(e){}        try{
         content.querySelectorAll('img,svg,canvas,video,table,figure,hr').forEach(function(el){
           var rects=el.getClientRects();
           for(var i=0;i<rects.length;i++){
             var r=rects[i];
             if(r&&r.height>2)addFragment(r.top-contentRect.top,r.bottom-contentRect.top);
+          }
+          // Clamp oversized media to page bounds so they don't bleed/crop
+          var mediaHeight=el.getBoundingClientRect().height||0;
+          if(mediaHeight>usableHeight*1.05&&el.tagName&&/^(IMG|SVG|VIDEO|CANVAS)$/i.test(el.tagName)){
+            el.style.setProperty('max-height',Math.floor(usableHeight)+'px','important');
+            el.style.setProperty('object-fit','contain','important');
+            el.style.setProperty('width','auto','important');
           }
         });
       }catch(e){}
@@ -422,7 +428,7 @@ internal fun readerPagedCoreJs(
           if(blockTop>endBottom)break;
           orphanGuardStart=blockTop;
         }
-        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*1.35){
+        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*3.0){
           var backupBottom=0;
           for(var p=0;p<=lastFitIndex;p++){
             var fitted=unique[p];
@@ -655,11 +661,19 @@ internal fun readerPagedCoreJs(
     target=Math.max(0,Math.min(pageCount-1,target||0));
     try{var s=window.getSelection&&window.getSelection();if(s)s.removeAllRanges();}catch(e){}
     try{window.__readerSelectionTs=0;}catch(e){}
-    applyPage(target,pages);
-    return JSON.stringify({
+    applyPage(target,pages);      var charPos=0;
+      try{
+        var fullText=(content.innerText||body.innerText||'');
+        var pageStartY=Math.round(Number((pages[target]||pages[0]||{}).start||0));
+        var contentFullHeight=Math.max(1,Math.ceil(content.scrollHeight||content.offsetHeight||contentHeight));
+        var charRatio=contentFullHeight>0?Math.min(1,Math.max(0,pageStartY/contentFullHeight)):0;
+        charPos=Math.round(charRatio*fullText.length);
+      }catch(e){}
+      return JSON.stringify({
       handled:true,
       pageIndex:target,
       pageCount:pageCount,
+      characterOffset:charPos,
       usableHeight:usableHeight,
       clipHeight:clipHeight,
       contentViewportTopOffset:contentViewportTopOffset,
