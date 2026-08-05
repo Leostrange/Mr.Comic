@@ -47,7 +47,7 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
     var onSelectionActionRequest: ((ReaderSelectionAction, String) -> Unit)? = null
     var onVerticalBoundaryNavigationRequest: ((Int) -> Unit)? = null
     var onNativePagedTapRequest: ((Float) -> Unit)? = null
-    var onPagedLayoutPageCountChanged: ((pageCount: Int, pageIndex: Int) -> Unit)? = null
+    var onPagedLayoutPageCountChanged: ((pageCount: Int, pageIndex: Int, characterOffset: Int) -> Unit)? = null
     var pagedModeScrollLock: Boolean = false
         set(value) {
             val changed = field != value
@@ -665,7 +665,8 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         signature: String,
         script: String,
         force: Boolean = false,
-        layoutAffectingSignature: String = signature
+        layoutAffectingSignature: String = signature,
+        characterOffsetToRestore: Int? = null
     ) {
         if (!force && lastReaderTextSettingsSignature == signature) return
         val layoutChanged = lastLayoutAffectingSignature != layoutAffectingSignature
@@ -673,12 +674,21 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         lastLayoutAffectingSignature = layoutAffectingSignature
         evaluateJavascript(script) {
             if (pagedModeScrollLock && layoutChanged) {
-                applyPagedLayout()
+                if (characterOffsetToRestore != null && characterOffsetToRestore > 0) {
+                    applyPagedLayout(targetPage = 0) {
+                        scrollToCharacterOffset(characterOffsetToRestore)
+                    }
+                } else {
+                    applyPagedLayout()
+                }
             }
         }
     }
 
-    fun applyPagedLayout(targetPage: Int? = pendingPagedLayoutTarget) {
+    fun applyPagedLayout(
+        targetPage: Int? = pendingPagedLayoutTarget,
+        onLayoutApplied: (() -> Unit)? = null
+    ) {
         if (!pagedModeScrollLock) {
             pagedLayoutReady = true
             alpha = 1f
@@ -711,7 +721,8 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
             )
             pagedLayoutReady = true
             alpha = 1f
-            onPagedLayoutPageCountChanged?.invoke(metrics.pageCount, metrics.pageIndex)
+            onPagedLayoutPageCountChanged?.invoke(metrics.pageCount, metrics.pageIndex, metrics.characterOffset)
+            onLayoutApplied?.invoke()
         }
     }
 
@@ -752,7 +763,11 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         alpha = 1f
     }
 
-    fun turnPagedColumn(delta: Int, onBoundary: () -> Unit, onPageMetricsChanged: ((pageCount: Int, pageIndex: Int) -> Unit)? = null) {
+    fun turnPagedColumn(
+        delta: Int,
+        onBoundary: () -> Unit,
+        onPageMetricsChanged: ((pageCount: Int, pageIndex: Int, characterOffset: Int) -> Unit)? = null
+    ) {
         if (!pagedModeScrollLock) {
             onBoundary()
             return
@@ -763,8 +778,23 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                 pendingPagedLayoutTarget = if (delta < 0) Int.MAX_VALUE else 0
                 post { onBoundary() }
             } else {
-                onPageMetricsChanged?.invoke(metrics.pageCount, metrics.pageIndex)
+                onPageMetricsChanged?.invoke(metrics.pageCount, metrics.pageIndex, metrics.characterOffset)
             }
+        }
+    }
+
+    /**
+     * Restores the paged reading position to the page containing [offset] characters
+     * from the start of the document. Called after font-size or layout changes so the
+     * reader stays near the same textual position even when page boundaries shift.
+     */
+    fun scrollToCharacterOffset(offset: Int) {
+        if (!pagedModeScrollLock || offset < 0) return
+        evaluateJavascript(readerScrollToCharacterOffsetJs(offset)) { rawValue ->
+            val pageIndex = rawValue?.trim('"')?.toIntOrNull() ?: return@evaluateJavascript
+            if (pageIndex < 0) return@evaluateJavascript
+            // Apply the resolved page via applyPagedLayout which reports metrics.
+            applyPagedLayout(targetPage = pageIndex)
         }
     }
 }

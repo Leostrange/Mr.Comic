@@ -102,7 +102,8 @@ internal class ReaderProgressController(
             comicId = comic.id,
             page = accuratePage,
             totalPages = totalPages,
-            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING
+            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING,
+            characterOffset = _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
         )
         if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, accuratePage)) return
         pendingProgressSave = pending
@@ -125,7 +126,8 @@ internal class ReaderProgressController(
             libraryRepository.updateProgress(
                 comicId = pending.comicId,
                 currentPage = pending.page,
-                totalPages = safeTotalPages
+                totalPages = safeTotalPages,
+                characterOffset = pending.characterOffset
             )
             val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
             val goalProgressDelta = navigationProgressDelta(

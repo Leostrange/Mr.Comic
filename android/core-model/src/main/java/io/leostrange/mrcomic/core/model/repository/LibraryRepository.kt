@@ -17,5 +17,5 @@ interface LibraryRepository {
     suspend fun toggleBookmark(comicId: String)
     suspend fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String)
     suspend fun markCompleted(comicId: String, completed: Boolean = true)
-    suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int)
+    suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int, characterOffset: Int? = null)
 }

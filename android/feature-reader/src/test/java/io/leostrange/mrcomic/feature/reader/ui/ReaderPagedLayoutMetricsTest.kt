@@ -9,10 +9,11 @@ class ReaderPagedLayoutMetricsTest {
     @Test
     fun decodesAUsableWebViewPaginationResult() {
         val metrics = decodeReaderPagedLayoutMetrics(
-            """{"handled":true,"pageIndex":2,"pageCount":6,"clipHeight":720,"usableHeight":640}"""
+            """{"handled":true,"pageIndex":2,"pageCount":6,"characterOffset":1200,"clipHeight":720,"usableHeight":640}"""
         )
 
         assertTrue(metrics?.isUsable() == true)
+        assertTrue(metrics?.characterOffset == 1200)
     }
 
     @Test

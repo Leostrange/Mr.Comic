@@ -179,12 +179,13 @@ internal fun HtmlPageView(
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
     onVerticalBoundaryNavigation: (Int) -> Unit = {},
-    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int) -> Unit = { _, _ -> },
+    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int, characterOffset: Int) -> Unit = { _, _, _ -> },
     pendingScrollToAnchor: String? = null,
     onConsumeScrollToAnchor: () -> Unit = {},
     pendingWebtoonSectionIndex: Int? = null,
     onConsumeWebtoonSection: () -> Unit = {},
     onTextWebtoonVisibleSectionChanged: (Int) -> Unit = {},
+    sectionCharacterOffset: Int = 0,
     readingMode: ReadingMode,
     autoScrollSpeed: Float = 0f,
     fontSize: Int    = 18,
@@ -275,6 +276,7 @@ internal fun HtmlPageView(
     val currentBottomPaddingPx = rememberUpdatedState(bottomPaddingPx)
     val currentHorizontalPaddingPx = rememberUpdatedState(horizontalPaddingPx)
     val currentMaxWidthPx = rememberUpdatedState(maxWidthPx)
+    val currentCharOffset = rememberUpdatedState(sectionCharacterOffset)
 
     // Auto-scroll state — must be before AndroidView so the factory can capture it.
     val autoScrollPaused = remember { mutableStateOf(false) }
@@ -333,14 +335,18 @@ internal fun HtmlPageView(
                     when {
                         xPercent < 0.3f -> {
                             if (readerWebView.pagedModeScrollLock) {
-                                readerWebView.turnPagedColumn(-1, { onLeft.value() }, onPagedLayoutPageCountChanged)
+                                readerWebView.turnPagedColumn(-1, { onLeft.value() }, { pageCount, pageIndex, characterOffset ->
+                                    onPagedLayoutPageCountChanged(pageCount, pageIndex, characterOffset)
+                                })
                             } else {
                                 onLeft.value()
                             }
                         }
                         xPercent > 0.7f -> {
                             if (readerWebView.pagedModeScrollLock) {
-                                readerWebView.turnPagedColumn(1, { onRight.value() }, onPagedLayoutPageCountChanged)
+                                readerWebView.turnPagedColumn(1, { onRight.value() }, { pageCount, pageIndex, characterOffset ->
+                                    onPagedLayoutPageCountChanged(pageCount, pageIndex, characterOffset)
+                                })
                             } else {
                                 onRight.value()
                             }
@@ -353,7 +359,9 @@ internal fun HtmlPageView(
                     if (readerWebView.pagedModeScrollLock) {
                         readerWebView.turnPagedColumn(pageDirection, {
                             if (pageDirection < 0) onLeft.value() else onRight.value()
-                        }, onPagedLayoutPageCountChanged)
+                        }, { pageCount, pageIndex, characterOffset ->
+                            onPagedLayoutPageCountChanged(pageCount, pageIndex, characterOffset)
+                        })
                     }
                 }
                 onNativePagedTapRequest = { xPercent ->
@@ -673,7 +681,9 @@ internal fun HtmlPageView(
                 onRegisterPageTurner { step ->
                     webView.turnPagedColumn(step, {
                         onVerticalBoundaryNavigation(step)
-                    }, onPagedLayoutPageCountChanged)
+                    }, { pageCount, pageIndex, characterOffset ->
+                        onPagedLayoutPageCountChanged(pageCount, pageIndex, characterOffset)
+                    })
                 }
             }
             webView.translateSelectionLabel = translateActionLabel
@@ -804,6 +814,7 @@ internal fun HtmlPageView(
             webView.applyReaderTextSettingsIfNeeded(
                 signature = textSettingsSignature,
                 layoutAffectingSignature = layoutAffectingSignature,
+                characterOffsetToRestore = currentCharOffset.value.takeIf { it > 0 },
                 script = textSettingsJs(
                     fontSize = fontSize,
                     bg = resolvedBg,
