@@ -884,8 +884,3 @@ internal fun readerScrollToCharacterOffsetJs(characterOffset: Int): String = """
   }catch(e){return -1;}
 })();
 """.trimIndent()
-
-/**
- * CSS Multi-Column pagination — alternative to TreeWalker-based approach.
- * Uses CSS column-width + column-fill: auto for native pagination.
- */
