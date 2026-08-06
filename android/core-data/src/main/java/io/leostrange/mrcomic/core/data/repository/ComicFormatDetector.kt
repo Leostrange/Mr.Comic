@@ -163,91 +163,106 @@ private fun String?.isArchiveMimeType(): Boolean = this in setOf(
  * Returns the detected format, or null if the archive contains only images (comic)
  * or cannot be parsed.
  *
+ * Handles ZIP and TAR which can be read through a plain [InputStream].
+ * 7z and RAR require random file access — use [detectArchiveContentFormat] (File).
+ *
  * @param openStream a supplier that returns an InputStream for the archive.
  *   The caller is responsible for closing the stream.
  */
 internal fun detectArchiveContentFormat(openStream: () -> java.io.InputStream?): io.leostrange.mrcomic.core.model.ComicFormat? {
-    val ext = runCatching {
-        var imageCount = 0
-        var textFormat: io.leostrange.mrcomic.core.model.ComicFormat? = null
-        var textCount = 0
-
-        fun getFormatFromExt(e: String): io.leostrange.mrcomic.core.model.ComicFormat? = when (e) {
-            "epub" -> io.leostrange.mrcomic.core.model.ComicFormat.EPUB
-            "fb2" -> io.leostrange.mrcomic.core.model.ComicFormat.FB2
-            "txt", "text" -> io.leostrange.mrcomic.core.model.ComicFormat.TXT
-            "htm", "html", "xhtml" -> io.leostrange.mrcomic.core.model.ComicFormat.HTML
-            "md", "markdown" -> io.leostrange.mrcomic.core.model.ComicFormat.MARKDOWN
-            "rtf" -> io.leostrange.mrcomic.core.model.ComicFormat.RTF
-            "mobi", "prc" -> io.leostrange.mrcomic.core.model.ComicFormat.MOBI
-            "docx" -> io.leostrange.mrcomic.core.model.ComicFormat.DOCX
-            "odt" -> io.leostrange.mrcomic.core.model.ComicFormat.ODT
-            else -> null
-        }
-
-        fun isImageExt(e: String): Boolean =
-            e in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
-
+    return runCatching {
         // ZIP
-        var processed = false
-        runCatching {
-            openStream()?.use { input ->
+        openStream()?.use { input ->
+            runCatching {
                 java.util.zip.ZipInputStream(input.buffered()).use { zip ->
-                    var entry = zip.nextEntry
-                    var scanned = 0
-                    while (entry != null && scanned < 100) {
-                        if (!entry.isDirectory) {
-                            scanned++
-                            val entryExt = entry.name.lowercase().substringAfterLast('.', "")
-                            val fmt = getFormatFromExt(entryExt)
-                            if (fmt != null) {
-                                textFormat = fmt
-                                textCount++
-                            } else if (isImageExt(entryExt)) {
-                                imageCount++
-                            }
-                        }
-                        entry = zip.nextEntry
-                    }
+                    val entries = generateSequence { zip.nextEntry }
+                        .map { it.name to it.isDirectory }
+                    classifyArchiveEntries(entries)
                 }
-            }
-            processed = true
+            }.getOrNull()?.let { return@runCatching it }
         }
 
         // TAR
-        if (textFormat == null) {
+        openStream()?.use { input ->
             runCatching {
-                openStream()?.use { input ->
-                    org.apache.commons.compress.archivers.tar.TarArchiveInputStream(input.buffered()).use { tis ->
-                        var entry = tis.nextEntry
-                        var scanned = 0
-                        while (entry != null && scanned < 100) {
-                            if (!entry.isDirectory) {
-                                scanned++
-                                val entryExt = entry.name.lowercase().substringAfterLast('.', "")
-                                val fmt = getFormatFromExt(entryExt)
-                                if (fmt != null) {
-                                    textFormat = fmt
-                                    textCount++
-                                } else if (isImageExt(entryExt)) {
-                                    imageCount++
-                                }
-                            }
-                            entry = tis.nextEntry
-                        }
-                    }
+                org.apache.commons.compress.archivers.tar.TarArchiveInputStream(input.buffered()).use { tis ->
+                    val entries = generateSequence { tis.nextEntry }
+                        .map { it.name to it.isDirectory }
+                    classifyArchiveEntries(entries)
                 }
-                if (!processed) processed = true
-            }
+            }.getOrNull()?.let { return@runCatching it }
         }
 
-        // 7z and RAR require File-based access (not InputStream).
-        // These formats are handled by ComicRepository.detectArchiveContentFormat()
-        // which can copy the content URI to a temp file before scanning.
-
-        if (textCount > 0 && textFormat != null) textFormat
-        else null
+        null
     }.getOrNull()
+}
 
-    return ext
+/**
+ * Scans a local archive file to detect the format of the book inside.
+ *
+ * Handles 7Z (commons-compress [SevenZFile]) and RAR4 (junrar [Archive]) which need
+ * random file access and cannot be scanned through a plain InputStream.
+ * Returns null for image-only archives, RAR5 (not supported by junrar), or unreadable files.
+ */
+internal fun detectArchiveContentFormat(file: java.io.File): io.leostrange.mrcomic.core.model.ComicFormat? {
+    if (!file.isFile) return null
+    return runCatching {
+        val header = ByteArray(8)
+        file.inputStream().use { input ->
+            if (input.read(header) < 4) return@runCatching null
+        }
+        when {
+            header.startsWithMagic(ComicFormatDetector.SEVENZ_MAGIC) ->
+                org.apache.commons.compress.archivers.sevenz.SevenZFile(file).use { sz ->
+                    val entries = sz.entries.asSequence()
+                        .map { (it.name ?: "") to it.isDirectory }
+                    classifyArchiveEntries(entries)
+                }
+            header.startsWithMagic(ComicFormatDetector.RAR4_MAGIC) ->
+                com.github.junrar.Archive(file).use { archive ->
+                    val entries = archive.fileHeaders.asSequence()
+                        .map { (it.fileNameString ?: "") to it.isDirectory }
+                    classifyArchiveEntries(entries)
+                }
+            else -> null
+        }
+    }.getOrNull()
+}
+
+/**
+ * Classifies archive entries by their file extension, up to [limit] scanned entries.
+ * Returns the first text-book format found, or null if the archive is image-only.
+ */
+private fun classifyArchiveEntries(
+    entries: Sequence<Pair<String, Boolean>>,
+    limit: Int = 100
+): io.leostrange.mrcomic.core.model.ComicFormat? {
+    var textFormat: io.leostrange.mrcomic.core.model.ComicFormat? = null
+    var textCount = 0
+    var scanned = 0
+    for ((name, isDirectory) in entries) {
+        if (isDirectory) continue
+        if (scanned >= limit) break
+        scanned++
+        val entryExt = name.lowercase().substringAfterLast('.', "")
+        val fmt = archiveTextFormatFromExtension(entryExt)
+        if (fmt != null) {
+            textFormat = fmt
+            textCount++
+        }
+    }
+    return if (textCount > 0) textFormat else null
+}
+
+private fun archiveTextFormatFromExtension(e: String): io.leostrange.mrcomic.core.model.ComicFormat? = when (e) {
+    "epub" -> io.leostrange.mrcomic.core.model.ComicFormat.EPUB
+    "fb2" -> io.leostrange.mrcomic.core.model.ComicFormat.FB2
+    "txt", "text" -> io.leostrange.mrcomic.core.model.ComicFormat.TXT
+    "htm", "html", "xhtml" -> io.leostrange.mrcomic.core.model.ComicFormat.HTML
+    "md", "markdown" -> io.leostrange.mrcomic.core.model.ComicFormat.MARKDOWN
+    "rtf" -> io.leostrange.mrcomic.core.model.ComicFormat.RTF
+    "mobi", "prc" -> io.leostrange.mrcomic.core.model.ComicFormat.MOBI
+    "docx" -> io.leostrange.mrcomic.core.model.ComicFormat.DOCX
+    "odt" -> io.leostrange.mrcomic.core.model.ComicFormat.ODT
+    else -> null
 }
