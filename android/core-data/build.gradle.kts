@@ -35,6 +35,8 @@ dependencies {
     implementation(libs.coil.compose)
     testImplementation(libs.test.junit)
     testImplementation(libs.test.kotlinx.coroutines)
+    // Only needed to write .7z fixtures for archive-content detection tests (SevenZOutputFile).
+    testImplementation(libs.xz)
     androidTestImplementation(libs.test.androidx.junit)
     androidTestImplementation(libs.test.androidx.runner)
     androidTestImplementation(libs.test.room)
