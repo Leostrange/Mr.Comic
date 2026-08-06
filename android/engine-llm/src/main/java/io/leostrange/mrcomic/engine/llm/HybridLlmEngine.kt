@@ -41,7 +41,8 @@ class HybridLlmEngine @Inject constructor(
     }
 
     override suspend fun isReady(): Boolean {
-        // Ready if local model is available OR online API is configured
+        // Online-only for now: ready when the OpenRouter API key is configured.
+        // Local model availability is reported separately via [isModelAvailable].
         return isModelAvailable() || apiKey.isNotBlank()
     }
 
@@ -50,13 +51,15 @@ class HybridLlmEngine @Inject constructor(
     }
 
     override suspend fun loadModel(): Boolean {
-        // TODO: Load local model via MediaPipe or llama.cpp
-        // For now, return true if online API is available
-        return apiKey.isNotBlank()
+        // Local on-device inference (MediaPipe / llama.cpp) is NOT implemented yet.
+        // Returning true here would be a lie: an API key enables ONLINE inference
+        // without loading any local model, so there is nothing to load.
+        // See LlamaCppEngine for the (stubbed) local path.
+        return false
     }
 
     override suspend fun unloadModel() {
-        // TODO: Unload local model
+        // No local model is ever loaded by this engine; nothing to unload.
     }
 
     override fun generate(prompt: String, config: LlmGenerationConfig): Flow<String> = flow {
