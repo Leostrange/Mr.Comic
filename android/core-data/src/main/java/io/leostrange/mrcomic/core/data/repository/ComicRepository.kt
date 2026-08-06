@@ -423,6 +423,24 @@ class ComicRepository @Inject constructor(
         repaired
     }
     private fun detectArchiveContentFormat(uri: Uri): ComicFormat? {
+        // ZIP and TAR can be scanned through a plain stream. 7z and RAR need
+        // random file access, so they are copied to a temp file first.
+        val header = ByteArray(ComicFormatDetector.MAGIC_HEADER_SIZE)
+        val read = runCatching { openInputStream(uri)?.use { it.read(header) } }.getOrNull() ?: -1
+        if (read >= 4) {
+            val isSevenZ = header.startsWithMagic(ComicFormatDetector.SEVENZ_MAGIC)
+            val isRar = header.startsWithMagic(ComicFormatDetector.RAR4_MAGIC) ||
+                header.startsWithMagic(ComicFormatDetector.RAR5_MAGIC)
+            if (isSevenZ || isRar) {
+                val extension = if (isSevenZ) "7z" else "rar"
+                val tempFile = copyContentUriToTemp(uri, extension) ?: return null
+                return try {
+                    io.leostrange.mrcomic.core.data.repository.detectArchiveContentFormat(tempFile)
+                } finally {
+                    runCatching { tempFile.delete() }
+                }
+            }
+        }
         return io.leostrange.mrcomic.core.data.repository.detectArchiveContentFormat(
             openStream = { openInputStream(uri) }
         )
