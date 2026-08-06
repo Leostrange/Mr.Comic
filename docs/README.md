@@ -25,20 +25,19 @@ feature-library / feature-reader / feature-settings / feature-ocr / feature-onbo
 
 ## Словари
 
-Скрипты сборки словарей находятся в `Translate/`:
+Скрипты сборки словарей (`build_dictionary*.py`, `import_freedict.py`) и каталог `Translate/`
+были удалены из репозитория при гигиенической чистке. Актуальные словари (WordNet, JMdict,
+CC-CEDICT, Kaikki) поставляются в APK как `.dbpack`-ассеты; подробности — в `docs/active/THIRD_PARTY_DICTIONARIES.md`.
 
-- `build_dictionary.py` — базовый словарь → SQLite
-- `build_dictionary_full.py` — полный словарь со streaming-парсером
-- `build_dictionary_room.py` — Room-совместимый формат
-- `build_dictionary_shipped_assets.py` — словари для поставки в APK
-
-Импорт FreeDict: `scripts/import_freedict.py`
+> Примечание: CI-джоба `python-scripts`, которая вызывала `cd Translate` и
+> `scripts/import_freedict.py`, была удалена из `.github/workflows/build-apk.yml`
+> вместе с самими скриптами.
 
 ## Тестовые файлы
 
-`samples/` содержит тестовые файлы для проверки поддержки форматов:
+Эталонные файлы форматов лежат в `reference/formats/` (локально, каталог gitignored):
 
-- `format-real-corpus/` — реальные файлы (EPUB, DOCX, ODT, RTF, HTML, TXT, Markdown)
-- `format-test-books/` — тестовые книги
-- `test-archives/` — архивы с книгами внутри (ZIP, TAR, 7Z)
-- `translation_texts/` — тексты для проверки перевода (UDHR на 10 языках)
+- реальные книги (EPUB, FB2, CBZ, CBR, MOBI, DJVU, RTF, DOCX, ODT, TXT, HTML, Markdown)
+- `_qa_text_tmp/` — сгенерированные текстовые файлы для QA
+
+Тесты форматов в CI используют синтетические фикстуры внутри `engine-formats/src/test/`.
