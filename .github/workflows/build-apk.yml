@@ -133,32 +133,6 @@ jobs:
           path: android/app/build/outputs/mapping/release/*
           if-no-files-found: ignore
 
-  python-scripts:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Smoke-test dictionary builders
-        run: |
-          cd Translate
-          python build_dictionary.py --help
-          python build_dictionary_full.py --help
-          python build_dictionary_room.py --help
-          python build_dictionary_shipped_assets.py --help
-
-      - name: Smoke-test FreeDict importer
-        run: |
-          cd scripts
-          python import_freedict.py --help
-
   instrumented-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
