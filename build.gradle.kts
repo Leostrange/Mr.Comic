@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.hilt.android) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.detekt)
-    alias(libs.plugins.kover) apply false
+    alias(libs.plugins.kover)
 }
 
 detekt {
@@ -26,6 +26,35 @@ subprojects {
         exclude(group = "com.shockwave.pdfium", module = "pdfium-android")
         // Запрещаем pdfbox-android (не нужен — используем встроенный android.graphics.pdf.PdfRenderer)
         exclude(group = "com.tom-roush", module = "pdfbox-android")
+    }
+}
+
+kover {
+    reports {
+        filters {
+            excludes {
+                classes(
+                    "*Fragment*",
+                    "*Fragment$*",
+                    "*Activity*",
+                    "*Activity$*",
+                    "*ComposableSingletons*",
+                    "*_Factory*",
+                    "*_MembersInjector*",
+                    "*Dagger*",
+                    "*Hilt*",
+                    "*.databinding.*",
+                    "*BuildConfig*"
+                )
+            }
+        }
+        verify {
+            rule {
+                bound {
+                    minValue = 20
+                }
+            }
+        }
     }
 }
 
