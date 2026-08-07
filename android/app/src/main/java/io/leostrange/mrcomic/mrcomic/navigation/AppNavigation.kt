@@ -7,21 +7,13 @@ import android.util.Log
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmarks
@@ -55,7 +47,6 @@ import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.ReaderFormatCatalog
-import io.leostrange.mrcomic.core.model.ReaderLocator
 import io.leostrange.mrcomic.core.model.storedReaderLocator
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomNavigationBar
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomNavigationItem
@@ -63,9 +54,9 @@ import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.feature.library.AudiobookPlayerScreen
 import io.leostrange.mrcomic.feature.library.LibraryScreen
+import io.leostrange.mrcomic.feature.library.LibraryViewModel
 import io.leostrange.mrcomic.feature.library.MiniAudiobookPlayer
 import io.leostrange.mrcomic.feature.library.MrComicProgressRoute
-import io.leostrange.mrcomic.feature.library.LibraryViewModel
 import io.leostrange.mrcomic.feature.ocr.ui.OcrScreen
 import io.leostrange.mrcomic.feature.onboarding.OnboardingScreen
 import io.leostrange.mrcomic.feature.reader.ui.OcrLaunchRequest
@@ -76,64 +67,11 @@ import io.leostrange.mrcomic.home.ContinueScreen
 import io.leostrange.mrcomic.icons.AppIconSettingsScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
 
-sealed class Screen(val route: String) {
-    data object Continue : Screen("continue")
-    data object Library : Screen("library")
-    data object Onboarding : Screen("onboarding")
-    data object Settings : Screen("settings")
-    data object ProgressProfile : Screen("progress_profile")
-    data object AppIconSettings : Screen("app_icon_settings")
-    data object Translation : Screen("translation?imagePath={imagePath}&comicId={comicId}&page={page}") {
-        fun create(imagePath: String? = null, comicId: String? = null, page: Int? = null): String {
-            val params = buildList {
-                if (imagePath != null) add("imagePath=${encodeRouteComponent(imagePath)}")
-                if (comicId != null) add("comicId=${encodeRouteComponent(comicId)}")
-                if (page != null) add("page=$page")
-            }
-            return if (params.isEmpty()) "translation" else "translation?${params.joinToString("&")}"
-        }
-    }
-
-    data object OpdsCatalog : Screen("opds_catalog")
-
-    data object AudiobookPlayer : Screen("audiobook_player/{audiobookId}") {
-        fun create(audiobookId: String) = "audiobook_player/$audiobookId"
-    }
-
-    data object Reader : Screen("reader?comicId={comicId}&uri={uri}&page={page}&locatorHref={locatorHref}&locatorProgression={locatorProgression}&locatorPosition={locatorPosition}&locatorTitle={locatorTitle}&locatorFragment={locatorFragment}") {
-        fun createForComic(comicId: String, page: Int? = null, locator: ReaderLocator? = null): String {
-            val params = buildList {
-                add("comicId=${encodeRouteComponent(comicId)}")
-                if (page != null) add("page=$page")
-                locator?.href?.takeIf { it.isNotBlank() }?.let { add("locatorHref=${encodeRouteComponent(it)}") }
-                locator?.progression?.let { add("locatorProgression=${encodeRouteComponent(it.toString())}") }
-                locator?.position?.let { add("locatorPosition=$it") }
-                locator?.title?.takeIf { it.isNotBlank() }?.let { add("locatorTitle=${encodeRouteComponent(it)}") }
-                locator?.fragment?.takeIf { it.isNotBlank() }?.let { add("locatorFragment=${encodeRouteComponent(it)}") }
-            }
-            return "reader?${params.joinToString("&")}"
-        }
-        fun createForUri(encodedUri: String, page: Int? = null, locator: ReaderLocator? = null): String {
-            val params = buildList {
-                add("uri=$encodedUri")
-                if (page != null) add("page=$page")
-                locator?.href?.takeIf { it.isNotBlank() }?.let { add("locatorHref=${encodeRouteComponent(it)}") }
-                locator?.progression?.let { add("locatorProgression=${encodeRouteComponent(it.toString())}") }
-                locator?.position?.let { add("locatorPosition=$it") }
-                locator?.title?.takeIf { it.isNotBlank() }?.let { add("locatorTitle=${encodeRouteComponent(it)}") }
-                locator?.fragment?.takeIf { it.isNotBlank() }?.let { add("locatorFragment=${encodeRouteComponent(it)}") }
-            }
-            return "reader?${params.joinToString("&")}"
-        }
-    }
-}
-
-private fun encodeRouteComponent(value: String): String {
-    return URLEncoder.encode(value, StandardCharsets.UTF_8.name()).replace("+", "%20")
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Navigation graph and bottom bar.
+// Screen definitions live in Screen.kt, transition helpers in AppNavTransitions.kt
+// ─────────────────────────────────────────────────────────────────────────────
 
 private data class NavItem(
     val route: String,
@@ -478,9 +416,6 @@ fun AppNavHost(
                         },
                         onAddFileClick = {
                             filePicker.launch(
-                                // Single-sourced from the format catalog (core-model) plus audio
-                                // types — the previous hardcoded list had drifted and omitted
-                                // 7z/tar/comicbook+zip/fictionbook/chm/xps, making them unselectable.
                                 ReaderFormatCatalog.readerOpenDocumentMimeTypes +
                                     ReaderFormatCatalog.audioMimeTypes
                             )
@@ -661,10 +596,6 @@ fun AppNavHost(
                     val readerContext = LocalContext.current
                     ReaderScreen(
                         onNavigateBack = {
-                            // Do NOT manually show system bars here before navigating back.
-                            // ReaderScreen's DisposableEffect restores them in onDispose,
-                            // which fires naturally after the transition begins — this avoids
-                            // the "bars instantly appear then screen slides away" jarring jump.
                             navController.navigateUp()
                         },
                         onNavigateToOcr = { request: OcrLaunchRequest ->
@@ -681,174 +612,6 @@ fun AppNavHost(
             }
         }
     }
-}
-private fun normalizeAppNavTransitionStyle(value: String?): String = when (value?.uppercase()) {
-    "NONE", "FADE", "SLIDE", "LIFT" -> value.uppercase()
-    else -> "FADE"
-}
-
-private fun appNavTransitionDurationMillis(style: String): Int = when (style) {
-    "NONE" -> 0
-    "SLIDE" -> 280
-    "LIFT" -> 240
-    else -> 220
-}
-
-private fun appRootChromeRevealDelayMillis(style: String): Long = when (style) {
-    "NONE" -> 0L
-    "SLIDE" -> 180L
-    "LIFT" -> 150L
-    else -> 120L
-}
-
-private fun rootChromeOffsetDp(style: String) = when (style) {
-    "SLIDE" -> 18.dp
-    "LIFT" -> 12.dp
-    else -> 8.dp
-}
-
-private fun appNavRootEnterTransition(style: String): EnterTransition = when (style) {
-    "NONE" -> EnterTransition.None
-    "SLIDE" -> fadeIn(tween(180)) + slideInHorizontally(
-        animationSpec = tween(240),
-        initialOffsetX = { it / 8 }
-    )
-    "LIFT" -> fadeIn(tween(180)) + scaleIn(
-        animationSpec = tween(220),
-        initialScale = 0.985f
-    )
-    else -> fadeIn(tween(180))
-}
-
-private fun appNavRootExitTransition(style: String): ExitTransition = when (style) {
-    "NONE" -> ExitTransition.None
-    "SLIDE" -> fadeOut(tween(160)) + slideOutHorizontally(
-        animationSpec = tween(220),
-        targetOffsetX = { -(it / 8) }
-    )
-    "LIFT" -> fadeOut(tween(170)) + scaleOut(
-        animationSpec = tween(220),
-        targetScale = 1.01f
-    )
-    else -> fadeOut(tween(180))
-}
-
-private fun appNavRootPopEnterTransition(style: String): EnterTransition = when (style) {
-    "NONE" -> EnterTransition.None
-    "SLIDE" -> fadeIn(tween(180)) + slideInHorizontally(
-        animationSpec = tween(240),
-        initialOffsetX = { -(it / 8) }
-    )
-    "LIFT" -> fadeIn(tween(180)) + scaleIn(
-        animationSpec = tween(220),
-        initialScale = 1.01f
-    )
-    else -> fadeIn(tween(180))
-}
-
-private fun appNavRootPopExitTransition(style: String): ExitTransition = when (style) {
-    "NONE" -> ExitTransition.None
-    "SLIDE" -> fadeOut(tween(160)) + slideOutHorizontally(
-        animationSpec = tween(220),
-        targetOffsetX = { it / 8 }
-    )
-    "LIFT" -> fadeOut(tween(170)) + scaleOut(
-        animationSpec = tween(220),
-        targetScale = 0.99f
-    )
-    else -> fadeOut(tween(180))
-}
-
-private fun appNavEnterTransition(
-    style: String,
-    fromRoute: String?,
-    toRoute: String?,
-    rootRoutes: Set<String>
-): EnterTransition = when (style) {
-    "NONE" -> EnterTransition.None
-    "SLIDE" -> fadeIn(tween(180)) + slideInVertically(
-        animationSpec = tween(300),
-        initialOffsetY = {
-            if (fromRoute in rootRoutes && toRoute in rootRoutes) it / 8 else it / 6
-        }
-    )
-    "LIFT" -> fadeIn(tween(180)) + slideInVertically(
-        animationSpec = tween(240),
-        initialOffsetY = { it / 18 }
-    ) + scaleIn(
-        animationSpec = tween(240),
-        initialScale = 0.965f
-    )
-    else -> fadeIn(tween(220))
-}
-
-private fun appNavExitTransition(
-    style: String,
-    fromRoute: String?,
-    toRoute: String?,
-    rootRoutes: Set<String>
-): ExitTransition = when (style) {
-    "NONE" -> ExitTransition.None
-    "SLIDE" -> fadeOut(tween(160)) + slideOutVertically(
-        animationSpec = tween(260),
-        targetOffsetY = {
-            if (fromRoute in rootRoutes && toRoute in rootRoutes) -(it / 10) else -(it / 12)
-        }
-    )
-    "LIFT" -> fadeOut(tween(170)) + slideOutVertically(
-        animationSpec = tween(220),
-        targetOffsetY = { -(it / 24) }
-    ) + scaleOut(
-        animationSpec = tween(220),
-        targetScale = 1.015f
-    )
-    else -> fadeOut(tween(180))
-}
-
-private fun appNavPopEnterTransition(
-    style: String,
-    fromRoute: String?,
-    toRoute: String?,
-    rootRoutes: Set<String>
-): EnterTransition = when (style) {
-    "NONE" -> EnterTransition.None
-    "SLIDE" -> fadeIn(tween(180)) + slideInVertically(
-        animationSpec = tween(300),
-        initialOffsetY = {
-            if (fromRoute in rootRoutes && toRoute in rootRoutes) -(it / 10) else -(it / 8)
-        }
-    )
-    "LIFT" -> fadeIn(tween(180)) + slideInVertically(
-        animationSpec = tween(240),
-        initialOffsetY = { -(it / 28) }
-    ) + scaleIn(
-        animationSpec = tween(240),
-        initialScale = 1.015f
-    )
-    else -> fadeIn(tween(220))
-}
-
-private fun appNavPopExitTransition(
-    style: String,
-    fromRoute: String?,
-    toRoute: String?,
-    rootRoutes: Set<String>
-): ExitTransition = when (style) {
-    "NONE" -> ExitTransition.None
-    "SLIDE" -> fadeOut(tween(160)) + slideOutVertically(
-        animationSpec = tween(260),
-        targetOffsetY = {
-            if (fromRoute in rootRoutes && toRoute in rootRoutes) it / 8 else it / 6
-        }
-    )
-    "LIFT" -> fadeOut(tween(170)) + slideOutVertically(
-        animationSpec = tween(220),
-        targetOffsetY = { it / 20 }
-    ) + scaleOut(
-        animationSpec = tween(220),
-        targetScale = 0.965f
-    )
-    else -> fadeOut(tween(180))
 }
 
 private fun isLikelyAudioDocument(context: Context, uri: Uri, mimeType: String?): Boolean {
