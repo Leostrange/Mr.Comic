@@ -1034,122 +1034,27 @@ fun LibraryScreen(
         } // Закрытие внешнего Box
     } // Закрытие тела Scaffold
 
-            if (showFilterSheet && uiState.contentSection == LibraryContentSection.FILES) {
-                ModalBottomSheet(
-                    onDismissRequest = { showFilterSheet = false },
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        .copy(alpha = MaterialTheme.colorScheme.surface.alpha),
-                    scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.22f)
-                ) {
-                    FilterSheet(
-                        sortOrder = uiState.sortOrder,
-                        statusFilter = uiState.statusFilter,
-                formatFilter = uiState.formatFilter,
-                groupByMode = uiState.groupByMode,
-                viewMode = uiState.viewMode,
-                thumbnailMode = uiState.thumbnailMode,
-                tileSizeDp = uiState.tileSizeDp,
-                onSortChange = viewModel::setSortOrder,
-                onStatusFilterChange = viewModel::setStatusFilter,
-                onFormatFilterChange = viewModel::setFormatFilter,
-                onGroupByChange = {
-                    viewModel.setGroupBy(it)
-                    if (it == GroupByMode.FOLDER) viewModel.openFolder(null)
-                },
-                onViewModeChange = viewModel::setViewMode,
-                onThumbnailModeChange = viewModel::setThumbnailMode,
-                onTileSizeChange = viewModel::setTileSizeDp,
-                onReset = {
-                    viewModel.setSortOrder(SortOrder.DATE_ADDED_DESC)
-                    viewModel.setStatusFilter(LibraryStatusFilter.ALL)
-                    viewModel.setFormatFilter(LibraryFormatFilter.ALL)
-                    viewModel.setGroupBy(GroupByMode.FOLDER)
-                    viewModel.setViewMode(LibraryViewMode.GRID)
-                    viewModel.setThumbnailMode("RECTANGLE")
-                    viewModel.setTileSizeDp(150)
-                    viewModel.openFolder(null)
-                    showFilterSheet = false
-                }
-            )
-        }
-    }
-
-    selectedComicId?.let { id ->
-        val comic = comicsById[id]
-        if (comic == null) {
-            LaunchedEffect(id) { selectedComicId = null }
-        } else {
-            ComicInfoSheet(
-                comic = comic,
-                onDismiss = { selectedComicId = null },
-                onOpen = { selectedComicId = null; onComicClick(id) },
-                onToggleBookmark = { viewModel.toggleBookmark(id); selectedComicId = null },
-                onToggleCompleted = {
-                    viewModel.markCompleted(id, !comic.isReadCompleted())
-                    selectedComicId = null
-                },
-                onDelete = { comicToDelete = id; selectedComicId = null },
-                onSaveMeta = { title, tags, shelf -> viewModel.updateComicMeta(id, title, tags, shelf) }
-            )
-        }
-    }
-
-    comicToDelete?.let { id ->
-        DeleteComicDialog(
-            comicId = id,
-            comicsById = comicsById,
-            strings = strings,
-            onDelete = {
-                viewModel.deleteComic(it)
-                comicToDelete = null
-            },
-            onDismiss = { comicToDelete = null }
-        )
-    }
-
-    folderToDelete?.let { folder ->
-        DeleteFolderDialog(
-            folder = folder,
-            comics = uiState.comics,
-            strings = strings,
-            onDelete = {
-                viewModel.deleteFolder(it)
-                folderToDelete = null
-            },
-            onDismiss = { folderToDelete = null }
-        )
-    }
-
-    audiobookToDelete?.let { audiobook ->
-        DeleteAudiobookDialog(
-            audiobook = audiobook,
-            strings = strings,
-            onDelete = {
-                viewModel.deleteAudiobook(it)
-                audiobookToDelete = null
-            },
-            onDismiss = { audiobookToDelete = null }
-        )
-    }
-
-    quoteToDelete?.let { quote ->
-        DeleteQuoteDialog(
-            quote = quote,
-            strings = strings,
-            onDelete = {
-                viewModel.deleteQuote(it)
-                quoteToDelete = null
-            },
-            onDismiss = { quoteToDelete = null }
-        )
-    }
-
-    LibraryFolderDialog(
+    LibraryScreenDialogs(
+        showFilterSheet = showFilterSheet,
+        onDismissFilterSheet = { showFilterSheet = false },
+        selectedComicId = selectedComicId,
+        onDismissComicInfo = { selectedComicId = null },
+        comicToDelete = comicToDelete,
+        onDismissDeleteComic = { comicToDelete = null },
+        folderToDelete = folderToDelete,
+        onDismissDeleteFolder = { folderToDelete = null },
+        audiobookToDelete = audiobookToDelete,
+        onDismissDeleteAudiobook = { audiobookToDelete = null },
+        quoteToDelete = quoteToDelete,
+        onDismissDeleteQuote = { quoteToDelete = null },
         uiState = uiState,
+        comicsById = comicsById,
         strings = strings,
         viewModel = viewModel,
         onComicClick = onComicClick,
-        onComicLongClick = { selectedComicId = it },
-        onFolderLongClick = { folderToDelete = it }
+        onSetComicToDelete = { comicToDelete = it },
+        onSetFolderToDelete = { folderToDelete = it },
+        onSetAudiobookToDelete = { audiobookToDelete = it },
+        onSetQuoteToDelete = { quoteToDelete = it },
     )
 }
