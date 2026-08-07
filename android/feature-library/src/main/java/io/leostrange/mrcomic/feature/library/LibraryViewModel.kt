@@ -117,8 +117,8 @@ class LibraryViewModel @Inject constructor(
         observeLibraryAvailability()
         observeSearch()
         observeAudiobooks()
-        restoreContentSection()
-    }
+        restoreContentSection()}
+
 
     private fun restoreContentSection() {
         viewModelScope.launch {
@@ -133,18 +133,17 @@ class LibraryViewModel @Inject constructor(
                             } else {
                                 section
                             }
-                        )
-                    }
-                }
-        }
-    }
+                        )    }
+}
+        }}
+
 
     private fun repairStoredCovers() {
         viewModelScope.launch {
             runCatching { coverRepository.repairStoredCovers() }
                 .onFailure { error -> Log.w("LibraryViewModel", "Stored cover repair failed", error) }
-        }
-    }
+        }}
+
 
     private fun observeAppLanguage() {
         viewModelScope.launch {
@@ -156,8 +155,8 @@ class LibraryViewModel @Inject constructor(
                     applyFiltersAndSort()
                 }
             }
-        }
-    }
+        }}
+
 
     private fun observeLayoutPreferences() {
         viewModelScope.launch {
@@ -192,8 +191,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     private fun observeLibraryPreferences() {
         viewModelScope.launch {
@@ -222,8 +221,8 @@ class LibraryViewModel @Inject constructor(
                 }
                 applyFiltersAndSort()
             }
-        }
-    }
+        }}
+
 
     private fun observeCoverTitlePreference() {
         viewModelScope.launch {
@@ -240,8 +239,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     private fun observeVisualPreferences() {
         viewModelScope.launch {
@@ -293,16 +292,16 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     private fun observeSecretCat() {
         viewModelScope.launch {
             preferences.get(PreferencesKeys.LIBRARY_SECRET_CAT_UNLOCKED, false).collect { unlocked ->
                 _uiState.update { it.copy(secretCatUnlocked = unlocked) }
             }
-        }
-    }
+        }}
+
 
     private fun observeAcknowledgedMascotStage() {
         viewModelScope.launch {
@@ -310,16 +309,16 @@ class LibraryViewModel @Inject constructor(
                 .collect { stageName ->
                     _uiState.update { it.copy(acknowledgedMascotStageName = stageName) }
                 }
-        }
-    }
+        }}
+
 
     private fun observeDailyReadingGoalState() {
         viewModelScope.launch {
             dailyReadingGoalStore.goalState.collect { goalState ->
                 _uiState.update { it.copy(dailyReadingGoalState = goalState) }
             }
-        }
-    }
+        }}
+
 
     private fun observeRememberedMascotQuest() {
         viewModelScope.launch {
@@ -330,11 +329,10 @@ class LibraryViewModel @Inject constructor(
                             rememberedMascotQuestAchievementId = achievementId
                                 .trim()
                                 .ifBlank { null }
-                        )
-                    }
-                }
-        }
-    }
+                        )    }
+}
+        }}
+
 
     private fun observeRememberedMascotQuestAction() {
         viewModelScope.launch {
@@ -345,33 +343,32 @@ class LibraryViewModel @Inject constructor(
                             rememberedMascotQuestAction = action
                                 .trim()
                                 .ifBlank { null }
-                        )
-                    }
-                }
-        }
-    }
+                        )    }
+}
+        }}
+
 
     private fun observeMascotUiPreference() {
         viewModelScope.launch {
             preferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true).collect { enabled ->
                 _uiState.update { it.copy(mascotUiEnabled = enabled) }
             }
-        }
-    }
+        }}
+
 
     private fun observeQuestPromptPreference() {
         viewModelScope.launch {
             preferences.get(PreferencesKeys.MASCOT_QUEST_PROMPTS_ENABLED, true).collect { enabled ->
                 _uiState.update { it.copy(questPromptsEnabled = enabled) }
             }
-        }
-    }
+        }}
+
 
     fun unlockSecretCat() {
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_SECRET_CAT_UNLOCKED, true)
-        }
-    }
+        }}
+
 
     private fun observeSearch() {
         viewModelScope.launch {
@@ -400,16 +397,15 @@ class LibraryViewModel @Inject constructor(
                                 cause = e
                             ),
                             isLoading = false
-                        )
-                    }
-                }
+                        )    }
+}
                 .collect { (comics, quotes) ->
                     rawComics = comics
                     rawQuotes = quotes
                     applyFiltersAndSort()
                 }
-        }
-    }
+        }}
+
 
     private fun observeLibraryAvailability() {
         viewModelScope.launch {
@@ -421,8 +417,8 @@ class LibraryViewModel @Inject constructor(
                     allLibraryComics = comics
                     applyFiltersAndSort()
                 }
-        }
-    }
+        }}
+
 
     private fun applyFiltersAndSort() {
         val state = _uiState.value
@@ -527,13 +523,13 @@ class LibraryViewModel @Inject constructor(
                 )
             )
         }
-        lastTrackedMascotStage = mascotProgress.stage
-    }
+        lastTrackedMascotStage = mascotProgress.stage}
+
 
     fun search(query: String) {
         _searchQuery.value = query
-        _uiState.update { it.copy(searchQuery = query) }
-    }
+        _uiState.update { it.copy(searchQuery = query) }}
+
 
     fun setContentSection(section: LibraryContentSection) {
         val normalizedSection = if (section == LibraryContentSection.AUDIOBOOKS) {
@@ -551,8 +547,8 @@ class LibraryViewModel @Inject constructor(
         }
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_CONTENT_SECTION, normalizedSection.name)
-        }
-    }
+        }}
+
 
     fun reportAchievementUnlocked(achievementId: String, unlockedCount: Int, totalCount: Int) {
         if (!reportedAchievementUnlocks.add(achievementId)) return
@@ -562,8 +558,8 @@ class LibraryViewModel @Inject constructor(
                 unlockedCount = unlockedCount,
                 totalCount = totalCount
             )
-        )
-    }
+        )}
+
 
     fun reportQuestTransition(
         previousAchievementId: String,
@@ -576,8 +572,8 @@ class LibraryViewModel @Inject constructor(
             nextAchievementId = nextAchievementId,
             previousCompleted = previousCompleted,
             actionName = actionName
-        ).forEach(analyticsTracker::track)
-    }
+        ).forEach(analyticsTracker::track)}
+
 
     fun acknowledgeMascotStagePreview() {
         viewModelScope.launch {
@@ -585,35 +581,35 @@ class LibraryViewModel @Inject constructor(
                 PreferencesKeys.MASCOT_LAST_ACKNOWLEDGED_STAGE,
                 _uiState.value.mascotProgress.stage.name
             )
-        }
-    }
+        }}
+
 
     fun rememberMascotQuestTarget(achievementId: String?) {
         val normalized = achievementId?.trim().orEmpty()
         if (_uiState.value.rememberedMascotQuestAchievementId == normalized.ifBlank { null }) return
         viewModelScope.launch {
             preferences.set(PreferencesKeys.MASCOT_LAST_QUEST_ACHIEVEMENT_ID, normalized)
-        }
-    }
+        }}
+
 
     fun rememberMascotQuestAction(actionName: String?) {
         val normalized = actionName?.trim().orEmpty()
         if (_uiState.value.rememberedMascotQuestAction == normalized.ifBlank { null }) return
         viewModelScope.launch {
             preferences.set(PreferencesKeys.MASCOT_LAST_QUEST_ACTION, normalized)
-        }
-    }
+        }}
+
 
     fun setSortOrder(order: SortOrder) {
         _uiState.update { it.copy(sortOrder = order) }
         viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_SORT_ORDER, order.name) }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun setStatusFilter(filter: LibraryStatusFilter) {
         _uiState.update { it.copy(statusFilter = filter) }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun showAllFiles() {
         _uiState.update {
@@ -624,13 +620,13 @@ class LibraryViewModel @Inject constructor(
                 currentFolderPath = null
             )
         }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun setFormatFilter(filter: LibraryFormatFilter) {
         _uiState.update { it.copy(formatFilter = filter) }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun setGroupBy(mode: GroupByMode) {
         _uiState.update {
@@ -640,18 +636,18 @@ class LibraryViewModel @Inject constructor(
             )
         }
         viewModelScope.launch { preferences.set(PreferencesKeys.LIBRARY_GROUP_BY, mode.name) }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun openFolder(path: String?) {
         _uiState.update { it.copy(currentFolderPath = path) }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun openFolderSheet(path: String) {
         _uiState.update { it.copy(folderSheetPath = path) }
-        applyFiltersAndSort()
-    }
+        applyFiltersAndSort()}
+
 
     fun dismissFolderSheet() {
         _uiState.update {
@@ -660,8 +656,8 @@ class LibraryViewModel @Inject constructor(
                 folderSheetItems = emptyList(),
                 folderSheetBreadcrumbs = emptyList()
             )
-        }
-    }
+        }}
+
 
     fun navigateUpFromFolderSheet() {
         val parentPath = _uiState.value.folderSheetPath.parentFolderPath()
@@ -669,8 +665,8 @@ class LibraryViewModel @Inject constructor(
             dismissFolderSheet()
         } else {
             openFolderSheet(parentPath)
-        }
-    }
+        }}
+
 
     fun deleteQuote(id: String) {
         viewModelScope.launch {
@@ -688,40 +684,39 @@ class LibraryViewModel @Inject constructor(
                                 ko = "문구를 삭제할 수 없습니다",
                                 cause = error
                             )
-                        )
-                    }
-                }
-        }
-    }
+                        )    }
+}
+        }}
+
 
     fun navigateUpFromFolder() {
         val parentPath = _uiState.value.currentFolderPath.parentFolderPath()
-        openFolder(parentPath)
-    }
+        openFolder(parentPath)}
+
 
     fun setViewMode(mode: LibraryViewMode) {
         _uiState.update { it.copy(viewMode = mode) }
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_VIEW_MODE, mode.name)
             preferences.set(PreferencesKeys.LIBRARY_VIEW_GRID, mode == LibraryViewMode.GRID)
-        }
-    }
+        }}
+
 
     fun setThumbnailMode(mode: String) {
         val normalized = if (mode == "SQUARE") "SQUARE" else "RECTANGLE"
         _uiState.update { it.copy(thumbnailMode = normalized) }
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_THUMBNAIL_MODE, normalized)
-        }
-    }
+        }}
+
 
     fun setTileSizeDp(size: Int) {
         val normalized = size.coerceIn(80, 200)
         _uiState.update { it.copy(tileSizeDp = normalized) }
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_TILE_SIZE_DP, normalized)
-        }
-    }
+        }}
+
 
     fun addComicFromUri(uri: Uri) {
         viewModelScope.launch {
@@ -746,8 +741,8 @@ class LibraryViewModel @Inject constructor(
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
-        }
-    }
+        }}
+
 
     fun addComicsFromDirectory(treeUri: Uri) {
         viewModelScope.launch {
@@ -775,8 +770,8 @@ class LibraryViewModel @Inject constructor(
             } finally {
                 _uiState.update { it.copy(isLoading = false) }
             }
-        }
-    }
+        }}
+
 
     fun deleteComic(comicId: String) {
         viewModelScope.launch {
@@ -798,8 +793,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     fun deleteFolder(folderPath: String) {
         viewModelScope.launch {
@@ -831,8 +826,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     fun toggleBookmark(comicId: String) {
         viewModelScope.launch {
@@ -853,8 +848,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String) {
         viewModelScope.launch {
@@ -875,8 +870,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     fun markCompleted(comicId: String, completed: Boolean) {
         viewModelScope.launch {
@@ -897,8 +892,8 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
+        }}
+
 
     suspend fun getComicById(id: String): Comic? = libraryRepository.getComicById(id)
 
@@ -912,8 +907,8 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(audiobooks = list) }
                 repairMissingAudiobookCovers(list)
             }
-        }
-    }
+        }}
+
 
     private suspend fun repairMissingAudiobookCovers(audiobooks: List<Audiobook>) = withContext(Dispatchers.IO) {
         // Runs on every audiobook list emission; each resolve does MediaMetadataRetriever + file
@@ -935,8 +930,8 @@ class LibraryViewModel @Inject constructor(
                 } else {
                     repairedAudiobookCoverIds.remove(audiobook.id)
                 }
-            }
-    }
+            }}
+
 
     /** Add a single audio file as a 1-chapter audiobook. */
     fun addAudiobookFromUri(uri: Uri) {
@@ -959,8 +954,8 @@ class LibraryViewModel @Inject constructor(
                 Log.e("LibraryViewModel", "Failed to add audiobook from URI: $uri", e)
                 _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
             }
-        }
-    }
+        }}
+
 
     /** Scan a folder tree and add direct audio files and nested audio folders separately. */
     fun addAudiobookFromFolder(treeUri: Uri) {
@@ -985,14 +980,14 @@ class LibraryViewModel @Inject constructor(
                 Log.e("LibraryViewModel", "Failed to add audiobook from folder: $treeUri", e)
                 _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
             }
-        }
-    }
+        }}
+
 
     fun deleteAudiobook(audiobookId: String) {
         viewModelScope.launch {
             audiobookRepository.delete(audiobookId)
-        }
-    }
+        }}
+
 
     private fun DocumentFile.toAudiobookImportNode(): AudiobookImportNode {
         val childNodes = if (isDirectory) {
@@ -1013,271 +1008,6 @@ class LibraryViewModel @Inject constructor(
             isDirectory = isDirectory,
             mimeType = type,
             children = childNodes
-        )
-    }
+        )}
 
-
-
-    private fun buildSections(
-        comics: List<Comic>,
-        keySelector: (Comic) -> String
-    ): List<Pair<String, List<Comic>>> {
-        val orderedSections = linkedMapOf<String, MutableList<Comic>>()
-        comics.forEach { comic ->
-            orderedSections.getOrPut(keySelector(comic)) { mutableListOf() }.add(comic)
-        }
-        return orderedSections.entries.map { it.key to it.value.toList() }
-    }
-
-    private fun buildFolderDisplayItems(
-        comics: List<Comic>,
-        currentFolderPath: String?,
-        sortOrder: SortOrder
-    ): List<LibraryDisplayItem> {
-        val folders = buildFolderItems(comics, currentFolderPath, sortOrder)
-        val directFiles = sortLibraryComics(directFilesForPath(comics, currentFolderPath), sortOrder)
-        return folders + buildSeparatedComicDisplayItems(
-            comics = directFiles,
-            forceHeaders = folders.isNotEmpty()
-        )
-    }
-
-    private fun buildSeparatedComicDisplayItems(
-        comics: List<Comic>,
-        forceHeaders: Boolean = false
-    ): List<LibraryDisplayItem> {
-        if (comics.isEmpty()) return emptyList()
-
-        val graphics = comics.filter { it.libraryContentSection() == LibraryFileSection.GRAPHIC }
-        val books = comics.filter { it.libraryContentSection() == LibraryFileSection.BOOKS }
-        val shouldShowHeaders = forceHeaders || (graphics.isNotEmpty() && books.isNotEmpty())
-
-        if (!shouldShowHeaders) {
-            return comics.map(::LibraryComicItem)
-        }
-
-        return buildList {
-            if (graphics.isNotEmpty()) {
-                add(LibrarySectionDividerItem(LibraryFileSection.GRAPHIC))
-                addAll(graphics.map(::LibraryComicItem))
-            }
-            if (books.isNotEmpty()) {
-                add(LibrarySectionDividerItem(LibraryFileSection.BOOKS))
-                addAll(books.map(::LibraryComicItem))
-            }
-        }
-    }
-
-    private fun Comic.libraryContentSection(): LibraryFileSection = when (libraryShelfCategory()) {
-        ComicLibraryShelf.GRAPHIC -> LibraryFileSection.GRAPHIC
-        ComicLibraryShelf.BOOKS -> LibraryFileSection.BOOKS
-        ComicLibraryShelf.AUTO -> if (format.isTextReadingFormat()) {
-            LibraryFileSection.BOOKS
-        } else {
-            LibraryFileSection.GRAPHIC
-        }
-    }
-
-    private fun buildFolderItems(
-        comics: List<Comic>,
-        currentFolderPath: String?,
-        sortOrder: SortOrder
-    ): List<LibraryFolderItem> {
-        val grouped = linkedMapOf<String, MutableList<Comic>>()
-        comics.forEach { comic ->
-            val childFolderPath = directChildFolderPath(normalizeFolderId(comic.folderId), currentFolderPath)
-                ?: return@forEach
-            grouped.getOrPut(childFolderPath) { mutableListOf() }.add(comic)
-        }
-
-        return sortFolderItems(
-            grouped.map { (path, descendants) ->
-                val directFiles = descendants.count { normalizeFolderId(it.folderId) == path }
-                val directSubfolders = descendants.mapNotNull { descendant ->
-                    directChildFolderPath(normalizeFolderId(descendant.folderId), path)
-                }.distinct().size
-                val directChildren = descendants.filter { normalizeFolderId(it.folderId) == path }
-                val representativeSource = if (directChildren.isNotEmpty()) directChildren else descendants
-                val representative = representativeSource
-                    .sortedWith(
-                        compareBy<Comic>(
-                            { it.coverPath.isNullOrBlank() },
-                            { folderRepresentativeName(it) }
-                        )
-                    )
-                    .firstOrNull()
-                LibraryFolderItem(
-                    path = path,
-                    title = path.substringAfterLast('/'),
-                    coverPath = representative?.coverPath,
-                    fileCount = directFiles,
-                    subfolderCount = directSubfolders,
-                    newestAdded = descendants.maxOfOrNull { it.addedDate } ?: 0L,
-                    lastReadDate = descendants.mapNotNull { it.lastReadDate }.maxOrNull(),
-                    totalSize = descendants.sumOf { it.fileSize },
-                    progress = descendants.map { it.displayReadingProgress() }.average().toFloat()
-                )
-            },
-            sortOrder
-        )
-    }
-
-    private fun sortFolderItems(
-        folders: List<LibraryFolderItem>,
-        order: SortOrder
-    ): List<LibraryFolderItem> = when (order) {
-        SortOrder.TITLE_ASC, SortOrder.GENRE_ASC, SortOrder.FOLDER_ASC ->
-            folders.sortedBy { it.title.lowercase() }
-        SortOrder.TITLE_DESC, SortOrder.GENRE_DESC, SortOrder.FOLDER_DESC ->
-            folders.sortedByDescending { it.title.lowercase() }
-        SortOrder.DATE_ADDED_ASC -> folders.sortedBy { it.newestAdded }
-        SortOrder.DATE_ADDED_DESC -> folders.sortedByDescending { it.newestAdded }
-        SortOrder.DATE_READ_ASC -> folders.sortedBy { it.lastReadDate ?: 0L }
-        SortOrder.DATE_READ_DESC -> folders.sortedByDescending { it.lastReadDate ?: 0L }
-        SortOrder.PROGRESS_ASC -> folders.sortedBy { it.progress }
-        SortOrder.PROGRESS_DESC -> folders.sortedByDescending { it.progress }
-        SortOrder.FILE_SIZE_ASC -> folders.sortedBy { it.totalSize }
-        SortOrder.FILE_SIZE_DESC -> folders.sortedByDescending { it.totalSize }
-    }
-
-    private fun directFilesForPath(comics: List<Comic>, currentFolderPath: String?): List<Comic> {
-        return comics.filter { normalizeFolderId(it.folderId) == currentFolderPath }
-    }
-
-    private fun directChildFolderPath(folderPath: String?, currentFolderPath: String?): String? {
-        val normalizedFolderPath = normalizeFolderId(folderPath) ?: return null
-        return if (currentFolderPath == null) {
-            normalizedFolderPath.substringBefore('/')
-        } else {
-            if (normalizedFolderPath == currentFolderPath || !normalizedFolderPath.startsWith("$currentFolderPath/")) {
-                null
-            } else {
-                val remainder = normalizedFolderPath.removePrefix("$currentFolderPath/")
-                "$currentFolderPath/${remainder.substringBefore('/')}"
-            }
-        }
-    }
-
-    private fun normalizeFolderPath(path: String?, comics: List<Comic>): String? {
-        var candidate = normalizeFolderId(path)
-        while (candidate != null && !folderExists(candidate, comics)) {
-            candidate = candidate.parentFolderPath()
-        }
-        return candidate
-    }
-
-    private fun folderExists(path: String, comics: List<Comic>): Boolean {
-        return comics.any { comic ->
-            val folderPath = normalizeFolderId(comic.folderId)
-            folderPath == path || folderPath?.startsWith("$path/") == true
-        }
-    }
-
-    private fun buildBreadcrumbs(currentFolderPath: String?, language: String): List<LibraryBreadcrumb> {
-        val breadcrumbs = mutableListOf(
-            LibraryBreadcrumb(
-                label = vmTr(
-                    lang = language,
-                    ru = "Библиотека",
-                    en = "Library",
-                    ja = "ライブラリ",
-                    zh = "图书馆",
-                    ko = "라이브러리"
-                ),
-                path = null
-            )
-        )
-        if (currentFolderPath.isNullOrBlank()) return breadcrumbs
-
-        var cumulativePath = ""
-        currentFolderPath.split('/').forEach { segment ->
-            cumulativePath = if (cumulativePath.isEmpty()) segment else "$cumulativePath/$segment"
-            breadcrumbs += LibraryBreadcrumb(label = segment, path = cumulativePath)
-        }
-        return breadcrumbs
-    }
-
-    private fun normalizeFolderId(folderId: String?): String? {
-        return folderId
-            ?.trim()
-            ?.trim('/')
-            ?.takeIf { it.isNotBlank() }
-    }
-
-    private fun String?.parentFolderPath(): String? {
-        val value = normalizeFolderId(this) ?: return null
-        return value.substringBeforeLast('/', "").ifBlank { null }
-    }
-
-    private fun folderRepresentativeName(comic: Comic): String {
-        return comic.documentId
-            ?.substringAfterLast('/')
-            ?.substringAfterLast(':')
-            ?.lowercase()
-            ?: comic.path.substringAfterLast('/').substringAfterLast('\\').lowercase()
-    }
-
-    private fun vmTr(
-        lang: String,
-        ru: String,
-        en: String,
-        ja: String,
-        zh: String,
-        ko: String
-    ): String = when (lang) {
-        "en" -> en
-        "ja" -> ja
-        "zh" -> zh
-        "ko" -> ko
-        else -> ru
-    }
-
-    private fun localizedError(
-        lang: String,
-        ru: String,
-        en: String,
-        ja: String,
-        zh: String,
-        ko: String,
-        cause: Throwable?
-    ): String {
-        val details = cause?.message?.takeIf { it.isNotBlank() }?.let { ": $it" }.orEmpty()
-        return vmTr(
-            lang = lang,
-            ru = "$ru$details",
-            en = "$en$details",
-            ja = "$ja$details",
-            zh = "$zh$details",
-            ko = "$ko$details"
-        )
-    }
-}
-
-internal fun shouldTrackMascotStageUp(
-    previousStage: MascotStage?,
-    currentStage: MascotStage
-): Boolean = previousStage != null && currentStage.ordinal > previousStage.ordinal
-
-internal fun buildQuestTransitionAnalyticsEvents(
-    previousAchievementId: String,
-    nextAchievementId: String?,
-    previousCompleted: Boolean,
-    actionName: String?
-): List<ReadingAnalyticsEvent> {
-    val events = mutableListOf<ReadingAnalyticsEvent>()
-    if (previousCompleted) {
-        events += ReadingAnalyticsEvent.QuestCompleted(
-            achievementId = previousAchievementId,
-            nextAchievementId = nextAchievementId,
-            action = actionName
-        )
-    }
-    if (!nextAchievementId.isNullOrBlank() && nextAchievementId != previousAchievementId) {
-        events += ReadingAnalyticsEvent.QuestSwitched(
-            previousAchievementId = previousAchievementId,
-            nextAchievementId = nextAchievementId,
-            action = actionName
-        )
-    }
-    return events
 }
