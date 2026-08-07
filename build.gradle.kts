@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.hilt.android) apply false
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.detekt)
+    alias(libs.plugins.kover) apply false
 }
 
 detekt {
