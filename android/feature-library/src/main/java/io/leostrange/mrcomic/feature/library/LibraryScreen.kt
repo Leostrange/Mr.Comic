@@ -1095,318 +1095,61 @@ fun LibraryScreen(
     }
 
     comicToDelete?.let { id ->
-        val title = comicsById[id]?.title ?: strings.libraryComicFallback
-        AlertDialog(
-            onDismissRequest = { comicToDelete = null },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = {
-                Text(strings.libraryDeleteComicTitle)
+        DeleteComicDialog(
+            comicId = id,
+            comicsById = comicsById,
+            strings = strings,
+            onDelete = {
+                viewModel.deleteComic(it)
+                comicToDelete = null
             },
-            text = {
-                Text(strings.libraryDeleteComicMessage.replace("%s", title))
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.deleteComic(id); comicToDelete = null }) {
-                    Text(strings.libraryDeleteAction, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { comicToDelete = null }) { Text(strings.cancel) }
-            }
+            onDismiss = { comicToDelete = null }
         )
     }
 
     folderToDelete?.let { folder ->
-        val affectedCount = remember(folder.path, uiState.comics) {
-            uiState.comics.count { comic ->
-                val folderId = comic.folderId
-                    ?.trim()
-                    ?.trim('/')
-                    ?.replace('\\', '/')
-                    ?.takeIf { it.isNotBlank() }
-                folderId == folder.path || folderId?.startsWith(folder.path + "/") == true
-            }
-        }
-        AlertDialog(
-            onDismissRequest = { folderToDelete = null },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = {
-                Text(strings.libraryDeleteFolderTitle)
+        DeleteFolderDialog(
+            folder = folder,
+            comics = uiState.comics,
+            strings = strings,
+            onDelete = {
+                viewModel.deleteFolder(it)
+                folderToDelete = null
             },
-            text = {
-                Text(strings.libraryDeleteFolderMessage.format(folder.title, affectedCount))
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteFolder(folder.path)
-                    folderToDelete = null
-                }) {
-                    Text(strings.libraryDeleteAction, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { folderToDelete = null }) { Text(strings.cancel) }
-            }
+            onDismiss = { folderToDelete = null }
         )
     }
 
     audiobookToDelete?.let { audiobook ->
-        AlertDialog(
-            onDismissRequest = { audiobookToDelete = null },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text("Убрать аудиокнигу из библиотеки?") },
-            text = {
-                Text(
-                    buildString {
-                        append(audiobook.title)
-                        append("\n\n")
-                        append(
-                            if (audiobook.sourceIsFolder) {
-                                "Будет удалена только запись из библиотеки. Файлы в папке останутся на месте."
-                            } else {
-                                "Будет удалена только запись из библиотеки. Исходный аудиофайл останется на месте."
-                            }
-                        )
-                    }
-                )
+        DeleteAudiobookDialog(
+            audiobook = audiobook,
+            strings = strings,
+            onDelete = {
+                viewModel.deleteAudiobook(it)
+                audiobookToDelete = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteAudiobook(audiobook.id)
-                        audiobookToDelete = null
-                    }
-                ) {
-                    Text(strings.libraryDeleteAction, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { audiobookToDelete = null }) {
-                    Text(strings.cancel)
-                }
-            }
+            onDismiss = { audiobookToDelete = null }
         )
     }
 
     quoteToDelete?.let { quote ->
-        AlertDialog(
-            onDismissRequest = { quoteToDelete = null },
-            containerColor = MaterialTheme.colorScheme.surface,
-            title = { Text(strings.libraryDeleteQuoteTitle) },
-            text = {
-                Text(
-                    text = buildString {
-                        append(quote.text.take(180))
-                        if (quote.text.length > 180) append("…")
-                    }
-                )
+        DeleteQuoteDialog(
+            quote = quote,
+            strings = strings,
+            onDelete = {
+                viewModel.deleteQuote(it)
+                quoteToDelete = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteQuote(quote.id)
-                        quoteToDelete = null
-                    }
-                ) {
-                    Text(strings.libraryDeleteAction, color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { quoteToDelete = null }) { Text(strings.cancel) }
-            }
+            onDismiss = { quoteToDelete = null }
         )
     }
 
-    if (uiState.folderSheetPath != null) {
-        val screenHeight = LocalConfiguration.current.screenHeightDp.dp
-        Dialog(
-            onDismissRequest = { viewModel.dismissFolderSheet() },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            val sheetColumns = if (uiState.viewMode == LibraryViewMode.LIST) {
-                GridCells.Fixed(1)
-            } else {
-                GridCells.Fixed(uiState.libraryGridColumns)
-            }
-            val itemSpacing = when (uiState.cardStyle) {
-                "COMPACT" -> 6.dp
-                "SHOWCASE" -> 12.dp
-                else -> 8.dp
-            }
-            val folderTitle = uiState.folderSheetBreadcrumbs.lastOrNull()?.label ?: strings.actionFolder
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth(0.92f)
-                        .widthIn(max = 760.dp)
-                        .heightIn(max = screenHeight * 0.7f),
-                    shape = RoundedCornerShape(28.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(
-                        alpha = MaterialTheme.colorScheme.surface.alpha.coerceAtLeast(0.9f)
-                    ),
-                    tonalElevation = 8.dp,
-                    shadowElevation = 18.dp
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = folderTitle,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = folderDescription(
-                                        LibraryFolderItem(
-                                            path = uiState.folderSheetPath ?: "",
-                                            title = folderTitle,
-                                            coverPath = null,
-                                            fileCount = uiState.folderSheetItems.count { it is LibraryComicItem },
-                                            subfolderCount = uiState.folderSheetItems.count { it is LibraryFolderItem },
-                                            newestAdded = 0L,
-                                            lastReadDate = null,
-                                            totalSize = 0L,
-                                            progress = 0f
-                                        ),
-                                        strings
-                                    ),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (uiState.folderSheetBreadcrumbs.size > 1) {
-                                    FilledTonalButton(onClick = viewModel::navigateUpFromFolderSheet) {
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(strings.back)
-                                    }
-                                }
-                                IconButton(onClick = viewModel::dismissFolderSheet) {
-                                    Icon(Icons.Default.Close, contentDescription = strings.cancel)
-                                }
-                            }
-                        }
-                        if (uiState.folderSheetBreadcrumbs.size > 1) {
-                            BreadcrumbRow(
-                                breadcrumbs = uiState.folderSheetBreadcrumbs,
-                                canNavigateUp = uiState.folderSheetBreadcrumbs.size > 1,
-                                onNavigateUp = viewModel::navigateUpFromFolderSheet,
-                                onNavigateTo = { path ->
-                                    if (path == null) {
-                                        viewModel.dismissFolderSheet()
-                                    } else {
-                                        viewModel.openFolderSheet(path)
-                                    }
-                                }
-                            )
-                        }
-                        LazyVerticalGrid(
-                            columns = sheetColumns,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = screenHeight * 0.54f),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 20.dp),
-                            horizontalArrangement = Arrangement.spacedBy(itemSpacing),
-                            verticalArrangement = Arrangement.spacedBy(itemSpacing)
-                        ) {
-                            items(
-                                items = uiState.folderSheetItems,
-                                key = { it.key },
-                                span = { item ->
-                                    if (item is LibrarySectionDividerItem) {
-                                        GridItemSpan(maxLineSpan)
-                                    } else {
-                                        GridItemSpan(1)
-                                    }
-                                }
-                            ) { item ->
-                                when (item) {
-                                    is LibrarySectionDividerItem -> LibraryFileSectionDivider(section = item.section)
-                                    is LibraryComicItem -> {
-                                        LibraryGridCell(
-                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                            tileSizeDp = uiState.tileSizeDp
-                                        ) {
-                                            ComicGridItem(
-                                                comic = item.comic,
-                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                cardStyle = uiState.cardStyle,
-                                                tileSizeDp = uiState.tileSizeDp,
-                                                coverScaleMode = uiState.coverScale,
-                                                thumbnailMode = uiState.thumbnailMode,
-                                                shelfStyle = uiState.shelfStyle,
-                                                shelfDepth = uiState.shelfDepth,
-                                                graphicCoverStyle = uiState.graphicCoverStyle,
-                                                cardShadow = uiState.cardShadow,
-                                                titleScale = uiState.titleScale,
-                                                titleLines = uiState.titleLines,
-                                                cardStroke = uiState.cardStroke,
-                                                cardCornerRadius = uiState.cardCornerRadius,
-                                                titlePanelOpacity = uiState.titlePanelOpacity,
-                                                showProgressIndicators = uiState.showProgressIndicators,
-                                                showCoverTitles = uiState.showCoverTitlesOnGrid,
-                                                onClick = { onComicClick(item.comic.id) },
-                                                onLongClick = { selectedComicId = item.comic.id }
-                                            )
-                                        }
-                                    }
-                                    is LibraryFolderItem -> {
-                                        LibraryGridCell(
-                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                            tileSizeDp = uiState.tileSizeDp
-                                        ) {
-                                            FolderCard(
-                                                folder = item,
-                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                cardStyle = uiState.cardStyle,
-                                                tileSizeDp = uiState.tileSizeDp,
-                                                coverScale = uiState.coverScale,
-                                                thumbnailMode = uiState.thumbnailMode,
-                                                shelfStyle = uiState.shelfStyle,
-                                                shelfDepth = uiState.shelfDepth,
-                                                cardShadow = uiState.cardShadow,
-                                                onClick = {
-                                                    if (item.fileCount == 1 && item.subfolderCount == 0) {
-                                                        val singleComic = uiState.folderSheetItems
-                                                            .filterIsInstance<LibraryComicItem>()
-                                                            .find { it.comic.folderId == item.path }
-                                                            ?.comic
-                                                        if (singleComic != null) {
-                                                            viewModel.dismissFolderSheet()
-                                                            onComicClick(singleComic.id)
-                                                        } else {
-                                                            viewModel.openFolderSheet(item.path)
-                                                        }
-                                                    } else {
-                                                        viewModel.openFolderSheet(item.path)
-                                                    }
-                                                },
-                                                onLongClick = { folderToDelete = item }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    LibraryFolderDialog(
+        uiState = uiState,
+        strings = strings,
+        viewModel = viewModel,
+        onComicClick = onComicClick,
+        onComicLongClick = { selectedComicId = it },
+        onFolderLongClick = { folderToDelete = it }
+    )
 }
