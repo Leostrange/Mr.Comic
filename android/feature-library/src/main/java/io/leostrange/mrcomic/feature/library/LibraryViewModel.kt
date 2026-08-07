@@ -26,12 +26,11 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.domain.analytics.calculateMascotProgress
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicLibraryShelf
-import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.model.SortOrder
 import io.leostrange.mrcomic.core.model.isReadCompleted
 import io.leostrange.mrcomic.core.model.isReadingInProgress
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import io.leostrange.mrcomic.core.model.libraryShelfCategory
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
@@ -427,8 +426,8 @@ class LibraryViewModel @Inject constructor(
 
     private fun applyFiltersAndSort() {
         val state = _uiState.value
-        val filtered = filterComics(rawComics, state.statusFilter, state.formatFilter)
-        val sorted = sortComics(filtered, state.sortOrder)
+        val filtered = filterLibraryComics(rawComics, state.statusFilter, state.formatFilter)
+        val sorted = sortLibraryComics(filtered, state.sortOrder)
         val bookmarkedSorted = sorted.filter { it.isBookmarked }
         val sortedQuotes = rawQuotes.sortedByDescending { it.createdAt }
         val mascotProgress = calculateMascotProgress(allLibraryComics)
@@ -1017,63 +1016,7 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
-    private fun filterComics(
-        comics: List<Comic>,
-        statusFilter: LibraryStatusFilter,
-        formatFilter: LibraryFormatFilter
-    ): List<Comic> {
-        val byStatus = when (statusFilter) {
-            LibraryStatusFilter.ALL -> comics
-            LibraryStatusFilter.BOOKMARKED -> comics.filter { it.isBookmarked }
-            LibraryStatusFilter.IN_PROGRESS -> comics.filter { it.isReadingInProgress() }
-            LibraryStatusFilter.COMPLETED -> comics.filter { it.isReadCompleted() }
-        }
-        return when (formatFilter) {
-            LibraryFormatFilter.ALL -> byStatus
-            LibraryFormatFilter.IMAGE -> byStatus.filter {
-                it.format in setOf(
-                    ComicFormat.CBZ,
-                    ComicFormat.CBR,
-                    ComicFormat.ZIP,
-                    ComicFormat.RAR,
-                    ComicFormat.SEVENZ,
-                    ComicFormat.TAR,
-                    ComicFormat.FOLDER
-                )
-            }
-            LibraryFormatFilter.PDF -> byStatus.filter { it.format == ComicFormat.PDF }
-            LibraryFormatFilter.TEXT -> byStatus.filter {
-                it.format.isTextReadingFormat()
-            }
-        }
-    }
 
-    private fun sortComics(comics: List<Comic>, order: SortOrder): List<Comic> = when (order) {
-        SortOrder.TITLE_ASC -> comics.sortedBy { it.title.lowercase() }
-        SortOrder.TITLE_DESC -> comics.sortedByDescending { it.title.lowercase() }
-        SortOrder.DATE_ADDED_ASC -> comics.sortedBy { it.addedDate }
-        SortOrder.DATE_ADDED_DESC -> comics.sortedByDescending { it.addedDate }
-        SortOrder.DATE_READ_ASC -> comics.sortedBy { it.lastReadDate ?: 0L }
-        SortOrder.DATE_READ_DESC -> comics.sortedByDescending { it.lastReadDate ?: 0L }
-        SortOrder.PROGRESS_ASC -> comics.sortedWith(
-            compareBy<Comic> { effectiveReadingProgress(it) }
-                .thenBy { it.title.lowercase() }
-        )
-        SortOrder.PROGRESS_DESC -> comics.sortedWith(
-            compareByDescending<Comic> { effectiveReadingProgress(it) }
-                .thenBy { it.title.lowercase() }
-        )
-        SortOrder.FILE_SIZE_ASC -> comics.sortedBy { it.fileSize }
-        SortOrder.FILE_SIZE_DESC -> comics.sortedByDescending { it.fileSize }
-        SortOrder.GENRE_ASC -> comics.sortedBy { it.genre.orEmpty().lowercase() }
-        SortOrder.GENRE_DESC -> comics.sortedByDescending { it.genre.orEmpty().lowercase() }
-        SortOrder.FOLDER_ASC -> comics.sortedBy { normalizeFolderId(it.folderId).orEmpty().lowercase() }
-        SortOrder.FOLDER_DESC -> comics.sortedByDescending { normalizeFolderId(it.folderId).orEmpty().lowercase() }
-    }
-
-    private fun effectiveReadingProgress(comic: Comic): Float {
-        return comic.displayReadingProgress()
-    }
 
     private fun buildSections(
         comics: List<Comic>,
@@ -1092,7 +1035,7 @@ class LibraryViewModel @Inject constructor(
         sortOrder: SortOrder
     ): List<LibraryDisplayItem> {
         val folders = buildFolderItems(comics, currentFolderPath, sortOrder)
-        val directFiles = sortComics(directFilesForPath(comics, currentFolderPath), sortOrder)
+        val directFiles = sortLibraryComics(directFilesForPath(comics, currentFolderPath), sortOrder)
         return folders + buildSeparatedComicDisplayItems(
             comics = directFiles,
             forceHeaders = folders.isNotEmpty()
@@ -1172,7 +1115,7 @@ class LibraryViewModel @Inject constructor(
                     newestAdded = descendants.maxOfOrNull { it.addedDate } ?: 0L,
                     lastReadDate = descendants.mapNotNull { it.lastReadDate }.maxOrNull(),
                     totalSize = descendants.sumOf { it.fileSize },
-                    progress = descendants.map { effectiveReadingProgress(it) }.average().toFloat()
+                    progress = descendants.map { it.displayReadingProgress() }.average().toFloat()
                 )
             },
             sortOrder
