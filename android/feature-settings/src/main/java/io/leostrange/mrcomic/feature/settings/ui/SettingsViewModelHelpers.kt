@@ -9,7 +9,6 @@ import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.ui.library.LibraryThemePresetSnapshot
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
-import io.leostrange.mrcomic.core.ui.theme.ThemePreset
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
@@ -202,89 +201,5 @@ internal suspend fun SettingsViewModel.persistNullableReaderColor(key: Preferenc
     }
 }
 
-/* ──── persistReaderStylePresetEntries ──── */
-internal suspend fun SettingsViewModel.persistReaderStylePresetEntries(entries: List<ReaderStylePresetEntry>) {
-    val normalizedEntries = entries.distinctBy { it.id }
-    val legacySlots = normalizedEntries.toLegacyReaderStyleSlots()
-    preferences.set(
-        PreferencesKeys.READER_STYLE_PRESET_LIST,
-        serializeReaderStylePresetEntries(normalizedEntries)
-    )
-    preferences.set(PreferencesKeys.READER_STYLE_PRESET_1, legacySlots[0].serialized.orEmpty())
-    preferences.set(PreferencesKeys.READER_STYLE_PRESET_2, legacySlots[1].serialized.orEmpty())
-    preferences.set(PreferencesKeys.READER_STYLE_PRESET_3, legacySlots[2].serialized.orEmpty())
-}
 
-/* ──── applyLibraryPresetSnapshot ──── */
-internal suspend fun SettingsViewModel.applyLibraryPresetSnapshot(
-    snapshot: LibraryThemePresetSnapshot,
-    useAmoledDark: Boolean? = null
-) {
-    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, snapshot.backgroundStyle)
-    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_IMAGE_URI, snapshot.backgroundImageUri ?: "")
-    preferences.set(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, snapshot.backdropStrength)
-    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, snapshot.backgroundBlur)
-    preferences.set(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, snapshot.backgroundVeil)
-    preferences.set(PreferencesKeys.LIBRARY_SHELF_STYLE, snapshot.shelfStyle)
-    preferences.set(PreferencesKeys.LIBRARY_SHELF_DEPTH, snapshot.shelfDepth)
-    preferences.set(PreferencesKeys.LIBRARY_CARD_SHADOW, snapshot.cardShadow)
-    preferences.set(PreferencesKeys.LIBRARY_TITLE_SCALE, snapshot.titleScale)
-    preferences.set(PreferencesKeys.LIBRARY_TITLE_LINES, snapshot.titleLines)
-    preferences.set(PreferencesKeys.LIBRARY_CARD_STROKE, snapshot.cardStroke)
-    preferences.set(PreferencesKeys.LIBRARY_CARD_CORNER_RADIUS, snapshot.cardCornerRadius)
-    preferences.set(PreferencesKeys.LIBRARY_TITLE_PANEL_OPACITY, snapshot.titlePanelOpacity)
-    preferences.set(PreferencesKeys.LIBRARY_CARD_STYLE, snapshot.cardStyle)
-    preferences.set(PreferencesKeys.LIBRARY_THUMBNAIL_MODE, snapshot.thumbnailMode)
-    preferences.set(PreferencesKeys.LIBRARY_GRAPHIC_COVER_STYLE, snapshot.graphicCoverStyle)
-    preferences.set(PreferencesKeys.LIBRARY_COVER_SCALE, snapshot.coverScale)
-    themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
-    themePreferencesRepository.setSurfaceOpacity(snapshot.surfaceOpacity)
-    if (useAmoledDark != null) {
-        themePreferencesRepository.setUseAmoledDark(useAmoledDark)
-    }
-}
-
-/* ──── applyAppThemePresetSnapshot ──── */
-internal suspend fun SettingsViewModel.applyAppThemePresetSnapshot(
-    snapshot: AppThemePresetSnapshot
-) {
-    themePreferencesRepository.setThemePreset(
-        runCatching { ThemePreset.valueOf(snapshot.themePreset) }.getOrDefault(ThemePreset.CUSTOM)
-    )
-    themePreferencesRepository.setThemeMode(
-        runCatching { ThemeMode.valueOf(snapshot.themeMode) }.getOrDefault(ThemeMode.SYSTEM)
-    )
-    themePreferencesRepository.setUseDynamicColor(snapshot.useDynamicColor)
-    themePreferencesRepository.setUseAmoledDark(snapshot.useAmoledDark)
-    themePreferencesRepository.setCustomPrimaryColor(snapshot.customPrimaryColor)
-    themePreferencesRepository.setCustomSecondaryColor(snapshot.customSecondaryColor)
-    themePreferencesRepository.setCustomBackgroundColor(snapshot.customBackgroundColor)
-    themePreferencesRepository.setCustomSurfaceColor(snapshot.customSurfaceColor)
-    themePreferencesRepository.setSurfaceOpacity(snapshot.surfaceOpacity)
-    preferences.set(PreferencesKeys.UI_FONT_SCALE, snapshot.uiFontScale)
-    preferences.set(PreferencesKeys.UI_DENSITY_SCALE, snapshot.uiDensityScale)
-    preferences.set(PreferencesKeys.UI_CORNER_RADIUS, snapshot.uiCornerRadius)
-}
-
-/* ──── applyReaderStylePresetSnapshot ──── */
-internal suspend fun SettingsViewModel.applyReaderStylePresetSnapshot(
-    snapshot: ReaderStylePresetSnapshot
-) {
-    preferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
-    preferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
-    preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
-    persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, snapshot.textCustomTextColor)
-    persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, snapshot.textCustomBackgroundColor)
-    persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, snapshot.textCustomAccentColor)
-    preferences.set(PreferencesKeys.TEXT_FONT_FAMILY, snapshot.textFontFamily)
-    preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, snapshot.textLineHeight)
-    preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, snapshot.textLetterSpacing)
-    preferences.set(PreferencesKeys.TEXT_WORD_SPACING, snapshot.textWordSpacing)
-    preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, snapshot.textParagraphSpacing)
-    preferences.set(PreferencesKeys.TEXT_ALIGNMENT, snapshot.textAlignment)
-    preferences.set(PreferencesKeys.TEXT_BOLD, snapshot.textBold)
-    preferences.set(PreferencesKeys.READING_BRIGHTNESS, snapshot.brightness)
-    preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, snapshot.immersiveMode)
-    preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, snapshot.pageAnimation)
-}
 
