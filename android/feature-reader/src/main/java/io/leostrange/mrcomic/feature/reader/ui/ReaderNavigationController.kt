@@ -20,7 +20,7 @@ internal class ReaderNavigationController(
     private val readerSessionCoordinator: ReaderSessionCoordinator,
     private val pagePreloader: PagePreloader,
     private val textReaderOrchestrator: TextReaderOrchestrator,
-    private val formatReader: () -> io.leostrange.mrcomic.engine.formats.base.FormatReader?,
+    private val formatReader: () -> io.leostrange.mrcomic.engine.api.FormatReader?,
     private val loadPage: (Int) -> Unit,
     private val prewarmHtmlPagesAround: (Int) -> Unit,
     private val loadPageTranslationNote: (Int) -> Unit,

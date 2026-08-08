@@ -1,9 +1,9 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.text.ReflowableTextFormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
+import io.leostrange.mrcomic.engine.api.ReflowableTextFormatReader
+import io.leostrange.mrcomic.engine.api.SectionPaginator
 import io.leostrange.mrcomic.engine.api.TextDocumentSection
-import io.leostrange.mrcomic.engine.formats.text.pagination.DocumentTextPaginator
 import io.leostrange.mrcomic.engine.api.TextPaginationConstraints
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,7 +17,7 @@ internal data class TextPagePaginationSnapshot(
  * Builds display pages for [ReaderContainerKind.TEXT_PAGE] from engine sections.
  */
 internal class TextPagePaginationController(
-    private val documentPaginator: DocumentTextPaginator = DocumentTextPaginator()
+    private val sectionPaginator: SectionPaginator
 ) {
     // @Volatile: ensureBuilt() runs on Dispatchers.IO while isReady()/getDisplayPage()/
     // displayPageForEngine() read these from the main thread. Without @Volatile the JVM
@@ -65,7 +65,7 @@ internal class TextPagePaginationController(
             }
             else -> loadEngineSectionsFromHtmlPages(reader, reader.getPageCount().coerceAtLeast(1))
         }
-        val result = documentPaginator.paginateSections(sections, constraints)
+        val result = sectionPaginator.paginateSections(sections, constraints)
         val engineByDisplay = IntArray(result.pages.size)
         val displayPages = result.pages.mapIndexed { displayIndex, subPage ->
             engineByDisplay[displayIndex] = subPage.sectionIndex

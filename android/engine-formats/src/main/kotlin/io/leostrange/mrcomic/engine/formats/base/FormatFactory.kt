@@ -3,6 +3,8 @@ package io.leostrange.mrcomic.engine.formats.base
 import android.content.Context
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.engine.api.EpubCacheStore
+import io.leostrange.mrcomic.engine.api.ReaderFactory
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.engine.formats.archive.ArchiveDelegatingFormatReader
 import io.leostrange.mrcomic.engine.formats.djvu.DjvuFormatReader
 import io.leostrange.mrcomic.engine.formats.djvu.DjvuBackend
@@ -26,10 +28,10 @@ class FormatFactory @Inject constructor(
     private val djvuBackend: DjvuBackend,
     @Named("epubStructureCache") private val epubStructureCache: EpubCacheStore?,
     @Named("epubManifestCache") private val epubManifestCache: EpubCacheStore?
-) {
+) : ReaderFactory {
     private val deviceProfile by lazy { context.resolveRenderDeviceProfile() }
 
-    fun createReader(path: String, format: ComicFormat): FormatReader? {
+    override fun createReader(path: String, format: ComicFormat): FormatReader? {
         val archiveContainerFormat = archiveContainerFormatFromPath(path)
         if (archiveContainerFormat != null && format.isTextReadingFormat()) {
             return archiveDelegatingReader(path, archiveContainerFormat)

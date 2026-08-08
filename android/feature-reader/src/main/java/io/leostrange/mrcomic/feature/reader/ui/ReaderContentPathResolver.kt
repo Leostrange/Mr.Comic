@@ -7,8 +7,8 @@ import android.provider.DocumentsContract
 import android.util.Log
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.engine.formats.base.FormatDetector
-import io.leostrange.mrcomic.engine.formats.epub.EpubReadablePath
+import io.leostrange.mrcomic.engine.api.EpubReadablePath
+import io.leostrange.mrcomic.engine.api.FormatDetector
 
 /**
  * Resolves content URIs and file paths to readable local paths.

@@ -3,7 +3,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 

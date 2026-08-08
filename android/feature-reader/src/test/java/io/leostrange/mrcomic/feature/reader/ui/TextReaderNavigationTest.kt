@@ -6,6 +6,22 @@ import org.junit.Test
 
 class TextReaderNavigationTest {
 
+    private fun paginationController(): TextPagePaginationController =
+        TextPagePaginationController(
+            object : io.leostrange.mrcomic.engine.api.SectionPaginator {
+                override suspend fun paginateSections(
+                    sections: List<io.leostrange.mrcomic.engine.api.TextDocumentSection>,
+                    constraints: io.leostrange.mrcomic.engine.api.TextPaginationConstraints
+                ): io.leostrange.mrcomic.engine.api.SectionPaginationResult =
+                    io.leostrange.mrcomic.engine.api.SectionPaginationResult(
+                        sections = sections,
+                        pages = sections.mapIndexed { index, section ->
+                            io.leostrange.mrcomic.engine.api.TextPaginationSubPage(section.html, index, index)
+                        }
+                    )
+            }
+        )
+
     @Test
     fun resolveTextPosition_clampsNegativeValues() {
         val resolved = TextReaderNavigation.resolveTextPosition(
@@ -26,7 +42,8 @@ class TextReaderNavigationTest {
                 builder = WebtoonDocumentBuilder { pages ->
                     TextWebtoonCachedDocument(html = pages.joinToString { it.html }, assetBasePath = null)
                 }
-            )
+            ),
+            paginationController()
         )
         val state = ReaderUiState(
             readerContainerKind = ReaderContainerKind.TEXT_PAGE,
@@ -51,7 +68,8 @@ class TextReaderNavigationTest {
                 builder = WebtoonDocumentBuilder { pages ->
                     TextWebtoonCachedDocument(html = pages.joinToString { it.html }, assetBasePath = null)
                 }
-            )
+            ),
+            paginationController()
         )
         val state = ReaderUiState(
             readerContainerKind = ReaderContainerKind.TEXT_PAGE,

@@ -1,9 +1,14 @@
-package io.leostrange.mrcomic.engine.formats.base
+package io.leostrange.mrcomic.engine.api
 
 import io.leostrange.mrcomic.core.model.ComicFormat
 import java.io.InputStream
-import java.nio.charset.StandardCharsets
 
+/**
+ * Pure format detection by extension and magic bytes.
+ *
+ * Lives in engine-api so feature modules can re-detect formats without
+ * importing engine-formats.
+ */
 object FormatDetector {
     // Magic bytes
     private val ZIP_MAGIC  = byteArrayOf(0x50, 0x4B, 0x03, 0x04)
@@ -82,7 +87,7 @@ object FormatDetector {
     }
 
     private fun detectZipContainer(header: ByteArray): ComicFormat? {
-        val text = header.toString(StandardCharsets.ISO_8859_1)
+        val text = header.toString(Charsets.ISO_8859_1)
         return when {
             text.contains("application/epub+zip", ignoreCase = true) ||
                 text.contains("META-INF/container.xml", ignoreCase = true) -> ComicFormat.EPUB

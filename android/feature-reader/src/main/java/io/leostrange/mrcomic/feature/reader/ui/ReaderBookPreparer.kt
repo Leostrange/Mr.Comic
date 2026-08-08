@@ -20,8 +20,8 @@ import android.content.Context
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
-import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
+import io.leostrange.mrcomic.engine.api.ReaderFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
@@ -34,7 +34,7 @@ import javax.inject.Inject
  * reader preparation from ViewModel lifecycle and state management.
  */
 class ReaderBookPreparer @Inject constructor(
-    private val formatFactory: FormatFactory,
+    private val readerFactory: ReaderFactory,
 ) {
 
     /**
@@ -73,7 +73,7 @@ class ReaderBookPreparer @Inject constructor(
         val newReader = if (detectedFormat.isTextReadingFormat()) {
             textFormatReaderOpener(comic, resolvedPath, detectedFormat)
         } else {
-            formatFactory.createReader(resolvedPath, detectedFormat)
+            readerFactory.createReader(resolvedPath, detectedFormat)
         }
 
         val readerRendersHtmlContent =

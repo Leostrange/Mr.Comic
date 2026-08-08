@@ -11,7 +11,7 @@ import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.TranslationComparisonEngine
 import io.leostrange.mrcomic.core.domain.translation.TranslatorEngine
 import io.leostrange.mrcomic.core.model.TranslationTransportPreference
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 

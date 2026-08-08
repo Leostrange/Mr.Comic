@@ -1,14 +1,14 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
 
 /**
  * Text/HTML reader responsibilities extracted from [ReaderViewModel].
  */
 internal class TextReaderController(
     private val textWebtoonSessionController: TextWebtoonSessionController,
-    private val textPagePaginationController: TextPagePaginationController = TextPagePaginationController()
+    private val textPagePaginationController: TextPagePaginationController
 ) {
     private val htmlPageCache = object : LinkedHashMap<Int, CachedHtmlPage>(16, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, CachedHtmlPage>?): Boolean = size > 20
@@ -49,7 +49,7 @@ internal class TextReaderController(
 
     suspend fun ensureTextPagePagination(
         reader: FormatReader,
-        constraints: io.leostrange.mrcomic.engine.formats.text.pagination.TextPaginationConstraints,
+        constraints: io.leostrange.mrcomic.engine.api.TextPaginationConstraints,
         key: String
     ): TextPagePaginationSnapshot =
         textPagePaginationController.ensureBuilt(reader, constraints, key)

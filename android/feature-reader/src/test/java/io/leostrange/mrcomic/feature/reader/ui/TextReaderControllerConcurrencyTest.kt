@@ -17,8 +17,23 @@ class TextReaderControllerConcurrencyTest {
             builder = WebtoonDocumentBuilder { pages ->
                 TextWebtoonCachedDocument(html = pages.joinToString { it.html }, assetBasePath = null)
             }
-        )
+        ),
+        TextPagePaginationController(testSectionPaginator())
     )
+
+    private fun testSectionPaginator(): io.leostrange.mrcomic.engine.api.SectionPaginator =
+        object : io.leostrange.mrcomic.engine.api.SectionPaginator {
+            override suspend fun paginateSections(
+                sections: List<io.leostrange.mrcomic.engine.api.TextDocumentSection>,
+                constraints: io.leostrange.mrcomic.engine.api.TextPaginationConstraints
+            ): io.leostrange.mrcomic.engine.api.SectionPaginationResult =
+                io.leostrange.mrcomic.engine.api.SectionPaginationResult(
+                    sections = sections,
+                    pages = sections.mapIndexed { index, section ->
+                        io.leostrange.mrcomic.engine.api.TextPaginationSubPage(section.html, index, index)
+                    }
+                )
+        }
 
     /**
      * Bug #1 — htmlPageCache used accessOrder=true without synchronization. Concurrent

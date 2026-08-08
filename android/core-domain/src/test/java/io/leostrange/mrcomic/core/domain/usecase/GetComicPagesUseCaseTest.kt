@@ -3,8 +3,8 @@ package io.leostrange.mrcomic.core.domain.usecase
 import android.graphics.Bitmap
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatProvider
+import io.leostrange.mrcomic.engine.api.FormatReaderHandle
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -18,25 +18,22 @@ import org.junit.Test
 
 class GetComicPagesUseCaseTest {
 
-    private lateinit var formatFactory: FormatFactory
+    private lateinit var formatProvider: FormatProvider
     private lateinit var useCase: GetComicPagesUseCase
 
     @Before
     fun setUp() {
-        formatFactory = mockk(relaxed = true)
-        useCase = GetComicPagesUseCase(formatFactory)
+        formatProvider = mockk(relaxed = true)
+        useCase = GetComicPagesUseCase(formatProvider)
     }
 
     @Test
     fun invoke_returnsSuccess_whenReaderProvidesPages() = runTest {
         val mockBitmap1 = mockk<Bitmap>()
         val mockBitmap2 = mockk<Bitmap>()
-        val reader = mockk<FormatReader>(relaxed = true) {
-            coEvery { getPageCount() } returns 2
-            coEvery { getPage(0) } returns mockBitmap1
-            coEvery { getPage(1) } returns mockBitmap2
-        }
-        coEvery { formatFactory.createReader(any(), any()) } returns reader
+        val reader = mockk<FormatReaderHandle>(relaxed = true)
+        every { formatProvider.createReader(any(), any()) } returns reader
+        coEvery { formatProvider.getPages(reader) } returns listOf(mockBitmap1, mockBitmap2)
 
         val result = useCase("/path/to/comic.cbz", ComicFormat.CBZ)
 
@@ -49,7 +46,7 @@ class GetComicPagesUseCaseTest {
 
     @Test
     fun invoke_returnsError_whenFormatNotSupported() = runTest {
-        coEvery { formatFactory.createReader(any(), any()) } returns null
+        every { formatProvider.createReader(any(), any()) } returns null
 
         val result = useCase("/path/to/file.xyz", ComicFormat.UNKNOWN)
 
@@ -59,7 +56,9 @@ class GetComicPagesUseCaseTest {
 
     @Test
     fun invoke_returnsError_whenReaderThrows() = runTest {
-        coEvery { formatFactory.createReader(any(), any()) } throws RuntimeException("Corrupt file")
+        val reader = mockk<FormatReaderHandle>(relaxed = true)
+        every { formatProvider.createReader(any(), any()) } returns reader
+        coEvery { formatProvider.getPages(reader) } throws RuntimeException("Corrupt file")
 
         val result = useCase("/path/to/comic.cbz", ComicFormat.CBZ)
 
@@ -68,15 +67,12 @@ class GetComicPagesUseCaseTest {
     }
 
     @Test
-    fun invoke_filtersNullPages() = runTest {
+    fun invoke_returnsPagesFromProvider() = runTest {
         val mockBitmap = mockk<Bitmap>()
-        val reader = mockk<FormatReader>(relaxed = true) {
-            coEvery { getPageCount() } returns 3
-            coEvery { getPage(0) } returns mockBitmap
-            coEvery { getPage(1) } returns null
-            coEvery { getPage(2) } returns mockBitmap
-        }
-        coEvery { formatFactory.createReader(any(), any()) } returns reader
+        val reader = mockk<FormatReaderHandle>(relaxed = true)
+        every { formatProvider.createReader(any(), any()) } returns reader
+        // The provider contract already filters out null pages (see FormatProviderImpl).
+        coEvery { formatProvider.getPages(reader) } returns listOf(mockBitmap, mockBitmap)
 
         val result = useCase("/path/to/comic.cbz", ComicFormat.CBZ)
 
@@ -86,35 +82,32 @@ class GetComicPagesUseCaseTest {
 
     @Test
     fun invoke_closesReaderAfterUse() = runTest {
-        val reader = mockk<FormatReader>(relaxed = true) {
-            coEvery { getPageCount() } returns 1
-            coEvery { getPage(0) } returns mockk()
-        }
-        coEvery { formatFactory.createReader(any(), any()) } returns reader
+        val reader = mockk<FormatReaderHandle>(relaxed = true)
+        every { formatProvider.createReader(any(), any()) } returns reader
+        coEvery { formatProvider.getPages(reader) } returns listOf(mockk())
 
         useCase("/path/to/comic.cbz", ComicFormat.CBZ)
 
-        verify { reader.close() }
+        verify { formatProvider.closeReader(reader) }
     }
 
     @Test
     fun invoke_usesAutoDetect_whenFormatIsUnknown() = runTest {
-        val reader = mockk<FormatReader>(relaxed = true) {
-            coEvery { getPageCount() } returns 0
-        }
-        coEvery { formatFactory.createReader(any(), any()) } returns reader
+        val reader = mockk<FormatReaderHandle>(relaxed = true)
+        every { formatProvider.detectByExtension("/path/to/file.epub") } returns ComicFormat.EPUB
+        every { formatProvider.createReader(any(), any()) } returns reader
+        coEvery { formatProvider.getPages(reader) } returns emptyList()
 
         useCase("/path/to/file.epub", ComicFormat.UNKNOWN)
 
-        coVerify { formatFactory.createReader("/path/to/file.epub", any()) }
+        coVerify { formatProvider.createReader("/path/to/file.epub", ComicFormat.EPUB) }
     }
 
     @Test
     fun invoke_returnsEmptyList_whenZeroPages() = runTest {
-        val reader = mockk<FormatReader>(relaxed = true) {
-            coEvery { getPageCount() } returns 0
-        }
-        coEvery { formatFactory.createReader(any(), any()) } returns reader
+        val reader = mockk<FormatReaderHandle>(relaxed = true)
+        every { formatProvider.createReader(any(), any()) } returns reader
+        coEvery { formatProvider.getPages(reader) } returns emptyList()
 
         val result = useCase("/path/to/comic.cbz", ComicFormat.CBZ)
 

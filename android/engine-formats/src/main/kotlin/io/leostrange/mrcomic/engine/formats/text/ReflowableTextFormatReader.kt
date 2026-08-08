@@ -1,11 +1,13 @@
 package io.leostrange.mrcomic.engine.formats.text
 
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
+
 /**
- * Text formats that expose logical document sections before viewport pagination.
+ * Backward-compatible re-export. The canonical capability interface lives in
+ * engine-api so feature modules can type-check readers without importing
+ * engine-formats.
  */
-interface ReflowableTextFormatReader {
-    suspend fun getTextDocumentSections(): List<TextDocumentSection>
-}
+typealias ReflowableTextFormatReader = io.leostrange.mrcomic.engine.api.ReflowableTextFormatReader
 
 internal fun List<TextDocumentSection>.withSequentialIndices(): List<TextDocumentSection> =
     mapIndexed { index, section -> section.copy(index = index) }

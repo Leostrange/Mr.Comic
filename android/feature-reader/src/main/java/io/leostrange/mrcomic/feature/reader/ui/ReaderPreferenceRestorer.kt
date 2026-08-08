@@ -17,7 +17,7 @@ import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.RenderDeviceProfile
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntries
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSlot
 import io.leostrange.mrcomic.feature.reader.domain.preset.migrateLegacyReaderStyleSlotsToEntries

@@ -2,7 +2,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.*
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.api.TocEntry
 import io.leostrange.mrcomic.feature.reader.domain.enums.*
 import io.leostrange.mrcomic.feature.reader.domain.preset.*

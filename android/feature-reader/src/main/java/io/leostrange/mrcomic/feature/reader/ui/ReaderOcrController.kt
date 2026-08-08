@@ -2,8 +2,8 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import android.content.Context
 import android.util.Log
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
+import io.leostrange.mrcomic.engine.api.FormatReader
+import io.leostrange.mrcomic.engine.api.RenderDeviceTier
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +20,7 @@ internal class ReaderOcrController(
     private val _uiState: MutableStateFlow<ReaderUiState>,
     private val viewModelScope: CoroutineScope,
     private val pagePreloader: PagePreloader,
-    private val renderProfile: io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile,
+    private val renderProfile: io.leostrange.mrcomic.engine.api.RenderDeviceProfile,
     private val context: Context,
     private val _ocrPagePath: MutableSharedFlow<OcrLaunchRequest>,
     private val getPage: (Int, Int) -> android.graphics.Bitmap?,

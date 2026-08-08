@@ -52,8 +52,8 @@ import io.leostrange.mrcomic.core.ui.locale.appStringsForCode
 import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
 import io.leostrange.mrcomic.core.ui.performance.LocalPerformanceUiHints
 import io.leostrange.mrcomic.core.ui.performance.PerformanceUiHints
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
-import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.RenderDeviceTier
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.icons.AppIconManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers

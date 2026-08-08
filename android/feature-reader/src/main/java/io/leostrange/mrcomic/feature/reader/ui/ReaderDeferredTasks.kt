@@ -33,7 +33,7 @@ internal class ReaderDeferredTasks(
      */
     fun scheduleDeferredTocWarmup(
         delayMillis: Long = 450L,
-        getFormatReader: () -> io.leostrange.mrcomic.engine.formats.base.FormatReader?,
+        getFormatReader: () -> io.leostrange.mrcomic.engine.api.FormatReader?,
         isTocEmpty: () -> Boolean,
         loadToc: () -> Unit
     ) {
@@ -74,7 +74,7 @@ internal class ReaderDeferredTasks(
      */
     fun scheduleDeferredPageCountResolution(
         comic: Comic,
-        reader: io.leostrange.mrcomic.engine.formats.base.FormatReader,
+        reader: io.leostrange.mrcomic.engine.api.FormatReader,
         requestToken: Long,
         openingMode: ReadingMode,
         requestedStartPage: Int,
@@ -124,7 +124,7 @@ internal data class DeferredPageCountResult(
 )
 
 internal suspend fun resolveDeferredPageCountAfterOpen(
-    reader: io.leostrange.mrcomic.engine.formats.base.FormatReader,
+    reader: io.leostrange.mrcomic.engine.api.FormatReader,
     requestToken: Long,
     openingMode: ReadingMode,
     requestedStartPage: Int,

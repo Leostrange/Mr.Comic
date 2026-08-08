@@ -11,12 +11,11 @@ import io.leostrange.mrcomic.engine.api.TextPaginationConstraints
  */
 typealias TextPaginationConstraints = io.leostrange.mrcomic.engine.api.TextPaginationConstraints
 
-data class TextPaginationSubPage(
-    val html: String,
-    val index: Int,
-    /** Source section index before viewport sub-pagination. */
-    val sectionIndex: Int = 0
-)
+/**
+ * Re-export from engine-api. The canonical definition is in
+ * [io.leostrange.mrcomic.engine.api.TextPaginationSubPage].
+ */
+typealias TextPaginationSubPage = io.leostrange.mrcomic.engine.api.TextPaginationSubPage
 
 data class TextPaginationResult(
     val subPages: List<TextPaginationSubPage>
