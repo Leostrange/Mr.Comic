@@ -162,3 +162,13 @@
 - Срез 10 (коммит `TBD`): аудит Library stateless-хелперов — Filtering/Sorting/StatusText уже покрыты собственными тестами; Display (`buildSections`/`buildSeparatedComicDisplayItems`/`libraryContentSection`/`buildFolderItems`/`sortFolderItems`/путевые утилиты/`buildBreadcrumbs`) и Helpers (`vmTr`/`localizedError`/`normalizeFolderId`/`parentFolderPath`/`folderRepresentativeName`/`normalizeLibraryViewMode`) закрыты новым `LibraryStatelessHelpersTest` (20 тестов). Мёртвых статeless-хелперов не найдено.
 - Проверка (2026-08-09): `:feature-settings:testDebugUnitTest` + `:feature-library:testDebugUnitTest` + detekt обоих модулей (0 smells) + `:app:assembleDebug` — BUILD SUCCESSFUL.
 
+## В работе (2026-08-09) — 4.2 разрезы ReaderViewModel и остальные ViewModel
+
+Паттерн 4.1 (контроллер с явными зависимостями + собственный unit-тест, AGENTS.md) переносится на feature-reader: `ReaderViewModel.kt` (819 строк) уже использует контроллеры (chrome/translation/footnote/bookmark/highlight/eyeRest/ocr/navigation/readingMode/progress/warmup/saveQuote/pageLoader/sessionManager), но в теле остались два монолита:
+
+- Срез 1: **book-opening pipeline** в `ReaderBookOpeningController` — `loadComicFromSource` → `openComic` → `resetForBookOpen` → `prepareBook` → `configureOpening` → `applyOpeningState` → `startReaderSession` → `loadInitialPages` → `applyDeferredPageCount` → `schedulePostOpenTasks` (строки ~303-610). Зависимости: репозитории, readerBookPreparer, sessionManager, orchestrator, progressController, chrome/translation контроллеры + scope + `_uiState`.
+- Срез 2: **page-html cache/warmup** в `ReaderPageCacheController` — `refreshAdjacentHtmlPages`/`getOrLoadHtmlPage`/`prewarmHtmlPagesAround`/`loadToc`/`clearHtmlPageCache` (строки ~697-775).
+- Срез 3: аудит `AudiobookPlayerViewModel` (357 строк, feature-library) — вынос операций проигрывателя.
+- Срез 4: аудит `OpdsCatalogViewModel` (160 строк, feature-library).
+- Ограничение (из AGENTS.md): один срез = один контроллер + собственный unit-тест до подключения к ViewModel/UI.
+
