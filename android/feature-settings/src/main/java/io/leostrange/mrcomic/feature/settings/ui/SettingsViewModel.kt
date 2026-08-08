@@ -45,7 +45,6 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
-import io.leostrange.mrcomic.core.data.dictionary.DictionaryAssetCatalog
 import io.leostrange.mrcomic.core.domain.util.LibraryViewModeKey
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.domain.util.normalizeLibraryViewModeKey
@@ -396,39 +395,40 @@ class SettingsViewModel @Inject constructor(
 
     // Phase X (2026-08-04): backup/cache/repair → SettingsViewModelBackup.kt.
 
-    // Dictionary download
+    // Dictionary download state
+    private val _dictionaryDownloadState = MutableStateFlow(DictionaryDownloadState())
+    val dictionaryDownloadState: StateFlow<DictionaryDownloadState> = _dictionaryDownloadState
+
     fun downloadAllDictionaries() {
         viewModelScope.launch {
-            uiState.update { it.copy(
-                isDownloadingDictionary = true,
-                dictionaryProgress = emptyMap()
-            ) }
+            _dictionaryDownloadState.value = DictionaryDownloadState(
+                isDownloading = true
+            )
             try {
                 val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
                 val downloaded = mutableSetOf<String>()
                 allLanguages.forEach { lang ->
-                    uiState.update { it.copy(downloadingDictionaryName = lang) }
+                    _dictionaryDownloadState.update { it.copy(currentLanguage = lang) }
                     val result = dictionaryDownloader.ensureDictionary(lang) { progress ->
-                        uiState.update { state ->
+                        _dictionaryDownloadState.update { state ->
+                            state.copy(progress = state.progress + (lang to progress))
+                        }
+                    }
+                    if (result != null) {
+                        downloaded.add(lang)
+                        _dictionaryDownloadState.update { state ->
                             state.copy(
-                                dictionaryProgress = state.dictionaryProgress + (lang to progress)
+                                downloadedLanguages = state.downloadedLanguages + lang,
+                                progress = state.progress + (lang to 100)
                             )
                         }
                     }
-                    if (result != null) downloaded.add(lang)
                 }
-                uiState.update { it.copy(
-                    isDownloadingDictionary = false,
-                    downloadingDictionaryName = null,
-                    downloadedDictionaries = downloaded.toSet(),
-                    dictionaryProgress = emptyMap()
-                ) }
+                _dictionaryDownloadState.value = DictionaryDownloadState(
+                    downloadedLanguages = downloaded.toSet()
+                )
             } catch (e: Exception) {
-                uiState.update { it.copy(
-                    isDownloadingDictionary = false,
-                    downloadingDictionaryName = null,
-                    dictionaryProgress = emptyMap()
-                ) }
+                _dictionaryDownloadState.value = DictionaryDownloadState()
             }
         }
     }

@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.core.domain.translation
 
-import io.leostrange.mrcomic.core.interfaces.dictionary.DictionaryRepository
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryRepository
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.domain.util.runCatchingResult
 import io.leostrange.mrcomic.core.model.DictionaryEntry
