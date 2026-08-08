@@ -86,6 +86,17 @@ class LibraryViewModel @Inject constructor(
         )
     }
 
+    /** Audiobook observation/import/CRUD (4.1). */
+    internal val audiobookController: LibraryAudiobookController by lazy {
+        LibraryAudiobookController(
+            audiobookRepository = audiobookRepository,
+            context = context,
+            scope = viewModelScope,
+            uiState = _uiState,
+            repairedAudiobookCoverIds = repairedAudiobookCoverIds,
+        )
+    }
+
     /** CRUD/import operations extracted into an explicit-dependency controller (4.1). */
     internal val crudController: LibraryCrudController by lazy {
         LibraryCrudController(
