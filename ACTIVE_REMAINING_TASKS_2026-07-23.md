@@ -1,6 +1,6 @@
 # Активный остаток задач Mr.Comic
 
-Дата обновления: 2026-07-23
+Дата обновления: 2026-08-09
 
 Это рабочая точка входа для продолжения. Подробные продуктовые описания остаются в
 `TASKLIST_01_READER_EXPERIENCE.md` ... `TASKLIST_05_PLATFORM_FOUNDATION.md`, а
@@ -126,4 +126,24 @@
 3. Выполнить ARC-09b с unit-тестами.
 4. Выполнить ARC-10 с unit-тестами.
 5. Вернуться к page/vertical QA-матрице и обновить этот документ только зелёными фактами.
+
+---
+
+## Выполнено (2026-08-09) — границы модулей (аудит 3.3 / 3.4)
+
+### 3.3 — feature-reader больше не обходит engine-api
+
+- Контракты переехали в `engine-api`: `FormatReader` (с `BaseFormatReader`/`RasterPageReader`/`TextContentReader`), `LegacyFormatSessionAccess`, `FormatDetector`, `RenderDeviceProfile`/`RenderDeviceTier`, `EpubReadablePath`, `ReflowableTextFormatReader`, новые `ReaderFactory` и `SectionPaginator` (+ `TextPaginationSubPage`/`SectionPaginationResult`).
+- Реализации остались в `engine-formats`; удалённые типы пере-экспортированы typealias'ами (`base/FormatTypes.kt` и по пакетам) для обратной совместимости.
+- В main-коде `feature-reader` не осталось импортов `engine.formats`; зависимость модуля понижена до `testImplementation`. `engine-rendering` и `app` переведены на engine-api; AGENTS.md обновлён.
+
+### 3.4 — инверсия core-domain завершена, тесты зелёные
+
+- `:core-domain:testDebugUnitTest` снова собирается и проходит: 7 тестовых файлов приведены к контрактам `core-interfaces`/`core-model` (DailyReadingGoalPolicyTest, GamificationMetricsSnapshotTest, MrComicMascotStateTest, ReaderCheckpointTrailPolicyTest, AddComicUseCaseTest, SaveReadingProgressUseCaseTest, ScanFolderUseCaseTest); GetComicPagesUseCaseTest переведён на `FormatProvider`.
+
+### 3.1 — попутный фикс
+
+- `SettingsViewModelSmokeTest` (feature-settings) обновлён под параметр `dictionaryDownloader` конструктора `SettingsViewModel`.
+
+Проверка: `testDebugUnitTest` + `detekt` по всем 16 модулям — зелёные.
 
