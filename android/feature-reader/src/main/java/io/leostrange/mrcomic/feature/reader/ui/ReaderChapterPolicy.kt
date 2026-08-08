@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 
 /** Resolves a chapter from an engine page without relying on reader UI state. */
 internal object ReaderChapterPolicy {

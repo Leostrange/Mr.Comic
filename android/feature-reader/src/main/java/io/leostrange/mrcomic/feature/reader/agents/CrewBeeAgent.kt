@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.agents
 
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 
 /**
  * CrewBee — оркестрация AI-агентов в команды.

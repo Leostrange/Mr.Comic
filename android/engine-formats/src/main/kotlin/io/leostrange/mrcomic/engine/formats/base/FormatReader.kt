@@ -2,21 +2,8 @@ package io.leostrange.mrcomic.engine.formats.base
 
 import android.graphics.Bitmap
 import io.leostrange.mrcomic.core.model.ComicFormat
-/** One entry in the book's table of contents. */
-data class TocEntry(
-    val title: String,
-    val pageIndex: Int,
-    val anchorId: String? = null,
-    val sectionIndex: Int = -1,
-    val charOffset: Int = -1
-)
-
-/** Binary web resource used by HTML-based readers through WebViewAssetLoader. */
-data class FormatReaderWebResource(
-    val mimeType: String,
-    val bytes: ByteArray,
-    val encoding: String? = null
-)
+import io.leostrange.mrcomic.engine.api.TocEntry
+import io.leostrange.mrcomic.engine.api.FormatReaderWebResource
 
 interface FormatReader : BaseFormatReader, RasterPageReader, TextContentReader {
     override fun rendersHtmlContent(): Boolean = false

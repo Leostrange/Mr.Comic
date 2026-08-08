@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.engine.formats.text.TextDocumentSection
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
 
 /**
  * Stable text-reader session snapshot consumed by PAGE/WEBTOON containers.

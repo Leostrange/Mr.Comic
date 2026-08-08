@@ -2,6 +2,8 @@ package io.leostrange.mrcomic.engine.formats.base
 
 import android.graphics.Bitmap
 import io.leostrange.mrcomic.core.model.ComicFormat
+import io.leostrange.mrcomic.engine.api.TocEntry
+import io.leostrange.mrcomic.engine.api.FormatReaderWebResource
 
 /**
  * Base contract shared by all format readers.

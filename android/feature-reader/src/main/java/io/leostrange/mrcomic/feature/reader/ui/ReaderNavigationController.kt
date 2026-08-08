@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator

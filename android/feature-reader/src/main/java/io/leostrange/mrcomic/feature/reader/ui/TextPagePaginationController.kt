@@ -2,9 +2,9 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.text.ReflowableTextFormatReader
-import io.leostrange.mrcomic.engine.formats.text.TextDocumentSection
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
 import io.leostrange.mrcomic.engine.formats.text.pagination.DocumentTextPaginator
-import io.leostrange.mrcomic.engine.formats.text.pagination.TextPaginationConstraints
+import io.leostrange.mrcomic.engine.api.TextPaginationConstraints
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
