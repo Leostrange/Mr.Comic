@@ -618,71 +618,24 @@ fun LibraryScreen(
                         }
 
                         item(key = "library_stats", span = { GridItemSpan(maxLineSpan) }) {
-                            if (uiState.contentSection == LibraryContentSection.QUOTES) {
-                                QuoteStatsBar(
-                                    totalQuotes = uiState.totalQuoteCount,
-                                    sourceCount = uiState.quoteSourceCount,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            } else if (isAchievementSection) {
-                                MrComicHubCard(
-                                    unlockedCount = unlockedCount,
-                                    totalCount = visibleAchievementTotal,
-                                    mascotState = mascotState,
-                                    nextAchievement = activeDiscoveryAchievement,
-                                    questFeedback = visibleQuestFeedback,
-                                    dailyReadingGoalState = uiState.dailyReadingGoalState,
-                                    mascotProgress = uiState.mascotProgress,
-                                    stagePreview = stagePreview,
-                                    totalTitles = uiState.allComicsRawCount,
-                                    completedTitles = uiState.completedComicCount,
-                                    bookmarkedTitles = uiState.bookmarkedComicCount,
-                                    quotesCount = uiState.totalQuoteCount,
-                                    authorCount = uniqueAuthorCount,
-                                    genreCount = uniqueGenreCount,
-                                    secretUnlocked = uiState.secretCatUnlocked,
-                                    recentComic = uiState.recentlyRead.firstOrNull(),
-                                    nextAchievementHintAction = activeDiscoveryAction,
-                                    preferredSeriesName = preferredQuestSeriesName,
-                                    preferredCollectionQuery = preferredQuestCollectionQuery,
-                                    onOpenRecent = {
-                                        uiState.recentlyRead.firstOrNull()?.let { comic ->
-                                            onComicClick(comic.id)
-                                        }
-                                    },
-                                    onOpenFiles = {
-                                        viewModel.setContentSection(LibraryContentSection.FILES)
-                                    },
-                                    onOpenSeries = {
-                                        viewModel.setContentSection(LibraryContentSection.FILES)
-                                        viewModel.search("")
-                                        viewModel.setGroupBy(GroupByMode.SERIES)
-                                    },
-                                    onOpenCollection = { query ->
-                                        viewModel.setContentSection(LibraryContentSection.FILES)
-                                        viewModel.setGroupBy(GroupByMode.NONE)
-                                        viewModel.search(query)
-                                    },
-                                    onOpenProgress = openProgressProfile,
-                                    onDismissStagePreview = viewModel::acknowledgeMascotStagePreview,
-                                    onDismissQuestFeedback = { activeQuestFeedback = null },
-                                    showMascot = uiState.mascotUiEnabled,
-                                    appLanguage = uiState.appLanguage,
-                                    searchActive = uiState.searchQuery.isNotBlank(),
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            } else if (
-                                uiState.contentSection != LibraryContentSection.ACHIEVEMENTS &&
-                                uiState.contentSection != LibraryContentSection.FILES
-                            ) {
-                                val activeComics = if (isBookmarkSection) uiState.bookmarkedComics else uiState.comics
-                                LibraryStatsBar(
-                                    totalItems = if (isBookmarkSection) uiState.totalBookmarkedCount else uiState.totalComicCount,
-                    completedCount = activeComics.count { it.isReadCompleted() },
-                    inProgressCount = activeComics.count { it.isReadingInProgress() },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
+                            LibraryStatsGridContent(
+                                uiState = uiState,
+                                viewModel = viewModel,
+                                unlockedCount = unlockedCount,
+                                visibleAchievementTotal = visibleAchievementTotal,
+                                mascotState = mascotState,
+                                activeDiscoveryAchievement = activeDiscoveryAchievement,
+                                visibleQuestFeedback = visibleQuestFeedback,
+                                stagePreview = stagePreview,
+                                uniqueAuthorCount = uniqueAuthorCount,
+                                uniqueGenreCount = uniqueGenreCount,
+                                preferredQuestSeriesName = preferredQuestSeriesName,
+                                preferredQuestCollectionQuery = preferredQuestCollectionQuery,
+                                activeDiscoveryAction = activeDiscoveryAction,
+                                openProgressProfile = openProgressProfile,
+                                onComicClick = onComicClick,
+                                onDismissQuestFeedback = { activeQuestFeedback = null },
+                            )
                         }
 
                         if (isAchievementSection) {
