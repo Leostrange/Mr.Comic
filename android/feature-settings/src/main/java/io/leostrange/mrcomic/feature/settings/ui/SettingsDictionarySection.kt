@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
@@ -29,6 +30,7 @@ internal fun DictionarySection(
     modifier: Modifier = Modifier
 ) {
     val language = strings.languageCode
+    val downloadState by viewModel.dictionaryDownloadState.collectAsStateWithLifecycle()
     
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -41,13 +43,13 @@ internal fun DictionarySection(
                 hint = dictionarySectionHint(language),
                 items = listOf(
                     dictionaryStatusLabel(language) to "10",
-                    dictionaryDownloadedLabel(language) to "${uiState.downloadedDictionaries.size}/10"
+                    dictionaryDownloadedLabel(language) to "${downloadState.downloadedLanguages.size}/10"
                 )
             )
         }
         item {
             DictionaryDownloadCard(
-                uiState = uiState,
+                downloadState = downloadState,
                 strings = strings,
                 viewModel = viewModel
             )
@@ -58,12 +60,12 @@ internal fun DictionarySection(
 
 @Composable
 private fun DictionaryDownloadCard(
-    uiState: SettingsUiState,
+    downloadState: DictionaryDownloadState,
     strings: AppStrings,
     viewModel: SettingsViewModel
 ) {
     val language = strings.languageCode
-    val isDownloading = uiState.isDownloadingDictionary
+    val isDownloading = downloadState.isDownloading
     
     SettingsCard(title = dictionaryDownloadTitle(language)) {
         Text(
@@ -75,7 +77,7 @@ private fun DictionaryDownloadCard(
         
         if (isDownloading) {
             // Show overall progress
-            val totalProgress = uiState.dictionaryProgress.values.average().toInt()
+            val totalProgress = downloadState.progress.values.average().toInt()
             Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -90,7 +92,7 @@ private fun DictionaryDownloadCard(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = uiState.downloadingDictionaryName?.let { lang ->
+                        text = downloadState.currentLanguage?.let { lang ->
                             "${languageNames[lang] ?: lang}... $totalProgress%"
                         } ?: "Downloading...",
                         style = MaterialTheme.typography.bodyMedium
@@ -126,8 +128,8 @@ private fun DictionaryDownloadCard(
         
         // List of downloaded dictionaries
         DictionaryStatusList(
-            downloadedLanguages = uiState.downloadedDictionaries,
-            progressMap = uiState.dictionaryProgress,
+            downloadedLanguages = downloadState.downloadedLanguages,
+            progressMap = downloadState.progress,
             isDownloading = isDownloading,
             language = language
         )

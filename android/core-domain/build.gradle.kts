@@ -15,6 +15,7 @@ android {
 dependencies {
     implementation(project(":core-model"))
     implementation(project(":core-interfaces"))
+    implementation(project(":core-data"))
     implementation(project(":engine-formats"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.datastore.preferences)

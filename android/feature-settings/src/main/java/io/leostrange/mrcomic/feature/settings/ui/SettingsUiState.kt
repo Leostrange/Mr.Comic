@@ -208,11 +208,6 @@ data class SettingsUiState(
     val bookmarkedComics: Int = 0,
     val rawAuthors: List<String?> = emptyList(),
     val rawGenres: List<String?> = emptyList(),
-    // Словари
-    val isDownloadingDictionary: Boolean = false,
-    val downloadingDictionaryName: String? = null,
-    val downloadedDictionaries: Set<String> = emptySet(),
-    val dictionaryProgress: Map<String, Int> = emptyMap() // language -> progress (0-100)
 ) {
     val readerTtsProvider: String
         get() = readerTtsConfig.storedProvider
@@ -247,6 +242,14 @@ data class SettingsUiState(
     val translationExplainEnabled: Boolean
         get() = translationConfig.explainEnabled
 }
+
+/* ──── DictionaryDownloadState (data class) ──── */
+data class DictionaryDownloadState(
+    val isDownloading: Boolean = false,
+    val currentLanguage: String? = null,
+    val downloadedLanguages: Set<String> = emptySet(),
+    val progress: Map<String, Int> = emptyMap() // language -> progress (0-100)
+)
 
 /* ──── StatusState (data class) ──── */
 internal data class StatusState(
