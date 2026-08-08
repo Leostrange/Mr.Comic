@@ -147,3 +147,11 @@
 
 Проверка: `testDebugUnitTest` + `detekt` по всем 16 модулям — зелёные.
 
+## Выполнено (2026-08-09) — 4.1 делегаты в Library/Settings
+
+- Срез 1 (коммит `161a41d`): CRUD/import/folder-deletion вынесены из `LibraryViewModelCrud.kt` в `LibraryCrudController` (репозитории + scope + `MutableStateFlow<LibraryUiState>` + лямбды `rawComics`/`openFolder`). Публичное API ViewModel сохранено; `runCrud` перенесён в контроллер. Добавлены `mockk`+`kotlinx-coroutines-test` в feature-library и `LibraryCrudControllerTest` (8 тестов).
+- Срез 2 (коммит `81d9b45`): пресеты тем Library/app/reader и zone/look-пресеты вынесены из `SettingsViewModelPresets.kt` + apply/persist-хелперы из `SettingsViewModelHelpers.kt` в `SettingsPresetsController` (preferences + themePreferencesRepository + scope + uiState + лямбда `persistNullableColor`). ViewModel сохраняет публичное API через делегирующие extension-функции. `SettingsPresetsControllerTest` (8 тестов, Robolectric для org.json).
+- Срез 3 (коммит `4b24ea5`): `applyFiltersAndSort` (фильтрация/сортировка/группировка по папкам и сериям/статистика/маскот-прогресс) вынесен из тела `LibraryViewModel` в чистый `LibraryContentPipeline` (derive: состояние + сырые списки → новое `LibraryUiState`). ViewModel хранит только запись состояния и аналитику смены стадии. `LibraryContentPipelineTest` (7 тестов).
+- Проверка: `testDebugUnitTest` + `detekt` по feature-library/feature-settings + `:app:compileDebugKotlin` — зелёные.
+- Остаток 4.1: следующие кандидаты — Settings-контроллеры (Backup: export/import/cache; popup-preferences сеттеры; translation flows) и Library (`observe*` flow-наблюдатели; вынос остальных сеттеров из тела ViewModel).
+
