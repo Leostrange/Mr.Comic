@@ -9,7 +9,8 @@ import javax.inject.Singleton
 
 @Singleton
 class DictionaryRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val downloader: DictionaryDownloader
 ) {
     private val lookupCache = object : LinkedHashMap<String, List<DictionaryLookupCard>>(128, 0.75f, true) {
         override fun removeEldestEntry(
@@ -127,17 +128,14 @@ class DictionaryRepository @Inject constructor(
             if (daoCache.containsKey(language)) return daoCache[language]
         }
 
-        val config = DictionaryAssetCatalog.configForLanguage(language)
-        val dao = if (config != null && hasAsset(config.assetPath)) {
+        val databaseFile = downloader.ensureDictionary(language)
+        val dao = if (databaseFile != null) {
             withContext(Dispatchers.IO) {
-                val databaseFile = DictionaryAssetExtractor.ensureExtractedDatabase(
-                    context = context,
-                    config = config,
-                )
+                val config = DictionaryAssetCatalog.configForLanguage(language)
                 DictionaryDatabase.fromFile(
                     context = context,
                     databaseFile = databaseFile,
-                    databaseName = config.databaseName,
+                    databaseName = config?.databaseName ?: "dictionary_${language}_room_asset_v3.db",
                 ).dictionaryDao()
             }
         } else {
@@ -149,11 +147,6 @@ class DictionaryRepository @Inject constructor(
         }
         return dao
     }
-
-    private fun hasAsset(assetPath: String): Boolean = runCatching {
-        context.assets.open(assetPath).use { }
-        true
-    }.getOrDefault(false)
 }
 
 private fun DictionaryEntryBundle.toLookupCard(): DictionaryLookupCard {
