@@ -4,6 +4,7 @@ import com.google.gson.Gson
 import io.leostrange.mrcomic.engine.api.EpubCacheEntry
 import io.leostrange.mrcomic.engine.api.EpubCacheStore
 import io.leostrange.mrcomic.engine.formats.base.log.safeLogW
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -84,7 +85,7 @@ internal object EpubCacheSerializer {
         if (cacheKey == null) return null
         val store = cacheStore ?: return null
         val cachedEntry = runCatching {
-            runBlocking { store.getByPath(cacheKey.filePath) }
+            runBlocking(Dispatchers.IO) { store.getByPath(cacheKey.filePath) }
         }.getOrElse { error ->
             safeLogW(TAG, "Failed to load EPUB manifest cache", error)
             null
@@ -108,7 +109,7 @@ internal object EpubCacheSerializer {
             return
         }
         runCatching {
-            runBlocking {
+            runBlocking(Dispatchers.IO) {
                 store.upsert(
                     EpubCacheEntry(
                         filePath = cacheKey.filePath,
@@ -132,7 +133,7 @@ internal object EpubCacheSerializer {
         if (cacheKey == null) return null
         val store = cacheStore ?: return null
         val cachedEntry = runCatching {
-            runBlocking { store.getByPath(cacheKey.filePath) }
+            runBlocking(Dispatchers.IO) { store.getByPath(cacheKey.filePath) }
         }.getOrElse { error ->
             safeLogW(TAG, "Failed to load EPUB structure cache", error)
             null
@@ -155,7 +156,7 @@ internal object EpubCacheSerializer {
             return
         }
         runCatching {
-            runBlocking {
+            runBlocking(Dispatchers.IO) {
                 store.upsert(
                     EpubCacheEntry(
                         filePath = cacheKey.filePath,
