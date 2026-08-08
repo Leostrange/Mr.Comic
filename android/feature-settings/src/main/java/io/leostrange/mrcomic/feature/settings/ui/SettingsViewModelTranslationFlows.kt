@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.mapLatest
 // Phase W-Z (2026-08-07): Translation config, network, and availability flows
 // extracted from SettingsViewModelFlows.
 
-internal fun SettingsViewModel.createTranslationConfigFlow() = combine(
+internal fun SettingsUiStateFlowBuilder.createTranslationConfigFlow() = combine(
         preferences.get(PreferencesKeys.TRANSLATION_MODE, "OFF"),
         preferences.get(PreferencesKeys.TRANSLATION_SOURCE_LANGUAGE, "AUTO"),
         preferences.get(PreferencesKeys.TRANSLATION_TARGET_LANGUAGE, "APP"),
@@ -38,10 +38,10 @@ internal fun SettingsViewModel.createTranslationConfigFlow() = combine(
         )
     }
 
-internal fun SettingsViewModel.createAppLanguageFlow() = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
+internal fun SettingsUiStateFlowBuilder.createAppLanguageFlow() = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
         .map(::normalizeAppLanguageCode)
 
-internal fun SettingsViewModel.createNetworkAvailableFlow(): Flow<Boolean> = callbackFlow {
+internal fun SettingsUiStateFlowBuilder.createNetworkAvailableFlow(): Flow<Boolean> = callbackFlow {
         val connectivityManager = context.getSystemService(ConnectivityManager::class.java)
         if (connectivityManager == null) {
             trySend(false)
@@ -77,7 +77,7 @@ internal fun SettingsViewModel.createNetworkAvailableFlow(): Flow<Boolean> = cal
         }
     }.distinctUntilChanged()
 
-internal fun SettingsViewModel.createTranslationAvailabilityFlow(): Flow<SettingsTranslationAvailabilityState> = combine(
+internal fun SettingsUiStateFlowBuilder.createTranslationAvailabilityFlow(): Flow<SettingsTranslationAvailabilityState> = combine(
         createTranslationConfigFlow(),
         createAppLanguageFlow(),
         createNetworkAvailableFlow()

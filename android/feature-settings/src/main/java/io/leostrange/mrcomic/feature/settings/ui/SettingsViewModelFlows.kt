@@ -43,7 +43,7 @@ import kotlinx.coroutines.flow.map
 // Reader TTS/presets/perf → SettingsViewModelReaderFlows.kt
 
     // Extras 1: библиотека + базовые настройки ридера
-internal fun SettingsViewModel.createExtrasFlow1a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow1a() = combine(
         preferences.get(PreferencesKeys.LIBRARY_GRID_COLUMNS, 3).map { it.coerceIn(2, 4) },
         preferences.get(PreferencesKeys.LIBRARY_VIEW_MODE, ""),
         preferences.get(PreferencesKeys.LIBRARY_VIEW_GRID, true)
@@ -54,7 +54,7 @@ internal fun SettingsViewModel.createExtrasFlow1a() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow1() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow1() = combine(
         createExtrasFlow1a(),
         preferences.get(PreferencesKeys.READER_PRELOAD_PAGES, 3).map { it.coerceIn(2, 8) },
         preferences.get(PreferencesKeys.READER_IMMERSIVE_MODE, false),
@@ -69,7 +69,7 @@ internal fun SettingsViewModel.createExtrasFlow1() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow1b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow1b() = combine(
         preferences.get(PreferencesKeys.READER_CHROME_AUTO_HIDE, true),
         preferences.get(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).map { it.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f) },
         preferences.get(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).map { it.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f) },
@@ -78,7 +78,7 @@ internal fun SettingsViewModel.createExtrasFlow1b() = combine(
         listOf<Any>(autoHide, topOpacity, bottomOpacity, toolbarBlur)
     }
 
-internal fun SettingsViewModel.createExtrasFlow2a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow2a() = combine(
         preferences.get(PreferencesKeys.APP_LANGUAGE, "ru").map(::normalizeAppLanguageCode),
         preferences.get(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             .map { ReadingPreset.fromStored(it).name },
@@ -89,18 +89,18 @@ internal fun SettingsViewModel.createExtrasFlow2a() = combine(
         listOf<Any>(lang, readerPreset, fontScale, uiDensityScale, cornerRadius)
     }
 
-internal fun SettingsViewModel.createExtrasFlow2b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow2b() = combine(
         preferences.get(PreferencesKeys.UI_REDUCED_MOTION, false),
         preferences.get(PreferencesKeys.UI_REDUCED_VISUAL_EFFECTS, false)
     ) { reducedMotion, reducedEffects ->
         listOf<Any>(reducedMotion, reducedEffects)
     }
 
-internal fun SettingsViewModel.createExtrasFlow2() = combine(createExtrasFlow2a(), createExtrasFlow2b()) { left, right -> left + right }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow2() = combine(createExtrasFlow2a(), createExtrasFlow2b()) { left, right -> left + right }
 
-internal fun SettingsViewModel.createExtrasFlow12() = combine(createExtrasFlow1(), createExtrasFlow1b(), createExtrasFlow2()) { e1, e1b, e2 -> e1 + e1b + e2 }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow12() = combine(createExtrasFlow1(), createExtrasFlow1b(), createExtrasFlow2()) { e1, e1b, e2 -> e1 + e1b + e2 }
 
-internal fun SettingsViewModel.createExtrasFlow3a2() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow3a2() = combine(
         preferences.get(PreferencesKeys.OCR_DIALOGUES_ONLY, false),
         preferences.get(PreferencesKeys.OCR_INCLUDE_SFX, true)
     ) { ocrDialoguesOnly, ocrIncludeSfx ->
@@ -110,7 +110,7 @@ internal fun SettingsViewModel.createExtrasFlow3a2() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow3a3() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow3a3() = combine(
         preferences.get(PreferencesKeys.OCR_OVERLAY_OPACITY, 0.85f).map { it.coerceIn(0.45f, 1.0f) },
         preferences.get(PreferencesKeys.OCR_OVERLAY_FONT_SCALE, 1.0f).map { it.coerceIn(0.85f, 1.3f) },
         preferences.get(PreferencesKeys.OCR_OVERLAY_STYLE, "AUTO")
@@ -118,7 +118,7 @@ internal fun SettingsViewModel.createExtrasFlow3a3() = combine(
         listOf<Any>(overlayOpacity, overlayFontScale, overlayStyle)
     }
 
-internal fun SettingsViewModel.createExtrasFlow3b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow3b() = combine(
         preferences.get(PreferencesKeys.OCR_LANGUAGE, "JA"),
         preferences.get(PreferencesKeys.AUTO_BACKUP_ENABLED, false),
         preferences.get(PreferencesKeys.READER_PAGE_SOUND, false),
@@ -127,11 +127,11 @@ internal fun SettingsViewModel.createExtrasFlow3b() = combine(
         listOf<Any>(ocrLanguage, autoBackup, pageSound, tileSize)
     }
 
-internal fun SettingsViewModel.createExtrasFlow3() = combine(createTranslationConfigFlow(), createExtrasFlow3a2(), createExtrasFlow3a3(), createExtrasFlow3b()) { translationConfig, middle, overlay, right ->
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow3() = combine(createTranslationConfigFlow(), createExtrasFlow3a2(), createExtrasFlow3a3(), createExtrasFlow3b()) { translationConfig, middle, overlay, right ->
         listOf<Any>(translationConfig) + middle + overlay + right
     }
 
-internal fun SettingsViewModel.createExtrasFlow4() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow4() = combine(
         preferences.get(PreferencesKeys.READER_PAGE_SOUND_STYLE, "PAPER"),
         preferences.get(PreferencesKeys.UI_SOUND_ENABLED, false),
         preferences.get(PreferencesKeys.UI_SOUNDS_VOLUME, 0.6f).map { it.coerceIn(0f, 1f) },
@@ -141,7 +141,7 @@ internal fun SettingsViewModel.createExtrasFlow4() = combine(
         listOf<Any>(soundStyle, uiSoundEnabled, uiSoundsVolume, libraryCardStyle, libraryRecentStripPosition)
     }
 
-internal fun SettingsViewModel.createExtrasFlow5() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow5() = combine(
         preferences.get(PreferencesKeys.LIBRARY_SHOW_PROGRESS, true),
         preferences.get(PreferencesKeys.LIBRARY_COVER_SCALE, DEFAULT_LIBRARY_COVER_SCALE),
         preferences.get(PreferencesKeys.LIBRARY_BACKDROP_STRENGTH, DEFAULT_LIBRARY_BACKDROP_STRENGTH).map { it.coerceIn(0f, 1f) },
@@ -157,7 +157,7 @@ internal fun SettingsViewModel.createExtrasFlow5() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow6a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow6a() = combine(
         preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_STYLE, DEFAULT_LIBRARY_BACKGROUND_STYLE),
         preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_IMAGE_URI, ""),
         preferences.get(PreferencesKeys.LIBRARY_SHELF_STYLE, DEFAULT_LIBRARY_SHELF_STYLE),
@@ -167,7 +167,7 @@ internal fun SettingsViewModel.createExtrasFlow6a() = combine(
         listOf<Any>(backgroundStyle, backgroundImageUri, shelfStyle, thumbnailMode, graphicCoverStyle)
     }
 
-internal fun SettingsViewModel.createExtrasFlow6b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow6b() = combine(
         preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_BLUR, DEFAULT_LIBRARY_BACKGROUND_BLUR).map { it.coerceIn(0f, 1f) },
         preferences.get(PreferencesKeys.LIBRARY_BACKGROUND_VEIL, DEFAULT_LIBRARY_BACKGROUND_VEIL).map { it.coerceIn(0f, 1f) },
         preferences.get(PreferencesKeys.LIBRARY_SHELF_DEPTH, DEFAULT_LIBRARY_SHELF_DEPTH).map { it.coerceIn(0f, 1f) },
@@ -176,7 +176,7 @@ internal fun SettingsViewModel.createExtrasFlow6b() = combine(
         listOf<Any>(backgroundBlur, backgroundVeil, shelfDepth, cardShadow)
     }
 
-internal fun SettingsViewModel.createExtrasFlow6e() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow6e() = combine(
         preferences.get(PreferencesKeys.LIBRARY_TITLE_SCALE, DEFAULT_LIBRARY_TITLE_SCALE).map { it.coerceIn(0.85f, 1.3f) },
         preferences.get(PreferencesKeys.LIBRARY_TITLE_LINES, DEFAULT_LIBRARY_TITLE_LINES).map { it.coerceIn(1, 3) },
         preferences.get(PreferencesKeys.LIBRARY_CARD_STROKE, DEFAULT_LIBRARY_CARD_STROKE).map { it.coerceIn(0f, 1f) },
@@ -186,7 +186,7 @@ internal fun SettingsViewModel.createExtrasFlow6e() = combine(
         listOf<Any>(titleScale, titleLines, cardStroke, cardCornerRadius, titlePanelOpacity)
     }
 
-internal fun SettingsViewModel.createExtrasFlow6c() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow6c() = combine(
         preferences.get(PreferencesKeys.LIBRARY_THEME_PRESET_1, ""),
         preferences.get(PreferencesKeys.LIBRARY_THEME_PRESET_2, ""),
         preferences.get(PreferencesKeys.LIBRARY_THEME_PRESET_3, "")
@@ -198,7 +198,7 @@ internal fun SettingsViewModel.createExtrasFlow6c() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow6d() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow6d() = combine(
         preferences.get(PreferencesKeys.APP_THEME_PRESET_1, ""),
         preferences.get(PreferencesKeys.APP_THEME_PRESET_2, ""),
         preferences.get(PreferencesKeys.APP_THEME_PRESET_3, "")
@@ -210,14 +210,14 @@ internal fun SettingsViewModel.createExtrasFlow6d() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow345() = combine(createExtrasFlow3(), createExtrasFlow4(), createExtrasFlow5()) { e3, e4, e5 -> e3 + e4 + e5 }
-internal fun SettingsViewModel.createExtrasFlow6() = combine(createExtrasFlow6a(), createExtrasFlow6b(), createExtrasFlow6c(), createExtrasFlow6e()) { left, middle, right, style ->
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow345() = combine(createExtrasFlow3(), createExtrasFlow4(), createExtrasFlow5()) { e3, e4, e5 -> e3 + e4 + e5 }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow6() = combine(createExtrasFlow6a(), createExtrasFlow6b(), createExtrasFlow6c(), createExtrasFlow6e()) { left, middle, right, style ->
         left + middle + right + style
     }
-internal fun SettingsViewModel.createExtrasFlow3456() = combine(createExtrasFlow345(), createExtrasFlow6(), createExtrasFlow6d()) { left, middle, right ->
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow3456() = combine(createExtrasFlow345(), createExtrasFlow6(), createExtrasFlow6d()) { left, middle, right ->
         left + middle + right
     }
-internal fun SettingsViewModel.createExtrasFlow7a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7a() = combine(
         preferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false),
         preferences.get(PreferencesKeys.READER_EYE_REST_MINUTES, 20).map { it.coerceIn(10, 60) },
         preferences.get(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, true),
@@ -231,7 +231,7 @@ internal fun SettingsViewModel.createExtrasFlow7a() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow7b1a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b1a() = combine(
         preferences.get(PreferencesKeys.TEXT_FONT_SIZE, 18).map { it.coerceIn(12, 32) },
         preferences.get(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY"),
         preferences.get(PreferencesKeys.TEXT_FONT_FAMILY, "Georgia")
@@ -243,7 +243,7 @@ internal fun SettingsViewModel.createExtrasFlow7b1a() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow7b1b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b1b() = combine(
         preferences.get(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE),
         preferences.get(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE),
         preferences.get(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE)
@@ -255,11 +255,11 @@ internal fun SettingsViewModel.createExtrasFlow7b1b() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow7b1() = combine(createExtrasFlow7b1a(), createExtrasFlow7b1b()) { left: List<Any>, right: List<Any?> ->
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b1() = combine(createExtrasFlow7b1a(), createExtrasFlow7b1b()) { left: List<Any>, right: List<Any?> ->
         left + right
     }
 
-internal fun SettingsViewModel.createExtrasFlow7b2a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b2a() = combine(
         preferences.get(PreferencesKeys.TEXT_LINE_HEIGHT, 1.8f).map { it.coerceIn(1.0f, 3.0f) },
         preferences.get(PreferencesKeys.TEXT_LETTER_SPACING, 0f).map { it.coerceIn(0f, 0.2f) },
         preferences.get(PreferencesKeys.TEXT_WORD_SPACING, 0f).map { it.coerceIn(0f, 0.6f) }
@@ -271,7 +271,7 @@ internal fun SettingsViewModel.createExtrasFlow7b2a() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow7b2b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b2b() = combine(
         preferences.get(PreferencesKeys.TEXT_PARAGRAPH_SPACING, 0.2f).map { it.coerceIn(0.1f, 1.2f) },
         preferences.get(PreferencesKeys.TEXT_ALIGNMENT, "justify"),
         preferences.get(PreferencesKeys.TEXT_BOLD, false)
@@ -283,9 +283,9 @@ internal fun SettingsViewModel.createExtrasFlow7b2b() = combine(
         )
     }
 
-internal fun SettingsViewModel.createExtrasFlow7b2() = combine(createExtrasFlow7b2a(), createExtrasFlow7b2b()) { left, right -> left + right }
-internal fun SettingsViewModel.createExtrasFlow7b() = combine(createExtrasFlow7b1(), createExtrasFlow7b2()) { left: List<Any?>, right: List<Any> -> left + right }
-internal fun SettingsViewModel.createExtrasFlow7c1a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b2() = combine(createExtrasFlow7b2a(), createExtrasFlow7b2b()) { left, right -> left + right }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7b() = combine(createExtrasFlow7b1(), createExtrasFlow7b2()) { left: List<Any?>, right: List<Any> -> left + right }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c1a() = combine(
         preferences.get(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name)
             .map { ReaderTapZoneMode.fromStored(it).name },
         preferences.get(PreferencesKeys.READER_TAP_ZONE_SWAP, false),
@@ -294,7 +294,7 @@ internal fun SettingsViewModel.createExtrasFlow7c1a() = combine(
         listOf<Any>(mode, swap, volumeKeysPaging)
     }
 
-internal fun SettingsViewModel.createExtrasFlow7c1b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c1b() = combine(
         preferences.get(PreferencesKeys.READER_TAP_ZONE_LEFT, ReaderTapZoneAction.PREVIOUS_PAGE.name)
             .map { normalizeTapZoneActionName(it) },
         preferences.get(PreferencesKeys.READER_TAP_ZONE_CENTER, ReaderTapZoneAction.MENU.name)
@@ -304,9 +304,9 @@ internal fun SettingsViewModel.createExtrasFlow7c1b() = combine(
     ) { leftAction, centerAction, rightAction ->
         listOf<Any>(leftAction, centerAction, rightAction)
     }
-internal fun SettingsViewModel.createExtrasFlow7c1() = combine(createExtrasFlow7c1a(), createExtrasFlow7c1b()) { left, right -> left + right }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c1() = combine(createExtrasFlow7c1a(), createExtrasFlow7c1b()) { left, right -> left + right }
 
-internal fun SettingsViewModel.createExtrasFlow7c2a() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c2a() = combine(
         preferences.get(PreferencesKeys.READER_HEADER_LEFT_SLOT, ReaderInfoSlot.BOOK_TITLE.name)
             .map { ReaderInfoSlot.fromStored(it).name },
         preferences.get(PreferencesKeys.READER_HEADER_CENTER_SLOT, ReaderInfoSlot.NONE.name)
@@ -317,7 +317,7 @@ internal fun SettingsViewModel.createExtrasFlow7c2a() = combine(
         listOf<Any>(headerLeft, headerCenter, headerRight)
     }
 
-internal fun SettingsViewModel.createExtrasFlow7c2b() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c2b() = combine(
         preferences.get(PreferencesKeys.READER_FOOTER_LEFT_SLOT, ReaderInfoSlot.CHAPTER_TITLE.name)
             .map { ReaderInfoSlot.fromStored(it).name },
         preferences.get(PreferencesKeys.READER_FOOTER_CENTER_SLOT, ReaderInfoSlot.PAGE.name)
@@ -328,7 +328,7 @@ internal fun SettingsViewModel.createExtrasFlow7c2b() = combine(
         listOf<Any>(footerLeft, footerCenter, footerRight)
     }
 
-internal fun SettingsViewModel.createExtrasFlow7c3() = combine(
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c3() = combine(
         preferences.get(PreferencesKeys.READER_HEADER_FOOTER_FONT_SIZE, 12).map { it.coerceIn(10, 20) },
         preferences.get(PreferencesKeys.READER_HEADER_FOOTER_VERTICAL_PADDING, 6).map { it.coerceIn(4, 20) },
         preferences.get(PreferencesKeys.READER_HEADER_FOOTER_LEFT_PADDING, 16).map { it.coerceIn(8, 32) },
@@ -337,15 +337,15 @@ internal fun SettingsViewModel.createExtrasFlow7c3() = combine(
         listOf<Any>(fontSize, verticalPadding, leftPadding, rightPadding)
     }
 
-internal fun SettingsViewModel.createExtrasFlow7c2() = combine(createExtrasFlow7c2a(), createExtrasFlow7c2b()) { left, right -> left + right }
-internal fun SettingsViewModel.createExtrasFlow7c() = combine(createExtrasFlow7c1(), createExtrasFlow7c2(), createExtrasFlow7c3()) { left, middle, right ->
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c2() = combine(createExtrasFlow7c2a(), createExtrasFlow7c2b()) { left, right -> left + right }
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7c() = combine(createExtrasFlow7c1(), createExtrasFlow7c2(), createExtrasFlow7c3()) { left, middle, right ->
         left + middle + right
     }
-internal fun SettingsViewModel.createExtrasFlow7() = combine(createExtrasFlow7a(), createExtrasFlow7b(), createExtrasFlow7c()) { left: List<Any>, middle: List<Any?>, right: List<Any> ->
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow7() = combine(createExtrasFlow7a(), createExtrasFlow7b(), createExtrasFlow7c()) { left: List<Any>, middle: List<Any?>, right: List<Any> ->
         left + middle + right
     }
 
-internal fun SettingsViewModel.createCombinedSettingsUiState(): Flow<SettingsUiState> = combine(
+internal fun SettingsUiStateFlowBuilder.createCombinedSettingsUiState(): Flow<SettingsUiState> = combine(
         createBaseUiState(),
         createExtrasFlow12(),
         createExtrasFlow3456(),

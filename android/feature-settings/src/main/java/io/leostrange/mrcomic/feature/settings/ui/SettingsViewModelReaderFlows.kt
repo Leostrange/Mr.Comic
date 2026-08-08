@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.map
 // Phase W-Z (2026-08-07): Reader TTS, style presets, and performance flows
 // extracted from SettingsViewModelFlows.
 
-internal fun SettingsViewModel.createReaderStylePresetSlotsFlow() = combine(
+internal fun SettingsUiStateFlowBuilder.createReaderStylePresetSlotsFlow() = combine(
         preferences.get(PreferencesKeys.READER_STYLE_PRESET_1, ""),
         preferences.get(PreferencesKeys.READER_STYLE_PRESET_2, ""),
         preferences.get(PreferencesKeys.READER_STYLE_PRESET_3, "")
@@ -26,7 +26,7 @@ internal fun SettingsViewModel.createReaderStylePresetSlotsFlow() = combine(
         )
     }
 
-internal fun SettingsViewModel.createReaderStylePresetEntriesFlow() = combine(
+internal fun SettingsUiStateFlowBuilder.createReaderStylePresetEntriesFlow() = combine(
         preferences.get(PreferencesKeys.READER_STYLE_PRESET_LIST, ""),
         createReaderStylePresetSlotsFlow()
     ) { serializedList, slots ->
@@ -35,7 +35,7 @@ internal fun SettingsViewModel.createReaderStylePresetEntriesFlow() = combine(
         }
     }
 
-internal fun SettingsViewModel.createReaderTtsFlowA() = combine(
+internal fun SettingsUiStateFlowBuilder.createReaderTtsFlowA() = combine(
         preferences.get(
             PreferencesKeys.READER_TTS_PROVIDER,
             ReaderTtsProviderType.SYSTEM.storedValue
@@ -46,7 +46,7 @@ internal fun SettingsViewModel.createReaderTtsFlowA() = combine(
         listOf<Any>(provider, speed, pitch)
     }
 
-internal fun SettingsViewModel.createReaderTtsFlowB() = combine(
+internal fun SettingsUiStateFlowBuilder.createReaderTtsFlowB() = combine(
         preferences.get(PreferencesKeys.READER_TTS_VOLUME, 1.0f).map { it.coerceIn(0f, 1.0f) },
         preferences.get(PreferencesKeys.READER_TTS_VOICE_NAME, "").map { it.ifBlank { null } },
         preferences.get(
@@ -57,7 +57,7 @@ internal fun SettingsViewModel.createReaderTtsFlowB() = combine(
         listOf<Any>(volume, voiceName ?: "", sleepTimerMode)
     }
 
-internal fun SettingsViewModel.createReaderTtsFlow() = combine(createReaderTtsFlowA(), createReaderTtsFlowB()) { left, right ->
+internal fun SettingsUiStateFlowBuilder.createReaderTtsFlow() = combine(createReaderTtsFlowA(), createReaderTtsFlowB()) { left, right ->
         ReaderTtsConfig.fromStored(
             provider = left[0] as String,
             speed = left[1] as Float,
@@ -68,7 +68,7 @@ internal fun SettingsViewModel.createReaderTtsFlow() = combine(createReaderTtsFl
         )
     }
 
-internal fun SettingsViewModel.createPerfFlow() = combine(
+internal fun SettingsUiStateFlowBuilder.createPerfFlow() = combine(
         preferences.get(PerformancePreferencesKeys.PERF_PROFILE, PerformanceDefaults.PROFILE),
         preferences.get(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerformanceDefaults.RENDER_QUALITY),
         preferences.get(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, PerformanceDefaults.COVER_CACHE_MB),
