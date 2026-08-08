@@ -57,6 +57,11 @@ import io.leostrange.mrcomic.feature.library.LibraryScreen
 import io.leostrange.mrcomic.feature.library.LibraryViewModel
 import io.leostrange.mrcomic.feature.library.MiniAudiobookPlayer
 import io.leostrange.mrcomic.feature.library.MrComicProgressRoute
+import io.leostrange.mrcomic.feature.library.addAudiobookFromFolder
+import io.leostrange.mrcomic.feature.library.addAudiobookFromUri
+import io.leostrange.mrcomic.feature.library.addComicFromUri
+import io.leostrange.mrcomic.feature.library.addComicsFromDirectory
+import io.leostrange.mrcomic.feature.library.getComicById
 import io.leostrange.mrcomic.feature.ocr.ui.OcrScreen
 import io.leostrange.mrcomic.feature.onboarding.OnboardingScreen
 import io.leostrange.mrcomic.feature.reader.ui.OcrLaunchRequest
