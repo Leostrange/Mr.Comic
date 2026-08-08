@@ -72,6 +72,27 @@ compatibility. Feature modules must not add new direct imports from
 engine.formats; test sources may use engine-formats for real pagination
 fixtures.
 
+**ViewModel delegate controllers (4.1):** large ViewModels keep their
+public API surface (Compose calls unchanged) but delegate logic to
+small controllers with explicit dependencies: the ViewModel stays the
+single owner of state and lifecycle. Established pattern (feature-library
+and feature-settings):
+
+- `LibraryCrudController` — CRUD/import/folder deletion; deps: repositories,
+  scope, `MutableStateFlow<LibraryUiState>`, `rawComics`/`openFolder` lambdas.
+- `LibraryContentPipeline` — pure filtering/sorting/grouping/statistics
+  derivation (`derive(state, rawComics, rawQuotes, allLibraryComics)`);
+  no Android dependencies, directly unit-testable.
+- `SettingsPresetsController` — theme preset save/apply/clear/rename; deps:
+  `UserPreferences`, `ThemePreferencesRepository`, scope, `uiState` lambda,
+  `persistNullableColor` lambda.
+
+Rule: one slice = one controller with explicit dependencies + its own
+unit test before wiring into the ViewModel. Do not grow ViewModels with
+new logic; extract into a controller instead. Prefer lambdas for ViewModel
+callbacks (state writes, `applyFiltersAndSort`, persistence) so controllers
+stay Android-free and testable.
+
 ## Reader invariants
 
 Mr.Comic has separate rendering paths for:
