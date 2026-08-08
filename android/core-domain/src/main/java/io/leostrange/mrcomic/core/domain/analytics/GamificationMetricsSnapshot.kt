@@ -1,4 +1,6 @@
 package io.leostrange.mrcomic.core.domain.analytics
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
 
 private const val WAR_MINUTES_THRESHOLD = 20
 private const val WAR_NATURAL_UNITS_THRESHOLD = 1

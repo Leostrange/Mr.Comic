@@ -2,7 +2,7 @@ package io.leostrange.mrcomic.feature.library
 
 // Phase J (2026-08-05): Types + UiState extracted from LibraryViewModel.kt
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote

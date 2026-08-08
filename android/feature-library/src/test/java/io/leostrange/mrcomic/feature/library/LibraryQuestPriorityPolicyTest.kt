@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.library
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.feature.library.components.AchievementId
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievement
 import org.junit.Assert.assertEquals

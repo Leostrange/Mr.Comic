@@ -23,6 +23,7 @@ rootProject.name = "Mr.Comic"
 
 include(":app");                project(":app").projectDir                = file("android/app")
 include(":core-model");         project(":core-model").projectDir         = file("android/core-model")
+include(":core-interfaces");    project(":core-interfaces").projectDir    = file("android/core-interfaces")
 include(":core-data");          project(":core-data").projectDir          = file("android/core-data")
 include(":core-domain");        project(":core-domain").projectDir        = file("android/core-domain")
 include(":core-ui");            project(":core-ui").projectDir            = file("android/core-ui")
