@@ -1,15 +1,13 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
-import android.content.Context
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
-import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
-import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
 import io.leostrange.mrcomic.core.interfaces.analytics.READER_CHECKPOINT_TRAIL_LIMIT
-import dagger.hilt.android.qualifiers.ApplicationContext
+import io.leostrange.mrcomic.core.interfaces.preferences.DataStoreProvider
+import io.leostrange.mrcomic.core.interfaces.preferences.PreferencesKeys
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -20,9 +18,9 @@ import javax.inject.Singleton
 
 @Singleton
 class ReaderCheckpointStore @Inject constructor(
-    @ApplicationContext context: Context
+    dataStoreProvider: DataStoreProvider
 ) {
-    private val dataStore = context.dataStore
+    private val dataStore = dataStoreProvider.dataStore
 
     val checkpointTrail: Flow<List<ReaderCheckpoint>> = dataStore.data
         .catch { exception ->

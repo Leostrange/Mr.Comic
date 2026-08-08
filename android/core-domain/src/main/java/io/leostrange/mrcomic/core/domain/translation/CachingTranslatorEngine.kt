@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.core.domain.translation
 
-import io.leostrange.mrcomic.core.data.db.TranslationCacheDao
-import io.leostrange.mrcomic.core.data.db.entity.TranslationCacheEntry
+import io.leostrange.mrcomic.core.interfaces.translation.TranslationCacheRepository
+import io.leostrange.mrcomic.core.interfaces.translation.TranslationCacheEntry
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,7 +14,7 @@ import javax.inject.Singleton
 @Singleton
 class CachingTranslatorEngine @Inject constructor(
     private val delegate: TranslatorEngine,
-    private val cacheDao: TranslationCacheDao
+    private val cacheRepository: TranslationCacheRepository
 ) : TranslatorEngine {
 
     override val engineName: String = "Cached(${delegate.engineName})"
@@ -38,19 +38,17 @@ class CachingTranslatorEngine @Inject constructor(
         val key = TranslationCacheEntry.cacheKey(normalized, sourceLang, targetLang)
 
         // Check cache
-        val cached = cacheDao.getByKey(key)
+        val cached = cacheRepository.getByKey(key)
         if (cached != null) {
-            cacheDao.recordHit(key)
+            cacheRepository.recordHit(key)
             return cached.translatedText
         }
 
         // Translate via delegate
         val result = delegate.translate(normalized, sourceLang, targetLang)
 
-        // Cache the result. OnConflictStrategy.IGNORE means the insert is a no-op
-        // when the key already exists; recordHit updates lastUsedAt/hitCount for
-        // the existing row so LRU eviction works correctly.
-        cacheDao.insert(
+        // Cache the result
+        cacheRepository.insert(
             TranslationCacheEntry(
                 cacheKey = key,
                 sourceLang = sourceLang,
@@ -60,7 +58,7 @@ class CachingTranslatorEngine @Inject constructor(
                 provider = delegate.engineName
             )
         )
-        cacheDao.recordHit(key)
+        cacheRepository.recordHit(key)
 
         return result
     }

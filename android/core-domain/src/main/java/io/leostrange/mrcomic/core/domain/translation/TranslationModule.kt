@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.core.domain.translation
 
-import io.leostrange.mrcomic.core.data.db.TranslationCacheDao
+import io.leostrange.mrcomic.core.interfaces.translation.TranslationCacheRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -38,8 +38,8 @@ abstract class TranslationModule {
         @Provides
         fun provideTranslatorEngine(
             mlKitEngine: MlKitTranslatorEngine,
-            cacheDao: TranslationCacheDao
-        ): TranslatorEngine = CachingTranslatorEngine(mlKitEngine, cacheDao)
+            cacheRepository: TranslationCacheRepository
+        ): TranslatorEngine = CachingTranslatorEngine(mlKitEngine, cacheRepository)
 
         @Provides
         @Singleton
