@@ -6,14 +6,12 @@ import io.leostrange.mrcomic.core.interfaces.analytics.DEFAULT_DAILY_READING_GOA
 import io.leostrange.mrcomic.core.interfaces.analytics.MIN_DAILY_READING_GOAL_PAGES
 import io.leostrange.mrcomic.core.interfaces.analytics.MAX_DAILY_READING_GOAL_PAGES
 
-import android.content.Context
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
-import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
-import io.leostrange.mrcomic.core.data.preferences.dataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
+import io.leostrange.mrcomic.core.interfaces.preferences.DataStoreProvider
+import io.leostrange.mrcomic.core.interfaces.preferences.PreferencesKeys
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -33,9 +31,9 @@ private const val RECENT_READING_CALENDAR_DAYS = 7
 
 @Singleton
 class DailyReadingGoalStore @Inject constructor(
-    @ApplicationContext context: Context
+    dataStoreProvider: DataStoreProvider
 ) {
-    private val dataStore = context.dataStore
+    private val dataStore = dataStoreProvider.dataStore
 
     val goalState: Flow<DailyReadingGoalState> = dataStore.data
         .catch { exception ->
