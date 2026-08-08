@@ -28,9 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.webkit.WebView
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -131,92 +128,13 @@ fun ReaderScreen(
     var quoteSavePopupToken by rememberSaveable { mutableIntStateOf(0) }
     var fontCatalogVersion by remember { mutableIntStateOf(0) }
     var pendingCustomFontDeletion by rememberSaveable { mutableStateOf<String?>(null) }
-    val fontImportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        val importedFont = runCatching { ReaderTextFontCatalog.importFont(context, uri) }.getOrNull()
-        if (importedFont != null) {
-            fontCatalogVersion += 1
-            viewModel.settingsController.setTextFontFamily(importedFont)
-            Toast.makeText(context, importedFont, Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(
-                context,
-                if (strings.languageCode == "ru") "РќРµ СѓРґР°Р»РѕСЃСЊ РёРјРїРѕСЂС‚РёСЂРѕРІР°С‚СЊ С€СЂРёС„С‚" else "Couldn't import font",
-                Toast.LENGTH_SHORT
-                ).show()
-        }
-    }
-    val deleteCustomFont = { fontName: String ->
-        val deleted = runCatching { ReaderTextFontCatalog.deleteCustomFont(context, fontName) }.getOrDefault(false)
-        if (deleted) {
-            fontCatalogVersion += 1
-            if (uiState.textFontFamily == fontName) {
-                viewModel.settingsController.setTextFontFamily("Georgia")
-            }
-            Toast.makeText(
-                context,
-                if (strings.languageCode == "ru") "РЁСЂРёС„С‚ СѓРґР°Р»С‘РЅ" else "Font deleted",
-                Toast.LENGTH_SHORT
-            ).show()
-        } else {
-            Toast.makeText(
-                context,
-                if (strings.languageCode == "ru") "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ С€СЂРёС„С‚" else "Couldn't delete font",
-                Toast.LENGTH_SHORT
-            ).show()
-        }
-    }
-    val latestUiState by rememberUpdatedState(uiState)
-    val readerStyleImportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        val importedStyleResult = runCatching {
-            context.contentResolver.openInputStream(uri)
-                ?.bufferedReader()
-                ?.use { it.readText() }
-        }.getOrNull()
-        val importedStyle = importedStyleResult?.let { raw ->
-            if (looksLikeReaderStyleJson(raw)) {
-                viewModel.settingsController.importReaderStyleFromJson(raw)
-            } else {
-                null
-            }
-        }
-        Toast.makeText(
-            context,
-            if (importedStyle != null) {
-                if (strings.languageCode == "ru") "РРјРїРѕСЂС‚РёСЂРѕРІР°РЅ СЃС‚РёР»СЊ: $importedStyle" else "Imported style: $importedStyle"
-            } else if (importedStyleResult != null && !looksLikeReaderStyleJson(importedStyleResult)) {
-                if (strings.languageCode == "ru") "РќСѓР¶РµРЅ С„Р°Р№Р» СЃС‚РёР»СЏ РІ С„РѕСЂРјР°С‚Рµ JSON" else "Please choose a JSON style file"
-            } else {
-                if (strings.languageCode == "ru") "РќРµ СѓРґР°Р»РѕСЃСЊ РёРјРїРѕСЂС‚РёСЂРѕРІР°С‚СЊ СЃС‚РёР»СЊ" else "Couldn't import style"
-            },
-            Toast.LENGTH_SHORT
-        ).show()
-    }
-    val readerStyleExportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        val exported = runCatching {
-            val payload = buildReaderTypographyExportJson(latestUiState)
-            context.contentResolver.openOutputStream(uri)?.use { out ->
-                out.write(payload.toByteArray(Charsets.UTF_8))
-            } ?: error("No output stream")
-        }.isSuccess
-        Toast.makeText(
-            context,
-            if (exported) {
-                if (strings.languageCode == "ru") "РЎС‚РёР»СЊ СЌРєСЃРїРѕСЂС‚РёСЂРѕРІР°РЅ" else "Style exported"
-            } else {
-                if (strings.languageCode == "ru") "РќРµ СѓРґР°Р»РѕСЃСЊ СЌРєСЃРїРѕСЂС‚РёСЂРѕРІР°С‚СЊ СЃС‚РёР»СЊ" else "Couldn't export style"
-            },
-            Toast.LENGTH_SHORT
-        ).show()
-    }
+    val fontStyleActions = rememberReaderFontStyleActions(
+        context = context,
+        viewModel = viewModel,
+        languageCode = strings.languageCode,
+        uiState = uiState,
+        onFontCatalogChanged = { fontCatalogVersion += 1 }
+    )
     // During loading (especially slow archive extraction), default to text color scheme
     // to avoid a dark flash for text formats inside archives. Once loading completes,
     // the correct scheme is applied based on the resolved readerContainerKind.
@@ -970,10 +888,10 @@ fun ReaderScreen(
         quoteSavePopupToken = quoteSavePopupToken,
         eyeRestReminderMinutes = eyeRestReminderMinutes,
         onEyeRestReminderMinutesChange = { eyeRestReminderMinutes = it },
-        onLaunchFontImport = { fontImportLauncher.launch(arrayOf("*/*")) },
-        onLaunchStyleImport = { readerStyleImportLauncher.launch(arrayOf("application/json", "*/*")) },
-        onLaunchStyleExport = { readerStyleExportLauncher.launch(readerTypographyExportFileName(uiState)) },
-        onDeleteCustomFont = deleteCustomFont,
+        onLaunchFontImport = fontStyleActions.onLaunchFontImport,
+        onLaunchStyleImport = fontStyleActions.onLaunchStyleImport,
+        onLaunchStyleExport = fontStyleActions.onLaunchStyleExport,
+        onDeleteCustomFont = fontStyleActions.onDeleteCustomFont,
     )
 }
 }
