@@ -1,21 +1,17 @@
 package io.leostrange.mrcomic.feature.library
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
-import androidx.documentfile.provider.DocumentFile
 import io.leostrange.mrcomic.core.data.repository.AudiobookRepository
 import io.leostrange.mrcomic.core.model.repository.CoverRepository
 import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
-import io.leostrange.mrcomic.core.model.AudioChapter
-import io.leostrange.mrcomic.core.model.Audiobook
 import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
@@ -57,7 +53,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -69,34 +64,34 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
-    private val libraryRepository: LibraryRepository,
-    private val importRepository: ImportRepository,
+    internal val libraryRepository: LibraryRepository,
+    internal val importRepository: ImportRepository,
     private val coverRepository: CoverRepository,
-    private val quoteRepository: QuoteRepository,
-    private val audiobookRepository: AudiobookRepository,
-    private val readerCheckpointStore: ReaderCheckpointStore,
+    internal val quoteRepository: QuoteRepository,
+    internal val audiobookRepository: AudiobookRepository,
+    internal val readerCheckpointStore: ReaderCheckpointStore,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
     private val analyticsTracker: ReadingAnalyticsTracker,
-    @ApplicationContext private val context: Context
+    @ApplicationContext internal val context: Context
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LibraryUiState(isLoading = true))
+    internal val _uiState = MutableStateFlow(LibraryUiState(isLoading = true))
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     private val preferences = UserPreferences(context.dataStore)
     private val reportedAchievementUnlocks = linkedSetOf<String>()
-    private val repairedAudiobookCoverIds = mutableSetOf<String>()
+    internal val repairedAudiobookCoverIds = mutableSetOf<String>()
     private var lastTrackedMascotStage: MascotStage? = null
 
-    /** Raw filtered list from the repository before local sorting/grouping is applied. */
-    private var rawComics: List<Comic> = emptyList()
+    /** Raw filtered list from the repository before local sorting/grouping is applied.
+     * Internal visibility: written by filter/sort pipeline, read by CRUD extensions. */
+    internal var rawComics: List<Comic> = emptyList()
     private var rawQuotes: List<SavedQuote> = emptyList()
     private var allLibraryComics: List<Comic> = emptyList()
 
@@ -668,27 +663,6 @@ class LibraryViewModel @Inject constructor(
         }}
 
 
-    fun deleteQuote(id: String) {
-        viewModelScope.launch {
-            runCatching { quoteRepository.deleteQuote(id) }
-                .onFailure { error ->
-                    Log.e("LibraryViewModel", "Failed to delete quote", error)
-                    _uiState.update {
-                        it.copy(
-                            error = localizedError(
-                                lang = it.appLanguage,
-                                ru = "Не удалось удалить цитату",
-                                en = "Failed to delete quote",
-                                ja = "引用を削除できませんでした",
-                                zh = "无法删除摘录",
-                                ko = "문구를 삭제할 수 없습니다",
-                                cause = error
-                            )
-                        )    }
-}
-        }}
-
-
     fun navigateUpFromFolder() {
         val parentPath = _uiState.value.currentFolderPath.parentFolderPath()
         openFolder(parentPath)}
@@ -716,298 +690,5 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             preferences.set(PreferencesKeys.LIBRARY_TILE_SIZE_DP, normalized)
         }}
-
-
-    fun addComicFromUri(uri: Uri) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                importRepository.addComic(uri)
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Failed to add comic", e)
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Не удалось добавить комикс",
-                            en = "Failed to add comic",
-                            ja = "コミックを追加できませんでした",
-                            zh = "无法添加漫画",
-                            ko = "코믹을 추가할 수 없습니다",
-                            cause = e
-                        )
-                    )
-                }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
-            }
-        }}
-
-
-    fun addComicsFromDirectory(treeUri: Uri) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                importRepository.addComicsFromDirectory(treeUri)
-                if (_uiState.value.groupByMode == GroupByMode.FOLDER) {
-                    openFolder(null)
-                }
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Failed to add directory", e)
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Ошибка сканирования папки",
-                            en = "Folder scan failed",
-                            ja = "フォルダのスキャンに失敗しました",
-                            zh = "文件夹扫描失败",
-                            ko = "폴더 스캔 실패",
-                            cause = e
-                        )
-                    )
-                }
-            } finally {
-                _uiState.update { it.copy(isLoading = false) }
-            }
-        }}
-
-
-    fun deleteComic(comicId: String) {
-        viewModelScope.launch {
-            try {
-                libraryRepository.deleteComic(comicId)
-                readerCheckpointStore.removeComicCheckpoints(comicId)
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Не удалось удалить",
-                            en = "Failed to delete",
-                            ja = "削除に失敗しました",
-                            zh = "删除失败",
-                            ko = "삭제에 실패했습니다",
-                            cause = e
-                        )
-                    )
-                }
-            }
-        }}
-
-
-    fun deleteFolder(folderPath: String) {
-        viewModelScope.launch {
-            try {
-                val normalizedPath = normalizeFolderId(folderPath) ?: return@launch
-                val matchingComics = rawComics.filter { comic ->
-                    val comicFolder = normalizeFolderId(comic.folderId) ?: return@filter false
-                    comicFolder == normalizedPath || comicFolder.startsWith("$normalizedPath/")
-                }
-                matchingComics.forEach { comic ->
-                    libraryRepository.deleteComic(comic.id)
-                    readerCheckpointStore.removeComicCheckpoints(comic.id)
-                }
-                if (_uiState.value.currentFolderPath == normalizedPath) {
-                    openFolder(normalizedPath.parentFolderPath())
-                }
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Не удалось удалить папку",
-                            en = "Failed to delete folder",
-                            ja = "フォルダの削除に失敗しました",
-                            zh = "删除文件夹失败",
-                            ko = "폴더 삭제에 실패했습니다",
-                            cause = e
-                        )
-                    )
-                }
-            }
-        }}
-
-
-    fun toggleBookmark(comicId: String) {
-        viewModelScope.launch {
-            try {
-                libraryRepository.toggleBookmark(comicId)
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Не удалось изменить закладку",
-                            en = "Failed to update bookmark",
-                            ja = "しおりの更新に失敗しました",
-                            zh = "更新书签失败",
-                            ko = "북마크 변경에 실패했습니다",
-                            cause = e
-                        )
-                    )
-                }
-            }
-        }}
-
-
-    fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String) {
-        viewModelScope.launch {
-            try {
-                libraryRepository.updateComicMeta(comicId, title, tags, libraryShelf)
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Не удалось сохранить изменения",
-                            en = "Failed to save changes",
-                            ja = "変更を保存できませんでした",
-                            zh = "保存更改失败",
-                            ko = "변경 사항을 저장하지 못했습니다",
-                            cause = e
-                        )
-                    )
-                }
-            }
-        }}
-
-
-    fun markCompleted(comicId: String, completed: Boolean) {
-        viewModelScope.launch {
-            try {
-                libraryRepository.markCompleted(comicId, completed)
-            } catch (e: Exception) {
-                _uiState.update {
-                    it.copy(
-                        error = localizedError(
-                            lang = it.appLanguage,
-                            ru = "Не удалось изменить статус",
-                            en = "Failed to update status",
-                            ja = "ステータスの更新に失敗しました",
-                            zh = "更新状态失败",
-                            ko = "상태를 변경하지 못했습니다",
-                            cause = e
-                        )
-                    )
-                }
-            }
-        }}
-
-
-    suspend fun getComicById(id: String): Comic? = libraryRepository.getComicById(id)
-
-    fun clearError() = _uiState.update { it.copy(error = null) }
-
-    // ── Audiobook CRUD ────────────────────────────────────────────────────────
-
-    private fun observeAudiobooks() {
-        viewModelScope.launch {
-            audiobookRepository.getAllFlow().collect { list ->
-                _uiState.update { it.copy(audiobooks = list) }
-                repairMissingAudiobookCovers(list)
-            }
-        }}
-
-
-    private suspend fun repairMissingAudiobookCovers(audiobooks: List<Audiobook>) = withContext(Dispatchers.IO) {
-        // Runs on every audiobook list emission; each resolve does MediaMetadataRetriever + file
-        // copy + DocumentTree walk. Must stay off the main thread to avoid jank/ANR on library open.
-        audiobooks
-            .forEach { audiobook ->
-                val hasValidStoredCover = audiobook.coverUri
-                    ?.takeIf { cover -> runCatching { android.net.Uri.parse(cover) }.isSuccess }
-                    ?.let { AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook) == audiobook.coverUri }
-                    ?: false
-                if (hasValidStoredCover) {
-                    return@forEach
-                }
-                if (audiobook.id in repairedAudiobookCoverIds) return@forEach
-                val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
-                if (!resolvedCover.isNullOrBlank() && resolvedCover != audiobook.coverUri) {
-                    audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover))
-                    repairedAudiobookCoverIds += audiobook.id
-                } else {
-                    repairedAudiobookCoverIds.remove(audiobook.id)
-                }
-            }}
-
-
-    /** Add a single audio file as a 1-chapter audiobook. */
-    fun addAudiobookFromUri(uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val title = DocumentFile.fromSingleUri(context, uri)?.name
-                    ?.substringBeforeLast('.')
-                    ?: uri.lastPathSegment ?: "Аудиокнига"
-                val chapter = AudioChapter(index = 0, title = title, uri = uri.toString())
-                val audiobook = Audiobook(
-                    title = title,
-                    sourcePath = uri.toString(),
-                    sourceIsFolder = false,
-                    chapters = listOf(chapter)
-                )
-                val coverUri = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
-                audiobookRepository.upsert(audiobook.copy(coverUri = coverUri ?: audiobook.coverUri))
-                Log.i("LibraryViewModel", "Audiobook added: $title")
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Failed to add audiobook from URI: $uri", e)
-                _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
-            }
-        }}
-
-
-    /** Scan a folder tree and add direct audio files and nested audio folders separately. */
-    fun addAudiobookFromFolder(treeUri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val root = DocumentFile.fromTreeUri(context, treeUri) ?: run {
-                    Log.w("LibraryViewModel", "Could not resolve tree URI: $treeUri")
-                    _uiState.update { it.copy(error = "Не удалось открыть папку") }
-                    return@launch
-                }
-                val planned = planAudiobookImports(root.toAudiobookImportNode())
-                if (planned.isEmpty()) {
-                    Log.i("LibraryViewModel", "No audio files in folder tree: $treeUri")
-                    return@launch
-                }
-                planned.forEach { audiobook ->
-                    val resolvedCover = AudiobookCoverResolver.resolvePersistedCoverUri(context, audiobook)
-                    audiobookRepository.upsert(audiobook.copy(coverUri = resolvedCover ?: audiobook.coverUri))
-                }
-                Log.i("LibraryViewModel", "Audiobook imports added from folder: ${planned.size}")
-            } catch (e: Exception) {
-                Log.e("LibraryViewModel", "Failed to add audiobook from folder: $treeUri", e)
-                _uiState.update { it.copy(error = "Не удалось добавить аудио: ${e.localizedMessage}") }
-            }
-        }}
-
-
-    fun deleteAudiobook(audiobookId: String) {
-        viewModelScope.launch {
-            audiobookRepository.delete(audiobookId)
-        }}
-
-
-    private fun DocumentFile.toAudiobookImportNode(): AudiobookImportNode {
-        val childNodes = if (isDirectory) {
-            listFiles()
-                .map { it.toAudiobookImportNode() }
-                .sortedWith(
-                    compareBy<AudiobookImportNode>(
-                        { !it.isDirectory },
-                        { it.name.lowercase() }
-                    )
-                )
-        } else {
-            emptyList()
-        }
-        return AudiobookImportNode(
-            name = name?.trim()?.ifBlank { null } ?: uri.lastPathSegment.orEmpty().ifBlank { "Аудиокнига" },
-            uri = uri.toString(),
-            isDirectory = isDirectory,
-            mimeType = type,
-            children = childNodes
-        )}
 
 }
