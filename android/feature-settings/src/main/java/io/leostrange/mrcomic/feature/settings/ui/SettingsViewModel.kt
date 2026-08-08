@@ -155,6 +155,18 @@ class SettingsViewModel @Inject constructor(
     )
     internal val statusState = MutableStateFlow(StatusState())
 
+    /** Theme/library/reader preset save/apply/clear/rename (4.1).
+     * The ViewModel stays the single owner of state and lifecycle. */
+    internal val presetsController: SettingsPresetsController by lazy {
+        SettingsPresetsController(
+            preferences = preferences,
+            themePreferencesRepository = themePreferencesRepository,
+            scope = viewModelScope,
+            uiState = { uiState.value },
+            persistNullableColor = { key, value -> persistNullableReaderColor(key, value) },
+        )
+    }
+
     internal suspend fun updateToggleEnabledAt(
         key: Preferences.Key<Long>,
         wasEnabled: Boolean,
