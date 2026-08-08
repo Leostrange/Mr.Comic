@@ -105,8 +105,8 @@ import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.previewColors
 import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
-import io.leostrange.mrcomic.feature.reader.ui.components.ImageMessagePopup
-import io.leostrange.mrcomic.feature.reader.ui.components.ImageMessagePopupConfig
+import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopup
+import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopupConfig
 import io.leostrange.mrcomic.feature.settings.R as SettingsR
 import java.util.Locale
 import kotlin.math.roundToInt

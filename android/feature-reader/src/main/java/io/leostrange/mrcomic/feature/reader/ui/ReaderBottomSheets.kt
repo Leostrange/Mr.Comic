@@ -10,8 +10,8 @@ import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.R
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
-import io.leostrange.mrcomic.feature.reader.ui.components.ImageMessagePopup
-import io.leostrange.mrcomic.feature.reader.ui.components.ImageMessagePopupConfig
+import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopup
+import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopupConfig
 import io.leostrange.mrcomic.feature.reader.ui.rsvp.RsvpOverlay
 import io.leostrange.mrcomic.feature.reader.ui.rsvp.extractWordsForRsvp
 

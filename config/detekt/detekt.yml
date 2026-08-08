@@ -15,3 +15,18 @@ empty-blocks:
     active: true
   EmptyWhenBlock:
     active: true
+
+complexity:
+  LargeClass:
+    active: true
+    threshold: 1600
+  LongMethod:
+    active: true
+    threshold: 810
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 135
+  LongParameterList:
+    active: true
+    functionThreshold: 65
+    constructorThreshold: 65
