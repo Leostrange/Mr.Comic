@@ -37,4 +37,6 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.documentfile)
     testImplementation(libs.test.junit)
+    testImplementation(libs.test.mockk)
+    testImplementation(libs.test.kotlinx.coroutines)
 }
