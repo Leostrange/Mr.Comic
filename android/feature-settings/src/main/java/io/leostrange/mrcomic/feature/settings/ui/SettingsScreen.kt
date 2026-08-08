@@ -335,6 +335,7 @@ fun SettingsScreen(
             TranslationSettingsPage.OCR -> translationMapText.ocrTitle
             TranslationSettingsPage.OVERLAY -> translationMapText.overlayTitle
             TranslationSettingsPage.SERVICES -> translationMapText.servicesTitle
+            TranslationSettingsPage.DICTIONARIES -> translationMapText.dictionariesTitle
         }
         SettingsSection.AI_SERVICES  -> settingsSectionMeta(SettingsSection.AI_SERVICES, strings.languageCode, strings).title
         SettingsSection.READ_ALOUD   -> settingsSectionMeta(SettingsSection.READ_ALOUD, strings.languageCode, strings).title
