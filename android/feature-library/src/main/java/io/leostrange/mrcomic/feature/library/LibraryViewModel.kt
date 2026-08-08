@@ -15,20 +15,13 @@ import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
-import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
-import io.leostrange.mrcomic.core.domain.analytics.calculateMascotProgress
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.ComicLibraryShelf
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.model.SortOrder
 import io.leostrange.mrcomic.core.model.isReadCompleted
-import io.leostrange.mrcomic.core.model.isReadingInProgress
-import io.leostrange.mrcomic.core.model.displayReadingProgress
-import io.leostrange.mrcomic.core.model.isTextReadingFormat
-import io.leostrange.mrcomic.core.model.libraryShelfCategory
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
@@ -94,6 +87,9 @@ class LibraryViewModel @Inject constructor(
     internal var rawComics: List<Comic> = emptyList()
     private var rawQuotes: List<SavedQuote> = emptyList()
     private var allLibraryComics: List<Comic> = emptyList()
+
+    /** Pure content pipeline: filtering/sorting/grouping/statistics (4.1). */
+    internal val contentPipeline = LibraryContentPipeline()
 
     /** CRUD/import operations extracted into an explicit-dependency controller (4.1).
      * The ViewModel stays the single owner of state and lifecycle. */
@@ -427,113 +423,21 @@ class LibraryViewModel @Inject constructor(
                     allLibraryComics = comics
                     applyFiltersAndSort()
                 }
-        }}
-
-
-    private fun applyFiltersAndSort() {
-        val state = _uiState.value
-        val filtered = filterLibraryComics(rawComics, state.statusFilter, state.formatFilter)
-        val sorted = sortLibraryComics(filtered, state.sortOrder)
-        val bookmarkedSorted = sorted.filter { it.isBookmarked }
-        val sortedQuotes = rawQuotes.sortedByDescending { it.createdAt }
-        val mascotProgress = calculateMascotProgress(allLibraryComics)
-        val recent = rawComics
-            .filter { it.isReadingInProgress() }
-            .sortedByDescending { it.lastReadDate }
-            .take(10)
-
-        val effectiveFolderPath = if (state.groupByMode == GroupByMode.FOLDER) {
-            normalizeFolderPath(state.currentFolderPath, filtered)
-        } else {
-            null
-        }
-        val effectiveFolderSheetPath = if (state.groupByMode == GroupByMode.FOLDER) {
-            normalizeFolderPath(state.folderSheetPath, filtered)
-        } else {
-            null
-        }
-
-        val displayItems = when (state.groupByMode) {
-            GroupByMode.FOLDER -> buildFolderDisplayItems(filtered, effectiveFolderPath, state.sortOrder)
-            else -> buildSeparatedComicDisplayItems(sorted)
-        }
-        val folderSheetItems = if (effectiveFolderSheetPath != null) {
-            buildFolderDisplayItems(filtered, effectiveFolderSheetPath, state.sortOrder)
-        } else {
-            emptyList()
-        }
-
-        val sections = when (state.groupByMode) {
-            GroupByMode.SERIES -> buildSections(sorted) {
-                it.series?.takeIf(String::isNotBlank) ?: vmTr(
-                    lang = state.appLanguage,
-                    ru = "Без серии",
-                    en = "No series",
-                    ja = "シリーズなし",
-                    zh = "无系列",
-                    ko = "시리즈 없음"
-                )
-            }
-            else -> emptyList()
-        }
-        val bookmarkedSections = when (state.groupByMode) {
-            GroupByMode.SERIES -> buildSections(bookmarkedSorted) {
-                it.series?.takeIf(String::isNotBlank) ?: vmTr(
-                    lang = state.appLanguage,
-                    ru = "Без серии",
-                    en = "No series",
-                    ja = "シリーズなし",
-                    zh = "无系列",
-                    ko = "시리즈 없음"
-                )
-            }
-            else -> emptyList()
-        }
-
-        _uiState.update {
-            it.copy(
-                comics = sorted,
-                displayItems = displayItems,
-                groupSections = sections,
-                bookmarkedComics = bookmarkedSorted,
-                bookmarkedDisplayItems = buildSeparatedComicDisplayItems(bookmarkedSorted),
-                bookmarkedGroupSections = bookmarkedSections,
-                recentlyRead = recent,
-                isLoading = false,
-                currentFolderPath = effectiveFolderPath,
-                breadcrumbs = buildBreadcrumbs(effectiveFolderPath, state.appLanguage),
-                quotes = sortedQuotes,
-                availableQuoteComicIds = allLibraryComics.map { comic -> comic.id }.toSet(),
-                totalComicCount = filtered.size,
-                readingComicCount = rawComics.count { c -> c.isReadingInProgress() },
-                totalBookmarkedCount = bookmarkedSorted.size,
-                totalQuoteCount = sortedQuotes.size,
-                quoteSourceCount = sortedQuotes.map { it.comicId }.distinct().size,
-                visibleFolderCount = displayItems.count { item -> item is LibraryFolderItem },
-                visibleComicCount = displayItems.count { item -> item is LibraryComicItem },
-                // Данные для достижений берём из полного сырого списка (без фильтров)
-                allComicsRawCount = rawComics.size,
-                completedComicCount = rawComics.count { c -> c.isReadCompleted() },
-                bookmarkedComicCount = rawComics.count { c -> c.isBookmarked },
-                rawAuthors = rawComics.map { c -> c.author },
-                rawGenres = rawComics.map { c -> c.genre },
-                mascotProgress = mascotProgress,
-                folderSheetPath = effectiveFolderSheetPath,
-                folderSheetItems = folderSheetItems,
-                folderSheetBreadcrumbs = buildBreadcrumbs(effectiveFolderSheetPath, state.appLanguage)
-            )
-        }
-        if (shouldTrackMascotStageUp(lastTrackedMascotStage, mascotProgress.stage)) {
+        }}    private fun applyFiltersAndSort() {
+        val derived = contentPipeline.derive(_uiState.value, rawComics, rawQuotes, allLibraryComics)
+        _uiState.value = derived
+        if (shouldTrackMascotStageUp(lastTrackedMascotStage, derived.mascotProgress.stage)) {
             analyticsTracker.track(
                 ReadingAnalyticsEvent.StageUp(
-                    stage = mascotProgress.stage.name,
-                    xp = mascotProgress.xp,
+                    stage = derived.mascotProgress.stage.name,
+                    xp = derived.mascotProgress.xp,
                     totalTitles = allLibraryComics.size,
                     completedTitles = allLibraryComics.count { it.isReadCompleted() }
                 )
             )
         }
-        lastTrackedMascotStage = mascotProgress.stage}
+        lastTrackedMascotStage = derived.mascotProgress.stage
+    }
 
 
     fun search(query: String) {
