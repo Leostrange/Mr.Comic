@@ -13,7 +13,7 @@ interface DictionaryRepository {
 }
 
 data class DictionaryLookupCard(
-    val entryId: String,
+    val entryId: Long,
     val language: String,
     val lemma: String,
     val pos: String? = null,

@@ -3,7 +3,7 @@ package io.leostrange.mrcomic.home
 import android.util.Log
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.core.model.Comic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +29,7 @@ internal sealed interface ContinueWarmState {
 @Singleton
 class ContinueStartupWarmStore @Inject constructor(
     private val libraryRepository: LibraryRepository,
-    private val readerCheckpointStore: ReaderCheckpointStore
+    private val readerCheckpointStore: ReaderCheckpointRepository
 ) {
     private val mutex = Mutex()
     private val _state = MutableStateFlow<ContinueWarmState>(ContinueWarmState.Idle)

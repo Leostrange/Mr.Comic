@@ -5,7 +5,9 @@ import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import io.leostrange.mrcomic.core.data.db.RoomTranslationCacheRepository
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryRepository
 import io.leostrange.mrcomic.core.data.preferences.DataStoreProviderImpl
+import io.leostrange.mrcomic.core.interfaces.dictionary.DictionaryRepository as DictionaryRepositoryInterface
 import io.leostrange.mrcomic.core.interfaces.preferences.DataStoreProvider
 import io.leostrange.mrcomic.core.interfaces.translation.TranslationCacheRepository
 import javax.inject.Singleton
@@ -20,4 +22,8 @@ abstract class DataStoreModule {
     @Binds
     @Singleton
     abstract fun bindTranslationCacheRepository(impl: RoomTranslationCacheRepository): TranslationCacheRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindDictionaryRepository(impl: DictionaryRepository): DictionaryRepositoryInterface
 }

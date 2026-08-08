@@ -18,7 +18,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import android.util.Log
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.model.ComicFormat
@@ -51,7 +51,7 @@ internal class ReaderProgressController(
     private val viewModelScope: CoroutineScope,
     private val libraryRepository: LibraryRepository,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
-    private val readerCheckpointStore: ReaderCheckpointStore,
+    private val readerCheckpointStore: ReaderCheckpointRepository,
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val readerSessionCoordinator: ReaderSessionCoordinator,
     private val _readerProgressRecap: MutableSharedFlow<ReaderProgressRecap>,
