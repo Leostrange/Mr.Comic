@@ -114,6 +114,15 @@ internal fun TranslationSection(
                     onOpenAiServices = onOpenAiServices
                 )
             }
+            TranslationSettingsPage.DICTIONARIES -> {
+                item {
+                    DictionarySection(
+                        uiState = uiState,
+                        strings = strings,
+                        viewModel = viewModel
+                    )
+                }
+            }
         }
         item { Spacer(Modifier.height(16.dp)) }
     }
@@ -129,6 +138,7 @@ internal fun pageTitleForTranslation(
     TranslationSettingsPage.OCR -> text.ocrTitle
     TranslationSettingsPage.OVERLAY -> text.overlayTitle
     TranslationSettingsPage.SERVICES -> text.servicesTitle
+    TranslationSettingsPage.DICTIONARIES -> text.dictionariesTitle
 }
 
 /* ──── pageDescriptionForTranslation (fun) ──── */
@@ -141,6 +151,7 @@ internal fun pageDescriptionForTranslation(
     TranslationSettingsPage.OCR -> text.ocrDescription
     TranslationSettingsPage.OVERLAY -> text.overlayDescription
     TranslationSettingsPage.SERVICES -> text.servicesDescription
+    TranslationSettingsPage.DICTIONARIES -> text.dictionariesDescription
 }
 
 /* ──── TranslationSettingsNavItem (data class) ──── */
@@ -178,6 +189,12 @@ internal fun translationPageNavItems(
         title = text.servicesTitle,
         description = text.servicesDescription,
         icon = Icons.Default.SettingsSuggest
+    ),
+    TranslationSettingsNavItem(
+        page = TranslationSettingsPage.DICTIONARIES,
+        title = text.dictionariesTitle,
+        description = text.dictionariesDescription,
+        icon = Icons.Default.CloudDownload
     )
 )
 

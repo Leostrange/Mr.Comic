@@ -207,7 +207,11 @@ data class SettingsUiState(
     val completedComics: Int = 0,
     val bookmarkedComics: Int = 0,
     val rawAuthors: List<String?> = emptyList(),
-    val rawGenres: List<String?> = emptyList()
+    val rawGenres: List<String?> = emptyList(),
+    // Словари
+    val isDownloadingDictionary: Boolean = false,
+    val downloadingDictionaryName: String? = null,
+    val downloadedDictionaries: Set<String> = emptySet()
 ) {
     val readerTtsProvider: String
         get() = readerTtsConfig.storedProvider

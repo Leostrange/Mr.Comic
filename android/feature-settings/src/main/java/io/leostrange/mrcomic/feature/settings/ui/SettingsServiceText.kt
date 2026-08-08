@@ -23,7 +23,9 @@ internal data class TranslationSettingsMapText(
     val overlayTitle: String,
     val overlayDescription: String,
     val servicesTitle: String,
-    val servicesDescription: String
+    val servicesDescription: String,
+    val dictionariesTitle: String,
+    val dictionariesDescription: String
 )
 
 
@@ -105,7 +107,9 @@ internal fun translationSettingsMapText(language: String): TranslationSettingsMa
         overlayTitle = "Overlay",
         overlayDescription = "Overlay opacity, font scale, and presentation style.",
         servicesTitle = "Services",
-        servicesDescription = "Transport, Explain, and provider routes now live in AI Services."
+        servicesDescription = "Transport, Explain, and provider routes now live in AI Services.",
+        dictionariesTitle = "Dictionaries",
+        dictionariesDescription = "Download offline dictionaries for translation and lookup."
     )
     "ja" -> TranslationSettingsMapText(
         overviewTitle = "翻訳エリア",
@@ -118,7 +122,9 @@ internal fun translationSettingsMapText(language: String): TranslationSettingsMa
         overlayTitle = "オーバーレイ",
         overlayDescription = "不透明度、フォント倍率、表示スタイル。",
         servicesTitle = "サービス",
-        servicesDescription = "転送方式、Explain、provider 経路は AI Services に集約されました。"
+        servicesDescription = "転送方式、Explain、provider 経路は AI Services に集約されました。",
+        dictionariesTitle = "辞書",
+        dictionariesDescription = "翻訳・辞書検索用のオフライン辞書をダウンロード。"
     )
     "zh" -> TranslationSettingsMapText(
         overviewTitle = "翻译区域",
@@ -131,7 +137,9 @@ internal fun translationSettingsMapText(language: String): TranslationSettingsMa
         overlayTitle = "覆盖层",
         overlayDescription = "透明度、字体缩放和显示样式。",
         servicesTitle = "服务",
-        servicesDescription = "传输、Explain 和 provider 路径现在集中在 AI Services。"
+        servicesDescription = "传输、Explain 和 provider 路径现在集中在 AI Services。",
+        dictionariesTitle = "词典",
+        dictionariesDescription = "下载离线词典用于翻译和查询。"
     )
     "ko" -> TranslationSettingsMapText(
         overviewTitle = "번역 영역",
@@ -144,7 +152,9 @@ internal fun translationSettingsMapText(language: String): TranslationSettingsMa
         overlayTitle = "오버레이",
         overlayDescription = "투명도, 글꼴 비율, 표시 스타일.",
         servicesTitle = "서비스",
-        servicesDescription = "전송, Explain, provider 경로는 이제 AI Services에 모였습니다."
+        servicesDescription = "전송, Explain, provider 경로는 이제 AI Services에 모였습니다.",
+        dictionariesTitle = "사전",
+        dictionariesDescription = "번역 및 조회를 위한 오프라인 사전을 다운로드합니다."
     )
     else -> TranslationSettingsMapText(
         overviewTitle = "Зоны перевода",
@@ -157,7 +167,9 @@ internal fun translationSettingsMapText(language: String): TranslationSettingsMa
         overlayTitle = "Оверлей",
         overlayDescription = "Прозрачность, масштаб шрифта и стиль показа.",
         servicesTitle = "Сервисы",
-        servicesDescription = "Транспорт, Explain и маршруты провайдеров теперь собраны в AI Services."
+        servicesDescription = "Транспорт, Explain и маршруты провайдеров теперь собраны в AI Services.",
+        dictionariesTitle = "Словари",
+        dictionariesDescription = "Скачать оффлайн-словари для перевода и поиска."
     )
 }
 

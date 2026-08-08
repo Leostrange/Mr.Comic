@@ -45,6 +45,7 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryAssetCatalog
 import io.leostrange.mrcomic.core.domain.util.LibraryViewModeKey
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.domain.util.normalizeLibraryViewModeKey
@@ -97,6 +98,7 @@ import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.core.ui.theme.toConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryDownloader
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
@@ -143,7 +145,8 @@ class SettingsViewModel @Inject constructor(
     internal val analyticsTracker: ReadingAnalyticsTracker,
     private val dictionaryEngine: DictionaryEngine,
     private val offlineTranslationEngine: OfflineTranslationEngine,
-    private val onlineTranslationEngine: OnlineTranslationEngine
+    private val onlineTranslationEngine: OnlineTranslationEngine,
+    private val dictionaryDownloader: DictionaryDownloader
 ) : ViewModel() {
 
     internal val preferences = UserPreferences(context.dataStore)
@@ -392,4 +395,30 @@ class SettingsViewModel @Inject constructor(
     // Phase Z (2026-08-04): setter functions → SettingsViewModelSetters.kt.
 
     // Phase X (2026-08-04): backup/cache/repair → SettingsViewModelBackup.kt.
+
+    // Dictionary download
+    fun downloadAllDictionaries() {
+        viewModelScope.launch {
+            uiState.update { it.copy(isDownloadingDictionary = true) }
+            try {
+                val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
+                val downloaded = mutableSetOf<String>()
+                allLanguages.forEach { lang ->
+                    uiState.update { it.copy(downloadingDictionaryName = lang) }
+                    val result = dictionaryDownloader.ensureDictionary(lang)
+                    if (result != null) downloaded.add(lang)
+                }
+                uiState.update { it.copy(
+                    isDownloadingDictionary = false,
+                    downloadingDictionaryName = null,
+                    downloadedDictionaries = downloaded.toSet()
+                ) }
+            } catch (e: Exception) {
+                uiState.update { it.copy(
+                    isDownloadingDictionary = false,
+                    downloadingDictionaryName = null
+                ) }
+            }
+        }
+    }
 }

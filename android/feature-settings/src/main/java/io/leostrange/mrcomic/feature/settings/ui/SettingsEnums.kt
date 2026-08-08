@@ -16,6 +16,6 @@ internal enum class AppearanceSettingsPage { OVERVIEW, BASICS, LIBRARY, THEME_ST
 internal enum class ReaderSettingsPage { OVERVIEW, TEXT_APPEARANCE, PAGE_LAYOUT, HEADERS, PAGING, BEHAVIOR }
 internal enum class LibrarySettingsPage { OVERVIEW, ACCESS, CACHE, IMPORT_EXPORT }
 internal enum class SyncSettingsPage { OVERVIEW, BACKUP }
-internal enum class TranslationSettingsPage { OVERVIEW, LANGUAGES, OCR, OVERLAY, SERVICES }
+internal enum class TranslationSettingsPage { OVERVIEW, LANGUAGES, OCR, OVERLAY, SERVICES, DICTIONARIES }
 internal enum class AppearanceSettingsTab { BASICS, THEME, SCALE, COLORS, EXTRA }
 internal enum class LibrarySettingsTab { DISPLAY, COVERS, STYLE, SORTING }
