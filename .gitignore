@@ -133,3 +133,7 @@ mimo.exe
 
 # === Detekt baselines (per-module) ===
 **/detekt-baseline.xml
+
+# Dictionary .dbpack files (downloaded on demand from GitHub Releases)
+android/app/src/main/assets/databases/*.dbpack
+android/app/src/main/assets/databases/*.dbpack.gz
