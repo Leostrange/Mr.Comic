@@ -1,18 +1,23 @@
 package io.leostrange.mrcomic.engine.formats.di
 
-import io.leostrange.mrcomic.engine.formats.djvu.DjvuBackend
-import io.leostrange.mrcomic.engine.formats.djvu.StructuredDjvuBackend
+import dagger.Binds
 import dagger.Module
-import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import io.leostrange.mrcomic.engine.api.FormatProvider
+import io.leostrange.mrcomic.engine.formats.FormatProviderImpl
+import io.leostrange.mrcomic.engine.formats.djvu.DjvuBackend
+import io.leostrange.mrcomic.engine.formats.djvu.StructuredDjvuBackend
+import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object EngineFormatsModule {
+abstract class EngineFormatsModule {
+    @Binds
+    @Singleton
+    abstract fun bindFormatProvider(impl: FormatProviderImpl): FormatProvider
 
-    @Provides
-    fun provideDjvuBackend(
-        backend: StructuredDjvuBackend
-    ): DjvuBackend = backend
+    @Binds
+    @Singleton
+    abstract fun bindDjvuBackend(impl: StructuredDjvuBackend): DjvuBackend
 }
