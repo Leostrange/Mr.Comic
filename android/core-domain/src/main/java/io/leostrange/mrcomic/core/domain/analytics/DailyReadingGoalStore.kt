@@ -1,5 +1,11 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
+import io.leostrange.mrcomic.core.interfaces.analytics.DEFAULT_DAILY_READING_GOAL_PAGES
+import io.leostrange.mrcomic.core.interfaces.analytics.MIN_DAILY_READING_GOAL_PAGES
+import io.leostrange.mrcomic.core.interfaces.analytics.MAX_DAILY_READING_GOAL_PAGES
+
 import android.content.Context
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
@@ -21,49 +27,9 @@ import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
 
-internal const val DEFAULT_DAILY_READING_GOAL_PAGES = 20
-internal const val MIN_DAILY_READING_GOAL_PAGES = 5
-internal const val MAX_DAILY_READING_GOAL_PAGES = 200
 private const val WEEKLY_GRACE_DAY_LIMIT = 1
 private const val DAILY_READING_HISTORY_LIMIT = 365
 private const val RECENT_READING_CALENDAR_DAYS = 7
-
-data class DailyReadingCalendarDay(
-    val dayKey: String,
-    val pagesRead: Int = 0,
-    val goalCompleted: Boolean = false,
-    val minutesRead: Int = 0,
-    val completedCheckpoints: Int = 0,
-    val xpEarned: Int = 0
-)
-
-data class DailyReadingGoalState(
-    val enabled: Boolean = false,
-    val targetPages: Int = DEFAULT_DAILY_READING_GOAL_PAGES,
-    val pagesReadToday: Int = 0,
-    val pagesReadThisWeek: Int = 0,
-    val weeklyTargetPages: Int = DEFAULT_DAILY_READING_GOAL_PAGES * 7,
-    val completedDaysThisWeek: Int = 0,
-    val streakEnabled: Boolean = false,
-    val graceEnabled: Boolean = true,
-    val currentStreak: Int = 0,
-    val bestStreak: Int = 0,
-    val graceDaysRemainingThisWeek: Int = WEEKLY_GRACE_DAY_LIMIT,
-    val historyActivity: List<DailyReadingCalendarDay> = emptyList(),
-    val recentActivity: List<DailyReadingCalendarDay> = emptyList()
-) {
-    val remainingPages: Int
-        get() = (targetPages - pagesReadToday).coerceAtLeast(0)
-
-    val isCompleted: Boolean
-        get() = enabled && pagesReadToday >= targetPages
-
-    val remainingPagesThisWeek: Int
-        get() = (weeklyTargetPages - pagesReadThisWeek).coerceAtLeast(0)
-
-    val isWeeklyPlanCompleted: Boolean
-        get() = enabled && pagesReadThisWeek >= weeklyTargetPages
-}
 
 @Singleton
 class DailyReadingGoalStore @Inject constructor(

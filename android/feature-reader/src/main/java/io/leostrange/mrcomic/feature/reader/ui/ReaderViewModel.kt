@@ -29,7 +29,7 @@ import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.api.BookSession
@@ -71,7 +71,7 @@ class ReaderViewModel @Inject constructor(
     private val translatorEngine: io.leostrange.mrcomic.core.domain.translation.TranslatorEngine,
     private val translationComparisonEngine: io.leostrange.mrcomic.core.domain.translation.TranslationComparisonEngine,
     private val analyticsTracker: ReadingAnalyticsTracker,
-    private val readerCheckpointStore: ReaderCheckpointStore,
+    private val readerCheckpointStore: ReaderCheckpointRepository,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
     private val readerBookPreparer: ReaderBookPreparer,
     private val appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope,

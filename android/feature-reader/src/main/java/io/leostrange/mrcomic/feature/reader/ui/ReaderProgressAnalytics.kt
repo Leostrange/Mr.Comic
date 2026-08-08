@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 

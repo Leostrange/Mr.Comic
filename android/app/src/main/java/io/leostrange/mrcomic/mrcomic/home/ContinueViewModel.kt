@@ -8,15 +8,15 @@ import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.data.repository.ComicRepository
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotContext
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotState
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpoint
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.core.domain.analytics.calculateMascotProgress
 import io.leostrange.mrcomic.core.domain.analytics.resolveGamificationMetricsSnapshot
 import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
@@ -101,7 +101,7 @@ internal fun resolveContinueStartupData(
 class ContinueViewModel @Inject constructor(
     comicRepository: ComicRepository,
     @ApplicationContext context: Context,
-    private val readerCheckpointStore: ReaderCheckpointStore,
+    private val readerCheckpointStore: ReaderCheckpointRepository,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val continueStartupWarmStore: ContinueStartupWarmStore

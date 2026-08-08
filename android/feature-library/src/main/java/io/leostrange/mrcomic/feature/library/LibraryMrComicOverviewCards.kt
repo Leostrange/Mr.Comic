@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings

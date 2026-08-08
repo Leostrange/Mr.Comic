@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.feature.library
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.feature.library.components.AchievementId

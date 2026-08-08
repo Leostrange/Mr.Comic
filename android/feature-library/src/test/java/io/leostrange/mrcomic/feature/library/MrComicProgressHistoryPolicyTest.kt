@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.feature.library
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

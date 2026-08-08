@@ -1,13 +1,7 @@
-package io.leostrange.mrcomic.core.domain.analytics
+package io.leostrange.mrcomic.core.interfaces.analytics
 
 import kotlinx.coroutines.flow.Flow
 
-/**
- * Repository interface for reader checkpoint storage.
- *
- * Moved from core-data to core-domain to enforce dependency inversion.
- * Implementation lives in core-data and is injected via Hilt.
- */
 interface ReaderCheckpointRepository {
     val checkpointTrail: Flow<List<ReaderCheckpoint>>
     val latestCheckpoint: Flow<ReaderCheckpoint?>

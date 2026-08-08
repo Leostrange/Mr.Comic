@@ -148,6 +148,7 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     implementation(project(":core-model"))
+    implementation(project(":core-interfaces"))
     implementation(project(":core-data"))
     implementation(project(":core-domain"))
     implementation(project(":core-ui"))

@@ -1,10 +1,10 @@
 package io.leostrange.mrcomic.home
 
 import androidx.compose.material3.Text
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotState
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpoint
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodHeadline
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.ui.ContinueScreenText

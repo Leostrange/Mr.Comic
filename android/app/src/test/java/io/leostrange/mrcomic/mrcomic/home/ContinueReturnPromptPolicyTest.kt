@@ -1,8 +1,8 @@
 package io.leostrange.mrcomic.home
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpoint
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
 import io.leostrange.mrcomic.core.model.Comic
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

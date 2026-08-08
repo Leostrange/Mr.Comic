@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.feature.library
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.MascotStageArchive
 import io.leostrange.mrcomic.core.domain.analytics.MascotStageArchiveEntry
@@ -106,7 +106,7 @@ class MrComicProgressUiPolicyTest {
     @Test
     fun mrComicProgressHistoryDays_prefersRecentWindowForLast7AndFallsBackToHistory() {
         val history = (1..12).map { index ->
-            io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay(
+            io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay(
                 dayKey = "2026-03-${index.toString().padStart(2, '0')}",
                 pagesRead = index
             )
@@ -128,20 +128,20 @@ class MrComicProgressUiPolicyTest {
     fun summarizeMrComicProgressHistory_countsPagesMinutesCheckpointsAndActiveDays() {
         val summary = summarizeMrComicProgressHistory(
             listOf(
-                io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay(
+                io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay(
                     dayKey = "2026-03-20",
                     pagesRead = 12,
                     xpEarned = 72,
                     minutesRead = 8,
                     completedCheckpoints = 1
                 ),
-                io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay(
+                io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay(
                     dayKey = "2026-03-21",
                     pagesRead = 0,
                     minutesRead = 14,
                     completedCheckpoints = 0
                 ),
-                io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay(
+                io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay(
                     dayKey = "2026-03-22",
                     pagesRead = 0,
                     minutesRead = 0,
@@ -161,7 +161,7 @@ class MrComicProgressUiPolicyTest {
     @Test
     fun mrComicProgressStreakDays_keepsWeeklySliceSeparateFromRawHistory() {
         val recent = (1..7).map { index ->
-            io.leostrange.mrcomic.core.domain.analytics.DailyReadingCalendarDay(
+            io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay(
                 dayKey = "2026-03-${index.toString().padStart(2, '0')}",
                 goalCompleted = index >= 5
             )
