@@ -4,12 +4,11 @@ import android.graphics.Bitmap
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.domain.util.runCatchingResult
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-import io.leostrange.mrcomic.engine.formats.base.FormatDetector
+import io.leostrange.mrcomic.engine.api.FormatProvider
 import javax.inject.Inject
 
 class GetComicPagesUseCase @Inject constructor(
-    private val formatFactory: FormatFactory
+    private val formatProvider: FormatProvider
 ) {
     /**
      * Открывает комикс по пути и возвращает список bitmap-страниц.
@@ -19,13 +18,12 @@ class GetComicPagesUseCase @Inject constructor(
     suspend operator fun invoke(path: String, format: ComicFormat): Result<List<Bitmap>> =
         runCatchingResult {
             val resolved = if (format == ComicFormat.UNKNOWN) {
-                FormatDetector.detectByExtension(path)
+                formatProvider.detectByExtension(path)
             } else {
                 format
             }
-            val reader = formatFactory.createReader(path, resolved)
+            val reader = formatProvider.createReader(path, resolved)
                 ?: error("Формат не поддерживается: $resolved")
-            val count = reader.getPageCount()
-            (0 until count).mapNotNull { reader.getPage(it) }.also { reader.close() }
+            formatProvider.getPages(reader).also { formatProvider.closeReader(reader) }
         }
 }
