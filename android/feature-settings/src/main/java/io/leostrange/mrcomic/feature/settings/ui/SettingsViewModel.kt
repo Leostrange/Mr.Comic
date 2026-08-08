@@ -11,9 +11,6 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
 import android.provider.DocumentsContract
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.Preferences
@@ -46,7 +43,6 @@ import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
 import io.leostrange.mrcomic.core.domain.util.LibraryViewModeKey
-import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.domain.util.normalizeLibraryViewModeKey
 import io.leostrange.mrcomic.core.domain.util.normalizeTapZoneActionName
 import io.leostrange.mrcomic.core.model.Comic
@@ -61,8 +57,6 @@ import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
-import io.leostrange.mrcomic.core.model.TranslationAvailabilitySnapshot
-import io.leostrange.mrcomic.core.model.TranslationServiceConfig
 import io.leostrange.mrcomic.core.model.TranslationTransportPreference
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
 import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
@@ -87,9 +81,7 @@ import io.leostrange.mrcomic.core.ui.library.normalizeLibraryGraphicCoverStyle
 import io.leostrange.mrcomic.core.ui.library.normalizeLibraryShelfStyle
 import io.leostrange.mrcomic.core.ui.library.parseLibraryThemePreset
 import io.leostrange.mrcomic.core.ui.eink.isEInkDevice
-import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
 import io.leostrange.mrcomic.core.ui.locale.normalizeTranslationLanguageCode
-import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreferencesRepository
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
@@ -110,10 +102,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
-import java.util.Locale
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -199,103 +188,21 @@ class SettingsViewModel @Inject constructor(
         sliderJobs[key] = viewModelScope.launch { delay(300); block() }
     }
 
-    private val baseUiStateLeftCore = createBaseUiStateLeftCore()
+    /** Flow-composition holder for SettingsUiState (4.1). */
+    private val settingsUiStateFlowBuilder: SettingsUiStateFlowBuilder by lazy {
+        SettingsUiStateFlowBuilder(
+            preferences = preferences,
+            context = context,
+            statusState = statusState,
+            themePreferencesRepository = themePreferencesRepository,
+            onlineTranslationEngine = onlineTranslationEngine,
+            offlineTranslationEngine = offlineTranslationEngine,
+            dictionaryEngine = dictionaryEngine,
+        )
+    }
 
-    private val baseUiStateLeft = createBaseUiStateLeft()
-
-    private val baseUiState = createBaseUiState()
-
-    // Extras 1: библиотека + базовые настройки ридера
-    private val extrasFlow1a = createExtrasFlow1a()
-
-    private val extrasFlow1 = createExtrasFlow1()
-
-    private val extrasFlow1b = createExtrasFlow1b()
-
-    private val extrasFlow2a = createExtrasFlow2a()
-
-    private val extrasFlow2b = createExtrasFlow2b()
-
-    private val extrasFlow2 = createExtrasFlow2()
-
-    private val extrasFlow12 = createExtrasFlow12()
-
-    private val translationConfigFlow = createTranslationConfigFlow()
-
-    private val appLanguageFlow = preferences.get(PreferencesKeys.APP_LANGUAGE, "ru")
-        .map(::normalizeAppLanguageCode)
-
-    private val networkAvailableFlow = createNetworkAvailableFlow()
-
-    private val translationAvailabilityFlow = createTranslationAvailabilityFlow()
-
-    private val extrasFlow3a2 = createExtrasFlow3a2()
-
-    private val extrasFlow3a3 = createExtrasFlow3a3()
-
-    private val extrasFlow3b = createExtrasFlow3b()
-
-    private val extrasFlow3 = createExtrasFlow3()
-
-    private val extrasFlow4 = createExtrasFlow4()
-
-    private val extrasFlow5 = createExtrasFlow5()
-
-    private val extrasFlow6a = createExtrasFlow6a()
-
-    private val extrasFlow6b = createExtrasFlow6b()
-
-    private val extrasFlow6e = createExtrasFlow6e()
-
-    private val extrasFlow6c = createExtrasFlow6c()
-
-    private val extrasFlow6d = createExtrasFlow6d()
-
-    private val readerStylePresetSlotsFlow = createReaderStylePresetSlotsFlow()
-
-    private val readerStylePresetEntriesFlow = createReaderStylePresetEntriesFlow()
-
-    private val extrasFlow345 = createExtrasFlow345()
-    private val extrasFlow6 = createExtrasFlow6()
-    private val extrasFlow3456 = createExtrasFlow3456()
-    private val extrasFlow7a = createExtrasFlow7a()
-
-    private val extrasFlow7b1a = createExtrasFlow7b1a()
-
-    private val extrasFlow7b1b = createExtrasFlow7b1b()
-
-    private val extrasFlow7b1 = createExtrasFlow7b1()
-
-    private val extrasFlow7b2a = createExtrasFlow7b2a()
-
-    private val extrasFlow7b2b = createExtrasFlow7b2b()
-
-    private val extrasFlow7b2 = createExtrasFlow7b2()
-    private val extrasFlow7b = createExtrasFlow7b()
-    private val extrasFlow7c1a = createExtrasFlow7c1a()
-
-    private val extrasFlow7c1b = createExtrasFlow7c1b()
-    private val extrasFlow7c1 = createExtrasFlow7c1()
-
-    private val extrasFlow7c2a = createExtrasFlow7c2a()
-
-    private val extrasFlow7c2b = createExtrasFlow7c2b()
-
-    private val extrasFlow7c3 = createExtrasFlow7c3()
-
-    private val extrasFlow7c2 = createExtrasFlow7c2()
-    private val extrasFlow7c = createExtrasFlow7c()
-    private val extrasFlow7 = createExtrasFlow7()
-
-    private val readerTtsFlowA = createReaderTtsFlowA()
-
-    private val readerTtsFlowB = createReaderTtsFlowB()
-
-    private val readerTtsFlow = createReaderTtsFlow()
-
-    private val perfFlow = createPerfFlow()
-
-    private val combinedSettingsUiState: Flow<SettingsUiState> = createCombinedSettingsUiState()
+    private val combinedSettingsUiState: Flow<SettingsUiState> = settingsUiStateFlowBuilder
+        .createCombinedSettingsUiState()
         .combine(dailyReadingGoalStore.goalState) { state: SettingsUiState, goalState ->
             state.copy(
                 dailyReadingGoalEnabled = goalState.enabled,
@@ -344,78 +251,6 @@ class SettingsViewModel @Inject constructor(
                 persistReaderStylePresetEntries(migrated)
             }
         }
-    }
-
-    internal suspend fun resolveSettingsTranslationAvailabilityState(
-        translationConfig: TranslationServiceConfig,
-        appLanguage: String,
-        networkAvailable: Boolean
-    ): SettingsTranslationAvailabilityState {
-        val sourceLanguage = translationConfig.sourceLanguage
-            .takeUnless { it.equals("AUTO", ignoreCase = true) }
-            ?.let(::normalizeTranslationLanguageCode)
-        val targetLanguage = when (translationConfig.targetLanguage.uppercase(Locale.US)) {
-            "APP" -> normalizeTranslationLanguageCode(appLanguage)
-            else -> normalizeTranslationLanguageCode(translationConfig.targetLanguage)
-        }
-        val onlineConfigured = when (val configured = onlineTranslationEngine.isConfigured()) {
-            is Result.Success -> configured.data
-            is Result.Error -> false
-            Result.Loading -> false
-        }
-
-        if (sourceLanguage == null || targetLanguage == null || sourceLanguage == targetLanguage) {
-            return SettingsTranslationAvailabilityState(
-                snapshot = TranslationAvailabilitySnapshot(
-                    networkAvailable = networkAvailable,
-                    onlineConfigured = onlineConfigured,
-                    explainToggleEnabled = translationConfig.explainEnabled
-                ),
-                pairKnown = false
-            )
-        }
-
-        val dictionaryAvailable = when (
-            val availability = dictionaryEngine.isLookupAvailable(
-                sourceLanguage = sourceLanguage,
-                targetLanguage = targetLanguage
-            )
-        ) {
-            is Result.Success -> availability.data
-            is Result.Error -> false
-            Result.Loading -> false
-        }
-
-        val offlineModelInstalled = when (
-            val availability = offlineTranslationEngine.isLanguagePairAvailable(
-                sourceLanguage = sourceLanguage,
-                targetLanguage = targetLanguage
-            )
-        ) {
-            is Result.Success -> availability.data
-            is Result.Error -> false
-            Result.Loading -> false
-        }
-
-        return SettingsTranslationAvailabilityState(
-            snapshot = TranslationAvailabilitySnapshot(
-                dictionaryAvailable = dictionaryAvailable,
-                offlinePairSupported = true,
-                offlineModelInstalled = offlineModelInstalled,
-                networkAvailable = networkAvailable,
-                onlineConfigured = onlineConfigured,
-                explainToggleEnabled = translationConfig.explainEnabled
-            ),
-            pairKnown = true
-        )
-    }
-
-    internal fun resolveSettingsNetworkAvailable(
-        connectivityManager: ConnectivityManager
-    ): Boolean {
-        val network = connectivityManager.activeNetwork ?: return false
-        val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
-        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     // Phase Z (2026-08-04): setter functions → SettingsViewModelSetters.kt.

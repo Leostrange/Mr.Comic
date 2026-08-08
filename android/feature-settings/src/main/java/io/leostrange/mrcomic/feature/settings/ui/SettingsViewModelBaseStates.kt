@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.map
 
 // Phase W-Z (2026-08-07): Base UI state flow builders extracted from SettingsViewModelFlows.
 
-internal fun SettingsViewModel.createBaseUiStateLeftCore() = combine(
+internal fun SettingsUiStateFlowBuilder.createBaseUiStateLeftCore() = combine(
         themePreferencesRepository.themeConfig,
         themePreferencesRepository.themePreset,
         preferences.get(PreferencesKeys.READING_MODE, ReadingMode.PAGE_LTR.name).map { stored ->
@@ -25,7 +25,7 @@ internal fun SettingsViewModel.createBaseUiStateLeftCore() = combine(
         listOf(themeConfig, preset, readingMode, brightness, keepScreenOn)
     }
 
-internal fun SettingsViewModel.createBaseUiStateLeft() = combine(
+internal fun SettingsUiStateFlowBuilder.createBaseUiStateLeft() = combine(
         createBaseUiStateLeftCore(),
         preferences.get(
             PreferencesKeys.READER_SCREEN_TIMEOUT_MODE,
@@ -35,7 +35,7 @@ internal fun SettingsViewModel.createBaseUiStateLeft() = combine(
         left + screenTimeoutMode
     }
 
-internal fun SettingsViewModel.createBaseUiState() = combine(
+internal fun SettingsUiStateFlowBuilder.createBaseUiState() = combine(
         createBaseUiStateLeft(),
         preferences.get(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, true)
     ) { left, landscapeSpreadEnabled ->
