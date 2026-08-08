@@ -399,24 +399,35 @@ class SettingsViewModel @Inject constructor(
     // Dictionary download
     fun downloadAllDictionaries() {
         viewModelScope.launch {
-            uiState.update { it.copy(isDownloadingDictionary = true) }
+            uiState.update { it.copy(
+                isDownloadingDictionary = true,
+                dictionaryProgress = emptyMap()
+            ) }
             try {
                 val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
                 val downloaded = mutableSetOf<String>()
                 allLanguages.forEach { lang ->
                     uiState.update { it.copy(downloadingDictionaryName = lang) }
-                    val result = dictionaryDownloader.ensureDictionary(lang)
+                    val result = dictionaryDownloader.ensureDictionary(lang) { progress ->
+                        uiState.update { state ->
+                            state.copy(
+                                dictionaryProgress = state.dictionaryProgress + (lang to progress)
+                            )
+                        }
+                    }
                     if (result != null) downloaded.add(lang)
                 }
                 uiState.update { it.copy(
                     isDownloadingDictionary = false,
                     downloadingDictionaryName = null,
-                    downloadedDictionaries = downloaded.toSet()
+                    downloadedDictionaries = downloaded.toSet(),
+                    dictionaryProgress = emptyMap()
                 ) }
             } catch (e: Exception) {
                 uiState.update { it.copy(
                     isDownloadingDictionary = false,
-                    downloadingDictionaryName = null
+                    downloadingDictionaryName = null,
+                    dictionaryProgress = emptyMap()
                 ) }
             }
         }

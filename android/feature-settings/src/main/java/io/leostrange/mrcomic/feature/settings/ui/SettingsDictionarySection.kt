@@ -74,18 +74,35 @@ private fun DictionaryDownloadCard(
         Spacer(Modifier.height(12.dp))
         
         if (isDownloading) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            // Show overall progress
+            val totalProgress = uiState.dictionaryProgress.values.average().toInt()
+            Column(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    strokeWidth = 2.dp
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = uiState.downloadingDictionaryName ?: "Downloading...",
-                    style = MaterialTheme.typography.bodyMedium
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    CircularProgressIndicator(
+                        progress = { totalProgress / 100f },
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = uiState.downloadingDictionaryName?.let { lang ->
+                            "${languageNames[lang] ?: lang}... $totalProgress%"
+                        } ?: "Downloading...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = { totalProgress / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         } else {
@@ -110,33 +127,41 @@ private fun DictionaryDownloadCard(
         // List of downloaded dictionaries
         DictionaryStatusList(
             downloadedLanguages = uiState.downloadedDictionaries,
+            progressMap = uiState.dictionaryProgress,
+            isDownloading = isDownloading,
             language = language
         )
     }
 }
 
+private val languageNames = mapOf(
+    "en" to "English",
+    "fr" to "Français",
+    "it" to "Italiano",
+    "ja" to "日本語",
+    "ko" to "한국어",
+    "pl" to "Polski",
+    "pt" to "Português",
+    "ru" to "Русский",
+    "tr" to "Türkçe",
+    "zh" to "中文"
+)
+
+private val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
+
 @Composable
 private fun DictionaryStatusList(
     downloadedLanguages: Set<String>,
+    progressMap: Map<String, Int>,
+    isDownloading: Boolean,
     language: String
 ) {
-    val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
-    val languageNames = mapOf(
-        "en" to "English",
-        "fr" to "Français",
-        "it" to "Italiano",
-        "ja" to "日本語",
-        "ko" to "한국어",
-        "pl" to "Polski",
-        "pt" to "Português",
-        "ru" to "Русский",
-        "tr" to "Türkçe",
-        "zh" to "中文"
-    )
-    
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         allLanguages.forEach { lang ->
             val isDownloaded = lang in downloadedLanguages
+            val progress = progressMap[lang]
+            val isCurrentLang = isDownloading && progress != null
+            
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -144,12 +169,17 @@ private fun DictionaryStatusList(
                     .padding(vertical = 2.dp)
             ) {
                 Icon(
-                    imageVector = if (isDownloaded) Icons.Default.Check else Icons.Default.Language,
+                    imageVector = when {
+                        isDownloaded -> Icons.Default.Check
+                        isCurrentLang -> Icons.Default.CloudDownload
+                        else -> Icons.Default.Language
+                    },
                     contentDescription = null,
-                    tint = if (isDownloaded) 
-                        MaterialTheme.colorScheme.primary 
-                    else 
-                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = when {
+                        isDownloaded -> MaterialTheme.colorScheme.primary
+                        isCurrentLang -> MaterialTheme.colorScheme.tertiary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -164,7 +194,24 @@ private fun DictionaryStatusList(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
+                } else if (isCurrentLang) {
+                    Text(
+                        text = "${progress}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
                 }
+            }
+            // Show progress bar for current language
+            if (isCurrentLang) {
+                LinearProgressIndicator(
+                    progress = { (progress ?: 0) / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp)
+                        .padding(start = 24.dp),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             }
         }
     }
