@@ -414,7 +414,7 @@ internal fun SelectedTextTranslationSheet(
                             )
                             dictionaryEntry.translations.forEach { meaning ->
                                 Text(
-                                    text = "вЂў $meaning",
+                                    text = "• $meaning",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
