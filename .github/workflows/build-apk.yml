@@ -112,8 +112,10 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Kover XML Report
-        run: ./gradlew --no-daemon --console=plain koverXmlReport
+      - name: Kover XML Report + Verify (20% threshold)
+        # koverVerify fails the job when the overall line coverage drops below
+        # the minimum bound configured in build.gradle.kts (kover.verify).
+        run: ./gradlew --no-daemon --console=plain koverXmlReport koverVerify
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
