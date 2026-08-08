@@ -7,9 +7,9 @@ import io.leostrange.mrcomic.core.model.BookSource
 import io.leostrange.mrcomic.core.model.storedReaderLocator
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.api.OpenBookRequest
-import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.LegacyFormatSessionAccess
+import io.leostrange.mrcomic.engine.api.FormatReader
+import io.leostrange.mrcomic.engine.api.LegacyFormatSessionAccess
+import io.leostrange.mrcomic.engine.api.ReaderFactory
 import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
 
 /**
@@ -20,7 +20,7 @@ import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
  */
 internal class ReaderBookSessionManager(
     private val bookEngineRegistry: BookEngineRegistry,
-    private val formatFactory: FormatFactory,
+    private val readerFactory: ReaderFactory,
     private val textReaderOrchestrator: TextReaderOrchestrator
 ) {
     var formatReader: FormatReader? = null
@@ -57,12 +57,12 @@ internal class ReaderBookSessionManager(
             activeBookSession = session
             when (session) {
                 is LegacyFormatSessionAccess -> session.loadLegacyReader()
-                else -> formatFactory.createReader(resolvedPath, detectedFormat)
+                else -> readerFactory.createReader(resolvedPath, detectedFormat)
             }
         }.getOrElse { error ->
             Log.w(TAG, "BookEngine open failed for $detectedFormat; falling back to FormatFactory", error)
             activeBookSession = null
-            formatFactory.createReader(resolvedPath, detectedFormat)
+            readerFactory.createReader(resolvedPath, detectedFormat)
         }
     }
 

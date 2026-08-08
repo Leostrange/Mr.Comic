@@ -221,7 +221,7 @@ internal class ReaderProgressController(
 
     fun rememberChapterMilestoneAnchor(
         page: Int = _uiState.value.currentPage,
-        currentChapterFor: (Int) -> io.leostrange.mrcomic.engine.formats.base.TocEntry?
+        currentChapterFor: (Int) -> io.leostrange.mrcomic.engine.api.TocEntry?
     ) {
         val comicId = _uiState.value.comic?.id ?: return
         val chapter = currentChapterFor(page) ?: return
@@ -236,7 +236,7 @@ internal class ReaderProgressController(
     fun maybeEmitChapterMilestone(
         page: Int,
         progressSource: ReaderNavigationProgressSource,
-        currentChapterFor: (Int) -> io.leostrange.mrcomic.engine.formats.base.TocEntry?
+        currentChapterFor: (Int) -> io.leostrange.mrcomic.engine.api.TocEntry?
     ) {
         val comic = _uiState.value.comic ?: return
         val chapter = currentChapterFor(page) ?: return

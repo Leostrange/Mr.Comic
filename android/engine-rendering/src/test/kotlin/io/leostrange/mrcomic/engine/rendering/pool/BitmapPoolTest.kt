@@ -3,9 +3,9 @@ package io.leostrange.mrcomic.engine.rendering.pool
 import android.content.ComponentCallbacks2
 import android.content.Context
 import android.graphics.Bitmap
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile
-import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
-import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.RenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.RenderDeviceTier
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
@@ -40,7 +40,7 @@ class BitmapPoolTest {
 
     @Before
     fun setUp() {
-        mockkStatic("io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfileKt")
+        mockkStatic("io.leostrange.mrcomic.engine.api.RenderDeviceProfileKt")
         mockkStatic(Bitmap::class)
         val context = mockk<Context>()
         every { context.resolveRenderDeviceProfile() } returns testProfile
@@ -50,7 +50,7 @@ class BitmapPoolTest {
 
     @After
     fun tearDown() {
-        unmockkStatic("io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfileKt")
+        unmockkStatic("io.leostrange.mrcomic.engine.api.RenderDeviceProfileKt")
         unmockkStatic(Bitmap::class)
     }
 

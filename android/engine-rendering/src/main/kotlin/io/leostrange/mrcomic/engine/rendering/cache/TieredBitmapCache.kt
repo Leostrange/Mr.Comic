@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.LruCache
 import android.util.Log
-import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -4,7 +4,7 @@ import android.content.ComponentCallbacks2
 import android.content.Context
 import android.graphics.Bitmap
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator
-import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject

@@ -23,12 +23,6 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
-interface LegacyFormatSessionAccess {
-    val legacyReader: FormatReader
-
-    suspend fun loadLegacyReader(): FormatReader = legacyReader
-}
-
 @Singleton
 class LegacyFormatBookEngine @Inject constructor(
     private val formatFactory: FormatFactory

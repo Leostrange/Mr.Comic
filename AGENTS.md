@@ -59,13 +59,18 @@ Do not place Android UI dependencies in core-model.
 Do not bypass engine-api from feature modules unless the existing
 architecture explicitly requires it.
 
-**Known compromise:** feature-reader currently uses `FormatReader`,
-`FormatFactory`, and `LegacyFormatSessionAccess` from engine-formats
-directly. Pure data types (`TocEntry`, `FormatReaderWebResource`,
-`TextDocumentSection`, `TextPaginationConstraints`) have been moved
-to engine-api. The remaining format types require a deeper refactor
-(tracked in audit item 3.3). New code should prefer engine-api
-types; do not add new direct imports from engine.formats.base.
+**Boundary status:** feature-reader main source depends on engine-api
+for reader contracts and no longer imports engine-formats directly.
+The reader contract family (`FormatReader`, `BaseFormatReader`,
+`RasterPageReader`, `TextContentReader`), `LegacyFormatSessionAccess`,
+`FormatDetector`, `RenderDeviceProfile`/`RenderDeviceTier`,
+`EpubReadablePath`, `ReflowableTextFormatReader`, `ReaderFactory` and
+`SectionPaginator` live in engine-api; implementations stay in
+engine-formats, which re-exports the moved types via typealiases in
+`base/FormatTypes.kt` (and per-package files) for backward
+compatibility. Feature modules must not add new direct imports from
+engine.formats; test sources may use engine-formats for real pagination
+fixtures.
 
 ## Reader invariants
 

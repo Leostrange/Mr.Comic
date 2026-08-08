@@ -1,20 +1,25 @@
 package io.leostrange.mrcomic.engine.formats.text.pagination
 
-import io.leostrange.mrcomic.engine.formats.text.TextDocumentSection
+import io.leostrange.mrcomic.engine.api.SectionPaginator
+import io.leostrange.mrcomic.engine.api.SectionPaginationResult
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
 import io.leostrange.mrcomic.engine.formats.text.TextSectionBuilder
 import org.jsoup.Jsoup
 
 /**
  * Section-first pagination pipeline: split by chapter/spine boundaries, then layout units per section.
+ *
+ * Implements the engine-api [SectionPaginator] contract; feature modules depend
+ * on the interface, never on this class directly.
  */
 class DocumentTextPaginator(
     private val sectionPaginator: TextPaginator = LayoutUnitTextPaginator()
-) {
+) : SectionPaginator {
     suspend fun paginateMarkup(
         markup: String,
         baseUrl: String?,
         constraints: TextPaginationConstraints
-    ): DocumentTextPaginationResult {
+    ): SectionPaginationResult {
         val sections = TextSectionBuilder.fromMarkup(markup, baseUrl)
         return paginateSections(sections, constraints)
     }
@@ -22,15 +27,15 @@ class DocumentTextPaginator(
     suspend fun paginatePlainText(
         text: String,
         constraints: TextPaginationConstraints
-    ): DocumentTextPaginationResult {
+    ): SectionPaginationResult {
         val sections = TextSectionBuilder.fromPlainText(text)
         return paginateSections(sections, constraints)
     }
 
-    suspend fun paginateSections(
+    override suspend fun paginateSections(
         sections: List<TextDocumentSection>,
         constraints: TextPaginationConstraints
-    ): DocumentTextPaginationResult {
+    ): SectionPaginationResult {
         val pages = mutableListOf<TextPaginationSubPage>()
         var sectionIndex = 0
         while (sectionIndex < sections.size) {
@@ -69,7 +74,7 @@ class DocumentTextPaginator(
             }
             sectionIndex++
         }
-        return DocumentTextPaginationResult(
+        return SectionPaginationResult(
             sections = sections,
             pages = pages.ifEmpty {
                 listOf(TextPaginationSubPage(html = sections.firstOrNull()?.html.orEmpty(), index = 0))
@@ -93,11 +98,4 @@ class DocumentTextPaginator(
         // producing a mostly empty page between the title and its first paragraph.
         const val SHORT_SECTION_TEXT_LIMIT = 220
     }
-}
-
-data class DocumentTextPaginationResult(
-    val sections: List<TextDocumentSection>,
-    val pages: List<TextPaginationSubPage>
-) {
-    val pageCount: Int get() = pages.size.coerceAtLeast(1)
 }

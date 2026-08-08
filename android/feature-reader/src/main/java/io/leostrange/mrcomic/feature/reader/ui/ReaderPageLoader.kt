@@ -2,7 +2,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import android.util.Log
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
+import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

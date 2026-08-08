@@ -1,4 +1,4 @@
-package io.leostrange.mrcomic.engine.formats.base
+package io.leostrange.mrcomic.engine.api
 
 import android.app.ActivityManager
 import android.content.Context

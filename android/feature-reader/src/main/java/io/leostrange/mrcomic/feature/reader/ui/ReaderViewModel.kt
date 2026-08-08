@@ -30,11 +30,12 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
-import io.leostrange.mrcomic.engine.formats.base.FormatFactory
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.api.BookSession
+import io.leostrange.mrcomic.engine.api.FormatReader
+import io.leostrange.mrcomic.engine.api.ReaderFactory
+import io.leostrange.mrcomic.engine.api.SectionPaginator
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
-import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -59,7 +60,8 @@ class ReaderViewModel @Inject constructor(
     private val importRepository: ImportRepository,
     private val quoteRepository: QuoteRepository,
     private val textHighlightRepository: io.leostrange.mrcomic.core.data.repository.TextHighlightRepository,
-    private val formatFactory: FormatFactory,
+    private val readerFactory: ReaderFactory,
+    private val sectionPaginator: SectionPaginator,
     private val bookEngineRegistry: BookEngineRegistry,
     private val pagePreloader: PagePreloader,
     private val languageDetector: LanguageDetector,
@@ -173,11 +175,14 @@ class ReaderViewModel @Inject constructor(
         builder = TextWebtoonDocumentBuilder
     )
     private val textReaderOrchestrator = TextReaderOrchestrator(
-        TextReaderController(textWebtoonSessionController)
+        TextReaderController(
+            textWebtoonSessionController,
+            TextPagePaginationController(sectionPaginator)
+        )
     )
     private val sessionManager = ReaderBookSessionManager(
         bookEngineRegistry = bookEngineRegistry,
-        formatFactory = formatFactory,
+        readerFactory = readerFactory,
         textReaderOrchestrator = textReaderOrchestrator
     )
 

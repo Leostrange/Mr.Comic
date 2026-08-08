@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.util.Log
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.resolveRenderDeviceProfile
+import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.engine.rendering.cache.TieredBitmapCache
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*

@@ -16,7 +16,7 @@ import org.json.JSONTokener
 // ── WebView asset path handlers ──────────────────────────────────────────
 
 internal class ReaderFormatAssetPathHandler(
-    private val resolver: (String) -> io.leostrange.mrcomic.engine.formats.base.FormatReaderWebResource?
+    private val resolver: (String) -> io.leostrange.mrcomic.engine.api.FormatReaderWebResource?
 ) : WebViewAssetLoader.PathHandler {
     override fun handle(path: String): WebResourceResponse? {
         val cleanPath = path.substringBefore('#').substringBefore('?').trimStart('/')

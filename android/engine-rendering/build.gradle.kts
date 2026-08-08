@@ -16,6 +16,7 @@ android {
 }
 dependencies {
     implementation(project(":core-model"))
+    implementation(project(":engine-api"))
     implementation(project(":engine-formats"))
     api(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
