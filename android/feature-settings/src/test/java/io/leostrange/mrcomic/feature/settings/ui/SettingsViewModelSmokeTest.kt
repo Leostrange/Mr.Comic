@@ -7,6 +7,7 @@ import io.leostrange.mrcomic.core.data.repository.ComicRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryDownloader
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
@@ -58,6 +59,7 @@ class SettingsViewModelSmokeTest {
         dailyReadingGoalStore = mockk(relaxed = true),
         analyticsTracker = mockk(relaxed = true),
         dictionaryEngine = mockk(relaxed = true),
+        dictionaryDownloader = mockk(relaxed = true),
         offlineTranslationEngine = mockk(relaxed = true),
         onlineTranslationEngine = mockk(relaxed = true)
     )
