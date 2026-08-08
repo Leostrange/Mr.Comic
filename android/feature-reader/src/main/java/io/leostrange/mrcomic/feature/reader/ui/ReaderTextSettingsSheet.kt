@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import io.leostrange.mrcomic.core.model.*
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.*
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 
 /**
  * Sheet and panel composables for the reader.

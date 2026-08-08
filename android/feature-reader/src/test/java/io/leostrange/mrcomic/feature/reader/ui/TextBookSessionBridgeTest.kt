@@ -4,7 +4,7 @@ import io.leostrange.mrcomic.core.model.BookTocItem
 import io.leostrange.mrcomic.core.model.ReaderLocator
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.text.ReflowableTextFormatReader
-import io.leostrange.mrcomic.engine.formats.text.TextDocumentSection
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
