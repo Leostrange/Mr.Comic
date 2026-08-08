@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.library
 
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.libraryFileCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryFolderCountLabel

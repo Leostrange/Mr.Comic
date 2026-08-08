@@ -15,6 +15,7 @@ android {
 }
 dependencies {
     implementation(project(":core-model"))
+    implementation(project(":core-interfaces"))
     implementation(project(":engine-api"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.room.runtime)

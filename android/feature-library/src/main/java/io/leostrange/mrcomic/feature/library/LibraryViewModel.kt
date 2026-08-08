@@ -12,8 +12,8 @@ import io.leostrange.mrcomic.core.model.repository.CoverRepository
 import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpointStore
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
@@ -74,7 +74,7 @@ class LibraryViewModel @Inject constructor(
     private val coverRepository: CoverRepository,
     internal val quoteRepository: QuoteRepository,
     internal val audiobookRepository: AudiobookRepository,
-    internal val readerCheckpointStore: ReaderCheckpointStore,
+    internal val readerCheckpointStore: ReaderCheckpointRepository,
     private val dailyReadingGoalStore: DailyReadingGoalStore,
     private val analyticsTracker: ReadingAnalyticsTracker,
     @ApplicationContext internal val context: Context

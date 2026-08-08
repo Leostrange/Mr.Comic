@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.home
 
-import io.leostrange.mrcomic.core.domain.analytics.ReaderCheckpoint
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import org.junit.Assert.assertEquals

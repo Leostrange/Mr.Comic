@@ -7,6 +7,8 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.dataStore
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
+import io.leostrange.mrcomic.core.interfaces.analytics.READER_CHECKPOINT_TRAIL_LIMIT
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -15,16 +17,6 @@ import kotlinx.coroutines.flow.map
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
-
-data class ReaderCheckpoint(
-    val comicId: String,
-    val comicTitle: String,
-    val chapterTitle: String,
-    val page: Int,
-    val reachedAtMillis: Long = -1L
-)
-
-internal const val READER_CHECKPOINT_TRAIL_LIMIT = 3
 
 @Singleton
 class ReaderCheckpointStore @Inject constructor(
