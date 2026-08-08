@@ -1,44 +1,31 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import kotlinx.coroutines.launch
 
-internal fun SettingsViewModel.setMascotRecapEnabled(enabled: Boolean) {
-        val wasEnabled = uiState.value.mascotRecapEnabled
-        viewModelScope.launch {
+internal fun SettingsSettersController.setMascotRecapEnabled(enabled: Boolean) {
+        val wasEnabled = uiState().mascotRecapEnabled
+        scope.launch {
             preferences.set(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED, enabled)
-            updateToggleEnabledAt(
-                key = PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED_AT,
-                wasEnabled = wasEnabled,
-                enabled = enabled
-            )
+            updateToggleEnabledAt(PreferencesKeys.CONTINUE_MASCOT_RECAP_ENABLED_AT, wasEnabled, enabled)
         }
     }
 
-internal fun SettingsViewModel.setQuestPromptsEnabled(enabled: Boolean) {
-        val wasEnabled = uiState.value.questPromptsEnabled
-        viewModelScope.launch {
+internal fun SettingsSettersController.setQuestPromptsEnabled(enabled: Boolean) {
+        val wasEnabled = uiState().questPromptsEnabled
+        scope.launch {
             preferences.set(PreferencesKeys.MASCOT_QUEST_PROMPTS_ENABLED, enabled)
-            updateToggleEnabledAt(
-                key = PreferencesKeys.MASCOT_QUEST_PROMPTS_ENABLED_AT,
-                wasEnabled = wasEnabled,
-                enabled = enabled
-            )
+            updateToggleEnabledAt(PreferencesKeys.MASCOT_QUEST_PROMPTS_ENABLED_AT, wasEnabled, enabled)
         }
     }
 
-internal fun SettingsViewModel.setDailyReadingGoalEnabled(enabled: Boolean) {
-        val currentState = uiState.value
+internal fun SettingsSettersController.setDailyReadingGoalEnabled(enabled: Boolean) {
+        val currentState = uiState()
         if (currentState.dailyReadingGoalEnabled == enabled) return
-        viewModelScope.launch {
+        scope.launch {
             dailyReadingGoalStore.setGoalEnabled(enabled)
-            updateToggleEnabledAt(
-                key = PreferencesKeys.DAILY_READING_GOAL_ENABLED_AT,
-                wasEnabled = currentState.dailyReadingGoalEnabled,
-                enabled = enabled
-            )
+            updateToggleEnabledAt(PreferencesKeys.DAILY_READING_GOAL_ENABLED_AT, currentState.dailyReadingGoalEnabled, enabled)
             if (!enabled) {
                 dailyReadingGoalStore.setStreakEnabled(false)
                 dailyReadingGoalStore.setGraceEnabled(false)
@@ -55,10 +42,10 @@ internal fun SettingsViewModel.setDailyReadingGoalEnabled(enabled: Boolean) {
         }
     }
 
-internal fun SettingsViewModel.setDailyReadingGoalTargetPages(targetPages: Int) {
-        val currentState = uiState.value
+internal fun SettingsSettersController.setDailyReadingGoalTargetPages(targetPages: Int) {
+        val currentState = uiState()
         if (currentState.dailyReadingGoalTargetPages == targetPages) return
-        viewModelScope.launch {
+        scope.launch {
             dailyReadingGoalStore.setTargetPages(targetPages)
             analyticsTracker.track(
                 ReadingAnalyticsEvent.GoalSet(
@@ -72,15 +59,11 @@ internal fun SettingsViewModel.setDailyReadingGoalTargetPages(targetPages: Int) 
         }
     }
 
-internal fun SettingsViewModel.setDailyReadingStreakEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            if (enabled && !uiState.value.dailyReadingGoalEnabled) {
+internal fun SettingsSettersController.setDailyReadingStreakEnabled(enabled: Boolean) {
+        scope.launch {
+            if (enabled && !uiState().dailyReadingGoalEnabled) {
                 dailyReadingGoalStore.setGoalEnabled(true)
-                updateToggleEnabledAt(
-                    key = PreferencesKeys.DAILY_READING_GOAL_ENABLED_AT,
-                    wasEnabled = false,
-                    enabled = true
-                )
+                updateToggleEnabledAt(PreferencesKeys.DAILY_READING_GOAL_ENABLED_AT, false, true)
             }
             dailyReadingGoalStore.setStreakEnabled(enabled)
             if (!enabled) {
@@ -89,15 +72,11 @@ internal fun SettingsViewModel.setDailyReadingStreakEnabled(enabled: Boolean) {
         }
     }
 
-internal fun SettingsViewModel.setDailyReadingGraceEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            if (enabled && !uiState.value.dailyReadingGoalEnabled) {
+internal fun SettingsSettersController.setDailyReadingGraceEnabled(enabled: Boolean) {
+        scope.launch {
+            if (enabled && !uiState().dailyReadingGoalEnabled) {
                 dailyReadingGoalStore.setGoalEnabled(true)
-                updateToggleEnabledAt(
-                    key = PreferencesKeys.DAILY_READING_GOAL_ENABLED_AT,
-                    wasEnabled = false,
-                    enabled = true
-                )
+                updateToggleEnabledAt(PreferencesKeys.DAILY_READING_GOAL_ENABLED_AT, false, true)
             }
             if (enabled) {
                 dailyReadingGoalStore.setStreakEnabled(true)

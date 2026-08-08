@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.preferences.PerfProfile
 import io.leostrange.mrcomic.core.data.preferences.PerfRenderQuality
 import io.leostrange.mrcomic.core.data.preferences.PerformanceDefaults
@@ -8,30 +7,30 @@ import io.leostrange.mrcomic.core.data.preferences.PerformancePreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import kotlinx.coroutines.launch
 
-internal fun SettingsViewModel.setUiSoundEnabled(enabled: Boolean) = settingsPreferencesController.setUiSoundEnabled(enabled)
+internal fun SettingsSettersController.setUiSoundEnabled(enabled: Boolean) = settingsPreferencesController.setUiSoundEnabled(enabled)
 
-internal fun SettingsViewModel.setUiSoundsVolume(vol: Float) {
+internal fun SettingsSettersController.setUiSoundsVolume(vol: Float) {
         setSlider("uiVolume") { preferences.set(PreferencesKeys.UI_SOUNDS_VOLUME, vol.coerceIn(0f, 1f)) }
     }
 
-internal fun SettingsViewModel.setUiFontScale(scale: Float) {
+internal fun SettingsSettersController.setUiFontScale(scale: Float) {
         setSlider("fontScale") { preferences.set(PreferencesKeys.UI_FONT_SCALE, scale) }
     }
 
-internal fun SettingsViewModel.setUiDensityScale(scale: Float) {
+internal fun SettingsSettersController.setUiDensityScale(scale: Float) {
         setSlider("uiDensity") { preferences.set(PreferencesKeys.UI_DENSITY_SCALE, scale.coerceIn(0.82f, 1.18f)) }
     }
 
-internal fun SettingsViewModel.setUiCornerRadius(radius: Int) {
+internal fun SettingsSettersController.setUiCornerRadius(radius: Int) {
         setSlider("cornerRadius") { preferences.set(PreferencesKeys.UI_CORNER_RADIUS, radius.coerceIn(0, 32)) }
     }
 
-internal fun SettingsViewModel.setPerformanceReducedMotion(enabled: Boolean) = settingsPreferencesController.setPerformanceReducedMotion(enabled)
+internal fun SettingsSettersController.setPerformanceReducedMotion(enabled: Boolean) = settingsPreferencesController.setPerformanceReducedMotion(enabled)
 
-internal fun SettingsViewModel.setPerformanceReducedVisualEffects(enabled: Boolean) = settingsPreferencesController.setPerformanceReducedVisualEffects(enabled)
+internal fun SettingsSettersController.setPerformanceReducedVisualEffects(enabled: Boolean) = settingsPreferencesController.setPerformanceReducedVisualEffects(enabled)
 
-internal fun SettingsViewModel.setPerfProfile(profile: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfProfile(profile: String) {
+        scope.launch {
             preferences.set(
                 PerformancePreferencesKeys.PERF_PROFILE,
                 PerfProfile.fromStored(profile).storedValue
@@ -60,8 +59,8 @@ internal fun SettingsViewModel.setPerfProfile(profile: String) {
         }
     }
 
-internal fun SettingsViewModel.setPerfRenderQuality(quality: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfRenderQuality(quality: String) {
+        scope.launch {
             preferences.set(
                 PerformancePreferencesKeys.PERF_RENDER_QUALITY,
                 PerfRenderQuality.fromStored(quality).storedValue
@@ -69,38 +68,38 @@ internal fun SettingsViewModel.setPerfRenderQuality(quality: String) {
         }
     }
 
-internal fun SettingsViewModel.setPerfCoverCacheMb(mb: Int) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfCoverCacheMb(mb: Int) {
+        scope.launch {
             preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, mb.coerceIn(64, 512))
         }
     }
 
-internal fun SettingsViewModel.setPerfPageCacheCount(count: Int) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfPageCacheCount(count: Int) {
+        scope.launch {
             preferences.set(PerformancePreferencesKeys.PERF_PAGE_CACHE_COUNT, count.coerceIn(3, 10))
         }
     }
 
-internal fun SettingsViewModel.setPerfFtsSearchEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfFtsSearchEnabled(enabled: Boolean) {
+        scope.launch {
             preferences.set(PerformancePreferencesKeys.PERF_FTS_SEARCH_ENABLED, enabled)
         }
     }
 
-internal fun SettingsViewModel.setPerfStartupPreloadEnabled(enabled: Boolean) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfStartupPreloadEnabled(enabled: Boolean) {
+        scope.launch {
             preferences.set(PerformancePreferencesKeys.PERF_STARTUP_PRELOAD_ENABLED, enabled)
         }
     }
 
-internal fun SettingsViewModel.setPerfReducedAnimations(reduced: Boolean) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setPerfReducedAnimations(reduced: Boolean) {
+        scope.launch {
             preferences.set(PerformancePreferencesKeys.PERF_REDUCED_ANIMATIONS, reduced)
         }
     }
 
-internal fun SettingsViewModel.resetPerfSettings() {
-        viewModelScope.launch {
+internal fun SettingsSettersController.resetPerfSettings() {
+        scope.launch {
             preferences.set(PerformancePreferencesKeys.PERF_PROFILE, PerformanceDefaults.PROFILE)
             preferences.set(PerformancePreferencesKeys.PERF_RENDER_QUALITY, PerformanceDefaults.RENDER_QUALITY)
             preferences.set(PerformancePreferencesKeys.PERF_COVER_CACHE_MB, PerformanceDefaults.COVER_CACHE_MB)

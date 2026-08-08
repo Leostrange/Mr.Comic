@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
@@ -13,8 +12,8 @@ import kotlinx.coroutines.launch
      * Applies a reader preset: sets multiple reader settings at once.
      * CUSTOM only marks the preset key without changing other settings.
      */
-internal fun SettingsViewModel.setReaderPreset(presetName: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setReaderPreset(presetName: String) {
+        scope.launch {
             val preset = ReadingPreset.fromStored(presetName.uppercase())
             preferences.set(PreferencesKeys.READER_PRESET, preset.name)
             if (preset == ReadingPreset.CUSTOM) return@launch
@@ -37,19 +36,19 @@ internal fun SettingsViewModel.setReaderPreset(presetName: String) {
         }
     }
 
-private fun SettingsViewModel.markReaderPresetCustom() {
-        viewModelScope.launch {
+private fun SettingsSettersController.markReaderPresetCustom() {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
         }
     }
 
-internal fun SettingsViewModel.setReadingMode(mode: ReadingMode) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setReadingMode(mode: ReadingMode) {
+        scope.launch {
             preferences.set(PreferencesKeys.READING_MODE, mode.name)
         }
     }
 
-internal fun SettingsViewModel.setBrightness(value: Float) {
+internal fun SettingsSettersController.setBrightness(value: Float) {
         markReaderPresetCustom()
         setSlider("brightness") {
             preferences.set(
@@ -59,15 +58,15 @@ internal fun SettingsViewModel.setBrightness(value: Float) {
         }
     }
 
-internal fun SettingsViewModel.setKeepScreenOnInReader(enabled: Boolean) {
+internal fun SettingsSettersController.setKeepScreenOnInReader(enabled: Boolean) {
         markReaderPresetCustom()
-        viewModelScope.launch {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_KEEP_SCREEN_ON, enabled)
         }
     }
 
-internal fun SettingsViewModel.setReaderScreenTimeoutMode(mode: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setReaderScreenTimeoutMode(mode: String) {
+        scope.launch {
             preferences.set(
                 PreferencesKeys.READER_SCREEN_TIMEOUT_MODE,
                 ReaderScreenTimeoutMode.fromStored(mode).storedValue
@@ -75,26 +74,26 @@ internal fun SettingsViewModel.setReaderScreenTimeoutMode(mode: String) {
         }
     }
 
-internal fun SettingsViewModel.setReaderLandscapeSpreadEnabled(enabled: Boolean) {
+internal fun SettingsSettersController.setReaderLandscapeSpreadEnabled(enabled: Boolean) {
         markReaderPresetCustom()
-        viewModelScope.launch {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_LANDSCAPE_SPREAD_ENABLED, enabled)
         }
     }
 
-internal fun SettingsViewModel.setReaderPreloadPages(count: Int) {
+internal fun SettingsSettersController.setReaderPreloadPages(count: Int) {
         setSlider("preloadPages") { preferences.set(PreferencesKeys.READER_PRELOAD_PAGES, count.coerceIn(2, 8)) }
     }
 
-internal fun SettingsViewModel.setReaderImageScaleMode(mode: String) {
+internal fun SettingsSettersController.setReaderImageScaleMode(mode: String) {
         val resolved = ReaderImageScaleMode.fromStored(mode)
         markReaderPresetCustom()
-        viewModelScope.launch {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_IMAGE_SCALE_MODE, resolved.storedValue)
         }
     }
 
-internal fun SettingsViewModel.setReaderImageMarginCropHorizontal(value: Float) {
+internal fun SettingsSettersController.setReaderImageMarginCropHorizontal(value: Float) {
         markReaderPresetCustom()
         setSlider("readerImageMarginCropHorizontal") {
             preferences.set(
@@ -104,7 +103,7 @@ internal fun SettingsViewModel.setReaderImageMarginCropHorizontal(value: Float) 
         }
     }
 
-internal fun SettingsViewModel.setReaderImageMarginCropVertical(value: Float) {
+internal fun SettingsSettersController.setReaderImageMarginCropVertical(value: Float) {
         markReaderPresetCustom()
         setSlider("readerImageMarginCropVertical") {
             preferences.set(
@@ -114,26 +113,26 @@ internal fun SettingsViewModel.setReaderImageMarginCropVertical(value: Float) {
         }
     }
 
-internal fun SettingsViewModel.setReaderImmersiveMode(enabled: Boolean) {
+internal fun SettingsSettersController.setReaderImmersiveMode(enabled: Boolean) {
         markReaderPresetCustom()
-        viewModelScope.launch { preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, enabled) }
+        scope.launch { preferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, enabled) }
     }
 
-internal fun SettingsViewModel.setReaderChromeAutoHide(enabled: Boolean) = settingsPreferencesController.setReaderChromeAutoHide(enabled)
+internal fun SettingsSettersController.setReaderChromeAutoHide(enabled: Boolean) = settingsPreferencesController.setReaderChromeAutoHide(enabled)
 
-internal fun SettingsViewModel.setReaderTopToolbarOpacity(value: Float) {
+internal fun SettingsSettersController.setReaderTopToolbarOpacity(value: Float) {
         setSlider("readerTopToolbarOpacity") {
             preferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, value.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f))
         }
     }
 
-internal fun SettingsViewModel.setReaderBottomToolbarOpacity(value: Float) {
+internal fun SettingsSettersController.setReaderBottomToolbarOpacity(value: Float) {
         setSlider("readerBottomToolbarOpacity") {
             preferences.set(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, value.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f))
         }
     }
 
-internal fun SettingsViewModel.setReaderToolbarOpacity(value: Float) {
+internal fun SettingsSettersController.setReaderToolbarOpacity(value: Float) {
         val safe = value.coerceIn(SETTINGS_READER_MIN_TOOLBAR_OPACITY, 1.0f)
         setSlider("readerToolbarOpacity") {
             preferences.set(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, safe)
@@ -141,19 +140,19 @@ internal fun SettingsViewModel.setReaderToolbarOpacity(value: Float) {
         }
     }
 
-internal fun SettingsViewModel.setReaderToolbarBlur(value: Float) {
+internal fun SettingsSettersController.setReaderToolbarBlur(value: Float) {
         setSlider("readerToolbarBlur") {
             preferences.set(PreferencesKeys.READER_TOOLBAR_BLUR, value.coerceIn(0f, 1.0f))
         }
     }
 
-internal fun SettingsViewModel.setReaderPageAnimation(animation: String) {
+internal fun SettingsSettersController.setReaderPageAnimation(animation: String) {
         markReaderPresetCustom()
-        viewModelScope.launch { preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, animation) }
+        scope.launch { preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, animation) }
     }
 
-internal fun SettingsViewModel.setAppNavTransitionStyle(style: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setAppNavTransitionStyle(style: String) {
+        scope.launch {
             preferences.set(
                 PreferencesKeys.APP_NAV_TRANSITION_STYLE,
                 when (style.uppercase()) {
@@ -164,20 +163,20 @@ internal fun SettingsViewModel.setAppNavTransitionStyle(style: String) {
         }
     }
 
-internal fun SettingsViewModel.setReaderPageSound(enabled: Boolean) {
+internal fun SettingsSettersController.setReaderPageSound(enabled: Boolean) {
         markReaderPresetCustom()
-        viewModelScope.launch { preferences.set(PreferencesKeys.READER_PAGE_SOUND, enabled) }
+        scope.launch { preferences.set(PreferencesKeys.READER_PAGE_SOUND, enabled) }
     }
 
-internal fun SettingsViewModel.setReaderEyeRestEnabled(enabled: Boolean) = settingsPreferencesController.setReaderEyeRestEnabled(enabled)
+internal fun SettingsSettersController.setReaderEyeRestEnabled(enabled: Boolean) = settingsPreferencesController.setReaderEyeRestEnabled(enabled)
 
-internal fun SettingsViewModel.setReaderEyeRestMinutes(minutes: Int) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setReaderEyeRestMinutes(minutes: Int) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_EYE_REST_MINUTES, minutes.coerceIn(10, 60))
         }
     }
 
-internal fun SettingsViewModel.setReaderPageSoundStyle(style: String) {
+internal fun SettingsSettersController.setReaderPageSoundStyle(style: String) {
         markReaderPresetCustom()
-        viewModelScope.launch { preferences.set(PreferencesKeys.READER_PAGE_SOUND_STYLE, style) }
+        scope.launch { preferences.set(PreferencesKeys.READER_PAGE_SOUND_STYLE, style) }
     }

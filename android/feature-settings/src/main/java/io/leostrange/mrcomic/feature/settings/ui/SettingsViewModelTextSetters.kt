@@ -1,98 +1,97 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
-internal fun SettingsViewModel.setTextFontSize(size: Int) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextFontSize(size: Int) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_FONT_SIZE, size.coerceIn(12, 32))
         }
     }
 
-internal fun SettingsViewModel.setTextColorScheme(scheme: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextColorScheme(scheme: String) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme.uppercase())
         }
     }
 
-internal fun SettingsViewModel.setTextCustomTextColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextCustomTextColor(color: Long?) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, color)
         }
     }
 
-internal fun SettingsViewModel.setTextCustomBackgroundColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextCustomBackgroundColor(color: Long?) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, color)
         }
     }
 
-internal fun SettingsViewModel.setTextCustomAccentColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextCustomAccentColor(color: Long?) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, color)
         }
     }
 
-internal fun SettingsViewModel.setTextFontFamily(family: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextFontFamily(family: String) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_FONT_FAMILY, family)
         }
     }
 
-internal fun SettingsViewModel.setTextLineHeight(height: Float) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextLineHeight(height: Float) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, height.coerceIn(1.0f, 3.0f))
         }
     }
 
-internal fun SettingsViewModel.setTextLetterSpacing(spacing: Float) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextLetterSpacing(spacing: Float) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_LETTER_SPACING, spacing.coerceIn(0f, 0.2f))
         }
     }
 
-internal fun SettingsViewModel.setTextWordSpacing(spacing: Float) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextWordSpacing(spacing: Float) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_WORD_SPACING, spacing.coerceIn(0f, 0.6f))
         }
     }
 
-internal fun SettingsViewModel.setTextParagraphSpacing(spacing: Float) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextParagraphSpacing(spacing: Float) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_PARAGRAPH_SPACING, spacing.coerceIn(0.1f, 1.2f))
         }
     }
 
-internal fun SettingsViewModel.setTextAlignment(alignment: String) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextAlignment(alignment: String) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_ALIGNMENT, alignment.lowercase())
         }
     }
 
-internal fun SettingsViewModel.setTextBold(enabled: Boolean) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setTextBold(enabled: Boolean) {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_BOLD, enabled)
         }
     }
 
-internal fun SettingsViewModel.resetReaderTextStyle() {
-        viewModelScope.launch {
+internal fun SettingsSettersController.resetReaderTextStyle() {
+        scope.launch {
             preferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
             preferences.set(PreferencesKeys.TEXT_FONT_SIZE, 18)
             preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY")
@@ -109,8 +108,8 @@ internal fun SettingsViewModel.resetReaderTextStyle() {
         }
     }
 
-internal suspend fun SettingsViewModel.importReaderTypographyFromJson(rawJson: String): String? = kotlinx.coroutines.withContext(Dispatchers.IO) {
-        val imported = parseImportedReaderTypography(JSONObject(rawJson)) ?: return@withContext null
+internal suspend fun SettingsSettersController.importReaderTypographyFromJson(rawJson: String): String? = kotlinx.coroutines.withContext(Dispatchers.IO) {
+        val imported = parseImportedTypography(JSONObject(rawJson)) ?: return@withContext null
         preferences.set(PreferencesKeys.READER_PRESET, imported.readerPreset.name)
         preferences.set(PreferencesKeys.TEXT_FONT_SIZE, imported.textFontSize)
         preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, imported.textColorScheme)

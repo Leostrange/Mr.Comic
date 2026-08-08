@@ -171,6 +171,25 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    /** Settings setters (4.1). The functions live as extensions on this
+     * holder in the SettingsViewModel*Setters.kt files; the ViewModel
+     * keeps the public API via one-line delegates. */
+    internal val settersController: SettingsSettersController by lazy {
+        SettingsSettersController(
+            preferences = preferences,
+            themePreferencesRepository = themePreferencesRepository,
+            dailyReadingGoalStore = dailyReadingGoalStore,
+            analyticsTracker = analyticsTracker,
+            scope = viewModelScope,
+            uiState = { uiState.value },
+            settingsPreferencesController = settingsPreferencesController,
+            setSlider = ::setSlider,
+            updateToggleEnabledAt = ::updateToggleEnabledAt,
+            persistNullableReaderColor = { key, value -> persistNullableReaderColor(key, value) },
+            parseImportedTypography = { json -> parseImportedReaderTypography(json) },
+        )
+    }
+
     internal suspend fun updateToggleEnabledAt(
         key: Preferences.Key<Long>,
         wasEnabled: Boolean,
@@ -254,6 +273,142 @@ class SettingsViewModel @Inject constructor(
     }
 
     // Phase Z (2026-08-04): setter functions → SettingsViewModelSetters.kt.
+    // 4.1: setters moved to SettingsSettersController; these one-line delegates
+    // keep the public API stable (Compose calls viewModel.setX).
+    fun setAppLanguage(code: String) = settersController.setAppLanguage(code)
+    fun setThemePreset(preset: ThemePreset) = settersController.setThemePreset(preset)
+    fun setThemeMode(mode: ThemeMode) = settersController.setThemeMode(mode)
+    fun setUseDynamicColor(enabled: Boolean) = settersController.setUseDynamicColor(enabled)
+    fun setUseAmoledDark(enabled: Boolean) = settersController.setUseAmoledDark(enabled)
+    fun setCustomPrimaryColor(color: Long?) = settersController.setCustomPrimaryColor(color)
+    fun setCustomSecondaryColor(color: Long?) = settersController.setCustomSecondaryColor(color)
+    fun setCustomBackgroundColor(color: Long?) = settersController.setCustomBackgroundColor(color)
+    fun setCustomSurfaceColor(color: Long?) = settersController.setCustomSurfaceColor(color)
+    fun setSurfaceOpacity(value: Float) = settersController.setSurfaceOpacity(value)
+    fun setMascotRecapEnabled(enabled: Boolean) = settersController.setMascotRecapEnabled(enabled)
+    fun setQuestPromptsEnabled(enabled: Boolean) = settersController.setQuestPromptsEnabled(enabled)
+    fun setDailyReadingGoalEnabled(enabled: Boolean) = settersController.setDailyReadingGoalEnabled(enabled)
+    fun setDailyReadingGoalTargetPages(targetPages: Int) = settersController.setDailyReadingGoalTargetPages(targetPages)
+    fun setDailyReadingStreakEnabled(enabled: Boolean) = settersController.setDailyReadingStreakEnabled(enabled)
+    fun setDailyReadingGraceEnabled(enabled: Boolean) = settersController.setDailyReadingGraceEnabled(enabled)
+    fun setLibraryGridColumns(count: Int) = settersController.setLibraryGridColumns(count)
+    fun setLibraryViewGrid(grid: Boolean) = settersController.setLibraryViewGrid(grid)
+    fun setLibraryViewMode(mode: String) = settersController.setLibraryViewMode(mode)
+    fun setLibraryTileSize(size: Int) = settersController.setLibraryTileSize(size)
+    fun setLibraryCardStyle(style: String) = settersController.setLibraryCardStyle(style)
+    fun setLibraryRecentStripPosition(position: String) = settersController.setLibraryRecentStripPosition(position)
+    fun setLibraryShowProgress(enabled: Boolean) = settersController.setLibraryShowProgress(enabled)
+    fun setLibraryShowCoverTitles(enabled: Boolean) = settersController.setLibraryShowCoverTitles(enabled)
+    fun setLibraryShowStatusChips(enabled: Boolean) = settersController.setLibraryShowStatusChips(enabled)
+    fun setLibraryCoverScale(scale: String) = settersController.setLibraryCoverScale(scale)
+    fun setLibraryBackdropStrength(value: Float) = settersController.setLibraryBackdropStrength(value)
+    fun setLibraryBackgroundBlur(value: Float) = settersController.setLibraryBackgroundBlur(value)
+    fun setLibraryBackgroundStyle(style: String) = settersController.setLibraryBackgroundStyle(style)
+    fun setLibraryBackgroundVeil(value: Float) = settersController.setLibraryBackgroundVeil(value)
+    fun setLibraryBackgroundImageUri(uri: String?) = settersController.setLibraryBackgroundImageUri(uri)
+    fun setLibraryShelfStyle(style: String) = settersController.setLibraryShelfStyle(style)
+    fun setLibraryShelfDepth(value: Float) = settersController.setLibraryShelfDepth(value)
+    fun setLibraryCardShadow(value: Float) = settersController.setLibraryCardShadow(value)
+    fun setLibraryTitleScale(value: Float) = settersController.setLibraryTitleScale(value)
+    fun setLibraryTitleLines(value: Int) = settersController.setLibraryTitleLines(value)
+    fun setLibraryCardStroke(value: Float) = settersController.setLibraryCardStroke(value)
+    fun setLibraryCardCornerRadius(value: Int) = settersController.setLibraryCardCornerRadius(value)
+    fun setLibraryTitlePanelOpacity(value: Float) = settersController.setLibraryTitlePanelOpacity(value)
+    fun setLibraryThumbnailMode(mode: String) = settersController.setLibraryThumbnailMode(mode)
+    fun setLibraryGraphicCoverStyle(style: String) = settersController.setLibraryGraphicCoverStyle(style)
+    fun setLibrarySortOrder(order: String) = settersController.setLibrarySortOrder(order)
+    fun setLibraryGroupBy(mode: String) = settersController.setLibraryGroupBy(mode)
+    fun setUiSoundEnabled(enabled: Boolean) = settersController.setUiSoundEnabled(enabled)
+    fun setUiSoundsVolume(vol: Float) = settersController.setUiSoundsVolume(vol)
+    fun setUiFontScale(scale: Float) = settersController.setUiFontScale(scale)
+    fun setUiDensityScale(scale: Float) = settersController.setUiDensityScale(scale)
+    fun setUiCornerRadius(radius: Int) = settersController.setUiCornerRadius(radius)
+    fun setPerformanceReducedMotion(enabled: Boolean) = settersController.setPerformanceReducedMotion(enabled)
+    fun setPerformanceReducedVisualEffects(enabled: Boolean) = settersController.setPerformanceReducedVisualEffects(enabled)
+    fun setPerfProfile(profile: String) = settersController.setPerfProfile(profile)
+    fun setPerfRenderQuality(quality: String) = settersController.setPerfRenderQuality(quality)
+    fun setPerfCoverCacheMb(mb: Int) = settersController.setPerfCoverCacheMb(mb)
+    fun setPerfPageCacheCount(count: Int) = settersController.setPerfPageCacheCount(count)
+    fun setPerfFtsSearchEnabled(enabled: Boolean) = settersController.setPerfFtsSearchEnabled(enabled)
+    fun setPerfStartupPreloadEnabled(enabled: Boolean) = settersController.setPerfStartupPreloadEnabled(enabled)
+    fun setPerfReducedAnimations(reduced: Boolean) = settersController.setPerfReducedAnimations(reduced)
+    fun resetPerfSettings() = settersController.resetPerfSettings()
+    fun setReaderTapZoneMode(mode: String) = settersController.setReaderTapZoneMode(mode)
+    fun setReaderTapZoneSwap(enabled: Boolean) = settersController.setReaderTapZoneSwap(enabled)
+    fun setReaderVolumeKeysPaging(enabled: Boolean) = settersController.setReaderVolumeKeysPaging(enabled)
+    fun setReaderTtsSpeed(value: Float) = settersController.setReaderTtsSpeed(value)
+    fun setReaderTtsProvider(value: String) = settersController.setReaderTtsProvider(value)
+    fun setReaderTtsPitch(value: Float) = settersController.setReaderTtsPitch(value)
+    fun setReaderTtsVolume(value: Float) = settersController.setReaderTtsVolume(value)
+    fun setReaderTtsVoiceName(value: String?) = settersController.setReaderTtsVoiceName(value)
+    fun setReaderTtsSleepTimerMode(value: String) = settersController.setReaderTtsSleepTimerMode(value)
+    fun setAppVideoSplashEnabled(enabled: Boolean) = settersController.setAppVideoSplashEnabled(enabled)
+    fun setReaderTapZoneAction(position: String, action: String) = settersController.setReaderTapZoneAction(position, action)
+    fun setReaderHeaderSlot(position: String, slot: String) = settersController.setReaderHeaderSlot(position, slot)
+    fun setReaderFooterSlot(position: String, slot: String) = settersController.setReaderFooterSlot(position, slot)
+    fun setReaderHeaderFooterFontSize(size: Int) = settersController.setReaderHeaderFooterFontSize(size)
+    fun setReaderHeaderFooterVerticalPadding(padding: Int) = settersController.setReaderHeaderFooterVerticalPadding(padding)
+    fun setReaderHeaderFooterLeftPadding(padding: Int) = settersController.setReaderHeaderFooterLeftPadding(padding)
+    fun setReaderHeaderFooterRightPadding(padding: Int) = settersController.setReaderHeaderFooterRightPadding(padding)
+    fun setReaderPreset(presetName: String) = settersController.setReaderPreset(presetName)
+    fun setReadingMode(mode: ReadingMode) = settersController.setReadingMode(mode)
+    fun setBrightness(value: Float) = settersController.setBrightness(value)
+    fun setKeepScreenOnInReader(enabled: Boolean) = settersController.setKeepScreenOnInReader(enabled)
+    fun setReaderScreenTimeoutMode(mode: String) = settersController.setReaderScreenTimeoutMode(mode)
+    fun setReaderLandscapeSpreadEnabled(enabled: Boolean) = settersController.setReaderLandscapeSpreadEnabled(enabled)
+    fun setReaderPreloadPages(count: Int) = settersController.setReaderPreloadPages(count)
+    fun setReaderImageScaleMode(mode: String) = settersController.setReaderImageScaleMode(mode)
+    fun setReaderImageMarginCropHorizontal(value: Float) = settersController.setReaderImageMarginCropHorizontal(value)
+    fun setReaderImageMarginCropVertical(value: Float) = settersController.setReaderImageMarginCropVertical(value)
+    fun setReaderImmersiveMode(enabled: Boolean) = settersController.setReaderImmersiveMode(enabled)
+    fun setReaderChromeAutoHide(enabled: Boolean) = settersController.setReaderChromeAutoHide(enabled)
+    fun setReaderTopToolbarOpacity(value: Float) = settersController.setReaderTopToolbarOpacity(value)
+    fun setReaderBottomToolbarOpacity(value: Float) = settersController.setReaderBottomToolbarOpacity(value)
+    fun setReaderToolbarOpacity(value: Float) = settersController.setReaderToolbarOpacity(value)
+    fun setReaderToolbarBlur(value: Float) = settersController.setReaderToolbarBlur(value)
+    fun setReaderPageAnimation(animation: String) = settersController.setReaderPageAnimation(animation)
+    fun setAppNavTransitionStyle(style: String) = settersController.setAppNavTransitionStyle(style)
+    fun setReaderPageSound(enabled: Boolean) = settersController.setReaderPageSound(enabled)
+    fun setReaderEyeRestEnabled(enabled: Boolean) = settersController.setReaderEyeRestEnabled(enabled)
+    fun setReaderEyeRestMinutes(minutes: Int) = settersController.setReaderEyeRestMinutes(minutes)
+    fun setReaderPageSoundStyle(style: String) = settersController.setReaderPageSoundStyle(style)
+    fun setTextFontSize(size: Int) = settersController.setTextFontSize(size)
+    fun setTextColorScheme(scheme: String) = settersController.setTextColorScheme(scheme)
+    fun setTextCustomTextColor(color: Long?) = settersController.setTextCustomTextColor(color)
+    fun setTextCustomBackgroundColor(color: Long?) = settersController.setTextCustomBackgroundColor(color)
+    fun setTextCustomAccentColor(color: Long?) = settersController.setTextCustomAccentColor(color)
+    fun setTextFontFamily(family: String) = settersController.setTextFontFamily(family)
+    fun setTextLineHeight(height: Float) = settersController.setTextLineHeight(height)
+    fun setTextLetterSpacing(spacing: Float) = settersController.setTextLetterSpacing(spacing)
+    fun setTextWordSpacing(spacing: Float) = settersController.setTextWordSpacing(spacing)
+    fun setTextParagraphSpacing(spacing: Float) = settersController.setTextParagraphSpacing(spacing)
+    fun setTextAlignment(alignment: String) = settersController.setTextAlignment(alignment)
+    fun setTextBold(enabled: Boolean) = settersController.setTextBold(enabled)
+    fun resetReaderTextStyle() = settersController.resetReaderTextStyle()
+    suspend fun importReaderTypographyFromJson(rawJson: String) = settersController.importReaderTypographyFromJson(rawJson)
+    fun setTranslationMode(mode: String) = settersController.setTranslationMode(mode)
+    fun setTranslationSourceLanguage(code: String) = settersController.setTranslationSourceLanguage(code)
+    fun setTranslationTargetLanguage(code: String) = settersController.setTranslationTargetLanguage(code)
+    fun setTranslationTransport(value: String) = settersController.setTranslationTransport(value)
+    fun setTranslationExplainEnabled(enabled: Boolean) = settersController.setTranslationExplainEnabled(enabled)
+    fun setTranslationExplainProvider(provider: String) = settersController.setTranslationExplainProvider(provider)
+    fun saveEncryptedOpenRouterApiKey(value: String) = settersController.saveEncryptedOpenRouterApiKey(value)
+    fun setOpenRouterApiKey(value: String) = settersController.setOpenRouterApiKey(value)
+    fun setOpenRouterModel(value: String) = settersController.setOpenRouterModel(value)
+    fun setDeepLApiKey(value: String) = settersController.setDeepLApiKey(value)
+    fun setDeepLUseFreeApi(value: Boolean) = settersController.setDeepLUseFreeApi(value)
+    fun setGoogleApiKey(value: String) = settersController.setGoogleApiKey(value)
+    fun setYandexApiKey(value: String) = settersController.setYandexApiKey(value)
+    fun setYandexFolderId(value: String) = settersController.setYandexFolderId(value)
+    fun setTranslationWifiOnly(value: Boolean) = settersController.setTranslationWifiOnly(value)
+    fun setTranslationDailyCharLimit(value: Int) = settersController.setTranslationDailyCharLimit(value)
+    fun setOcrLanguage(lang: String) = settersController.setOcrLanguage(lang)
+    fun setOcrDialoguesOnly(enabled: Boolean) = settersController.setOcrDialoguesOnly(enabled)
+    fun setOcrIncludeSfx(enabled: Boolean) = settersController.setOcrIncludeSfx(enabled)
+    fun setOcrOverlayOpacity(value: Float) = settersController.setOcrOverlayOpacity(value)
+    fun setOcrOverlayFontScale(value: Float) = settersController.setOcrOverlayFontScale(value)
+    fun setOcrOverlayStyle(value: String) = settersController.setOcrOverlayStyle(value)
+
 
     // Phase X (2026-08-04): backup/cache/repair → SettingsViewModelBackup.kt.
 
