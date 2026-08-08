@@ -1,5 +1,7 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
+import io.leostrange.mrcomic.core.interfaces.analytics.READER_CHECKPOINT_TRAIL_LIMIT
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -1,7 +1,7 @@
 package io.leostrange.mrcomic.core.domain.usecase
 
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
 import io.leostrange.mrcomic.core.domain.util.Result
+import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -13,7 +13,7 @@ import org.junit.Test
 
 class SaveReadingProgressUseCaseTest {
 
-    private lateinit var repository: ComicRepository
+    private lateinit var repository: LibraryRepository
     private lateinit var useCase: SaveReadingProgressUseCase
 
     @Before

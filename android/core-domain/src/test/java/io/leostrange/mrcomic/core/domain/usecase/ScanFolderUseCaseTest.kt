@@ -1,8 +1,8 @@
 package io.leostrange.mrcomic.core.domain.usecase
 
 import android.net.Uri
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
 import io.leostrange.mrcomic.core.domain.util.Result
+import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -16,7 +16,7 @@ import org.junit.Test
 
 class ScanFolderUseCaseTest {
 
-    private lateinit var repository: ComicRepository
+    private lateinit var repository: ImportRepository
     private lateinit var useCase: ScanFolderUseCase
 
     @Before
