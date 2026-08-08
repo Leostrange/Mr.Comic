@@ -1,19 +1,18 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
 import io.leostrange.mrcomic.core.ui.theme.toConfig
 import kotlinx.coroutines.launch
 
-internal fun SettingsViewModel.setAppLanguage(code: String) = settingsPreferencesController.setAppLanguage(code)
+internal fun SettingsSettersController.setAppLanguage(code: String) = settingsPreferencesController.setAppLanguage(code)
 
     /**
      * Applies a theme preset: writes all preset color values and flags into DataStore,
      * then marks the active preset. Selecting CUSTOM only marks the preset key.
      */
-internal fun SettingsViewModel.setThemePreset(preset: ThemePreset) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setThemePreset(preset: ThemePreset) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(preset)
             if (preset != ThemePreset.CUSTOM) {
                 val cfg = preset.toConfig()
@@ -29,58 +28,58 @@ internal fun SettingsViewModel.setThemePreset(preset: ThemePreset) {
         }
     }
 
-internal fun SettingsViewModel.setThemeMode(mode: ThemeMode) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setThemeMode(mode: ThemeMode) {
+        scope.launch {
             // Manual change = exit preset
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setThemeMode(mode)
         }
     }
 
-internal fun SettingsViewModel.setUseDynamicColor(enabled: Boolean) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setUseDynamicColor(enabled: Boolean) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setUseDynamicColor(enabled)
         }
     }
 
-internal fun SettingsViewModel.setUseAmoledDark(enabled: Boolean) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setUseAmoledDark(enabled: Boolean) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setUseAmoledDark(enabled)
         }
     }
 
-internal fun SettingsViewModel.setCustomPrimaryColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setCustomPrimaryColor(color: Long?) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setCustomPrimaryColor(color)
         }
     }
 
-internal fun SettingsViewModel.setCustomSecondaryColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setCustomSecondaryColor(color: Long?) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setCustomSecondaryColor(color)
         }
     }
 
-internal fun SettingsViewModel.setCustomBackgroundColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setCustomBackgroundColor(color: Long?) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setCustomBackgroundColor(color)
         }
     }
 
-internal fun SettingsViewModel.setCustomSurfaceColor(color: Long?) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setCustomSurfaceColor(color: Long?) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setCustomSurfaceColor(color)
         }
     }
 
-internal fun SettingsViewModel.setSurfaceOpacity(value: Float) {
-        viewModelScope.launch {
+internal fun SettingsSettersController.setSurfaceOpacity(value: Float) {
+        scope.launch {
             themePreferencesRepository.setThemePreset(ThemePreset.CUSTOM)
             themePreferencesRepository.setSurfaceOpacity(value)
         }
