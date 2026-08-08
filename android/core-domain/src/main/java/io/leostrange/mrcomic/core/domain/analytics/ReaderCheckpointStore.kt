@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.edit
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
+import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.core.interfaces.analytics.READER_CHECKPOINT_TRAIL_LIMIT
 import io.leostrange.mrcomic.core.interfaces.preferences.DataStoreProvider
 import io.leostrange.mrcomic.core.interfaces.preferences.PreferencesKeys
@@ -19,10 +20,10 @@ import javax.inject.Singleton
 @Singleton
 class ReaderCheckpointStore @Inject constructor(
     dataStoreProvider: DataStoreProvider
-) {
+) : ReaderCheckpointRepository {
     private val dataStore = dataStoreProvider.dataStore
 
-    val checkpointTrail: Flow<List<ReaderCheckpoint>> = dataStore.data
+    override val checkpointTrail: Flow<List<ReaderCheckpoint>> = dataStore.data
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -33,11 +34,11 @@ class ReaderCheckpointStore @Inject constructor(
         .map(::readCheckpointTrail)
         .distinctUntilChanged()
 
-    val latestCheckpoint: Flow<ReaderCheckpoint?> = checkpointTrail
+    override val latestCheckpoint: Flow<ReaderCheckpoint?> = checkpointTrail
         .map { it.firstOrNull() }
         .distinctUntilChanged()
 
-    suspend fun recordChapterReached(
+    override suspend fun recordChapterReached(
         comicId: String,
         comicTitle: String,
         chapterTitle: String,
@@ -73,13 +74,13 @@ class ReaderCheckpointStore @Inject constructor(
         }
     }
 
-    suspend fun clearCheckpoint() {
+    override suspend fun clearCheckpoint() {
         dataStore.edit { preferences ->
             clearCheckpointTrail(preferences)
         }
     }
 
-    suspend fun removeComicCheckpoints(comicId: String) {
+    override suspend fun removeComicCheckpoints(comicId: String) {
         val normalizedComicId = comicId.trim()
         if (normalizedComicId.isBlank()) return
 
@@ -91,7 +92,7 @@ class ReaderCheckpointStore @Inject constructor(
         }
     }
 
-    suspend fun pruneToComicIds(validComicIds: Set<String>) {
+    override suspend fun pruneToComicIds(validComicIds: Set<String>) {
         val normalizedIds = validComicIds
             .map(String::trim)
             .filter(String::isNotBlank)

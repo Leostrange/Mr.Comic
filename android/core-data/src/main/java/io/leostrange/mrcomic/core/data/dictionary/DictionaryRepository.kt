@@ -2,6 +2,10 @@ package io.leostrange.mrcomic.core.data.dictionary
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.leostrange.mrcomic.core.interfaces.dictionary.DictionaryRepository as DictionaryRepositoryInterface
+import io.leostrange.mrcomic.core.interfaces.dictionary.DictionaryLookupCard
+import io.leostrange.mrcomic.core.interfaces.dictionary.DictionaryLookupTranslation
+import io.leostrange.mrcomic.core.interfaces.dictionary.DictionaryLookupExample
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -11,7 +15,7 @@ import javax.inject.Singleton
 class DictionaryRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val downloader: DictionaryDownloader
-) {
+) : DictionaryRepositoryInterface {
     private val lookupCache = object : LinkedHashMap<String, List<DictionaryLookupCard>>(128, 0.75f, true) {
         override fun removeEldestEntry(
             eldest: MutableMap.MutableEntry<String, List<DictionaryLookupCard>>?
@@ -32,12 +36,12 @@ class DictionaryRepository @Inject constructor(
         ): Boolean = size > ROUTE_CACHE_LIMIT
     }
 
-    suspend fun isLookupAvailable(language: String): Boolean {
+    override suspend fun isLookupAvailable(language: String): Boolean {
         val normalizedLanguage = language.normalizeLanguageCode() ?: return false
         return daoForLanguage(normalizedLanguage) != null
     }
 
-    suspend fun hasTranslationRoute(
+    override suspend fun hasTranslationRoute(
         language: String,
         targetLanguage: String,
     ): Boolean {
@@ -61,11 +65,11 @@ class DictionaryRepository @Inject constructor(
         return hasRoute
     }
 
-    suspend fun lookup(
+    override suspend fun lookup(
         surface: String,
         language: String,
-        targetLanguage: String? = null,
-        limit: Int = 8,
+        targetLanguage: String?,
+        limit: Int,
     ): List<DictionaryLookupCard> {
         val normalizedLanguage = language.normalizeLanguageCode() ?: return emptyList()
         val normalized = DictionaryNormalizer.normalize(surface, normalizedLanguage)
@@ -103,10 +107,10 @@ class DictionaryRepository @Inject constructor(
         return cards
     }
 
-    suspend fun suggest(
+    override suspend fun suggest(
         prefix: String,
         language: String,
-        limit: Int = 12,
+        limit: Int,
     ): List<String> {
         val normalizedLanguage = language.normalizeLanguageCode() ?: return emptyList()
         val normalized = DictionaryNormalizer.normalize(prefix, normalizedLanguage)
