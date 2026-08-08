@@ -124,17 +124,17 @@ internal fun TextPageTranslationSheet(
     val readerText = readerUiText(strings.languageCode)
     val title = when (strings.languageCode) {
         "en" -> "Translate page"
-        "ja" -> "гѓљгѓјг‚ёг‚’зї»иЁі"
-        "zh" -> "зї»иЇ‘йЎµйќў"
-        "ko" -> "нЋмќґм§Ђ лІ€м—­"
-        else -> "РџРµСЂРµРІРµСЃС‚Рё СЃС‚СЂР°РЅРёС†Сѓ"
+        "ja" -> "ページを翻訳"
+        "zh" -> "翻译页面"
+        "ko" -> "페이지 번역"
+        else -> "Перевести страницу"
     }
     val currentLabel = when (strings.languageCode) {
         "en" -> "Current"
-        "ja" -> "зЏѕењЁ"
-        "zh" -> "еЅ“е‰Ќ"
-        "ko" -> "н„мћ¬"
-        else -> "РўРµРєСѓС‰Р°СЏ"
+        "ja" -> "現在"
+        "zh" -> "当前"
+        "ko" -> "현재"
+        else -> "Текущая"
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
