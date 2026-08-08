@@ -1,8 +1,8 @@
 package io.leostrange.mrcomic.core.domain.usecase
 
 import android.net.Uri
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
 import io.leostrange.mrcomic.core.domain.util.Result
+import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.mockk.coEvery
@@ -22,7 +22,7 @@ import org.junit.Test
 
 class AddComicUseCaseTest {
 
-    private lateinit var repository: ComicRepository
+    private lateinit var repository: ImportRepository
     private lateinit var useCase: AddComicUseCase
 
     @Before

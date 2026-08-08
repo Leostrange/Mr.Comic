@@ -1,5 +1,6 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.model.Comic
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

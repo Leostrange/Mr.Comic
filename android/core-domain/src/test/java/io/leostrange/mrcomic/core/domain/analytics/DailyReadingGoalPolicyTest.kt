@@ -1,5 +1,10 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
+import io.leostrange.mrcomic.core.interfaces.analytics.DEFAULT_DAILY_READING_GOAL_PAGES
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
+import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
+import io.leostrange.mrcomic.core.interfaces.analytics.MAX_DAILY_READING_GOAL_PAGES
+import io.leostrange.mrcomic.core.interfaces.analytics.MIN_DAILY_READING_GOAL_PAGES
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
