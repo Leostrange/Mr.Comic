@@ -95,6 +95,21 @@ class LibraryViewModel @Inject constructor(
     private var rawQuotes: List<SavedQuote> = emptyList()
     private var allLibraryComics: List<Comic> = emptyList()
 
+    /** CRUD/import operations extracted into an explicit-dependency controller (4.1).
+     * The ViewModel stays the single owner of state and lifecycle. */
+    internal val crudController: LibraryCrudController by lazy {
+        LibraryCrudController(
+            libraryRepository = libraryRepository,
+            importRepository = importRepository,
+            quoteRepository = quoteRepository,
+            readerCheckpointStore = readerCheckpointStore,
+            scope = viewModelScope,
+            uiState = _uiState,
+            rawComics = { rawComics },
+            openFolder = ::openFolder,
+        )
+    }
+
     init {
         repairStoredCovers()
         observeAppLanguage()
