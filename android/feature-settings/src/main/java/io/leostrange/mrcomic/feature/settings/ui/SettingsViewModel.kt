@@ -167,6 +167,21 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    /** Backup/export/import/cache operations (4.1).
+     * The ViewModel stays the single owner of state and lifecycle. */
+    internal val backupController: SettingsBackupController by lazy {
+        SettingsBackupController(
+            context = context,
+            preferences = preferences,
+            themePreferencesRepository = themePreferencesRepository,
+            comicRepository = comicRepository,
+            quoteRepository = quoteRepository,
+            scope = viewModelScope,
+            statusState = statusState,
+            language = { uiState.value.appLanguage },
+        )
+    }
+
     internal suspend fun updateToggleEnabledAt(
         key: Preferences.Key<Long>,
         wasEnabled: Boolean,

@@ -1,16 +1,14 @@
-// Phase T (2026-08-04):
-// 12 i18n message helpers extracted from SettingsViewModel.kt
-// as extension functions. formatSize promoted to internal in main class.
-// Zero field promotion — only use uiState (public val).
+// Phase T (2026-08-04) + 4.1 (2026-08-09):
+// i18n message helpers extracted from SettingsViewModel.kt. Since 4.1 they
+// are top-level functions taking the language explicitly so controllers
+// (SettingsBackupController) can use them without the ViewModel.
 // Module: feature-settings
 
 package io.leostrange.mrcomic.feature.settings.ui
 
 import io.leostrange.mrcomic.core.model.repository.BackupRepository
 
-internal fun SettingsViewModel.settingsLanguage(): String = uiState.value.appLanguage
-
-internal fun SettingsViewModel.settingsCacheClearedMessage(bytes: Long): String = when (settingsLanguage()) {
+internal fun settingsCacheClearedMessage(lang: String, bytes: Long): String = when (lang) {
         "en" -> "Cache cleared (${formatSize(bytes)})"
         "ja" -> "キャッシュを削除しました (${formatSize(bytes)})"
         "zh" -> "缓存已清理（${formatSize(bytes)}）"
@@ -18,7 +16,7 @@ internal fun SettingsViewModel.settingsCacheClearedMessage(bytes: Long): String 
         else -> "Кэш очищен (${formatSize(bytes)})"
     }
 
-internal fun SettingsViewModel.settingsCacheAlreadyEmptyMessage(): String = when (settingsLanguage()) {
+internal fun settingsCacheAlreadyEmptyMessage(lang: String): String = when (lang) {
         "en" -> "Cache is already empty"
         "ja" -> "キャッシュはすでに空です"
         "zh" -> "缓存已经是空的"
@@ -26,7 +24,7 @@ internal fun SettingsViewModel.settingsCacheAlreadyEmptyMessage(): String = when
         else -> "Кэш уже пуст"
     }
 
-internal fun SettingsViewModel.settingsExportSuccessMessage(comicCount: Int): String = when (settingsLanguage()) {
+internal fun settingsExportSuccessMessage(lang: String, comicCount: Int): String = when (lang) {
         "en" -> "Exported: $comicCount books/comics and all settings"
         "ja" -> "エクスポート完了: 書籍/コミック $comicCount 件とすべての設定"
         "zh" -> "已导出：$comicCount 本书/漫画以及全部设置"
@@ -34,7 +32,7 @@ internal fun SettingsViewModel.settingsExportSuccessMessage(comicCount: Int): St
         else -> "Экспортировано: $comicCount книг/комиксов и все настройки"
     }
 
-internal fun SettingsViewModel.settingsExportFailedMessage(detail: String?): String = when (settingsLanguage()) {
+internal fun settingsExportFailedMessage(lang: String, detail: String?): String = when (lang) {
         "en" -> "Export failed: ${detail ?: "unknown error"}"
         "ja" -> "エクスポートに失敗しました: ${detail ?: "不明なエラー"}"
         "zh" -> "导出失败：${detail ?: "未知错误"}"
@@ -42,7 +40,7 @@ internal fun SettingsViewModel.settingsExportFailedMessage(detail: String?): Str
         else -> "Ошибка экспорта: ${detail ?: "неизвестная ошибка"}"
     }
 
-internal fun SettingsViewModel.settingsImportReadFailedMessage(): String = when (settingsLanguage()) {
+internal fun settingsImportReadFailedMessage(lang: String): String = when (lang) {
         "en" -> "Failed to read the file"
         "ja" -> "ファイルを読み込めませんでした"
         "zh" -> "无法读取文件"
@@ -50,7 +48,8 @@ internal fun SettingsViewModel.settingsImportReadFailedMessage(): String = when 
         else -> "Не удалось прочитать файл"
     }
 
-internal fun SettingsViewModel.settingsImportSummaryMessage(
+internal fun settingsImportSummaryMessage(
+        lang: String,
         restored: Int,
         updated: Int,
         skipped: Int,
@@ -58,7 +57,7 @@ internal fun SettingsViewModel.settingsImportSummaryMessage(
         restoredQuotes: Int,
         updatedQuotes: Int,
         unresolvedAccess: Int
-    ): String = when (settingsLanguage()) {
+    ): String = when (lang) {
         "en" -> buildString {
             append("Imported into library: $restored, updated: $updated, skipped: $skipped, settings restored: $restoredSettings")
             if (restoredQuotes > 0 || updatedQuotes > 0) {
@@ -106,7 +105,7 @@ internal fun SettingsViewModel.settingsImportSummaryMessage(
         }
     }
 
-internal fun SettingsViewModel.settingsImportFailedMessage(detail: String?): String = when (settingsLanguage()) {
+internal fun settingsImportFailedMessage(lang: String, detail: String?): String = when (lang) {
         "en" -> "Import failed: ${detail ?: "unknown error"}"
         "ja" -> "インポートに失敗しました: ${detail ?: "不明なエラー"}"
         "zh" -> "导入失败：${detail ?: "未知错误"}"
@@ -114,18 +113,19 @@ internal fun SettingsViewModel.settingsImportFailedMessage(detail: String?): Str
         else -> "Ошибка импорта: ${detail ?: "неизвестная ошибка"}"
     }
 
-internal fun SettingsViewModel.settingsImportFailureMessage(error: Throwable): String {
+internal fun settingsImportFailureMessage(lang: String, error: Throwable): String {
         val detail = error.message?.takeIf { it.isNotBlank() } ?: error.localizedMessage
         return if (detail == SETTINGS_IMPORT_REJECTION_MESSAGE) {
             SETTINGS_IMPORT_REJECTION_MESSAGE
         } else {
-            settingsImportFailedMessage(detail)
+            settingsImportFailedMessage(lang, detail)
         }
     }
 
-internal fun SettingsViewModel.settingsRepairSummaryMessage(
+internal fun settingsRepairSummaryMessage(
+        lang: String,
         result: BackupRepository.RepairLibraryAccessResult
-    ): String = when (settingsLanguage()) {
+    ): String = when (lang) {
         "en" -> when {
             result.repaired > 0 -> buildString {
                 append("Rebound: ${result.repaired}")
@@ -183,7 +183,7 @@ internal fun SettingsViewModel.settingsRepairSummaryMessage(
         }
     }
 
-internal fun SettingsViewModel.settingsRepairFailedMessage(detail: String?): String = when (settingsLanguage()) {
+internal fun settingsRepairFailedMessage(lang: String, detail: String?): String = when (lang) {
         "en" -> "Access rebind failed: ${detail ?: "unknown error"}"
         "ja" -> "アクセス再関連付けに失敗しました: ${detail ?: "不明なエラー"}"
         "zh" -> "重新绑定访问权限失败：${detail ?: "未知错误"}"
@@ -191,7 +191,7 @@ internal fun SettingsViewModel.settingsRepairFailedMessage(detail: String?): Str
         else -> "Ошибка перепривязки доступа: ${detail ?: "неизвестная ошибка"}"
     }
 
-internal fun SettingsViewModel.settingsUntitledLabel(): String = when (settingsLanguage()) {
+internal fun settingsUntitledLabel(lang: String): String = when (lang) {
         "en" -> "Untitled"
         "ja" -> "無題"
         "zh" -> "未命名"
