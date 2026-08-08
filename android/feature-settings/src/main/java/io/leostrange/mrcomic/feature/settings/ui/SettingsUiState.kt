@@ -211,7 +211,8 @@ data class SettingsUiState(
     // Словари
     val isDownloadingDictionary: Boolean = false,
     val downloadingDictionaryName: String? = null,
-    val downloadedDictionaries: Set<String> = emptySet()
+    val downloadedDictionaries: Set<String> = emptySet(),
+    val dictionaryProgress: Map<String, Int> = emptyMap() // language -> progress (0-100)
 ) {
     val readerTtsProvider: String
         get() = readerTtsConfig.storedProvider

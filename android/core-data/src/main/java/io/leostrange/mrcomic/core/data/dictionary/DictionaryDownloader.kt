@@ -29,40 +29,52 @@ class DictionaryDownloader @Inject constructor(
      * Ensures the dictionary for the given language is available.
      * First checks local assets, then downloads if not found.
      *
+     * @param language Dictionary language code
+     * @param onProgress Callback for download progress (0-100)
      * @return The extracted database file, or null if download failed
      */
-    suspend fun ensureDictionary(language: String): File? {
+    suspend fun ensureDictionary(
+        language: String,
+        onProgress: ((progress: Int) -> Unit)? = null
+    ): File? {
         val config = DictionaryAssetCatalog.configForLanguage(language) ?: return null
 
         // Check if already extracted
         val extractedFile = File(extractedDir, config.extractedFileName)
         if (extractedFile.exists() && extractedFile.length() > 0L) {
+            onProgress?.invoke(100)
             return extractedFile
         }
 
         // Try local asset first
         if (hasAsset(config.assetPath)) {
+            onProgress?.invoke(100)
             return DictionaryAssetExtractor.ensureExtractedDatabase(context, config)
         }
 
         // Download from GitHub Releases
-        return downloadAndExtract(config)
+        return downloadAndExtract(config, onProgress)
     }
 
-    private fun downloadAndExtract(config: DictionaryAssetConfig): File? {
+    private fun downloadAndExtract(
+        config: DictionaryAssetConfig,
+        onProgress: ((progress: Int) -> Unit)?
+    ): File? {
         return try {
             val downloadUrl = buildReleaseUrl(config)
             Log.i(TAG, "Downloading dictionary for ${config.language} from $downloadUrl")
 
             val compressedFile = File(downloadsDir, "${config.language}.dbpack.gz")
-            downloadFile(downloadUrl, compressedFile)
+            downloadFile(downloadUrl, compressedFile, onProgress)
 
+            onProgress?.invoke(95)
             val extractedFile = File(extractedDir, config.extractedFileName)
             extractGzip(compressedFile, extractedFile)
 
             // Clean up compressed file
             compressedFile.delete()
 
+            onProgress?.invoke(100)
             Log.i(TAG, "Successfully downloaded and extracted dictionary for ${config.language}")
             extractedFile
         } catch (e: Exception) {
@@ -76,7 +88,11 @@ class DictionaryDownloader @Inject constructor(
         return "https://github.com/Leostrange/Mr.Comic/releases/download/$DICTIONARY_RELEASE_TAG/${config.language}.dbpack.gz"
     }
 
-    private fun downloadFile(url: String, targetFile: File) {
+    private fun downloadFile(
+        url: String,
+        targetFile: File,
+        onProgress: ((progress: Int) -> Unit)?
+    ) {
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 30_000
@@ -86,9 +102,21 @@ class DictionaryDownloader @Inject constructor(
                 throw Exception("HTTP ${connection.responseCode}: ${connection.responseMessage}")
             }
 
+            val contentLength = connection.contentLength.toLong()
+            var bytesDownloaded = 0L
+
             connection.inputStream.use { input ->
                 FileOutputStream(targetFile).use { output ->
-                    input.copyTo(output)
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        bytesDownloaded += bytesRead
+                        if (contentLength > 0) {
+                            val progress = (bytesDownloaded * 85 / contentLength).toInt() // 0-85%
+                            onProgress?.invoke(progress.coerceAtMost(85))
+                        }
+                    }
                 }
             }
         } finally {
