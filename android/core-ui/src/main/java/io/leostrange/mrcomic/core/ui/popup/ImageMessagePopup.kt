@@ -1,4 +1,4 @@
-package io.leostrange.mrcomic.feature.reader.ui.components
+package io.leostrange.mrcomic.core.ui.popup
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable

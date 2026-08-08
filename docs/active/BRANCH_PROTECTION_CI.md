@@ -34,7 +34,6 @@ Branch Protection — это настройка GitHub (Settings → Branches), 
      - `lint`
      - `coverage`
      - `build`
-     - `instrumented-tests`
 4. Включить **Require conversation resolution** — ✅
 5. **Do not allow bypassing the above settings** — ✅ (для прода)
 6. Save changes.
