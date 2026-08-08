@@ -6,7 +6,7 @@ import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.FormatReaderWebResource
 import io.leostrange.mrcomic.engine.formats.base.LegacyFormatSessionAccess
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 import android.graphics.Bitmap
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

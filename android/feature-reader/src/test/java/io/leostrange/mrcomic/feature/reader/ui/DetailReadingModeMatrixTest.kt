@@ -1,8 +1,8 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.engine.formats.text.pagination.DocumentTextPaginator
-import io.leostrange.mrcomic.engine.formats.text.pagination.TextPaginationConstraints
-import io.leostrange.mrcomic.engine.formats.text.TextDocumentSection
+import io.leostrange.mrcomic.engine.api.TextPaginationConstraints
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

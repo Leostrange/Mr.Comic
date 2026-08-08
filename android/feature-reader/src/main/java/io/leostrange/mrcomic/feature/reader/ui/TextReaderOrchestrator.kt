@@ -5,7 +5,7 @@ import android.util.Log
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 import io.leostrange.mrcomic.engine.formats.base.renderViewportTarget
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

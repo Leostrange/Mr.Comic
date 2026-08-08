@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ReaderInfoSlot
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt

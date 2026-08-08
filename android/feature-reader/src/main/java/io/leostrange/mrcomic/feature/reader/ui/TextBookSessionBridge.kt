@@ -3,7 +3,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 import io.leostrange.mrcomic.core.model.BookTocItem
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 import io.leostrange.mrcomic.engine.formats.text.ReflowableTextFormatReader
 
 internal object TextBookSessionBridge {

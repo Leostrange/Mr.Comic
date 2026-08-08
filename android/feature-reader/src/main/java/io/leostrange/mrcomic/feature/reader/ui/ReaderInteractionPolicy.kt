@@ -3,7 +3,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 import android.view.KeyEvent
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.engine.formats.base.TocEntry
+import io.leostrange.mrcomic.engine.api.TocEntry
 import kotlin.math.roundToInt
 
 data class ReaderHardwareKeyDecision(
