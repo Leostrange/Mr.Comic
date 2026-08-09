@@ -169,7 +169,54 @@
 - Срез 1 (коммит `24bb36e`): book-opening pipeline вынесен в `ReaderBookOpeningController` (loadComicFromSource → openComic → resetForBookOpen → prepareBook → configureOpening → applyOpeningState → startReaderSession → loadInitialPages → applyDeferredPageCount → schedulePostOpenTasks + warmupAroundPage). Явные зависимости: scope, openGuard, `_uiState`, preparer, sessionManager, navigation/readingMode/progress/warmup/deferredTasks/eyeRest/readersessionCoordinator/analytics/bookmark + лямбды formatReader/setFormatReader/localizedError/loadToc/clearHtmlPageCache/prewarm/schedulePageTranslationNote. `ReaderViewModel` похудел с 819 до ~290 строк.
 - Срез 2 (коммит `24bb36e`): page-html cache/warmup вынесен в `ReaderPageCacheController` — `loadToc`/`tocDisplayPage`/`clearHtmlPageCache`/`refreshAdjacentHtmlPages`/`getOrLoadHtmlPage`/`prewarmHtmlPagesAround` + `tocLoadJob`. В feature-reader добавлен mockk; `ReaderBookOpeningControllerTest` (4) + `ReaderPageCacheControllerTest` (6).
 - Срез 3 (коммит `0ffa6f9`): аудит `AudiobookPlayerViewModel` (357 строк) — вывод: VM — когезивная MediaController-обвязка, извлекаемо чистое правило-логика. Порог персиста прогресса (5s / смена главы), границы глав, клэмпы start/seek/speed, отсчёт sleep-timer вынесены в статeless `AudiobookPlayerPolicy` (паттерн `*Policy.kt` репозитория). `AudiobookPlayerPolicyTest` (14).
-- Срез 4 (коммит `6edea4c`): аудит `OpdsCatalogViewModel` (160 → 64 строки, feature-library): browse/search/download вынесены в `OpdsCatalogController` (opdsRepository + scope + `MutableStateFlow<OpdsCatalogUiState>`), `UiState` переехал в топ-левел `OpdsCatalogUiState`. VM — тонкая обвязка, публичное API сохранено. `OpdsCatalogControllerTest` (14 тестов: открытие каталога, стек навигации, goBack, next page, search/exitSearch, download-прогресс, error-пути).
-- Проверка (2026-08-09): `:feature-library:testDebugUnitTest` (194 теста) + `:feature-library:detekt` (0 smells) — BUILD SUCCESSFUL.
+- Срез 4 (коммит `6edea4c`): аудит `OpdsCatalogViewModel` (160 → 64 строки, feature-library): browse/search/download вынесены в `OpdsCatalogController` (opdsRepository + scope + `MutableStateFlow<OpdsCatalogUiState>`), `UiState` переехал в топ-левел `OpdsCatalogUiState`. VM — тонкая обвязка, публичное API сохранено. `OpdsCatalogControllerTest` (14 тестов: открытие каталога, стек навигации, goBack, next page, search/exitSearch, download-прогресс, error-пути).- Проверка (2026-08-09): `:feature-library:testDebugUnitTest` (194 теста) + `:feature-library:detekt` (0 smells) — BUILD SUCCESSFUL.
 - Ограничение (из AGENTS.md): один срез = один контроллер/политика + собственный unit-тест до подключения к ViewModel/UI.
+
+## Выполнено (2026-08-09) — ARC-11 срезы S3, S5, S8, S6, S12, S10
+
+### S3 — ChromeInsetsPlan
+
+- `ChromeInsetsPlan.kt` — pure-Kotlin data class (10 полей) + `companion.compute(...)` с measured/auto-hide/final reserve + CSS-инсетами.
+- `@Composable rememberChromeInsetsPlan` — Compose-обёртка с `remember` по 8 ключам.
+- `ReaderScreen.kt` похудел с 881 → 833 строк (-48): ~100 строк inline chrome-вычислений заменены на `val plan = rememberChromeInsetsPlan(...)`.
+- `ChromeInsetsPlanTest.kt` — 7 unit-тестов (visible/hidden chrome, capped reserve, CSS inset + sentence gutter, auto-hide floor).
+
+### S5 — HtmlProgressAnchor
+
+- `HtmlProgressAnchor.kt` — `ReaderPositionAnchor` data class + `extractTextAnchor` + `resolveAnchorPosition` + `ReaderSectionCursor` + `readerSectionCursor`.
+- `HtmlProgressAnchorTest.kt` — 18 unit-тестов (extract from id/text, no match, blank, truncation, resolve id/text/priority, stability after reflow, cursor ordering/equality/clamping, anchor validation).
+- `ReaderPositionAnchorTest.kt` удалён (тесты subsumed).
+
+### S8 — ReaderPagePreloadPolicy
+
+- `ReaderPagePreloadPolicy.kt` — pure-Kotlin `pagesToPreload(centerPage, visiblePages, totalPages, preloadDistance)` с клэмпом 1..8.
+- Инлайн-логика в `TextReaderOrchestrator.prewarmHtmlPagesAround` заменена на вызов политики.
+- `ReaderPagePreloadPolicyTest.kt` — 10 unit-тестов (empty, single/dual page, left/right boundary, small book, distance clamp, empty visible fallback, distinct pages).
+
+### S6 — ReaderFontResolutionPolicy
+
+- `ReaderFontResolutionPolicy.kt` — `resolveFamily(selected, builtIn, custom)` → fallback Georgia + `isBuiltIn`/`isCustom`.
+- `ReaderFontResolutionPolicyTest.kt` — 10 unit-тестов (exact match, null/blank/unknown fallback, case sensitivity, empty sets).
+
+### S12 — ReaderChromeBars
+
+- `ReaderChromeBars.kt` — обёртка над `ReaderTopChromeBar` + `ReaderBottomChromePanel` (29 параметров).
+- `ReaderScreen.kt` — два вызова (~50 строк) заменены на один `ReaderChromeBars(...)`.
+
+### S10 — ReaderContentArea
+
+- `ReaderContentArea.kt` — reader content area: four `when` branches (TEXT_WEBTOON, TEXT_PAGE, RASTER_WEBTOON, RASTER_PAGE) со всеми параметрами.
+- `ReaderScreen.kt`: 833 → 635 строк (-198). Цель ≤400 ещё не достигнута.
+
+**Проверка**: `:feature-reader:testDebugUnitTest` + `:feature-reader:detekt` + `:app:compileDebugKotlin` — BUILD SUCCESSFUL, 0 smells.
+
+### Проверка и закрытие S10/S12
+
+- `ReaderChromeBars.kt` — `BoxScope`-extension над `ReaderTopChromeBar` и `ReaderBottomChromePanel`; типы `ReaderHeaderFooterOverlayStyle` и `ReaderInfoOverlayLine` передаются явно.
+- `ReaderContentArea.kt` — четыре ветки контейнера (`TEXT_WEBTOON`, `TEXT_PAGE`, `RASTER_WEBTOON`, `RASTER_PAGE`) вынесены с явными импортами `WebViewAssetLoader`, core-model layout/actions и callback-регистрацией paged turner.
+- Добавлен `ReaderChromeSurfacePlan.kt` для pure-политики поверхностей chrome, а `ReaderWebViewLoadController.kt` восстановлен как pure lifecycle-контракт для regression suite.
+- `ReaderScreen.kt`: 881 → 635 строк; цель ≤400 ещё не достигнута, дальнейшее сокращение должно быть отдельным срезом.
+- Исправлены несовместимые незакоммиченные ARC-11 артефакты (дубликат key policy, host/test visibility и stale test expectations).
+
+**Проверка (2026-08-09)**: `:feature-reader:testDebugUnitTest` (488 тестов), `:feature-reader:detekt`, `:feature-reader:compileDebugKotlin` и `:app:assembleDebug` — BUILD SUCCESSFUL.
 

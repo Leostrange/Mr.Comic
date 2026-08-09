@@ -222,18 +222,13 @@ internal class TextReaderOrchestrator(
         val state = getUiState()
         val totalPages = state.totalPages
         if (totalPages <= 0) return
-        val preloadDistance = state.preloadPages.coerceIn(1, 8)
         val visiblePages = visiblePagesFor(centerPage, state.readingMode)
-        val minVisible = visiblePages.minOrNull() ?: centerPage
-        val maxVisible = visiblePages.maxOrNull() ?: centerPage
-        val pagesToPrewarm = buildList {
-            for (offset in 1..preloadDistance) {
-                val left = minVisible - offset
-                if (left >= 0) add(left)
-                val right = maxVisible + offset
-                if (right < totalPages) add(right)
-            }
-        }.distinct()
+        val pagesToPrewarm = ReaderPagePreloadPolicy.pagesToPreload(
+            centerPage = centerPage,
+            visiblePages = visiblePages,
+            totalPages = totalPages,
+            preloadDistance = state.preloadPages
+        )
         if (pagesToPrewarm.isEmpty()) return
 
         prewarmJob?.cancel()
