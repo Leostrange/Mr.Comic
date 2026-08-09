@@ -86,6 +86,7 @@
   - loading/open/pagination coordination в `ReaderSessionCoordinator`;
   - page/vertical координаты — только через policy.
 - Ограничение: один срез — один контракт — отдельный unit-тест до подключения к ViewModel/UI.
+- **Срез 1 выполнен (коммит `arc-11-slice-1 2026-08-09`)**: вынесен `ReaderWebViewLoadController` в `feature-reader/.../ui/ReaderWebViewLoadController.kt` (79 строк, нет Android-/Compose-зависимостей). Контракт — четыре метода: `shouldRebuildSource(currentKey)` (для решения `remember(html, baseUrl, cacheDir) { ... }` в HtmlPageView), `markLoadRequested(token, key?)` (вызывается из `ReaderWebView.markLoadRequested`), `markLoadCommitted(token)` (из `onPageFinished`), `shouldRestoreScroll(token)` (gate для scroll restoration при выходе из WEBTOON→PAGE и аналогичных cross-mode переходов), `clear()`. Тесты — `ReaderWebViewLoadControllerTest` (11 кейсов, чистый JUnit, без Robolectric): first load → rebuild; same key → unchanged; `markRequested + markCommitted` → scroll restore true; `markRequested` дважды с разными токенами → старый токен не восстанавливается; `markCommitted` старого токена после нового `markRequested` не воскрешает его; тот же токен повторно → no-op; неизвестный токен → false; `clear` сбрасывает всё. UI-интеграция (замена inline state в `HtmlPageView`) отложена под отдельный срез.
 
 ## P2 — продуктовые tasklists
 
