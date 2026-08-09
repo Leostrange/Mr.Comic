@@ -47,7 +47,7 @@ class Fb2FormatReader(
          * Keep pages below a single phone viewport in PAGE_* mode. The WebView is
          * scroll-locked there, so oversized chunks look like skipped/cut text.
          */
-private const val CHARS_PER_PAGE = 4000
+        private const val CHARS_PER_PAGE = 4000
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
         private val GENERATED_BLOCK_RE = Regex(
@@ -59,6 +59,9 @@ a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{font-size:0.75em;vertical-align:
      font-weight:bold;text-decoration:none;cursor:pointer}
 p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left}
 .note-num{font-weight:bold;display:inline-block;min-width:2.8em;text-indent:0}
+.mrcomic-cover-section{text-align:center;break-inside:avoid;page-break-inside:avoid}
+.mrcomic-cover-section p{text-align:center!important;text-indent:0!important;margin:0.55em 0}
+.mrcomic-cover-section .mrcomic-cover-image{max-height:min(58vh,calc(100vh - 20em))!important;width:auto!important;max-width:100%!important;object-fit:contain!important;margin:0 auto 0.8em!important}
 """
 
         private fun appendEscapedFb2Text(target: StringBuilder, text: String) {
@@ -140,16 +143,18 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         val hasBodyText: Boolean,            // true = text was found in body
         val tocEntries: List<TocEntry>,      // chapter TOC
         val footnoteMap: Map<String, String>, // anchorId → footnote HTML text
+        val anchorPageMap: Map<String, Int>,  // FB2 section id → reader page
         val metadata: Map<String, String>
     )
 
     private val data: Parsed by lazy {
         try {
             openStream()?.use { parse(it) }
-                ?: Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap())
+                ?: Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap(), emptyMap())
         } catch (e: Exception) {
             logError("FB2 parse error for $path", e)
-            Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap())
+            e.printStackTrace()
+            Parsed(emptyMap(), emptyList(), emptyList(), false, emptyList(), emptyMap(), emptyMap(), emptyMap())
         }
     }
 
@@ -260,6 +265,15 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         val binaries = LinkedHashMap<String, ByteArray>()
         val bodyImageRefs = mutableListOf<String>()
         val rawSections = mutableListOf<String>()
+        val rawSectionStarts = mutableListOf<Boolean>()
+        val sectionRawStarts = linkedMapOf<String, Int>()
+        var markNextRawSectionStart = true
+
+        fun addRawSection(content: String) {
+            rawSections.add(content)
+            rawSectionStarts.add(markNextRawSectionStart)
+            markNextRawSectionStart = false
+        }
 
         val sectionBuf = StringBuilder()
         var sectionCount = 0
@@ -269,6 +283,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         var bodyDepth = -1
         var isMainBody = false
         var sectionDepth = 0
+        var currentTopLevelSectionId: String? = null
         var inBinary = false
         var binaryId = ""
         val binaryBuf = StringBuilder()
@@ -315,7 +330,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             val parts = extractPageBlocks(content)
 
             if (parts.isEmpty()) {
-                rawSections.add(content)
+                addRawSection(content)
                 return
             }
 
@@ -324,14 +339,14 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             for (part in parts) {
                 val partChars = HTML_TAG_RE.replace(part, "").length
                 if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
-                    rawSections.add(currentChunk.toString())
+                    addRawSection(currentChunk.toString())
                     currentChunk = StringBuilder()
                     currentChars = 0
                 }
                 currentChunk.append(part)
                 currentChars += partChars
             }
-            if (currentChunk.isNotEmpty()) rawSections.add(currentChunk.toString())
+            if (currentChunk.isNotEmpty()) addRawSection(currentChunk.toString())
         }
 
         val reader = Fb2Preprocessor.createStreamingReader(bufferedStream, charset)
@@ -386,8 +401,14 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                     // Flush buffer when a new top-level section starts.
                                     if (sectionDepth == 0) {
                                         flushPage()
-                                        // Record where this section's raw pages will start
+                                        // Record where this section's raw pages will start and keep
+                                        // explicit front-matter sections (cover/TOC) separate.
                                         pendingTocRawIdx = rawSections.size
+                                        parser.getAttributeValue(null, "id")?.trim()
+                                            ?.takeIf { it.isNotEmpty() }
+                                            ?.let { sectionRawStarts[it] = pendingTocRawIdx }
+                                        markNextRawSectionStart = true
+                                        currentTopLevelSectionId = parser.getAttributeValue(null, "id")?.trim()
                                         inTopLevelTitle = false
                                         titleTextBuf.clear()
                                     }
@@ -414,10 +435,17 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 "cite"          -> sectionBuf.append("<blockquote>")
                                 "epigraph"      -> sectionBuf.append("<blockquote><em>")
                                 "a" -> {
-                                    // Preserve hyperlinks as fbanchor:// scheme so JS can intercept
-                                    val href = findHref(parser).trimStart('#')
+                                    // Keep chapter/section links as normal fragments so the reader
+                                    // can resolve them to an FB2 section page. Footnote-like links
+                                    // retain the dedicated scheme and open the popup instead.
+                                    val rawHref = findHref(parser).trim()
+                                    val href = rawHref.trimStart('#')
                                     if (href.isNotEmpty()) {
-                                        sectionBuf.append("<a class=\"fn\" href=\"fbanchor://${href.escapeAttr()}\">")
+                                        if (rawHref.startsWith("#") && !isLikelyFb2FootnoteTarget(href)) {
+                                            sectionBuf.append("<a href=\"#${href.escapeAttr()}\">")
+                                        } else {
+                                            sectionBuf.append("<a class=\"fn\" href=\"fbanchor://${href.escapeAttr()}\">")
+                                        }
                                         inLink = true
                                     }
                                 }
@@ -427,7 +455,10 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                         if (sectionDepth == 0) {
                                             bodyImageRefs.add(ref)
                                         } else {
-                                            sectionBuf.append("<img data-id=\"${ref.escapeAttr()}\"/>")
+                                            val coverClass = if (currentTopLevelSectionId.equals("synopsis", ignoreCase = true)) {
+                                                " class=\"mrcomic-cover-image\""
+                                            } else ""
+                                            sectionBuf.append("<img$coverClass data-id=\"${ref.escapeAttr()}\"/>")
                                         }
                                     }
                                 }
@@ -476,13 +507,18 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 "section" -> {
                                     sectionDepth--
                                     // Flush whatever remained in this top-level section.
-                                    if (sectionDepth == 0) flushPage()
+                                    if (sectionDepth == 0) {
+                                        flushPage()
+                                        currentTopLevelSectionId = null
+                                    }
                                 }
                                 "title" -> {
                                     sectionBuf.append("</h2>")
                                     if (inTopLevelTitle) {
                                         val t = titleTextBuf.toString().trim()
-                                        if (t.isNotEmpty()) tocRaw.add(Pair(t, pendingTocRawIdx))
+                                        if (t.isNotEmpty() && !isTocSectionId(currentTopLevelSectionId)) {
+                                            tocRaw.add(Pair(t, pendingTocRawIdx))
+                                        }
                                         inTopLevelTitle = false
                                     }
                                 }
@@ -547,6 +583,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             }
         } catch (e: Exception) {
             logError("FB2 XML parse exception", e)
+            e.printStackTrace()
             // Flush whatever was buffered before the error
             flushPage()
         }
@@ -562,6 +599,12 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         var pendingChars = 0
         for ((rawIdx, section) in rawSections.withIndex()) {
             val sectionChars = HTML_TAG_RE.replace(section, "").length
+            if (pendingChars > 0 && rawSectionStarts.getOrNull(rawIdx) == true) {
+                mergedSections.add(pendingMerge.toString())
+                pendingMerge.clear()
+                pendingChars = 0
+                currentMergedIdx++
+            }
             if (pendingChars + sectionChars > CHARS_PER_PAGE && pendingChars > 0) {
                 mergedSections.add(pendingMerge.toString())
                 pendingMerge.clear()
@@ -589,6 +632,10 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             val pageIdx = rawToMergedPage[clampedIdx] ?: 0
             TocEntry(title, pageIdx)
         }.toMutableList()
+        val anchorPageMap = sectionRawStarts.mapValues { (_, rawSectionIdx) ->
+            val clampedIdx = rawSectionIdx.coerceAtMost((rawSections.size - 1).coerceAtLeast(0))
+            rawToMergedPage[clampedIdx] ?: 0
+        }
 
         // If there are footnotes, split them into screen-sized pages and add a TOC entry.
         val pages: List<String>
@@ -642,13 +689,14 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
             hasBodyText  = hasBodyText,
             tocEntries   = tocEntries,
             footnoteMap  = footnoteMap,
+            anchorPageMap = anchorPageMap,
             metadata     = metadata
         )
     }
 
     private fun buildHtmlPage(body: String, binaries: Map<String, ByteArray>, lang: String? = null): String {
-        val resolved = Regex("""<img data-id="([^"]+)"/>""").replace(body) { m ->
-            val ref = m.groupValues[1]
+        val resolved = Regex("""<img([^>]*)data-id="([^"]+)"([^>]*)/>""").replace(body) { m ->
+            val ref = m.groupValues[2]
             val noExt = ref.substringBeforeLast('.', ref)
             val bytes = binaries[ref] ?: binaries[noExt]
                 ?: binaries.entries.firstOrNull { (k, _) ->
@@ -661,11 +709,17 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                     "webp" -> "image/webp"
                     else   -> "image/jpeg"
                 }
-                "<img src=\"data:$mime;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}\"/>"
+                val coverClass = if (m.value.contains("mrcomic-cover-image")) {
+                    " class=\"mrcomic-cover-image\""
+                } else ""
+                "<img$coverClass src=\"data:$mime;base64,${Base64.encodeToString(bytes, Base64.NO_WRAP)}\"/>"
             } else m.value
         }
+        val pageBody = if (body.contains("mrcomic-cover-image")) {
+            "<div class=\"mrcomic-cover-section\">$resolved</div>"
+        } else resolved
         return buildUnifiedReaderHtmlDocument(
-            body = resolved,
+            body = pageBody,
             extraCss = FB2_READER_CSS,
             lang = lang
         )
@@ -680,6 +734,23 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     }
 
     private fun String.escapeAttr() = replace("\"", "&quot;")
+
+    private fun isLikelyFb2FootnoteTarget(href: String): Boolean =
+        Regex("(?i)(?:^|[-_])(fn|footnote|note|endnote|ref)(?:[-_]|$)|^\\d+$").containsMatchIn(href)
+
+    private fun isTocSectionId(id: String?): Boolean =
+        id?.trim()?.lowercase() in setOf("toc", "contents", "table-of-contents", "table_of_contents")
+
+    override fun resolveHrefToPage(href: String): Int? {
+        val normalized = href.trim()
+            .removePrefix("fbanchor://")
+            .removePrefix("#")
+        val fragment = normalized.substringAfter('#', normalized)
+            .substringAfterLast('/')
+            .trim()
+        return data.anchorPageMap[fragment]
+            ?: data.anchorPageMap[normalized.substringBefore('#').substringAfterLast('/').trim()]
+    }
 
     /** Escapes HTML-unsafe characters in FB2 body text before it reaches WebView. */
     private fun escapeHtmlForFb2(text: String): String = text

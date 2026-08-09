@@ -223,18 +223,17 @@ fun LibraryTopBar(
                                             onAddFolderClick()
                                         }
                                     )
-                                    if (onOpdsCatalogClick != null) {
-                                        DropdownMenuItem(
-                                            text = { Text("OPDS Catalog") },
-                                            leadingIcon = {
-                                                Icon(Icons.Default.CloudDownload, contentDescription = null)
-                                            },
-                                            onClick = {
-                                                addMenuExpanded = false
-                                                onOpdsCatalogClick()
-                                            }
-                                        )
-                                    }
+                                }
+                            }
+                            if (onOpdsCatalogClick != null) {
+                                MrComicIconButton(
+                                    onClick = onOpdsCatalogClick,
+                                    variant = MrComicIconButtonVariant.Tonal
+                                ) {
+                                    Icon(
+                                        Icons.Default.CloudDownload,
+                                        contentDescription = strings.opdsCatalog
+                                    )
                                 }
                             }
                         }

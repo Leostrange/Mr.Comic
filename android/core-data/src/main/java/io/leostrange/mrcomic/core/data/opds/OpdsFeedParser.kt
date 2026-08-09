@@ -84,7 +84,7 @@ internal object OpdsFeedParser {
 
         val depth = parser.depth
         parser.next()
-        while (parser.depth > depth) {
+        while (!(parser.eventType == XmlPullParser.END_TAG && parser.depth == depth)) {
             if (parser.eventType == XmlPullParser.START_TAG) {
                 when {
                     parser.namespace == ATOM_NS && parser.name == "title" ->
@@ -133,7 +133,7 @@ internal object OpdsFeedParser {
         val depth = parser.depth
         parser.next()
         var name: String? = null
-        while (parser.depth > depth) {
+        while (!(parser.eventType == XmlPullParser.END_TAG && parser.depth == depth)) {
             if (parser.eventType == XmlPullParser.START_TAG &&
                 parser.namespace == ATOM_NS && parser.name == "name"
             ) {
@@ -146,10 +146,10 @@ internal object OpdsFeedParser {
 
     private fun readText(parser: XmlPullParser, tag: String): String {
         val depth = parser.depth
-        parser.next()
         val sb = StringBuilder()
-        while (parser.depth > depth) {
-            if (parser.eventType == XmlPullParser.TEXT) {
+        parser.next()
+        while (!(parser.eventType == XmlPullParser.END_TAG && parser.depth == depth)) {
+            if (parser.eventType == XmlPullParser.TEXT || parser.eventType == XmlPullParser.CDSECT) {
                 sb.append(parser.text)
             }
             parser.next()

@@ -56,11 +56,7 @@ class OpdsRepository @Inject constructor(
     /** Search within an OPDS catalog. */
     suspend fun search(searchUrl: String, query: String): OpdsFeed = withContext(Dispatchers.IO) {
         // OPDS search uses OpenSearch URL template: replace {searchTerms} or {?searchTerms}
-        val encoded = java.net.URLEncoder.encode(query, "UTF-8")
-            .replace("+", "%20") // URLEncoder uses + for spaces; OPDS expects %20
-        val url = searchUrl
-            .replace("{searchTerms}", encoded)
-            .replace("{?searchTerms}", "?q=$encoded")
+        val url = buildOpdsSearchUrl(searchUrl, query)
         Log.d(TAG, "Searching: $url")
         networkClient.fetchFeed(url)
     }
@@ -77,10 +73,12 @@ class OpdsRepository @Inject constructor(
         val safeName = entry.title.replace(Regex("[^a-zA-Z0-9а-яА-ЯёЁ\\-_. ]"), "_")
             .take(80)
             .ifBlank { "book" }
-        val fileName = "${safeName}.$extension"
+        // Include the acquisition identity so equal titles cannot race on one file.
+        val downloadIdentity = Integer.toHexString(acquisitionLink.href.hashCode())
+        val fileName = "${safeName}-${downloadIdentity}.$extension"
 
         val downloadsDir = File(context.filesDir, DOWNLOADS_DIR).apply { mkdirs() }
-        val outputFile = File(downloadsDir, fileName)
+        val outputFile = uniqueDownloadFile(downloadsDir, fileName)
 
         Log.d(TAG, "Downloading '${entry.title}' from ${acquisitionLink.href}")
         networkClient.downloadBook(acquisitionLink.href, outputFile, onProgress)
@@ -94,6 +92,21 @@ class OpdsRepository @Inject constructor(
         val dir = File(context.filesDir, DOWNLOADS_DIR)
         if (dir.exists()) {
             dir.listFiles()?.forEach { it.delete() }
+        }
+    }
+
+    private fun uniqueDownloadFile(downloadsDir: File, fileName: String): File {
+        val candidate = File(downloadsDir, fileName)
+        if (!candidate.exists()) return candidate
+
+        val baseName = fileName.substringBeforeLast('.', fileName)
+        val extension = fileName.substringAfterLast('.', "")
+        var index = 2
+        while (true) {
+            val suffix = " ($index)" + if (extension.isBlank()) "" else ".${extension}"
+            val next = File(downloadsDir, baseName + suffix)
+            if (!next.exists()) return next
+            index++
         }
     }
 
@@ -121,5 +134,24 @@ class OpdsRepository @Inject constructor(
         }
 
         return "epub" // default fallback
+    }
+}
+
+/** Build a correctly encoded URL from an OPDS/OpenSearch query template. */
+internal fun buildOpdsSearchUrl(searchUrl: String, query: String): String {
+    val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+        .replace("+", "%20")
+
+    return when {
+        "{?searchTerms}" in searchUrl -> searchUrl.replace("{?searchTerms}", "?q=$encoded")
+        "{searchTerms}" in searchUrl -> searchUrl.replace("{searchTerms}", encoded)
+        else -> {
+            val separator = when {
+                searchUrl.endsWith("?") || searchUrl.endsWith("&") -> ""
+                "?" in searchUrl -> "&"
+                else -> "?"
+            }
+            "$searchUrl${separator}q=$encoded"
+        }
     }
 }
