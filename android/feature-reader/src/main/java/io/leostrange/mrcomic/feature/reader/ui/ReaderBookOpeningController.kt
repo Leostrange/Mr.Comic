@@ -14,6 +14,7 @@ import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
+import io.leostrange.mrcomic.feature.reader.ui.ReaderSessionCoordinator as SessionLifecycleCoordinator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -46,6 +47,7 @@ internal class ReaderBookOpeningController(
     private val eyeRestController: ReaderEyeRestController,
     private val textReaderOrchestrator: TextReaderOrchestrator,
     private val readerSessionCoordinator: ReaderSessionCoordinator,
+    private val sessionLifecycleCoordinator: SessionLifecycleCoordinator,
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val bookmarkController: ReaderBookmarkController,
     private val context: Context,
@@ -94,20 +96,36 @@ internal class ReaderBookOpeningController(
     }
 
     private suspend fun openComic(comic: Comic, sourcePath: String, requestToken: Long) {
+        // ARC-11 slice "wire-coordinator-to-vm": pickup the lifecycle ledger
+        // here. beginOpen returns false when the previous open is still in flight
+        // or a close is pending — in either case we leave the existing state
+        // untouched and bail out.
+        if (!sessionLifecycleCoordinator.beginOpen()) return
         try {
             resetForBookOpen(requestToken)
-            if (!openGuard.isCurrent(requestToken)) return
-
-            val prepared = prepareBook(comic, sourcePath, requestToken) ?: return
-            val activeReader = prepared.reader ?: return
             if (!openGuard.isCurrent(requestToken)) {
-                activeReader.close(); setFormatReader(null); return
+                sessionLifecycleCoordinator.reset(); return
             }
 
-            val config = configureOpening(comic, prepared, requestToken) ?: return
+            val prepared = prepareBook(comic, sourcePath, requestToken) ?: run {
+                sessionLifecycleCoordinator.reset(); return
+            }
+            val activeReader = prepared.reader ?: run {
+                sessionLifecycleCoordinator.reset(); return
+            }
+            if (!openGuard.isCurrent(requestToken)) {
+                activeReader.close(); setFormatReader(null)
+                sessionLifecycleCoordinator.reset(); return
+            }
+
+            val config = configureOpening(comic, prepared, requestToken) ?: run {
+                sessionLifecycleCoordinator.reset(); return
+            }
             applyOpeningState(comic, prepared, config)
             startReaderSession(comic, config)
-            if (!openGuard.isCurrent(requestToken)) return
+            if (!openGuard.isCurrent(requestToken)) {
+                sessionLifecycleCoordinator.reset(); return
+            }
             if (config.readerRendersHtmlContent) formatReader()?.let { reader ->
                 textReaderOrchestrator.syncBookEngineTextLayer(
                     scope = scope,
@@ -123,9 +141,12 @@ internal class ReaderBookOpeningController(
             loadInitialPages(comic, prepared, activeReader, config)
             scheduleDeferredPageCountIfNeeded(comic, activeReader, prepared, config, requestToken)
             schedulePostOpenTasks(comic, config.startPage, config.initialPages)
+            sessionLifecycleCoordinator.markReadyAfterBeginOpen()
         } catch (e: CancellationException) {
+            sessionLifecycleCoordinator.reset()
             throw e
         } catch (e: Exception) {
+            sessionLifecycleCoordinator.reset()
             if (!openGuard.isCurrent(requestToken)) return
             Log.e("ReaderViewModel", "Failed to open comic", e)
             eyeRestController.cancel()
