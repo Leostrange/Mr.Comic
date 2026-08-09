@@ -260,7 +260,7 @@ class ComicFormatDetectorTest {
 
     private fun detector(): ComicFormatDetector = ComicFormatDetector(
         openInputStream = { error("The pure policy tests must not read a URI") },
-        detectArchiveContentFormat = { error("The pure policy tests must not inspect an archive") }
+        archiveAccessFor = { error("The pure policy tests must not inspect an archive") }
     )
 
     private fun zipOf(vararg entries: Pair<String, String>): ByteArray =

@@ -8,21 +8,45 @@ import java.net.URLDecoder
 import java.util.zip.ZipInputStream
 
 /**
- * Classifies an import before [ComicRepository] persists it. Archive-content
- * inspection stays injectable because it needs the repository's temporary-file
- * lifecycle for RAR and 7Z sources.
+ * Classifies an import before [ComicRepository] persists it. The detector is
+ * deliberately agnostic to how archives reach it: the host wires two adapters
+ * through [archiveAccessFor] — a stream source for ZIP/TAR scans and a
+ * random-access materialiser for 7Z/RAR scans — and the detector does the
+ * rest here so the classification logic stays testable without Android.
  */
 internal class ComicFormatDetector(
     private val openInputStream: (Uri) -> InputStream?,
-    private val detectArchiveContentFormat: (Uri) -> ComicFormat?,
+    private val archiveAccessFor: (Uri) -> ArchiveAccess?,
     private val onMagicDetectionFailure: (Uri, Exception) -> Unit = { _, _ -> }
 ) {
 
     fun detect(uri: Uri, name: String?, mimeType: String?): ComicFormat {
         detectByExtension(name).takeIf { it != ComicFormat.UNKNOWN }?.let { return it }
-        val textArchive = if (mimeType.isArchiveMimeType()) detectArchiveContentFormat(uri) != null else false
+        val textArchive = if (mimeType.isArchiveMimeType()) {
+            archiveContentForUri(uri) != null
+        } else {
+            false
+        }
         detectByMime(mimeType, textArchive).takeIf { it != ComicFormat.UNKNOWN }?.let { return it }
         return detectByMagic(uri)
+    }
+
+    /**
+     * Routes a URI through the configured adapters: ZIP and TAR scan via
+     * [ArchiveStreamSource], 7Z and RAR scan via a temp file produced by
+     * [RandomAccessArchiveMaterialiser] (which the detector deletes after use).
+     */
+    internal fun archiveContentForUri(uri: Uri): ComicFormat? {
+        val access = archiveAccessFor(uri) ?: return null
+        val header = ByteArray(MAGIC_HEADER_SIZE)
+        val read = runCatching { access.stream.openStream()?.use { it.read(header) } }.getOrNull() ?: -1
+        return when {
+            read >= 4 && header.startsWithMagic(SEVENZ_MAGIC) ->
+                detectArchiveContentFormat(access.randomAccess, "7z")
+            read >= 4 && (header.startsWithMagic(RAR4_MAGIC) || header.startsWithMagic(RAR5_MAGIC)) ->
+                detectArchiveContentFormat(access.randomAccess, "rar")
+            else -> detectArchiveContentFormat { access.stream.openStream() }
+        }
     }
 
     fun detectByExtension(name: String?): ComicFormat = when (
@@ -30,7 +54,7 @@ internal class ComicFormatDetector(
     ) {
         "cbz" -> ComicFormat.CBZ
         "zip" -> ComicFormat.ZIP
-        "cbr" -> ComicFormat.CBR
+        "cbr" -> ComicFormat.RAR
         "rar" -> ComicFormat.RAR
         "cb7", "7z" -> ComicFormat.SEVENZ
         "cbt", "tar" -> ComicFormat.TAR
@@ -138,13 +162,13 @@ internal fun deriveComicTitleFromPath(path: String): String {
         .ifBlank { "Untitled" }
 }
 
-private fun ByteArray.startsWithMagic(other: ByteArray): Boolean =
+internal fun ByteArray.startsWithMagic(other: ByteArray): Boolean =
     size >= other.size && other.indices.all { this[it] == other[it] }
 
-private fun ByteArray.hasSliceAt(offset: Int, other: ByteArray): Boolean =
+internal fun ByteArray.hasSliceAt(offset: Int, other: ByteArray): Boolean =
     offset >= 0 && size >= offset + other.size && other.indices.all { this[offset + it] == other[it] }
 
-private fun ByteArray.isDjvuDocument(): Boolean =
+internal fun ByteArray.isDjvuDocument(): Boolean =
     startsWithMagic(ComicFormatDetector.DJVU_CONTAINER_MAGIC) &&
         (hasSliceAt(12, ComicFormatDetector.DJVU_SINGLE_MAGIC) || hasSliceAt(12, ComicFormatDetector.DJVU_MULTI_MAGIC))
 
@@ -169,12 +193,12 @@ private fun String?.isArchiveMimeType(): Boolean = this in setOf(
  * @param openStream a supplier that returns an InputStream for the archive.
  *   The caller is responsible for closing the stream.
  */
-internal fun detectArchiveContentFormat(openStream: () -> java.io.InputStream?): io.leostrange.mrcomic.core.model.ComicFormat? {
+internal fun detectArchiveContentFormat(openStream: () -> InputStream?): ComicFormat? {
     return runCatching {
         // ZIP
         openStream()?.use { input ->
             runCatching {
-                java.util.zip.ZipInputStream(input.buffered()).use { zip ->
+                ZipInputStream(input.buffered()).use { zip ->
                     val entries = generateSequence { zip.nextEntry }
                         .map { it.name to it.isDirectory }
                     classifyArchiveEntries(entries)
@@ -204,7 +228,7 @@ internal fun detectArchiveContentFormat(openStream: () -> java.io.InputStream?):
  * random file access and cannot be scanned through a plain InputStream.
  * Returns null for image-only archives, RAR5 (not supported by junrar), or unreadable files.
  */
-internal fun detectArchiveContentFormat(file: java.io.File): io.leostrange.mrcomic.core.model.ComicFormat? {
+internal fun detectArchiveContentFormat(file: File): ComicFormat? {
     if (!file.isFile) return null
     return runCatching {
         val header = ByteArray(8)
@@ -230,14 +254,33 @@ internal fun detectArchiveContentFormat(file: java.io.File): io.leostrange.mrcom
 }
 
 /**
+ * Scans an archive through a temp file produced by [randomAccess]. Used for
+ * 7Z and RAR4 which cannot read from a plain [java.io.InputStream]. The
+ * detector always deletes the temp file in a `finally` block, even when the
+ * underlying scanner throws, so the materialiser caller does not have to
+ * track lifecycle.
+ */
+internal fun detectArchiveContentFormat(
+    randomAccess: RandomAccessArchiveMaterialiser,
+    scanExtension: String
+): ComicFormat? {
+    val tempFile = runCatching { randomAccess.materialise(scanExtension) }.getOrNull() ?: return null
+    return try {
+        detectArchiveContentFormat(tempFile)
+    } finally {
+        runCatching { tempFile.delete() }
+    }
+}
+
+/**
  * Classifies archive entries by their file extension, up to [limit] scanned entries.
  * Returns the first text-book format found, or null if the archive is image-only.
  */
 private fun classifyArchiveEntries(
     entries: Sequence<Pair<String, Boolean>>,
     limit: Int = 100
-): io.leostrange.mrcomic.core.model.ComicFormat? {
-    var textFormat: io.leostrange.mrcomic.core.model.ComicFormat? = null
+): ComicFormat? {
+    var textFormat: ComicFormat? = null
     var textCount = 0
     var scanned = 0
     for ((name, isDirectory) in entries) {
@@ -254,15 +297,15 @@ private fun classifyArchiveEntries(
     return if (textCount > 0) textFormat else null
 }
 
-private fun archiveTextFormatFromExtension(e: String): io.leostrange.mrcomic.core.model.ComicFormat? = when (e) {
-    "epub" -> io.leostrange.mrcomic.core.model.ComicFormat.EPUB
-    "fb2" -> io.leostrange.mrcomic.core.model.ComicFormat.FB2
-    "txt", "text" -> io.leostrange.mrcomic.core.model.ComicFormat.TXT
-    "htm", "html", "xhtml" -> io.leostrange.mrcomic.core.model.ComicFormat.HTML
-    "md", "markdown" -> io.leostrange.mrcomic.core.model.ComicFormat.MARKDOWN
-    "rtf" -> io.leostrange.mrcomic.core.model.ComicFormat.RTF
-    "mobi", "prc" -> io.leostrange.mrcomic.core.model.ComicFormat.MOBI
-    "docx" -> io.leostrange.mrcomic.core.model.ComicFormat.DOCX
-    "odt" -> io.leostrange.mrcomic.core.model.ComicFormat.ODT
+private fun archiveTextFormatFromExtension(e: String): ComicFormat? = when (e) {
+    "epub" -> ComicFormat.EPUB
+    "fb2" -> ComicFormat.FB2
+    "txt", "text" -> ComicFormat.TXT
+    "htm", "html", "xhtml" -> ComicFormat.HTML
+    "md", "markdown" -> ComicFormat.MARKDOWN
+    "rtf" -> ComicFormat.RTF
+    "mobi", "prc" -> ComicFormat.MOBI
+    "docx" -> ComicFormat.DOCX
+    "odt" -> ComicFormat.ODT
     else -> null
 }
