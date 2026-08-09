@@ -67,6 +67,7 @@
 - Остаток: перенести сканирование содержимого ZIP/TAR/7Z/RAR в detector через явные stream/temp-file adapters.
 - Тесты: текстовый архив vs архив изображений, лимит первых 100 файлов, content URI, ошибки 7Z/RAR и cleanup temp file.
 - Критерий готовности: `ComicRepository` хранит только Android/файловые адаптеры; логика классификации архивов тестируема вне repository.
+- **Срез выполнен (2026-08-09)**: detector получил `archiveAccessFor: (Uri) -> ArchiveAccess?` через `ArchiveStreamSource` + `RandomAccessArchiveMaterialiser` (`ArchiveAccess.kt`); `ComicFormatDetector.archiveContentForUri(uri)` снiffит заголовок, для ZIP/TAR сканирует через stream adapter, для 7Z/RAR — через временный файл с гарантированным cleanup в finally. `ComicRepository` теперь только собирает `ArchiveAccess(uri)` из `openInputStream(uri)` + `copyContentUriToTemp(uri, ext)`; private `detectArchiveContentFormat(uri)` dispatcher удалён (-25 строк). Тесты: 13 новых в `ComicFormatDetectorArchiveAccessTest` (text vs image, лимит 100 через URI dispatcher, content URI с null stream, 7Z/RAR corrupted + cleanup, корректный extension arg), существующие 18 в `ComicFormatDetectorTest` без изменений. Модуль: 0 фейлов / 46 тестов.
 
 ### ARC-10. T-10: Epub chunk extraction
 
@@ -123,7 +124,7 @@
 
 1. Собрать безопасный QA-артефакт по API 37 ANR и восстановить рабочий эмулятор.
 2. Подтвердить RDR-01 и закрыть PAGE <-> WEBTOON runtime regression.
-3. Выполнить ARC-09b с unit-тестами.
+3. ~~Выполнить ARC-09b с unit-тестами.~~ Сделано — см. ARC-09b ниже.
 4. Выполнить ARC-10 с unit-тестами.
 5. Вернуться к page/vertical QA-матрице и обновить этот документ только зелёными фактами.
 
