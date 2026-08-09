@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 import javax.inject.Inject
 
 data class AudiobookPlayerUiState(
@@ -131,9 +130,9 @@ class AudiobookPlayerViewModel @Inject constructor(
             }
             val ctrl = controller ?: return@launch
             val items = buildMediaItems(displayAudiobook)
-            val startIndex = displayAudiobook.lastChapterIndex.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+            val startIndex = AudiobookPlayerPolicy.startChapterIndex(displayAudiobook.lastChapterIndex, items.size)
             ctrl.setMediaItems(items, startIndex, displayAudiobook.lastPositionMs)
-            ctrl.setPlaybackSpeed(displayAudiobook.speed.coerceIn(0.75f, 2.5f))
+            ctrl.setPlaybackSpeed(AudiobookPlayerPolicy.clampSpeed(displayAudiobook.speed))
             ctrl.prepare()
             ctrl.play()
         }
@@ -162,9 +161,7 @@ class AudiobookPlayerViewModel @Inject constructor(
     fun seekBy(deltaMs: Long) {
         val ctrl = controller ?: return
         val duration = ctrl.duration.coerceAtLeast(0L)
-        val target = (ctrl.currentPosition + deltaMs).coerceAtLeast(0L).let { candidate ->
-            if (duration > 0L) candidate.coerceAtMost(duration) else candidate
-        }
+        val target = AudiobookPlayerPolicy.seekTarget(ctrl.currentPosition, deltaMs, duration)
         ctrl.seekTo(target)
         _uiState.value = _uiState.value.copy(positionMs = target, durationMs = duration)
         persistProgress(force = true)
@@ -177,14 +174,12 @@ class AudiobookPlayerViewModel @Inject constructor(
     }
 
     fun skipPreviousChapter() {
-        val prev = (_uiState.value.currentChapterIndex - 1).coerceAtLeast(0)
-        seekToChapter(prev)
+        seekToChapter(AudiobookPlayerPolicy.previousChapterIndex(_uiState.value.currentChapterIndex))
     }
 
     fun skipNextChapter() {
-        val maxIndex = ((_uiState.value.audiobook?.chapters?.size ?: 1) - 1).coerceAtLeast(0)
-        val next = (_uiState.value.currentChapterIndex + 1).coerceAtMost(maxIndex)
-        seekToChapter(next)
+        val chapterCount = _uiState.value.audiobook?.chapters?.size ?: 1
+        seekToChapter(AudiobookPlayerPolicy.nextChapterIndex(_uiState.value.currentChapterIndex, chapterCount))
     }
 
     fun setSpeed(speed: Float) {
@@ -204,8 +199,9 @@ class AudiobookPlayerViewModel @Inject constructor(
         if (durationMs == null) return
         sleepTimerJob = viewModelScope.launch {
             while (isActive) {
-                val remaining = (sleepTimerEndAtMs ?: break) - SystemClock.elapsedRealtime()
-                if (remaining <= 0L) {
+                val endAtMs = sleepTimerEndAtMs ?: break
+                val remaining = AudiobookPlayerPolicy.sleepTimerRemaining(endAtMs, SystemClock.elapsedRealtime())
+                if (remaining == null) {
                     pause()
                     _uiState.value = _uiState.value.copy(sleepTimerRemainingMs = null)
                     sleepTimerEndAtMs = null
@@ -327,9 +323,14 @@ class AudiobookPlayerViewModel @Inject constructor(
     private fun persistProgress(force: Boolean = false) {
         val state = _uiState.value
         val id = state.audiobook?.id ?: return
-        val sameChapter = lastPersistedChapterIndex == state.currentChapterIndex
-        val movedEnough = abs(state.positionMs - lastPersistedPositionMs) >= 5_000L
-        if (!force && sameChapter && !movedEnough) return
+        if (!AudiobookPlayerPolicy.shouldPersistProgress(
+                force = force,
+                lastPersistedChapterIndex = lastPersistedChapterIndex,
+                lastPersistedPositionMs = lastPersistedPositionMs,
+                currentChapterIndex = state.currentChapterIndex,
+                currentPositionMs = state.positionMs
+            )
+        ) return
         lastPersistedChapterIndex = state.currentChapterIndex
         lastPersistedPositionMs = state.positionMs
         viewModelScope.launch {
