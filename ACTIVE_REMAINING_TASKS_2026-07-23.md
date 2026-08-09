@@ -210,4 +210,17 @@
 
 **Проверка**: `:feature-reader:testDebugUnitTest` + `:feature-reader:detekt` + `:app:compileDebugKotlin` — BUILD SUCCESSFUL, 0 smells.
 
+### S12 — ReaderChromeBars
+
+- `ReaderChromeBars.kt` — `BoxScope` extension composable, обёртка над `ReaderTopChromeBar` + `ReaderBottomChromePanel` (31 параметр).
+- `ReaderScreen.kt`: 835 → 785 строк (-50).
+- Исправлена проблема с типами из первой попытки: `overlayTextStyle` → `ReaderHeaderFooterOverlayStyle`, `overlayLine` → `ReaderInfoOverlayLine`, receiver → `BoxScope`.
+
+### S10 — ReaderContentArea (отложено)
+
+- Попытка извлечения 260-строчного `when (readerContainerKind)` блока провалилась из-за зависимостей от локальных переменных (`readerAssetLoader: WebViewAssetLoader`, `pagedColumnTurn` как `var`) и типов из других пакетов (`ReaderTapZoneLayout`/`ReaderTapZoneAction` в `core-model`).
+- Текущее состояние: 785 строк. Цель ≤400 требует пересмотра подхода.
+
+**Проверка**: `:feature-reader:testDebugUnitTest` + `:feature-reader:detekt` + `:app:compileDebugKotlin` — BUILD SUCCESSFUL, 0 smells.
+
 
