@@ -517,6 +517,15 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         }
     }
 
+    /**
+     * Callback invoked after [markLoadCommitted] updates the WebView state.
+     * ARC-11 slice 2b: the UI layer registers this so [ReaderWebViewLoadController]
+     * can mark the load completed too. The token passed is the same one the
+     * caller handed to [markLoadRequested] earlier (or null if no load was
+     * ever requested — in which case the controller is a no-op).
+     */
+    internal var onLoadCommitted: ((String?) -> Unit)? = null
+
     fun markLoadCommitted() {
         committedLoadToken = activeLoadToken
         inlineFallbackRunnable?.let(::removeCallbacks)
@@ -531,6 +540,7 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
             }
             post { animate().alpha(1f).setDuration(200L).start() }
         }
+        onLoadCommitted?.invoke(activeLoadToken)
     }
 
     fun prepareFreeScrollReloadPreservingPosition() {

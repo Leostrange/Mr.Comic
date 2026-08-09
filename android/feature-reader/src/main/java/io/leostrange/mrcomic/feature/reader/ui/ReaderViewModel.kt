@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
+import io.leostrange.mrcomic.feature.reader.ui.ReaderSessionCoordinator as SessionLifecycleCoordinator
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
@@ -211,6 +212,7 @@ class ReaderViewModel @Inject constructor(
         readerPreferences = readerPreferences
     )
     private val readerSessionCoordinator = ReaderSessionCoordinator()
+    private val sessionLifecycleCoordinator = SessionLifecycleCoordinator()
     internal val navigationController = ReaderNavigationController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
@@ -295,6 +297,7 @@ class ReaderViewModel @Inject constructor(
             eyeRestController = eyeRestController,
             textReaderOrchestrator = textReaderOrchestrator,
             readerSessionCoordinator = readerSessionCoordinator,
+            sessionLifecycleCoordinator = sessionLifecycleCoordinator,
             analyticsTracker = analyticsTracker,
             bookmarkController = bookmarkController,
             context = context,
@@ -412,6 +415,11 @@ class ReaderViewModel @Inject constructor(
         deferredTasks.cancelAll()
         eyeRestController.cancel()
         warmupController.cancel()
+        // ARC-11 slice "wire-coordinator-to-vm": lifecycle ledger begins the
+        // close phase right before the heavy cancellation work and finishes at
+        // the end. If we are still in Opening from a half-done open, this
+        // is a no-op and matching reset() runs _after_ the cleanup.
+        sessionLifecycleCoordinator.beginClose()
         textReaderOrchestrator.cancelAllJobs()
         progressController.progressSaveJob?.cancel()
         sessionManager.closeReaderResources()
@@ -420,6 +428,14 @@ class ReaderViewModel @Inject constructor(
                 .onFailure { Log.e("ReaderViewModel", "Failed to flush progress on close", it) }
             runCatching { sessionManager.closeBookSessionAsync() }
                 .onFailure { Log.w(TAG, "Failed to close book session on close", it) }
+            // markClosed throws if the ledger was Opening when beginClose()
+            // ran (no transition to Closing happened). Force the slot back to
+            // Idle in that case so the next VM does not start in Opening.
+            try {
+                sessionLifecycleCoordinator.markClosed()
+            } catch (e: IllegalArgumentException) {
+                sessionLifecycleCoordinator.reset()
+            }
         }
         pagePreloader.cancelPreload()
         pagePreloader.clearPages()

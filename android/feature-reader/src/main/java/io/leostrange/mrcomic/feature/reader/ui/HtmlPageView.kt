@@ -306,6 +306,12 @@ internal fun HtmlPageView(
         factory = { ctx ->
             ReaderWebView(ctx).apply {
                 val readerWebView = this
+                // ARC-11 slice 2b: bridge ReaderWebView.markLoadCommitted's token
+                // into the load controller so shouldRestoreScroll() follows the
+                // WebView's own commit lifecycle.
+                onLoadCommitted = { token ->
+                    token?.takeIf { it.isNotBlank() }?.let(loadController::markLoadCommitted)
+                }
                 autoScrollScrollLambda.value = { pixels -> scrollBy(0, pixels) }
                 pagedModeScrollLock = pagedMode
                 settings.javaScriptEnabled  = true   // required for tap bridge

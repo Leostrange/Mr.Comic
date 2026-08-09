@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * ```
  *                beginOpen                  markReady
- *      ┌─── Idle ─────────► Opening ─────────────► Ready ──┐
+ *      ┌─── Idle ─────────► Opening ─────────────► Ready ───┐
  *      │                                                  │
  *      │                       beginClose               │
  *      └────────────── Idle ◄──── Closing ◄──────────────┘
