@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import android.view.KeyEvent
+// ARC-11 S4: KeyEvent moved to ReaderKeyActionPolicyTest
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.engine.api.TocEntry
@@ -34,17 +34,6 @@ class ReaderInteractionPolicyTest {
 
         assertEquals("Chapter 1", currentReaderChapterTitle(toc, 20))
         assertNull(currentReaderChapterTitle(emptyList(), 20))
-    }
-
-    @Test
-    fun volumePagingStepUsesUpForPreviousAndDownForNext() {
-        // LTR mode: UP = previous (-1), DOWN = next (+1)
-        assertEquals(-1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_UP, ReadingMode.PAGE_LTR))
-        assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN, ReadingMode.PAGE_LTR))
-        assertNull(readerVolumePagingStep(KeyEvent.KEYCODE_MENU, ReadingMode.PAGE_LTR))
-        // RTL mode: UP = next (+1), DOWN = previous (-1)
-        assertEquals(1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_UP, ReadingMode.PAGE_RTL))
-        assertEquals(-1, readerVolumePagingStep(KeyEvent.KEYCODE_VOLUME_DOWN, ReadingMode.PAGE_RTL))
     }
 
     @Test
