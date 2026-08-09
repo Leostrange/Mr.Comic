@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="uid">urn:uuid:sample-rdr01-2026-08-09</dc:identifier>
+    <dc:title>QA Sample For RDR-01</dc:title>
+    <dc:language>ru</dc:language>
+  </metadata>
+  <manifest>
+    <item id="cap1" href="cap1.xhtml" media-type="application/xhtml+xml"/>
+    <item id="cap2" href="cap2.xhtml" media-type="application/xhtml+xml"/>
+    <item id="cap3" href="cap3.xhtml" media-type="application/xhtml+xml"/>
+  </manifest>
+  <spine>
+    <itemref idref="cap1"/>
+    <itemref idref="cap2"/>
+    <itemref idref="cap3"/>
+  </spine>
+</package>
