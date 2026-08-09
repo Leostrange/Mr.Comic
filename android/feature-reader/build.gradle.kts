@@ -53,6 +53,7 @@ dependencies {
     testImplementation(project(":engine-formats"))
     testImplementation(libs.test.junit)
     testImplementation(libs.test.kotlinx.coroutines)
+    testImplementation(libs.test.mockk)
     testImplementation(libs.robolectric)
     testImplementation(libs.test.androidx.junit)
     testImplementation(libs.test.espresso.core)
