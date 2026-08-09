@@ -1,15 +1,12 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import android.view.KeyEvent
+// ARC-11 S4: KeyEvent import removed — see ReaderKeyActionPolicy.kt
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.engine.api.TocEntry
 import kotlin.math.roundToInt
 
-data class ReaderHardwareKeyDecision(
-    val consume: Boolean,
-    val pageStep: Int? = null
-)
+// ARC-11 S4: ReaderHardwareKeyDecision moved to ReaderKeyActionPolicy.kt
 
 fun previousReaderChapterPage(
     tableOfContents: List<TocEntry>,
@@ -37,11 +34,7 @@ fun currentReaderChapterTitle(
     ?.trim()
     ?.takeIf { it.isNotBlank() }
 
-fun readerVolumePagingStep(keyCode: Int, readingMode: ReadingMode = ReadingMode.PAGE_LTR): Int? = when (keyCode) {
-    KeyEvent.KEYCODE_VOLUME_UP -> if (readingMode == ReadingMode.PAGE_RTL) 1 else -1
-    KeyEvent.KEYCODE_VOLUME_DOWN -> if (readingMode == ReadingMode.PAGE_RTL) -1 else 1
-    else -> null
-}
+// ARC-11 S4: readerVolumePagingStep moved to ReaderKeyActionPolicy.kt
 
 fun readerModeAllowsHorizontalPageTurn(readingMode: ReadingMode): Boolean =
     readingMode == ReadingMode.PAGE_LTR ||
@@ -183,22 +176,4 @@ fun readerPagedNextStartAfterFittedLine(
         .coerceAtMost(contentHeight.coerceAtLeast(minimumNextStart))
 }
 
-fun resolveReaderHardwareKeyDecision(
-    event: KeyEvent,
-    volumePagingEnabled: Boolean,
-    readingMode: ReadingMode = ReadingMode.PAGE_LTR
-): ReaderHardwareKeyDecision {
-    if (!volumePagingEnabled) return ReaderHardwareKeyDecision(consume = false)
-    val pageStep = readerVolumePagingStep(event.keyCode, readingMode) ?: return ReaderHardwareKeyDecision(consume = false)
-    return when (event.action) {
-        KeyEvent.ACTION_DOWN -> {
-            if (event.repeatCount == 0) {
-                ReaderHardwareKeyDecision(consume = true, pageStep = pageStep)
-            } else {
-                ReaderHardwareKeyDecision(consume = true)
-            }
-        }
-        KeyEvent.ACTION_UP -> ReaderHardwareKeyDecision(consume = true)
-        else -> ReaderHardwareKeyDecision(consume = false)
-    }
-}
+// ARC-11 S4: resolveReaderHardwareKeyDecision moved to ReaderKeyActionPolicy.kt
