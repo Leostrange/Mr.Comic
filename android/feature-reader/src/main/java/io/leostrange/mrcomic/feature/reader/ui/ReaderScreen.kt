@@ -767,41 +767,21 @@ fun ReaderScreen(
                     }
                 }
 
-                // Chrome surface calculations
-                val combinedToolbarOpacity = ((uiState.topToolbarOpacity + uiState.bottomToolbarOpacity) * 0.5f).coerceIn(0f, 1f)
-                val forceOpaqueChromeSurface = readerChromeRequiresOpaqueSurface(
+                // ARC-11 chrome slice: chrome surface/overlay/style plan is computed
+                // once in [rememberReaderChromeSurfacePlan] instead of inline so the
+                // values can be unit-tested as a pure-Kotlin data class.
+                val chromeSurfacePlan = rememberReaderChromeSurfacePlan(
                     preset = activeReaderPreset,
-                    isTextReader = uiState.currentHtmlContent != null
+                    isTextReader = uiState.currentHtmlContent != null,
+                    topToolbarOpacity = uiState.topToolbarOpacity,
+                    bottomToolbarOpacity = uiState.bottomToolbarOpacity,
+                    toolbarBlur = uiState.toolbarBlur,
+                    baseColor = readerColorScheme.surface,
                 )
-                val effectiveToolbarOpacity = readerEffectiveToolbarOpacity(combinedToolbarOpacity, activeReaderPreset)
-                val effectiveToolbarBlur = readerEffectiveToolbarBlur(uiState.toolbarBlur, activeReaderPreset)
-                // Comic/raster mode always uses the reader's dark surface for chrome;
-                // text mode keeps the inherited app surface so presets (sepia, newspaper) affect chrome too.
-                val chromeBaseColor = readerColorScheme.surface
-                val chromeSurface = readerPanelSurfaceColor(
-                    base = chromeBaseColor,
-                    emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.06f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
-                    minAlpha = if (forceOpaqueChromeSurface) {
-                        1f
-                    } else {
-                        READER_TOOLBAR_MIN_OPACITY
-                    }
-                )
-                val overlaySurface = readerPanelSurfaceColor(
-                    base = chromeBaseColor,
-                    emphasis = (effectiveToolbarOpacity + effectiveToolbarBlur * 0.03f).coerceIn(READER_TOOLBAR_MIN_OPACITY, 1f),
-                    minAlpha = if (forceOpaqueChromeSurface) {
-                        1f
-                    } else {
-                        READER_TOOLBAR_MIN_OPACITY
-                    }
-                )
-                val overlayTextStyle = remember(overlaySurface, activeReaderPreset) {
-                    readerHeaderFooterOverlayStyle(
-                        surfaceColor = overlaySurface,
-                        eink = activeReaderPreset == ReadingPreset.EINK
-                    )
-                }
+                val chromeSurface = chromeSurfacePlan.chromeSurface
+                val effectiveToolbarBlur = chromeSurfacePlan.effectiveToolbarBlur
+                val overlaySurface = chromeSurfacePlan.overlaySurface
+                val overlayTextStyle = chromeSurfacePlan.overlayStyle
 
                 ReaderTopChromeBar(
                     uiState = uiState,
