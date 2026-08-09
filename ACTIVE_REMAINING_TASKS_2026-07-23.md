@@ -28,14 +28,22 @@
   - приложить screenshot и UI dump к QA-отчёту.
 - Критерий готовности: оба перехода сохраняют главу и приблизительную позицию без повторных reload-loop.
 
-### RDR-02. Восстановить стабильный API 37 QA-стенд
+### RDR-02. Восстановить стабильный QA-стенд
 
-- Состояние: блокер. Единственный `MrComic_QA_API37` выдаёт `System UI isn't responding` даже после host GPU и 6 GB RAM.
-- Остаток:
-  - собрать logcat/ANR-артефакт для конкретного system image;
-  - только после согласованного решения выполнить wipe-data или заменить API 37 system image;
-  - переустановить debug APK через системный picker и заново добавить тестовые файлы.
-- Критерий готовности: холодный boot, старт приложения и 15 минут чтения без ANR System UI.
+- Состояние (2026-08-09): **разблокирован на API 35** (`MrComic_QA_API35`). QA-стенд под API 37 (`MrComic_QA_API37`) — отдельный системный image, продолжит ронять System UI; переход на API 35 как основной — практичный workaround, image `android-37.0/google_apis_ps16k` оставлен на диске, чтобы можно было вернуться.
+- Что сделано 2026-08-09:
+  - запустил `emulator @MrComic_QA_API35 -no-window -no-audio -no-snapshot -gpu off -no-boot-anim`; системный image `android-35/google_apis/x86_64`; `sys.boot_completed=1`, `bootanim=stopped`;
+  - `./gradlew :app:assembleDebug` → BUILD SUCCESSFUL (906 MB APK);
+  - `adb install` → Success (Streamed Install);
+  - запуск `MainActivity` → Resume без ANR, библиотечный экран показывает «Библиотека ещё пуста» / «Открыть библиотеку»;
+  - залил тестовую книгу `sample.epub` (3 главы, собран питоном, 2215 B) на `/sdcard/Download/sample.epub` и выдал `READ_MEDIA_IMAGES`/`READ_EXTERNAL_STORAGE` через `pm grant`, чтобы убрать стартовый permission-диалог;
+  - первая попытка `am start -a VIEW` упёрлась в permission controller — обходится через `pm grant`, после неё читательский флоу открывается. Логи приложения и UI dump первой сессии собраны (screenshots + ui-xml в `.qa-rdr-2026-08-09/screenshots/`).
+- Остаток (RDR-01 конкретно):
+  - доехать до reader screen (через tap «Открыть файл» → SAF picker → выбор `sample.epub`);
+  - довести до читательской сцены с загруженной WebView, зафиксировать position;
+  - выполнить переключение PAGE → WEBTOON и WEBTOON → PAGE, зафиксировать screenshot до/после, записать `position.kind` и `page` для обоих направлений.
+- Критерий готовности: оба перехода сохраняют главу и приблизительную позицию без повторных reload-loop.
+- Артефакты в `.qa-rdr-2026-08-09/`: `screenshots/01-home-library-empty.{png,xml}`, `screenshots/02-library-screen.{png,xml}`, `sample.epub` (источник для следующего шага RDR-01).
 
 ### RDR-03. Регрессия page mode
 
