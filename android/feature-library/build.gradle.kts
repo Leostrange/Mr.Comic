@@ -13,6 +13,11 @@ android {
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
     buildFeatures { compose = true }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 dependencies {
     implementation(project(":core-model"))
@@ -39,4 +44,10 @@ dependencies {
     testImplementation(libs.test.junit)
     testImplementation(libs.test.mockk)
     testImplementation(libs.test.kotlinx.coroutines)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.test.androidx.junit)
+    testImplementation(libs.test.espresso.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
