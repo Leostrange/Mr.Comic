@@ -9,6 +9,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
 import javax.inject.Inject
 
 /**
@@ -47,13 +48,19 @@ class OpdsCatalogViewModel @Inject constructor(
     /** Start a search. */
     fun search(query: String) = controller.search(query)
 
+    /** Retry the currently visible feed or search request. */
+    fun retry() = controller.retry()
+
     /** Exit search mode and return to the current catalog. */
     fun exitSearch() = controller.exitSearch()
 
     /** Download a book from an OPDS entry. */
     fun downloadBook(entry: OpdsEntry) = controller.downloadBook(entry)
 
-    /** Clear the downloaded book state (after import). */
+    /** Clear one queued downloaded book after it has been imported. */
+    fun clearDownloadedBook(file: File) = controller.clearDownloadedBook(file)
+
+    /** Clear the first queued downloaded book after it has been imported. */
     fun clearDownloadedBook() = controller.clearDownloadedBook()
 
     /** Show the catalog picker again. */

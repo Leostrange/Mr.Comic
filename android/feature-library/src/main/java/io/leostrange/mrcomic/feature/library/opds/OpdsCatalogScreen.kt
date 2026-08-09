@@ -19,6 +19,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.model.OpdsCatalogSource
 import io.leostrange.mrcomic.core.model.OpdsEntry
+import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,11 +29,12 @@ fun OpdsCatalogScreen(
     viewModel: OpdsCatalogViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val strings = LocalStrings.current
 
-    LaunchedEffect(uiState.downloadedBook) {
-        uiState.downloadedBook?.let { file ->
+    LaunchedEffect(uiState.downloadedBooks) {
+        uiState.downloadedBooks.firstOrNull()?.let { file ->
             onBookDownloaded(file)
-            viewModel.clearDownloadedBook()
+            viewModel.clearDownloadedBook(file)
         }
     }
 
@@ -41,9 +43,9 @@ fun OpdsCatalogScreen(
             TopAppBar(
                 title = {
                     if (uiState.isSearchMode) {
-                        Text("Search: ${uiState.searchQuery}")
+                        Text("${strings.opdsSearch}: ${uiState.searchQuery}")
                     } else {
-                        Text(uiState.currentFeed?.title ?: "OPDS Catalogs")
+                        Text(uiState.currentFeed?.title ?: strings.opdsCatalogs)
                     }
                 },
                 navigationIcon = {
@@ -52,7 +54,7 @@ fun OpdsCatalogScreen(
                         else if (!uiState.showCatalogPicker) viewModel.goBack()
                         else onNavigateBack()
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                     }
                 },
                 actions = {
@@ -64,7 +66,7 @@ fun OpdsCatalogScreen(
                             OutlinedTextField(
                                 value = searchText,
                                 onValueChange = { searchText = it },
-                                placeholder = { Text("Search...") },
+                                placeholder = { Text(strings.opdsSearchPlaceholder) },
                                 singleLine = true,
                                 modifier = Modifier.weight(1f),
                                 trailingIcon = {
@@ -72,19 +74,19 @@ fun OpdsCatalogScreen(
                                         if (searchText.isNotBlank()) viewModel.search(searchText)
                                         showSearch = false
                                     }) {
-                                        Icon(Icons.Default.Search, contentDescription = "Search")
+                                        Icon(Icons.Default.Search, contentDescription = strings.opdsSearch)
                                     }
                                 }
                             )
                         } else {
                             IconButton(onClick = { showSearch = true }) {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
+                                Icon(Icons.Default.Search, contentDescription = strings.opdsSearch)
                             }
                         }
                     }
                     if (!uiState.showCatalogPicker) {
                         IconButton(onClick = { viewModel.showCatalogPicker() }) {
-                            Icon(Icons.Default.List, contentDescription = "Catalogs")
+                            Icon(Icons.Default.List, contentDescription = strings.opdsCatalogs)
                         }
                     }
                 }
@@ -105,7 +107,7 @@ fun OpdsCatalogScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(uiState.error!!, color = MaterialTheme.colorScheme.error)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.clearError() }) { Text("Retry") }
+                        Button(onClick = { viewModel.retry() }) { Text(strings.opdsRetry) }
                     }
                 }
                 uiState.showCatalogPicker -> {
@@ -132,31 +134,49 @@ fun OpdsCatalogScreen(
     }
 }
 
+private fun OpdsCatalogSource.localized(strings: io.leostrange.mrcomic.core.ui.locale.AppStrings): OpdsCatalogSource = when {
+    url.contains("gutenberg.org/ebooks.opds") -> copy(
+        name = strings.opdsProjectGutenberg,
+        description = strings.opdsProjectGutenbergDescription
+    )
+    url.contains("feedbooks.com/catalog/public_domain") -> copy(
+        name = strings.opdsFeedbooks,
+        description = strings.opdsFeedbooksDescription
+    )
+    url.contains("manybooks.net/opds") -> copy(
+        name = strings.opdsManyBooks,
+        description = strings.opdsManyBooksDescription
+    )
+    else -> this
+}
+
 @Composable
 private fun CatalogPicker(
     catalogs: List<OpdsCatalogSource>,
     onSelect: (OpdsCatalogSource) -> Unit
 ) {
+    val strings = LocalStrings.current
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
             Text(
-                "Book Catalogs",
+                strings.opdsCatalogPickerTitle,
                 style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
         items(catalogs) { catalog ->
+            val displayCatalog = catalog.localized(strings)
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { onSelect(catalog) }
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(catalog.name, style = MaterialTheme.typography.titleMedium)
-                    if (catalog.description.isNotBlank()) {
+                    Text(displayCatalog.name, style = MaterialTheme.typography.titleMedium)
+                    if (displayCatalog.description.isNotBlank()) {
                         Text(
-                            catalog.description,
+                            displayCatalog.description,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -174,6 +194,7 @@ private fun FeedContent(
     onEntryClick: (OpdsEntry) -> Unit,
     onLoadNextPage: () -> Unit
 ) {
+    val strings = LocalStrings.current
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -182,7 +203,7 @@ private fun FeedContent(
         val navEntries = feed.entries.filter { it.isCatalog }
         if (navEntries.isNotEmpty()) {
             item {
-                Text("Categories", style = MaterialTheme.typography.titleSmall,
+                Text(strings.opdsCategories, style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             items(navEntries) { entry ->
@@ -195,7 +216,7 @@ private fun FeedContent(
         val bookEntries = feed.entries.filter { it.isBook }
         if (bookEntries.isNotEmpty()) {
             item {
-                Text("Books", style = MaterialTheme.typography.titleSmall,
+                Text(strings.opdsBooks, style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(bottom = 4.dp))
             }
             items(bookEntries) { entry ->
@@ -216,7 +237,7 @@ private fun FeedContent(
                 ) {
                     Icon(Icons.Default.ArrowForward, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Load more")
+                    Text(strings.opdsLoadMore)
                 }
             }
         }
@@ -252,6 +273,7 @@ private fun BookEntryCard(
     downloadProgress: Float?,
     onClick: () -> Unit
 ) {
+    val strings = LocalStrings.current
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
@@ -287,7 +309,7 @@ private fun BookEntryCard(
             }
             // Download icon
             if (entry.acquisitionLink != null && downloadProgress == null) {
-                Icon(Icons.Default.Download, contentDescription = "Download",
+                Icon(Icons.Default.Download, contentDescription = strings.opdsDownload,
                     tint = MaterialTheme.colorScheme.primary)
             }
         }

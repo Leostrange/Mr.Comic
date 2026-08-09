@@ -17,9 +17,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.After
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -252,7 +252,7 @@ class OpdsCatalogControllerTest {
         controller.downloadBook(entry)
         advanceUntilIdle()
 
-        assertEquals(file, uiState.value.downloadedBook)
+        assertEquals(listOf(file), uiState.value.downloadedBooks)
         assertFalse(uiState.value.downloadProgress.containsKey(entry.acquisitionLink?.href))
         assertNull(uiState.value.error)
     }
@@ -267,7 +267,7 @@ class OpdsCatalogControllerTest {
         controller.downloadBook(entry)
         advanceUntilIdle()
 
-        assertNull(uiState.value.downloadedBook)
+        assertTrue(uiState.value.downloadedBooks.isEmpty())
         assertEquals("Download failed: no space", uiState.value.error)
         assertFalse(uiState.value.downloadProgress.containsKey("https://example.com/broken.epub"))
     }
