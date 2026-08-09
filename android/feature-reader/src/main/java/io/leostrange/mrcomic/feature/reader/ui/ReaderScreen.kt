@@ -735,7 +735,7 @@ fun ReaderScreen(
                 val overlaySurface = chromeSurfacePlan.overlaySurface
                 val overlayTextStyle = chromeSurfacePlan.overlayStyle
 
-                ReaderTopChromeBar(
+                ReaderChromeBars(
                     uiState = uiState,
                     chromeSurface = chromeSurface,
                     effectiveToolbarBlur = effectiveToolbarBlur,
@@ -743,48 +743,35 @@ fun ReaderScreen(
                     overlayTextStyle = overlayTextStyle,
                     activeReaderPreset = activeReaderPreset,
                     isTextReader = isTextReader,
+                    supportsLandscapeSpread = supportsLandscapeSpread,
                     directionShortcutActive = directionShortcutActive,
                     showBrightnessRow = showBrightnessRow,
                     showHeaderFooterOverlay = showHeaderFooterOverlay,
                     headerOverlayLine = headerOverlayLine,
+                    footerOverlayLine = footerOverlayLine,
                     onHeaderMeasured = { measuredHeaderOverlayPx = it },
                     onTopMeasured = { measuredTopChromePx = it },
+                    onFooterMeasured = { measuredFooterOverlayPx = it },
+                    onBottomMeasured = { measuredBottomChromePx = it },
                     onNavigateBack = onNavigateBack,
                     onToggleToc = { viewModel.toggleTocSheet() },
                     onToggleTextSettings = { viewModel.chromeController.toggleTextSettings() },
                     onSwapDirection = { viewModel.settingsController.toggleTapZoneDirectionShortcut() },
                     onRequestOcr = {
-                        if (isTextReader) {
-                            showTextTranslationPageSheet = true
-                        } else {
-                            viewModel.ocrController.requestOcr()
-                        }
+                        if (isTextReader) showTextTranslationPageSheet = true
+                        else viewModel.ocrController.requestOcr()
                     },
                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
                     onToggleTtsControls = { showReaderAudioSheet = true },
                     onAutoScrollToggle = { viewModel.settingsController.cycleAutoScrollSpeed() },
-                    onBrightnessChange = { viewModel.settingsController.setBrightness(it) }
-                )
-
-                ReaderBottomChromePanel(
-                    uiState = uiState,
-                    chromeSurface = chromeSurface,
-                    overlaySurface = overlaySurface,
-                    effectiveToolbarBlur = effectiveToolbarBlur,
-                    overlayTextStyle = overlayTextStyle,
-                    activeReaderPreset = activeReaderPreset,
-                    supportsLandscapeSpread = supportsLandscapeSpread,
-                    showHeaderFooterOverlay = showHeaderFooterOverlay,
-                    footerOverlayLine = footerOverlayLine,
-                    onBottomMeasured = { measuredBottomChromePx = it },
-                    onFooterMeasured = { measuredFooterOverlayPx = it },
+                    onBrightnessChange = { viewModel.settingsController.setBrightness(it) },
                     onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
                     onApplyPreset = { viewModel.settingsController.applyReadingPreset(it) },
                     onReadingModeChange = { viewModel.readingModeController.setReadingMode(it) },
                     onPageChange = { viewModel.navigationController.navigateTo(it) },
                     onDismissFootnote = { viewModel.footnoteController.dismissFootnote() },
                     onExpandFootnote = { viewModel.footnoteController.expandFootnote() },
-                    onCollapseFootnote = { viewModel.footnoteController.collapseFootnote() }
+                    onCollapseFootnote = { viewModel.footnoteController.collapseFootnote() },
                 )
             }
         }
