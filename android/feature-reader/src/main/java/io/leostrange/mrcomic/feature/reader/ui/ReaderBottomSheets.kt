@@ -19,45 +19,58 @@ import io.leostrange.mrcomic.feature.reader.ui.rsvp.extractWordsForRsvp
  * All conditional bottom sheets, dialogs, and overlays for the reader screen.
  * Extracted from [ReaderScreen] to reduce its composable size.
  */
+/**
+ * ARC-11 slice 2. Все 35+ параметров свёрнуты в [ReaderBottomSheetHost]
+ * (см. [ReaderBottomSheetHost.kt] — там же `rememberReaderBottomSheetHost`
+ * для точек входа из [ReaderScreen]). Контракт функции не менялся:
+ * все flag-states и setters, которые раньше жили в call-site'е,
+ * теперь лежат в `host` и читаются через `host.fieldName`. Никаких
+ * публичных API не изменилось; добавился только новый internal
+ * data-class [ReaderBottomSheetHost].
+ */
 @Composable
 internal fun ReaderBottomSheets(
-    uiState: ReaderUiState,
-    viewModel: ReaderViewModel,
-    isTextReader: Boolean,
-    ttsRuntimeState: ReaderTtsRuntimeState,
-    ttsController: ReaderTextToSpeechController,
-    activeReaderPreset: ReadingPreset,
-    currentChapterTitle: String?,
-    clipboardManager: ClipboardManager,
-    readerText: ReaderUiText,
-    // Mutable state holders (owned by ReaderScreen)
-    fontCatalogVersion: Int,
-    openControlCenterAtServices: Boolean,
-    onOpenControlCenterAtServicesChange: (Boolean) -> Unit,
-    showTextTranslationPageSheet: Boolean,
-    onShowTextTranslationPageSheetChange: (Boolean) -> Unit,
-    showRsvpOverlay: Boolean,
-    onShowRsvpOverlayChange: (Boolean) -> Unit,
-    rsvpWords: List<String>,
-    onRsvpWordsChange: (List<String>) -> Unit,
-    showReaderAudioSheet: Boolean,
-    onShowReaderAudioSheetChange: (Boolean) -> Unit,
-    pendingTtsRestartTargetPage: Int?,
-    onPendingTtsRestartTargetPageChange: (Int?) -> Unit,
-    pendingCustomFontDeletion: String?,
-    onPendingCustomFontDeletionChange: (String?) -> Unit,
-    quoteSavePopupVisible: Boolean,
-    onQuoteSavePopupVisibleChange: (Boolean) -> Unit,
-    quoteSavePopupToken: Int,
-    eyeRestReminderMinutes: Int?,
-    onEyeRestReminderMinutesChange: (Int?) -> Unit,
-    // Launchers
-    onLaunchFontImport: () -> Unit,
-    onLaunchStyleImport: () -> Unit,
-    onLaunchStyleExport: () -> Unit,
-    onDeleteCustomFont: (String) -> Unit,
+
+    host: ReaderBottomSheetHost,
 ) {
     val strings = LocalStrings.current
+    val uiState = host.uiState
+    val viewModel = host.viewModel
+    val isTextReader = host.isTextReader
+    val ttsRuntimeState = host.ttsRuntimeState
+    val ttsController = host.ttsController
+    val activeReaderPreset = host.activeReaderPreset
+    val currentChapterTitle = host.currentChapterTitle
+    val clipboardManager = host.clipboardManager
+    val readerText = host.readerText
+    val fontCatalogVersion = host.fontCatalogVersion
+    val openControlCenterAtServices = host.openControlCenterAtServices
+    val showTextTranslationPageSheet = host.showTextTranslationPageSheet
+    val showRsvpOverlay = host.showRsvpOverlay
+    val rsvpWords = host.rsvpWords
+    val showReaderAudioSheet = host.showReaderAudioSheet
+    val pendingTtsRestartTargetPage = host.pendingTtsRestartTargetPage
+    val pendingCustomFontDeletion = host.pendingCustomFontDeletion
+    val quoteSavePopupVisible = host.quoteSavePopupVisible
+    val quoteSavePopupToken = host.quoteSavePopupToken
+    val eyeRestReminderMinutes = host.eyeRestReminderMinutes
+
+    // Local setters/view — `host.onX` lambdas. Compose-область позволяет
+    // короткие `= host.onX` без потери ссылочной стабильности, потому что
+    // remember{} сверху блокирует изменения при неизменных зависимостях.
+    val onOpenControlCenterAtServicesChange = host.onOpenControlCenterAtServicesChange
+    val onShowTextTranslationPageSheetChange = host.onShowTextTranslationPageSheetChange
+    val onShowRsvpOverlayChange = host.onShowRsvpOverlayChange
+    val onRsvpWordsChange = host.onRsvpWordsChange
+    val onShowReaderAudioSheetChange = host.onShowReaderAudioSheetChange
+    val onPendingTtsRestartTargetPageChange = host.onPendingTtsRestartTargetPageChange
+    val onPendingCustomFontDeletionChange = host.onPendingCustomFontDeletionChange
+    val onQuoteSavePopupVisibleChange = host.onQuoteSavePopupVisibleChange
+    val onEyeRestReminderMinutesChange = host.onEyeRestReminderMinutesChange
+    val onLaunchFontImport = host.onLaunchFontImport
+    val onLaunchStyleImport = host.onLaunchStyleImport
+    val onLaunchStyleExport = host.onLaunchStyleExport
+    val onDeleteCustomFont = host.onDeleteCustomFont
 
     // ── Оглавление (ModalBottomSheet) ──────────────────────────────────────────
     if (uiState.showTocSheet) {
