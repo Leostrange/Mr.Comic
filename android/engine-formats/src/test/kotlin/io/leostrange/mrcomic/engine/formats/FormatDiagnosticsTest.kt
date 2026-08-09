@@ -3,6 +3,7 @@ package io.leostrange.mrcomic.engine.formats
 import android.content.ContextWrapper
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.engine.formats.epub.EpubFormatReader
+import io.leostrange.mrcomic.engine.formats.epub.extractChunk
 import io.leostrange.mrcomic.engine.formats.text.TextFormatReader
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
@@ -56,17 +57,11 @@ class FormatDiagnosticsTest {
                     println("HTML_BODY_$index=" + if (bodyIdx >= 0) html.substring(bodyIdx, minOf(html.length, bodyIdx + 1200)) else "NO_BODY")
                 }
             }
-            val extractChunk = EpubFormatReader::class.java.getDeclaredMethod(
-                "extractChunk",
-                String::class.java,
-                Int::class.javaPrimitiveType,
-                Int::class.javaPrimitiveType
-            ).apply { isAccessible = true }
             val raw = java.util.zip.ZipFile(sample).use { zip ->
                 zip.getInputStream(zip.getEntry("OPS/ch1-2.xhtml")).reader(Charsets.UTF_8).readText()
             }
             for (chunkIndex in 0..2) {
-                val rawChunk = extractChunk.invoke(reader, raw, chunkIndex, 99) as String
+                val rawChunk = extractChunk(raw, chunkIndex, 99)
                 val rawBodyText = Jsoup.parse(rawChunk).body().text().replace(Regex("\\s+"), " ").trim()
                 println("RAW_CHUNK[$chunkIndex] body=${rawBodyText.length} ${rawBodyText.take(600)}")
                 println(rawChunk.take(600))
