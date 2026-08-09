@@ -166,9 +166,9 @@
 
 Паттерн 4.1 (контроллер с явными зависимостями + собственный unit-тест, AGENTS.md) переносится на feature-reader: `ReaderViewModel.kt` (819 строк) уже использует контроллеры (chrome/translation/footnote/bookmark/highlight/eyeRest/ocr/navigation/readingMode/progress/warmup/saveQuote/pageLoader/sessionManager), но в теле остались два монолита:
 
-- Срез 1: **book-opening pipeline** в `ReaderBookOpeningController` — `loadComicFromSource` → `openComic` → `resetForBookOpen` → `prepareBook` → `configureOpening` → `applyOpeningState` → `startReaderSession` → `loadInitialPages` → `applyDeferredPageCount` → `schedulePostOpenTasks` (строки ~303-610). Зависимости: репозитории, readerBookPreparer, sessionManager, orchestrator, progressController, chrome/translation контроллеры + scope + `_uiState`.
-- Срез 2: **page-html cache/warmup** в `ReaderPageCacheController` — `refreshAdjacentHtmlPages`/`getOrLoadHtmlPage`/`prewarmHtmlPagesAround`/`loadToc`/`clearHtmlPageCache` (строки ~697-775).
-- Срез 3: аудит `AudiobookPlayerViewModel` (357 строк, feature-library) — вынос операций проигрывателя.
-- Срез 4: аудит `OpdsCatalogViewModel` (160 строк, feature-library).
-- Ограничение (из AGENTS.md): один срез = один контроллер + собственный unit-тест до подключения к ViewModel/UI.
+- Срез 1 (коммит `24bb36e`): book-opening pipeline вынесен в `ReaderBookOpeningController` (loadComicFromSource → openComic → resetForBookOpen → prepareBook → configureOpening → applyOpeningState → startReaderSession → loadInitialPages → applyDeferredPageCount → schedulePostOpenTasks + warmupAroundPage). Явные зависимости: scope, openGuard, `_uiState`, preparer, sessionManager, navigation/readingMode/progress/warmup/deferredTasks/eyeRest/readersessionCoordinator/analytics/bookmark + лямбды formatReader/setFormatReader/localizedError/loadToc/clearHtmlPageCache/prewarm/schedulePageTranslationNote. `ReaderViewModel` похудел с 819 до ~290 строк.
+- Срез 2 (коммит `24bb36e`): page-html cache/warmup вынесен в `ReaderPageCacheController` — `loadToc`/`tocDisplayPage`/`clearHtmlPageCache`/`refreshAdjacentHtmlPages`/`getOrLoadHtmlPage`/`prewarmHtmlPagesAround` + `tocLoadJob`. В feature-reader добавлен mockk; `ReaderBookOpeningControllerTest` (4) + `ReaderPageCacheControllerTest` (6).
+- Срез 3 (коммит `0ffa6f9`): аудит `AudiobookPlayerViewModel` (357 строк) — вывод: VM — когезивная MediaController-обвязка, извлекаемо чистое правило-логика. Порог персиста прогресса (5s / смена главы), границы глав, клэмпы start/seek/speed, отсчёт sleep-timer вынесены в статeless `AudiobookPlayerPolicy` (паттерн `*Policy.kt` репозитория). `AudiobookPlayerPolicyTest` (14).
+- Срез 4 (осталось): аудит `OpdsCatalogViewModel` (160 строк, feature-library).
+- Ограничение (из AGENTS.md): один срез = один контроллер/политика + собственный unit-тест до подключения к ViewModel/UI.
 
