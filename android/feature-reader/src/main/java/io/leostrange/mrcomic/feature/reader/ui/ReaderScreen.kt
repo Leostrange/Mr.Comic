@@ -282,37 +282,30 @@ fun ReaderScreen(
     val chromeIsVisible = uiState.chromeState != ReaderChromeState.HIDDEN &&
         !uiState.showTextSettings &&
         !uiState.showTocSheet
-    // When chrome is visible: include measured toolbar height in the reserve.
-    // When chrome is hidden: only use the small header/footer overlay (info strip), not the
-    // stale measuredTopChromePx from when the toolbar was last open вЂ” that value persists
-    // in memory even after the toolbar Box is removed from composition, causing the text
-    // viewport to be permanently shrunk even in full-screen reading mode.
-    val measuredTopReservePx = when {
-        chromeIsVisible -> maxOf(
-            (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0),
-            (measuredTopChromePx - systemTopInsetPx).coerceAtLeast(0)
-        ).coerceAtMost(maxStableTopChromeReservePx)
-        else -> maxOf(
-            (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0),
-            estimatedOverlayContentPx
-        )
-    }
-    val measuredBottomReservePx = when {
-        chromeIsVisible -> maxOf(
-            (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
-            (measuredBottomChromePx - systemBottomInsetPx).coerceAtLeast(0)
-        )
-        else -> maxOf(
-            (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0),
-            estimatedOverlayContentPx
-        )
-    }
+    // ARC-11 S3: chrome inset plan replaces ~100 lines of inline computation.
+    val plan = rememberChromeInsetsPlan(
+        chromeIsVisible = chromeIsVisible,
+        measuredHeaderOverlayPx = measuredHeaderOverlayPx,
+        measuredFooterOverlayPx = measuredFooterOverlayPx,
+        measuredTopChromePx = measuredTopChromePx,
+        measuredBottomChromePx = measuredBottomChromePx,
+        systemTopInsetPx = systemTopInsetPx,
+        systemBottomInsetPx = systemBottomInsetPx,
+        stableTopChromeReservePx = stableTopChromeReservePx,
+        stableBottomChromeReservePx = stableBottomChromeReservePx,
+        baselineTopChromeReservePx = baselineTopChromeReservePx,
+        baselineBottomChromeReservePx = baselineBottomChromeReservePx,
+        estimatedOverlayContentPx = estimatedOverlayContentPx,
+        maxStableTopChromeReservePx = maxStableTopChromeReservePx,
+        textSentenceInsetPx = textSentenceInsetPx,
+        densityScale = density.density.takeIf { it > 0f } ?: 1f,
+    )
     SideEffect {
-        if (measuredTopReservePx > baselineTopChromeReservePx) {
-            baselineTopChromeReservePx = measuredTopReservePx
+        if (plan.measuredTopReservePx > baselineTopChromeReservePx) {
+            baselineTopChromeReservePx = plan.measuredTopReservePx
         }
-        if (measuredBottomReservePx > baselineBottomChromeReservePx) {
-            baselineBottomChromeReservePx = measuredBottomReservePx
+        if (plan.measuredBottomReservePx > baselineBottomChromeReservePx) {
+            baselineBottomChromeReservePx = plan.measuredBottomReservePx
         }
         if (uiState.chromeAutoHideEnabled) {
             val overlayTop = maxOf(
@@ -332,55 +325,14 @@ fun ReaderScreen(
         } else if (chromeIsVisible) {
             // Only grow the stable reserve when the chrome is actually visible;
             // never let a stale EXPANDED measurement inflate the HIDDEN viewport.
-            if (measuredTopReservePx > stableTopChromeReservePx) {
-                stableTopChromeReservePx = measuredTopReservePx
+            if (plan.measuredTopReservePx > stableTopChromeReservePx) {
+                stableTopChromeReservePx = plan.measuredTopReservePx
             }
-            if (measuredBottomReservePx > stableBottomChromeReservePx) {
-                stableBottomChromeReservePx = measuredBottomReservePx
+            if (plan.measuredBottomReservePx > stableBottomChromeReservePx) {
+                stableBottomChromeReservePx = plan.measuredBottomReservePx
             }
         }
     }
-    // When chrome is hidden but the header overlay strip hasn't been measured yet
-    // (measuredTopReservePx == 0 on the very first frame), use stableTopChromeReservePx
-    // as a floor so text is never drawn at y=0 behind the overlay.  Once
-    // measuredTopReservePx has a real value it wins via maxOf, so the over-reserve
-    // (toolbar height vs strip height) is automatically corrected within one frame.
-    val autoHideTopChromeReservePx = maxOf(
-        estimatedOverlayContentPx,
-        stableTopChromeReservePx,
-        (measuredHeaderOverlayPx - systemTopInsetPx).coerceAtLeast(0)
-    )
-    val autoHideBottomChromeReservePx = maxOf(
-        estimatedOverlayContentPx,
-        stableBottomChromeReservePx,
-        (measuredFooterOverlayPx - systemBottomInsetPx).coerceAtLeast(0)
-    )
-    val topChromeReservePx = visibleChromeContentReservePx(
-        chromeIsVisible = chromeIsVisible,
-        stableReservePx = stableTopChromeReservePx,
-        measuredReservePx = measuredTopReservePx
-    )
-    val bottomChromeReservePx = visibleChromeContentReservePx(
-        chromeIsVisible = chromeIsVisible,
-        stableReservePx = stableBottomChromeReservePx,
-        measuredReservePx = measuredBottomReservePx
-    )
-    // Text WebView owns the whole reader viewport. If chrome is visible and not
-    // auto-hidden, the toolbar itself is the reserve: do not add an extra sentence
-    // gutter on top of it. If chrome is hidden/overlayed, keep exactly one line
-    // below the system bars so text never sits under the status/nav areas.
-    val textContentTopInsetPx = systemTopInsetPx + topChromeReservePx +
-        if (topChromeReservePx == 0) textSentenceInsetPx else 0
-    val textContentBottomInsetPx = systemBottomInsetPx + bottomChromeReservePx +
-        if (bottomChromeReservePx == 0) textSentenceInsetPx else 0
-    val densityScale = density.density.takeIf { it > 0f } ?: 1f
-    val textContentTopInsetCssPx = (textContentTopInsetPx / densityScale).roundToInt().coerceAtLeast(0)
-    val textContentBottomInsetCssPx = (textContentBottomInsetPx / densityScale).roundToInt().coerceAtLeast(0)
-    // PAGE and WEBTOON share the same inset contract to avoid jumps when switching modes.
-    // VERTICAL-01/02: Add safety margin for edge-to-edge mode where WebView draws
-    // behind status bar. The CSS padding must be at least the system inset height.
-    val textWebtoonTopInsetCssPx = textContentTopInsetCssPx
-    val textWebtoonBottomInsetCssPx = textContentBottomInsetCssPx
 
     // GEOMETRY-01: Unified viewport geometry for future migration.
     // Currently computed in parallel with the inline values above.
@@ -392,12 +344,12 @@ fun ReaderScreen(
         statusBarInsetPx = systemTopInsetPx,
         navigationBarInsetPx = systemBottomInsetPx,
         displayCutoutInsetPx = 0, // already included in systemTopInsetPx
-        topToolbarHeightPx = if (chromeIsVisible) topChromeReservePx else 0,
-        bottomToolbarHeightPx = if (chromeIsVisible) bottomChromeReservePx else 0,
+        topToolbarHeightPx = if (chromeIsVisible) plan.topChromeReservePx else 0,
+        bottomToolbarHeightPx = if (chromeIsVisible) plan.bottomChromeReservePx else 0,
         readerTopPaddingPx = textSentenceInsetPx,
         readerBottomPaddingPx = textSentenceInsetPx,
         hideToolbarsWhileReading = !chromeIsVisible,
-        densityScale = densityScale
+        densityScale = density.density.takeIf { it > 0f } ?: 1f
     )
 
     val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
@@ -642,8 +594,8 @@ fun ReaderScreen(
                                 dictionaryActionLabel = readerText.openDictionary,
                                 explainActionLabel = readerText.selectionExplainAction,
                                 saveQuoteActionLabel = readerText.saveQuote,
-                                contentTopInsetPx = textWebtoonTopInsetCssPx,
-                                contentBottomInsetPx = textWebtoonBottomInsetCssPx,
+                                contentTopInsetPx = plan.textContentTopInsetCssPx,
+                                contentBottomInsetPx = plan.textContentBottomInsetCssPx,
                                 pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                 onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                 pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
@@ -725,8 +677,8 @@ fun ReaderScreen(
                                     dictionaryActionLabel = readerText.openDictionary,
                                     explainActionLabel = readerText.selectionExplainAction,
                                     saveQuoteActionLabel = readerText.saveQuote,
-                                    contentTopInsetPx = textContentTopInsetCssPx,
-                                    contentBottomInsetPx = textContentBottomInsetCssPx,
+                                    contentTopInsetPx = plan.textContentTopInsetCssPx,
+                                    contentBottomInsetPx = plan.textContentBottomInsetCssPx,
                                     pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                     onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                     onRegisterPageTurner = { pagedColumnTurn = it },
