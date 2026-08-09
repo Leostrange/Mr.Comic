@@ -107,6 +107,7 @@ internal fun readerHtmlPageSourceReloadKey(
 
 @Composable
 private fun rememberReaderHtmlPageSource(
+    controller: ReaderWebViewLoadController,
     html: String,
     bg: String,
     fg: String,
@@ -117,17 +118,21 @@ private fun rememberReaderHtmlPageSource(
     val reloadKey = remember(html, resolvedBaseUrl, cacheDirPath) {
         readerHtmlPageSourceReloadKey(html, resolvedBaseUrl, cacheDirPath)
     }
-    var pageSource by remember(reloadKey) {
-        mutableStateOf<ReaderHtmlPageSource?>(null)
-    }
+    var pageSource by remember { mutableStateOf<ReaderHtmlPageSource?>(null) }
     LaunchedEffect(reloadKey) {
-        pageSource = buildReaderHtmlPageSource(
+        // ARC-11 slice 2: the controller is the single source of truth for
+        // whether a rebuild is required. Two consecutive effects with the
+        // same key therefore no-op, even when the keys happen to remount.
+        if (!controller.shouldRebuildSource(reloadKey)) return@LaunchedEffect
+        val source = buildReaderHtmlPageSource(
             context = context,
             html = html,
             bg = bg,
             fg = fg,
             resolvedBaseUrl = resolvedBaseUrl
         )
+        controller.markLoadRequested(source.loadToken, reloadKey)
+        pageSource = source
     }
     return pageSource
 }
@@ -234,7 +239,9 @@ internal fun HtmlPageView(
     val resolvedBaseUrl = remember(baseUrl, assetDocumentPath) {
         assetDocumentPath?.let(::readerAssetDocumentBaseUrl) ?: baseUrl ?: HTML_READER_BASE_URL
     }
+    val loadController = remember { ReaderWebViewLoadController() }
     val pageSource = rememberReaderHtmlPageSource(
+        controller = loadController,
         html = html,
         bg = resolvedBg,
         fg = resolvedFg,
