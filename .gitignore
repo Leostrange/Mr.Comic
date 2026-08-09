@@ -94,6 +94,10 @@ anx-reader-analyzed/
 anx-reader-*.zip
 re-out/
 .codegraph/
+*.stackdump
+
+# === Scratch / local analysis ===
+tmp/
 
 # === State stores / binary data ===
 /data/

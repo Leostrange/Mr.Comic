@@ -460,6 +460,7 @@ fun LibraryScreen(
                 onThumbnailModeChange = viewModel::setThumbnailMode,
                 onAddFileClick = onAddFileClick,
                 onAddFolderClick = onAddFolderClick,
+                onOpdsCatalogClick = onOpdsCatalogClick,
                 canNavigateUp = canNavigateUpWithinLibrary,
                 onNavigateUp = navigateUpWithinLibrary,
                 onSettingsClick = onSettingsClick
