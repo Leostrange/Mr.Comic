@@ -76,6 +76,7 @@
 - Перенести: `estimateChunkCount`, `splitEstimatedCharCount`, `extractChunk`, `extractChunkBlocks` и связанные value-правила.
 - Тесты: пустой spine, oversized block, границы chunk, стабильный порядок секций и сохранение footnotes.
 - Критерий готовности: extractor не зависит от Android/UI, `EpubFormatReader.kt` уменьшается без смены публичного поведения.
+- **Срез выполнен (коммиты `89f9e20` + `3eee597`, 2026-07-26 → 2026-08-06)**: целевая единица — `EpubHtmlChunker.kt` (название отличается от `EpubChunkExtractor.kt` в задаче; команда остановилась на `*HtmlChunker` для согласованности с именами `*TocResolver`, `*ContentAnalyzer` в том же пакете). Перенесены все 21 функция + 5 констант: `estimateChunkCount`, `splitEstimatedCharCount`, `extractChunk`, `extractChunkBlocks`, `extractEstimatedChunkBlocks`, `extractDomChunkBlocks`, `shouldRecurseIntoEpubChunkContainer`, `hasNestedEpubChunkBoundary`, `isEpubChunkBoundaryElement`, `wrapInChunkAncestors`, `extractParagraphFallbackChunkBlocks`, `splitOversizedEpubBlock`, `splitTextForEpubBlocks`, `partitionChunkBlocks`, `rebalanceTrailingChunkPair`, `isEpubSectionStartBlock`, `resolveEpubHtmlChunkCount`, `shouldKeepWholeEpubHtmlBody`, `visibleTextCharCount`, `hasRenderableMedia`, `canSplitEstimatedBlock`, `CHUNK_CHARS_PER_PAGE`, `CHUNK_HTML_TAG_RE`, `CHUNK_BOUNDARY_TAGS`, `CHUNK_CONTAINER_TAGS`, `CHUNK_ATOMIC_TAGS`. `EpubFormatReader.kt` похудел с 2267 до 1779 строк (−488, −22%); потребители (`EpubTocResolver`, `EpubContentAnalyzer`, страница-chunking в `getHtmlPage`) просто используют функции из того же пакета. Тесты — `EpubChunkingTest.kt` (13 кейсов): `splitEstimatedCharCount`, `estimateChunkCount`, `extractChunk` (empty body / whole-paragraph / word-boundary split), `extractChunkBlocks` (порядок секций / footnotes), плюс `resolveEpubHtmlChunkCount` границы групп и `shouldKeepWholeEpubHtmlBody`. `EpubHtmlChunker.kt` использует только jsoup + Kotlin stdlib, без Android/UI — критерий соблюдён.
 
 ### ARC-11. Продолжить разрез ReaderScreen и ReaderViewModel
 
@@ -125,7 +126,7 @@
 1. Собрать безопасный QA-артефакт по API 37 ANR и восстановить рабочий эмулятор.
 2. Подтвердить RDR-01 и закрыть PAGE <-> WEBTOON runtime regression.
 3. ~~Выполнить ARC-09b с unit-тестами.~~ Сделано — см. ARC-09b ниже.
-4. Выполнить ARC-10 с unit-тестами.
+4. ~~Выполнить ARC-10 с unit-тестами.~~ Сделано — см. ARC-10 ниже.
 5. Вернуться к page/vertical QA-матрице и обновить этот документ только зелёными фактами.
 
 ---
