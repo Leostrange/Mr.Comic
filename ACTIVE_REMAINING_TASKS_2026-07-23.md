@@ -99,6 +99,96 @@
 - **Срез 3 выполнен (коммит `arc-11-slice-3 2026-08-09`)**: `feature-reader/.../ui/ReaderSessionCoordinator.kt` (99 строк) — четыре фазы `ReaderSessionPhase.{Idle, Opening, Ready, Closing}` + явные переходы `beginOpen` / `markReadyAfterBeginOpen` / `beginClose` / `markClosed` + `reset()` для аварийных состояний. Не владеет тяжёлой работой — только ledger. 15 unit-тестов (`ReaderSessionCoordinatorTest`): legal transitions, illegal transitions отвергаются с IllegalArgumentException (с сообщением, указывающим текущую фазу), `reset` восстанавливает Idle, `phase.first()` согласован с `phase.value` после полного round-trip. Имя `ReaderSessionCoordinator` уже занято в `domain.session` (2 теста, аналитика сессии) — намеренное разделение: domain — метрики, ui — ledger жизненного цикла. UI-интеграция (заворачивание `ReaderBookSessionManager.openTextFormatReader` + `TextReaderOrchestrator.cancelAllJobsAndJoin` в фазы) отложена под отдельный срез.
 - **Срез A выполнен (`arc-11-wire-markload 2026-08-09`)**: протащен `markLoadCommitted` из `ReaderWebView.markLoadCommitted()` в `ReaderWebViewLoadController`. В `ReaderWebView.kt` добавлен `internal var onLoadCommitted: ((String?) -> Unit)?`; пустой колбэк вызывается из `markLoadCommitted()` с `activeLoadToken`. В `HtmlPageView` при создании `ReaderWebView` устанавливается лямбда `{ token -> token?.takeIf { it.isNotBlank() }?.let(loadController::markLoadCommitted) }`. Контракт контроллера исполняется целиком (11 юнит-тестов среза 1 покрывают все 3 метода: `shouldRebuildSource`, `markLoadRequested`, `markLoadCommitted`). Дополнительных тестов на UI-бридж не писалось — ограничение такое же, как и в срезе 2.
 - **Срез B выполнен (`arc-11-wire-coord 2026-08-09`)**: `ui.ReaderSessionCoordinator` интегрирован в `ReaderBookOpeningController` (переиспользуется как `sessionLifecycleCoordinator`, импорт с alias чтобы не коллизировать с domain `ReaderSessionCoordinator`). Фазы: `beginOpen()` перед `openComic`, `markReadyAfterBeginOpen()` после успешной подготовки, `beginClose()` перед `тяжёлой очисткой` в `ReaderViewModel.onCleared()`, `markClosed()` в `appScope.launch { ... }`, а в `catch` (включая CancellationException и Exception) вызывается `reset()`. Три теста `ReaderBookOpeningControllerTest` (`lifecycle_remainsReady_after_internal_return_paths`, `reset_*`) используют новый `buildController()` хелпер (без auto-open). Существующие 14 тестов и 11 тестов контроллера остались зелёными.
+- **Срез C — WebView regression suite (`arc-11-chrome-slice 2026-08-09`)**: новый `ReaderChromeSurfacePlan.kt` (pure-Kotlin data class) — раньше chrome surface/overlay/style-расчёт (~30 строк inline в `ReaderScreen.kt`) жилось без unit-теста. Контракт: 5 полей (`effectiveToolbarOpacity`, `effectiveToolbarBlur`, `forceOpaqueChromeSurface`, `chromeSurface`, `overlaySurface`, `overlayStyle`) + Compose-обёртка `rememberReaderChromeSurfacePlan`. 7 unit-тестов в `ReaderChromeSurfacePlanTest`: EINK-переопределение (forceOpaque, blur=0), не-EINK clamp в `READER_TOOLBAR_MIN_OPACITY`, усреднение top/bottom opacity, разница emphasis chrome vs overlay, light vs dark overlayStyle. `ReaderScreen.kt` похудел на 31 строку inline chrome-вычислений; читаемость функции `ReaderScreen()` выросла.
+  Параллельно — `ReaderWebViewRegressionTest.kt` (plain JUnit, без Robolectric, 6 тестов): сценарии из реальных регрессий — переключение mode сразу после initial load не должно мёртвить scroll-restore предыдущего токена; stale `onPageFinished` для закрытого экрана не воскрешает старый токен; повторный markLoadRequested с тем же токеном — no-op; цепочка `load-a → load-b → load-c` с финальным stale commit `load-a` — самый старый остаётся мёртвым; пустые/blank токены не должны «активировать» контроллер; цепочка clear/clear/clear сохраняет чистое начальное состояние. Это **не** повторяет [ReaderWebViewLoadControllerTest] — там покрытие happy-path контракта, здесь — то, что отрабатывается при реальной повторной композиции chrome surface. 
+
+
+### ARC-11. Backlog — последующие срезы вне текущей ветки
+
+Контрактное правило остаётся: **один срез — один контракт — отдельный unit-тест до подключения к ViewModel/UI**. Все кандидаты сгруппированы по риску / пользе.
+
+#### S1. ReaderChromeSurfacePlan (controller → ReaderScreen refactor)
+- **Статус**: выполнен 2026-08-09 (slice 0/baseline этот коммит-тур). Файл `ReaderChromeSurfacePlan.kt` — pure-Kotlin data class; 7 unit-тестов; `ReaderScreen.kt` (-31 строк inline chrome-вычислений).
+- **Критерий готовности**: PASS — проверили, детект 0 smells.
+
+#### S2. ReaderBottomSheetHost
+- **Цель**: вынести 28+ параметров `ReaderBottomSheets(...)` (строки 861–887 в `ReaderScreen.kt`) в `ReaderScreenBottomSheetsHost.kt`, как обёртку; в `ReaderScreen.kt` остаётся `ReaderBottomSheets(host = rememberReaderBottomSheetHost(...))`.
+- **Критерий готовности**: компилируется; `feature-reader:testDebugUnitTest` зелёный; `ReaderScreen.kt` уменьшается на ~30 строк; новых публичных типов в публичном API не появляется.
+- **Тест**: один focused test — что host создаёт корректный set flags по умолчанию и не теряет callbacks при recompose.
+
+#### S3. ReaderChromeInsetsPolicy + ReaderChromeMeasuredInsets
+- **Цель**: разделить chrome-инсеты на 2 слоя — стабильные (preset-based) и measured (per-composition).
+- **Файл**: `ReaderChromeInsets.kt`. Compose-обёртка и pure-Kotlin policy.
+- **Тест**: `ReaderChromeInsetsPolicyTest` — focus on `measuredReservePx` clamping, preset override.
+
+#### S4. ReaderHardwareKeyHostPolicy
+- **Текущее**: `ReaderHardwareKeyHost.kt` смешивает Android `KeyEvent` парсинг и политику действий.
+- **Цель**: вынести `keyEventToReaderAction(event): Optional<ReaderAction>` в pure-Kotlin `ReaderKeyActionPolicy.kt`; host становится тонкой обёрткой над ним.
+- **Тест**: 6-8 кейсов — mapping `KEYCODE_VOLUME_*`, `KEYCODE_PAGE_*`, `KEYCODE_DPAD_*`.
+
+#### S5. ReaderProgressPolicyHtmlDocument
+- **Цель**: перевод HTML/JS-связанной логики прогресса из inline в `ReaderHtmlProgressPolicy.kt`.
+- **Тест**: focus on anchor offsets и sectionId-scoped cursorки.
+
+#### S6. ReaderFontStyleActions → ReaderFontCatalog
+- **Файл**: `ReaderFontCatalog.kt` (есть частично в `ReaderScreen.kt`); вынести `rememberReaderFontStyleActions` + lookup.
+- **Тест**: focus on font resolution + fallback.
+
+#### S7. ReaderColorScheme (вынести из inline)
+- **Файл**: `ReaderColorSchemeResolver.kt`. Pure-Kotlin: какой `MaterialColorScheme` использовать для какого preset/isTextReader.
+- **Тест**: 5 кейсов покрытие (PAPER/SEPIA_BOOK/NEWSPAPER/NIGHT_INK/OLED_BLACK для text+image).
+
+#### S8. ReaderPageCachePolicy
+- **Текущее**: `ReaderPageCacheController.kt` (~60 строк) — контроллер + policy в одном файле. Разделить на controller + policy без изменения API.
+
+#### S9. ReaderPreloadPolicy
+- **Файл**: `ReaderPreloadPolicy.kt`. Дистанции для прелоада, кеширование demands, отмена при низком приоритете.
+
+#### S10. ReaderScreen rewrite — разбить 901 строку на композиции
+- **Цель**: получить `ReaderScreen.kt` ≤ 400 строк. Подсчёт сейчас (2026-08-09):
+  - **ReaderScreen.kt**: 870 строк
+  - **ReaderChromeOverlays.kt**: 291
+  - **ReaderBottomSheets.kt**: 329
+  - **ReaderControlCenterSheet.kt**: 298
+  - **ReaderControlCenterStrings.kt**: 418
+  - **ReaderChromeComponents.kt**: 462
+- **Главный приоритет — `ReaderControlCenterStrings.kt`** (418 строк локализованных строк — это ad-hoc ContentResolver; либо вынести в strings.xml, либо разделить на отдельные services-tab).
+- **Критерий готовности**: `ReaderScreen.kt` ≤ 400 строк; ноль новых public API.
+
+#### S11. ReaderWebView instrumentation androidTest
+- **Цель**: поднять `androidTest/.../WebViewLifecycleTest.kt`, который запускает WebView на эмуляторе и проверяет sequence `markLoadRequested → onPageFinished → markLoadCommitted → shouldRestoreScroll=true`.
+- **Зависимость**: требует восстановленного эмулятора (RDR-02 ✅), готового `sample.epub` (✅ `.qa-rdr-2026-08-09/sample.epub`).
+- **Критерий готовности**: 1-2 androidTest-кейса зелёные через `./gradlew :feature-reader:connectedDebugAndroidTest`.
+
+#### S12. ARC-11 chrome double-split — top vs bottom
+- **Цель**: `ReaderChromeOverlays.kt` (291 строк) уже разделяет `ReaderTopChromeBar` / `ReaderBottomChromePanel`, но они используют один общий composable шаблон (статус, опacities, flags). Вынести этот «общий шаблон» в `ReaderChromeBarShell.kt`.
+- **Тест**: 1 focused test, проверяющий, что chrome bar shell правильно применяет все 4 переданные комбинации (top+bottom chrome, top+bottom overlay).
+
+### Summary метрики после всех срезов
+- **ReaderScreen.kt**: 870 → ≤400 строк (-54%); читаемость улучшена, контракты выделены.
+- **feature-reader unit tests**: 448 (2026-08-09) → +8 chrome slice +6 webview regression +6 hardware key +5 page cache +5 preload = **478**.
+- **Detekt smells**: держать в нуле. Каждый срез обязан прогнать `:feature-reader:detekt` + (subset изменил) запустить `:app:compileDebugKotlin`.
+
+### Приоритизация (по правилу «опасно + полезно»)
+
+```
+Приоритет | Срез                | Оценка опасности | Оценка пользы
+---------|---------------------|------------------|---------------
+P1       | S2 (BottomSheetHost) | low              | medium
+P1       | S4 (KeyActionPolicy) | low              | high
+P2       | S3 (ChromeInsets)   | low              | medium
+P2       | S5 (HtmlProgress)   | medium           | medium
+P2       | S8 (PageCache)      | medium           | medium
+P3       | S6 (FontCatalog)    | medium           | low
+P3       | S7 (ColorScheme)    | medium           | medium
+P3       | S9 (PreloadPolicy)  | medium           | low
+P4       | S10 (Screen rewrite) | high             | high
+P4       | S11 (androidTest)    | high             | high (RDR-01 ★)
+P4       | S12 (Chrome bar shell)| high            | low
+```
+
+P1 — следующие два среза. Безопасны (один контроллер / одна policy, оба pure-Kotlin + Compose-обёртка). Запускаются параллельно в две параллельные ветки; merge-conflict опасность низкая (разные файлы).
+
 
 ## P2 — продуктовые tasklists
 
