@@ -64,4 +64,30 @@ class ReaderPageLoadStateTest {
 
         assertEquals(PageLoadState.HtmlReady(""), state)
     }
+
+    // ── webtoonPageErrorEntry (webtoon window failure publication) ──
+
+    @Test
+    fun webtoon_error_published_when_neither_bitmap_nor_html_is_ready() {
+        assertEquals(
+            3 to "Ошибка загрузки страницы 4",
+            webtoonPageErrorEntry(bitmapReady = false, htmlReady = false, pageIndex = 3)
+        )
+    }
+
+    @Test
+    fun webtoon_error_cleared_when_bitmap_becomes_ready() {
+        assertEquals(
+            null,
+            webtoonPageErrorEntry(bitmapReady = true, htmlReady = false, pageIndex = 3)
+        )
+    }
+
+    @Test
+    fun webtoon_error_cleared_when_html_becomes_ready() {
+        assertEquals(
+            null,
+            webtoonPageErrorEntry(bitmapReady = false, htmlReady = true, pageIndex = 3)
+        )
+    }
 }

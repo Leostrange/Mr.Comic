@@ -191,13 +191,17 @@ internal class ReaderPageLoader(
                 }
                 // Publish a per-page Failed state when neither bitmap nor HTML could be
                 // produced, so the WebtoonView can show a retry card instead of a spinner.
-                if (formatReader() === reader &&
-                    pagePreloader.getPage(pageIndex, 1) == null &&
-                    _webtoonHtmlCache.value[pageIndex] == null
-                ) {
-                    _pageErrors.update { it + (pageIndex to "Ошибка загрузки страницы ${pageIndex + 1}") }
-                } else {
-                    _pageErrors.update { it - pageIndex }
+                if (formatReader() === reader) {
+                    val errorEntry = webtoonPageErrorEntry(
+                        bitmapReady = pagePreloader.getPage(pageIndex, 1) != null,
+                        htmlReady = _webtoonHtmlCache.value[pageIndex] != null,
+                        pageIndex = pageIndex
+                    )
+                    if (errorEntry != null) {
+                        _pageErrors.update { it + errorEntry }
+                    } else {
+                        _pageErrors.update { it - pageIndex }
+                    }
                 }
             }
         }
@@ -238,6 +242,27 @@ internal class ReaderPageLoader(
                             textWebtoonHtmlContent = document.html,
                             textWebtoonHtmlAssetBasePath = document.assetBasePath,
                             textWebtoonHtmlPageCount = loadedCount
+                        )
+                    }
+                }
+            },
+            onBuildFailed = {
+                // A stitched-document build failure (e.g. malformed RTF HTML) must not
+                // crash the reader back to the library: surface a recoverable error page
+                // in the webtoon container instead. pageCount = 0 keeps the re-entry
+                // guard open so switching modes re-attempts the build.
+                _uiState.update { current ->
+                    if (current.comic?.id != comic.id || formatReader() !== reader) {
+                        current
+                    } else {
+                        val errorHtml = textReaderOrchestrator.loadErrorHtml(
+                            current.currentPage.coerceAtLeast(0),
+                            IllegalStateException("Failed to build webtoon document")
+                        )
+                        current.copy(
+                            textWebtoonHtmlContent = errorHtml,
+                            textWebtoonHtmlAssetBasePath = null,
+                            textWebtoonHtmlPageCount = 0
                         )
                     }
                 }

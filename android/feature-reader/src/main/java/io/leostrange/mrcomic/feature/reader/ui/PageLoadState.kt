@@ -30,3 +30,19 @@ internal fun pageLoadStateFrom(
     error != null -> PageLoadState.Failed(error)
     else -> PageLoadState.Loading
 }
+
+/**
+ * Derives the per-page webtoon error entry from raw readiness signals. Returns null when
+ * the page has either a decoded bitmap or cached HTML (nothing to surface), otherwise the
+ * (pageIndex -> message) pair that [ReaderPageLoader] publishes into its error map.
+ */
+internal fun webtoonPageErrorEntry(
+    bitmapReady: Boolean,
+    htmlReady: Boolean,
+    pageIndex: Int
+): Pair<Int, String>? =
+    if (!bitmapReady && !htmlReady) {
+        pageIndex to "Ошибка загрузки страницы ${pageIndex + 1}"
+    } else {
+        null
+    }

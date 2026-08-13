@@ -249,6 +249,7 @@ fun WebtoonView(
                         WebtoonPageErrorCard(
                             pageIndex = pageIndex,
                             reason = state.reason,
+                            onTap = onCenterTap,
                             onRetry = { viewModel.retryLoadPage(pageIndex) }
                         )
                     }
@@ -256,7 +257,10 @@ fun WebtoonView(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .aspectRatio(1f / estimatedPageAspect),
+                                .aspectRatio(1f / estimatedPageAspect)
+                                .pointerInput(pageIndex) {
+                                    detectTapGestures(onTap = { onCenterTap() })
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(color = Color.White)
@@ -272,13 +276,20 @@ fun WebtoonView(
 private fun WebtoonPageErrorCard(
     pageIndex: Int,
     reason: String,
+    onTap: () -> Unit,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .aspectRatio(1f / 1.45f),
+            .aspectRatio(1f / 1.45f)
+            .pointerInput(pageIndex) {
+                // The retry button consumes its own press, so this only fires when the
+                // user taps the placeholder area around it — keeping chrome toggling alive
+                // in the error state without shadowing the retry action.
+                detectTapGestures(onTap = { onTap() })
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(

@@ -66,11 +66,12 @@ fun Comic.readingStatus(): ComicReadingStatus {
     val completedByProgress = normalizedProgress >= 0.999f &&
         (hasStableReadingSignal || normalizedPageCount > 1)
     val hasReadingActivity = hasStableReadingSignal || progressHasAuthority
-    val completedByPage = hasReadingActivity &&
-        normalizedPageCount > 1 &&
-        normalizedCurrentPage >= normalizedPageCount - 1
+    // Completion is driven only by an explicit flag or a confirmed full-progress
+    // signal. Landing on the last page index (currentPage >= pageCount - 1) is no
+    // longer a completion condition: a crash, a deferred-count clamp or a text book
+    // parked on its final section must not fake a 100% badge.
     return when {
-        isCompleted || completedByProgress || completedByPage -> ComicReadingStatus.COMPLETED
+        isCompleted || completedByProgress -> ComicReadingStatus.COMPLETED
         hasReadingActivity -> ComicReadingStatus.READING
         else -> ComicReadingStatus.NEW
     }

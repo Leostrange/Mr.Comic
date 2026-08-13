@@ -98,7 +98,7 @@ internal class ReaderBookOpeningController(
     private suspend fun openComic(comic: Comic, sourcePath: String, requestToken: Long) {
         // ARC-11 slice "wire-coordinator-to-vm": pickup the lifecycle ledger
         // here. beginOpen returns false when the previous open is still in flight
-        // or a close is pending — in either case we leave the existing state
+        // or a close is pending ï¿½ in either case we leave the existing state
         // untouched and bail out.
         if (!sessionLifecycleCoordinator.beginOpen()) return
         try {
@@ -272,6 +272,13 @@ internal class ReaderBookOpeningController(
         prepared: PreparedReaderOpen,
         config: OpeningConfig
     ) {
+        // When the page count is deferred and the reader is resuming mid-book, keep the
+        // loading shell visible until the real count resolves. Otherwise the provisional
+        // one-page model briefly renders the cover and then jumps to the saved page.
+        val holdLoadingForDeferredRestore = shouldHoldLoadingForDeferredRestore(
+            shouldDeferCount = config.shouldDeferCount,
+            requestedStartPage = config.requestedStartPage
+        )
         _uiState.update {
             it.copy(
                 comic = comic,
@@ -284,7 +291,7 @@ internal class ReaderBookOpeningController(
                 ),
                 readingMode = config.openingMode,
                 currentPage = config.startPage,
-                isLoading = false,
+                isLoading = holdLoadingForDeferredRestore,
                 htmlBaseUrl = formatReader()?.htmlBaseUrl(),
                 htmlAssetBasePath = null,
                 textWebtoonHtmlContent = null,
@@ -372,6 +379,11 @@ internal class ReaderBookOpeningController(
                 currentTotalPages = { _uiState.value.totalPages },
                 onResolved = { realPages, normalizedStartPage, resolvedComic ->
                     applyDeferredPageCount(realPages, normalizedStartPage, resolvedComic, activeReader, config.openingMode)
+                },
+                onSkipped = {
+                    // Deferred count failed or was not applicable. Release the loading shell
+                    // so the provisional single-page model is at least interactive.
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             )
         }
@@ -385,7 +397,7 @@ internal class ReaderBookOpeningController(
         openingMode: ReadingMode
     ) {
         progressController.totalBookSections = realPages.coerceAtLeast(1)
-        _uiState.update { it.copy(totalPages = realPages, currentPage = normalizedStartPage) }
+        _uiState.update { it.copy(totalPages = realPages, currentPage = normalizedStartPage, isLoading = false) }
         readerSessionCoordinator.updateTotalPages(realPages)
         val visiblePages = navigationController.visiblePagesFor(normalizedStartPage, openingMode)
         reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->

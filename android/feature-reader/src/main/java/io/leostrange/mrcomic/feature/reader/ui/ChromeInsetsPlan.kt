@@ -166,8 +166,12 @@ internal data class ChromeInsetsPlan(
 
 /**
  * Compose-обёртка. Передаёт все входные primitives в [ChromeInsetsPlan.compute]
- * и кеширует результат через [remember] по ключевым значениям (игнорируя
- * stableState, который растёт monotonically).
+ * и кеширует результат через [remember] по ключевым значениям. Каждый вход,
+ * участвующий в формуле (включая mutable stable/baseline reserves, measured
+ * values, estimated overlay, sentence inset и density), обязан быть в ключах —
+ * иначе план вернёт устаревший inset после измерения chrome. При добавлении
+ * параметра в [ChromeInsetsPlan.compute] добавляйте его и сюда, и в ключи
+ * [remember], и в [ChromeInsetsPlanTest].
  */
 @Composable
 internal fun rememberChromeInsetsPlan(

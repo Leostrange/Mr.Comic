@@ -156,4 +156,36 @@ class DeferredPageCountPolicyTest {
 
         assertEquals(25, resolved)
     }
+
+    // ── shouldHoldLoadingForDeferredRestore (RASTER-03) ──────────────────
+
+    @Test
+    fun holdsLoadingWhenResumingMidBookWithDeferredCount() {
+        assertTrue(
+            shouldHoldLoadingForDeferredRestore(
+                shouldDeferCount = true,
+                requestedStartPage = 14
+            )
+        )
+    }
+
+    @Test
+    fun doesNotHoldLoadingForFreshBookWithDeferredCount() {
+        assertTrue(
+            !shouldHoldLoadingForDeferredRestore(
+                shouldDeferCount = true,
+                requestedStartPage = 0
+            )
+        )
+    }
+
+    @Test
+    fun doesNotHoldLoadingWhenCountIsResolvedUpFront() {
+        assertTrue(
+            !shouldHoldLoadingForDeferredRestore(
+                shouldDeferCount = false,
+                requestedStartPage = 14
+            )
+        )
+    }
 }
