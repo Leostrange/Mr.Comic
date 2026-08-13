@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.library
 
-import android.content.Context
 import io.leostrange.mrcomic.core.data.repository.AudiobookRepository
 import io.leostrange.mrcomic.core.model.Audiobook
 import io.mockk.coEvery
@@ -11,7 +10,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

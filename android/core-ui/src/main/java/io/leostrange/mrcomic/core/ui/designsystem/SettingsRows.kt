@@ -26,20 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.util.Locale
-
-@Composable
-fun MrComicSectionHeader(title: String, modifier: Modifier = Modifier) {
-    Text(
-        text = title.uppercase(Locale.getDefault()),
-        modifier = modifier.fillMaxWidth().padding(horizontal = MrComicSpacingTokens.x4, vertical = MrComicSpacingTokens.x2),
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp),
-        color = MaterialTheme.colorScheme.primary,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
-}
-
 @Composable
 fun MrComicSettingsRow(
     title: String,

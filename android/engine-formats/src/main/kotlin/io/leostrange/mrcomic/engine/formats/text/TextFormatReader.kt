@@ -9,9 +9,7 @@ import io.leostrange.mrcomic.engine.formats.base.TocEntry
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.nodes.Document
 import java.io.File
-import java.nio.charset.Charset
 import java.net.URLDecoder
 import javax.inject.Inject
 

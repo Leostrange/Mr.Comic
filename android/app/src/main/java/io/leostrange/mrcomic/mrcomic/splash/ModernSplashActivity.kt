@@ -11,7 +11,6 @@ import androidx.core.animation.doOnEnd
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.media3.common.util.UnstableApi
 import io.leostrange.mrcomic.MainActivity
-import io.leostrange.mrcomic.R
 
 @UnstableApi
 class ModernSplashActivity : ComponentActivity() {

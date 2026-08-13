@@ -40,8 +40,6 @@ dependencies {
     implementation(libs.okhttp)
     implementation(project(":core-domain"))
     implementation(project(":core-model"))
-    // ONNX Runtime for NLLB inference
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.17.0")
     testImplementation(libs.test.junit)
     testImplementation(libs.test.mockk)
     testImplementation(libs.test.kotlinx.coroutines)

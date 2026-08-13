@@ -1,6 +1,8 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -18,6 +20,24 @@ import org.junit.Test
  *  рекомпозиционном цикле / переключении режима.
  */
 class ReaderWebViewRegressionTest {
+
+    @Test
+    fun pagedViewportAcceptsPhoneLandscapeAfterSafeInsets() {
+        assertTrue(readerPagedViewportIsReady(cssWidth = 814, cssHeight = 325))
+        assertFalse(readerPagedViewportIsReady(cssWidth = 814, cssHeight = 180))
+    }
+
+    @Test
+    fun freeScrollProgressionUsesPhysicalScrollRangeAndSurvivesViewportChanges() {
+        val progression = readerFreeScrollProgression(
+            scrollY = 1_500,
+            scrollRangePx = 4_000,
+            viewportHeightPx = 1_000
+        )
+
+        assertEquals(0.5, progression!!, 0.0001)
+        assertNull(readerFreeScrollProgression(0, 100, 1_000))
+    }
 
     @Test
     fun regression_loadFollowedImmediatelyByModeSwitch_doesNotLeakOldScrollRestore() {
@@ -105,6 +125,17 @@ class ReaderWebViewRegressionTest {
         // Активный токен по-прежнему null → должен rebuild до первого
         // настоящего запроса.
         assertTrue(controller.shouldRebuildSource(currentKey = "p10"))
+    }
+
+    @Test
+    fun regression_blankTokenCannotBecomeRestorable() {
+        // U2 closes the characterization gap: callbacks without a document
+        // identity cannot become the active load or unlock restoration.
+        val controller = ReaderWebViewLoadController()
+        controller.markLoadRequested(token = "")
+        controller.markLoadCommitted(token = "")
+
+        assertFalse(controller.shouldRestoreScroll(""))
     }
 
     @Test

@@ -6,12 +6,14 @@ import androidx.webkit.WebViewAssetLoader
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.ui.HtmlPageView
+import io.leostrange.mrcomic.feature.reader.ui.ReaderWebViewRestoreTarget
 
 @Composable
-fun TextContainer(
+internal fun TextContainer(
     html: String,
     baseUrl: String?,
     assetDocumentPath: String?,
+    documentIdentity: String? = null,
     assetLoader: WebViewAssetLoader?,
     readingMode: ReadingMode,
     autoScrollSpeed: Float = 0f,
@@ -36,6 +38,8 @@ fun TextContainer(
     pendingWebtoonSectionIndex: Int? = null,
     onConsumeWebtoonSection: () -> Unit = {},
     onTextWebtoonVisibleSectionChanged: (Int) -> Unit = {},
+    freeScrollRestoreTarget: ReaderWebViewRestoreTarget? = null,
+    onFreeScrollPositionUpdate: (ReaderWebViewRestoreTarget) -> Unit = {},
     fontSize: Int = 18,
     colorScheme: String = "DAY",
     readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
@@ -57,12 +61,14 @@ fun TextContainer(
     explainActionLabel: String,
     saveQuoteActionLabel: String,
     onRegisterPageTurner: ((Int) -> Unit) -> Unit = {},
+    onSelectionActionModeChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     HtmlPageView(
         html = html,
         baseUrl = baseUrl,
         assetDocumentPath = assetDocumentPath,
+        documentIdentity = documentIdentity,
         assetLoader = assetLoader,
         onLeftTap = onLeftTap,
         onRightTap = onRightTap,
@@ -85,6 +91,8 @@ fun TextContainer(
         pendingWebtoonSectionIndex = pendingWebtoonSectionIndex,
         onConsumeWebtoonSection = onConsumeWebtoonSection,
         onTextWebtoonVisibleSectionChanged = onTextWebtoonVisibleSectionChanged,
+        freeScrollRestoreTarget = freeScrollRestoreTarget,
+        onFreeScrollPositionUpdate = onFreeScrollPositionUpdate,
         readingMode = readingMode,
         autoScrollSpeed = autoScrollSpeed,
         fontSize = fontSize,
@@ -108,6 +116,7 @@ fun TextContainer(
         explainActionLabel = explainActionLabel,
         saveQuoteActionLabel = saveQuoteActionLabel,
         onRegisterPageTurner = onRegisterPageTurner,
+        onSelectionActionModeChange = onSelectionActionModeChange,
         modifier = modifier
     )
 }

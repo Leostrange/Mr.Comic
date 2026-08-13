@@ -2,66 +2,29 @@ package io.leostrange.mrcomic.feature.library
 
 // Phase A (2026-08-05): MrComic* cards extracted from LibraryScreen.kt
 
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
-import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotContext
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotState
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotFocusText
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodHeadline
 import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodLabel
-import io.leostrange.mrcomic.core.domain.analytics.resolveMascotStagePreview
-import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.isReadCompleted
-import io.leostrange.mrcomic.core.model.isReadingInProgress
-import io.leostrange.mrcomic.core.model.readingStatus
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
-import io.leostrange.mrcomic.core.ui.designsystem.mrComicCompletedColor
-import io.leostrange.mrcomic.core.ui.locale.AppStrings
-import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.core.ui.mascot.MrComicMiniAvatar
 import io.leostrange.mrcomic.core.ui.mascot.MrComicStagePreviewLead
-import io.leostrange.mrcomic.feature.library.components.AchievementId
 import io.leostrange.mrcomic.feature.library.components.AchievementQuestTransition
-import io.leostrange.mrcomic.feature.library.components.AchievementStrings
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievement
-import io.leostrange.mrcomic.feature.library.components.LibraryAchievementsRow
-import io.leostrange.mrcomic.feature.library.components.questTransitionFeedback
-import java.util.Calendar
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable

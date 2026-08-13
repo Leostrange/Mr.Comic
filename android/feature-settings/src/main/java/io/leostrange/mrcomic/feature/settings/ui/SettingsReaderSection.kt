@@ -20,52 +20,17 @@
 
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TextSnippet
-import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.ReaderInfoSlot
-import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.ReaderScreenTimeoutMode
-import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
-import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
-import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
-import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
-import java.util.Locale
-import kotlin.math.roundToInt
 
 // SETTINGS_READER_MIN_TOOLBAR_OPACITY (const) → SettingsReaderCards.kt (Phase N 2026-08-03)
 

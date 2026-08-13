@@ -3,10 +3,12 @@ package io.leostrange.mrcomic.engine.formats.text
 import android.content.ContextWrapper
 import io.leostrange.mrcomic.core.model.ComicFormat
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
+import org.jsoup.Jsoup
 import java.io.File
 
 class TextRealFileSmokeTest {
@@ -386,6 +388,15 @@ class TextRealFileSmokeTest {
                 joined.contains("<p", ignoreCase = true) ||
                     joined.contains("<img", ignoreCase = true) ||
                     joined.contains("data:image", ignoreCase = true)
+            )
+            assertFalse(
+                "RTF font-table metadata must not leak into reader pages",
+                joined.contains("Times New Roman;", ignoreCase = true) ||
+                    joined.contains("Cambria Math;", ignoreCase = true)
+            )
+            assertFalse(
+                "RTF picture payload must not be rendered as raw hexadecimal text",
+                Regex("[0-9a-fA-F]{160}").containsMatchIn(Jsoup.parse(joined).text())
             )
         } finally {
             reader.close()

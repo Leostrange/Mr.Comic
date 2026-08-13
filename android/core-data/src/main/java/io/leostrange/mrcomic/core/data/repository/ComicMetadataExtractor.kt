@@ -3,8 +3,6 @@ package io.leostrange.mrcomic.core.data.repository
 import android.net.Uri
 import android.util.Log
 import android.util.Xml
-import io.leostrange.mrcomic.core.model.Comic
-import kotlinx.coroutines.flow.first
 import net.lingala.zip4j.ZipFile
 import org.xmlpull.v1.XmlPullParser
 import java.io.File

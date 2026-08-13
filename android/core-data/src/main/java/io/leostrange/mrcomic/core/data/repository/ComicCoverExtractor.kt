@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.core.data.repository
 
-import kotlinx.coroutines.flow.map
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -17,7 +16,6 @@ import android.os.ParcelFileDescriptor
 import android.util.Base64
 import android.util.Log
 import android.util.Xml
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import kotlinx.coroutines.flow.first
 import net.sf.sevenzipjbinding.ExtractOperationResult

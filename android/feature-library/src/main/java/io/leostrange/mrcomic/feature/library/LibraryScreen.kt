@@ -1,90 +1,28 @@
 package io.leostrange.mrcomic.feature.library
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowScope
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -95,81 +33,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
-import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
-import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
-import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotContext
-import io.leostrange.mrcomic.core.domain.analytics.MrComicMascotState
-import io.leostrange.mrcomic.core.ui.designsystem.mrComicCompletedColor
-import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotFocusText
-import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodHeadline
-import io.leostrange.mrcomic.core.domain.analytics.mrComicMascotMoodLabel
 import io.leostrange.mrcomic.core.domain.analytics.resolveMascotStagePreview
 import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
-import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.ComicLibraryShelf
-import io.leostrange.mrcomic.core.model.ComicReadingStatus
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
-import io.leostrange.mrcomic.core.model.SortOrder
 import io.leostrange.mrcomic.core.model.Audiobook
 import io.leostrange.mrcomic.core.model.isReadCompleted
-import io.leostrange.mrcomic.core.model.isReadingInProgress
-import io.leostrange.mrcomic.core.model.libraryShelfCategory
-import io.leostrange.mrcomic.core.model.readingStatus
-import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer
-import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
-import io.leostrange.mrcomic.core.ui.library.LibraryShelfBar
-import io.leostrange.mrcomic.core.ui.library.libraryCardElevation
-import io.leostrange.mrcomic.core.ui.library.rootChromePillBorder
-import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
-import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
-import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.core.ui.locale.libraryBooksSectionLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryFileCountLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryGraphicSectionLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryQuoteCountLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryQuotePageLabel
-import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceMissingLabel
-import io.leostrange.mrcomic.core.ui.mascot.MrComicMiniAvatar
-import io.leostrange.mrcomic.core.ui.mascot.MrComicStagePreviewLead
-import io.leostrange.mrcomic.feature.library.components.AchievementId
 import io.leostrange.mrcomic.feature.library.components.AchievementQuestTransition
-import io.leostrange.mrcomic.feature.library.components.AchievementStrings
 import io.leostrange.mrcomic.feature.library.components.ComicGridItem
-import io.leostrange.mrcomic.feature.library.components.libraryGridCoverRatio
-import io.leostrange.mrcomic.feature.library.components.CoverArt
-import io.leostrange.mrcomic.feature.library.components.FolderBackgroundStack
-import io.leostrange.mrcomic.feature.library.components.FolderCoverTreatment
-import io.leostrange.mrcomic.feature.library.components.LibraryAchievement
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievementsRow
 import io.leostrange.mrcomic.feature.library.components.LibraryTopBar
 import io.leostrange.mrcomic.feature.library.components.computeAchievements
 import io.leostrange.mrcomic.feature.library.components.questTransitionFeedback
-import java.io.File
-import java.util.Calendar
 import kotlinx.coroutines.launch
 @Suppress("UNUSED_PARAMETER")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -278,19 +161,16 @@ fun LibraryScreen(
     val openProgressProfile = remember(onProgressProfileClick) {
         onProgressProfileClick ?: { showMrComicProgress = true }
     }
-    val uniqueAuthorCount = remember(uiState.rawAuthors) {
-        uiState.rawAuthors.mapNotNull { author ->
-            author?.trim()?.takeIf { it.isNotBlank() }
-        }.distinct().size
+    val screenStateFacts = remember(uiState.rawAuthors, uiState.rawGenres, uiState.recentlyRead) {
+        resolveLibraryScreenStateFacts(
+            rawAuthors = uiState.rawAuthors,
+            rawGenres = uiState.rawGenres,
+            recentlyRead = uiState.recentlyRead
+        )
     }
-    val uniqueGenreCount = remember(uiState.rawGenres) {
-        uiState.rawGenres.mapNotNull { genre ->
-            genre?.trim()?.takeIf { it.isNotBlank() }
-        }.distinct().size
-    }
-    val preferredQuestSeriesName = remember(uiState.recentlyRead) {
-        uiState.recentlyRead.firstOrNull()?.series?.trim()?.takeIf { it.isNotBlank() }
-    }
+    val uniqueAuthorCount = screenStateFacts.uniqueAuthorCount
+    val uniqueGenreCount = screenStateFacts.uniqueGenreCount
+    val preferredQuestSeriesName = screenStateFacts.preferredQuestSeriesName
     val preferredQuestCollectionQuery = remember(nextAchievementTarget?.id, uiState.rawAuthors, uiState.rawGenres) {
         resolveMrComicCollectionQuery(
             achievementId = nextAchievementTarget?.id,

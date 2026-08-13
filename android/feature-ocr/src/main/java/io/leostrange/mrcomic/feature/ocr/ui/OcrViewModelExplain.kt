@@ -286,50 +286,6 @@ internal fun OcrViewModel.cleanupSelectedBlockText() {
     }
 }
 
-internal fun cleanupOcrText(
-    rawText: String,
-    sourceLanguage: String
-): String {
-    var text = rawText
-        .replace("\r\n", "\n")
-        .replace('\r', '\n')
-        .trim()
-
-    text = text.replace(Regex("([\\p{L}\\p{N}])[\\-‐‑‒–—]\\s*\\n\\s*([\\p{L}\\p{N}])"), "$1$2")
-    text = text.replace(Regex("[ \\t]*\\n[ \\t]*"), "\n")
-    text = text.replace(Regex("[ \\t]{2,}"), " ")
-
-    text = when (sourceLanguage) {
-        "ja", "zh" -> {
-            text
-                .replace(Regex("(?<=[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])\\s+(?=[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}])"), "")
-                .replace(Regex("\\n{2,}"), "\n")
-        }
-        else -> {
-            text
-                .replace(Regex("(?<=[\\p{L}\\p{N},;:])\\n(?=[\\p{L}\\p{N}])"), " ")
-                .replace(Regex("\\n{3,}"), "\n\n")
-        }
-    }
-
-    text = text
-        .replace(Regex("\\s+([,.;:!?])"), "$1")
-        .replace(Regex("([“«(\\[{])\\s+"), "$1")
-        .replace(Regex("\\s+([”»)\\]}])"), "$1")
-        .replace(Regex("[|¦]{2,}"), "|")
-        .replace(Regex("^[|¦•·]+\\s*"), "")
-        .replace(Regex("\\s*[|¦•·]+$"), "")
-        .replace(Regex("[!?.,]{4,}")) { match ->
-            match.value.take(3)
-        }
-        .replace(Regex("…{2,}"), "…")
-        .replace(Regex("[ \\t]{2,}"), " ")
-        .replace(Regex("\\n{3,}"), "\n\n")
-        .trim()
-
-    return text
-}
-
 internal fun OcrViewModel.buildSelectedBlockExplainContext(
     blockId: String,
     state: OcrUiState

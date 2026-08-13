@@ -194,7 +194,9 @@ internal fun BoxScope.ReaderTopChromeBar(
     onToggleBrightness: () -> Unit,
     onToggleTtsControls: () -> Unit,
     onAutoScrollToggle: () -> Unit,
-    onBrightnessChange: (Float) -> Unit
+    onBrightnessChange: (Float) -> Unit,
+    onAutoScrollSpeedPreview: (Float) -> Unit,
+    onAutoScrollSpeedCommit: (Float) -> Unit
 ) {
     if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
         Surface(
@@ -265,8 +267,8 @@ internal fun BoxScope.ReaderTopChromeBar(
                             showDirectionIcon = uiState.chromeShowDirectionIcon,
                             showTranslateIcon = uiState.chromeShowTranslateIcon,
                             showBrightnessIcon = uiState.chromeShowBrightnessIcon,
-                            showAutoScrollIcon = true,
-                            autoScrollActive = uiState.autoScrollSpeed > 0f,
+                            showAutoScrollIcon = uiState.readerContainerKind != ReaderContainerKind.TEXT_WEBTOON,
+                            autoScrollActive = uiState.autoScrollEnabled,
                             onNavigateBack = onNavigateBack,
                             onToggleToc = onToggleToc,
                             onToggleTextSettings = onToggleTextSettings,
@@ -282,6 +284,16 @@ internal fun BoxScope.ReaderTopChromeBar(
                                 onBrightnessChange = onBrightnessChange
                             )
                         }
+                        ReaderAutoScrollChromeControls(
+                            speed = uiState.autoScrollSpeed,
+                            readingMode = uiState.readingMode,
+                            autoScrollEnabled = uiState.autoScrollEnabled,
+                            isTemporarilyPaused = uiState.isAutoScrollTemporarilyPaused,
+                            countdownProgress = uiState.autoScrollCountdownProgress,
+                            onToggleAutoScroll = onAutoScrollToggle,
+                            onSpeedPreview = onAutoScrollSpeedPreview,
+                            onSpeedCommit = onAutoScrollSpeedCommit,
+                        )
                     }
                     else -> Unit
                 }

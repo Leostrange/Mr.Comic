@@ -115,7 +115,9 @@ fun Comic.storedReaderLocator(): ReaderLocator? {
             position = position,
             title = title,
             fragment = fragment,
-            pageIndex = currentPage
+            pageIndex = currentPage,
+            sectionIndex = currentPage,
+            characterOffset = position
         )
     }
 }
@@ -124,7 +126,7 @@ fun Comic.withStoredReaderLocator(locator: ReaderLocator?): Comic =
     copy(
         readerLocatorHref = locator?.href?.takeIf { it.isNotBlank() },
         readerLocatorProgression = locator?.progression,
-        readerLocatorPosition = locator?.position,
+        readerLocatorPosition = locator?.characterOffset ?: locator?.position,
         readerLocatorTitle = locator?.title?.takeIf { it.isNotBlank() },
         readerLocatorFragment = locator?.fragment?.takeIf { it.isNotBlank() }
     )

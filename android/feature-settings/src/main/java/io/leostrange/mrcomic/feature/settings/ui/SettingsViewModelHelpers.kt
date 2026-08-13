@@ -8,7 +8,6 @@ import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.ui.library.LibraryThemePresetSnapshot
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 

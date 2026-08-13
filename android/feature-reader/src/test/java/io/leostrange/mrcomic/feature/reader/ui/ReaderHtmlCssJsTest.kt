@@ -256,6 +256,38 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun protocolBootstrapCarriesVersionAndGeneration() {
+        val js = readerWebViewProtocolBootstrapJs(generation = 42L)
+
+        assertTrue(js.contains("version:1"))
+        assertTrue(js.contains("generation:42"))
+        assertTrue(js.contains("type:'committed'"))
+        assertTrue(js.contains("window.__mrcomicProtocol"))
+    }
+
+    @Test
+    fun protocolPagedLayoutWrapsLegacyPayloadWithoutDuplicatingLayoutLogic() {
+        val legacy = readerPagedLayoutJs(targetPage = 3)
+        val protocol = readerPagedLayoutJs(targetPage = 3, generation = 9L)
+
+        assertTrue(protocol.contains("type:'layoutReady'"))
+        assertTrue(protocol.contains("generation:9"))
+        assertTrue(protocol.contains("var rawPayload="))
+        assertEquals(1, protocol.windowCount("var requested=3;"))
+        assertTrue(protocol.length > legacy.length)
+    }
+
+    @Test
+    fun contentProbeReturnsVersionedMetricsEnvelope() {
+        val js = readerWebViewContentProbeJs(generation = 5L)
+
+        assertTrue(js.contains("type:'contentMeasured'"))
+        assertTrue(js.contains("generation:5"))
+        assertTrue(js.contains("rawText"))
+        assertTrue(js.contains("protocol_wrapper"))
+    }
+
+    @Test
     fun readerPagedLayoutJs_mediaPagesDoNotMaskFrontispieceBottom() {
         val js = readerPagedLayoutJs(targetPage = 0)
 
@@ -498,8 +530,8 @@ class ReaderHtmlCssJsTest {
             js.contains("orphanGuardStart>current+lineHeight*1.1")
         )
         assertTrue(
-            "blocks of up to 3.0 line heights must not be left as page-tail orphans",
-            js.contains("endBottom-orphanGuardStart<=lineHeight*3.0")
+            "only a genuinely isolated final line should trigger the orphan guard",
+            js.contains("endBottom-orphanGuardStart<=lineHeight*1.15")
         )
         assertTrue(
             "the page must roll back to the last fully-fitted fragment",
@@ -510,8 +542,8 @@ class ReaderHtmlCssJsTest {
             js.contains("nextStart=orphanGuardStart;")
         )
         assertTrue(
-            "rollback only when the trimmed page still fills at least 65%",
-            js.contains("pageFillRatio>=0.65")
+            "rollback only when the trimmed page still fills at least 90%",
+            js.contains("pageFillRatio>=0.90")
         )
     }
 
@@ -640,3 +672,6 @@ class ReaderHtmlCssJsTest {
         assertTrue("fallback alpha", rgba.contains("0.5"))
     }
 }
+
+private fun String.windowCount(needle: String): Int =
+    windowed(needle.length).count { it == needle }

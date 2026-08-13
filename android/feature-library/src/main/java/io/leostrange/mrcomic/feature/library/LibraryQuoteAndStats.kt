@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
@@ -28,7 +27,6 @@ import io.leostrange.mrcomic.core.ui.locale.libraryFileCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteCountLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuotePageLabel
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceCountLabel
-import io.leostrange.mrcomic.feature.library.formatQuoteDate
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceMissingLabel
 
 @Composable

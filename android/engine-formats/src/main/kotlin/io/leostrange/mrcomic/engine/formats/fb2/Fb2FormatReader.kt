@@ -12,12 +12,10 @@ import io.leostrange.mrcomic.engine.formats.base.TocEntry
 import io.leostrange.mrcomic.engine.formats.base.buildUnifiedReaderHtmlDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.jsoup.parser.Parser
 import org.xmlpull.v1.XmlPullParser
 import java.io.File
 import java.io.InputStream
 import java.net.URLDecoder
-import java.nio.charset.Charset
 
 /**
  * FB2 reader.  Two automatic modes:

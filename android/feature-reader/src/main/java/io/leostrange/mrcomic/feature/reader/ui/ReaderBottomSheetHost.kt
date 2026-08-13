@@ -1,10 +1,8 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.ClipboardManager
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 

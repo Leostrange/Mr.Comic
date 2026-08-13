@@ -65,7 +65,12 @@ fun readerTextWebtoonBoundaryNavigationStep(
     }
 }
 
-fun readerHtmlSelectionActionsEnabled(pagedModeScrollLock: Boolean): Boolean = !pagedModeScrollLock
+/**
+ * Text selection and its action mode are enabled in both PAGE and WEBTOON.
+ * A proven PAGE swipe suppresses the action mode through the drag flag instead,
+ * so a page turn is never mistaken for a long-press selection.
+ */
+fun readerHtmlSelectionActionsEnabled(pagedModeScrollLock: Boolean): Boolean = true
 
 fun readerHtmlReloadResetsScroll(pagedModeScrollLock: Boolean): Boolean = !pagedModeScrollLock
 

@@ -4,7 +4,6 @@ import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.OverlayDisplayMode
 import io.leostrange.mrcomic.feature.ocr.data.shouldAllowOcrDictionaryLookup
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 

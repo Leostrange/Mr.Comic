@@ -54,13 +54,17 @@ interface BookSession {
 
     /**
      * Returns the last known reading position, or null if the book
-     * has not been opened before.
+     * has not been opened before. Reflowable sessions should populate
+     * section/character coordinates in addition to format-native href and
+     * progression; raster sessions should populate pageIndex.
      */
     suspend fun currentLocator(): ReaderLocator?
 
     /**
      * Jumps to the given locator and returns the resolved position,
-     * or null if the locator could not be resolved.
+     * or null if the locator could not be resolved. Implementations prefer
+     * href/fragment, then section/character coordinates, then progression or
+     * page fallback when the preferred coordinate is unavailable.
      */
     suspend fun goTo(locator: ReaderLocator): ReaderLocator?
 

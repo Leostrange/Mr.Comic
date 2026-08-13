@@ -45,7 +45,6 @@ data class LibraryThemePresetSnapshot(
         .put("surfaceOpacity", surfaceOpacity)
         .toString()
 }
-
 fun parseLibraryThemePreset(raw: String?): LibraryThemePresetSnapshot? {
     if (raw.isNullOrBlank()) return null
     return runCatching {
@@ -198,17 +197,8 @@ private val libraryQuickPresetSpecs = listOf(
     )
 )
 
-fun libraryQuickPresetCatalog(): List<LibraryQuickPresetSpec> = libraryQuickPresetSpecs
-
 fun libraryQuickPresetSpec(presetId: String): LibraryQuickPresetSpec? =
     libraryQuickPresetSpecs.firstOrNull { it.id == presetId.uppercase(Locale.ROOT) }
-
-fun resolveLibraryQuickPresetId(
-    snapshot: LibraryThemePresetSnapshot,
-    useAmoledDark: Boolean
-): String? = libraryQuickPresetSpecs
-    .firstOrNull { matchesLibraryQuickPreset(snapshot, useAmoledDark, it.id) }
-    ?.id
 
 fun matchesLibraryQuickPreset(
     snapshot: LibraryThemePresetSnapshot,
@@ -232,62 +222,4 @@ fun matchesLibraryQuickPreset(
             snapshot.shelfStyle == "NEON" &&
             snapshot.graphicCoverStyle == "POSTER"
     else -> false
-}
-
-fun libraryQuickPresetTitle(presetId: String, language: String): String = when (presetId.uppercase(Locale.ROOT)) {
-    LIBRARY_QUICK_PRESET_PAPER -> when (language) {
-        "ja" -> "ペーパー"
-        "zh" -> "纸感"
-        "ko" -> "페이퍼"
-        "ru" -> "Бумага"
-        else -> "Paper"
-    }
-    LIBRARY_QUICK_PRESET_DARK_SHELF -> when (language) {
-        "ja" -> "ダークシェルフ"
-        "zh" -> "暗色书架"
-        "ko" -> "다크 셸프"
-        "ru" -> "Тёмная полка"
-        else -> "Dark Shelf"
-    }
-    LIBRARY_QUICK_PRESET_AMOLED -> "AMOLED"
-    LIBRARY_QUICK_PRESET_COMICS_NEON -> when (language) {
-        "ja" -> "コミック / ネオン"
-        "zh" -> "漫画 / 霓虹"
-        "ko" -> "코믹스 / 네온"
-        "ru" -> "Комиксы / Неон"
-        else -> "Comics / Neon"
-    }
-    else -> presetId
-}
-
-fun libraryQuickPresetDescription(presetId: String, language: String): String = when (presetId.uppercase(Locale.ROOT)) {
-    LIBRARY_QUICK_PRESET_PAPER -> when (language) {
-        "ja" -> "あたたかい紙の背景、オーク棚、静かなカード。"
-        "zh" -> "温暖纸感背景、橡木书架、安静卡片。"
-        "ko" -> "따뜻한 종이 배경, 오크 선반, 차분한 카드."
-        "ru" -> "Тёплая бумажная основа, дубовые полки, спокойные карточки."
-        else -> "Warm paper background, oak shelves, calm cards."
-    }
-    LIBRARY_QUICK_PRESET_DARK_SHELF -> when (language) {
-        "ja" -> "濃い木目、深い棚、抑えたコントラスト。"
-        "zh" -> "深色木架、更深层次、克制对比。"
-        "ko" -> "짙은 목재, 깊은 선반, 절제된 대비."
-        "ru" -> "Тёмное дерево, глубокие полки и сдержанный контраст."
-        else -> "Dark wood, deeper shelves, restrained contrast."
-    }
-    LIBRARY_QUICK_PRESET_AMOLED -> when (language) {
-        "ja" -> "純粋なダーク基調、最小限の棚、静かなUI。"
-        "zh" -> "纯黑风格、极简书架、低调界面。"
-        "ko" -> "순수한 다크 톤, 미니멀 선반, 조용한 크롬."
-        "ru" -> "Чистый тёмный вид, минимальные полки и тихая подача."
-        else -> "Pure dark look with minimal shelves and quiet chrome."
-    }
-    LIBRARY_QUICK_PRESET_COMICS_NEON -> when (language) {
-        "ja" -> "ショーケースカード、マンガ調背景、ネオン棚。"
-        "zh" -> "展示型卡片、漫画墨感背景、霓虹层架。"
-        "ko" -> "쇼케이스 카드, 만화 잉크 배경, 네온 선반."
-        "ru" -> "Витринные карточки, фон манга-чернил и неоновая полка."
-        else -> "Showcase cards, manga ink background, neon shelf edge."
-    }
-    else -> presetId
 }

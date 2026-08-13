@@ -6,9 +6,7 @@ import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**

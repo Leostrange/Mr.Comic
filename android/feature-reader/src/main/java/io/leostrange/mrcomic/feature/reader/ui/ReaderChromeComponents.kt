@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.BrightnessLow
@@ -323,7 +324,7 @@ private fun ReaderExpandedActionButtons(
                         content = {
                             ReaderChromeIconButton(onClick = onAutoScrollToggle) {
                                 Icon(
-                                    Icons.Default.PlayArrow,
+                                    imageVector = if (autoScrollActive) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                     contentDescription = "Auto-scroll",
                                     tint = if (autoScrollActive) {
                                         MaterialTheme.colorScheme.primary

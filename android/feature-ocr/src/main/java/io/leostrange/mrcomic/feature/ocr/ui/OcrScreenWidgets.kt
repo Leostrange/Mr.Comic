@@ -20,7 +20,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.leostrange.mrcomic.core.model.OcrBlock
 import io.leostrange.mrcomic.core.ui.library.RootChromeDensePillShape
 import io.leostrange.mrcomic.core.ui.library.RootChromePanelShape
 import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
@@ -223,40 +222,4 @@ internal fun OutlinedButton(
             }
         }
     }
-}
-
-internal fun buildSelectedBlockContextPreview(
-    selectedBlockId: String?,
-    recognizedBlocks: List<OcrBlock>
-): Pair<String?, String?> {
-    if (selectedBlockId == null) return null to null
-    val orderedBlocks = recognizedBlocks.sortedWith(
-        compareBy<OcrBlock> { it.bboxTop }
-            .thenBy { it.bboxLeft }
-            .thenByDescending { it.bboxWidth * it.bboxHeight }
-    )
-    val index = orderedBlocks.indexOfFirst { it.id == selectedBlockId }
-    if (index == -1) return null to null
-
-    val before = orderedBlocks
-        .subList(0, index)
-        .asReversed()
-        .asSequence()
-        .mapNotNull(::contextSnippet)
-        .firstOrNull()
-    val after = orderedBlocks
-        .subList((index + 1).coerceAtMost(orderedBlocks.size), orderedBlocks.size)
-        .asSequence()
-        .mapNotNull(::contextSnippet)
-        .firstOrNull()
-    return before to after
-}
-
-internal fun contextSnippet(block: OcrBlock): String? {
-    val normalized = block.textNormalized
-        .ifBlank { block.textOriginal }
-        .trim()
-        .replace(Regex("\\s+"), " ")
-    if (normalized.isBlank()) return null
-    return if (normalized.length <= 96) normalized else normalized.take(93).trimEnd() + "..."
 }

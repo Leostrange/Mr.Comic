@@ -1,8 +1,5 @@
 package io.leostrange.mrcomic.engine.formats.text
 
-import android.content.Context
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import org.jsoup.nodes.Document
 
 private val TXT_CHAPTER_PATTERNS = listOf(
     Regex("""(?iu)^(глава|часть|книга|том)\s+[0-9ivxlcdm]+(?:[\s\p{Pd}.:]+.+)?$"""),

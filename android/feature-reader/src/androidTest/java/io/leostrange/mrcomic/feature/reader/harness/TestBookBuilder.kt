@@ -1,5 +1,9 @@
 package io.leostrange.mrcomic.feature.reader.harness
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import java.io.File
 import java.util.UUID
 import java.util.zip.ZipEntry
@@ -60,7 +64,7 @@ object TestBookBuilder {
             """<?xml version="1.0" encoding="UTF-8"?>
             <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="uid">
               <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-                <dc:identifier id="uid">urn:uuid:${UUID.randomUUID()}</dc:identifier>
+                <dc:identifier id="uid">urn:uuid:${stableBookId(title, language, chapters.size)}</dc:identifier>
                 <dc:title>$title</dc:title>
                 <dc:language>$language</dc:language>
               </metadata>
@@ -190,11 +194,122 @@ object TestBookBuilder {
         )
     }
 
+    /** Deterministic minimal DOCX used by the runtime format matrix. */
+    fun buildDocx(outputDir: File): File {
+        val docxDir = File(outputDir, "docx_basic_source").apply { mkdirs() }
+        File(docxDir, "_rels").mkdirs()
+        File(docxDir, "word").mkdirs()
+        File(docxDir, "[Content_Types].xml").writeText(
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+              <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+              <Default Extension="xml" ContentType="application/xml"/>
+              <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+            </Types>""".trimIndent()
+        )
+        File(docxDir, "_rels/.rels").writeText(
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+              <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+            </Relationships>""".trimIndent()
+        )
+        File(docxDir, "word/document.xml").writeText(
+            """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+            <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+              <w:body>
+                <w:p><w:r><w:t>Mr.Comic DOCX runtime fixture</w:t></w:r></w:p>
+                <w:p><w:r><w:t>A stable paragraph verifies text readiness and restore.</w:t></w:r></w:p>
+                <w:sectPr/>
+              </w:body>
+            </w:document>""".trimIndent()
+        )
+        val output = File(outputDir, "docx-basic.docx")
+        zipDirectory(docxDir, output)
+        docxDir.deleteRecursively()
+        return output
+    }
+
+    /** Deterministic two-page CBZ used as the raster representative in smoke tests. */
+    fun buildCbz(outputDir: File): File {
+        val cbzDir = File(outputDir, "cbz_basic_source").apply { mkdirs() }
+        buildRasterPages(cbzDir)
+        val output = File(outputDir, "cbz-basic.cbz")
+        zipDirectory(cbzDir, output)
+        cbzDir.deleteRecursively()
+        return output
+    }
+
+    /** ZIP containing a text book; exercises archive delegation into a reflowable reader. */
+    fun buildTextArchive(outputDir: File): File {
+        val sourceDir = File(outputDir, "text_archive_basic_source").apply { mkdirs() }
+        File(sourceDir, "book.txt").writeText(
+            "Mr.Comic text archive fixture.\n\n" +
+                "The second section is long enough to exercise reflow and restore. ".repeat(20)
+        )
+        return File(outputDir, "text-archive-basic.txt.zip").also { output ->
+            zipDirectory(sourceDir, output)
+            sourceDir.deleteRecursively()
+        }
+    }
+
+    /** Two-page image folder used to verify directory-backed raster reading. */
+    fun buildImageFolder(outputDir: File): File =
+        File(outputDir, "image-folder-basic").apply {
+            mkdirs()
+            buildRasterPages(this)
+        }
+
+    /** Minimal deterministic two-page PDF without a runtime PDF-generation dependency. */
+    fun buildPdf(outputDir: File): File {
+        val pageOne = "BT /F1 18 Tf 72 720 Td (Mr.Comic PDF page 1) Tj ET"
+        val pageTwo = "BT /F1 18 Tf 72 720 Td (Mr.Comic PDF page 2) Tj ET"
+        val objects = listOf(
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 5 0 R >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 7 0 R >> >> /Contents 6 0 R >>",
+            "<< /Length ${pageOne.length} >>\nstream\n$pageOne\nendstream",
+            "<< /Length ${pageTwo.length} >>\nstream\n$pageTwo\nendstream",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
+        )
+        val body = StringBuilder("%PDF-1.4\n")
+        val offsets = objects.mapIndexed { index, value ->
+            body.length.also { body.append("${index + 1} 0 obj\n$value\nendobj\n") }
+        }
+        val xrefOffset = body.length
+        body.append("xref\n0 ${objects.size + 1}\n")
+        body.append("0000000000 65535 f \n")
+        offsets.forEach { body.append(it.toString().padStart(10, '0')).append(" 00000 n \n") }
+        body.append("trailer\n<< /Size ${objects.size + 1} /Root 1 0 R >>\n")
+        body.append("startxref\n$xrefOffset\n%%EOF\n")
+        return File(outputDir, "pdf-basic.pdf").apply { writeText(body.toString(), Charsets.US_ASCII) }
+    }
+
+    private fun buildRasterPages(directory: File) {
+        repeat(2) { pageIndex ->
+            val bitmap = Bitmap.createBitmap(320, 480, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            canvas.drawColor(if (pageIndex == 0) Color.WHITE else Color.rgb(235, 240, 250))
+            val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.BLACK
+                textSize = 28f
+            }
+            canvas.drawText("Mr.Comic page ${pageIndex + 1}", 30f, 80f, paint)
+            File(directory, "page-${pageIndex + 1}.png").outputStream().use { stream ->
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream))
+            }
+            bitmap.recycle()
+        }
+    }
+
+    private fun stableBookId(title: String, language: String, chapterCount: Int): UUID =
+        UUID.nameUUIDFromBytes("$title|$language|$chapterCount".toByteArray(Charsets.UTF_8))
+
     private fun zipDirectory(dir: File, output: File) {
         ZipOutputStream(output.outputStream()).use { zos ->
             dir.walkTopDown().filter { it.isFile }.forEach { file ->
-                val entryName = file.relativeTo(dir).path
-                zos.putNextEntry(ZipEntry(entryName))
+                val entryName = file.relativeTo(dir).path.replace(File.separatorChar, '/')
+                zos.putNextEntry(ZipEntry(entryName).apply { time = 0L })
                 file.inputStream().use { it.copyTo(zos) }
                 zos.closeEntry()
             }

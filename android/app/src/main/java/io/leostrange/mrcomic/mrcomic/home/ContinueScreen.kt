@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,9 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
 import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer

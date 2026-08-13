@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+  <description>
+    <title-info>
+      <genre>prose</genre>
+      <author><first-name>Mr.Comic</first-name><last-name>QA</last-name></author>
+      <book-title>Runtime fixture</book-title>
+      <lang>en</lang>
+    </title-info>
+  </description>
+  <body>
+    <section id="chapter-one"><title><p>Chapter one</p></title><p>A stable FB2 sentence verifies the first section.</p></section>
+    <section id="chapter-two"><title><p>Chapter two</p></title><p>The second section verifies mode restoration.</p></section>
+  </body>
+</FictionBook>

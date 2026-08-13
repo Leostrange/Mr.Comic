@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.home
 
-import androidx.compose.foundation.background
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage

@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +32,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
+import io.leostrange.mrcomic.feature.reader.ui.PageLoadState
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
 import io.leostrange.mrcomic.feature.reader.ui.ReaderViewModel
+import io.leostrange.mrcomic.feature.reader.ui.isAutoScrollTemporarilyPaused
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -64,6 +69,17 @@ fun WebtoonView(
         listState.scrollToItem(uiState.currentPage)
     }
     var zoomedPageIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Raster WEBTOON auto-scroll: content-pixel scrolling that pauses on drag/zoom/end-of-list.
+    WebtoonAutoPixelScrollEffect(
+        enabled = uiState.autoScrollEnabled && !uiState.isAutoScrollTemporarilyPaused,
+        speed = uiState.autoScrollSpeed,
+        listState = listState,
+        userIsDragging = listState.isScrollInProgress,
+        zoomed = zoomedPageIndex != null,
+        onStop = { viewModel.autoScrollRuntimeController.stop() }
+    )
+
     val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
         ReaderImageCrop(
             horizontalFraction = marginCropHorizontal,
@@ -146,9 +162,8 @@ fun WebtoonView(
         flingBehavior = if (isEInk) NoFlingBehavior else ScrollableDefaults.flingBehavior()
     ) {
         items(uiState.totalPages) { pageIndex ->
-            // Collect from StateFlow вЂ” no polling, immediate update when bitmap is ready
-            val bitmap by viewModel.pageLoader.getPageFlow(pageIndex).collectAsState(initial = viewModel.pageLoader.getPage(pageIndex))
-            val htmlPage by viewModel.getWebtoonHtmlPageFlow(pageIndex).collectAsState(initial = null)
+            val pageState by viewModel.pageLoader.getPageLoadStateFlow(pageIndex)
+                .collectAsState(initial = PageLoadState.Loading)
             LaunchedEffect(uiState.comic?.id, pageIndex) {
                 viewModel.pageLoader.loadPage(pageIndex)
             }
@@ -156,93 +171,132 @@ fun WebtoonView(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
-                val currentBitmap = bitmap
-                if (currentBitmap != null) {
-                    // Update aspect ratio estimate from the first decoded page so that
-                    // subsequent placeholders use the correct proportions.
-                    val bitmapAspect = currentBitmap.height.toFloat() /
-                        currentBitmap.width.coerceAtLeast(1).toFloat()
-                    if (bitmapAspect in 0.5f..3f && bitmapAspect != estimatedPageAspect) {
-                        estimatedPageAspect = bitmapAspect
+                when (val state = pageState) {
+                    is PageLoadState.BitmapReady -> {
+                        val currentBitmap = state.bitmap
+                        val bitmapAspect = currentBitmap.height.toFloat() /
+                            currentBitmap.width.coerceAtLeast(1).toFloat()
+                        if (bitmapAspect in 0.5f..3f && bitmapAspect != estimatedPageAspect) {
+                            estimatedPageAspect = bitmapAspect
+                        }
+                        ZoomableFillWidthImage(
+                            bitmap = currentBitmap,
+                            contentDescription = "Page ${pageIndex + 1}",
+                            resetToken = if (zoomedPageIndex != null && zoomedPageIndex != pageIndex) zoomedPageIndex else null,
+                            onLeftTap = onLeftTap,
+                            onRightTap = onRightTap,
+                            onCenterTap = onCenterTap,
+                            onZoomChanged = { isZoomed ->
+                                zoomedPageIndex = when {
+                                    isZoomed -> pageIndex
+                                    zoomedPageIndex == pageIndex -> null
+                                    else -> zoomedPageIndex
+                                }
+                            },
+                            imageScaleMode = imageScaleMode,
+                            crop = imageCrop,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
-                    ZoomableFillWidthImage(
-                        bitmap = currentBitmap,
-                        contentDescription = "Page ${pageIndex + 1}",
-                        resetToken = if (zoomedPageIndex != null && zoomedPageIndex != pageIndex) zoomedPageIndex else null,
-                        onLeftTap = onLeftTap,
-                        onRightTap = onRightTap,
-                        onCenterTap = onCenterTap,
-                        onZoomChanged = { isZoomed ->
-                            zoomedPageIndex = when {
-                                isZoomed -> pageIndex
-                                zoomedPageIndex == pageIndex -> null
-                                else -> zoomedPageIndex
-                            }
-                        },
-                        imageScaleMode = imageScaleMode,
-                        crop = imageCrop,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else if (htmlPage != null) {
-                    val html = htmlPage!!
-                    val htmlBaseUrl = uiState.htmlBaseUrl
-                    var lastLoadedHtml by remember { mutableStateOf("") }
-                    AndroidView(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(),
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                settings.javaScriptEnabled = true
-                                settings.loadWithOverviewMode = true
-                                settings.useWideViewPort = true
-                                settings.domStorageEnabled = false
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        view?.post {
-                                            view.requestLayout()
+                    is PageLoadState.HtmlReady -> {
+                        val html = state.html
+                        val htmlBaseUrl = uiState.htmlBaseUrl
+                        var lastLoadedHtml by remember { mutableStateOf("") }
+                        AndroidView(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(),
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    settings.javaScriptEnabled = true
+                                    settings.loadWithOverviewMode = true
+                                    settings.useWideViewPort = true
+                                    settings.domStorageEnabled = false
+                                    webViewClient = object : WebViewClient() {
+                                        override fun onPageFinished(view: WebView?, url: String?) {
+                                            view?.post {
+                                                view.requestLayout()
+                                            }
                                         }
                                     }
+                                    isVerticalScrollBarEnabled = false
+                                    isHorizontalScrollBarEnabled = false
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.WRAP_CONTENT
+                                    )
                                 }
-                                isVerticalScrollBarEnabled = false
-                                isHorizontalScrollBarEnabled = false
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                )
-                            }
-                        },
-                        update = { webView ->
-                            if (html != lastLoadedHtml) {
-                                lastLoadedHtml = html
-                                val safeHtml = html.ifBlank { "<p></p>" }
-                                webView.loadDataWithBaseURL(htmlBaseUrl, safeHtml, "text/html", "UTF-8", null)
-                                webView.post {
-                                    webView.requestLayout()
+                            },
+                            update = { webView ->
+                                if (html != lastLoadedHtml) {
+                                    lastLoadedHtml = html
+                                    val safeHtml = html.ifBlank { "<p></p>" }
+                                    webView.loadDataWithBaseURL(htmlBaseUrl, safeHtml, "text/html", "UTF-8", null)
+                                    webView.post {
+                                        webView.requestLayout()
+                                    }
                                 }
+                            },
+                            onRelease = { webView ->
+                                (webView.parent as? ViewGroup)?.removeView(webView)
+                                webView.stopLoading()
+                                webView.loadUrl("about:blank")
+                                webView.destroy()
                             }
-                        },
-                        onRelease = { webView ->
-                            // This AndroidView lives inside a scrolling list item; without teardown
-                            // every recycled row leaks a WebView + renderer as the user scrolls.
-                            (webView.parent as? ViewGroup)?.removeView(webView)
-                            webView.stopLoading()
-                            webView.loadUrl("about:blank")
-                            webView.destroy()
+                        )
+                    }
+                    is PageLoadState.Failed -> {
+                        WebtoonPageErrorCard(
+                            pageIndex = pageIndex,
+                            reason = state.reason,
+                            onRetry = { viewModel.retryLoadPage(pageIndex) }
+                        )
+                    }
+                    PageLoadState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f / estimatedPageAspect),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
                         }
-                    )
-                } else {
-                    // Placeholder sized to match real page proportions so there are no
-                    // layout jumps when the bitmap finishes loading.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f / estimatedPageAspect),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = Color.White)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebtoonPageErrorCard(
+    pageIndex: Int,
+    reason: String,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f / 1.45f),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Страница ${pageIndex + 1}",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White
+            )
+            Text(
+                text = reason,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+            TextButton(onClick = onRetry) {
+                Text("Повторить", color = Color.White)
             }
         }
     }

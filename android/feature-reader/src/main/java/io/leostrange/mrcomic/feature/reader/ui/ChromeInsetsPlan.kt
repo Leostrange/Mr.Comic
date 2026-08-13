@@ -3,8 +3,6 @@ package io.leostrange.mrcomic.feature.reader.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlin.math.roundToInt
-import androidx.compose.ui.unit.Density
-import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 
 /**
  * ARC-11 S3: pure-Kotlin chrome inset plan.
@@ -196,7 +194,14 @@ internal fun rememberChromeInsetsPlan(
     measuredBottomChromePx,
     systemTopInsetPx,
     systemBottomInsetPx,
-
+    stableTopChromeReservePx,
+    stableBottomChromeReservePx,
+    baselineTopChromeReservePx,
+    baselineBottomChromeReservePx,
+    estimatedOverlayContentPx,
+    maxStableTopChromeReservePx,
+    textSentenceInsetPx,
+    densityScale,
 ) {
     ChromeInsetsPlan.compute(
         chromeIsVisible = chromeIsVisible,

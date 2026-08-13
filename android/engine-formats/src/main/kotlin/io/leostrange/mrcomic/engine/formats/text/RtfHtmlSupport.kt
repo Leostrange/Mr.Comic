@@ -163,12 +163,15 @@ internal object RtfHtmlSupport {
                     ParsedControl(Node.Control("*"), currentUcSkip)
                 }
                 else -> {
-                    // Always advance past non-letter / non-identifier characters (P0 #4)
-                    index++
-                    if (index >= raw.length) return ParsedControl(null, currentUcSkip)
                     if (!next.isLetter()) {
+                        // Unknown one-character control symbol. The known symbols above
+                        // already consume themselves; discard this one and keep parsing.
+                        index++
                         return ParsedControl(null, currentUcSkip)
                     }
+                    // [index] still points at the first character after the backslash.
+                    // Advancing here used to truncate every control word (fonttbl became
+                    // onttbl, par became ar), leaking metadata and disabling formatting.
                     val start = index
                     while (index < raw.length && raw[index].isLetter()) index++
                     val word = raw.substring(start, index)

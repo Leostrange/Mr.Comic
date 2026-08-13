@@ -1,0 +1,6 @@
+Mr.Comic runtime fixture
+
+Chapter one starts with a stable sentence used to verify text readiness and position restore.
+The second paragraph is intentionally long enough to remain visible after typography changes. It contains no private data and is released with the project test sources.
+
+Chapter two starts here. Returning from PAGE to WEBTOON must not jump back to the title.

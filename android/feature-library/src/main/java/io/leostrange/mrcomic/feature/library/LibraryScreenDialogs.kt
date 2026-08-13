@@ -6,7 +6,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.leostrange.mrcomic.core.model.Audiobook
 import io.leostrange.mrcomic.core.model.Comic

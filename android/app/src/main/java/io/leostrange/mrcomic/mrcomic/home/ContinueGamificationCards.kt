@@ -27,7 +27,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,7 +35,6 @@ import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
 import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
 import io.leostrange.mrcomic.core.domain.analytics.MascotStage
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpoint
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine

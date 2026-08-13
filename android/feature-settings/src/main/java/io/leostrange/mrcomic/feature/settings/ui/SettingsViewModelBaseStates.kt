@@ -1,11 +1,9 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.datastore.preferences.core.Preferences
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.ReaderScreenTimeoutMode
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 

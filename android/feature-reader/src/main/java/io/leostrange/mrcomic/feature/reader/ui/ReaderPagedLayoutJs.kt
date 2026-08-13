@@ -12,23 +12,33 @@ package io.leostrange.mrcomic.feature.reader.ui
  * with no side effects or Android dependencies.
  */
 
-internal fun readerPagedLayoutJs(targetPage: Int): String = readerPagedCoreJs(
-    """
-    var requested=$targetPage;
-    var target=(requested<0)?current:((requested>=2147483647)?(pageCount-1):Math.max(0,Math.min(pageCount-1,requested||0)));
-    """.trimIndent()
-)
+internal fun readerPagedLayoutJs(targetPage: Int, generation: Long? = null): String {
+    val legacyScript = readerPagedCoreJs(
+        """
+        var requested=$targetPage;
+        var target=(requested<0)?current:((requested>=2147483647)?(pageCount-1):Math.max(0,Math.min(pageCount-1,requested||0)));
+        """.trimIndent()
+    )
+    return generation?.let {
+        readerWebViewProtocolEnvelopeJs(it, eventType = "layoutReady", payloadScript = legacyScript)
+    } ?: legacyScript
+}
 
-internal fun readerPagedTurnJs(delta: Int): String = readerPagedCoreJs(
-    """
-    var target=current+($delta);
-    if(target<0||target>=pageCount){
-      return JSON.stringify({handled:false,pageIndex:current,pageCount:pageCount});
-    }
-    """.trimIndent(),
-    failureHandled = false,
-    reuseExistingLayoutsOnly = true
-)
+internal fun readerPagedTurnJs(delta: Int, generation: Long? = null): String {
+    val legacyScript = readerPagedCoreJs(
+        """
+        var target=current+($delta);
+        if(target<0||target>=pageCount){
+          return JSON.stringify({handled:false,pageIndex:current,pageCount:pageCount});
+        }
+        """.trimIndent(),
+        failureHandled = false,
+        reuseExistingLayoutsOnly = true
+    )
+    return generation?.let {
+        readerWebViewProtocolEnvelopeJs(it, eventType = "layoutReady", payloadScript = legacyScript)
+    } ?: legacyScript
+}
 
 internal fun readerPagedCoreJs(
     targetJs: String,
@@ -428,7 +438,10 @@ internal fun readerPagedCoreJs(
           if(blockTop>endBottom)break;
           orphanGuardStart=blockTop;
         }
-        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*3.0){
+        // Avoid only a genuinely isolated final line. Moving a whole short paragraph
+        // after a merely 65%-filled page created conspicuous empty bands, especially
+        // in landscape. Normal paragraphs should split and use the available viewport.
+        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*1.15){
           var backupBottom=0;
           for(var p=0;p<=lastFitIndex;p++){
             var fitted=unique[p];
@@ -437,7 +450,7 @@ internal fun readerPagedCoreJs(
             }
           }
           var pageFillRatio=(backupBottom-current)/usableHeight;
-          if(backupBottom>current+lineHeight*0.75&&pageFillRatio>=0.65){
+          if(backupBottom>current+lineHeight*0.75&&pageFillRatio>=0.90){
             endBottom=backupBottom;
             nextStart=orphanGuardStart;
           }

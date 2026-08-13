@@ -41,6 +41,8 @@ internal fun BoxScope.ReaderChromeBars(
     onToggleTtsControls: () -> Unit,
     onAutoScrollToggle: () -> Unit,
     onBrightnessChange: (Float) -> Unit,
+    onAutoScrollSpeedPreview: (Float) -> Unit,
+    onAutoScrollSpeedCommit: (Float) -> Unit,
     onToggleBookmark: () -> Unit,
     onApplyPreset: (ReadingPreset) -> Unit,
     onReadingModeChange: (ReadingMode) -> Unit,
@@ -72,6 +74,8 @@ internal fun BoxScope.ReaderChromeBars(
         onToggleTtsControls = onToggleTtsControls,
         onAutoScrollToggle = onAutoScrollToggle,
         onBrightnessChange = onBrightnessChange,
+        onAutoScrollSpeedPreview = onAutoScrollSpeedPreview,
+        onAutoScrollSpeedCommit = onAutoScrollSpeedCommit,
     )
 
     ReaderBottomChromePanel(

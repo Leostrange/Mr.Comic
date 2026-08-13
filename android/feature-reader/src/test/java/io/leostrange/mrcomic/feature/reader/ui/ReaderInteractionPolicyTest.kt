@@ -107,8 +107,9 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
-    fun htmlSelectionActionsAreDisabledInPagedModeToPreventSwipeSelection() {
-        assertFalse(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
+    fun htmlSelectionActionsAreEnabledInBothPagedAndFreeScrollModes() {
+        // Selection works in PAGE too; a proven swipe is what suppresses the action mode.
+        assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
         assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = false))
     }
 

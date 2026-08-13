@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.engine.formats.text
 
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import java.nio.charset.Charset
 
 // ── RTF non-content destination groups ────────────────────────────────────────

@@ -1,6 +1,6 @@
 # Активный остаток задач Mr.Comic
 
-Дата обновления: 2026-08-09
+Дата обновления: 2026-08-11
 
 Это рабочая точка входа для продолжения. Подробные продуктовые описания остаются в
 `TASKLIST_01_READER_EXPERIENCE.md` ... `TASKLIST_05_PLATFORM_FOUNDATION.md`, а
@@ -13,7 +13,45 @@
 3. Новый UX выпускать только после targeted unit-тестов и проверки на устройстве.
 4. Не очищать несвязанные изменения и не переносить форматный парсинг в UI.
 
+## Security и сверка worktree (2026-08-11)
+
+- B1: `git log -S "tvly-" --all` нашёл один исторический коммит:
+  `61ce56adf15fc34814fe1ff232988e1fae8e9ee9` (`chore: remove 378 unnecessary files — media, AI configs, screenshots, internal docs`).
+  Он достижим из локальных `main`, `backup/arc11-stale-894176f`,
+  `freebuff/apk-6adb2719-9db0-4636-8e83-76257bc94b21`,
+  `freebuff/https-api-hcnsec-cn-claude-code-bd1cc3a8-3e4f-49d7-a4ec-7a34740b2dbc`,
+  `freebuff/task-44e3619f-2b5b-4ee7-a14f-c14e96b57589`,
+  `freebuff/task-69b57678-647e-4f2e-ad31-224f00f2260b`,
+  `wip/opds-fb2-2026-08-09`, `worktree-opds-verify`; remote refs
+  `origin/HEAD` и `origin/main`; тегов `v2.2.0`, `v2.3.0` и трёх
+  `freebuff-snapshot/*`. B2 остаётся отдельной операцией с переписыванием
+  истории и force-push только после явного одобрения.
+- Рабочее дерево: фактических Tavily-значений нет; `TavilySearchAgent` и
+  связанные reader-agent/DI файлы удалены из текущего `main` вместе с ключом.
+- B4: CI job `secrets-scan` запускает `scripts/scan-secrets.sh`; `.gitignore`
+  исключает `local.properties`, `*.pem`, `*.key`, `.env*`. Версионируемый
+  `.githooks/pre-commit` запускает тот же сканер; в этом checkout включён через
+  `core.hooksPath=.githooks`.
+- F1: основной worktree — текущий `main`; отдельный `opds-verify` locked для
+  независимой задачи, а `.freebuff` — старый detached snapshot. Все ранее
+  удалённые reader-agent и legacy engine-format файлы уже отсутствуют в
+  основном рабочем дереве; дополнительный перенос не нужен. `main` на 5
+  коммитов впереди `origin/main`.
+- F2: полный локальный набор Android unit-тестов даёт 1560 тестов, 0 failures,
+  0 errors и 67 ожидаемых skipped (в прежнем числе 1530 не учитывались 30
+  тестов `core-model`). Detekt XML всех 17 модулей: 0 issues.
+
 ## P0 — Reader: корректность чтения
+
+### Reader runtime architecture и matrix (2026-08-12)
+
+- Завершены code-срезы U1-U5 из `docs/plans/2026-08-11-001-refactor-reader-runtime-restore-plan.md`: generation state machine, typed WebView protocol, canonical locator/navigator adapters и rewiring runtime owner.
+- `HtmlPageView.kt` — 345 строк wiring/glue. Legacy triple delayed restore удалён; fallback ограничен одной попыткой на generation.
+- U6 corpus содержит 11 checksum-pinned форматов: EPUB, FB2, HTML, TXT, DOCX, text ZIP, CBZ, настоящий CBR, PDF, настоящий DJVU и image folder. `ReaderFormatMatrixTest` открывает каждую строку через production `FormatFactory`.
+- U7 добавляет release-tier `ReaderRuntimeSoakTest`: 30 open/10 turns/close циклов и проверка единственных ready/dispose событий без load failures.
+- U8 разделяет CI: PR instrumentation исключает `LargeTest`, ручной `reader-release-runtime` запускает format matrix, restore integration и lifecycle soak с загрузкой отчётов.
+- Локальная проверка: 535 reader unit-тестов, 0 failures/errors/skips; reader detekt зелёный; instrumentation Kotlin и app debug Kotlin компилируются.
+- Runtime остаётся неподтверждённым: `adb devices -l` показывает `emulator-5554` и `127.0.0.1:5555` как `device`, но `adb shell getprop sys.boot_completed` зависает на обоих. Строки QA matrix остаются `NOT RUN`, без ложного PASS.
 
 ### RDR-01. Подтвердить и закрыть PAGE -> WEBTOON restoration
 

@@ -1,14 +1,6 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
-import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
-import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
-import io.leostrange.mrcomic.core.domain.util.Result
-import io.leostrange.mrcomic.core.model.DictionaryEntry
-import io.leostrange.mrcomic.core.model.TranslationRequest
-import io.leostrange.mrcomic.core.model.TranslationResult
 import io.leostrange.mrcomic.core.model.TranslationServiceConfig
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -5,7 +5,6 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.api.RenderDeviceTier
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader

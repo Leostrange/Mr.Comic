@@ -5,11 +5,8 @@ import android.graphics.Rect
 import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.domain.translation.TranslationBackendUnavailableException
 import io.leostrange.mrcomic.core.domain.util.Result
-import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.OcrBlock
-import io.leostrange.mrcomic.core.model.TranslationSourceType
 import io.leostrange.mrcomic.core.model.TranslationTransportPreference
-import io.leostrange.mrcomic.feature.ocr.data.shouldUseOcrDictionaryFallback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
@@ -537,15 +534,6 @@ internal suspend fun OcrViewModel.translateSelectedBlockInternal(
         Result.Loading -> Unit
     }
 }
-
-internal fun selectedBlockTranslationInput(
-    block: OcrBlock,
-    state: OcrUiState
-): String = state.selectedBlockCleanedText
-    ?.takeIf { it.isNotBlank() }
-    ?: block.textNormalized.ifBlank { block.textOriginal }
-        .trim()
-        .replace(Regex("\\s+"), " ")
 
 internal fun cropBitmapForBlock(bitmap: Bitmap, block: OcrBlock): Bitmap? {
     if (bitmap.width <= 0 || bitmap.height <= 0) return null

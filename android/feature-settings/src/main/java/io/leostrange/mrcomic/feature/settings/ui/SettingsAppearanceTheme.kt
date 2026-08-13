@@ -7,110 +7,31 @@ package io.leostrange.mrcomic.feature.settings.ui
 
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.FlowRowScope
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.filled.Sort
-import androidx.compose.material.icons.automirrored.filled.TextSnippet
-import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.ReaderInfoSlot
-import io.leostrange.mrcomic.core.model.ReaderScreenTimeoutMode
-import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
-import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
-import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
-import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
-import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.TranslationTransportPreference
-import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicLibraryPresetCard
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
-import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer
-import io.leostrange.mrcomic.core.ui.library.LibraryShelfBar
-import io.leostrange.mrcomic.core.ui.library.LibraryThemePresetSnapshot
-import io.leostrange.mrcomic.core.ui.library.RootChromePanelShape
-import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
-import io.leostrange.mrcomic.core.ui.library.RootChromeTone
-import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
-import io.leostrange.mrcomic.core.ui.library.libraryCardElevation
-import io.leostrange.mrcomic.core.ui.library.parseLibraryThemePreset
-import io.leostrange.mrcomic.core.ui.library.rootChromeBackdropStrength
-import io.leostrange.mrcomic.core.ui.library.rootChromeBackdropVeil
-import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
-import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
-import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
-import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
-import io.leostrange.mrcomic.core.ui.library.rootChromeTextFieldColors
-import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
-import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.core.ui.locale.ocrSourceLanguageOptions
-import io.leostrange.mrcomic.core.ui.locale.translationLanguageOptions
-import io.leostrange.mrcomic.core.ui.sound.UIFeedback
-import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.previewColors
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
-import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopup
-import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopupConfig
-import io.leostrange.mrcomic.feature.settings.R as SettingsR
-import java.util.Locale
-import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
 /**
  * Локализованная подпись предустановки темы. Phase A 2026-08-02.
@@ -455,4 +376,3 @@ internal fun ThemePresetCard(
         )
     }
 }
-

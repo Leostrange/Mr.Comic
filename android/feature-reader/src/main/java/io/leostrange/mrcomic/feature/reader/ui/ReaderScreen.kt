@@ -1,33 +1,24 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.app.Activity
-import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.os.Build
-import android.view.View
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.webkit.WebView
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -44,7 +35,6 @@ import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.reader.R
 import io.leostrange.mrcomic.feature.reader.ui.components.PageView
 import io.leostrange.mrcomic.feature.reader.ui.components.TextContainer
 import io.leostrange.mrcomic.feature.reader.ui.components.WebtoonView
@@ -163,8 +153,8 @@ fun ReaderScreen(
             quoteSavePopupToken = nextReaderUiEventToken(quoteSavePopupToken)
         }
     }
-    // Text books stay in portrait; image-based readers can opt into landscape spreads
-    // only when the actual screen width is large enough.
+    // Text books keep a single-page layout in landscape; image-based readers can opt
+    // into spreads only when the actual screen width is large enough.
     LaunchedEffect(supportsLandscapeSpread, isTextReader) {
         viewModel.readingModeController.onOrientationChanged(
             useLandscapeSpread = supportsLandscapeSpread,
@@ -172,14 +162,10 @@ fun ReaderScreen(
         )
     }
 
-    DisposableEffect(isTextReader, context) {
+    DisposableEffect(context) {
         val activity = context as? Activity
         val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        activity?.requestedOrientation = if (isTextReader) {
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         onDispose {
             activity?.requestedOrientation = previousOrientation.takeUnless {
                 it == ActivityInfo.SCREEN_ORIENTATION_LOCKED
@@ -268,6 +254,16 @@ fun ReaderScreen(
         (uiState.textFontSize.sp.toPx() * uiState.textLineHeight)
             .roundToInt()
             .coerceAtLeast(8)
+    }
+    val freeScrollRestoreTarget = remember(uiState.freeScrollCharacterOffset, uiState.freeScrollProgression) {
+        if (uiState.freeScrollCharacterOffset >= 0 || uiState.freeScrollProgression in 0.0..1.0) {
+            ReaderWebViewRestoreTarget(
+                characterOffset = uiState.freeScrollCharacterOffset.takeIf { it >= 0 },
+                progression = uiState.freeScrollProgression.takeIf { it in 0.0..1.0 }
+            )
+        } else {
+            null
+        }
     }
     val maxStableTopChromeReservePx = with(density) { 96.dp.roundToPx() }
     val estimatedOverlayContentPx = with(density) {
@@ -483,6 +479,44 @@ fun ReaderScreen(
         context = context
     )
 
+    // Auto-scroll: pauses when the app is backgrounded and drives the page
+    // countdown for graphic PAGE/DUAL_PAGE. WEBTOON uses WebtoonAutoPixelScrollEffect.
+    ReaderAutoScrollLifecyclePauseEffect(controller = viewModel.autoScrollRuntimeController)
+    ReaderAutoPageCountdownEffect(
+        enabled = uiState.autoScrollEnabled &&
+            uiState.readerContainerKind == ReaderContainerKind.RASTER_PAGE,
+        paused = uiState.isAutoScrollTemporarilyPaused,
+        intervalMillis = ReaderAutoScrollPrecision.pageTurnIntervalMillis(uiState.autoScrollSpeed),
+        countdownProgress = uiState.autoScrollCountdownProgress,
+        onCountdownProgress = viewModel.autoScrollRuntimeController::updateCountdown,
+        onRequestNextPage = {
+            val step = viewModel.navigationController.pageStepForMode(uiState.readingMode)
+            val next = uiState.currentPage + step
+            if (next >= uiState.totalPages) false
+            else {
+                viewModel.navigationController.nextPage()
+                true
+            }
+        },
+        onReachedEnd = viewModel.autoScrollRuntimeController::stop
+    )
+
+    // Pause auto-scroll while any reader sheet/overlay is open so the countdown or
+    // pixel-scroll cannot advance the document underneath an open dialog.
+    val anyBottomSheetOpen = uiState.showTocSheet ||
+        uiState.showTextSettings ||
+        showReaderAudioSheet ||
+        showTextTranslationPageSheet ||
+        showRsvpOverlay ||
+        openControlCenterAtServices
+    LaunchedEffect(anyBottomSheetOpen) {
+        if (anyBottomSheetOpen) {
+            viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.BOTTOM_SHEET)
+        } else {
+            viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.BOTTOM_SHEET)
+        }
+    }
+
     // Reading area uses reader-specific MaterialTheme (background, text colors).
     // Chrome overlays (top/bottom bars, sheets) use the inherited app MaterialTheme.
     MaterialTheme(colorScheme = readerColorScheme) {
@@ -520,8 +554,32 @@ fun ReaderScreen(
                     val htmlContent = uiState.currentHtmlContent
                     val textWebtoonHtmlContent = uiState.textWebtoonHtmlContent ?: htmlContent
                     val textWebtoonAssetBasePath = uiState.textWebtoonHtmlAssetBasePath ?: uiState.htmlAssetBasePath
-                    val textReaderModifier = Modifier.fillMaxSize()
-                    val textWebtoonModifier = Modifier.fillMaxSize()
+                    // Both reflowable modes keep system bars and one persistent line
+                    // gutter outside the WebView. CSS reserves only reader chrome;
+                    // otherwise a stale JS layout can paint text under system bars.
+                    // In immersive mode keep only horizontal cutout safety, matching
+                    // established readers: hidden bars must not leave vertical holes.
+                    val textSystemInsetsModifier = if (uiState.immersiveMode) {
+                        Modifier.windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                        )
+                    } else {
+                        Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                    }
+                    val textReaderModifier = Modifier
+                        .fillMaxSize()
+                        .then(textSystemInsetsModifier)
+                        .padding(
+                            vertical = with(density) { textSentenceInsetPx.toDp() }
+                        )
+                    val textChromeTopInsetCssPx =
+                        (plan.topChromeReservePx / density.density.coerceAtLeast(1f))
+                            .roundToInt()
+                            .coerceAtLeast(0)
+                    val textChromeBottomInsetCssPx =
+                        (plan.bottomChromeReservePx / density.density.coerceAtLeast(1f))
+                            .roundToInt()
+                            .coerceAtLeast(0)
                     val imageReaderModifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -546,8 +604,16 @@ fun ReaderScreen(
                                 html = textWebtoonHtmlContent ?: htmlContent.orEmpty(),
                                 baseUrl = uiState.htmlBaseUrl,
                                 assetDocumentPath = textWebtoonAssetBasePath,
+                                documentIdentity = uiState.comic?.id,
                                 assetLoader = readerAssetLoader,
                                 readingMode = ReadingMode.WEBTOON,
+                                onSelectionActionModeChange = { active ->
+                                    if (active) {
+                                        viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
+                                    } else {
+                                        viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
+                                    }
+                                },
                                 onLeftTap = {},
                                 onRightTap = {},
                                 onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
@@ -594,15 +660,17 @@ fun ReaderScreen(
                                 dictionaryActionLabel = readerText.openDictionary,
                                 explainActionLabel = readerText.selectionExplainAction,
                                 saveQuoteActionLabel = readerText.saveQuote,
-                                contentTopInsetPx = plan.textContentTopInsetCssPx,
-                                contentBottomInsetPx = plan.textContentBottomInsetCssPx,
+                                contentTopInsetPx = textChromeTopInsetCssPx,
+                                contentBottomInsetPx = textChromeBottomInsetCssPx,
                                 pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                 onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                 pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
                                 onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
                                 onTextWebtoonVisibleSectionChanged = { viewModel.navigationController.updateTextWebtoonVisibleSection(it) },
+                                freeScrollRestoreTarget = freeScrollRestoreTarget,
+                                onFreeScrollPositionUpdate = viewModel::onFreeScrollPositionChanged,
                                 sectionCharacterOffset = uiState.sectionCharacterOffset,
-                                modifier = textWebtoonModifier
+                                modifier = textReaderModifier
                             )
                         }
                         ReaderContainerKind.TEXT_PAGE -> {
@@ -616,9 +684,17 @@ fun ReaderScreen(
                                     html = htmlContent,
                                     baseUrl = uiState.htmlBaseUrl,
                                     assetDocumentPath = uiState.htmlAssetBasePath,
+                                    documentIdentity = uiState.comic?.id,
                                     assetLoader = readerAssetLoader,
                                     readingMode = uiState.readingMode,
-                                    autoScrollSpeed = uiState.autoScrollSpeed,
+                                    autoScrollSpeed = if (uiState.autoScrollEnabled && !uiState.isAutoScrollTemporarilyPaused) uiState.autoScrollSpeed else 0f,
+                                    onSelectionActionModeChange = { active ->
+                                        if (active) {
+                                            viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
+                                        } else {
+                                            viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
+                                        }
+                                    },
                                     onLeftTap = {
                                         if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
                                             handleTapZoneAction(tapZoneLayout.left)
@@ -677,8 +753,8 @@ fun ReaderScreen(
                                     dictionaryActionLabel = readerText.openDictionary,
                                     explainActionLabel = readerText.selectionExplainAction,
                                     saveQuoteActionLabel = readerText.saveQuote,
-                                    contentTopInsetPx = plan.textContentTopInsetCssPx,
-                                    contentBottomInsetPx = plan.textContentBottomInsetCssPx,
+                                    contentTopInsetPx = textChromeTopInsetCssPx,
+                                    contentBottomInsetPx = textChromeBottomInsetCssPx,
                                     pendingScrollToAnchor = uiState.pendingScrollToAnchor,
                                     onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                                     onRegisterPageTurner = { pagedColumnTurn = it },
@@ -713,6 +789,13 @@ fun ReaderScreen(
                                 onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
                                 onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
                                 onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
+                                onUserTouchChange = { touching ->
+                                    if (touching) {
+                                        viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.TOUCH_GESTURE)
+                                    } else {
+                                        viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.TOUCH_GESTURE)
+                                    }
+                                },
                                 modifier = imageReaderModifier
                             )
                         }
@@ -763,8 +846,10 @@ fun ReaderScreen(
                     },
                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
                     onToggleTtsControls = { showReaderAudioSheet = true },
-                    onAutoScrollToggle = { viewModel.settingsController.cycleAutoScrollSpeed() },
+                    onAutoScrollToggle = { viewModel.autoScrollSettingsController.toggle() },
                     onBrightnessChange = { viewModel.settingsController.setBrightness(it) },
+                    onAutoScrollSpeedPreview = { viewModel.autoScrollSettingsController.previewSpeed(it) },
+                    onAutoScrollSpeedCommit = { viewModel.autoScrollSettingsController.commitSpeed(uiState.readingMode, it) },
                     onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
                     onApplyPreset = { viewModel.settingsController.applyReadingPreset(it) },
                     onReadingModeChange = { viewModel.readingModeController.setReadingMode(it) },

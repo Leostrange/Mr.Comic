@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
@@ -32,11 +31,9 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.model.*
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.library.*
 import io.leostrange.mrcomic.core.ui.locale.*
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.library.components.ComicGridItem
 import io.leostrange.mrcomic.feature.library.components.CoverArt
 import io.leostrange.mrcomic.feature.library.components.FolderBackgroundStack
 import io.leostrange.mrcomic.feature.library.components.FolderCoverTreatment

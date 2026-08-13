@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.core.data.opds
 
 import io.leostrange.mrcomic.core.model.OpdsEntry
 import io.leostrange.mrcomic.core.model.OpdsLink
-import java.nio.charset.StandardCharsets
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer

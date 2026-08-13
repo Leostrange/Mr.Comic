@@ -1,8 +1,6 @@
 package io.leostrange.mrcomic.engine.formats.text
 
 import android.net.Uri
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
-import org.jsoup.nodes.Document
 import java.io.File
 import java.io.InputStream
 

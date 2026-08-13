@@ -13,7 +13,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +51,7 @@ fun PageView(
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
+    onUserTouchChange: (Boolean) -> Unit = {},
     imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
     marginCropHorizontal: Float = 0f,
     marginCropVertical: Float = 0f,
@@ -109,6 +109,7 @@ fun PageView(
             onLeftTap = onLeftTap,
             onRightTap = onRightTap,
             onCenterTap = onCenterTap,
+            onUserTouchChange = onUserTouchChange,
             modifier = Modifier.fillMaxSize()
         ) {
             if (dual) {
@@ -240,6 +241,7 @@ private fun ReaderPageGestureSurface(
     onLeftTap: () -> Unit,
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
+    onUserTouchChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     content: @Composable BoxWithConstraintsScope.() -> Unit
 ) {
@@ -293,8 +295,10 @@ private fun ReaderPageGestureSurface(
                 }
                 .pointerInput(resetToken) {
                     awaitEachGesture {
-                        var gestureScale = scale
-                        var gestureOffset = offset
+                        onUserTouchChange(true)
+                        try {
+                            var gestureScale = scale
+                            var gestureOffset = offset
 
                         do {
                             val event = awaitPointerEvent()
@@ -336,6 +340,9 @@ private fun ReaderPageGestureSurface(
                                 }
                             }
                         } while (event.changes.any { it.pressed })
+                        } finally {
+                            onUserTouchChange(false)
+                        }
                     }
                 }
         ) {

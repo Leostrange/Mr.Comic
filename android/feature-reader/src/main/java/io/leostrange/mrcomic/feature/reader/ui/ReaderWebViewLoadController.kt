@@ -21,6 +21,145 @@ internal class ReaderWebViewLoadController {
     private var activeLoadToken: String? = null
     private var latestCommittedToken: String? = null
 
+    var runtimeState: ReaderWebViewRuntimeState = ReaderWebViewRuntimeState()
+        private set
+
+    /**
+     * Advances the generation-aware runtime state machine and returns Android
+     * effects for the UI layer to execute. Events for stale generations are
+     * deliberately ignored; the instrumentation probe still records them.
+     */
+    fun dispatch(event: ReaderWebViewRuntimeEvent): List<ReaderWebViewRuntimeEffect> {
+        if (runtimeState.phase == ReaderWebViewRuntimePhase.DISPOSED) return emptyList()
+        return when (event) {
+            is ReaderWebViewRuntimeEvent.LoadRequested -> handleLoadRequested(event)
+            is ReaderWebViewRuntimeEvent.DocumentCommitted -> handleCommitted(event.generation)
+            is ReaderWebViewRuntimeEvent.LayoutReady -> handleLayoutReady(event)
+            is ReaderWebViewRuntimeEvent.RestoreAcknowledged -> handleRestoreAcknowledged(event.generation)
+            is ReaderWebViewRuntimeEvent.LoadFailed -> handleFailure(event.generation, event.reason.ifBlank { "load failed" })
+            is ReaderWebViewRuntimeEvent.ContentBlank -> handleFailure(event.generation, blankReason())
+            ReaderWebViewRuntimeEvent.Disposed -> {
+                runtimeState = ReaderWebViewRuntimeState(phase = ReaderWebViewRuntimePhase.DISPOSED)
+                emptyList()
+            }
+        }
+    }
+
+    private fun handleLoadRequested(
+        event: ReaderWebViewRuntimeEvent.LoadRequested
+    ): List<ReaderWebViewRuntimeEffect> {
+        if (event.documentIdentity.isBlank() || event.generation <= 0L) return emptyList()
+        if (
+            event.generation == runtimeState.generation &&
+            event.documentIdentity == runtimeState.documentIdentity
+        ) {
+            return emptyList()
+        }
+        if (runtimeState.generation > 0L && event.generation <= runtimeState.generation) return emptyList()
+
+        runtimeState = ReaderWebViewRuntimeState(
+            phase = ReaderWebViewRuntimePhase.LOADING,
+            documentIdentity = event.documentIdentity,
+            generation = event.generation,
+            loadAttempt = PRIMARY_LOAD_ATTEMPT,
+            restoreTarget = event.restoreTarget
+        )
+        return listOf(
+            ReaderWebViewRuntimeEffect.LoadDocument(
+                generation = event.generation,
+                attempt = PRIMARY_LOAD_ATTEMPT,
+                fallback = false
+            )
+        )
+    }
+
+    private fun handleCommitted(generation: Long): List<ReaderWebViewRuntimeEffect> {
+        if (!isActive(generation) || runtimeState.committed) return emptyList()
+        runtimeState = runtimeState.copy(
+            phase = ReaderWebViewRuntimePhase.COMMITTED,
+            committed = true
+        )
+        return advanceAfterReadiness()
+    }
+
+    private fun handleLayoutReady(
+        event: ReaderWebViewRuntimeEvent.LayoutReady
+    ): List<ReaderWebViewRuntimeEffect> {
+        if (!isActive(event.generation) || runtimeState.layoutMetrics != null) return emptyList()
+        runtimeState = runtimeState.copy(
+            phase = ReaderWebViewRuntimePhase.LAYOUT_READY,
+            layoutMetrics = event.metrics
+        )
+        return advanceAfterReadiness()
+    }
+
+    private fun advanceAfterReadiness(): List<ReaderWebViewRuntimeEffect> {
+        val metrics = runtimeState.layoutMetrics ?: return emptyList()
+        if (!runtimeState.committed) return emptyList()
+        val restoreTarget = runtimeState.restoreTarget
+        if (restoreTarget != null) {
+            if (runtimeState.restoreIssued) return emptyList()
+            runtimeState = runtimeState.copy(
+                phase = ReaderWebViewRuntimePhase.RESTORING,
+                restoreIssued = true
+            )
+            return listOf(ReaderWebViewRuntimeEffect.Restore(runtimeState.generation, restoreTarget))
+        }
+        if (runtimeState.phase == ReaderWebViewRuntimePhase.READY) return emptyList()
+        runtimeState = runtimeState.copy(phase = ReaderWebViewRuntimePhase.READY)
+        return listOf(ReaderWebViewRuntimeEffect.PublishReady(runtimeState.generation, metrics))
+    }
+
+    private fun handleRestoreAcknowledged(generation: Long): List<ReaderWebViewRuntimeEffect> {
+        if (!isActive(generation) || runtimeState.phase != ReaderWebViewRuntimePhase.RESTORING) {
+            return emptyList()
+        }
+        val metrics = runtimeState.layoutMetrics ?: return emptyList()
+        runtimeState = runtimeState.copy(phase = ReaderWebViewRuntimePhase.READY)
+        return listOf(ReaderWebViewRuntimeEffect.PublishReady(generation, metrics))
+    }
+
+    private fun handleFailure(
+        generation: Long,
+        reason: String
+    ): List<ReaderWebViewRuntimeEffect> {
+        if (!isActive(generation)) return emptyList()
+        if (runtimeState.loadAttempt < FALLBACK_LOAD_ATTEMPT) {
+            runtimeState = runtimeState.copy(
+                phase = ReaderWebViewRuntimePhase.LOADING,
+                loadAttempt = FALLBACK_LOAD_ATTEMPT,
+                committed = false,
+                layoutMetrics = null,
+                restoreIssued = false,
+                error = reason
+            )
+            return listOf(
+                ReaderWebViewRuntimeEffect.LoadDocument(
+                    generation = generation,
+                    attempt = FALLBACK_LOAD_ATTEMPT,
+                    fallback = true
+                )
+            )
+        }
+        runtimeState = runtimeState.copy(
+            phase = ReaderWebViewRuntimePhase.TERMINAL_ERROR,
+            error = reason
+        )
+        return listOf(ReaderWebViewRuntimeEffect.ShowTerminalError(generation, reason))
+    }
+
+    private fun blankReason(): String =
+        if (runtimeState.loadAttempt >= FALLBACK_LOAD_ATTEMPT) "fallback blank" else "content blank"
+
+    private fun isActive(generation: Long): Boolean =
+        generation > 0L && generation == runtimeState.generation &&
+            runtimeState.phase in setOf(
+                ReaderWebViewRuntimePhase.LOADING,
+                ReaderWebViewRuntimePhase.COMMITTED,
+                ReaderWebViewRuntimePhase.LAYOUT_READY,
+                ReaderWebViewRuntimePhase.RESTORING
+            )
+
     /**
      * Decide whether the page source must be rebuilt because the input that
      * drives it (HTML body, resolved base URL, cache dir) actually changed.
@@ -44,6 +183,7 @@ internal class ReaderWebViewLoadController {
      * denied even if it eventually commits.
      */
     fun markLoadRequested(token: String, key: String? = null) {
+        if (token.isBlank()) return
         if (key != null) previousReloadKey = key
         if (token == activeLoadToken) return
         activeLoadToken = token
@@ -55,6 +195,7 @@ internal class ReaderWebViewLoadController {
      * calls for the already-committed token are no-ops.
      */
     fun markLoadCommitted(token: String) {
+        if (token.isBlank() || token != activeLoadToken) return
         latestCommittedToken = token
     }
 
@@ -75,5 +216,11 @@ internal class ReaderWebViewLoadController {
         previousReloadKey = null
         activeLoadToken = null
         latestCommittedToken = null
+        runtimeState = ReaderWebViewRuntimeState()
+    }
+
+    private companion object {
+        const val PRIMARY_LOAD_ATTEMPT = 1
+        const val FALLBACK_LOAD_ATTEMPT = 2
     }
 }
