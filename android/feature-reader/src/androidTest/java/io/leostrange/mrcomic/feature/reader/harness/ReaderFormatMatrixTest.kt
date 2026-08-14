@@ -3,6 +3,7 @@ package io.leostrange.mrcomic.feature.reader.harness
 import android.graphics.Bitmap
 import androidx.test.platform.app.InstrumentationRegistry
 import io.leostrange.mrcomic.core.model.ComicFormat
+import io.leostrange.mrcomic.engine.api.ReflowableTextFormatReader
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator
 import io.leostrange.mrcomic.engine.formats.base.FormatFactory
 import io.leostrange.mrcomic.engine.formats.djvu.StructuredDjvuBackend
@@ -47,14 +48,22 @@ class ReaderFormatMatrixTest(
             reader!!
             try {
                 val pageCount = reader.getPageCount()
-                assertTrue(
-                    "${fixture.id}: pageCount=$pageCount expected>=${fixture.expectedMinPages}",
-                    pageCount >= fixture.expectedMinPages
-                )
                 if (fixture.isTextFixture()) {
+                    assertTrue("${fixture.id}: expected at least one engine page", pageCount >= 1)
                     assertTrue("${fixture.id}: expected HTML content", reader.rendersHtmlContent())
                     assertTrue("${fixture.id}: empty first HTML page", !reader.getHtmlPage(0).isNullOrBlank())
+                    val reflowable = reader as? ReflowableTextFormatReader
+                    val sectionCount = reflowable?.getTextDocumentSections()?.size ?: pageCount
+                    assertTrue(
+                        "${fixture.id}: sectionCount=$sectionCount " +
+                            "expected>=${fixture.expectedMinSections}",
+                        sectionCount >= fixture.expectedMinSections
+                    )
                 } else {
+                    assertTrue(
+                        "${fixture.id}: pageCount=$pageCount expected>=${fixture.expectedMinPages}",
+                        pageCount >= fixture.expectedMinPages
+                    )
                     val firstPage = reader.getPage(0)
                     assertNotNull("${fixture.id}: first raster page did not render", firstPage)
                     firstPage?.recycle()
@@ -96,6 +105,7 @@ private fun ReaderCorpusFixture.comicFormat(): ComicFormat = when (format) {
     "EPUB" -> ComicFormat.EPUB
     "FB2" -> ComicFormat.FB2
     "HTML" -> ComicFormat.HTML
+    "MARKDOWN" -> ComicFormat.MARKDOWN
     "TXT" -> ComicFormat.TXT
     "DOCX" -> ComicFormat.DOCX
     "TEXT_ARCHIVE" -> ComicFormat.TXT
@@ -108,5 +118,5 @@ private fun ReaderCorpusFixture.comicFormat(): ComicFormat = when (format) {
 }
 
 private fun ReaderCorpusFixture.isTextFixture(): Boolean = format in setOf(
-    "EPUB", "FB2", "HTML", "TXT", "DOCX", "TEXT_ARCHIVE"
+    "EPUB", "FB2", "HTML", "MARKDOWN", "TXT", "DOCX", "TEXT_ARCHIVE"
 )

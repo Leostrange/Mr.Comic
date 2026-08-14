@@ -61,7 +61,7 @@ data class ReaderCorpusManifest(
         const val SOURCE_GENERATOR = "generator"
 
         val SUPPORTED_FORMATS = setOf(
-            "EPUB", "FB2", "HTML", "TXT", "DOCX", "TEXT_ARCHIVE",
+            "EPUB", "FB2", "HTML", "MARKDOWN", "TXT", "DOCX", "TEXT_ARCHIVE",
             "CBZ", "CBR", "PDF", "DJVU", "IMAGE_FOLDER"
         )
         val SUPPORTED_SOURCE_TYPES = setOf(SOURCE_ASSET, SOURCE_GENERATOR)
