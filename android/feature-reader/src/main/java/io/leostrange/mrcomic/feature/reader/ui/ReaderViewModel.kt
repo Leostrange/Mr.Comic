@@ -266,7 +266,8 @@ class ReaderViewModel @Inject constructor(
         prewarmHtmlPagesAround = { pageCacheController.prewarmHtmlPagesAround(it) },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
         markReaderPresetCustom = { settingsController.markReaderPresetCustom() },
-        getLastTextWebtoonSection = { navigationController.lastTextWebtoonVisibleSection },
+        getLastTextWebtoonCursor = { navigationController.lastTextWebtoonCursor },
+        seedTextWebtoonCursor = { navigationController.seedTextWebtoonCursor(it) },
         onAutoScrollModeChanged = { mode -> autoScrollSettingsController.switchMode(mode) }
     )
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
@@ -388,6 +389,16 @@ class ReaderViewModel @Inject constructor(
                 freeScrollCharacterOffset = position.characterOffset ?: -1,
                 freeScrollProgression = position.progression ?: -1.0
             )
+        }
+        if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
+            navigationController.updateTextWebtoonVisiblePosition(
+                characterOffset = position.characterOffset,
+                progression = position.progression
+            )
+            // A Webtoon scroll changes the semantic position without changing the engine page.
+            // Persist the structured cursor through the position-only path so single-spine books
+            // are restorable even when the normal EPUB page-progress guard is still provisional.
+            progressController.savePositionSnapshot()
         }
     }
 

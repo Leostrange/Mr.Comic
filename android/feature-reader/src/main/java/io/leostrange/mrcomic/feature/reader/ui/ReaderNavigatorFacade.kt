@@ -23,6 +23,7 @@ internal object ReaderNavigatorFacade {
         primaryIndex: Int,
         pageInSection: Int = 0,
         characterOffset: Int = 0,
+        progression: Double? = null,
         fragment: String? = null
     ): ReaderLocator = navigator(kind).toLocator(
         when (kind) {
@@ -30,11 +31,13 @@ internal object ReaderNavigatorFacade {
                 sectionIndex = primaryIndex,
                 pageInSplit = pageInSection,
                 characterOffset = characterOffset,
+                progression = progression,
                 fragment = fragment
             )
             ReaderContainerKind.TEXT_WEBTOON -> ReaderContainerPosition.TextWebtoon(
                 sectionIndex = primaryIndex,
                 characterOffset = characterOffset,
+                progression = progression,
                 fragment = fragment
             )
             ReaderContainerKind.RASTER_PAGE -> ReaderContainerPosition.RasterPage(primaryIndex)

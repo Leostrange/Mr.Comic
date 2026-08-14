@@ -373,7 +373,12 @@ internal fun HtmlPageView(
                         isRtl = isRtl,
                         fragment = currentPendingAnchor.value?.takeIf { it.isNotBlank() },
                         sectionIndex = currentPendingWebtoonSection.value?.takeIf { !pagedMode },
-                        characterOffset = currentCharOffset.value.takeIf { pagedMode && it > 0 }
+                        characterOffset = currentCharOffset.value.takeIf { pagedMode && it > 0 },
+                        freeScrollRestoreTarget = if (!pagedMode) {
+                            freeScrollRestoreTarget ?: freeScrollPosition.value
+                        } else {
+                            null
+                        }
                     )
                 )) {
                 return@AndroidView

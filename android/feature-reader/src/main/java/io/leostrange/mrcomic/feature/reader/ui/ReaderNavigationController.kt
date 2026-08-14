@@ -4,6 +4,7 @@ import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.engine.api.TocEntry
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
+import io.leostrange.mrcomic.feature.reader.domain.navigation.ReaderTextWebtoonCursor
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import kotlinx.coroutines.CoroutineScope
@@ -187,14 +188,43 @@ internal class ReaderNavigationController(
     }
 
     /**
-     * Last visible section index reported by the text WEBTOON IntersectionObserver.
-     * Used by [ReaderReadingModeController.applyReadingMode] to restore position
-     * when switching WEBTOON → PAGE for text formats.
+     * Last text WEBTOON cursor reported by the stitched document.
+     *
+     * This keeps the canonical engine section separate from the visual Webtoon section so
+     * WEBTOON → PAGE does not reset a single-spine book to the beginning.
      */
-    var lastTextWebtoonVisibleSection: Int? = null
+    var lastTextWebtoonCursor: ReaderTextWebtoonCursor? = null
         private set
 
+    fun seedTextWebtoonCursor(cursor: ReaderTextWebtoonCursor?) {
+        lastTextWebtoonCursor = cursor
+    }
+
+    fun clearTextWebtoonCursor() {
+        lastTextWebtoonCursor = null
+    }
+
     fun updateTextWebtoonVisibleSection(sectionIndex: Int) {
-        lastTextWebtoonVisibleSection = sectionIndex
+        lastTextWebtoonCursor = readerTextWebtoonCursorAtVisibleSection(
+            previous = lastTextWebtoonCursor,
+            visibleSectionIndex = sectionIndex
+        )
+    }
+
+    fun updateTextWebtoonVisiblePosition(
+        characterOffset: Int?,
+        progression: Double?
+    ) {
+        val current = lastTextWebtoonCursor ?: ReaderTextWebtoonCursor(
+            engineSectionIndex = _uiState.value.currentPage.coerceAtLeast(0),
+            webtoonSectionIndex = _uiState.value.currentPage.coerceAtLeast(0)
+        )
+        lastTextWebtoonCursor = readerTextWebtoonCursorAtVisibleSection(
+            previous = current,
+            visibleSectionIndex = current.webtoonSectionIndex,
+            characterOffset = characterOffset,
+            progression = progression,
+            fragment = _uiState.value.pendingScrollToAnchor
+        )
     }
 }

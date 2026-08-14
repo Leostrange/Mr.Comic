@@ -12,6 +12,33 @@ internal enum class ReaderNavigationResolutionSource {
     START
 }
 
+/**
+ * Stable cursor for a text WEBTOON document.
+ *
+ * [engineSectionIndex] is the canonical spine coordinate used when returning to PAGE.
+ * [webtoonSectionIndex] is only the stitched-document coordinate used by the WebView.
+ * Keeping both is essential for single-spine books, where many visual sections belong to
+ * one engine section.
+ */
+internal data class ReaderTextWebtoonCursor(
+    val engineSectionIndex: Int,
+    val webtoonSectionIndex: Int,
+    val characterOffset: Int? = null,
+    val progression: Double? = null,
+    val fragment: String? = null
+) {
+    init {
+        require(engineSectionIndex >= 0) { "engineSectionIndex must be non-negative" }
+        require(webtoonSectionIndex >= 0) { "webtoonSectionIndex must be non-negative" }
+        require(characterOffset == null || characterOffset >= 0) {
+            "characterOffset must be non-negative"
+        }
+        require(progression == null || progression.isFinite() && progression in 0.0..1.0) {
+            "progression must be within 0..1"
+        }
+    }
+}
+
 internal sealed interface ReaderContainerPosition {
     data class TextPage(
         val sectionIndex: Int,

@@ -10,7 +10,9 @@ internal data class ReaderHtmlSourceLoadRequest(
     val isRtl: Boolean,
     val fragment: String?,
     val sectionIndex: Int?,
-    val characterOffset: Int?
+    val characterOffset: Int?,
+    /** Semantic target captured before a non-paged WebView document reload. */
+    val freeScrollRestoreTarget: ReaderWebViewRestoreTarget? = null
 )
 
 internal fun loadReaderHtmlSourceIfChanged(
@@ -25,7 +27,11 @@ internal fun loadReaderHtmlSourceIfChanged(
         cached != null && !request.pagedMode && source is ReaderHtmlPageSource.Inline &&
         source.html.contains("data-mrcomic-text-webtoon-document")
     ) {
-        webView.prepareFreeScrollReloadPreservingPosition()
+        if (request.freeScrollRestoreTarget != null) {
+            webView.primeFreeScrollRestoreTarget(request.freeScrollRestoreTarget)
+        } else {
+            webView.prepareFreeScrollReloadPreservingPosition()
+        }
     }
     val restoreTarget = restoreTarget(webView, request)
     val generation = runtimeOwner.beginLoad(source.loadToken, restoreTarget)
@@ -45,7 +51,7 @@ private fun restoreTarget(
     webView: ReaderWebView,
     request: ReaderHtmlSourceLoadRequest
 ): ReaderWebViewRestoreTarget? {
-    val freeScrollTarget = webView.pendingFreeScrollRestoreTarget
+    val freeScrollTarget = request.freeScrollRestoreTarget ?: webView.pendingFreeScrollRestoreTarget
     if (
         request.fragment == null && request.sectionIndex == null &&
         request.characterOffset == null && freeScrollTarget == null
