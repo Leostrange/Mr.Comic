@@ -330,10 +330,11 @@ fun ReaderScreen(
         }
     }
 
-    // GEOMETRY-01: Unified viewport geometry for future migration.
-    // Currently computed in parallel with the inline values above.
-    // TODO: Replace inline calculations with geometry.contentTopInsetCssPx / contentBottomInsetCssPx
-    //       after confirming they produce identical values across all device/config combinations.
+    // GEOMETRY-01: Unified viewport geometry — single source of truth for CSS insets
+    // passed to the text WebView.  chromeTopInsetCssPx / chromeBottomInsetCssPx provide
+    // the chrome-reserve-only inset matching the current Compose-modifier contract;
+    // the full system-bar-in-CSS migration (contentTopInsetCssPx with safety margins)
+    // remains a follow-up requiring device verification.
     val viewportGeometry = ReaderViewportGeometry.fromMeasured(
         viewportWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() },
         viewportHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() },
@@ -572,14 +573,8 @@ fun ReaderScreen(
                         .padding(
                             vertical = with(density) { textSentenceInsetPx.toDp() }
                         )
-                    val textChromeTopInsetCssPx =
-                        (plan.topChromeReservePx / density.density.coerceAtLeast(1f))
-                            .roundToInt()
-                            .coerceAtLeast(0)
-                    val textChromeBottomInsetCssPx =
-                        (plan.bottomChromeReservePx / density.density.coerceAtLeast(1f))
-                            .roundToInt()
-                            .coerceAtLeast(0)
+                    val textChromeTopInsetCssPx = viewportGeometry.chromeTopInsetCssPx
+                    val textChromeBottomInsetCssPx = viewportGeometry.chromeBottomInsetCssPx
                     val imageReaderModifier = Modifier
                         .fillMaxSize()
                         .then(

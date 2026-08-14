@@ -101,6 +101,32 @@ data class ReaderViewportGeometry(
             return (usablePx / densityScale).roundToInt().coerceAtLeast(1)
         }
 
+    // ── Chrome-reserve-only CSS insets ─────────────────────────────────
+    // System bars are handled by Compose WindowInsetsPadding modifiers and
+    // the sentence gutter by vertical padding on the text reader modifier;
+    // only the visible chrome reserve is injected into CSS.  When toolbars
+    // are hidden the reserve (and therefore the CSS inset) is zero.
+
+    /**
+     * Top chrome-reserve inset in CSS pixels.
+     * Returns 0 when toolbars are hidden.
+     */
+    val chromeTopInsetCssPx: Int
+        get() {
+            val reservePx = if (hideToolbarsWhileReading) 0 else topToolbarHeightPx
+            return (reservePx / densityScale).roundToInt().coerceAtLeast(0)
+        }
+
+    /**
+     * Bottom chrome-reserve inset in CSS pixels.
+     * Returns 0 when toolbars are hidden.
+     */
+    val chromeBottomInsetCssPx: Int
+        get() {
+            val reservePx = if (hideToolbarsWhileReading) 0 else bottomToolbarHeightPx
+            return (reservePx / densityScale).roundToInt().coerceAtLeast(0)
+        }
+
     companion object {
         /** Minimum safety margin in physical pixels for edge-to-edge mode. */
         private const val MIN_SAFETY_MARGIN_PX = 8
