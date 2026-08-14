@@ -37,7 +37,8 @@ object DatabaseModule {
                 AppDatabaseMigrations.MIGRATION_5_6,
                 AppDatabaseMigrations.MIGRATION_6_7,
                 AppDatabaseMigrations.MIGRATION_7_8,
-                AppDatabaseMigrations.MIGRATION_8_9
+                AppDatabaseMigrations.MIGRATION_8_9,
+                AppDatabaseMigrations.MIGRATION_9_10
             )
             // Never silently drop the user's library on a forward-migration gap (a missing
             // migration is a bug to fix, not data to wipe). Destructive recovery is kept only for

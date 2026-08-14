@@ -296,8 +296,38 @@ class ReaderHtmlCssJsTest {
             js.contains("mediaPage:true")
         )
         assertTrue(
-            "media pages do not reserve a text gutter that crops the image",
-            js.contains("var bottomTextGutter=isMediaPage?0:Math.max(lineHeight,pageInsetBottom,viewportBottomSafety);")
+            "media pages keep the bottom shield below the last content line",
+            js.contains("var shieldTop=Math.max(") && js.contains("Math.max(0,rawVisibleHeight-1)")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_shieldStartsAtLastContentLineNotAtGutter() {
+        // LAYOUT-03: the bottom shield must never be pulled up by a text gutter
+        // (visibleHeight - bottomTextGutter), which clipped the final legal line.
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "shield must start at the last content line",
+            js.contains("Math.max(0,rawVisibleHeight-1)")
+        )
+        assertFalse(
+            "shield must not be raised by a bottom text gutter",
+            js.contains("visibleHeight-bottomTextGutter")
+        )
+        assertFalse(
+            "the gutter-based shield calculation must be gone entirely",
+            js.contains("var bottomTextGutter=")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_keepsViewportBottomSafetyForSinglePageSpan() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "single-page span still accounts for bottom safety",
+            js.contains("pageInsetTop-pageInsetBottom-viewportBottomSafety")
         )
     }
 

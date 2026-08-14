@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Overflow</title></head>
+<body>
+<h2>Chapter: overflow regression</h2>
+<p>This paragraph is intentionally long so that the paged layout must split it across several visual pages without clipping the descenders of the final line (LAYOUT-03 regression). The bottom shield must start at the last content line, never at a text-gutter offset that would hide the final legal line.</p>
+<p>Tables and images must also respect the page boundary: a wide table here uses up to the full usable width.</p>
+<table><tr><td>cell 1</td><td>cell 2</td><td>cell 3</td><td>cell 4</td><td>cell 5</td><td>cell 6</td></tr></table>
+<p>End of the overflow fixture with a footnote<sup><a href="#fn1" id="r1">[1]</a></sup> near the edge.</p>
+<aside id="fn1"><p>1. Footnote content that must open instead of flipping the page when tapped near the right edge (GESTURE-01 regression).</p></aside>
+</body></html>

@@ -306,7 +306,9 @@ internal data class PendingProgressSave(
     val page: Int,
     val totalPages: Int,
     val countsTowardReadingProgress: Boolean,
-    val characterOffset: Int? = null
+    val characterOffset: Int? = null,
+    /** Structured position (TEXT-01) captured with the save; serialized on flush. */
+    val positionJson: String? = null
 )
 
 internal data class PersistedProgressMarker(

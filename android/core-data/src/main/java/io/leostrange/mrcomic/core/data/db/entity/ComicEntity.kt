@@ -55,6 +55,9 @@ data class ComicEntity(
     val genre: String? = null,
     val language: String = "en",
     val isCompleted: Boolean = false
+,
+    /** Structured reading position (TEXT-01) serialized by ReaderPositionCodec; null = legacy record. */
+    val readerPositionJson: String? = null
 )
 
 /** Convert domain model to Room entity. */
@@ -75,6 +78,8 @@ internal fun Comic.toEntity(): ComicEntity = ComicEntity(
     tags = tags, series = series, volume = volume, issue = issue,
     year = year, publisher = publisher, author = author, artist = artist,
     genre = genre, language = language, isCompleted = isCompleted
+,
+    readerPositionJson = readerPositionJson
 )
 
 /** Convert Room entity to domain model. */
@@ -95,4 +100,6 @@ internal fun ComicEntity.toDomain(): Comic = Comic(
     tags = tags, series = series, volume = volume, issue = issue,
     year = year, publisher = publisher, author = author, artist = artist,
     genre = genre, language = language, isCompleted = isCompleted
+,
+    readerPositionJson = readerPositionJson
 )

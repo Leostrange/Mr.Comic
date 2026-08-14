@@ -287,6 +287,13 @@ class ComicRepository @Inject constructor(
         )
     }
 
+    override suspend fun updateReaderPosition(comicId: String, positionJson: String?) {
+        comicDao.updateReaderPosition(comicId, positionJson, System.currentTimeMillis())
+    }
+
+    override suspend fun getReaderPositionJson(comicId: String): String? =
+        comicDao.getReaderPositionJson(comicId)
+
     override suspend fun repairLibraryAccess(treeUri: Uri): BackupRepository.RepairLibraryAccessResult = withContext(Dispatchers.IO) {
         val treeDocumentId = runCatching { DocumentsContract.getTreeDocumentId(treeUri) }
             .getOrNull()

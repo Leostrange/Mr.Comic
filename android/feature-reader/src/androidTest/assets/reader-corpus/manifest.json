@@ -7,7 +7,10 @@
       "sourceType": "asset",
       "source": "basic.txt",
       "sourceSha256": "288a99a9a8bc2c0d4b2814a03f70e8f0619e0bca449929d5120b0f38699d7836",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 2,
       "expectedMinPages": 1
     },
@@ -17,7 +20,10 @@
       "sourceType": "asset",
       "source": "basic.html",
       "sourceSha256": "7869727b33b5e45b87958a1f8a333bdd2feb4d16135b969d7863137851c05d76",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 2,
       "expectedMinPages": 1
     },
@@ -27,7 +33,10 @@
       "sourceType": "asset",
       "source": "basic.fb2",
       "sourceSha256": "094f9136162a192a25a962ed54f4c9c56384b9b6baab08b3cc12b9321feba15e",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 2,
       "expectedMinPages": 1
     },
@@ -37,7 +46,10 @@
       "sourceType": "generator",
       "source": "epub-basic-v1",
       "sourceSha256": "807e4b7b5eb728cc188fbea91eb943a4357baff1ee1536d52531ce06585b5b91",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 2,
       "expectedMinPages": 1
     },
@@ -47,7 +59,10 @@
       "sourceType": "generator",
       "source": "docx-basic-v1",
       "sourceSha256": "116a80d06cb1d5943dbd5c03f83b24a5d0969b0e7e47d9bb78e42c077d5c9085",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 1
     },
@@ -57,7 +72,10 @@
       "sourceType": "generator",
       "source": "cbz-basic-v1",
       "sourceSha256": "0de8c919d731c60b3736ee4b3e8566f27d19c84b037b1d9df5bfd7e0dcf3b46d",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 2
     },
@@ -67,7 +85,10 @@
       "sourceType": "generator",
       "source": "text-archive-basic-v1",
       "sourceSha256": "22faa872c556a1d442be51cfae473baccbb55c61f9b8da757ed421b2ba7fd45b",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 1
     },
@@ -77,7 +98,10 @@
       "sourceType": "asset",
       "source": "cbr-basic.cbr",
       "sourceSha256": "94de6f9167b164f744c08068e42b2d87a63e7b4936c21f4f57eac06259d08a1d",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 2
     },
@@ -87,7 +111,10 @@
       "sourceType": "generator",
       "source": "pdf-basic-v1",
       "sourceSha256": "88c246dce08ea44fbe1e312b35a38123aee3859cd42f8a1905fba6ac016a1f7e",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 2
     },
@@ -97,7 +124,10 @@
       "sourceType": "asset",
       "source": "djvu-reference.djvu",
       "sourceSha256": "59ce874eb87c622255a7e26409744a4b957174fbc1ebf665148749ce108467b6",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 1
     },
@@ -107,9 +137,75 @@
       "sourceType": "generator",
       "source": "image-folder-basic-v1",
       "sourceSha256": "aef9f5ce413858da095f3dae5fa33e55995a8d6833f95e969cef54a2f9acb6b0",
-      "modes": ["PAGE", "WEBTOON"],
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
       "expectedMinSections": 1,
       "expectedMinPages": 2
+    },
+    {
+      "id": "html-overflow",
+      "format": "HTML",
+      "sourceType": "asset",
+      "source": "overflow.html",
+      "sourceSha256": "cccc2126fd7ec89b97a790ead10e703e6b67c68193a17c007259c98f7c9e795c",
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
+      "expectedMinSections": 1,
+      "expectedMinPages": 2,
+      "regressions": [
+        "LAYOUT-03",
+        "GESTURE-01",
+        "TEXT-02",
+        "TEXT-03",
+        "TEXT-04",
+        "PROGRESS-01"
+      ]
+    },
+    {
+      "id": "md-long-note",
+      "format": "MARKDOWN",
+      "sourceType": "asset",
+      "source": "long-note.md",
+      "sourceSha256": "37d0ddf14b8e1687db320594301eac2c8a1574fda10b88cd553b45d8ceb34313",
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
+      "expectedMinSections": 1,
+      "expectedMinPages": 2,
+      "regressions": [
+        "LAYOUT-03",
+        "GESTURE-01",
+        "TEXT-02",
+        "TEXT-03",
+        "TEXT-04",
+        "PROGRESS-01"
+      ]
+    },
+    {
+      "id": "txt-paragraphs",
+      "format": "TXT",
+      "sourceType": "asset",
+      "source": "paragraphs.txt",
+      "sourceSha256": "b049e01dafd1c8427598e3cc66e9174075c4e2fc9ff5d871bb8200cfff3ac0a4",
+      "modes": [
+        "PAGE",
+        "WEBTOON"
+      ],
+      "expectedMinSections": 1,
+      "expectedMinPages": 2,
+      "regressions": [
+        "LAYOUT-03",
+        "GESTURE-01",
+        "TEXT-02",
+        "TEXT-03",
+        "TEXT-04",
+        "PROGRESS-01"
+      ]
     }
   ]
 }

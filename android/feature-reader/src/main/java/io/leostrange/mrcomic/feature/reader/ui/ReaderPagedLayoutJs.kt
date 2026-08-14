@@ -597,13 +597,14 @@ internal fun readerPagedCoreJs(
         viewport.appendChild(shield);
       }
       var isMediaPage=!!page.mediaPage;
-      var bottomTextGutter=isMediaPage?0:Math.max(lineHeight,pageInsetBottom,viewportBottomSafety);
+      // LAYOUT-03: the bottom shield must start at the last content line of the
+      // page (rawVisibleHeight-1) and never at visibleHeight-minus-gutter, which
+      // clipped the final legal line and left unexplained gaps on adjacent pages.
       var shieldTop=Math.max(
         0,
         Math.min(
           visibleHeight,
-          Math.max(0,rawVisibleHeight-1),
-          visibleHeight-bottomTextGutter
+          Math.max(0,rawVisibleHeight-1)
         )
       );
       var rootStyle=window.getComputedStyle?window.getComputedStyle(document.documentElement):null;

@@ -22,7 +22,11 @@ import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepositor
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.model.ComicFormat
+import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.isHeavyReflowableFormat
+import io.leostrange.mrcomic.core.model.isTextReadingFormat
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
@@ -98,12 +102,14 @@ internal class ReaderProgressController(
             readerPage = page,
             epubAbsolutePage = calculateAccuratePage(page)
         )
+        val state = _uiState.value
         val pending = PendingProgressSave(
             comicId = comic.id,
             page = accuratePage,
             totalPages = totalPages,
             countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING,
-            characterOffset = _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
+            characterOffset = state.sectionCharacterOffset.takeIf { it > 0 },
+            positionJson = buildPositionJson(state, comic.format, page)
         )
         if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, accuratePage)) return
         pendingProgressSave = pending
@@ -129,6 +135,11 @@ internal class ReaderProgressController(
                 totalPages = safeTotalPages,
                 characterOffset = pending.characterOffset
             )
+            // TEXT-01: persist the structured position alongside the legacy fields. Null keeps
+            // the stored record untouched (legacy-only) — never overwrite with a coarse fallback.
+            pending.positionJson?.let { positionJson ->
+                libraryRepository.updateReaderPosition(pending.comicId, positionJson)
+            }
             val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
             val goalProgressDelta = navigationProgressDelta(
                 previousPersistedPage = previousPersistedPage,
@@ -393,6 +404,39 @@ internal class ReaderProgressController(
                 sessionMetrics = sessionMetrics
             )
         )
+    }
+
+    // ── Structured position (TEXT-01) ──────────────────────────────────────
+
+    /**
+     * Builds the structured [ReaderPosition] JSON for the current UI state.
+     * Text formats split engine section / visual sub-page / character offset; raster formats
+     * map the page onto both section and visual index. Returns null when the record cannot be
+     * represented meaningfully (e.g. before page-count resolution), so legacy fields are kept.
+     */
+    private fun buildPositionJson(
+        state: ReaderUiState,
+        format: ComicFormat,
+        page: Int,
+    ): String? {
+        val mode = state.readingMode
+        val isText = format.isTextReadingFormat()
+        val webtoonFraction = if (mode == ReadingMode.WEBTOON) {
+            state.freeScrollProgression.takeIf { it in 0.0..1.0 }?.toFloat()
+        } else {
+            null
+        }
+        val position = ReaderPosition(
+            engineSectionIndex = if (isText) state.currentPage.coerceAtLeast(0) else page.coerceAtLeast(0),
+            visualPageIndex = if (isText) state.sectionCurrentPage.coerceAtLeast(0) else page.coerceAtLeast(0),
+            characterOffset = state.sectionCharacterOffset.takeIf { it > 0 },
+            domAnchor = state.pendingScrollToAnchor,
+            mode = mode,
+            webtoonScrollFraction = webtoonFraction,
+            updatedAtMillis = System.currentTimeMillis(),
+            schemaVersion = ReaderPosition.SCHEMA_VERSION
+        )
+        return ReaderPositionCodec.encode(position)
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────

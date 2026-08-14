@@ -33,7 +33,9 @@ data class Comic(
     val artist: String? = null,
     val genre: String? = null,
     val language: String = "en",
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    /** Structured reading position (TEXT-01) serialized by ReaderPositionCodec; null = legacy record. */
+    val readerPositionJson: String? = null
 )
 
 enum class ComicLibraryShelf {

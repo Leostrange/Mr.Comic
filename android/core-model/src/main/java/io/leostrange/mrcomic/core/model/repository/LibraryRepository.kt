@@ -18,4 +18,14 @@ interface LibraryRepository {
     suspend fun updateComicMeta(comicId: String, title: String, tags: String, libraryShelf: String)
     suspend fun markCompleted(comicId: String, completed: Boolean = true)
     suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int, characterOffset: Int? = null)
+
+    /**
+     * Persists the structured reading position (TEXT-01) as an opaque JSON blob.
+     * Null clears the structured position (falls back to legacy fields). The blob format is
+     * owned by feature-reader's ReaderPositionCodec; core-data stores it verbatim.
+     */
+    suspend fun updateReaderPosition(comicId: String, positionJson: String?)
+
+    /** Returns the stored structured reading position JSON, or null when only legacy fields exist. */
+    suspend fun getReaderPositionJson(comicId: String): String?
 }
