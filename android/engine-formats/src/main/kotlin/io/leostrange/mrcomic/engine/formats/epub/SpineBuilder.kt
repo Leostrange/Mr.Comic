@@ -14,7 +14,7 @@ import java.nio.charset.Charset
  * Handles the multi-phase spine building pipeline:
  * 1. [buildSpinePages] — iterate spine items and build raw page list
  * 2. [normalizeNoteSections] — consolidate adjacent note sections
- * 3. [mergeTinyPages] — merge tiny adjacent pages
+ * 3. [mergeTitleOnlyPages] — attach standalone chapter titles to their body
  * 4. [filterZeroWeightPages] — remove pages with zero visible content
  */
 internal class SpineBuilder(
@@ -75,7 +75,7 @@ internal class SpineBuilder(
         runCatching { Log.i("EpubPerf", "  phase.normalize: ${perfNowMs() - __t1} ms") }
 
         val __t2 = perfNowMs()
-        val merged = mergeTinyPages(normalized, ctx, zip)
+        val merged = mergeTitleOnlyPages(normalized, ctx, zip)
         val filtered = filterZeroWeightPages(merged, ctx)
         runCatching { Log.i("EpubPerf", "  phase.merge: ${perfNowMs() - __t2} ms") }
 
@@ -159,8 +159,8 @@ internal class SpineBuilder(
         return normalized
     }
 
-    /** Phase 3: merge tiny adjacent pages into larger groups. */
-    private fun mergeTinyPages(
+    /** Phase 3: attach a standalone chapter title to the following body page. */
+    private fun mergeTitleOnlyPages(
         normalized: List<EpubPage>,
         ctx: SpineBuildContext,
         zip: ZipFile
@@ -171,25 +171,6 @@ internal class SpineBuilder(
             val pg = normalized[i]
             if (pg is EpubPage.Html && pg.totalChunks == 1) {
                 val charCount = ctx.htmlVisibleChars[pg.entry] ?: 0
-                if (charCount in 1..CHUNK_CHARS_PER_PAGE / 4 && !ctx.keepWholeBodyEntries.contains(pg.entry)) {
-                    // Look ahead for adjacent tiny pages to merge
-                    val group = mutableListOf(pg.entry)
-                    var j = i + 1
-                    while (j < normalized.size && group.size < 4) {
-                        val nxt = normalized[j] as? EpubPage.Html ?: break
-                        if (nxt.totalChunks != 1) break
-                        val nxtChars = ctx.htmlVisibleChars[nxt.entry] ?: 0
-                        if (nxtChars > CHUNK_CHARS_PER_PAGE / 4 || ctx.keepWholeBodyEntries.contains(nxt.entry)) break
-                        group.add(nxt.entry)
-                        j++
-                    }
-                    if (group.size > 1) {
-                        // Create merged synthetic pages
-                        merged.addAll(contentAnalyzer.buildSyntheticNotePages(pg.entry, group, zip))
-                        i = j
-                        continue
-                    }
-                }
                 // Title-only page followed by a body page — prepend title into body.
                 // Intentionally broad: runs for ALL tiny title-only pages, including those in
                 // keepWholeBodyEntries (e.g. FB2EPUB span-wrapped titles). A page containing

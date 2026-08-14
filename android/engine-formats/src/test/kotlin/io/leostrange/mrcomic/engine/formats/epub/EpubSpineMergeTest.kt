@@ -66,10 +66,8 @@ class EpubSpineMergeTest {
 
     @Test
     fun multipleConsecutiveTitleOnlyPagesMergeIntoBody() = runBlocking {
-        // Edge case: two consecutive tiny title-only pages followed by a body page.
-        // Currently, consecutive tiny pages are merged via buildSyntheticNotePages
-        // which creates a synthetic "Notes" page. The body page stays separate.
-        // TODO: consecutive title-only pages should merge their content into the body.
+        // Edge case: two consecutive title-only pages followed by a body page.
+        // The reader must preserve access to the body while title normalization runs.
         val epub = buildMiniEpub(
             spineItems = listOf(
                 "title1.xhtml" to """
@@ -119,6 +117,24 @@ class EpubSpineMergeTest {
             val text = Jsoup.parse(reader.getHtmlPage(0).orEmpty()).body()?.text().orEmpty()
             assertTrue(text.contains("Visible chapter text"))
             assertFalse(text.isBlank())
+        } finally {
+            reader.close()
+            epub.delete()
+        }
+    }
+
+    @Test
+    fun adjacentShortChaptersRemainSeparateSpineSections() = runBlocking {
+        val epub = buildMiniEpub(
+            spineItems = listOf(
+                "chapter1.xhtml" to "<html><body><p>${"First short chapter. ".repeat(20)}</p></body></html>",
+                "chapter2.xhtml" to "<html><body><p>${"Second short chapter. ".repeat(20)}</p></body></html>"
+            )
+        )
+        val reader = EpubFormatReader(ContextWrapper(null), epub.absolutePath)
+        try {
+            assertEquals(2, reader.getPageCount())
+            assertEquals(2, reader.getTextDocumentSections().size)
         } finally {
             reader.close()
             epub.delete()
