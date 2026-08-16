@@ -1,9 +1,9 @@
 package io.leostrange.mrcomic.core.data.db
 
-import androidx.room.migration.Migration
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,6 +18,22 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
 
+    private val schemaAssetPrefix = "io.leostrange.mrcomic.core.data.db.AppDatabase"
+
+    private fun assumeHistoricalSchemasPresent(vararg versions: Int) {
+        val assets = InstrumentationRegistry.getInstrumentation().context.assets
+        val missing = versions.filter { version ->
+            runCatching {
+                assets.open("$schemaAssetPrefix/$version.json").use { }
+            }.isFailure
+        }
+        assumeTrue(
+            "Historical Room schemas are not checked in for versions ${missing.joinToString()}; " +
+                "export them before enabling device migration validation.",
+            missing.isEmpty()
+        )
+    }
+
     @get:Rule
     val helper = MigrationTestHelper(
         InstrumentationRegistry.getInstrumentation(),
@@ -26,6 +42,7 @@ class MigrationTest {
 
     @Test
     fun migrate8To9() {
+        assumeHistoricalSchemasPresent(8)
         // Create DB at version 8
         helper.createDatabase("test-db", 8).apply {
             execSQL("""
@@ -51,6 +68,7 @@ class MigrationTest {
 
     @Test
     fun migrate7To8() {
+        assumeHistoricalSchemasPresent(7)
         helper.createDatabase("test-db", 7).apply {
             execSQL("""
                 INSERT INTO comics (id, title, path, format, currentPage, totalPages)
@@ -72,6 +90,7 @@ class MigrationTest {
 
     @Test
     fun migrateAll() {
+        assumeHistoricalSchemasPresent(1)
         // Test full migration path from version 1 to latest
         helper.createDatabase("test-db", 1).apply {
             execSQL("""
