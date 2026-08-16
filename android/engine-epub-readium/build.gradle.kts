@@ -27,6 +27,12 @@ android {
     kotlinOptions {
         jvmTarget = libs.versions.jvmTarget.get()
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -44,4 +50,6 @@ dependencies {
     ksp(libs.google.hilt.compiler)
 
     testImplementation(libs.test.junit)
+    testImplementation(libs.robolectric)
 }
+

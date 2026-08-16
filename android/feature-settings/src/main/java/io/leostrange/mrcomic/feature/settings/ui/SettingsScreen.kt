@@ -47,7 +47,7 @@ import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.settings.R as SettingsR
-import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
+import io.leostrange.mrcomic.core.ui.fonts.ReaderTextFontCatalog
 import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopup
 import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopupConfig
 import kotlinx.coroutines.launch

@@ -150,4 +150,17 @@ class ReaderWebViewProtocolCodecTest {
         assertEquals(1842, target?.characterOffset)
         assertNull(target?.progression)
     }
+
+    @Test
+    fun decodeRestoreTarget_ignoresMissingSectionSentinelWithoutThrowing() {
+        val target = ReaderWebViewProtocolCodec.decodeRestoreTarget(
+            JSONObject.quote(
+                """{"sectionIndex":-1,"characterOffset":1842,"progression":0.25}"""
+            )
+        )
+
+        assertNull(target?.sectionIndex)
+        assertEquals(1842, target?.characterOffset)
+        assertEquals(0.25, target?.progression ?: -1.0, 0.0001)
+    }
 }

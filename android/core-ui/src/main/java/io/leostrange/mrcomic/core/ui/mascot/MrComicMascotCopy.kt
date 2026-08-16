@@ -22,8 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.leostrange.mrcomic.core.domain.analytics.MascotProgressState
-import io.leostrange.mrcomic.core.domain.analytics.MascotStage
+import io.leostrange.mrcomic.core.model.MascotProgressState
+import io.leostrange.mrcomic.core.model.MascotStage
 
 enum class MrComicMascotSurfaceMode {
     MASCOT,

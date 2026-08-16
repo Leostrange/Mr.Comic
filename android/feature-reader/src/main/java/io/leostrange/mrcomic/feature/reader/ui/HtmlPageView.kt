@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -69,7 +70,7 @@ internal fun HtmlPageView(
     onDictionarySelection: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
     onSaveQuoteSelection: (String) -> Unit,
-    onHighlightSelection: (String) -> Unit = {},
+    onHighlightSelection: (ReaderTextSelection) -> Unit = {},
     onTranslateChapter: () -> Unit = {},
     onCompareTranslations: (String) -> Unit = {},
     onAnchorClick: (String) -> Unit = {},
@@ -106,6 +107,7 @@ internal fun HtmlPageView(
     dictionaryActionLabel: String,
     explainActionLabel: String,
     saveQuoteActionLabel: String,
+    selectionMenuLanguageCode: String = "en",
     highlightsJs: String = "",
     onRegisterPageTurner: ((Int) -> Unit) -> Unit = {},
     onSelectionActionModeChange: (Boolean) -> Unit = {},
@@ -198,12 +200,27 @@ internal fun HtmlPageView(
     LaunchedEffect(autoScrollSpeed) {
         if (autoScrollSpeed <= 0f) return@LaunchedEffect
         autoScrollPaused.value = false
+        var previousFrameNanos = 0L
+        var pixelRemainder = 0f
         while (true) {
-            kotlinx.coroutines.delay(16) // ~60fps
-            val scrollFn = autoScrollScrollLambda.value
-            if (!autoScrollPaused.value && scrollFn != null) {
-                val pixelsPerFrame = (autoScrollSpeed / 60f).coerceAtLeast(0.5f).toInt()
-                scrollFn(pixelsPerFrame)
+            withFrameNanos { frameNanos ->
+                if (previousFrameNanos == 0L) {
+                    previousFrameNanos = frameNanos
+                    return@withFrameNanos
+                }
+                val elapsedSeconds = (frameNanos - previousFrameNanos) / 1_000_000_000f
+                previousFrameNanos = frameNanos
+                if (!autoScrollPaused.value) {
+                    val step = accumulateReaderAutoScrollPixels(
+                        remainder = pixelRemainder,
+                        pixelsPerSecond = autoScrollSpeed,
+                        elapsedSeconds = elapsedSeconds,
+                    )
+                    pixelRemainder = step.remainder
+                    if (step.wholePixels > 0) {
+                        autoScrollScrollLambda.value?.invoke(step.wholePixels)
+                    }
+                }
             }
         }
     }
@@ -283,14 +300,16 @@ internal fun HtmlPageView(
                 dictionarySelectionLabel = dictionaryActionLabel
                 explainSelectionLabel = explainActionLabel
                 saveQuoteSelectionLabel = saveQuoteActionLabel
+                readerWebView.selectionMenuLanguageCode = selectionMenuLanguageCode
                 onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
-                onSelectionActionRequest = { action, selectedText ->
+                onSelectionActionRequest = { action, selection ->
+                    val selectedText = selection.text
                     when (action) {
                         ReaderSelectionAction.TRANSLATE -> onTranslate.value(selectedText.trim())
                         ReaderSelectionAction.DICTIONARY -> onDictionary.value(selectedText.trim())
                         ReaderSelectionAction.EXPLAIN -> onExplain.value(selectedText.trim())
                         ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selectedText.trim())
-                        ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selectedText.trim())
+                        ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selection)
                         ReaderSelectionAction.TRANSLATE_CHAPTER -> onTranslateChapter.value()
                         ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
                     }
@@ -348,13 +367,15 @@ internal fun HtmlPageView(
             webView.dictionarySelectionLabel = dictionaryActionLabel
             webView.explainSelectionLabel = explainActionLabel
             webView.saveQuoteSelectionLabel = saveQuoteActionLabel
-            webView.onSelectionActionRequest = { action, selectedText ->
+            webView.selectionMenuLanguageCode = selectionMenuLanguageCode
+            webView.onSelectionActionRequest = { action, selection ->
+                val selectedText = selection.text
                 when (action) {
                     ReaderSelectionAction.TRANSLATE -> onTranslate.value(selectedText.trim())
                     ReaderSelectionAction.DICTIONARY -> onDictionary.value(selectedText.trim())
                     ReaderSelectionAction.EXPLAIN -> onExplain.value(selectedText.trim())
                     ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selectedText.trim())
-                    ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selectedText.trim())
+                    ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selection)
                     ReaderSelectionAction.TRANSLATE_CHAPTER -> onTranslateChapter.value()
                     ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
                 }
@@ -383,6 +404,40 @@ internal fun HtmlPageView(
                 )) {
                 return@AndroidView
             }
+            val pendingAnchor = currentPendingAnchor.value?.takeIf { it.isNotBlank() }
+            if (pendingAnchor != null) {
+                val cleanAnchor = pendingAnchor.removePrefix("#").replace("\"", "\\\"")
+                val script = """
+                    (function() {
+                        var target = document.getElementById("$cleanAnchor") ||
+                                     document.querySelector('[name="$cleanAnchor"]');
+                        if (target && window.__mrcomicScrollToAnchor) {
+                            window.__mrcomicScrollToAnchor(target);
+                            return true;
+                        }
+                        return false;
+                    })();
+                """.trimIndent()
+                webView.evaluateJavascript(script) { _ ->
+                    onConsumeAnchor.value()
+                }
+            }
+            val pendingWebtoonSection = currentPendingWebtoonSection.value?.takeIf { !pagedMode }
+            if (pendingWebtoonSection != null) {
+                val script = """
+                    (function() {
+                        var target = document.querySelector('.mrcomic-text-webtoon-section[data-mrcomic-page-index="$pendingWebtoonSection"]');
+                        if (target && window.__mrcomicScrollToAnchor) {
+                            window.__mrcomicScrollToAnchor(target);
+                            return true;
+                        }
+                        return false;
+                    })();
+                """.trimIndent()
+                webView.evaluateJavascript(script) { _ ->
+                    onConsumeWebtoonSectionState.value()
+                }
+            }
             val viewportWidthPx = webView.readerCssViewportWidthPxOrNull()
             val viewportHeightPx = webView.readerCssViewportHeightPxOrNull()
             webView.applyReaderTextSettingsIfNeeded(
@@ -396,6 +451,10 @@ internal fun HtmlPageView(
                 characterOffsetToRestore = currentCharOffset.value.takeIf { it > 0 },
                 script = textStyle.settingsScript(webView, pagedMode, isRtl)
             )
+            // Read the composable parameter directly here. `rememberUpdatedState` keeps
+            // callbacks current, but it does not reliably invalidate AndroidView.update
+            // when a Room highlight emission is the only state change.
+            webView.applyHighlightsIfChanged(highlightsJs)
         },
         onRelease = { webView ->
             autoScrollScrollLambda.value = null

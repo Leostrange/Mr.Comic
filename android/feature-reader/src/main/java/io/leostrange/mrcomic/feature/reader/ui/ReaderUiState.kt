@@ -222,6 +222,8 @@ data class ReaderUiState(
     val selectedTextTranslation: SelectedTextTranslationState? = null,
     /** Pending text awaiting highlight color selection. */
     val pendingHighlightText: String? = null,
+    val pendingHighlightStartOffset: Int = 0,
+    val pendingHighlightEndOffset: Int = 0,
     /** Highlights for the current page. */
     val pageHighlights: List<io.leostrange.mrcomic.core.data.db.entity.TextHighlight> = emptyList(),
     /** Chapter translation progress (null when not translating). */
@@ -243,7 +245,8 @@ data class ReaderUiState(
     val chromeShowAudioIcon: Boolean = true,
     val chromeShowDirectionIcon: Boolean = true,
     val chromeShowTranslateIcon: Boolean = true,
-    val chromeShowBrightnessIcon: Boolean = true
+    val chromeShowBrightnessIcon: Boolean = true,
+    val chromeShowAutoScrollIcon: Boolean = true
 )
 
 data class SelectedTextTranslationState(

@@ -70,7 +70,7 @@ internal fun AppThemePresetCard(
 
     MrComicCardSurface(
         modifier = modifier
-            .width(160.dp)
+            .width(180.dp)
             .clip(cardShape),
         fillMaxWidth = false,
         shape = cardShape,
@@ -175,7 +175,7 @@ internal fun AppThemePresetCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     minLines = 2,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }

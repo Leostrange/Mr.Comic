@@ -33,8 +33,11 @@ internal object ReaderProgressPolicy {
         currentComicIdMatches: Boolean,
         alreadyCompleted: Boolean,
         countsTowardReadingProgress: Boolean,
-        sessionManualPageTurns: Int
+        sessionManualPageTurns: Int,
+        isHeavyReflowable: Boolean = false,
+        totalPages: Int = 1
     ): Boolean {
+        if (isHeavyReflowable && totalPages <= 1) return false
         if (!reachedLastPage || !currentComicIdMatches || alreadyCompleted) return false
         return countsTowardReadingProgress || sessionManualPageTurns > 0
     }

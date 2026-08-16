@@ -43,3 +43,13 @@ internal data class ReaderTextLayoutFingerprint(
         isRtl
     ).joinToString(separator = "|")
 }
+
+internal fun readerTextSettingsUpdateRequired(
+    force: Boolean,
+    previousVisualSignature: String?,
+    nextVisualSignature: String,
+    previousLayoutSignature: String?,
+    nextLayoutSignature: String,
+): Boolean = force ||
+    previousVisualSignature != nextVisualSignature ||
+    previousLayoutSignature != nextLayoutSignature

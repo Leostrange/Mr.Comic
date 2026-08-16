@@ -155,4 +155,30 @@ class ReaderProgressPersistencePolicyTest {
             )
         )
     }
+
+    @Test
+    fun completionBlockedForProvisionalHeavyReflowable() {
+        assertFalse(
+            ReaderProgressPolicy.shouldComplete(
+                reachedLastPage = true,
+                currentComicIdMatches = true,
+                alreadyCompleted = false,
+                countsTowardReadingProgress = true,
+                sessionManualPageTurns = 5,
+                isHeavyReflowable = true,
+                totalPages = 1
+            )
+        )
+        assertTrue(
+            ReaderProgressPolicy.shouldComplete(
+                reachedLastPage = true,
+                currentComicIdMatches = true,
+                alreadyCompleted = false,
+                countsTowardReadingProgress = true,
+                sessionManualPageTurns = 5,
+                isHeavyReflowable = true,
+                totalPages = 150
+            )
+        )
+    }
 }

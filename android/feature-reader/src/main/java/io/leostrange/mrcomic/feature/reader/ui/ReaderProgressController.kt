@@ -237,13 +237,16 @@ internal class ReaderProgressController(
             val currentComic = _uiState.value.comic ?: return
             val authoritativeTotal = maxOf(pending.totalPages, storedPageCount)
             val reachedLastPageSafe = authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1
+            val isHeavy = currentComic.format.isHeavyReflowableFormat() || currentComic.format.isTextReadingFormat()
             val titleCompletionPolicy = resolveTitleCompletionPolicy(
                 reachedLastPage = reachedLastPageSafe,
                 currentComicIdMatches = currentComic.id == pending.comicId,
                 alreadyCompleted = currentComic.isCompleted,
                 countsTowardReadingProgress = pending.countsTowardReadingProgress,
                 sessionManualPageTurns = readerSessionCoordinator.currentManualPageTurns,
-                goalProgressDelta = goalProgressDelta
+                goalProgressDelta = goalProgressDelta,
+                isHeavyReflowable = isHeavy,
+                totalPages = authoritativeTotal
             )
             if (titleCompletionPolicy.shouldComplete) {
                 libraryRepository.markCompleted(pending.comicId, completed = true)

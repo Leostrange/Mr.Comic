@@ -206,6 +206,7 @@ private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
 
             randomAccessFile = RandomAccessFile(file, "r")
             inputStream = RandomAccessFileInStream(randomAccessFile)
+            runCatching { SevenZip.initSevenZipFromPlatformJAR(context.cacheDir) }
             archive = SevenZip.openInArchive(null, inputStream)
 
             val itemIndices = (0 until archive.getNumberOfItems())

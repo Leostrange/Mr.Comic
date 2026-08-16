@@ -2,6 +2,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderTextLayoutFingerprintTest {
@@ -54,5 +55,18 @@ class ReaderTextLayoutFingerprintTest {
         ).forEach { changed ->
             assertNotEquals(base.signature(), changed.signature())
         }
+    }
+
+    @Test
+    fun settingsUpdateIsRequiredWhenOnlyPagedChromeInsetsChange() {
+        assertTrue(
+            readerTextSettingsUpdateRequired(
+                force = false,
+                previousVisualSignature = "same-visual-style",
+                nextVisualSignature = "same-visual-style",
+                previousLayoutSignature = base.signature(),
+                nextLayoutSignature = base.copy(topPaddingPx = 0, bottomPaddingPx = 0).signature(),
+            ),
+        )
     }
 }

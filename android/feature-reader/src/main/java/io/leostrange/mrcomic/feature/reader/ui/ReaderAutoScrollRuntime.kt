@@ -12,6 +12,99 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlin.math.abs
 
+internal fun readerUsesAutoPageCountdown(containerKind: ReaderContainerKind): Boolean =
+    containerKind == ReaderContainerKind.RASTER_PAGE ||
+        containerKind == ReaderContainerKind.TEXT_PAGE
+
+internal fun readerContainerSupportsAutoScroll(containerKind: ReaderContainerKind): Boolean = when (containerKind) {
+    ReaderContainerKind.TEXT_PAGE,
+    ReaderContainerKind.TEXT_WEBTOON,
+    ReaderContainerKind.RASTER_PAGE,
+    ReaderContainerKind.RASTER_WEBTOON -> true
+    // This legacy placeholder is not selected by resolveReaderContainerKind().
+    ReaderContainerKind.READIUM_EPUB -> false
+}
+
+internal fun readerAutoScrollDockHeightDp(
+    containerKind: ReaderContainerKind,
+    chromeHidden: Boolean,
+    enabled: Boolean,
+): Int = if (
+    chromeHidden && enabled &&
+        (containerKind == ReaderContainerKind.TEXT_PAGE ||
+            containerKind == ReaderContainerKind.RASTER_PAGE)
+) {
+    72
+} else {
+    0
+}
+
+internal fun requestReaderAutoPageAdvance(
+    containerKind: ReaderContainerKind,
+    currentPage: Int,
+    totalPages: Int,
+    sectionCurrentPage: Int,
+    sectionPageCount: Int,
+    pageStep: Int,
+    pagedColumnTurn: ((Int) -> Unit)?,
+    onRasterPageTurn: () -> Unit,
+): Boolean = when (containerKind) {
+    ReaderContainerKind.RASTER_PAGE -> {
+        val target = currentPage + pageStep
+        if (target !in 0 until totalPages) {
+            false
+        } else {
+            onRasterPageTurn()
+            true
+        }
+    }
+    ReaderContainerKind.TEXT_PAGE -> {
+        val turner = pagedColumnTurn ?: return false
+        val finalSection = currentPage + pageStep !in 0 until totalPages
+        val finalVisualPage = sectionPageCount > 0 &&
+            sectionCurrentPage + pageStep !in 0 until sectionPageCount
+        if (finalSection && finalVisualPage) {
+            false
+        } else {
+            turner(pageStep)
+            true
+        }
+    }
+    else -> false
+}
+
+internal fun readerTextWebtoonPixelsPerSecond(
+    containerKind: ReaderContainerKind,
+    enabled: Boolean,
+    paused: Boolean,
+    speed: Float,
+): Float = if (
+    containerKind == ReaderContainerKind.TEXT_WEBTOON && enabled && !paused
+) {
+    ReaderAutoScrollPrecision.webtoonPixelsPerSecond(speed)
+} else {
+    0f
+}
+
+internal data class ReaderAutoScrollPixelStep(
+    val wholePixels: Int,
+    val remainder: Float,
+)
+
+internal fun accumulateReaderAutoScrollPixels(
+    remainder: Float,
+    pixelsPerSecond: Float,
+    elapsedSeconds: Float,
+): ReaderAutoScrollPixelStep {
+    val distance = remainder.coerceAtLeast(0f) +
+        pixelsPerSecond.coerceAtLeast(0f) * elapsedSeconds.coerceIn(0f, 0.1f)
+    val wholePixels = distance.toInt()
+    return ReaderAutoScrollPixelStep(
+        wholePixels = wholePixels,
+        remainder = distance - wholePixels,
+    )
+}
+
 /**
  * More than one reason can pause the reader at the same time. A Set is essential here:
  * ActionMode closing must not restart auto-scroll while the user is still dragging a page.
@@ -56,6 +149,9 @@ internal class ReaderAutoScrollRuntimeController(
                 it.copy(
                     autoScrollEnabled = true,
                     autoScrollCountdownProgress = 0f,
+                    // Starting is a new explicit session. Gesture/sheet reasons can be left
+                    // behind when the container is replaced while handling the last pointer-up.
+                    autoScrollPauseReasons = emptySet(),
                 )
             }
         }

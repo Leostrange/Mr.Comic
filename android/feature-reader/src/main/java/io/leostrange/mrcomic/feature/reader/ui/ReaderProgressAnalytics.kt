@@ -69,13 +69,17 @@ internal fun shouldAutoCompleteTitle(
     currentComicIdMatches: Boolean,
     alreadyCompleted: Boolean,
     countsTowardReadingProgress: Boolean,
-    sessionManualPageTurns: Int
+    sessionManualPageTurns: Int,
+    isHeavyReflowable: Boolean = false,
+    totalPages: Int = 1
 ): Boolean = ReaderProgressPolicy.shouldComplete(
     reachedLastPage = reachedLastPage,
     currentComicIdMatches = currentComicIdMatches,
     alreadyCompleted = alreadyCompleted,
     countsTowardReadingProgress = countsTowardReadingProgress,
-    sessionManualPageTurns = sessionManualPageTurns
+    sessionManualPageTurns = sessionManualPageTurns,
+    isHeavyReflowable = isHeavyReflowable,
+    totalPages = totalPages
 )
 
 internal fun resolveTitleCompletionPolicy(
@@ -84,14 +88,18 @@ internal fun resolveTitleCompletionPolicy(
     alreadyCompleted: Boolean,
     countsTowardReadingProgress: Boolean,
     sessionManualPageTurns: Int,
-    goalProgressDelta: Int
+    goalProgressDelta: Int,
+    isHeavyReflowable: Boolean = false,
+    totalPages: Int = 1
 ): TitleCompletionPolicy {
     val shouldComplete = shouldAutoCompleteTitle(
         reachedLastPage = reachedLastPage,
         currentComicIdMatches = currentComicIdMatches,
         alreadyCompleted = alreadyCompleted,
         countsTowardReadingProgress = countsTowardReadingProgress,
-        sessionManualPageTurns = sessionManualPageTurns
+        sessionManualPageTurns = sessionManualPageTurns,
+        isHeavyReflowable = isHeavyReflowable,
+        totalPages = totalPages
     )
     if (!shouldComplete) {
         return TitleCompletionPolicy(

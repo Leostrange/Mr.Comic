@@ -369,7 +369,7 @@ internal fun readerChromeButtonVisible(
     ReaderChromeButton.DIRECTION -> uiState.chromeShowDirectionIcon
     ReaderChromeButton.TRANSLATE -> uiState.chromeShowTranslateIcon
     ReaderChromeButton.BRIGHTNESS -> uiState.chromeShowBrightnessIcon
-    ReaderChromeButton.AUTO_SCROLL -> true
+    ReaderChromeButton.AUTO_SCROLL -> uiState.chromeShowAutoScrollIcon
 }
 
 internal fun readerTtsSleepTimerLabel(mode: ReaderTtsSleepTimerMode, language: String): String = when (mode) {

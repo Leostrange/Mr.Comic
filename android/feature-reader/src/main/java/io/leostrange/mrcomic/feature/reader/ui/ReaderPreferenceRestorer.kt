@@ -100,6 +100,7 @@ internal object ReaderPreferenceRestorer {
         val chromeShowDirectionIcon: Boolean,
         val chromeShowTranslateIcon: Boolean,
         val chromeShowBrightnessIcon: Boolean,
+        val chromeShowAutoScrollIcon: Boolean,
         val readerStylePresetEntries: List<io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry>,
         val readerStylePresetSlots: List<ReaderStylePresetSlot>,
         val savedReaderStylePresetEntries: List<io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry>,
@@ -129,36 +130,36 @@ internal object ReaderPreferenceRestorer {
         val chromeAutoHideEnabled = pref(PreferencesKeys.READER_CHROME_AUTO_HIDE, true)
         val topToolbarOpacity = pref(PreferencesKeys.READER_TOP_TOOLBAR_OPACITY, 0.86f).coerceIn(0f, 1.0f)
         val bottomToolbarOpacity = pref(PreferencesKeys.READER_BOTTOM_TOOLBAR_OPACITY, 0.9f).coerceIn(0f, 1.0f)
-        val toolbarBlur = pref(PreferencesKeys.READER_TOOLBAR_BLUR, READER_TOOLBAR_DEFAULT_BLUR).coerceIn(0f, 1f)
+        val toolbarBlur = pref(PreferencesKeys.READER_TOOLBAR_BLUR, 0.0f).coerceIn(0f, 1f)
         val imageScaleMode = ReaderImageScaleMode.fromStored(
             pref(PreferencesKeys.READER_IMAGE_SCALE_MODE, ReaderImageScaleMode.FIT_WIDTH.storedValue)
         )
         val imageMarginCropHorizontal = pref(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL
+            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, 0.0f
         ).coerceIn(0f, 0.22f)
         val imageMarginCropVertical = pref(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, DEFAULT_IMAGE_MARGIN_CROP_VERTICAL
+            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, 0.0f
         ).coerceIn(0f, 0.22f)
         val preload = pref(PreferencesKeys.READER_PRELOAD_PAGES, renderProfile.defaultPreloadPages)
             .coerceIn(2, 8)
             .coerceAtMost(renderProfile.maxPreloadPages)
 
         // Text reader settings
-        val fontSize = pref(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE).coerceIn(12, 32)
-        val colorScheme = pref(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
+        val fontSize = pref(PreferencesKeys.TEXT_FONT_SIZE, 18).coerceIn(12, 32)
+        val colorScheme = pref(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY")
         val customTextColor = pref(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
         val customBackgroundColor = pref(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
         val customAccentColor = pref(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
-        val fontFamily = pref(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY)
-        val lineHeight = pref(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT).coerceIn(1.0f, 3.0f)
-        val letterSpacing = pref(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING).coerceIn(0f, 0.2f)
-        val wordSpacing = pref(PreferencesKeys.TEXT_WORD_SPACING, DEFAULT_TEXT_WORD_SPACING).coerceIn(0f, 0.6f)
-        val paragraphSpacing = pref(PreferencesKeys.TEXT_PARAGRAPH_SPACING, DEFAULT_TEXT_PARAGRAPH_SPACING).coerceIn(0.1f, 1.2f)
-        val alignment = pref(PreferencesKeys.TEXT_ALIGNMENT, DEFAULT_TEXT_ALIGNMENT)
-        val bold = pref(PreferencesKeys.TEXT_BOLD, DEFAULT_TEXT_BOLD)
+        val fontFamily = pref(PreferencesKeys.TEXT_FONT_FAMILY, "Sans-Serif")
+        val lineHeight = pref(PreferencesKeys.TEXT_LINE_HEIGHT, 1.2f).coerceIn(1.0f, 3.0f)
+        val letterSpacing = pref(PreferencesKeys.TEXT_LETTER_SPACING, 0f).coerceIn(0f, 0.2f)
+        val wordSpacing = pref(PreferencesKeys.TEXT_WORD_SPACING, 0f).coerceIn(0f, 0.6f)
+        val paragraphSpacing = pref(PreferencesKeys.TEXT_PARAGRAPH_SPACING, 0.2f).coerceIn(0.1f, 1.2f)
+        val alignment = pref(PreferencesKeys.TEXT_ALIGNMENT, "left")
+        val bold = pref(PreferencesKeys.TEXT_BOLD, false)
 
         val tapZoneMode = ReaderTapZoneMode.fromStored(
             pref(PreferencesKeys.READER_TAP_ZONE_MODE, ReaderTapZoneMode.SIMPLE.name)
@@ -211,6 +212,7 @@ internal object ReaderPreferenceRestorer {
         val chromeShowDirectionIcon = pref(PreferencesKeys.READER_CHROME_SHOW_DIRECTION, true)
         val chromeShowTranslateIcon = pref(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true)
         val chromeShowBrightnessIcon = pref(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true)
+        val chromeShowAutoScrollIcon = pref(PreferencesKeys.READER_CHROME_SHOW_AUTO_SCROLL, true)
 
         val legacyReaderStylePresetSlots = listOf(
             ReaderStylePresetSlot(1, pref(PreferencesKeys.READER_STYLE_PRESET_1, "").ifBlank { null }),
@@ -294,6 +296,7 @@ internal object ReaderPreferenceRestorer {
             chromeShowDirectionIcon = chromeShowDirectionIcon,
             chromeShowTranslateIcon = chromeShowTranslateIcon,
             chromeShowBrightnessIcon = chromeShowBrightnessIcon,
+            chromeShowAutoScrollIcon = chromeShowAutoScrollIcon,
             readerStylePresetEntries = readerStylePresetEntries,
             readerStylePresetSlots = readerStylePresetSlots,
             savedReaderStylePresetEntries = savedReaderStylePresetEntries,
@@ -387,7 +390,8 @@ internal object ReaderPreferenceRestorer {
                 chromeShowAudioIcon = p.chromeShowAudioIcon,
                 chromeShowDirectionIcon = p.chromeShowDirectionIcon,
                 chromeShowTranslateIcon = p.chromeShowTranslateIcon,
-                chromeShowBrightnessIcon = p.chromeShowBrightnessIcon
+                chromeShowBrightnessIcon = p.chromeShowBrightnessIcon,
+                chromeShowAutoScrollIcon = p.chromeShowAutoScrollIcon
             )
         }
     }

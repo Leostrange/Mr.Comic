@@ -15,7 +15,8 @@ internal object ReaderNavigatorFacade {
         ReaderContainerKind.TEXT_PAGE to TextPageNavigator(),
         ReaderContainerKind.TEXT_WEBTOON to TextWebtoonNavigator(),
         ReaderContainerKind.RASTER_PAGE to RasterPageNavigator(),
-        ReaderContainerKind.RASTER_WEBTOON to RasterWebtoonNavigator()
+        ReaderContainerKind.RASTER_WEBTOON to RasterWebtoonNavigator(),
+        ReaderContainerKind.READIUM_EPUB to TextPageNavigator()
     )
 
     fun locator(
@@ -27,7 +28,8 @@ internal object ReaderNavigatorFacade {
         fragment: String? = null
     ): ReaderLocator = navigator(kind).toLocator(
         when (kind) {
-            ReaderContainerKind.TEXT_PAGE -> ReaderContainerPosition.TextPage(
+            ReaderContainerKind.TEXT_PAGE,
+            ReaderContainerKind.READIUM_EPUB -> ReaderContainerPosition.TextPage(
                 sectionIndex = primaryIndex,
                 pageInSplit = pageInSection,
                 characterOffset = characterOffset,

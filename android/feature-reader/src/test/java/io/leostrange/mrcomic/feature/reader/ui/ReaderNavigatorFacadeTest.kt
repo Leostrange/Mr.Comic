@@ -50,4 +50,24 @@ class ReaderNavigatorFacadeTest {
 
         assertEquals(17, ReaderNavigatorFacade.primaryIndex(webtoon.position))
     }
+
+    @Test
+    fun `readium epub mode round trip keeps section index`() {
+        val locator = ReaderNavigatorFacade.locator(
+            kind = ReaderContainerKind.READIUM_EPUB,
+            primaryIndex = 3,
+            pageInSection = 1,
+            characterOffset = 120
+        )
+        val bounds = ReaderNavigationBounds(sectionCount = 10, pageCount = 10)
+
+        val resolved = ReaderNavigatorFacade.resolve(
+            locator,
+            ReaderContainerKind.READIUM_EPUB,
+            bounds
+        )
+
+        assertEquals(3, ReaderNavigatorFacade.primaryIndex(resolved.position))
+    }
 }
+

@@ -259,6 +259,7 @@ class ArchiveDelegatingFormatReader(
     private fun <T> withRarArchive(block: (IInArchive) -> T): T? = runCatching {
         RandomAccessFile(archiveSourceFile(), "r").use { raf ->
             RandomAccessFileInStream(raf).use { stream ->
+                runCatching { SevenZip.initSevenZipFromPlatformJAR(context.cacheDir) }
                 SevenZip.openInArchive(null, stream).use(block)
             }
         }

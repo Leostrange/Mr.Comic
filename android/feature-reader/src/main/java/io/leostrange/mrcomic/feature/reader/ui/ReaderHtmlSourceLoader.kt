@@ -15,6 +15,13 @@ internal data class ReaderHtmlSourceLoadRequest(
     val freeScrollRestoreTarget: ReaderWebViewRestoreTarget? = null
 )
 
+internal fun readerHtmlSourceRequiresLoad(
+    activeToken: String?,
+    activePagedMode: Boolean?,
+    requestedToken: String,
+    requestedPagedMode: Boolean,
+): Boolean = activeToken != requestedToken || activePagedMode != requestedPagedMode
+
 internal fun loadReaderHtmlSourceIfChanged(
     webView: ReaderWebView,
     runtimeOwner: ReaderWebViewRuntimeOwner,
@@ -22,7 +29,15 @@ internal fun loadReaderHtmlSourceIfChanged(
 ): Boolean {
     val source = request.source
     val cached = webView.activeLoadToken
-    if (cached == source.loadToken) return false
+    if (!readerHtmlSourceRequiresLoad(
+            activeToken = cached,
+            activePagedMode = webView.activeLoadPagedMode,
+            requestedToken = source.loadToken,
+            requestedPagedMode = request.pagedMode,
+        )
+    ) {
+        return false
+    }
     if (
         cached != null && !request.pagedMode && source is ReaderHtmlPageSource.Inline &&
         source.html.contains("data-mrcomic-text-webtoon-document")
@@ -35,7 +50,7 @@ internal fun loadReaderHtmlSourceIfChanged(
     }
     val restoreTarget = restoreTarget(webView, request)
     val generation = runtimeOwner.beginLoad(source.loadToken, restoreTarget)
-    webView.markLoadRequested(source.loadToken, source.baseUrl(), generation)
+    webView.markLoadRequested(source.loadToken, source.baseUrl(), generation, request.pagedMode)
     when (source) {
         is ReaderHtmlPageSource.FileUrl -> loadFileSource(webView, source, request)
         is ReaderHtmlPageSource.Inline -> loadInlineSource(webView, source, request)

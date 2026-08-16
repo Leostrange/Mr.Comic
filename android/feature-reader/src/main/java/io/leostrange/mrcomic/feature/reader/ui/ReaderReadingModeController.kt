@@ -202,7 +202,10 @@ internal class ReaderReadingModeController(
                     null
                 },
                 freeScrollCharacterOffset = if (nextIsTextWebtoon) {
-                    textWebtoonPosition?.characterOffset ?: -1
+                    readerTextWebtoonRestoreCharacterOffset(
+                        transitionCursor = transitionCursor,
+                        resolvedCharacterOffset = textWebtoonPosition?.characterOffset ?: 0
+                    )
                 } else {
                     -1
                 },

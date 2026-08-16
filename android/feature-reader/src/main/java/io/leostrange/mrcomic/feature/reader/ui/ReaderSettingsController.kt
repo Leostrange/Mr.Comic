@@ -623,7 +623,10 @@ class ReaderSettingsController(
                 _uiState.update { it.copy(chromeShowBrightnessIcon = visible) }
                 viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, visible) }
             }
-            ReaderChromeButton.AUTO_SCROLL -> { /* always visible, no preference */ }
+            ReaderChromeButton.AUTO_SCROLL -> {
+                _uiState.update { it.copy(chromeShowAutoScrollIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_AUTO_SCROLL, visible) }
+            }
         }
     }
 

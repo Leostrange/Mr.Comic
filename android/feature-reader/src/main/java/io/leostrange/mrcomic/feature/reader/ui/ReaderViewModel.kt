@@ -384,6 +384,9 @@ class ReaderViewModel @Inject constructor(
     }
 
     internal fun onFreeScrollPositionChanged(position: ReaderWebViewRestoreTarget) {
+        position.sectionIndex?.takeIf { it >= 0 }?.let {
+            navigationController.updateTextWebtoonVisibleSection(it)
+        }
         _uiState.update {
             it.copy(
                 freeScrollCharacterOffset = position.characterOffset ?: -1,

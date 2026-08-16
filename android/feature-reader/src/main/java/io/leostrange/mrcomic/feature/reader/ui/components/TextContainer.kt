@@ -7,6 +7,7 @@ import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.ui.HtmlPageView
 import io.leostrange.mrcomic.feature.reader.ui.ReaderWebViewRestoreTarget
+import io.leostrange.mrcomic.feature.reader.ui.ReaderTextSelection
 
 @Composable
 internal fun TextContainer(
@@ -24,7 +25,7 @@ internal fun TextContainer(
     onDictionarySelection: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
     onSaveQuoteSelection: (String) -> Unit,
-    onHighlightSelection: (String) -> Unit = {},
+    onHighlightSelection: (ReaderTextSelection) -> Unit = {},
     onTranslateChapter: () -> Unit = {},
     onCompareTranslations: (String) -> Unit = {},
     highlightsJs: String = "",
@@ -60,6 +61,7 @@ internal fun TextContainer(
     dictionaryActionLabel: String,
     explainActionLabel: String,
     saveQuoteActionLabel: String,
+    selectionMenuLanguageCode: String = "en",
     onRegisterPageTurner: ((Int) -> Unit) -> Unit = {},
     onSelectionActionModeChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
@@ -115,6 +117,7 @@ internal fun TextContainer(
         dictionaryActionLabel = dictionaryActionLabel,
         explainActionLabel = explainActionLabel,
         saveQuoteActionLabel = saveQuoteActionLabel,
+        selectionMenuLanguageCode = selectionMenuLanguageCode,
         onRegisterPageTurner = onRegisterPageTurner,
         onSelectionActionModeChange = onSelectionActionModeChange,
         modifier = modifier

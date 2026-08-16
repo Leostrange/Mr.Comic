@@ -345,6 +345,25 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
+    fun missingPagedCharacterAnchorDoesNotOverrideWebtoonSectionWithDocumentStart() {
+        val cursor = readerTextWebtoonCursorFromPagedPosition(
+            engineSectionIndex = 4,
+            pagedSubpageIndex = 2,
+            pagedSubpageCount = 8,
+            totalWebtoonSections = 12,
+            characterOffset = null
+        )
+
+        assertEquals(
+            -1,
+            readerTextWebtoonRestoreCharacterOffset(
+                transitionCursor = cursor,
+                resolvedCharacterOffset = 0
+            )
+        )
+    }
+
+    @Test
     fun cursorVisibleSectionWithoutPreviousStartsAtItsCanonicalSection() {
         val cursor = readerTextWebtoonCursorAtVisibleSection(
             previous = null,

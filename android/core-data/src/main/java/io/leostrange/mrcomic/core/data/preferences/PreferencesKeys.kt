@@ -188,6 +188,7 @@ object PreferencesKeys {
     val READER_CHROME_SHOW_DIRECTION = booleanPreferencesKey("reader_chrome_show_direction")
     val READER_CHROME_SHOW_TRANSLATE = booleanPreferencesKey("reader_chrome_show_translate")
     val READER_CHROME_SHOW_BRIGHTNESS = booleanPreferencesKey("reader_chrome_show_brightness")
+    val READER_CHROME_SHOW_AUTO_SCROLL = booleanPreferencesKey("reader_chrome_show_auto_scroll")
 
     // Последняя секция библиотеки (FILES/AUDIOBOOKS/BOOKMARKS/QUOTES/ACHIEVEMENTS)
     val LIBRARY_CONTENT_SECTION    = stringPreferencesKey("library_content_section")

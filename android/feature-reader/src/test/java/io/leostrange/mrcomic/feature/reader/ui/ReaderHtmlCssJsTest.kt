@@ -11,6 +11,14 @@ import org.junit.Test
 class ReaderHtmlCssJsTest {
 
     @Test
+    fun webtoonCharacterRestoreScopesSectionRelativeOffsetToRequestedSection() {
+        val selector = readerFreeScrollCharacterScopeSelector(sectionIndex = 3)
+
+        assertTrue(selector.contains("data-mrcomic-page-index=\"3\""))
+        assertTrue(readerCaptureFreeScrollPositionJs(0.5).contains("closest('.mrcomic-text-webtoon-section')"))
+    }
+
+    @Test
     fun normalizeReaderOverrideColor_validHex() {
         assertEquals("#FF0000", normalizeReaderOverrideColor("#FF0000"))
         assertEquals("#1a6f9a", normalizeReaderOverrideColor("#1a6f9a"))
@@ -297,7 +305,7 @@ class ReaderHtmlCssJsTest {
         )
         assertTrue(
             "media pages keep the bottom shield below the last content line",
-            js.contains("var shieldTop=Math.max(") && js.contains("Math.max(0,rawVisibleHeight-1)")
+            js.contains("var shieldTop=Math.max(") && js.contains("rawVisibleHeight+1")
         )
     }
 
@@ -308,8 +316,8 @@ class ReaderHtmlCssJsTest {
         val js = readerPagedLayoutJs(targetPage = 0)
 
         assertTrue(
-            "shield must start at the last content line",
-            js.contains("Math.max(0,rawVisibleHeight-1)")
+            "shield must start after the last content line",
+            js.contains("rawVisibleHeight+1")
         )
         assertFalse(
             "shield must not be raised by a bottom text gutter",
@@ -350,8 +358,18 @@ class ReaderHtmlCssJsTest {
         val js = readerPagedLayoutJs(targetPage = 0)
 
         assertTrue(
-            "the bottom shield must start before the next page's first line can peek through",
-            js.contains("Math.max(0,rawVisibleHeight-1)")
+            "the bottom shield must not cover the last legal line",
+            js.contains("rawVisibleHeight+1")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_keepsPenultimatePageFullInsteadOfBalancingShortTail() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertFalse(
+            "a short final page must not pull content out of the preceding full page",
+            js.contains("rebalanceTrailingPages"),
         )
     }
 

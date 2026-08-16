@@ -143,6 +143,20 @@ internal fun readerTextWebtoonCursorFromPagedPosition(
 }
 
 /**
+ * Keeps an absent PAGE text anchor absent while entering WEBTOON.
+ *
+ * The navigator's legacy position model represents an unknown character offset as zero. Passing
+ * that synthetic zero to the WebView restore runtime takes precedence over the mapped section and
+ * scrolls the document to its first character.
+ */
+internal fun readerTextWebtoonRestoreCharacterOffset(
+    transitionCursor: ReaderTextWebtoonCursor?,
+    resolvedCharacterOffset: Int
+): Int = transitionCursor?.characterOffset
+    ?: resolvedCharacterOffset.takeIf { transitionCursor == null && it > 0 }
+    ?: -1
+
+/**
  * Updates the visible side of a Webtoon cursor without losing its canonical engine section.
  *
  * When the previous cursor started at engine section 0 but was mapped to another stitched

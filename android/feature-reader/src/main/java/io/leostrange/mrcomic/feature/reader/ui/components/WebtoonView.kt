@@ -153,7 +153,6 @@ fun WebtoonView(
         state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
             bottom = 16.dp
         ),
         userScrollEnabled = zoomedPageIndex == null,
@@ -332,32 +331,35 @@ private fun ZoomableFillWidthImage(
     ) {
         val density = LocalDensity.current
         val containerWidthPx = with(density) { maxWidth.toPx().coerceAtLeast(1f) }
-        val containerHeightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f).coerceAtMost(100000f) }
+        val hasBoundedContainerHeight = constraints.hasBoundedHeight
+        val containerHeightPx = if (hasBoundedContainerHeight) {
+            with(density) { maxHeight.toPx().coerceAtLeast(1f) }
+        } else {
+            Float.POSITIVE_INFINITY
+        }
         val (sourceWidthPx, sourceHeightPx) = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
             croppedSourceDimensions(bitmap, crop)
         }
-        val (baseWidthPx, baseHeightPx) = remember(
+        val imageSize = remember(
             bitmap,
             containerWidthPx,
             containerHeightPx,
+            hasBoundedContainerHeight,
             imageScaleMode,
             sourceWidthPx,
             sourceHeightPx
         ) {
-            when (ReaderImageScaleMode.fromStored(imageScaleMode)) {
-                ReaderImageScaleMode.FIT_WIDTH -> {
-                    val h = containerWidthPx * (sourceHeightPx / sourceWidthPx.coerceAtLeast(1f))
-                    containerWidthPx to h
-                }
-                ReaderImageScaleMode.FIT_HEIGHT -> {
-                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
-                    w to containerHeightPx
-                }
-                ReaderImageScaleMode.REAL_SIZE -> {
-                    sourceWidthPx to sourceHeightPx
-                }
-            }
+            resolveWebtoonImageSizePx(
+                containerWidthPx = containerWidthPx,
+                containerHeightPx = containerHeightPx,
+                hasBoundedHeight = hasBoundedContainerHeight,
+                sourceWidthPx = sourceWidthPx,
+                sourceHeightPx = sourceHeightPx,
+                scaleMode = ReaderImageScaleMode.fromStored(imageScaleMode),
+            )
         }
+        val baseWidthPx = imageSize.width
+        val baseHeightPx = imageSize.height
         val imageWidth  = with(density) { baseWidthPx.toDp() }
         val imageHeight = with(density) { baseHeightPx.toDp() }
         var scale by remember(bitmap, resetToken) { mutableFloatStateOf(1f) }
@@ -487,4 +489,3 @@ private fun boundedWebtoonOffset(
         y = current.y.coerceIn(-maxY, maxY)
     )
 }
-

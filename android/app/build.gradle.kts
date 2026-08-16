@@ -26,6 +26,10 @@ val hasCustomSigning = customKeystoreFile.exists() &&
     !signingKeyAlias.isNullOrBlank() &&
     !signingKeyPassword.isNullOrBlank()
 
+val gitSha = providers.exec {
+    commandLine("git", "rev-parse", "--short=8", "HEAD")
+}.standardOutput.asText.map { it.trim() }.orElse("unknown").get()
+
 android {
     namespace = "io.leostrange.mrcomic"
     compileSdk = libs.versions.compileSdk.get().toInt()
@@ -39,6 +43,7 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = 3
         versionName = "2.2.0"
+        buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
     }

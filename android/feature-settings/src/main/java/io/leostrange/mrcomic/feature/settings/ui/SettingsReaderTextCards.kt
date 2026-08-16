@@ -38,7 +38,7 @@ import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
+import io.leostrange.mrcomic.core.ui.fonts.ReaderTextFontCatalog
 import java.util.Locale
 
 /* ──── ReaderTextStyleCard ──── */

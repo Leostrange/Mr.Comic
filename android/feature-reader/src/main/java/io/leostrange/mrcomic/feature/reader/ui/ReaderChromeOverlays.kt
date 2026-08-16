@@ -11,8 +11,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -222,6 +232,52 @@ internal fun BoxScope.ReaderTopChromeBar(
         }
     }
 
+    if (uiState.chromeState == ReaderChromeState.HIDDEN && uiState.autoScrollEnabled) {
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 24.dp)
+                .navigationBarsPadding()
+                .displayCutoutPadding(),
+            shape = RoundedCornerShape(999.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+            shadowElevation = 6.dp
+        ) {
+            androidx.compose.foundation.layout.Row(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                androidx.compose.material3.IconButton(
+                    onClick = onAutoScrollToggle,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = if (uiState.isAutoScrollTemporarilyPaused) androidx.compose.material.icons.Icons.Filled.PlayArrow else androidx.compose.material.icons.Icons.Filled.Pause,
+                        contentDescription = if (uiState.isAutoScrollTemporarilyPaused) "Resume auto-scroll" else "Pause auto-scroll",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                if (uiState.readingMode != ReadingMode.WEBTOON) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        progress = { if (!uiState.isAutoScrollTemporarilyPaused) uiState.autoScrollCountdownProgress.coerceIn(0f, 1f) else 0f },
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.outlineVariant
+                    )
+                } else {
+                    androidx.compose.material3.Text(
+                        text = "${ReaderAutoScrollPrecision.webtoonPixelsPerSecond(uiState.autoScrollSpeed).toInt()} px/s",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+
     if (uiState.chromeState != ReaderChromeState.HIDDEN && !uiState.showTextSettings && !uiState.showTocSheet) {
         Box(
             modifier = Modifier
@@ -252,7 +308,7 @@ internal fun BoxScope.ReaderTopChromeBar(
                     ReaderChromeState.EXPANDED -> {
                         ReaderExpandedBar(
                             title = uiState.comic?.title.orEmpty(),
-                            canShowToc = uiState.tableOfContents.isNotEmpty() || uiState.bookmarkedPages.isNotEmpty(),
+                            canShowToc = isTextReader,
                             showTextSettings = true,
                             showOcrAction = true,
                             canSwapDirection = uiState.readingMode == ReadingMode.PAGE_LTR ||
@@ -261,13 +317,16 @@ internal fun BoxScope.ReaderTopChromeBar(
                             showBrightnessRow = showBrightnessRow,
                             useDirectActions = isTextReader,
                             chromeIconOrder = uiState.chromeIconOrder,
-                            showTocIcon = uiState.chromeShowTocIcon && isTextReader,
+                            showTocIcon = readerShouldShowTocChromeButton(
+                                isTextReader = isTextReader,
+                                buttonEnabled = uiState.chromeShowTocIcon,
+                            ),
                             showTextSettingsIcon = uiState.chromeShowStyleIcon,
                             showAudioIcon = uiState.chromeShowAudioIcon && isTextReader,
-                            showDirectionIcon = uiState.chromeShowDirectionIcon,
+                            showDirectionIcon = uiState.chromeShowDirectionIcon && (uiState.readingMode == ReadingMode.PAGE_LTR || uiState.readingMode == ReadingMode.PAGE_RTL),
                             showTranslateIcon = uiState.chromeShowTranslateIcon,
                             showBrightnessIcon = uiState.chromeShowBrightnessIcon,
-                            showAutoScrollIcon = uiState.readerContainerKind != ReaderContainerKind.TEXT_WEBTOON,
+                            showAutoScrollIcon = uiState.chromeShowAutoScrollIcon,
                             autoScrollActive = uiState.autoScrollEnabled,
                             onNavigateBack = onNavigateBack,
                             onToggleToc = onToggleToc,

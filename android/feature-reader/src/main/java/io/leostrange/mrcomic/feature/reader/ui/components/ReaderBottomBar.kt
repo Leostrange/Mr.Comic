@@ -39,20 +39,18 @@ fun ReaderBottomBar(
     val compactImageLayout = isLandscape && !isTextBook
     val showPageCountText = true
     val showSectionPage = sectionPageCount > 0 && isTextBook
-    // For text books with section paging: show section-local values so the counter
-    // and slider stay in sync (both advance only on section boundary, not per visual page).
-    // For image-based comics or EPUBs without section paging: use book-wide accumulated values.
-    val useSectionLocal = isTextBook && sectionPageCount > 0
-    val effectiveTotalPages = when {
-        useSectionLocal -> totalPages
-        epubAccumulatedTotalPages > 0 -> epubAccumulatedTotalPages
-        else -> totalPages
-    }
-    val effectiveCurrentPage = when {
-        useSectionLocal -> currentPage
-        epubAccumulatedTotalPages > 0 -> epubAccumulatedCurrentPage
-        else -> currentPage
-    }
+    // Text engines expose spine sections through currentPage/totalPages. Once visual-page
+    // accumulation is available, the reader-facing counter must use the whole-book model.
+    val effectiveProgress = resolveReaderBottomProgress(
+        currentPage = currentPage,
+        totalPages = totalPages,
+        isTextBook = isTextBook,
+        sectionPageCount = sectionPageCount,
+        epubAccumulatedCurrentPage = epubAccumulatedCurrentPage,
+        epubAccumulatedTotalPages = epubAccumulatedTotalPages,
+    )
+    val effectiveTotalPages = effectiveProgress.totalPages
+    val effectiveCurrentPage = effectiveProgress.currentPage
     val bookProgress = if (effectiveTotalPages > 0) ((effectiveCurrentPage + 1) * 100f / effectiveTotalPages).toInt() else 0
 
     Column(

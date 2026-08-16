@@ -9,6 +9,22 @@ import org.junit.Test
 class ReaderAutoScrollRuntimeControllerTest {
 
     @Test
+    fun enablingNewSession_clearsStalePauseReasons() {
+        val state = MutableStateFlow(
+            ReaderUiState(
+                autoScrollEnabled = false,
+                autoScrollPauseReasons = setOf(ReaderAutoScrollPauseReason.TOUCH_GESTURE),
+            ),
+        )
+        val controller = ReaderAutoScrollRuntimeController(state)
+
+        controller.toggle()
+
+        assertTrue(state.value.autoScrollEnabled)
+        assertTrue(state.value.autoScrollPauseReasons.isEmpty())
+    }
+
+    @Test
     fun resumeOneReason_keepsPauseWhileAnotherReasonIsActive() {
         val state = MutableStateFlow(ReaderUiState(autoScrollEnabled = true))
         val controller = ReaderAutoScrollRuntimeController(state)

@@ -135,8 +135,8 @@ internal object ReaderWebViewProtocolCodec {
 
     private fun JSONObject.toRestoreTarget(required: Boolean): ReaderWebViewRestoreTarget? {
         val fragment = optString("fragment").takeIf { it.isNotBlank() }
-        val sectionIndex = optIntOrNull("sectionIndex")
-        val characterOffset = optIntOrNull("characterOffset")
+        val sectionIndex = optionalNonNegativeInt("sectionIndex")
+        val characterOffset = optionalNonNegativeInt("characterOffset")
         val progression = sanitizeProgression(optDoubleOrNull("progression"))
         if (fragment == null && sectionIndex == null && characterOffset == null && progression == null) {
             if (required) error("Restore target is missing")
@@ -157,6 +157,9 @@ internal object ReaderWebViewProtocolCodec {
 
     private fun JSONObject.optIntOrNull(name: String): Int? =
         if (has(name) && !isNull(name)) getInt(name) else null
+
+    private fun JSONObject.optionalNonNegativeInt(name: String): Int? =
+        optIntOrNull(name)?.takeIf { it >= 0 }
 
     private fun JSONObject.optDoubleOrNull(name: String): Double? =
         if (has(name) && !isNull(name)) getDouble(name) else null

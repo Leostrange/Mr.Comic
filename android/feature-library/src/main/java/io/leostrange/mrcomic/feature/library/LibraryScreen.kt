@@ -10,16 +10,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
@@ -48,7 +43,6 @@ import io.leostrange.mrcomic.core.model.isReadCompleted
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceMissingLabel
 import io.leostrange.mrcomic.feature.library.components.AchievementQuestTransition
-import io.leostrange.mrcomic.feature.library.components.ComicGridItem
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievementsRow
 import io.leostrange.mrcomic.feature.library.components.LibraryTopBar
 import io.leostrange.mrcomic.feature.library.components.computeAchievements
@@ -587,269 +581,29 @@ fun LibraryScreen(
                             }
                         }
 
-                        if (uiState.contentSection == LibraryContentSection.QUOTES) {
-                            if (uiState.quotes.isEmpty()) {
-                                item(key = "empty_quotes", span = { GridItemSpan(maxLineSpan) }) {
-                                    EmptyQuotesPlaceholder(showMascot = uiState.mascotUiEnabled)
-                                }
-                            } else {
-                                items(uiState.quotes, key = { "quote_${it.id}" }) { quote ->
-                                    QuoteCard(
-                                        quote = quote,
-                                        sourceAvailable = quote.comicId in uiState.availableQuoteComicIds,
-                                        onClick = { onQuoteClick(quote.comicId, quote.page) },
-                                        onLongClick = { quoteToDelete = quote },
-                                        onUnavailableSourceClick = {
-                                            coroutineScope.launch {
-                                                snackbarHostState.showSnackbar(
-                                                    strings.libraryQuoteSourceMissingLabel()
-                                                )
-                                            }
-                                        }
+                        libraryDisplayItemsGridContent(
+                            uiState = uiState,
+                            visibleAudiobooks = visibleAudiobooks,
+                            isQuoteSection = isQuoteSection,
+                            isBookmarkSection = isBookmarkSection,
+                            isAchievementSection = isAchievementSection,
+                            strings = strings,
+                            onQuoteClick = onQuoteClick,
+                            onComicClick = onComicClick,
+                            onAudiobookClick = onAudiobookClick,
+                            onSelectComicId = { selectedComicId = it },
+                            onSetQuoteToDelete = { quoteToDelete = it },
+                            onSetFolderToDelete = { folderToDelete = it },
+                            onSetAudiobookToDelete = { audiobookToDelete = it },
+                            onOpenFolderSheet = viewModel::openFolderSheet,
+                            onShowMissingSourceSnackbar = {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        strings.libraryQuoteSourceMissingLabel()
                                     )
                                 }
                             }
-                        } else if (!isAchievementSection &&
-                            uiState.groupByMode == GroupByMode.SERIES &&
-                            ((isBookmarkSection && uiState.bookmarkedGroupSections.isNotEmpty()) ||
-                                (!isBookmarkSection && uiState.groupSections.isNotEmpty()))
-                        ) {
-                            val sections = if (isBookmarkSection) uiState.bookmarkedGroupSections else uiState.groupSections
-                            if (uiState.viewMode == LibraryViewMode.STRIPS) {
-                                val seriesStripSections = sections.mapIndexed { index, (title, comics) ->
-                                    LibraryStripSectionData(
-                                        key = "series_strip_${index}_$title",
-                                        title = title,
-                                        comics = comics
-                                    )
-                                }
-                                items(seriesStripSections, key = { it.key }) { section ->
-                                    LibraryDisplayStripSection(
-                                        section = section,
-                                        uiState = uiState,
-                                        onComicClick = { onComicClick(it.id) },
-                                        onComicLongClick = { selectedComicId = it.id },
-                                        onFolderClick = { folder ->
-                                            if (folder.fileCount == 1 && folder.subfolderCount == 0) {
-                                                val singleComic = uiState.comics.find { it.folderId == folder.path }
-                                                if (singleComic != null) {
-                                                    onComicClick(singleComic.id)
-                                                } else {
-                                                    viewModel.openFolderSheet(folder.path)
-                                                }
-                                            } else {
-                                                viewModel.openFolderSheet(folder.path)
-                                            }
-                                        },
-                                        onFolderLongClick = { folderToDelete = it },
-                                        onAudiobookClick = { onAudiobookClick(it.id) },
-                                        onAudiobookLongClick = { audiobookToDelete = it }
-                                    )
-                                }
-                            } else {
-                                sections.forEach { (title, comics) ->
-                                    item(key = "section_$title", span = { GridItemSpan(maxLineSpan) }) {
-                                        Text(
-                                            text = title,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp)
-                                                .padding(top = 8.dp, bottom = 4.dp)
-                                        )
-                                    }
-                                    items(comics, key = { it.id }) { comic ->
-                                        LibraryGridCell(
-                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                            tileSizeDp = uiState.tileSizeDp
-                                        ) {
-                                            ComicGridItem(
-                                                comic = comic,
-                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                cardStyle = uiState.cardStyle,
-                                                tileSizeDp = uiState.tileSizeDp,
-                                                coverScaleMode = uiState.coverScale,
-                                                thumbnailMode = uiState.thumbnailMode,
-                                                shelfStyle = uiState.shelfStyle,
-                                                shelfDepth = uiState.shelfDepth,
-                                                graphicCoverStyle = uiState.graphicCoverStyle,
-                                                cardShadow = uiState.cardShadow,
-                                                titleScale = uiState.titleScale,
-                                                titleLines = uiState.titleLines,
-                                                cardStroke = uiState.cardStroke,
-                                                cardCornerRadius = uiState.cardCornerRadius,
-                                                titlePanelOpacity = uiState.titlePanelOpacity,
-                                                showProgressIndicators = uiState.showProgressIndicators,
-                                                showCoverTitles = uiState.showCoverTitlesOnGrid,
-                                                onClick = { onComicClick(comic.id) },
-                                                onLongClick = { selectedComicId = comic.id }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        } else if (!isAchievementSection) {
-                            val activeDisplayItems = if (isBookmarkSection) uiState.bookmarkedDisplayItems else uiState.displayItems
-                            if (activeDisplayItems.isEmpty() && (uiState.contentSection != LibraryContentSection.FILES || visibleAudiobooks.isEmpty())) {
-                                item(key = "empty_folder", span = { GridItemSpan(maxLineSpan) }) {
-                                    if (isBookmarkSection) {
-                                        EmptyBookmarksPlaceholder(showMascot = uiState.mascotUiEnabled)
-                                    } else {
-                                        EmptyFolderPlaceholder(
-                                            title = uiState.breadcrumbs.lastOrNull()?.label ?: strings.actionFolder,
-                                            showMascot = uiState.mascotUiEnabled
-                                        )
-                                    }
-                                }
-                            } else if (uiState.viewMode == LibraryViewMode.STRIPS) {
-                                val stripSections = buildLibraryStripSections(
-                                    items = activeDisplayItems,
-                                    appLanguage = uiState.appLanguage,
-                                    audiobooks = if (uiState.contentSection == LibraryContentSection.FILES) {
-                                        visibleAudiobooks
-                                    } else {
-                                        emptyList()
-                                    }
-                                )
-                                items(stripSections, key = { it.key }) { section ->
-                                    LibraryDisplayStripSection(
-                                        section = section,
-                                        uiState = uiState,
-                                        onComicClick = { onComicClick(it.id) },
-                                        onComicLongClick = { selectedComicId = it.id },
-                                        onFolderClick = { folder ->
-                                            if (folder.fileCount == 1 && folder.subfolderCount == 0) {
-                                                val singleComic = uiState.comics.find { it.folderId == folder.path }
-                                                if (singleComic != null) {
-                                                    onComicClick(singleComic.id)
-                                                } else {
-                                                    viewModel.openFolderSheet(folder.path)
-                                                }
-                                            } else {
-                                                viewModel.openFolderSheet(folder.path)
-                                            }
-                                        },
-                                        onFolderLongClick = { folderToDelete = it },
-                                        onAudiobookClick = { onAudiobookClick(it.id) },
-                                        onAudiobookLongClick = { audiobookToDelete = it }
-                                    )
-                                }
-                            } else {
-                                items(
-                                    items = activeDisplayItems,
-                                    key = { it.key },
-                                    span = { item ->
-                                        if (item is LibrarySectionDividerItem) {
-                                            GridItemSpan(maxLineSpan)
-                                        } else {
-                                            GridItemSpan(1)
-                                        }
-                                    }
-                                ) { item ->
-                                    when (item) {
-                                        is LibrarySectionDividerItem -> {
-                                            LibraryFileSectionDivider(section = item.section)
-                                        }
-
-                                        is LibraryComicItem -> {
-                                            LibraryGridCell(
-                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                tileSizeDp = uiState.tileSizeDp
-                                            ) {
-                                                ComicGridItem(
-                                                    comic = item.comic,
-                                                    isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                    cardStyle = uiState.cardStyle,
-                                                    tileSizeDp = uiState.tileSizeDp,
-                                                    coverScaleMode = uiState.coverScale,
-                                                    thumbnailMode = uiState.thumbnailMode,
-                                                    shelfStyle = uiState.shelfStyle,
-                                                    shelfDepth = uiState.shelfDepth,
-                                                    graphicCoverStyle = uiState.graphicCoverStyle,
-                                                    cardShadow = uiState.cardShadow,
-                                                    titleScale = uiState.titleScale,
-                                                    titleLines = uiState.titleLines,
-                                                    cardStroke = uiState.cardStroke,
-                                                    cardCornerRadius = uiState.cardCornerRadius,
-                                                    titlePanelOpacity = uiState.titlePanelOpacity,
-                                                    showProgressIndicators = uiState.showProgressIndicators,
-                                                    showCoverTitles = uiState.showCoverTitlesOnGrid,
-                                                    onClick = { onComicClick(item.comic.id) },
-                                                    onLongClick = { selectedComicId = item.comic.id }
-                                                )
-                                            }
-                                        }
-
-                                        is LibraryFolderItem -> {
-                                            LibraryGridCell(
-                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                tileSizeDp = uiState.tileSizeDp
-                                            ) {
-                                                FolderCard(
-                                                    folder = item,
-                                                    isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                    cardStyle = uiState.cardStyle,
-                                                    tileSizeDp = uiState.tileSizeDp,
-                                                    coverScale = uiState.coverScale,
-                                                    thumbnailMode = uiState.thumbnailMode,
-                                                    shelfStyle = uiState.shelfStyle,
-                                                    shelfDepth = uiState.shelfDepth,
-                                                    cardShadow = uiState.cardShadow,
-                                                    onClick = {
-                                                        if (item.fileCount == 1 && item.subfolderCount == 0) {
-                                                            val singleComic = uiState.comics.find { it.folderId == item.path }
-                                                            if (singleComic != null) {
-                                                                onComicClick(singleComic.id)
-                                                            } else {
-                                                                viewModel.openFolderSheet(item.path)
-                                                            }
-                                                        } else {
-                                                            viewModel.openFolderSheet(item.path)
-                                                        }
-                                                    },
-                                                    onLongClick = { folderToDelete = item }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                if (uiState.contentSection == LibraryContentSection.FILES && visibleAudiobooks.isNotEmpty()) {
-                                    item(key = "audiobook_divider", span = { GridItemSpan(maxLineSpan) }) {
-                                        LibrarySectionHeader(
-                                            title = libraryAudiobooksStripLabel(uiState.appLanguage),
-                                            icon = Icons.Default.Headphones
-                                        )
-                                    }
-                                    items(visibleAudiobooks, key = { "ab_${it.id}" }) { audiobook ->
-                                        LibraryGridCell(
-                                            isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                            tileSizeDp = uiState.tileSizeDp
-                                        ) {
-                                            AudiobookGridItem(
-                                                audiobook = audiobook,
-                                                isGrid = uiState.viewMode != LibraryViewMode.LIST,
-                                                cardStyle = uiState.cardStyle,
-                                                tileSizeDp = uiState.tileSizeDp,
-                                                thumbnailMode = uiState.thumbnailMode,
-                                                shelfStyle = uiState.shelfStyle,
-                                                shelfDepth = uiState.shelfDepth,
-                                                cardShadow = uiState.cardShadow,
-                                                titleScale = uiState.titleScale,
-                                                titleLines = uiState.titleLines,
-                                                cardStroke = uiState.cardStroke,
-                                                cardCornerRadius = uiState.cardCornerRadius,
-                                                titlePanelOpacity = uiState.titlePanelOpacity,
-                                                showCoverTitles = uiState.showCoverTitlesOnGrid,
-                                                onClick = { onAudiobookClick(audiobook.id) },
-                                                onLongClick = { audiobookToDelete = audiobook }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
+                        )
                     }
                 }
             }
@@ -864,9 +618,9 @@ fun LibraryScreen(
                     Text(message)
                 }
             }
-            } // Закрытие внутреннего Box с padding
-        } // Закрытие внешнего Box
-    } // Закрытие тела Scaffold
+        }
+    }
+}
 
     LibraryScreenDialogs(
         showFilterSheet = showFilterSheet,

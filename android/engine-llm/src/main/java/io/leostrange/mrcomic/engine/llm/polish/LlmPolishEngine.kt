@@ -158,6 +158,4 @@ Improved translation (only the refined text, no explanations):"""
         "pt" -> "Portuguese"; "pl" -> "Polish"; "tr" -> "Turkish"
         else -> code
     }
-
-    private fun targetTargetLang(code: String) = code
 }

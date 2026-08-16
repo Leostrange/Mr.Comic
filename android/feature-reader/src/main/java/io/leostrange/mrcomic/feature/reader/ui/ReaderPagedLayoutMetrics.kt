@@ -1,5 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
+import io.leostrange.mrcomic.feature.reader.ui.geometry.PagedViewportContract
+
 /** Typed result returned by the WebView-side PAGE layout script. */
 internal data class ReaderPagedLayoutMetrics(
     val handled: Boolean,
@@ -13,8 +15,8 @@ internal data class ReaderPagedLayoutMetrics(
         handled &&
             pageCount >= 1 &&
             pageIndex in 0 until pageCount &&
-            clipHeight >= 320 &&
-            usableHeight >= 72
+            clipHeight >= PagedViewportContract.MIN_CLIP_HEIGHT_PX &&
+            usableHeight >= PagedViewportContract.MIN_USABLE_HEIGHT_CSS_PX
 }
 
 internal fun decodeReaderPagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetrics? {

@@ -155,7 +155,7 @@ internal class SettingsBackupController(
                 val jsonString = uri.readAcceptedSettingsImportText(context)
 
                 val root = JSONObject(jsonString)
-                val entries = root.getJSONArray("entries")
+                val entries = root.optJSONArray("entries")
                 var updated = 0
                 var restored = 0
                 var skipped = 0
@@ -167,26 +167,28 @@ internal class SettingsBackupController(
                 val restoredAppIcon = restoreAppIconFromBackup(root.optJSONObject("appIcon"))
                 val restoredSettings = restoredMainPreferences + restoredThemePreferences + restoredAppIcon
 
-                for (i in 0 until entries.length()) {
-                    val entry = entries.getJSONObject(i)
-                    val backupComic = parseComicBackupEntry(entry)
-                    if (backupComic == null) {
-                        skipped++
-                        continue
-                    }
+                if (entries != null) {
+                    for (i in 0 until entries.length()) {
+                        val entry = entries.getJSONObject(i)
+                        val backupComic = parseComicBackupEntry(entry)
+                        if (backupComic == null) {
+                            skipped++
+                            continue
+                        }
 
-                    val result = comicRepository.restoreComicFromBackup(backupComic)
-                    if (result != null) {
-                        if (result.inserted) {
-                            restored++
+                        val result = comicRepository.restoreComicFromBackup(backupComic)
+                        if (result != null) {
+                            if (result.inserted) {
+                                restored++
+                            } else {
+                                updated++
+                            }
+                            if (!result.isReadable) {
+                                unresolvedAccess++
+                            }
                         } else {
-                            updated++
+                            skipped++
                         }
-                        if (!result.isReadable) {
-                            unresolvedAccess++
-                        }
-                    } else {
-                        skipped++
                     }
                 }
 
