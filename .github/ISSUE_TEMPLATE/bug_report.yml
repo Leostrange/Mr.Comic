@@ -1,0 +1,53 @@
+name: Bug report
+description: Сообщить о воспроизводимой проблеме в Mr.Comic
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Перед созданием проверьте существующие issues. Не прикладывайте реальные книги, токены или персональные данные.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Описание
+      description: Что произошло и почему это проблема?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      placeholder: |
+        1. Открыть ...
+        2. Выбрать ...
+        3. Нажать ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемое и фактическое поведение
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Версия или commit
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Устройство и Android API
+    validations:
+      required: true
+  - type: input
+    id: format
+    attributes:
+      label: Формат книги/комикса и reader preset
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Логи или визуальные материалы
+      description: Очистите материалы от персональных данных и секретов.

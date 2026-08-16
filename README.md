@@ -14,7 +14,7 @@
     <img alt="Kotlin" src="https://img.shields.io/badge/Kotlin-7f52ff?style=for-the-badge&logo=kotlin&logoColor=white">
     <img alt="Compose" src="https://img.shields.io/badge/Jetpack%20Compose-4285f4?style=for-the-badge&logo=jetpackcompose&logoColor=white">
     <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Leostrange/Mr.Comic/build-apk.yml?style=for-the-badge&label=CI">
-    <img alt="License" src="https://img.shields.io/badge/license-source--available-16a34a?style=for-the-badge">
+    <img alt="License" src="https://img.shields.io/badge/license-Mr.Comic%20Source--Available-16a34a?style=for-the-badge">
   </p>
 
   <p>
@@ -25,6 +25,10 @@
     <a href="docs/RECOMMENDATIONS.md">Рекомендации по коду</a>
     ·
     <a href="THIRD_PARTY_NOTICES.md">Сторонние лицензии</a>
+    ·
+    <a href="CONTRIBUTING.md">Contributing</a>
+    ·
+    <a href="SECURITY.md">Security</a>
   </p>
 </div>
 
@@ -33,6 +37,7 @@
 ## Содержание
 
 - [О проекте](#о-проекте)
+- [Статус разработки](#статус-разработки)
 - [Что изменилось в 2.2.0](#что-изменилось-в-220)
 - [Возможности](#возможности)
 - [Поддерживаемые форматы](#поддерживаемые-форматы)
@@ -49,6 +54,12 @@
 Mr.Comic — Android-ридер для комиксов, манги, вебтунов, книг, аудиокниг с OCR-переводами, словарями и кастомизируемым интерфейсом библиотеки.
 
 Ридер построен на отдельных контейнерах для растровых страниц, вертикальных лент, текстовых страниц и вертикального текста. Это позволяет каждому формату использовать оптимальный путь рендеринга.
+
+## Статус разработки
+
+`main` — единственная поддерживаемая рабочая линия. Reader QA, перевод, словари и OCR развиваются по связанным GitHub issues; для translation/AI scope см. [issue #154](https://github.com/Leostrange/Mr.Comic/issues/154). Неофициальные APK, архивные snapshots и пользовательские книги не публикуются в репозитории.
+
+Mr.Comic придерживается **local-first** подхода: локальные книги и словари должны оставаться на устройстве, а отправка текста внешнему AI/translation provider выполняется только через явно выбранный пользователем сценарий. Для security reports используйте [SECURITY.md](SECURITY.md), для contribution workflow — [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Что изменилось в 2.2.0
 
@@ -176,6 +187,6 @@ GitHub Actions workflow (`.github/workflows/build-apk.yml`):
 
 ## Лицензия
 
-Исходный код Mr.Comic опубликован как **source-available**. Подробности в [LICENSE](LICENSE).
+Исходный код Mr.Comic опубликован по **Mr.Comic Source-Available License 1.0**. Она разрешает изучение, локальную сборку для личного некоммерческого тестирования и contribution workflow, но не разрешает коммерческое использование, redistribution или публичные modified builds без отдельного письменного разрешения. Полный текст — в [LICENSE](LICENSE).
 
 Сторонние библиотеки, компоненты Android, словари и ассеты остаются под своими лицензиями. См. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
