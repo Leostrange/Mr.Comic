@@ -352,6 +352,7 @@ internal data class SettingsStudioOverviewItem(
     val onClick: () -> Unit
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SettingsStudioOverviewCard(
     title: String,
