@@ -85,6 +85,12 @@ android {
     }
     kotlinOptions { jvmTarget = libs.versions.jvmTarget.get() }
     buildFeatures { compose = true; buildConfig = true }
+    lint {
+        // The base strings resource is intentionally Russian while locale packs are partial.
+        // Keep all other lint checks strict; translation completeness is tracked separately.
+        disable += "MissingTranslation"
+    }
+
     androidResources {
         // The packaged Room dictionary has grown beyond what AAPT compression handles reliably.
         // The shipped dictionaries are precompressed under a custom extension; keep them as-is.
