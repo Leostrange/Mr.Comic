@@ -1,6 +1,7 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
 import android.util.Log
+import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import javax.inject.Inject
 import javax.inject.Singleton
 
