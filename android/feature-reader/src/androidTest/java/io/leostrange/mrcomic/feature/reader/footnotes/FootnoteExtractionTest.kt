@@ -162,6 +162,8 @@ class FootnoteExtractionTest {
         val html = zipFile.getInputStream(entry).bufferedReader().readText()
         zipFile.close()
 
+        val bodyContent = html.substringAfter("<body>").substringBefore("</body>")
+
         return """
             <!DOCTYPE html>
             <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops">
@@ -197,7 +199,9 @@ class FootnoteExtractionTest {
                     }
                 </style>
             </head>
-            $html
+            <body>
+            $bodyContent
+            </body>
             </html>
         """.trimIndent()
     }

@@ -167,6 +167,8 @@ class HyphenationAndLineBreakTest {
         val html = zipFile.getInputStream(entry).bufferedReader().readText()
         zipFile.close()
 
+        val bodyContent = html.substringAfter("<body>").substringBefore("</body>")
+
         return """
             <!DOCTYPE html>
             <html>
@@ -190,7 +192,9 @@ class HyphenationAndLineBreakTest {
                     p { text-indent: 1.5em; margin: 0.5em 0; }
                 </style>
             </head>
-            $html
+            <body>
+            $bodyContent
+            </body>
             </html>
         """.trimIndent()
     }
