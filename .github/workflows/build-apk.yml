@@ -237,7 +237,11 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          script: ./gradlew --no-daemon --console=plain connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.LargeTest
+          script: >-
+            ./gradlew --no-daemon --console=plain
+            :core-data:connectedDebugAndroidTest
+            :feature-reader:connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.LargeTest
 
       - name: Upload test results
         uses: actions/upload-artifact@v7
