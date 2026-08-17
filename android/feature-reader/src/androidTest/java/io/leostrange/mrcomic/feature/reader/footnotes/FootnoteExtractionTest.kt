@@ -140,7 +140,7 @@ class FootnoteExtractionTest {
         val fnSectionVisible = runner.executeJs(
             """
             (function() {
-                var section = document.querySelector('[epub\:type="footnotes"]');
+                var section = document.querySelector('[epub\\:type="footnotes"]');
                 if (!section) return 'not_found';
                 var style = window.getComputedStyle(section);
                 return style.display;
