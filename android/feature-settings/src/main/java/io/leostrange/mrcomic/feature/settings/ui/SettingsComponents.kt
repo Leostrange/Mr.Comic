@@ -47,7 +47,6 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
-import io.leostrange.mrcomic.core.ui.library.RootChromePanelShape
 import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
 import io.leostrange.mrcomic.core.ui.library.RootChromeTone
 import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
@@ -353,6 +352,7 @@ internal data class SettingsStudioOverviewItem(
     val onClick: () -> Unit
 )
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun SettingsStudioOverviewCard(
     title: String,

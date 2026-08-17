@@ -6,12 +6,15 @@ import androidx.webkit.WebViewAssetLoader
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.ui.HtmlPageView
+import io.leostrange.mrcomic.feature.reader.ui.ReaderWebViewRestoreTarget
+import io.leostrange.mrcomic.feature.reader.ui.ReaderTextSelection
 
 @Composable
-fun TextContainer(
+internal fun TextContainer(
     html: String,
     baseUrl: String?,
     assetDocumentPath: String?,
+    documentIdentity: String? = null,
     assetLoader: WebViewAssetLoader?,
     readingMode: ReadingMode,
     autoScrollSpeed: Float = 0f,
@@ -22,7 +25,7 @@ fun TextContainer(
     onDictionarySelection: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
     onSaveQuoteSelection: (String) -> Unit,
-    onHighlightSelection: (String) -> Unit = {},
+    onHighlightSelection: (ReaderTextSelection) -> Unit = {},
     onTranslateChapter: () -> Unit = {},
     onCompareTranslations: (String) -> Unit = {},
     highlightsJs: String = "",
@@ -36,6 +39,8 @@ fun TextContainer(
     pendingWebtoonSectionIndex: Int? = null,
     onConsumeWebtoonSection: () -> Unit = {},
     onTextWebtoonVisibleSectionChanged: (Int) -> Unit = {},
+    freeScrollRestoreTarget: ReaderWebViewRestoreTarget? = null,
+    onFreeScrollPositionUpdate: (ReaderWebViewRestoreTarget) -> Unit = {},
     fontSize: Int = 18,
     colorScheme: String = "DAY",
     readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
@@ -56,13 +61,16 @@ fun TextContainer(
     dictionaryActionLabel: String,
     explainActionLabel: String,
     saveQuoteActionLabel: String,
+    selectionMenuLanguageCode: String = "en",
     onRegisterPageTurner: ((Int) -> Unit) -> Unit = {},
+    onSelectionActionModeChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     HtmlPageView(
         html = html,
         baseUrl = baseUrl,
         assetDocumentPath = assetDocumentPath,
+        documentIdentity = documentIdentity,
         assetLoader = assetLoader,
         onLeftTap = onLeftTap,
         onRightTap = onRightTap,
@@ -85,6 +93,8 @@ fun TextContainer(
         pendingWebtoonSectionIndex = pendingWebtoonSectionIndex,
         onConsumeWebtoonSection = onConsumeWebtoonSection,
         onTextWebtoonVisibleSectionChanged = onTextWebtoonVisibleSectionChanged,
+        freeScrollRestoreTarget = freeScrollRestoreTarget,
+        onFreeScrollPositionUpdate = onFreeScrollPositionUpdate,
         readingMode = readingMode,
         autoScrollSpeed = autoScrollSpeed,
         fontSize = fontSize,
@@ -107,7 +117,9 @@ fun TextContainer(
         dictionaryActionLabel = dictionaryActionLabel,
         explainActionLabel = explainActionLabel,
         saveQuoteActionLabel = saveQuoteActionLabel,
+        selectionMenuLanguageCode = selectionMenuLanguageCode,
         onRegisterPageTurner = onRegisterPageTurner,
+        onSelectionActionModeChange = onSelectionActionModeChange,
         modifier = modifier
     )
 }

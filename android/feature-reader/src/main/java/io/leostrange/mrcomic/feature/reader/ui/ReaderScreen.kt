@@ -1,53 +1,37 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.app.Activity
-import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.os.Build
-import android.view.View
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import android.webkit.WebView
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.webkit.WebViewAssetLoader
-import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
 import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
-import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.resolveReaderSimpleTapZoneLayout
 import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.reader.R
-import io.leostrange.mrcomic.feature.reader.ui.components.PageView
-import io.leostrange.mrcomic.feature.reader.ui.components.TextContainer
-import io.leostrange.mrcomic.feature.reader.ui.components.WebtoonView
 import io.leostrange.mrcomic.feature.reader.ui.geometry.ReaderViewportGeometry
 import kotlin.math.roundToInt
 
@@ -163,8 +147,8 @@ fun ReaderScreen(
             quoteSavePopupToken = nextReaderUiEventToken(quoteSavePopupToken)
         }
     }
-    // Text books stay in portrait; image-based readers can opt into landscape spreads
-    // only when the actual screen width is large enough.
+    // Text books keep a single-page layout in landscape; image-based readers can opt
+    // into spreads only when the actual screen width is large enough.
     LaunchedEffect(supportsLandscapeSpread, isTextReader) {
         viewModel.readingModeController.onOrientationChanged(
             useLandscapeSpread = supportsLandscapeSpread,
@@ -172,14 +156,10 @@ fun ReaderScreen(
         )
     }
 
-    DisposableEffect(isTextReader, context) {
+    DisposableEffect(context) {
         val activity = context as? Activity
         val previousOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        activity?.requestedOrientation = if (isTextReader) {
-            ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
-        } else {
-            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         onDispose {
             activity?.requestedOrientation = previousOrientation.takeUnless {
                 it == ActivityInfo.SCREEN_ORIENTATION_LOCKED
@@ -269,6 +249,16 @@ fun ReaderScreen(
             .roundToInt()
             .coerceAtLeast(8)
     }
+    val freeScrollRestoreTarget = remember(uiState.freeScrollCharacterOffset, uiState.freeScrollProgression) {
+        if (uiState.freeScrollCharacterOffset >= 0 || uiState.freeScrollProgression in 0.0..1.0) {
+            ReaderWebViewRestoreTarget(
+                characterOffset = uiState.freeScrollCharacterOffset.takeIf { it >= 0 },
+                progression = uiState.freeScrollProgression.takeIf { it in 0.0..1.0 }
+            )
+        } else {
+            null
+        }
+    }
     val maxStableTopChromeReservePx = with(density) { 96.dp.roundToPx() }
     val estimatedOverlayContentPx = with(density) {
         readerHeaderFooterReservedHeightDp(
@@ -334,10 +324,11 @@ fun ReaderScreen(
         }
     }
 
-    // GEOMETRY-01: Unified viewport geometry for future migration.
-    // Currently computed in parallel with the inline values above.
-    // TODO: Replace inline calculations with geometry.contentTopInsetCssPx / contentBottomInsetCssPx
-    //       after confirming they produce identical values across all device/config combinations.
+    // GEOMETRY-01: Unified viewport geometry — single source of truth for CSS insets
+    // passed to the text WebView.  chromeTopInsetCssPx / chromeBottomInsetCssPx provide
+    // the chrome-reserve-only inset matching the current Compose-modifier contract;
+    // the full system-bar-in-CSS migration (contentTopInsetCssPx with safety margins)
+    // remains a follow-up requiring device verification.
     val viewportGeometry = ReaderViewportGeometry.fromMeasured(
         viewportWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() },
         viewportHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() },
@@ -380,82 +371,40 @@ fun ReaderScreen(
             }
         }
     }
-
-    val latestVolumeKeysPagingEnabled by rememberUpdatedState(uiState.volumeKeysPagingEnabled)
-    val latestReadingMode by rememberUpdatedState(uiState.readingMode)
     // Text paged reader: volume buttons should turn visual pages within the section
     // instead of jumping whole sections. TextContainer registers this callback when active.
     var pagedColumnTurn by remember { mutableStateOf<((Int) -> Unit)?>(null) }
-    val latestPagedColumnTurn by rememberUpdatedState(pagedColumnTurn)
     // Clear stale callback when switching away from TEXT_PAGE mode.
     LaunchedEffect(uiState.readerContainerKind) {
         if (uiState.readerContainerKind != ReaderContainerKind.TEXT_PAGE) {
             pagedColumnTurn = null
         }
     }
-    var lastHardwarePageTurnMs by remember { mutableLongStateOf(0L) }
-    val latestHandleHardwarePageTurn by rememberUpdatedState<(Int) -> Unit> { step ->
-        val now = android.os.SystemClock.uptimeMillis()
-        if (now - lastHardwarePageTurnMs < 280L) return@rememberUpdatedState
-        lastHardwarePageTurnMs = now
-        // In text paged mode, turn visual pages within the WebView section first;
-        // only advance to the next section when at the last visual page.
-        val textPageTurn = latestPagedColumnTurn
-        if (textPageTurn != null && uiState.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
-            textPageTurn(step)
-        } else {
-            when {
-                step < 0 -> viewModel.navigationController.prevPage()
-                step > 0 -> viewModel.navigationController.nextPage()
-            }
-        }
-    }
 
-    DisposableEffect(readerHardwareKeyHost) {
-        readerHardwareKeyHost?.setReaderHardwareKeyHandler { event ->
-            val decision = resolveReaderHardwareKeyDecision(
-                event = event,
-                volumePagingEnabled = latestVolumeKeysPagingEnabled,
-                readingMode = latestReadingMode
-            )
-            if (!decision.consume) {
-                return@setReaderHardwareKeyHandler false
-            }
-            decision.pageStep?.let(latestHandleHardwarePageTurn)
-            true
-        }
-        onDispose {
-            readerHardwareKeyHost?.setReaderHardwareKeyHandler(null)
-        }
-    }
+    ReaderHardwareKeyEffect(
+        readerHardwareKeyHost = readerHardwareKeyHost,
+        volumeKeysPagingEnabled = uiState.volumeKeysPagingEnabled,
+        readingMode = uiState.readingMode,
+        readerContainerKind = uiState.readerContainerKind,
+        pagedColumnTurn = pagedColumnTurn,
+        onPrevPage = viewModel.navigationController::prevPage,
+        onNextPage = viewModel.navigationController::nextPage,
+    )
 
-    LaunchedEffect(
-        uiState.currentPage,
-        uiState.currentHtmlContent,
-        uiState.ttsVoiceName,
-        uiState.ttsSpeed,
-        uiState.ttsPitch,
-        uiState.ttsVolume,
-        uiState.ttsSleepTimerMode
-    ) {
-        ttsController.updateContent(
-            rawHtml = uiState.currentHtmlContent,
-            preferredVoiceName = uiState.ttsVoiceName,
-            speed = uiState.ttsSpeed,
-            pitch = uiState.ttsPitch,
-            volume = uiState.ttsVolume,
-            sleepTimerMode = ReaderTtsSleepTimerMode.fromStored(uiState.ttsSleepTimerMode),
-            title = uiState.comic?.title,
-            chapterTitle = currentChapterTitle
-        )
-        if (
-            pendingTtsRestartTargetPage == uiState.currentPage &&
-            !uiState.currentHtmlContent.isNullOrBlank()
-        ) {
-            pendingTtsRestartTargetPage = null
-            ttsController.restartFromBeginning()
-        }
-    }
+    ReaderTtsSyncEffect(
+        ttsController = ttsController,
+        currentPage = uiState.currentPage,
+        currentHtmlContent = uiState.currentHtmlContent,
+        ttsVoiceName = uiState.ttsVoiceName,
+        ttsSpeed = uiState.ttsSpeed,
+        ttsPitch = uiState.ttsPitch,
+        ttsVolume = uiState.ttsVolume,
+        ttsSleepTimerModeStored = uiState.ttsSleepTimerMode,
+        comicTitle = uiState.comic?.title,
+        chapterTitle = currentChapterTitle,
+        pendingTtsRestartTargetPage = pendingTtsRestartTargetPage,
+        onClearPendingTtsRestartTargetPage = { pendingTtsRestartTargetPage = null }
+    )
 
     LaunchedEffect(
         uiState.comic?.id,
@@ -482,6 +431,48 @@ fun ReaderScreen(
         showTextSettings = uiState.showTextSettings,
         context = context
     )
+
+    // Auto-scroll: pauses when the app is backgrounded and drives visual page
+    // turns for both raster and text PAGE containers. WEBTOON scrolls in pixels.
+    ReaderAutoScrollLifecyclePauseEffect(controller = viewModel.autoScrollRuntimeController)
+    ReaderAutoPageCountdownEffect(
+        enabled = uiState.autoScrollEnabled &&
+            readerUsesAutoPageCountdown(uiState.readerContainerKind),
+        paused = uiState.isAutoScrollTemporarilyPaused,
+        intervalMillis = ReaderAutoScrollPrecision.pageTurnIntervalMillis(uiState.autoScrollSpeed),
+        countdownProgress = uiState.autoScrollCountdownProgress,
+        onCountdownProgress = viewModel.autoScrollRuntimeController::updateCountdown,
+        onRequestNextPage = {
+            val step = viewModel.navigationController.pageStepForMode(uiState.readingMode)
+            requestReaderAutoPageAdvance(
+                containerKind = uiState.readerContainerKind,
+                currentPage = uiState.currentPage,
+                totalPages = uiState.totalPages,
+                sectionCurrentPage = uiState.sectionCurrentPage,
+                sectionPageCount = uiState.sectionPageCount,
+                pageStep = step,
+                pagedColumnTurn = pagedColumnTurn,
+                onRasterPageTurn = viewModel.navigationController::nextPage,
+            )
+        },
+        onReachedEnd = viewModel.autoScrollRuntimeController::stop
+    )
+
+    // Pause auto-scroll while any reader sheet/overlay is open so the countdown or
+    // pixel-scroll cannot advance the document underneath an open dialog.
+    val anyBottomSheetOpen = uiState.showTocSheet ||
+        uiState.showTextSettings ||
+        showReaderAudioSheet ||
+        showTextTranslationPageSheet ||
+        showRsvpOverlay ||
+        openControlCenterAtServices
+    LaunchedEffect(anyBottomSheetOpen) {
+        if (anyBottomSheetOpen) {
+            viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.BOTTOM_SHEET)
+        } else {
+            viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.BOTTOM_SHEET)
+        }
+    }
 
     // Reading area uses reader-specific MaterialTheme (background, text colors).
     // Chrome overlays (top/bottom bars, sheets) use the inherited app MaterialTheme.
@@ -520,203 +511,68 @@ fun ReaderScreen(
                     val htmlContent = uiState.currentHtmlContent
                     val textWebtoonHtmlContent = uiState.textWebtoonHtmlContent ?: htmlContent
                     val textWebtoonAssetBasePath = uiState.textWebtoonHtmlAssetBasePath ?: uiState.htmlAssetBasePath
-                    val textReaderModifier = Modifier.fillMaxSize()
-                    val textWebtoonModifier = Modifier.fillMaxSize()
+                    // Both reflowable modes keep system bars and one persistent line
+                    // gutter outside the WebView. CSS reserves only reader chrome;
+                    // otherwise a stale JS layout can paint text under system bars.
+                    // In immersive mode keep only horizontal cutout safety, matching
+                    // established readers: hidden bars must not leave vertical holes.
+                    val textSystemInsetsModifier = if (uiState.immersiveMode) {
+                        Modifier.windowInsetsPadding(
+                            WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                        )
+                    } else {
+                        Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
+                    }
+                    val autoScrollDockHeight = readerAutoScrollDockHeightDp(
+                        containerKind = uiState.readerContainerKind,
+                        chromeHidden = uiState.chromeState == ReaderChromeState.HIDDEN,
+                        enabled = uiState.autoScrollEnabled,
+                    ).dp
+                    val textReaderModifier = Modifier
+                        .fillMaxSize()
+                        .then(textSystemInsetsModifier)
+                        .padding(
+                            vertical = with(density) { textSentenceInsetPx.toDp() }
+                        )
+                        .padding(bottom = autoScrollDockHeight)
+                    val textChromeLayoutInsets = resolveReaderTextChromeLayoutInsets(
+                        measuredTopCssPx = viewportGeometry.chromeTopInsetCssPx,
+                        measuredBottomCssPx = viewportGeometry.chromeBottomInsetCssPx,
+                    )
                     val imageReaderModifier = Modifier
                         .fillMaxSize()
                         .then(
-                            if (uiState.immersiveMode) {
-                                // In immersive mode system bars are hidden, but
-                                // transient bars appear on swipe.  Use safeDrawing
-                                // insets which always include the display cutout
-                                // and a minimum safe area even when bars are hidden.
-                                Modifier.windowInsetsPadding(
-                                    WindowInsets.safeDrawing
-                                )
-                            } else {
-                                Modifier
-                                    .statusBarsPadding()
-                                    .displayCutoutPadding()
-                                    .navigationBarsPadding()
+                            when (readerRasterSystemInsets(uiState.immersiveMode)) {
+                                ReaderRasterSystemInsets.HORIZONTAL_ONLY ->
+                                    Modifier.windowInsetsPadding(
+                                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal)
+                                    )
+                                ReaderRasterSystemInsets.FULL_SAFE_DRAWING ->
+                                    Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
                             }
                         )
-                    when (uiState.readerContainerKind) {
-                        ReaderContainerKind.TEXT_WEBTOON -> {
-                            TextContainer(
-                                html = textWebtoonHtmlContent ?: htmlContent.orEmpty(),
-                                baseUrl = uiState.htmlBaseUrl,
-                                assetDocumentPath = textWebtoonAssetBasePath,
-                                assetLoader = readerAssetLoader,
-                                readingMode = ReadingMode.WEBTOON,
-                                onLeftTap = {},
-                                onRightTap = {},
-                                onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                                onAnchorClick = { viewModel.footnoteController.onAnchorClick(it) },
-                                onInlineFootnote = { viewModel.footnoteController.showInlineFootnote(it) },
-                                onVerticalBoundaryNavigation = { pageStep ->
-                                    when {
-                                        pageStep < 0 -> viewModel.navigationController.prevPage()
-                                        pageStep > 0 -> viewModel.navigationController.nextPage()
-                                    }
-                                },
-                                onTranslateSelection = { selectedText ->
-                                    viewModel.translationController.translateSelectedText(
-                                        selectedText = selectedText,
-                                        preferDictionary = false
-                                    )
-                                },
-                                onDictionarySelection = { selectedText ->
-                                    viewModel.translationController.translateSelectedText(
-                                        selectedText = selectedText,
-                                        preferDictionary = true
-                                    )
-                                },
-                                onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
-                                onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
-                                onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
-                                onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
-                                onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
-                                highlightsJs = viewModel.highlightController.injectHighlightsJs(),
-                                fontSize = uiState.textFontSize,
-                                readerPreset = activeReaderPreset,
-                                fontFamily = resolvedTextFont.familyName,
-                                fontSourceUrl = resolvedTextFont.sourceUrl,
-                                lineHeight = uiState.textLineHeight,
-                                letterSpacing = uiState.textLetterSpacing,
-                                wordSpacing = uiState.textWordSpacing,
-                                paragraphSpacing = uiState.textParagraphSpacing,
-                                textAlign = uiState.textAlignment,
-                                bold = uiState.textBold,
-                                overrideTextColor = readerColorOverrideHex(uiState.textCustomTextColor),
-                                overrideBackgroundColor = readerColorOverrideHex(uiState.textCustomBackgroundColor),
-                                overrideAccentColor = readerColorOverrideHex(uiState.textCustomAccentColor),
-                                translateActionLabel = readerText.selectionTranslateAction,
-                                dictionaryActionLabel = readerText.openDictionary,
-                                explainActionLabel = readerText.selectionExplainAction,
-                                saveQuoteActionLabel = readerText.saveQuote,
-                                contentTopInsetPx = plan.textContentTopInsetCssPx,
-                                contentBottomInsetPx = plan.textContentBottomInsetCssPx,
-                                pendingScrollToAnchor = uiState.pendingScrollToAnchor,
-                                onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
-                                pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
-                                onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
-                                onTextWebtoonVisibleSectionChanged = { viewModel.navigationController.updateTextWebtoonVisibleSection(it) },
-                                sectionCharacterOffset = uiState.sectionCharacterOffset,
-                                modifier = textWebtoonModifier
-                            )
-                        }
-                        ReaderContainerKind.TEXT_PAGE -> {
-                            if (htmlContent == null) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.align(Alignment.Center),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            } else {
-                                TextContainer(
-                                    html = htmlContent,
-                                    baseUrl = uiState.htmlBaseUrl,
-                                    assetDocumentPath = uiState.htmlAssetBasePath,
-                                    assetLoader = readerAssetLoader,
-                                    readingMode = uiState.readingMode,
-                                    autoScrollSpeed = uiState.autoScrollSpeed,
-                                    onLeftTap = {
-                                        if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
-                                            handleTapZoneAction(tapZoneLayout.left)
-                                        }
-                                    },
-                                    onRightTap = {
-                                        if (readerModeAllowsHorizontalPageTurn(uiState.readingMode)) {
-                                            handleTapZoneAction(tapZoneLayout.right)
-                                        }
-                                    },
-                                    onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                                    onAnchorClick = { viewModel.footnoteController.onAnchorClick(it) },
-                                    onInlineFootnote = { viewModel.footnoteController.showInlineFootnote(it) },
-                                    onVerticalBoundaryNavigation = { pageStep ->
-                                        when {
-                                            pageStep < 0 -> viewModel.navigationController.prevPage()
-                                            pageStep > 0 -> viewModel.navigationController.nextPage()
-                                        }
-                                    },
-                                    onPagedLayoutPageCountChanged = { pageCount, pageIndex, charOffset ->
-                                        viewModel.onPagedLayoutPageCountChanged(pageCount, pageIndex, charOffset)
-                                    },
-                                    onTranslateSelection = { selectedText ->
-                                        viewModel.translationController.translateSelectedText(
-                                            selectedText = selectedText,
-                                            preferDictionary = false
-                                        )
-                                    },
-                                    onDictionarySelection = { selectedText ->
-                                        viewModel.translationController.translateSelectedText(
-                                            selectedText = selectedText,
-                                            preferDictionary = true
-                                        )
-                                    },
-                                    onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
-                                    onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
-                                    onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
-                                onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
-                                onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
-                                    highlightsJs = viewModel.highlightController.injectHighlightsJs(),
-                                    fontSize = uiState.textFontSize,
-                                    colorScheme = uiState.textColorScheme,
-                                    readerPreset = activeReaderPreset,
-                                    fontFamily = resolvedTextFont.familyName,
-                                    fontSourceUrl = resolvedTextFont.sourceUrl,
-                                    lineHeight = uiState.textLineHeight,
-                                    letterSpacing = uiState.textLetterSpacing,
-                                    wordSpacing = uiState.textWordSpacing,
-                                    paragraphSpacing = uiState.textParagraphSpacing,
-                                    textAlign = uiState.textAlignment,
-                                    bold = uiState.textBold,
-                                    overrideTextColor = readerColorOverrideHex(uiState.textCustomTextColor),
-                                    overrideBackgroundColor = readerColorOverrideHex(uiState.textCustomBackgroundColor),
-                                    overrideAccentColor = readerColorOverrideHex(uiState.textCustomAccentColor),
-                                    translateActionLabel = readerText.selectionTranslateAction,
-                                    dictionaryActionLabel = readerText.openDictionary,
-                                    explainActionLabel = readerText.selectionExplainAction,
-                                    saveQuoteActionLabel = readerText.saveQuote,
-                                    contentTopInsetPx = plan.textContentTopInsetCssPx,
-                                    contentBottomInsetPx = plan.textContentBottomInsetCssPx,
-                                    pendingScrollToAnchor = uiState.pendingScrollToAnchor,
-                                    onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
-                                    onRegisterPageTurner = { pagedColumnTurn = it },
-                                    sectionCharacterOffset = uiState.sectionCharacterOffset,
-                                    modifier = textReaderModifier
-                                )
-                            }
-                        }
-                        ReaderContainerKind.RASTER_WEBTOON -> {
-                            // Graphic WEBTOON container.
-                            WebtoonView(
-                                viewModel = viewModel,
-                                uiState = uiState,
-                                imageScaleMode = uiState.imageScaleMode,
-                                marginCropHorizontal = effectiveMarginCropHorizontal,
-                                marginCropVertical = effectiveMarginCropVertical,
-                                // Vertical feed is scroll-only: side tap zones must not
-                                // trigger horizontal page turns in WEBTOON mode.
-                                onLeftTap = {},
-                                onRightTap = {},
-                                onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                                modifier = imageReaderModifier
-                            )
-                        }
-                        ReaderContainerKind.RASTER_PAGE -> {
-                            PageView(
-                                viewModel = viewModel,
-                                uiState = uiState,
-                                imageScaleMode = effectivePageImageScaleMode,
-                                marginCropHorizontal = effectiveMarginCropHorizontal,
-                                marginCropVertical = effectiveMarginCropVertical,
-                                onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
-                                onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
-                                onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                                modifier = imageReaderModifier
-                            )
-                        }
-                    }
+                        .padding(bottom = autoScrollDockHeight)
+
+                    ReaderContainerHost(
+                        uiState = uiState,
+                        viewModel = viewModel,
+                        readerAssetLoader = readerAssetLoader,
+                        activeReaderPreset = activeReaderPreset,
+                        resolvedTextFont = resolvedTextFont,
+                        readerText = readerText,
+                        languageCode = strings.languageCode,
+                        tapZoneLayout = tapZoneLayout,
+                        effectiveMarginCropHorizontal = effectiveMarginCropHorizontal,
+                        effectiveMarginCropVertical = effectiveMarginCropVertical,
+                        effectivePageImageScaleMode = effectivePageImageScaleMode,
+                        textReaderModifier = textReaderModifier,
+                        imageReaderModifier = imageReaderModifier,
+                        textChromeTopInsetCssPx = textChromeLayoutInsets.topCssPx,
+                        textChromeBottomInsetCssPx = textChromeLayoutInsets.bottomCssPx,
+                        freeScrollRestoreTarget = freeScrollRestoreTarget,
+                        handleTapZoneAction = handleTapZoneAction,
+                        onRegisterPagedColumnTurner = { pagedColumnTurn = it }
+                    )
                 }
 
                 // ARC-11 chrome slice: chrome surface/overlay/style plan is computed
@@ -763,8 +619,10 @@ fun ReaderScreen(
                     },
                     onToggleBrightness = { showBrightnessRow = !showBrightnessRow },
                     onToggleTtsControls = { showReaderAudioSheet = true },
-                    onAutoScrollToggle = { viewModel.settingsController.cycleAutoScrollSpeed() },
+                    onAutoScrollToggle = { viewModel.autoScrollSettingsController.toggle() },
                     onBrightnessChange = { viewModel.settingsController.setBrightness(it) },
+                    onAutoScrollSpeedPreview = { viewModel.autoScrollSettingsController.previewSpeed(it) },
+                    onAutoScrollSpeedCommit = { viewModel.autoScrollSettingsController.commitSpeed(uiState.readingMode, it) },
                     onToggleBookmark = { viewModel.bookmarkController.toggleBookmark() },
                     onApplyPreset = { viewModel.settingsController.applyReadingPreset(it) },
                     onReadingModeChange = { viewModel.readingModeController.setReadingMode(it) },

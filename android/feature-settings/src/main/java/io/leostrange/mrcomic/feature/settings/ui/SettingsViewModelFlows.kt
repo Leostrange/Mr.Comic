@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.datastore.preferences.core.Preferences
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.domain.util.LibraryViewModeKey
 import io.leostrange.mrcomic.core.domain.util.normalizeLibraryViewModeKey

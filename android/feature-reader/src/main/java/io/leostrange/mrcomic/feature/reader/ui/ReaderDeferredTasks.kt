@@ -82,7 +82,8 @@ internal class ReaderDeferredTasks(
         openGuard: io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard,
         isReaderCurrent: () -> Boolean,
         currentTotalPages: () -> Int,
-        onResolved: suspend (Int, Int, Comic) -> Unit
+        onResolved: suspend (Int, Int, Comic) -> Unit,
+        onSkipped: () -> Unit = {}
     ) {
         deferredPageCountJob?.cancel()
         deferredPageCountJob = scope.launch(Dispatchers.IO) {
@@ -96,7 +97,11 @@ internal class ReaderDeferredTasks(
                 isReaderCurrent = isReaderCurrent,
                 currentTotalPages = currentTotalPages,
                 formatName = { comic.format?.name ?: "unknown" }
-            ) ?: return@launch
+            )
+            if (result == null) {
+                withContext(Dispatchers.Main) { onSkipped() }
+                return@launch
+            }
 
             withContext(Dispatchers.Main) {
                 onResolved(result.totalPages, result.normalizedStartPage, comic)

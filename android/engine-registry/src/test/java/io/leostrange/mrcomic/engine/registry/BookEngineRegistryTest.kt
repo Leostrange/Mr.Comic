@@ -5,7 +5,6 @@ import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.engine.api.BookEngine
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.api.OpenBookRequest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Test

@@ -9,7 +9,6 @@ import androidx.compose.runtime.*
 import io.leostrange.mrcomic.core.model.TranslationTransportPreference
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.translationLanguageOptions
-import io.leostrange.mrcomic.core.ui.theme.style
 
 /* ──── TranslationSettingsMapText ──── */
 internal data class TranslationSettingsMapText(

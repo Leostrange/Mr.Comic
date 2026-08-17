@@ -12,6 +12,8 @@ import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.InputStream
 
 class FolderFormatReader(
     private val context: Context,
@@ -27,14 +29,13 @@ class FolderFormatReader(
         private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
     }
 
-    private val imageFiles: List<DocumentFile> by lazy {
+    private val imageFiles: List<FolderImageSource> by lazy {
         try {
-            val uri = Uri.parse(path)
-            val docFile = DocumentFile.fromTreeUri(context, uri) ?: DocumentFile.fromSingleUri(context, uri)
-            val candidates = docFile?.listFiles()
-                ?.filter { it.isFile }
-                ?.sortedBy { it.name }
-                ?: emptyList()
+            val candidates = if (path.startsWith("content://")) {
+                documentImageCandidates()
+            } else {
+                localImageCandidates(path)
+            }
 
             val byMimeOrExtension = candidates.filter(::looksLikeImageFile)
             if (byMimeOrExtension.isNotEmpty()) {
@@ -58,14 +59,14 @@ class FolderFormatReader(
     override suspend fun getPage(index: Int, renderQuality: Int): Bitmap? = withContext(Dispatchers.IO) {
         if (index < 0 || index >= imageFiles.size) return@withContext null
         try {
-            val uri = imageFiles[index].uri
+            val source = imageFiles[index]
             decodeBitmapFromStream(
                 context = context,
-                openStream = { context.contentResolver.openInputStream(uri) },
+                openStream = source.openStream,
                 deviceProfile = deviceProfile,
                 bitmapAllocator = bitmapAllocator,
                 renderQuality = renderQuality
-            )
+            ) ?: source.openStream()?.use(BitmapFactory::decodeStream)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decode image at $index", e)
             null
@@ -74,22 +75,56 @@ class FolderFormatReader(
 
     override fun close() { /* stateless */ }
 
-    private fun looksLikeImageFile(file: DocumentFile): Boolean {
-        if (file.type in IMAGE_MIMES) return true
-        val ext = file.name?.lowercase()?.substringAfterLast('.', "") ?: return false
+    private fun documentImageCandidates(): List<FolderImageSource> {
+        val uri = Uri.parse(path)
+        val directory = DocumentFile.fromTreeUri(context, uri) ?: DocumentFile.fromSingleUri(context, uri)
+        return directory?.listFiles()
+            ?.filter { it.isFile }
+            ?.sortedBy { it.name }
+            ?.map { file ->
+                FolderImageSource(file.name.orEmpty(), file.type) {
+                    context.contentResolver.openInputStream(file.uri)
+                }
+            }
+            .orEmpty()
+    }
+
+    private fun looksLikeImageFile(file: FolderImageSource): Boolean {
+        if (file.mimeType in IMAGE_MIMES) return true
+        val ext = file.name.lowercase().substringAfterLast('.', "")
         return ext in IMAGE_EXTENSIONS
     }
 
-    private fun isBitmapFile(file: DocumentFile): Boolean {
+    private fun isBitmapFile(file: FolderImageSource): Boolean {
         return runCatching {
-            context.contentResolver.openInputStream(file.uri)?.use { input ->
+            file.openStream()?.use { input ->
                 val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeStream(input, null, options)
                 options.outWidth > 0 && options.outHeight > 0
             } ?: false
         }.getOrElse { error ->
-            Log.w(TAG, "Failed to probe folder image candidate: ${file.uri}", error)
+            Log.w(TAG, "Failed to probe folder image candidate: ${file.name}", error)
             false
         }
     }
+}
+
+private data class FolderImageSource(
+    val name: String,
+    val mimeType: String?,
+    val openStream: () -> InputStream?
+)
+
+private fun localImageCandidates(path: String): List<FolderImageSource> {
+    val directory = when {
+        path.startsWith("file://") -> Uri.parse(path).path?.let(::File)
+        else -> File(path)
+    } ?: return emptyList()
+    return directory.listFiles()
+        ?.asSequence()
+        ?.filter { it.isFile }
+        ?.sortedBy { it.name }
+        ?.map { file -> FolderImageSource(file.name, null) { file.inputStream() } }
+        ?.toList()
+        .orEmpty()
 }

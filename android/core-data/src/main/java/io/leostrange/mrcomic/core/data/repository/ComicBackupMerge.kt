@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.core.data.repository
 
-import android.net.Uri
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.readingProgressForPage

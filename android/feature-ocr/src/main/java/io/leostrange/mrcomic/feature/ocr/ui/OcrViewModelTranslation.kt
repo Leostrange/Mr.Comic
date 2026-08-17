@@ -6,7 +6,6 @@ import io.leostrange.mrcomic.core.domain.translation.TranslationBackendUnavailab
 import io.leostrange.mrcomic.core.domain.translation.hasMeaningfulTranslationFor
 import io.leostrange.mrcomic.core.domain.translation.resolveBestSingleWordDictionaryMatch
 import io.leostrange.mrcomic.core.domain.util.Result
-import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.DictionaryEntry
 import io.leostrange.mrcomic.core.model.LanguageDetectionResult
 import io.leostrange.mrcomic.core.model.LookupRouteKind
@@ -15,14 +14,12 @@ import io.leostrange.mrcomic.core.model.TranslationRequest
 import io.leostrange.mrcomic.core.model.TranslationRoutingFailureReason
 import io.leostrange.mrcomic.core.model.TranslationRoutingRequest
 import io.leostrange.mrcomic.core.model.TranslationSourceType
-import io.leostrange.mrcomic.core.model.TranslationTransportPreference
 import io.leostrange.mrcomic.feature.ocr.data.shouldAllowOcrDictionaryLookup
 import io.leostrange.mrcomic.feature.ocr.data.shouldUseOcrDictionaryFallback
 import io.leostrange.mrcomic.core.ui.locale.isSupportedOcrSourceLanguageCode
 import io.leostrange.mrcomic.core.ui.locale.isSupportedTranslationLanguageCode
 import io.leostrange.mrcomic.core.ui.locale.normalizeTranslationLanguageCode
 import io.leostrange.mrcomic.core.ui.locale.supportedTranslationLanguageCodes
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 

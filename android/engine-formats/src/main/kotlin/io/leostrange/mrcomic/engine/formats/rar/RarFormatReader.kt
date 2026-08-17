@@ -128,6 +128,7 @@ class RarFormatReader(
 
                 randomAccessFile = RandomAccessFile(archiveFile, "r")
                 inputStream = RandomAccessFileInStream(randomAccessFile)
+                runCatching { SevenZip.initSevenZipFromPlatformJAR(context.cacheDir) }
                 SevenZip.openInArchive(null, inputStream).also { archive = it }
             } catch (error: Throwable) {
                 Log.e(TAG, "Failed to open RAR: $path", error)

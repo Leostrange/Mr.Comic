@@ -16,9 +16,6 @@ import java.io.RandomAccessFile
 import javax.inject.Inject
 import javax.inject.Singleton
 
-data class DjvuTableOfContents(val entries: List<DjvuTocEntry>)
-data class DjvuTocEntry(val title: String, val pageIndex: Int, val children: List<DjvuTocEntry> = emptyList())
-
 @Singleton
 class StructuredDjvuBackend @Inject constructor(
     @ApplicationContext private val context: Context

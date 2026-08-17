@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.library
 
-import android.net.Uri
 import android.util.Log
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository

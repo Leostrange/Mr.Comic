@@ -84,6 +84,12 @@ data class ReaderUiState(
     val toolbarBlur: Float = READER_TOOLBAR_DEFAULT_BLUR,
     /** Auto-scroll speed in pixels per second. 0 = disabled. */
     val autoScrollSpeed: Float = 0f,
+    /** Whether auto-scroll is actively running for the current reader session. */
+    val autoScrollEnabled: Boolean = false,
+    /** Countdown progress (0..1) toward the next automatic page turn. */
+    val autoScrollCountdownProgress: Float = 0f,
+    /** Reasons currently pausing auto-scroll; non-empty means temporarily paused. */
+    val autoScrollPauseReasons: Set<ReaderAutoScrollPauseReason> = emptySet(),
     /** How graphic pages should be fitted on the reader canvas. */
     val imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
     /** Symmetric left/right crop for document page margins. */
@@ -171,6 +177,9 @@ data class ReaderUiState(
     val sectionCurrentPage: Int = 0,
     /** Character offset at the start of the current visual page, reported by WebView pagination. */
     val sectionCharacterOffset: Int = 0,
+    /** DOM anchor used to preserve the free-scroll text position across rotations. */
+    val freeScrollCharacterOffset: Int = -1,
+    val freeScrollProgression: Double = -1.0,
     /** Accumulated total visual pages across all visited EPUB sections (0 when not EPUB or no data). */
     val epubAccumulatedTotalPages: Int = 0,
     /** Accumulated current visual page position across all visited EPUB sections. */
@@ -213,6 +222,8 @@ data class ReaderUiState(
     val selectedTextTranslation: SelectedTextTranslationState? = null,
     /** Pending text awaiting highlight color selection. */
     val pendingHighlightText: String? = null,
+    val pendingHighlightStartOffset: Int = 0,
+    val pendingHighlightEndOffset: Int = 0,
     /** Highlights for the current page. */
     val pageHighlights: List<io.leostrange.mrcomic.core.data.db.entity.TextHighlight> = emptyList(),
     /** Chapter translation progress (null when not translating). */
@@ -234,7 +245,8 @@ data class ReaderUiState(
     val chromeShowAudioIcon: Boolean = true,
     val chromeShowDirectionIcon: Boolean = true,
     val chromeShowTranslateIcon: Boolean = true,
-    val chromeShowBrightnessIcon: Boolean = true
+    val chromeShowBrightnessIcon: Boolean = true,
+    val chromeShowAutoScrollIcon: Boolean = true
 )
 
 data class SelectedTextTranslationState(
@@ -297,10 +309,15 @@ internal data class PendingProgressSave(
     val page: Int,
     val totalPages: Int,
     val countsTowardReadingProgress: Boolean,
-    val characterOffset: Int? = null
+    val characterOffset: Int? = null,
+    /** Structured position (TEXT-01) captured with the save; serialized on flush. */
+    val positionJson: String? = null,
+    /** Position-only snapshots must not advance page progress or completion state. */
+    val positionOnly: Boolean = false
 )
 
 internal data class PersistedProgressMarker(
     val comicId: String,
-    val page: Int
+    val page: Int,
+    val positionJson: String? = null
 )

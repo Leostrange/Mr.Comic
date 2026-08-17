@@ -1,0 +1,8 @@
+First paragraph of the plain-text fixture.
+
+Second paragraph. Plain text must paginate by lines; the paged layout must not leave a clipped
+last line and must not create unexplained gaps between adjacent pages (LAYOUT-03 regression).
+
+Third paragraph continues the flow so the fixture spans multiple visual pages even at large fonts.
+
+Fourth paragraph. Used by the reader corpus harness for PAGE and WEBTOON smoke coverage.

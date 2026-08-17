@@ -15,7 +15,7 @@ android {
     buildFeatures { compose = true }
 }
 dependencies {
-    implementation(project(":core-domain"))
+    implementation(project(":core-model"))
     api(platform(libs.androidx.compose.bom))
     api(libs.androidx.compose.ui)
     api(libs.androidx.compose.ui.tooling.preview)
@@ -31,4 +31,6 @@ dependencies {
     implementation(libs.coil.compose)
     testImplementation(libs.test.junit)
     debugImplementation("androidx.compose.ui:ui-tooling")
+    androidTestImplementation(libs.test.androidx.runner)
+    androidTestImplementation(libs.test.androidx.junit)
 }

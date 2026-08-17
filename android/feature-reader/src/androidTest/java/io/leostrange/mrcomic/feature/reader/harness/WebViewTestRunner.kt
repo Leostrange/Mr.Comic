@@ -3,7 +3,11 @@ package io.leostrange.mrcomic.feature.reader.harness
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebViewClient
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.CountDownLatch
@@ -14,7 +18,10 @@ import java.util.concurrent.atomic.AtomicReference
  * Инфраструктура для запуска тестов в реальном WebView.
  * Управляет жизненным циклом WebView и предоставляет JS bridge для callback'ов.
  */
-class WebViewTestRunner(private val context: Context) {
+class WebViewTestRunner(
+    private val context: Context,
+    val eventProbe: ReaderRuntimeEventProbe = ReaderRuntimeEventProbe()
+) {
 
     private var webView: WebView? = null
     private var lastPageCount = 0
@@ -32,6 +39,12 @@ class WebViewTestRunner(private val context: Context) {
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
+                layoutParams = ViewGroup.LayoutParams(1080, 1920)
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY)
+                )
+                layout(0, 0, 1080, 1920)
                 addJavascriptInterface(object {
                     @android.webkit.JavascriptInterface
                     fun onPageCountChanged(count: Int) {
@@ -53,12 +66,38 @@ class WebViewTestRunner(private val context: Context) {
         return reference.get()
     }
 
-    fun loadHtml(html: String, baseUrl: String = "file:///android_asset/") {
+    fun loadHtml(html: String, baseUrl: String = "file:///android_asset/"): Long {
+        val generation = eventProbe.beginLoad(
+            documentId = "$baseUrl|length=${html.length}|hash=${html.hashCode()}"
+        )
         val latch = CountDownLatch(1)
         instrumentation.runOnMainSync {
             webView?.webViewClient = object : WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    eventProbe.record(generation, ReaderRuntimeEventType.PAGE_STARTED, url)
+                }
+
+                override fun onPageCommitVisible(view: WebView?, url: String?) {
+                    eventProbe.record(generation, ReaderRuntimeEventType.PAGE_COMMITTED, url)
+                }
+
                 override fun onPageFinished(view: WebView?, url: String?) {
+                    eventProbe.record(generation, ReaderRuntimeEventType.PAGE_FINISHED, url)
                     latch.countDown()
+                }
+
+                override fun onReceivedError(
+                    view: WebView?,
+                    request: WebResourceRequest?,
+                    error: WebResourceError?
+                ) {
+                    if (request?.isForMainFrame == true) {
+                        eventProbe.record(
+                            generation,
+                            ReaderRuntimeEventType.LOAD_FAILED,
+                            "${error?.errorCode}:${error?.description}"
+                        )
+                    }
                 }
             }
             webView?.loadDataWithBaseURL(baseUrl, html, "text/html", "UTF-8", null)
@@ -66,6 +105,15 @@ class WebViewTestRunner(private val context: Context) {
         check(latch.await(10, TimeUnit.SECONDS)) { "WebView did not finish loading HTML within 10 seconds" }
         // Allow layout and pagination scripts to settle after the navigation callback.
         Thread.sleep(500)
+        val textLength = executeJs(
+            "(document.body && document.body.innerText ? document.body.innerText.trim().length : 0)"
+        ).toIntOrNull() ?: 0
+        eventProbe.record(
+            generation,
+            if (textLength > 0) ReaderRuntimeEventType.CONTENT_READY else ReaderRuntimeEventType.CONTENT_EMPTY,
+            "textLength=$textLength"
+        )
+        return generation
     }
 
     fun executeJs(script: String): String {
@@ -159,10 +207,14 @@ class WebViewTestRunner(private val context: Context) {
     }
 
     fun destroy() {
+        val generation = eventProbe.activeGeneration
         instrumentation.runOnMainSync {
             webView?.stopLoading()
             webView?.destroy()
             webView = null
+        }
+        if (generation > 0L) {
+            eventProbe.record(generation, ReaderRuntimeEventType.DISPOSED)
         }
     }
 }

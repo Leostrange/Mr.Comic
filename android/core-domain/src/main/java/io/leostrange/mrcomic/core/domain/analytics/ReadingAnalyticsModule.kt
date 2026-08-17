@@ -1,7 +1,6 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
 import dagger.Binds
-import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent

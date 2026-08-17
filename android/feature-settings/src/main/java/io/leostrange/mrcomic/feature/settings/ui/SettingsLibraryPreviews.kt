@@ -15,10 +15,7 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRowScope
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -36,15 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicLibraryPresetCard
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
 import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer
 import io.leostrange.mrcomic.core.ui.library.LibraryShelfBar
-import io.leostrange.mrcomic.core.ui.library.LibraryThemePresetSnapshot
 import io.leostrange.mrcomic.core.ui.library.libraryCardElevation
-import io.leostrange.mrcomic.core.ui.library.parseLibraryThemePreset
 
 /**
  * Library presets and previews (Phase P, 2026-08-03): non-viewModel composables

@@ -7,7 +7,6 @@ import android.provider.DocumentsContract
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import java.io.File
-import java.io.InputStream
 import java.security.MessageDigest
 
     internal data class ResolvedComicSource(

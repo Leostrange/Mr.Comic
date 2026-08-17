@@ -1,7 +1,6 @@
 package io.leostrange.mrcomic.feature.library
 
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.SortOrder
 
 /** Stateless helpers extracted from LibraryViewModel. */
 

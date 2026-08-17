@@ -11,6 +11,14 @@ import org.junit.Test
 class ReaderHtmlCssJsTest {
 
     @Test
+    fun webtoonCharacterRestoreScopesSectionRelativeOffsetToRequestedSection() {
+        val selector = readerFreeScrollCharacterScopeSelector(sectionIndex = 3)
+
+        assertTrue(selector.contains("data-mrcomic-page-index=\"3\""))
+        assertTrue(readerCaptureFreeScrollPositionJs(0.5).contains("closest('.mrcomic-text-webtoon-section')"))
+    }
+
+    @Test
     fun normalizeReaderOverrideColor_validHex() {
         assertEquals("#FF0000", normalizeReaderOverrideColor("#FF0000"))
         assertEquals("#1a6f9a", normalizeReaderOverrideColor("#1a6f9a"))
@@ -256,6 +264,38 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun protocolBootstrapCarriesVersionAndGeneration() {
+        val js = readerWebViewProtocolBootstrapJs(generation = 42L)
+
+        assertTrue(js.contains("version:1"))
+        assertTrue(js.contains("generation:42"))
+        assertTrue(js.contains("type:'committed'"))
+        assertTrue(js.contains("window.__mrcomicProtocol"))
+    }
+
+    @Test
+    fun protocolPagedLayoutWrapsLegacyPayloadWithoutDuplicatingLayoutLogic() {
+        val legacy = readerPagedLayoutJs(targetPage = 3)
+        val protocol = readerPagedLayoutJs(targetPage = 3, generation = 9L)
+
+        assertTrue(protocol.contains("type:'layoutReady'"))
+        assertTrue(protocol.contains("generation:9"))
+        assertTrue(protocol.contains("var rawPayload="))
+        assertEquals(1, protocol.windowCount("var requested=3;"))
+        assertTrue(protocol.length > legacy.length)
+    }
+
+    @Test
+    fun contentProbeReturnsVersionedMetricsEnvelope() {
+        val js = readerWebViewContentProbeJs(generation = 5L)
+
+        assertTrue(js.contains("type:'contentMeasured'"))
+        assertTrue(js.contains("generation:5"))
+        assertTrue(js.contains("rawText"))
+        assertTrue(js.contains("protocol_wrapper"))
+    }
+
+    @Test
     fun readerPagedLayoutJs_mediaPagesDoNotMaskFrontispieceBottom() {
         val js = readerPagedLayoutJs(targetPage = 0)
 
@@ -264,8 +304,38 @@ class ReaderHtmlCssJsTest {
             js.contains("mediaPage:true")
         )
         assertTrue(
-            "media pages do not reserve a text gutter that crops the image",
-            js.contains("var bottomTextGutter=isMediaPage?0:Math.max(lineHeight,pageInsetBottom,viewportBottomSafety);")
+            "media pages keep the bottom shield below the last content line",
+            js.contains("var shieldTop=Math.max(") && js.contains("rawVisibleHeight+1")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_shieldStartsAtLastContentLineNotAtGutter() {
+        // LAYOUT-03: the bottom shield must never be pulled up by a text gutter
+        // (visibleHeight - bottomTextGutter), which clipped the final legal line.
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "shield must start after the last content line",
+            js.contains("rawVisibleHeight+1")
+        )
+        assertFalse(
+            "shield must not be raised by a bottom text gutter",
+            js.contains("visibleHeight-bottomTextGutter")
+        )
+        assertFalse(
+            "the gutter-based shield calculation must be gone entirely",
+            js.contains("var bottomTextGutter=")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_keepsViewportBottomSafetyForSinglePageSpan() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "single-page span still accounts for bottom safety",
+            js.contains("pageInsetTop-pageInsetBottom-viewportBottomSafety")
         )
     }
 
@@ -288,8 +358,18 @@ class ReaderHtmlCssJsTest {
         val js = readerPagedLayoutJs(targetPage = 0)
 
         assertTrue(
-            "the bottom shield must start before the next page's first line can peek through",
-            js.contains("Math.max(0,rawVisibleHeight-1)")
+            "the bottom shield must not cover the last legal line",
+            js.contains("rawVisibleHeight+1")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_keepsPenultimatePageFullInsteadOfBalancingShortTail() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertFalse(
+            "a short final page must not pull content out of the preceding full page",
+            js.contains("rebalanceTrailingPages"),
         )
     }
 
@@ -498,8 +578,8 @@ class ReaderHtmlCssJsTest {
             js.contains("orphanGuardStart>current+lineHeight*1.1")
         )
         assertTrue(
-            "blocks of up to 3.0 line heights must not be left as page-tail orphans",
-            js.contains("endBottom-orphanGuardStart<=lineHeight*3.0")
+            "only a genuinely isolated final line should trigger the orphan guard",
+            js.contains("endBottom-orphanGuardStart<=lineHeight*1.15")
         )
         assertTrue(
             "the page must roll back to the last fully-fitted fragment",
@@ -510,8 +590,8 @@ class ReaderHtmlCssJsTest {
             js.contains("nextStart=orphanGuardStart;")
         )
         assertTrue(
-            "rollback only when the trimmed page still fills at least 65%",
-            js.contains("pageFillRatio>=0.65")
+            "rollback only when the trimmed page still fills at least 90%",
+            js.contains("pageFillRatio>=0.90")
         )
     }
 
@@ -640,3 +720,6 @@ class ReaderHtmlCssJsTest {
         assertTrue("fallback alpha", rgba.contains("0.5"))
     }
 }
+
+private fun String.windowCount(needle: String): Int =
+    windowed(needle.length).count { it == needle }

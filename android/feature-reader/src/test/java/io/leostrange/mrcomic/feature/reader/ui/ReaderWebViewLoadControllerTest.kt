@@ -63,6 +63,17 @@ class ReaderWebViewLoadControllerTest {
     }
 
     @Test
+    fun characterization_commitAloneCurrentlyAllowsRestoreWithoutLayoutReadiness() {
+        // U1 records the current two-state contract. U2 replaces this with
+        // request -> commit -> layout-ready -> restore acknowledgement.
+        val controller = ReaderWebViewLoadController()
+        controller.markLoadRequested(token = "load-a")
+        controller.markLoadCommitted(token = "load-a")
+
+        assertTrue(controller.shouldRestoreScroll("load-a"))
+    }
+
+    @Test
     fun markRequestedWithoutCommit_deniesScrollRestore() {
         val controller = ReaderWebViewLoadController()
         controller.markLoadRequested(token = "load-a")

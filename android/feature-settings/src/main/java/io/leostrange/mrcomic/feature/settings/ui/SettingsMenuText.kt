@@ -2,14 +2,12 @@
 
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.core.ui.theme.style
 import java.util.Locale
 
 /* ──── MainMenuText ──── */

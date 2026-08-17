@@ -107,8 +107,9 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
-    fun htmlSelectionActionsAreDisabledInPagedModeToPreventSwipeSelection() {
-        assertFalse(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
+    fun htmlSelectionActionsAreEnabledInBothPagedAndFreeScrollModes() {
+        // Selection works in PAGE too; a proven swipe is what suppresses the action mode.
+        assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = true))
         assertTrue(readerHtmlSelectionActionsEnabled(pagedModeScrollLock = false))
     }
 
@@ -290,23 +291,88 @@ class ReaderInteractionPolicyTest {
     }
 
     @Test
-    fun readerPageFromWebtoonSection_mapsDirectly() {
-        // Most EPUBs: each section maps 1:1 to a page
-        assertEquals(5, readerPageFromWebtoonSection(webtoonSectionIndex = 5, totalPagedPages = 20))
+    fun singleSpineCursorKeepsEngineSectionAndMapsVisualSubpage() {
+        val cursor = readerTextWebtoonCursorFromPagedPosition(
+            engineSectionIndex = 0,
+            pagedSubpageIndex = 46,
+            pagedSubpageCount = 461,
+            totalWebtoonSections = 91,
+            characterOffset = 12_500,
+            fragment = "paragraph-46"
+        )
+
+        assertEquals(0, cursor.engineSectionIndex)
+        assertEquals(9, cursor.webtoonSectionIndex)
+        assertEquals(12_500, cursor.characterOffset)
+        assertEquals("paragraph-46", cursor.fragment)
     }
 
     @Test
-    fun readerPageFromWebtoonSection_clampsToMax() {
-        assertEquals(19, readerPageFromWebtoonSection(webtoonSectionIndex = 25, totalPagedPages = 20))
+    fun cursorVisibleSectionUpdateKeepsSingleSpineReturnTarget() {
+        val initial = readerTextWebtoonCursorFromPagedPosition(
+            engineSectionIndex = 0,
+            pagedSubpageIndex = 46,
+            pagedSubpageCount = 461,
+            totalWebtoonSections = 91,
+            characterOffset = 12_500
+        )
+
+        val moved = readerTextWebtoonCursorAtVisibleSection(
+            previous = initial,
+            visibleSectionIndex = 25,
+            characterOffset = 28_000,
+            progression = 0.28
+        )
+
+        assertEquals(0, moved.engineSectionIndex)
+        assertEquals(25, moved.webtoonSectionIndex)
+        assertEquals(28_000, moved.characterOffset)
+        assertEquals(0.28, moved.progression!!, 0.0001)
     }
 
     @Test
-    fun readerPageFromWebtoonSection_clampsNegative() {
-        assertEquals(0, readerPageFromWebtoonSection(webtoonSectionIndex = -3, totalPagedPages = 20))
+    fun multiSpineCursorFollowsVisibleEngineSection() {
+        val initial = readerTextWebtoonCursorFromPagedPosition(
+            engineSectionIndex = 5,
+            pagedSubpageIndex = 0,
+            pagedSubpageCount = 4,
+            totalWebtoonSections = 20
+        )
+        val moved = readerTextWebtoonCursorAtVisibleSection(initial, visibleSectionIndex = 8)
+
+        assertEquals(8, moved.engineSectionIndex)
+        assertEquals(8, moved.webtoonSectionIndex)
     }
 
     @Test
-    fun readerPageFromWebtoonSection_zeroPages() {
-        assertEquals(0, readerPageFromWebtoonSection(webtoonSectionIndex = 5, totalPagedPages = 0))
+    fun missingPagedCharacterAnchorDoesNotOverrideWebtoonSectionWithDocumentStart() {
+        val cursor = readerTextWebtoonCursorFromPagedPosition(
+            engineSectionIndex = 4,
+            pagedSubpageIndex = 2,
+            pagedSubpageCount = 8,
+            totalWebtoonSections = 12,
+            characterOffset = null
+        )
+
+        assertEquals(
+            -1,
+            readerTextWebtoonRestoreCharacterOffset(
+                transitionCursor = cursor,
+                resolvedCharacterOffset = 0
+            )
+        )
+    }
+
+    @Test
+    fun cursorVisibleSectionWithoutPreviousStartsAtItsCanonicalSection() {
+        val cursor = readerTextWebtoonCursorAtVisibleSection(
+            previous = null,
+            visibleSectionIndex = -3,
+            characterOffset = 0
+        )
+
+        assertEquals(0, cursor.engineSectionIndex)
+        assertEquals(0, cursor.webtoonSectionIndex)
+        assertEquals(0, cursor.characterOffset)
     }
 }

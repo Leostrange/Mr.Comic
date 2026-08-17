@@ -102,3 +102,13 @@ internal fun deferredResolvedStartPage(
     mode = mode,
     totalPages = resolvedTotalPages
 )
+
+/**
+ * A resumed reader whose page count is still being resolved must not flash the
+ * provisional cover page before jumping to the saved page. Hold the loading shell
+ * until the authoritative total is known and the saved page can be applied atomically.
+ */
+internal fun shouldHoldLoadingForDeferredRestore(
+    shouldDeferCount: Boolean,
+    requestedStartPage: Int
+): Boolean = shouldDeferCount && requestedStartPage > 0

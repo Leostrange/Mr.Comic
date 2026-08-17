@@ -11,104 +11,39 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
 import android.content.Context
-import android.provider.DocumentsContract
-import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.doublePreferencesKey
-import androidx.datastore.preferences.core.floatPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import io.leostrange.mrcomic.core.data.preferences.APP_ICON_PREFERENCE_KEY
-import io.leostrange.mrcomic.core.data.preferences.DEFAULT_APP_ICON_ID
-import io.leostrange.mrcomic.core.data.preferences.PerfProfile
-import io.leostrange.mrcomic.core.data.preferences.PerfRenderQuality
-import io.leostrange.mrcomic.core.data.preferences.PerformanceDefaults
-import io.leostrange.mrcomic.core.data.preferences.PerformancePreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
-import io.leostrange.mrcomic.core.data.preferences.appIconDataStore
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.data.repository.ComicRepository
-import io.leostrange.mrcomic.core.model.repository.BackupRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
-import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
 import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
-import io.leostrange.mrcomic.core.domain.util.LibraryViewModeKey
-import io.leostrange.mrcomic.core.domain.util.normalizeLibraryViewModeKey
-import io.leostrange.mrcomic.core.domain.util.normalizeTapZoneActionName
 import io.leostrange.mrcomic.core.model.Comic
-import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.core.model.ReaderInfoSlot
-import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
-import io.leostrange.mrcomic.core.model.ReaderScreenTimeoutMode
-import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
-import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
-import io.leostrange.mrcomic.core.model.ReaderTtsConfig
-import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
-import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
-import io.leostrange.mrcomic.core.model.TranslationTransportPreference
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_STYLE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_VEIL
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKGROUND_BLUR
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_BACKDROP_STRENGTH
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_CARD_SHADOW
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_CARD_CORNER_RADIUS
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_CARD_STROKE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_CARD_STYLE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_COVER_SCALE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_SHELF_DEPTH
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_SHELF_STYLE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_THUMBNAIL_MODE
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_TITLE_LINES
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_TITLE_PANEL_OPACITY
-import io.leostrange.mrcomic.core.ui.library.DEFAULT_LIBRARY_TITLE_SCALE
-import io.leostrange.mrcomic.core.ui.library.LibraryThemePresetSnapshot
-import io.leostrange.mrcomic.core.ui.library.libraryQuickPresetSpec
-import io.leostrange.mrcomic.core.ui.library.normalizeLibraryBackgroundStyle
-import io.leostrange.mrcomic.core.ui.library.normalizeLibraryGraphicCoverStyle
-import io.leostrange.mrcomic.core.ui.library.normalizeLibraryShelfStyle
-import io.leostrange.mrcomic.core.ui.library.parseLibraryThemePreset
-import io.leostrange.mrcomic.core.ui.eink.isEInkDevice
-import io.leostrange.mrcomic.core.ui.locale.normalizeTranslationLanguageCode
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreferencesRepository
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.core.ui.theme.toConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryDownloader
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.net.URLDecoder
 import javax.inject.Inject
 
 // Preset data classes and parsing extracted to SettingsPresets.kt
@@ -223,29 +158,9 @@ class SettingsViewModel @Inject constructor(
     private val combinedSettingsUiState: Flow<SettingsUiState> = settingsUiStateFlowBuilder
         .createCombinedSettingsUiState()
         .combine(dailyReadingGoalStore.goalState) { state: SettingsUiState, goalState ->
-            state.copy(
-                dailyReadingGoalEnabled = goalState.enabled,
-                dailyReadingGoalTargetPages = goalState.targetPages,
-                dailyReadingGoalProgressPages = goalState.pagesReadToday,
-                dailyReadingWeekProgressPages = goalState.pagesReadThisWeek,
-                dailyReadingWeekTargetPages = goalState.weeklyTargetPages,
-                dailyReadingWeekCompletedDays = goalState.completedDaysThisWeek,
-                dailyReadingRecentActiveDays = goalState.recentActivity.count { it.pagesRead > 0 },
-                dailyReadingRecentGoalDays = goalState.recentActivity.count { it.goalCompleted },
-                dailyReadingStreakEnabled = goalState.streakEnabled,
-                dailyReadingGraceEnabled = goalState.graceEnabled,
-                dailyReadingCurrentStreak = goalState.currentStreak,
-                dailyReadingBestStreak = goalState.bestStreak,
-                dailyReadingGraceDaysRemainingThisWeek = goalState.graceDaysRemainingThisWeek
-            )
+            state.withDailyReadingGoal(goalState)
         }.combine(comicRepository.getAllComics()) { state: SettingsUiState, comics: List<Comic> ->
-            state.copy(
-                totalComics       = comics.size,
-                completedComics   = comics.count { it.isCompleted },
-                bookmarkedComics  = comics.count { it.isBookmarked },
-                rawAuthors        = comics.map { it.author },
-                rawGenres         = comics.map { it.genre }
-            )
+            state.withLibraryStats(comics)
         }
 
     val uiState: StateFlow<SettingsUiState> = combinedSettingsUiState.stateIn(

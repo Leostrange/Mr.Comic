@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.engine.formats.djvu
 
 import android.content.ContextWrapper
 import android.graphics.Bitmap
-import io.leostrange.mrcomic.core.model.ComicFormat
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.runBlocking

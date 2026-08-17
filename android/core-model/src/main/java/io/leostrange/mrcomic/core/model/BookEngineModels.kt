@@ -37,7 +37,11 @@ data class ReaderLocator(
     /** Logical HTML split inside a chapter (Moon+ lastSplitIndex). Persisted in Phase 3. */
     val splitIndex: Int? = null,
     /** Screen page index inside the current split (Moon+ page within split). */
-    val pageInSplit: Int? = null
+    val pageInSplit: Int? = null,
+    /** Canonical engine/spine section for reflowable text containers. */
+    val sectionIndex: Int? = null,
+    /** Character coordinate inside [sectionIndex], stable across text reflow. */
+    val characterOffset: Int? = null
 )
 
 data class BookTocItem(

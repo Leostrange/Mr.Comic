@@ -48,10 +48,30 @@ object AppDatabaseMigrations {
         "genre" to "TEXT",
         "language" to "TEXT NOT NULL DEFAULT 'en'",
         "isCompleted" to "INTEGER NOT NULL DEFAULT 0",
+        // Structured reading position (TEXT-01); nullable so existing rows keep legacy null.
+        "readerPositionJson" to "TEXT",
         // Defensive: these were introduced earlier but are cheap to reconcile idempotently.
         "libraryShelf" to "TEXT NOT NULL DEFAULT ''",
         "format" to "TEXT NOT NULL DEFAULT 'UNKNOWN'"
     )
+
+    val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            val existing = HashSet<String>()
+            db.query("PRAGMA table_info(`comics`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                if (nameIndex >= 0) {
+                    while (cursor.moveToNext()) {
+                        existing.add(cursor.getString(nameIndex))
+                    }
+                }
+            }
+            // TEXT-01: structured reading position blob (nullable — legacy rows keep null).
+            if ("readerPositionJson" !in existing) {
+                db.execSQL("ALTER TABLE `comics` ADD COLUMN `readerPositionJson` TEXT")
+            }
+        }
+    }
 
     val MIGRATION_8_9 = object : Migration(8, 9) {
         override fun migrate(db: SupportSQLiteDatabase) {

@@ -53,6 +53,25 @@ internal class LibraryContentPipeline {
             emptyList()
         }
 
+        var readingCount = 0
+        var completedCount = 0
+        var bookmarkedCount = 0
+        val authors = ArrayList<String?>(rawComics.size)
+        val genres = ArrayList<String?>(rawComics.size)
+        for (c in rawComics) {
+            if (c.isReadingInProgress()) readingCount++
+            if (c.isReadCompleted()) completedCount++
+            if (c.isBookmarked) bookmarkedCount++
+            authors.add(c.author)
+            genres.add(c.genre)
+        }
+
+        val availableQuoteComicIds = HashSet<String>(allLibraryComics.size).apply {
+            for (comic in allLibraryComics) {
+                add(comic.id)
+            }
+        }
+
         return state.copy(
             comics = sorted,
             displayItems = displayItems,
@@ -65,9 +84,9 @@ internal class LibraryContentPipeline {
             currentFolderPath = effectiveFolderPath,
             breadcrumbs = buildBreadcrumbs(effectiveFolderPath, state.appLanguage),
             quotes = sortedQuotes,
-            availableQuoteComicIds = allLibraryComics.map { comic -> comic.id }.toSet(),
+            availableQuoteComicIds = availableQuoteComicIds,
             totalComicCount = filtered.size,
-            readingComicCount = rawComics.count { c -> c.isReadingInProgress() },
+            readingComicCount = readingCount,
             totalBookmarkedCount = bookmarkedSorted.size,
             totalQuoteCount = sortedQuotes.size,
             quoteSourceCount = sortedQuotes.map { it.comicId }.distinct().size,
@@ -75,10 +94,10 @@ internal class LibraryContentPipeline {
             visibleComicCount = displayItems.count { item -> item is LibraryComicItem },
             // Данные для достижений берём из полного сырого списка (без фильтров)
             allComicsRawCount = rawComics.size,
-            completedComicCount = rawComics.count { c -> c.isReadCompleted() },
-            bookmarkedComicCount = rawComics.count { c -> c.isBookmarked },
-            rawAuthors = rawComics.map { c -> c.author },
-            rawGenres = rawComics.map { c -> c.genre },
+            completedComicCount = completedCount,
+            bookmarkedComicCount = bookmarkedCount,
+            rawAuthors = authors,
+            rawGenres = genres,
             mascotProgress = mascotProgress,
             folderSheetPath = effectiveFolderSheetPath,
             folderSheetItems = folderSheetItems,

@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.core.domain.translation
 
 import io.leostrange.mrcomic.core.domain.util.Result
 import io.leostrange.mrcomic.core.model.ExplainRequest
-import io.leostrange.mrcomic.core.model.TranslationMode
 import io.leostrange.mrcomic.core.model.TranslationRequest
 import io.leostrange.mrcomic.core.model.TranslationResult
 import io.leostrange.mrcomic.core.model.TranslationSourceType

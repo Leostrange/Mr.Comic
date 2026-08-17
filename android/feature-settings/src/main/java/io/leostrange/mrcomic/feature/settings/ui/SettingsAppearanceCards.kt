@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.style.TextOverflow
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
@@ -71,7 +70,7 @@ internal fun AppThemePresetCard(
 
     MrComicCardSurface(
         modifier = modifier
-            .width(160.dp)
+            .width(180.dp)
             .clip(cardShape),
         fillMaxWidth = false,
         shape = cardShape,
@@ -176,7 +175,7 @@ internal fun AppThemePresetCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     minLines = 2,
-                    maxLines = 2,
+                    maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
             }

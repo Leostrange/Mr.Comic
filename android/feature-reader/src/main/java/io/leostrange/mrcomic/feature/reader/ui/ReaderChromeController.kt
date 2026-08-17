@@ -12,20 +12,18 @@ internal class ReaderChromeController(
 ) {
     fun onCenterTap() {
         _uiState.update { state ->
-            state.copy(
-                chromeState = when (state.chromeState) {
-                    ReaderChromeState.HIDDEN -> ReaderChromeState.EXPANDED
-                    ReaderChromeState.EXPANDED -> ReaderChromeState.HIDDEN
-                }
-            )
+            when (state.chromeState) {
+                ReaderChromeState.HIDDEN -> state.copy(chromeState = ReaderChromeState.EXPANDED)
+                ReaderChromeState.EXPANDED -> state.withHiddenChrome()
+            }
         }
     }
 
     fun toggleChromeUi() = onCenterTap()
 
-    fun hideChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
+    fun hideChrome() = _uiState.update { it.withHiddenChrome() }
 
-    fun showMinimalChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.HIDDEN) }
+    fun showMinimalChrome() = _uiState.update { it.withHiddenChrome() }
 
     fun showExpandedChrome() = _uiState.update { it.copy(chromeState = ReaderChromeState.EXPANDED) }
 
@@ -50,4 +48,11 @@ internal class ReaderChromeController(
             chromeState = ReaderChromeState.EXPANDED
         )
     }
+
+    private fun ReaderUiState.withHiddenChrome(): ReaderUiState = copy(
+        chromeState = ReaderChromeState.HIDDEN,
+        // Center taps are delivered after pointer-up. If changing the reader padding
+        // disposes the gesture node, its finally block cannot be relied on to resume.
+        autoScrollPauseReasons = autoScrollPauseReasons - ReaderAutoScrollPauseReason.TOUCH_GESTURE,
+    )
 }

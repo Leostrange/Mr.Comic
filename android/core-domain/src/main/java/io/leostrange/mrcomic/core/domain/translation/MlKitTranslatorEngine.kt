@@ -1,7 +1,6 @@
 package io.leostrange.mrcomic.core.domain.translation
 
 import io.leostrange.mrcomic.core.model.TranslationMode
-import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
 import io.leostrange.mrcomic.core.model.TranslationRequest
 import io.leostrange.mrcomic.core.model.TranslationSourceType
 import java.util.UUID

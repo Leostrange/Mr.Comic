@@ -338,21 +338,6 @@ class ReaderSettingsController(
         }
     }
 
-    override fun setAutoScrollSpeed(speed: Float) {
-        _uiState.update { it.copy(autoScrollSpeed = speed.coerceIn(0f, 500f)) }
-    }
-
-    override fun cycleAutoScrollSpeed() {
-        val current = _uiState.value.autoScrollSpeed
-        val next = when {
-            current <= 0f -> 30f
-            current < 60f -> 80f
-            current < 120f -> 180f
-            else -> 0f
-        }
-        setAutoScrollSpeed(next)
-    }
-
     override fun setScreenTimeoutMode(mode: String) {
         val resolved = ReaderScreenTimeoutMode.fromStored(mode)
         _uiState.update { it.copy(screenTimeoutMode = resolved.storedValue) }
@@ -638,7 +623,10 @@ class ReaderSettingsController(
                 _uiState.update { it.copy(chromeShowBrightnessIcon = visible) }
                 viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, visible) }
             }
-            ReaderChromeButton.AUTO_SCROLL -> { /* always visible, no preference */ }
+            ReaderChromeButton.AUTO_SCROLL -> {
+                _uiState.update { it.copy(chromeShowAutoScrollIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_AUTO_SCROLL, visible) }
+            }
         }
     }
 

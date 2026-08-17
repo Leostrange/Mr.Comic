@@ -23,6 +23,9 @@ lint/
 !debug.keystore
 *.jks
 *.ks
+*.pem
+*.key
+.env*
 
 # === Generated sources (Hilt/KSP) ===
 **/generated/
@@ -112,6 +115,8 @@ READER_MASTER_BACKLOG.md
 REFACTORING_CONTINUATION_GUIDE.md
 docs/superpowers/
 plans/
+!docs/plans/
+!docs/plans/*.md
 test-reports/
 PROJECT_CONTEXT_HANDOFF.md
 READER_SETTINGS_SNAPSHOT*.md

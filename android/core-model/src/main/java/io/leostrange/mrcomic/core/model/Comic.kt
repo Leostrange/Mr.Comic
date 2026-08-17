@@ -33,7 +33,9 @@ data class Comic(
     val artist: String? = null,
     val genre: String? = null,
     val language: String = "en",
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    /** Structured reading position (TEXT-01) serialized by ReaderPositionCodec; null = legacy record. */
+    val readerPositionJson: String? = null
 )
 
 enum class ComicLibraryShelf {
@@ -66,11 +68,12 @@ fun Comic.readingStatus(): ComicReadingStatus {
     val completedByProgress = normalizedProgress >= 0.999f &&
         (hasStableReadingSignal || normalizedPageCount > 1)
     val hasReadingActivity = hasStableReadingSignal || progressHasAuthority
-    val completedByPage = hasReadingActivity &&
-        normalizedPageCount > 1 &&
-        normalizedCurrentPage >= normalizedPageCount - 1
+    // Completion is driven only by an explicit flag or a confirmed full-progress
+    // signal. Landing on the last page index (currentPage >= pageCount - 1) is no
+    // longer a completion condition: a crash, a deferred-count clamp or a text book
+    // parked on its final section must not fake a 100% badge.
     return when {
-        isCompleted || completedByProgress || completedByPage -> ComicReadingStatus.COMPLETED
+        isCompleted || completedByProgress -> ComicReadingStatus.COMPLETED
         hasReadingActivity -> ComicReadingStatus.READING
         else -> ComicReadingStatus.NEW
     }
@@ -115,7 +118,9 @@ fun Comic.storedReaderLocator(): ReaderLocator? {
             position = position,
             title = title,
             fragment = fragment,
-            pageIndex = currentPage
+            pageIndex = currentPage,
+            sectionIndex = currentPage,
+            characterOffset = position
         )
     }
 }
@@ -124,7 +129,7 @@ fun Comic.withStoredReaderLocator(locator: ReaderLocator?): Comic =
     copy(
         readerLocatorHref = locator?.href?.takeIf { it.isNotBlank() },
         readerLocatorProgression = locator?.progression,
-        readerLocatorPosition = locator?.position,
+        readerLocatorPosition = locator?.characterOffset ?: locator?.position,
         readerLocatorTitle = locator?.title?.takeIf { it.isNotBlank() },
         readerLocatorFragment = locator?.fragment?.takeIf { it.isNotBlank() }
     )

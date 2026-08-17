@@ -196,4 +196,58 @@ class ReaderViewportGeometryTest {
         // VERTICAL-01: safety margin 8px added when toolbars hidden
         assertEquals(92, geo.contentTopInsetCssPx)
     }
+    // ── Chrome-reserve-only CSS insets (LAYOUT-02) ─────────────────────
+
+    @Test
+    fun chromeTopInset_hiddenToolbars_returnsZero() {
+        val geo = ReaderViewportGeometry.fromMeasured(
+            viewportWidthPx = 1080,
+            viewportHeightPx = 2400,
+            statusBarInsetPx = 84,
+            navigationBarInsetPx = 126,
+            topToolbarHeightPx = 168,
+            bottomToolbarHeightPx = 192,
+            hideToolbarsWhileReading = true,
+            densityScale = 2.75f
+        )
+
+        // Hidden toolbars → chrome reserve = 0 → CSS inset = 0
+        assertEquals(0, geo.chromeTopInsetCssPx)
+        assertEquals(0, geo.chromeBottomInsetCssPx)
+    }
+
+    @Test
+    fun chromeTopInset_visibleToolbars_convertsToolbarHeight() {
+        val geo = ReaderViewportGeometry.fromMeasured(
+            viewportWidthPx = 1080,
+            viewportHeightPx = 2400,
+            statusBarInsetPx = 84,
+            navigationBarInsetPx = 126,
+            topToolbarHeightPx = 168,
+            bottomToolbarHeightPx = 192,
+            hideToolbarsWhileReading = false,
+            densityScale = 2.75f
+        )
+
+        // 168 / 2.75 ≈ 61 CSS px
+        assertEquals(61, geo.chromeTopInsetCssPx)
+        // 192 / 2.75 ≈ 70 CSS px
+        assertEquals(70, geo.chromeBottomInsetCssPx)
+    }
+
+    @Test
+    fun chromeInset_densityScaleOne_isExactPixels() {
+        val geo = ReaderViewportGeometry.fromMeasured(
+            viewportWidthPx = 1080,
+            viewportHeightPx = 2400,
+            statusBarInsetPx = 0,
+            navigationBarInsetPx = 0,
+            topToolbarHeightPx = 100,
+            bottomToolbarHeightPx = 50,
+            hideToolbarsWhileReading = false,
+            densityScale = 1f
+        )
+
+        assertEquals(100, geo.chromeTopInsetCssPx)
+    }
 }

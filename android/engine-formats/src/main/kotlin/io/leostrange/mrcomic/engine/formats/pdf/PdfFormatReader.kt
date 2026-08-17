@@ -42,11 +42,16 @@ class PdfFormatReader(
             pfd = if (path.startsWith("content://")) {
                 context.contentResolver.openFileDescriptor(uri, "r")
             } else {
-                ParcelFileDescriptor.open(java.io.File(path), ParcelFileDescriptor.MODE_READ_ONLY)
+                val file = java.io.File(path)
+                if (file.exists() && file.canRead()) {
+                    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                } else {
+                    context.contentResolver.openFileDescriptor(uri, "r")
+                }
             }
             pfd?.let { pdfRenderer = PdfRenderer(it) }
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to open PDF", e)
+            Log.e(TAG, "Failed to open PDF: $path", e)
         }
     }
 

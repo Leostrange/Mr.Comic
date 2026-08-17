@@ -12,23 +12,33 @@ package io.leostrange.mrcomic.feature.reader.ui
  * with no side effects or Android dependencies.
  */
 
-internal fun readerPagedLayoutJs(targetPage: Int): String = readerPagedCoreJs(
-    """
-    var requested=$targetPage;
-    var target=(requested<0)?current:((requested>=2147483647)?(pageCount-1):Math.max(0,Math.min(pageCount-1,requested||0)));
-    """.trimIndent()
-)
+internal fun readerPagedLayoutJs(targetPage: Int, generation: Long? = null): String {
+    val legacyScript = readerPagedCoreJs(
+        """
+        var requested=$targetPage;
+        var target=(requested<0)?current:((requested>=2147483647)?(pageCount-1):Math.max(0,Math.min(pageCount-1,requested||0)));
+        """.trimIndent()
+    )
+    return generation?.let {
+        readerWebViewProtocolEnvelopeJs(it, eventType = "layoutReady", payloadScript = legacyScript)
+    } ?: legacyScript
+}
 
-internal fun readerPagedTurnJs(delta: Int): String = readerPagedCoreJs(
-    """
-    var target=current+($delta);
-    if(target<0||target>=pageCount){
-      return JSON.stringify({handled:false,pageIndex:current,pageCount:pageCount});
-    }
-    """.trimIndent(),
-    failureHandled = false,
-    reuseExistingLayoutsOnly = true
-)
+internal fun readerPagedTurnJs(delta: Int, generation: Long? = null): String {
+    val legacyScript = readerPagedCoreJs(
+        """
+        var target=current+($delta);
+        if(target<0||target>=pageCount){
+          return JSON.stringify({handled:false,pageIndex:current,pageCount:pageCount});
+        }
+        """.trimIndent(),
+        failureHandled = false,
+        reuseExistingLayoutsOnly = true
+    )
+    return generation?.let {
+        readerWebViewProtocolEnvelopeJs(it, eventType = "layoutReady", payloadScript = legacyScript)
+    } ?: legacyScript
+}
 
 internal fun readerPagedCoreJs(
     targetJs: String,
@@ -126,7 +136,7 @@ internal fun readerPagedCoreJs(
       }
       var contentRect=content.getBoundingClientRect();
       var contentHeight=Math.ceil(Math.max(content.scrollHeight||0,content.offsetHeight||0,contentRect.height||0,clipHeight));
-      var sig=['text-page-no-overlap-v8',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign,pageInsetTop,pageInsetBottom].join('|');
+      var sig=['text-page-no-overlap-v9',pageWidth,clipHeight,contentHeight,(content.innerText||body.innerText||'').length,body.style.fontSize,body.style.lineHeight,body.style.textAlign,pageInsetTop,pageInsetBottom].join('|');
       if(existingLayouts&&window.__mrcomicPageBreakSig===sig){
         return existingLayouts;
       }
@@ -252,80 +262,35 @@ internal fun readerPagedCoreJs(
         }
       }catch(e){}
 
-      function nearestBreakBetween(minY,maxY,targetY){
-        var safeMin=Math.max(0,Number(minY)||0);
-        var safeMax=Math.max(safeMin,Number(maxY)||safeMin);
-        var safeTarget=Math.max(safeMin,Math.min(safeMax,Number(targetY)||safeMin));
-        var best=-1;
-        var bestDistance=Number.MAX_VALUE;
-        for(var breakIdx=0;breakIdx<blockStarts.length;breakIdx++){
-          var candidate=Math.floor(Number(blockStarts[breakIdx])||0);
-          if(candidate<=safeMin||candidate>=safeMax)continue;
-          var distance=Math.abs(candidate-safeTarget);
-          if(distance<bestDistance){
-            best=candidate;
-            bestDistance=distance;
+      function findLastContentBottom(pageStart, pageEnd){
+        var start = Number(pageStart||0);
+        var end = Number(pageEnd||0);
+        var lastB = start;
+        for(var i=0; i<unique.length; i++){
+          var f = unique[i];
+          if(f.top >= end) break;
+          if(f.bottom <= end && f.bottom > lastB){
+            lastB = f.bottom;
           }
         }
-        if(best>=0)return best;
-        for(var fragmentIdx=0;fragmentIdx<unique.length;fragmentIdx++){
-          var fragmentTop=Math.floor(Number(unique[fragmentIdx].top)||0);
-          if(fragmentTop<=safeMin||fragmentTop>=safeMax)continue;
-          var fragmentDistance=Math.abs(fragmentTop-safeTarget);
-          if(fragmentDistance<bestDistance){
-            best=fragmentTop;
-            bestDistance=fragmentDistance;
-          }
-        }
-        return best;
+        return lastB > start ? lastB : end;
       }
 
-      function makeVisibleHeight(pageStart,pageEnd,pageTopInset,pageBottomInset){
-        var span=Math.max(1,Number(pageEnd||0)-Number(pageStart||0));
-        // content is already positioned at pageInsetTop. Counting both values here
-        // exposes the next page's first line below the bottom shield.
+      function makeVisibleHeight(pageStart,pageEnd,pageTopInset,pageBottomInset,explicitContentBottom){
+        var pStart = Number(pageStart||0);
+        var pEnd = Number(pageEnd||0);
+        var contentBottom = Number(explicitContentBottom || findLastContentBottom(pStart, pEnd));
+        var span = Math.max(1, contentBottom - pStart);
         var leadingViewportOffset=Math.max(contentViewportTopOffset,Math.max(0,Number(pageTopInset||0)));
+        var shieldGap = pEnd > contentBottom ? Math.floor((pEnd - contentBottom) / 2) : 0;
+        var shieldOffset = span + Math.min(Math.max(0, shieldGap), Math.max(1, Math.floor(lineHeight * 0.15)));
         return Math.ceil(Math.max(
           1,
           Math.min(
             clipHeight,
-            leadingViewportOffset+span+1
+            leadingViewportOffset+shieldOffset
           )
         ));
-      }
-
-      function rebalanceTrailingPages(pages){
-        if(!pages||pages.length<2)return pages;
-        var lastIndex=pages.length-1;
-        var lastPage=pages[lastIndex];
-        var prevPage=pages[lastIndex-1];
-        if(!lastPage||!prevPage)return pages;
-
-        var prevSpan=Math.max(0,Number(prevPage.end||0)-Number(prevPage.start||0));
-        var lastSpan=Math.max(0,Number(lastPage.end||0)-Number(lastPage.start||0));
-        if(prevSpan<=0||lastSpan<=0)return pages;
-
-        var minTailSpan=Math.max(lineHeight*5,usableHeight*0.58);
-        if(lastSpan>=minTailSpan)return pages;
-        if(prevSpan<=Math.max(lineHeight*7,usableHeight*0.72))return pages;
-
-        var mergedStart=Math.max(0,Number(prevPage.start||0));
-        var mergedEnd=Math.max(mergedStart+lineHeight*2,Number(lastPage.end||0));
-        var targetBreak=mergedStart+((mergedEnd-mergedStart)/2);
-        var minBreak=mergedStart+Math.max(lineHeight*6,usableHeight*0.36);
-        var maxBreak=mergedEnd-Math.max(lineHeight*5,usableHeight*0.32);
-        if(maxBreak<=minBreak)return pages;
-
-        var balancedBreak=nearestBreakBetween(minBreak,maxBreak,targetBreak);
-        if(!(balancedBreak>mergedStart+lineHeight*2&&balancedBreak<mergedEnd-lineHeight*2)){
-          return pages;
-        }
-
-        prevPage.end=Math.round(balancedBreak);
-        prevPage.visibleHeight=makeVisibleHeight(prevPage.start,balancedBreak,pageInsetTop,pageInsetBottom);
-        lastPage.start=Math.round(balancedBreak);
-        lastPage.visibleHeight=makeVisibleHeight(balancedBreak,lastPage.end,pageInsetTop,pageInsetBottom);
-        return pages;
       }
 
       function firstFragmentTopAfter(y){
@@ -428,7 +393,10 @@ internal fun readerPagedCoreJs(
           if(blockTop>endBottom)break;
           orphanGuardStart=blockTop;
         }
-        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*3.0){
+        // Avoid only a genuinely isolated final line. Moving a whole short paragraph
+        // after a merely 65%-filled page created conspicuous empty bands, especially
+        // in landscape. Normal paragraphs should split and use the available viewport.
+        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*1.15){
           var backupBottom=0;
           for(var p=0;p<=lastFitIndex;p++){
             var fitted=unique[p];
@@ -437,7 +405,7 @@ internal fun readerPagedCoreJs(
             }
           }
           var pageFillRatio=(backupBottom-current)/usableHeight;
-          if(backupBottom>current+lineHeight*0.75&&pageFillRatio>=0.65){
+          if(backupBottom>current+lineHeight*0.75&&pageFillRatio>=0.90){
             endBottom=backupBottom;
             nextStart=orphanGuardStart;
           }
@@ -450,7 +418,7 @@ internal fun readerPagedCoreJs(
         pages.push({
           start:Math.round(current),
           end:Math.round(nextStart),
-          visibleHeight:makeVisibleHeight(current,nextStart,pageTopInset,pageBottomInset)
+          visibleHeight:makeVisibleHeight(current,nextStart,pageTopInset,pageBottomInset,endBottom)
         });
 
         if(nextStart>=contentHeight||nextStart<=current){
@@ -458,7 +426,6 @@ internal fun readerPagedCoreJs(
         }
         current=nextStart;
       }
-      pages=rebalanceTrailingPages(pages);
       pages=(function compactHeadingAndBlankPages(pages){
         if(!pages||!pages.length)return pages;
         var out=[];
@@ -584,13 +551,13 @@ internal fun readerPagedCoreJs(
         viewport.appendChild(shield);
       }
       var isMediaPage=!!page.mediaPage;
-      var bottomTextGutter=isMediaPage?0:Math.max(lineHeight,pageInsetBottom,viewportBottomSafety);
+      // Keep the shield one pixel below the measured content boundary. Starting
+      // inside that boundary clips descenders and can expose a partial final line.
       var shieldTop=Math.max(
         0,
         Math.min(
           visibleHeight,
-          Math.max(0,rawVisibleHeight-1),
-          visibleHeight-bottomTextGutter
+          Math.max(0,rawVisibleHeight+1)
         )
       );
       var rootStyle=window.getComputedStyle?window.getComputedStyle(document.documentElement):null;

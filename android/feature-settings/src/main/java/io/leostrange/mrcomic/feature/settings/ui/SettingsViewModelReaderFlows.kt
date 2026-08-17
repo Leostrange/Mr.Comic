@@ -1,13 +1,11 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import androidx.datastore.preferences.core.Preferences
 import io.leostrange.mrcomic.core.data.preferences.PerformanceDefaults
 import io.leostrange.mrcomic.core.data.preferences.PerformancePreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.ReaderTtsConfig
 import io.leostrange.mrcomic.core.model.ReaderTtsProviderType
 import io.leostrange.mrcomic.core.model.ReaderTtsSleepTimerMode
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 

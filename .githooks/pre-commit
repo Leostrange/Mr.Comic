@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Keep the local pre-commit check aligned with the required CI secret scan.
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+exec "$repo_root/scripts/scan-secrets.sh"

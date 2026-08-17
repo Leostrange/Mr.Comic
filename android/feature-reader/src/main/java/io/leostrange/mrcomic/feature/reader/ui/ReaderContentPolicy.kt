@@ -10,7 +10,8 @@ enum class ReaderContainerKind {
     TEXT_PAGE,
     TEXT_WEBTOON,
     RASTER_PAGE,
-    RASTER_WEBTOON
+    RASTER_WEBTOON,
+    READIUM_EPUB
 }
 
 fun resolveReaderContainerKind(
@@ -40,7 +41,12 @@ fun resolveReaderContainerKind(
 }
 
 fun ReaderContainerKind.isTextContainer(): Boolean =
-    this == ReaderContainerKind.TEXT_PAGE || this == ReaderContainerKind.TEXT_WEBTOON
+    this == ReaderContainerKind.TEXT_PAGE ||
+        this == ReaderContainerKind.TEXT_WEBTOON ||
+        this == ReaderContainerKind.READIUM_EPUB
+
+fun ReaderContainerKind.isReadiumContainer(): Boolean =
+    this == ReaderContainerKind.READIUM_EPUB
 
 fun ReaderContainerKind.isRasterContainer(): Boolean =
     this == ReaderContainerKind.RASTER_PAGE || this == ReaderContainerKind.RASTER_WEBTOON

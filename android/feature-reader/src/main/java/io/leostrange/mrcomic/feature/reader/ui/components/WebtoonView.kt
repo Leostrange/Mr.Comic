@@ -14,6 +14,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +32,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
+import io.leostrange.mrcomic.feature.reader.ui.PageLoadState
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
 import io.leostrange.mrcomic.feature.reader.ui.ReaderViewModel
+import io.leostrange.mrcomic.feature.reader.ui.isAutoScrollTemporarilyPaused
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -64,6 +69,17 @@ fun WebtoonView(
         listState.scrollToItem(uiState.currentPage)
     }
     var zoomedPageIndex by remember { mutableStateOf<Int?>(null) }
+
+    // Raster WEBTOON auto-scroll: content-pixel scrolling that pauses on drag/zoom/end-of-list.
+    WebtoonAutoPixelScrollEffect(
+        enabled = uiState.autoScrollEnabled && !uiState.isAutoScrollTemporarilyPaused,
+        speed = uiState.autoScrollSpeed,
+        listState = listState,
+        userIsDragging = listState.isScrollInProgress,
+        zoomed = zoomedPageIndex != null,
+        onStop = { viewModel.autoScrollRuntimeController.stop() }
+    )
+
     val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
         ReaderImageCrop(
             horizontalFraction = marginCropHorizontal,
@@ -137,7 +153,6 @@ fun WebtoonView(
         state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
             bottom = 16.dp
         ),
         userScrollEnabled = zoomedPageIndex == null,
@@ -146,9 +161,8 @@ fun WebtoonView(
         flingBehavior = if (isEInk) NoFlingBehavior else ScrollableDefaults.flingBehavior()
     ) {
         items(uiState.totalPages) { pageIndex ->
-            // Collect from StateFlow вЂ” no polling, immediate update when bitmap is ready
-            val bitmap by viewModel.pageLoader.getPageFlow(pageIndex).collectAsState(initial = viewModel.pageLoader.getPage(pageIndex))
-            val htmlPage by viewModel.getWebtoonHtmlPageFlow(pageIndex).collectAsState(initial = null)
+            val pageState by viewModel.pageLoader.getPageLoadStateFlow(pageIndex)
+                .collectAsState(initial = PageLoadState.Loading)
             LaunchedEffect(uiState.comic?.id, pageIndex) {
                 viewModel.pageLoader.loadPage(pageIndex)
             }
@@ -156,93 +170,143 @@ fun WebtoonView(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
-                val currentBitmap = bitmap
-                if (currentBitmap != null) {
-                    // Update aspect ratio estimate from the first decoded page so that
-                    // subsequent placeholders use the correct proportions.
-                    val bitmapAspect = currentBitmap.height.toFloat() /
-                        currentBitmap.width.coerceAtLeast(1).toFloat()
-                    if (bitmapAspect in 0.5f..3f && bitmapAspect != estimatedPageAspect) {
-                        estimatedPageAspect = bitmapAspect
+                when (val state = pageState) {
+                    is PageLoadState.BitmapReady -> {
+                        val currentBitmap = state.bitmap
+                        val bitmapAspect = currentBitmap.height.toFloat() /
+                            currentBitmap.width.coerceAtLeast(1).toFloat()
+                        if (bitmapAspect in 0.5f..3f && bitmapAspect != estimatedPageAspect) {
+                            estimatedPageAspect = bitmapAspect
+                        }
+                        ZoomableFillWidthImage(
+                            bitmap = currentBitmap,
+                            contentDescription = "Page ${pageIndex + 1}",
+                            resetToken = if (zoomedPageIndex != null && zoomedPageIndex != pageIndex) zoomedPageIndex else null,
+                            onLeftTap = onLeftTap,
+                            onRightTap = onRightTap,
+                            onCenterTap = onCenterTap,
+                            onZoomChanged = { isZoomed ->
+                                zoomedPageIndex = when {
+                                    isZoomed -> pageIndex
+                                    zoomedPageIndex == pageIndex -> null
+                                    else -> zoomedPageIndex
+                                }
+                            },
+                            imageScaleMode = imageScaleMode,
+                            crop = imageCrop,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
-                    ZoomableFillWidthImage(
-                        bitmap = currentBitmap,
-                        contentDescription = "Page ${pageIndex + 1}",
-                        resetToken = if (zoomedPageIndex != null && zoomedPageIndex != pageIndex) zoomedPageIndex else null,
-                        onLeftTap = onLeftTap,
-                        onRightTap = onRightTap,
-                        onCenterTap = onCenterTap,
-                        onZoomChanged = { isZoomed ->
-                            zoomedPageIndex = when {
-                                isZoomed -> pageIndex
-                                zoomedPageIndex == pageIndex -> null
-                                else -> zoomedPageIndex
-                            }
-                        },
-                        imageScaleMode = imageScaleMode,
-                        crop = imageCrop,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                } else if (htmlPage != null) {
-                    val html = htmlPage!!
-                    val htmlBaseUrl = uiState.htmlBaseUrl
-                    var lastLoadedHtml by remember { mutableStateOf("") }
-                    AndroidView(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(),
-                        factory = { ctx ->
-                            WebView(ctx).apply {
-                                settings.javaScriptEnabled = true
-                                settings.loadWithOverviewMode = true
-                                settings.useWideViewPort = true
-                                settings.domStorageEnabled = false
-                                webViewClient = object : WebViewClient() {
-                                    override fun onPageFinished(view: WebView?, url: String?) {
-                                        view?.post {
-                                            view.requestLayout()
+                    is PageLoadState.HtmlReady -> {
+                        val html = state.html
+                        val htmlBaseUrl = uiState.htmlBaseUrl
+                        var lastLoadedHtml by remember { mutableStateOf("") }
+                        AndroidView(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(),
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    settings.javaScriptEnabled = true
+                                    settings.loadWithOverviewMode = true
+                                    settings.useWideViewPort = true
+                                    settings.domStorageEnabled = false
+                                    webViewClient = object : WebViewClient() {
+                                        override fun onPageFinished(view: WebView?, url: String?) {
+                                            view?.post {
+                                                view.requestLayout()
+                                            }
                                         }
                                     }
+                                    isVerticalScrollBarEnabled = false
+                                    isHorizontalScrollBarEnabled = false
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.WRAP_CONTENT
+                                    )
                                 }
-                                isVerticalScrollBarEnabled = false
-                                isHorizontalScrollBarEnabled = false
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.WRAP_CONTENT
-                                )
-                            }
-                        },
-                        update = { webView ->
-                            if (html != lastLoadedHtml) {
-                                lastLoadedHtml = html
-                                val safeHtml = html.ifBlank { "<p></p>" }
-                                webView.loadDataWithBaseURL(htmlBaseUrl, safeHtml, "text/html", "UTF-8", null)
-                                webView.post {
-                                    webView.requestLayout()
+                            },
+                            update = { webView ->
+                                if (html != lastLoadedHtml) {
+                                    lastLoadedHtml = html
+                                    val safeHtml = html.ifBlank { "<p></p>" }
+                                    webView.loadDataWithBaseURL(htmlBaseUrl, safeHtml, "text/html", "UTF-8", null)
+                                    webView.post {
+                                        webView.requestLayout()
+                                    }
                                 }
+                            },
+                            onRelease = { webView ->
+                                (webView.parent as? ViewGroup)?.removeView(webView)
+                                webView.stopLoading()
+                                webView.loadUrl("about:blank")
+                                webView.destroy()
                             }
-                        },
-                        onRelease = { webView ->
-                            // This AndroidView lives inside a scrolling list item; without teardown
-                            // every recycled row leaks a WebView + renderer as the user scrolls.
-                            (webView.parent as? ViewGroup)?.removeView(webView)
-                            webView.stopLoading()
-                            webView.loadUrl("about:blank")
-                            webView.destroy()
+                        )
+                    }
+                    is PageLoadState.Failed -> {
+                        WebtoonPageErrorCard(
+                            pageIndex = pageIndex,
+                            reason = state.reason,
+                            onTap = onCenterTap,
+                            onRetry = { viewModel.retryLoadPage(pageIndex) }
+                        )
+                    }
+                    PageLoadState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f / estimatedPageAspect)
+                                .pointerInput(pageIndex) {
+                                    detectTapGestures(onTap = { onCenterTap() })
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
                         }
-                    )
-                } else {
-                    // Placeholder sized to match real page proportions so there are no
-                    // layout jumps when the bitmap finishes loading.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f / estimatedPageAspect),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = Color.White)
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WebtoonPageErrorCard(
+    pageIndex: Int,
+    reason: String,
+    onTap: () -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .aspectRatio(1f / 1.45f)
+            .pointerInput(pageIndex) {
+                // The retry button consumes its own press, so this only fires when the
+                // user taps the placeholder area around it — keeping chrome toggling alive
+                // in the error state without shadowing the retry action.
+                detectTapGestures(onTap = { onTap() })
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Страница ${pageIndex + 1}",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White
+            )
+            Text(
+                text = reason,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+            TextButton(onClick = onRetry) {
+                Text("Повторить", color = Color.White)
             }
         }
     }
@@ -267,32 +331,35 @@ private fun ZoomableFillWidthImage(
     ) {
         val density = LocalDensity.current
         val containerWidthPx = with(density) { maxWidth.toPx().coerceAtLeast(1f) }
-        val containerHeightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f).coerceAtMost(100000f) }
+        val hasBoundedContainerHeight = constraints.hasBoundedHeight
+        val containerHeightPx = if (hasBoundedContainerHeight) {
+            with(density) { maxHeight.toPx().coerceAtLeast(1f) }
+        } else {
+            Float.POSITIVE_INFINITY
+        }
         val (sourceWidthPx, sourceHeightPx) = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
             croppedSourceDimensions(bitmap, crop)
         }
-        val (baseWidthPx, baseHeightPx) = remember(
+        val imageSize = remember(
             bitmap,
             containerWidthPx,
             containerHeightPx,
+            hasBoundedContainerHeight,
             imageScaleMode,
             sourceWidthPx,
             sourceHeightPx
         ) {
-            when (ReaderImageScaleMode.fromStored(imageScaleMode)) {
-                ReaderImageScaleMode.FIT_WIDTH -> {
-                    val h = containerWidthPx * (sourceHeightPx / sourceWidthPx.coerceAtLeast(1f))
-                    containerWidthPx to h
-                }
-                ReaderImageScaleMode.FIT_HEIGHT -> {
-                    val w = containerHeightPx * (sourceWidthPx / sourceHeightPx.coerceAtLeast(1f))
-                    w to containerHeightPx
-                }
-                ReaderImageScaleMode.REAL_SIZE -> {
-                    sourceWidthPx to sourceHeightPx
-                }
-            }
+            resolveWebtoonImageSizePx(
+                containerWidthPx = containerWidthPx,
+                containerHeightPx = containerHeightPx,
+                hasBoundedHeight = hasBoundedContainerHeight,
+                sourceWidthPx = sourceWidthPx,
+                sourceHeightPx = sourceHeightPx,
+                scaleMode = ReaderImageScaleMode.fromStored(imageScaleMode),
+            )
         }
+        val baseWidthPx = imageSize.width
+        val baseHeightPx = imageSize.height
         val imageWidth  = with(density) { baseWidthPx.toDp() }
         val imageHeight = with(density) { baseHeightPx.toDp() }
         var scale by remember(bitmap, resetToken) { mutableFloatStateOf(1f) }
@@ -422,4 +489,3 @@ private fun boundedWebtoonOffset(
         y = current.y.coerceIn(-maxY, maxY)
     )
 }
-

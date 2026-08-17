@@ -3,15 +3,6 @@ package io.leostrange.mrcomic.feature.settings.ui
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.test.core.app.ApplicationProvider
-import io.leostrange.mrcomic.core.data.repository.ComicRepository
-import io.leostrange.mrcomic.core.data.repository.QuoteRepository
-import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
-import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
-import io.leostrange.mrcomic.core.data.dictionary.DictionaryDownloader
-import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
-import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
-import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
-import io.leostrange.mrcomic.core.ui.theme.ThemePreferencesRepository
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

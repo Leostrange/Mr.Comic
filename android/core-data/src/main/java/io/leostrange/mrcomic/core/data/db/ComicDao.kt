@@ -57,4 +57,10 @@ interface ComicDao {
         WHERE id = :id
     """)
     suspend fun updateProgress(id: String, currentPage: Int, progress: Float, lastReadDate: Long, pageCount: Int, characterOffset: Int?)
+
+    @Query("UPDATE comics SET readerPositionJson = :positionJson, lastReadDate = :lastReadDate WHERE id = :id")
+    suspend fun updateReaderPosition(id: String, positionJson: String?, lastReadDate: Long)
+
+    @Query("SELECT readerPositionJson FROM comics WHERE id = :id LIMIT 1")
+    suspend fun getReaderPositionJson(id: String): String?
 }

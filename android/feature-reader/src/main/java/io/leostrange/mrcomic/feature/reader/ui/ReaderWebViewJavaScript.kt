@@ -437,6 +437,44 @@ internal const val JS_TAP_HANDLER = """(function(){
 internal const val HTML_READER_TAG = "ReaderHtmlView"
 internal const val HTML_READER_BASE_URL = "https://appassets.androidplatform.net/reader/"
 internal const val HTML_READER_ASSET_PATH = "/reader/content/"
+
+internal fun readerWebViewProtocolBootstrapJs(generation: Long): String {
+    require(generation > 0L) { "generation must be positive" }
+    return """
+        (function(){
+          window.__mrcomicProtocol={version:${ReaderWebViewProtocolCodec.VERSION},generation:$generation};
+          return JSON.stringify({version:${ReaderWebViewProtocolCodec.VERSION},type:'committed',generation:$generation,payload:{}});
+        })();
+    """.trimIndent()
+}
+
+internal fun readerWebViewContentProbeJs(generation: Long): String =
+    readerWebViewProtocolEnvelopeJs(
+        generation = generation,
+        eventType = "contentMeasured",
+        payloadScript = HTML_READER_BLANK_CHECK_JS
+    )
+
+internal fun readerWebViewProtocolEnvelopeJs(
+    generation: Long,
+    eventType: String,
+    payloadScript: String
+): String {
+    require(generation > 0L) { "generation must be positive" }
+    require(eventType.matches(Regex("[A-Za-z][A-Za-z0-9]*"))) { "Invalid event type" }
+    return """
+        (function(){
+          try{
+            var rawPayload=$payloadScript;
+            var payload=(typeof rawPayload==='string')?JSON.parse(rawPayload):rawPayload;
+            return JSON.stringify({version:${ReaderWebViewProtocolCodec.VERSION},type:'$eventType',generation:$generation,payload:payload||{}});
+          }catch(e){
+            return JSON.stringify({version:${ReaderWebViewProtocolCodec.VERSION},type:'error',generation:$generation,payload:{code:'protocol_wrapper',message:String(e),recoverable:false}});
+          }
+        })();
+    """.trimIndent()
+}
+
 internal const val HTML_READER_RESET_FREE_SCROLL_JS = """(function(){
   try{
     var viewport=document.getElementById('__mrcomic_paged_viewport');

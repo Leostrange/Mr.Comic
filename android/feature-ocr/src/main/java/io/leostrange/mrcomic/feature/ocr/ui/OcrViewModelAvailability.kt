@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.ocr.ui
 
-import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import androidx.lifecycle.viewModelScope

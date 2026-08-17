@@ -1,0 +1,37 @@
+name: Feature request
+description: Предложить новую функцию или улучшение Mr.Comic
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую проблему решает функция?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Предлагаемое решение
+      description: Опишите пользовательский сценарий и ожидаемое поведение.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope и критерии готовности
+      description: Укажите модули, API, миграции, тесты и definition of done.
+  - type: checkboxes
+    id: concerns
+    attributes:
+      label: Дополнительные требования
+      options:
+        - label: Нужно учитывать все шесть текстовых reader presets
+        - label: Нужен offline-first сценарий
+        - label: Затрагивается privacy или внешний AI provider
+        - label: Нужны скриншоты или UI-макет
+  - type: textarea
+    id: references
+    attributes:
+      label: Референсы
+      description: Ссылки на issue, макеты, документы или примеры поведения.

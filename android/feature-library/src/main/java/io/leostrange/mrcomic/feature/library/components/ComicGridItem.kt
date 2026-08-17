@@ -253,14 +253,14 @@ private fun BoxScope.GridCardBadges(
     showCoverTitles: Boolean
 ) {
     val readingStatus = comic.readingStatus()
-    val showProgressChip = showProgressIndicators && readingStatus == ComicReadingStatus.READING
-    val showCompletedChip = readingStatus == ComicReadingStatus.COMPLETED
+    val showProgressChip = showProgressIndicators && (readingStatus == ComicReadingStatus.READING || readingStatus == ComicReadingStatus.NEW)
+    val showCompletedChip = showProgressIndicators && readingStatus == ComicReadingStatus.COMPLETED
     val showProgressLine = shouldShowLibraryProgressLine(
         showProgressIndicators = showProgressIndicators,
         readingStatus = readingStatus,
         readingProgress = comic.displayReadingProgress()
     )
-    val titleBottomPadding = if (showProgressChip || showCompletedChip) 30.dp else 8.dp
+    val titleBottomPadding = 8.dp
     // Format badge — top-left corner (design system spec)
     if (formatLabel != null) {
         FormatBadge(
@@ -275,8 +275,8 @@ private fun BoxScope.GridCardBadges(
         MrComicPill(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 6.dp, end = 10.dp, bottom = titleBottomPadding)
-                .widthIn(max = 160.dp),
+                .padding(start = 6.dp, end = 6.dp, bottom = titleBottomPadding)
+                .fillMaxWidth(0.88f),
             containerColor = MaterialTheme.colorScheme.surface.copy(
                 alpha = (0.82f + titlePanelOpacity.coerceIn(0.18f, 0.78f) * 0.12f).coerceIn(0.84f, 0.94f)
             ),
@@ -297,16 +297,6 @@ private fun BoxScope.GridCardBadges(
         }
     }
 
-    if (showProgressChip) {
-        MrComicStatusBadge(
-            text = "${(comic.displayReadingProgress() * 100).toInt()}%",
-            tone = MrComicStatusTone.Info,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 6.dp, bottom = 6.dp)
-        )
-    }
-
     if (showCompletedChip) {
         val completedColor = mrComicCompletedColor()
         MrComicStatusBadge(
@@ -315,10 +305,18 @@ private fun BoxScope.GridCardBadges(
             leadingIcon = Icons.Filled.CheckCircle,
             contentDescription = strings.libraryStatusCompleted,
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 6.dp, bottom = 6.dp),
+                .align(Alignment.TopEnd)
+                .padding(end = 6.dp, top = 6.dp),
             containerColor = completedColor.copy(alpha = 0.18f),
             contentColor = completedColor
+        )
+    } else if (showProgressChip) {
+        MrComicStatusBadge(
+            text = "${(comic.displayReadingProgress() * 100).toInt()}%",
+            tone = MrComicStatusTone.Info,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 6.dp, top = 6.dp)
         )
     }
 

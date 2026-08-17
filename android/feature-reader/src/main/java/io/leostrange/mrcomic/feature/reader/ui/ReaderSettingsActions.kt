@@ -40,8 +40,6 @@ interface ReaderSettingsActions {
     // ── Display ───────────────────────────────────────────────────────────
     fun setBrightness(value: Float)
     fun setKeepScreenOn(enabled: Boolean)
-    fun setAutoScrollSpeed(speed: Float)
-    fun cycleAutoScrollSpeed()
     fun setScreenTimeoutMode(mode: String)
     fun setImmersiveMode(enabled: Boolean)
     fun setLandscapeSpreadEnabled(enabled: Boolean)

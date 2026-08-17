@@ -50,7 +50,8 @@ internal class TextWebtoonSessionController(
         existingPageCount: Int,
         isSessionActive: () -> Boolean,
         loadPage: suspend (FormatReader, Int) -> CachedHtmlPage?,
-        publish: (TextWebtoonCachedDocument, Int) -> Unit
+        publish: (TextWebtoonCachedDocument, Int) -> Unit,
+        onBuildFailed: () -> Unit = {}
     ) {
         if (!readerRendersHtmlContent || totalPages <= 0) return
         if (existingHtml != null && existingPageCount >= totalPages) return
@@ -68,17 +69,39 @@ internal class TextWebtoonSessionController(
                 // Phase 1: publish preview after first batch so user sees content immediately
                 if (!previewPublished && loadedPages.size >= batchSize) {
                     previewPublished = true
-                    val document = builder.build(loadedPages)
-                    publish(document, loadedPages.size)
+                    if (!buildAndPublish(loadedPages, publish, onBuildFailed)) return@launch
                 }
             }
 
             if (loadedPages.isEmpty() || !isSessionActive()) return@launch
 
             // Phase 2: publish final document with ALL pages (single WebView reload)
-            val finalDocument = builder.build(loadedPages)
-            publish(finalDocument, loadedPages.size)
+            buildAndPublish(loadedPages, publish, onBuildFailed)
         }
+    }
+
+    /**
+     * Builds the stitched document and publishes it. A failure in either step (e.g.
+     * malformed RTF/EPUB HTML that breaks the builder regexes) must not crash the
+     * reader coroutine back to the library — it is routed to [onBuildFailed] instead.
+     * Returns false when the load loop should abort early.
+     */
+    private fun buildAndPublish(
+        pages: List<CachedHtmlPage>,
+        publish: (TextWebtoonCachedDocument, Int) -> Unit,
+        onBuildFailed: () -> Unit
+    ): Boolean {
+        val document = runCatching { builder.build(pages) }.getOrNull()
+        if (document == null) {
+            onBuildFailed()
+            return false
+        }
+        val published = runCatching { publish(document, pages.size) }
+        if (published.isFailure) {
+            onBuildFailed()
+            return false
+        }
+        return true
     }
 
     private companion object {

@@ -11,8 +11,18 @@ import org.json.JSONArray
  */
 internal class TavilySearchAgent {
 
-    private val apiKey = "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"
+    /**
+     * Inject this value through the runtime environment or a secure app configuration.
+     * Never commit provider credentials to the Android source tree.
+     */
+    private val apiKey: String = System.getenv("TAVILY_API_KEY").orEmpty()
     private val apiUrl = "https://api.tavily.com"
+
+    private fun requireApiKey() {
+        check(apiKey.isNotBlank()) {
+            "Tavily is not configured. Provide TAVILY_API_KEY through secure runtime configuration."
+        }
+    }
 
     data class SearchResult(
         val title: String,
@@ -30,6 +40,7 @@ internal class TavilySearchAgent {
      * - Поиска примеров кода
      */
     fun search(query: String, depth: String = "comprehensive"): List<SearchResult> {
+        requireApiKey()
         val url = URL("$apiUrl/search")
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "POST"
@@ -68,6 +79,7 @@ internal class TavilySearchAgent {
      * Используется для глубокого анализа документации.
      */
     fun extract(urls: List<String>): String {
+        requireApiKey()
         val url = URL("$apiUrl/extract")
         val connection = url.openConnection() as HttpURLConnection
         connection.requestMethod = "POST"

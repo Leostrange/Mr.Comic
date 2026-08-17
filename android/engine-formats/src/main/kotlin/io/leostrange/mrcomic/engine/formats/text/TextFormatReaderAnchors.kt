@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.engine.formats.text
 
-import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.base.TocEntry
 import org.jsoup.Jsoup
 

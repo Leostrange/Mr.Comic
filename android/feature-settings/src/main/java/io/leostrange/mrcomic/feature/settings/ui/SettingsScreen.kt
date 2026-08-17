@@ -11,39 +11,26 @@
 
 package io.leostrange.mrcomic.feature.settings.ui
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.TranslationTransportPreference
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
@@ -58,17 +45,11 @@ import io.leostrange.mrcomic.core.ui.library.rootChromeTextFieldColors
 import io.leostrange.mrcomic.core.ui.library.rootChromeTopBarColors
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
-import io.leostrange.mrcomic.core.ui.locale.translationLanguageOptions
-import io.leostrange.mrcomic.core.ui.sound.UIFeedback
-import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.core.ui.theme.ThemeMode
-import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.settings.R as SettingsR
-import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
+import io.leostrange.mrcomic.core.ui.fonts.ReaderTextFontCatalog
 import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopup
 import io.leostrange.mrcomic.core.ui.popup.ImageMessagePopupConfig
-import java.util.Locale
 import kotlinx.coroutines.launch
 
 // ──────────── Navigation model ────────────

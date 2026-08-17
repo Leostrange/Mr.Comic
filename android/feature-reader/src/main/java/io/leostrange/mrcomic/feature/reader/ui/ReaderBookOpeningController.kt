@@ -11,6 +11,10 @@ import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.api.RenderDeviceTier
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionRestorePlan
+import io.leostrange.mrcomic.feature.reader.domain.progress.planReaderPositionRestore
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
@@ -98,7 +102,7 @@ internal class ReaderBookOpeningController(
     private suspend fun openComic(comic: Comic, sourcePath: String, requestToken: Long) {
         // ARC-11 slice "wire-coordinator-to-vm": pickup the lifecycle ledger
         // here. beginOpen returns false when the previous open is still in flight
-        // or a close is pending — in either case we leave the existing state
+        // or a close is pending ï¿½ in either case we leave the existing state
         // untouched and bail out.
         if (!sessionLifecycleCoordinator.beginOpen()) return
         try {
@@ -183,9 +187,16 @@ internal class ReaderBookOpeningController(
                 footnotePresentation = FootnotePresentation.PEEK,
                 selectedTextActionSheet = null,
                 selectedTextTranslation = null,
-                sectionCharacterOffset = 0
+                pendingScrollToAnchor = null,
+                pendingWebtoonSectionIndex = null,
+                sectionPageCount = 0,
+                sectionCurrentPage = 0,
+                sectionCharacterOffset = 0,
+                freeScrollCharacterOffset = -1,
+                freeScrollProgression = -1.0
             )
         }
+        navigationController.clearTextWebtoonCursor()
         eyeRestController.cancel()
         warmupController.cancel()
         textReaderOrchestrator.cancelAllJobsAndJoin()
@@ -231,7 +242,8 @@ internal class ReaderBookOpeningController(
         val initialPages: Int,
         val startPage: Int,
         val requestedStartPage: Int,
-        val requestedPage: Int?
+        val requestedPage: Int?,
+        val restoredPosition: ReaderPosition?
     )
 
     /** Phase 3: Compute opening configuration (mode, start page, deferred count). */
@@ -242,11 +254,22 @@ internal class ReaderBookOpeningController(
     ): OpeningConfig? {
         if (!openGuard.isCurrent(requestToken)) return null
         val readerRendersHtmlContent = prepared.readerRendersHtmlContent
-        val openingMode = readingModeController.effectiveOpeningModeFor(prepared.detectedFormat, readerRendersHtmlContent)
+        // TEXT-03: prefer the structured position (section index) over the legacy raw page;
+        // the legacy value remains the fallback for records that predate the structured schema.
+        val restoredPosition = ReaderPositionCodec.decode(comic.readerPositionJson)
+        val configuredOpeningMode = readingModeController.effectiveOpeningModeFor(
+            prepared.detectedFormat,
+            readerRendersHtmlContent
+        )
+        // A structured position records the mode that owns its cursor. Reopen in that mode when
+        // it is compatible with the current renderer; DUAL_PAGE is never valid for reflowable HTML.
+        val openingMode = restoredPosition?.mode?.takeIf { mode ->
+            !readerRendersHtmlContent || mode != ReadingMode.DUAL_PAGE
+        } ?: configuredOpeningMode
         val requestedPage = pendingRequestedPage
         val shouldDeferCount = prepared.deferPageCount
         val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
-        val requestedStartPage = requestedPage ?: comic.currentPage
+        val requestedStartPage = requestedPage ?: restoredPosition?.engineSectionIndex ?: comic.currentPage
         val startPage = navigationController.normalizePageForMode(requestedStartPage, openingMode, initialPages)
         pendingRequestedPage = null
         progressController.lastPersistedProgress = PersistedProgressMarker(
@@ -255,6 +278,7 @@ internal class ReaderBookOpeningController(
                 navigationController.normalizePageForMode(comic.currentPage, openingMode, initialPages)
             } else startPage
         )
+        progressController.lastPersistedPositionJson = comic.readerPositionJson
         return OpeningConfig(
             readerRendersHtmlContent = readerRendersHtmlContent,
             openingMode = openingMode,
@@ -262,7 +286,8 @@ internal class ReaderBookOpeningController(
             initialPages = initialPages,
             startPage = startPage,
             requestedStartPage = requestedStartPage,
-            requestedPage = requestedPage
+            requestedPage = requestedPage,
+            restoredPosition = restoredPosition
         )
     }
 
@@ -272,6 +297,15 @@ internal class ReaderBookOpeningController(
         prepared: PreparedReaderOpen,
         config: OpeningConfig
     ) {
+        // When the page count is deferred and the reader is resuming mid-book, keep the
+        // loading shell visible until the real count resolves. Otherwise the provisional
+        // one-page model briefly renders the cover and then jumps to the saved page.
+        val holdLoadingForDeferredRestore = shouldHoldLoadingForDeferredRestore(
+            shouldDeferCount = config.shouldDeferCount,
+            requestedStartPage = config.requestedStartPage
+        )
+        val restorePlan = restoreCursorState(config)
+        val restoresWebtoon = config.openingMode == ReadingMode.WEBTOON
         _uiState.update {
             it.copy(
                 comic = comic,
@@ -284,7 +318,7 @@ internal class ReaderBookOpeningController(
                 ),
                 readingMode = config.openingMode,
                 currentPage = config.startPage,
-                isLoading = false,
+                isLoading = holdLoadingForDeferredRestore,
                 htmlBaseUrl = formatReader()?.htmlBaseUrl(),
                 htmlAssetBasePath = null,
                 textWebtoonHtmlContent = null,
@@ -296,9 +330,58 @@ internal class ReaderBookOpeningController(
                 nextHtmlAssetBasePath = null,
                 selectedTextActionSheet = null,
                 selectedTextTranslation = null,
-                sectionCharacterOffset = 0
+                sectionCurrentPage = when {
+                    config.shouldDeferCount -> it.sectionCurrentPage
+                    restoresWebtoon -> 0
+                    else -> restorePlan?.sectionCurrentPage ?: 0
+                },
+                sectionCharacterOffset = when {
+                    config.shouldDeferCount -> it.sectionCharacterOffset
+                    restoresWebtoon -> 0
+                    else -> restorePlan?.characterOffset ?: 0
+                },
+                pendingScrollToAnchor = if (config.shouldDeferCount) {
+                    it.pendingScrollToAnchor
+                } else {
+                    restorePlan?.domAnchor
+                },
+                pendingWebtoonSectionIndex = if (config.shouldDeferCount) {
+                    it.pendingWebtoonSectionIndex
+                } else if (restoresWebtoon) {
+                    restorePlan?.webtoonSectionIndex
+                } else {
+                    null
+                },
+                freeScrollCharacterOffset = if (config.shouldDeferCount) {
+                    it.freeScrollCharacterOffset
+                } else if (restoresWebtoon) {
+                    restorePlan?.characterOffset ?: -1
+                } else {
+                    -1
+                },
+                freeScrollProgression = if (config.shouldDeferCount) {
+                    it.freeScrollProgression
+                } else if (restoresWebtoon) {
+                    restorePlan?.webtoonScrollFraction?.toDouble() ?: -1.0
+                } else {
+                    -1.0
+                }
             )
         }
+    }
+
+    /**
+     * Restore cursor (TEXT-03) computed against the authoritative page count.
+     * Null when no structured position exists or it cannot be represented (stale/legacy).
+     */
+    private fun restoreCursorState(config: OpeningConfig): ReaderPositionRestorePlan? {
+        val position = config.restoredPosition ?: return null
+        return planReaderPositionRestore(
+            position = position,
+            openingMode = config.openingMode,
+            resolvedTotalPages = config.initialPages,
+            normalizePage = { page, mode, total -> navigationController.normalizePageForMode(page, mode, total) }
+        )
     }
 
     /** Phase 5: Start the reader session and track analytics. */
@@ -371,7 +454,19 @@ internal class ReaderBookOpeningController(
                 isReaderCurrent = { formatReader() === activeReader },
                 currentTotalPages = { _uiState.value.totalPages },
                 onResolved = { realPages, normalizedStartPage, resolvedComic ->
-                    applyDeferredPageCount(realPages, normalizedStartPage, resolvedComic, activeReader, config.openingMode)
+                    applyDeferredPageCount(
+                        realPages = realPages,
+                        normalizedStartPage = normalizedStartPage,
+                        comic = resolvedComic,
+                        reader = activeReader,
+                        openingMode = config.openingMode,
+                        restoredPosition = config.restoredPosition
+                    )
+                },
+                onSkipped = {
+                    // Deferred count failed or was not applicable. Release the loading shell
+                    // so the provisional single-page model is at least interactive.
+                    _uiState.update { it.copy(isLoading = false) }
                 }
             )
         }
@@ -382,18 +477,64 @@ internal class ReaderBookOpeningController(
         normalizedStartPage: Int,
         comic: Comic,
         reader: FormatReader,
-        openingMode: ReadingMode
+        openingMode: ReadingMode,
+        restoredPosition: ReaderPosition?
     ) {
         progressController.totalBookSections = realPages.coerceAtLeast(1)
-        _uiState.update { it.copy(totalPages = realPages, currentPage = normalizedStartPage) }
+        // TEXT-03: the authoritative page count is now known â€” apply the full restore cursor
+        // (section sub-page, char offset, DOM anchor / WEBTOON section) atomically with the
+        // resolved start page so the first frame already sits at the saved position.
+        val restorePlan = restoredPosition?.let { position ->
+            planReaderPositionRestore(
+                position = position,
+                openingMode = openingMode,
+                resolvedTotalPages = realPages,
+                normalizePage = { page, mode, total -> navigationController.normalizePageForMode(page, mode, total) }
+            )
+        }
+        val resolvedStartPage = restorePlan?.startPage ?: normalizedStartPage
+        val restoresWebtoon = openingMode == ReadingMode.WEBTOON
+        _uiState.update {
+            it.copy(
+                totalPages = realPages,
+                currentPage = resolvedStartPage,
+                isLoading = false,
+                sectionCurrentPage = if (restoresWebtoon) {
+                    0
+                } else {
+                    restorePlan?.sectionCurrentPage ?: it.sectionCurrentPage
+                },
+                sectionCharacterOffset = if (restoresWebtoon) {
+                    0
+                } else {
+                    restorePlan?.characterOffset ?: it.sectionCharacterOffset
+                },
+                pendingScrollToAnchor = restorePlan?.domAnchor ?: it.pendingScrollToAnchor,
+                pendingWebtoonSectionIndex = if (restoresWebtoon) {
+                    restorePlan?.webtoonSectionIndex ?: it.pendingWebtoonSectionIndex
+                } else {
+                    null
+                },
+                freeScrollCharacterOffset = if (restoresWebtoon) {
+                    restorePlan?.characterOffset ?: -1
+                } else {
+                    -1
+                },
+                freeScrollProgression = if (restoresWebtoon) {
+                    restorePlan?.webtoonScrollFraction?.toDouble() ?: -1.0
+                } else {
+                    -1.0
+                }
+            )
+        }
         readerSessionCoordinator.updateTotalPages(realPages)
-        val visiblePages = navigationController.visiblePagesFor(normalizedStartPage, openingMode)
+        val visiblePages = navigationController.visiblePagesFor(resolvedStartPage, openingMode)
         reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->
             pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)
         }
         visiblePages.forEach { pageLoader.loadPage(it) }
         if (_uiState.value.readerRendersHtmlContent) {
-            prewarmHtmlPagesAround(normalizedStartPage, 0L)
+            prewarmHtmlPagesAround(resolvedStartPage, 0L)
             if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_PAGE) {
                 textReaderOrchestrator.controller.clearTextPagePagination()
             }

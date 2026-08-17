@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.core.data.repository
 
-import kotlinx.coroutines.flow.map
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -17,7 +16,6 @@ import android.os.ParcelFileDescriptor
 import android.util.Base64
 import android.util.Log
 import android.util.Xml
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import kotlinx.coroutines.flow.first
 import net.sf.sevenzipjbinding.ExtractOperationResult
@@ -208,6 +206,7 @@ private val IMAGE_EXTENSIONS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp")
 
             randomAccessFile = RandomAccessFile(file, "r")
             inputStream = RandomAccessFileInStream(randomAccessFile)
+            runCatching { SevenZip.initSevenZipFromPlatformJAR(context.cacheDir) }
             archive = SevenZip.openInArchive(null, inputStream)
 
             val itemIndices = (0 until archive.getNumberOfItems())

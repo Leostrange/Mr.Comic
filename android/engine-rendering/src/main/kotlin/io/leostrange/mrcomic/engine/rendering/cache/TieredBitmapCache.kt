@@ -32,19 +32,10 @@ class TieredBitmapCache @Inject constructor(
     private val memCache = object : LruCache<String, CacheEntry>(maxMemoryKb) {
         override fun sizeOf(key: String, value: CacheEntry) = value.sizeKb
 
-        override fun entryRemoved(
-            evicted: Boolean,
-            key: String,
-            oldValue: CacheEntry,
-            newValue: CacheEntry?
-        ) {
-            // Recycle evicted bitmaps to free native memory (especially on pre-O).
-            // Only recycle if the bitmap is not being reused (newValue != oldValue)
-            // and is not already recycled.
-            if (evicted && oldValue.bitmap != newValue?.bitmap && !oldValue.bitmap.isRecycled) {
-                oldValue.bitmap.recycle()
-            }
-        }
+        // Do not recycle on LRU eviction. The reactive page store and Compose may still
+        // hold the same Bitmap while the cache is making room for another decoded page.
+        // Explicit page eviction is coordinated by PagePreloader; otherwise the bitmap
+        // becomes eligible for normal GC after its remaining owners release it.
     }
 
     fun get(key: String): Bitmap? {

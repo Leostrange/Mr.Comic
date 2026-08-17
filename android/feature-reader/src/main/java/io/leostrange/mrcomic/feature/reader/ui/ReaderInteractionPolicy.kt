@@ -4,6 +4,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.engine.api.TocEntry
+import io.leostrange.mrcomic.feature.reader.domain.navigation.ReaderTextWebtoonCursor
 import kotlin.math.roundToInt
 
 // ARC-11 S4: ReaderHardwareKeyDecision moved to ReaderKeyActionPolicy.kt
@@ -65,7 +66,12 @@ fun readerTextWebtoonBoundaryNavigationStep(
     }
 }
 
-fun readerHtmlSelectionActionsEnabled(pagedModeScrollLock: Boolean): Boolean = !pagedModeScrollLock
+/**
+ * Text selection and its action mode are enabled in both PAGE and WEBTOON.
+ * A proven PAGE swipe suppresses the action mode through the drag flag instead,
+ * so a page turn is never mistaken for a long-press selection.
+ */
+fun readerHtmlSelectionActionsEnabled(pagedModeScrollLock: Boolean): Boolean = true
 
 fun readerHtmlReloadResetsScroll(pagedModeScrollLock: Boolean): Boolean = !pagedModeScrollLock
 
@@ -106,20 +112,78 @@ fun readerWebtoonRestoreSectionIndex(
 }
 
 /**
- * Reverse of [readerWebtoonRestoreSectionIndex]: maps a visible WEBTOON section index
- * back to a paged engine section index for position restoration when switching
- * WEBTOON → PAGE.
+ * Creates the bidirectional cursor used when PAGE enters a stitched WEBTOON document.
  *
- * For most EPUBs each section maps 1:1 to a page, so the section index IS the page.
- * For EPUBs where the first section contains all content (single-spine),
- * this returns the section index directly — the subpage within that section
- * is not tracked and the user will land at the section start.
+ * The old implementation persisted only the mapped Webtoon section. That is insufficient for
+ * a single-spine document: the mapped section is a visual coordinate, while the return target
+ * must remain the original engine section plus its in-section anchor.
  */
-fun readerPageFromWebtoonSection(
-    webtoonSectionIndex: Int,
-    totalPagedPages: Int
-): Int {
-    return webtoonSectionIndex.coerceIn(0, (totalPagedPages - 1).coerceAtLeast(0))
+internal fun readerTextWebtoonCursorFromPagedPosition(
+    engineSectionIndex: Int,
+    pagedSubpageIndex: Int,
+    pagedSubpageCount: Int,
+    totalWebtoonSections: Int,
+    characterOffset: Int? = null,
+    fragment: String? = null
+): ReaderTextWebtoonCursor {
+    val lastEngineSection = (totalWebtoonSections - 1).coerceAtLeast(0)
+    val safeEngineSection = engineSectionIndex.coerceIn(0, lastEngineSection)
+    val webtoonSection = readerWebtoonRestoreSectionIndex(
+        engineSectionIndex = safeEngineSection,
+        pagedSubpageIndex = pagedSubpageIndex,
+        pagedSubpageCount = pagedSubpageCount,
+        totalWebtoonSections = totalWebtoonSections
+    )
+    return ReaderTextWebtoonCursor(
+        engineSectionIndex = safeEngineSection,
+        webtoonSectionIndex = webtoonSection,
+        characterOffset = characterOffset?.takeIf { it >= 0 },
+        fragment = fragment?.takeIf { it.isNotBlank() }
+    )
+}
+
+/**
+ * Keeps an absent PAGE text anchor absent while entering WEBTOON.
+ *
+ * The navigator's legacy position model represents an unknown character offset as zero. Passing
+ * that synthetic zero to the WebView restore runtime takes precedence over the mapped section and
+ * scrolls the document to its first character.
+ */
+internal fun readerTextWebtoonRestoreCharacterOffset(
+    transitionCursor: ReaderTextWebtoonCursor?,
+    resolvedCharacterOffset: Int
+): Int = transitionCursor?.characterOffset
+    ?: resolvedCharacterOffset.takeIf { transitionCursor == null && it > 0 }
+    ?: -1
+
+/**
+ * Updates the visible side of a Webtoon cursor without losing its canonical engine section.
+ *
+ * When the previous cursor started at engine section 0 but was mapped to another stitched
+ * section, it is a single-spine document and the engine section must stay 0 while the Webtoon
+ * section advances. For ordinary multi-spine books the two coordinates advance together.
+ */
+internal fun readerTextWebtoonCursorAtVisibleSection(
+    previous: ReaderTextWebtoonCursor?,
+    visibleSectionIndex: Int,
+    characterOffset: Int? = null,
+    progression: Double? = null,
+    fragment: String? = null
+): ReaderTextWebtoonCursor {
+    val webtoonSection = visibleSectionIndex.coerceAtLeast(0)
+    val isSingleSpine = previous != null &&
+        previous.engineSectionIndex == 0 &&
+        previous.webtoonSectionIndex != 0
+    val sameSection = previous?.webtoonSectionIndex == webtoonSection
+    return ReaderTextWebtoonCursor(
+        engineSectionIndex = if (isSingleSpine) 0 else webtoonSection,
+        webtoonSectionIndex = webtoonSection,
+        characterOffset = characterOffset?.takeIf { it >= 0 }
+            ?: previous?.characterOffset?.takeIf { sameSection },
+        progression = progression ?: previous?.progression?.takeIf { sameSection },
+        fragment = fragment?.takeIf { it.isNotBlank() }
+            ?: previous?.fragment?.takeIf { sameSection }
+    )
 }
 
 fun readerChromeRequiresOpaqueSurface(

@@ -6,7 +6,9 @@ import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +34,25 @@ internal class ReaderPageLoader(
 
     fun getPageFlow(index: Int, renderQuality: Int = 1) =
         pagePreloader.getPageFlow(index, renderQuality)
+
+    private val _pageErrors = MutableStateFlow<Map<Int, String>>(emptyMap())
+
+    /**
+     * Combines the bitmap flow, webtoon HTML cache and per-page error map into a single
+     * [PageLoadState] so containers can distinguish loading, ready and failed pages.
+     */
+    fun getPageLoadStateFlow(index: Int): Flow<PageLoadState> =
+        combine(
+            pagePreloader.getPageFlow(index, 1),
+            _webtoonHtmlCache,
+            _pageErrors,
+        ) { bitmap, htmlCache, errors ->
+            pageLoadStateFrom(
+                bitmap = bitmap,
+                html = htmlCache[index],
+                error = errors[index],
+            )
+        }
 
     fun loadPage(index: Int, renderQuality: Int = 1) {
         val comicId = _uiState.value.comic?.id
@@ -114,6 +135,9 @@ internal class ReaderPageLoader(
                     }
                 }
             }
+            if (renderQuality == 1) {
+                _pageErrors.update { it - index }
+            }
             if (pagePreloader.getPage(index, renderQuality) == null) {
                 val bitmap = try {
                     pagePreloader.loadPage(reader, index, renderQuality)
@@ -127,8 +151,10 @@ internal class ReaderPageLoader(
                     formatReader() === reader && _uiState.value.comic?.id == comicId &&
                     _uiState.value.currentPage == index
                 ) {
+                    val message = "Failed to render page ${index + 1}"
+                    _pageErrors.update { it + (index to message) }
                     _uiState.update {
-                        it.copy(error = "Failed to render page ${index + 1}")
+                        it.copy(error = message)
                     }
                 }
             }
@@ -150,7 +176,7 @@ internal class ReaderPageLoader(
             viewModelScope.launch {
                 if (formatReader() !== reader) return@launch
                 if (pagePreloader.getPage(pageIndex, 1) == null) {
-                    pagePreloader.loadPage(reader, pageIndex, 1)
+                    runCatching { pagePreloader.loadPage(reader, pageIndex, 1) }
                 }
                 if (formatReader() !== reader) return@launch
                 if (pagePreloader.getPage(pageIndex, 1) == null &&
@@ -161,6 +187,20 @@ internal class ReaderPageLoader(
                     }
                     if (html != null && formatReader() === reader) {
                         _webtoonHtmlCache.update { it + (pageIndex to html) }
+                    }
+                }
+                // Publish a per-page Failed state when neither bitmap nor HTML could be
+                // produced, so the WebtoonView can show a retry card instead of a spinner.
+                if (formatReader() === reader) {
+                    val errorEntry = webtoonPageErrorEntry(
+                        bitmapReady = pagePreloader.getPage(pageIndex, 1) != null,
+                        htmlReady = _webtoonHtmlCache.value[pageIndex] != null,
+                        pageIndex = pageIndex
+                    )
+                    if (errorEntry != null) {
+                        _pageErrors.update { it + errorEntry }
+                    } else {
+                        _pageErrors.update { it - pageIndex }
                     }
                 }
             }
@@ -202,6 +242,27 @@ internal class ReaderPageLoader(
                             textWebtoonHtmlContent = document.html,
                             textWebtoonHtmlAssetBasePath = document.assetBasePath,
                             textWebtoonHtmlPageCount = loadedCount
+                        )
+                    }
+                }
+            },
+            onBuildFailed = {
+                // A stitched-document build failure (e.g. malformed RTF HTML) must not
+                // crash the reader back to the library: surface a recoverable error page
+                // in the webtoon container instead. pageCount = 0 keeps the re-entry
+                // guard open so switching modes re-attempts the build.
+                _uiState.update { current ->
+                    if (current.comic?.id != comic.id || formatReader() !== reader) {
+                        current
+                    } else {
+                        val errorHtml = textReaderOrchestrator.loadErrorHtml(
+                            current.currentPage.coerceAtLeast(0),
+                            IllegalStateException("Failed to build webtoon document")
+                        )
+                        current.copy(
+                            textWebtoonHtmlContent = errorHtml,
+                            textWebtoonHtmlAssetBasePath = null,
+                            textWebtoonHtmlPageCount = 0
                         )
                     }
                 }

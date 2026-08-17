@@ -1,8 +1,6 @@
 package io.leostrange.mrcomic.core.domain.translation
 
 import io.leostrange.mrcomic.core.domain.util.Result
-import io.leostrange.mrcomic.core.domain.translation.OfflineTranslationEngine
-import io.leostrange.mrcomic.core.domain.translation.OnlineTranslationEngine
 import io.leostrange.mrcomic.core.domain.util.runCatchingResult
 import io.leostrange.mrcomic.core.model.TranslationMode
 import io.leostrange.mrcomic.core.model.TranslationRequest

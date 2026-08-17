@@ -7,7 +7,6 @@ import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import io.leostrange.mrcomic.engine.formats.base.BitmapAllocator
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceProfile
 import io.leostrange.mrcomic.engine.formats.base.RenderDeviceTier
-import io.leostrange.mrcomic.engine.formats.zip.ZipFormatReader
 import java.io.File
 import java.nio.file.Files
 import java.util.zip.ZipEntry

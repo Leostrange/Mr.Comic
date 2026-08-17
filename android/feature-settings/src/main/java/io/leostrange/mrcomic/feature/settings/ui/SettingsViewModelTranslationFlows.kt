@@ -1,10 +1,8 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
-import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
-import androidx.datastore.preferences.core.Preferences
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.model.TranslationServiceConfig
 import io.leostrange.mrcomic.core.model.TranslationTransportPreference

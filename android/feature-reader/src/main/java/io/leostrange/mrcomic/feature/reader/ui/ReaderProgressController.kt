@@ -22,7 +22,11 @@ import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepositor
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.model.ComicFormat
+import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.isHeavyReflowableFormat
+import io.leostrange.mrcomic.core.model.isTextReadingFormat
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
@@ -60,6 +64,7 @@ internal class ReaderProgressController(
     internal var pendingProgressSave: PendingProgressSave? = null
     internal var progressSaveJob: Job? = null
     internal var lastPersistedProgress: PersistedProgressMarker? = null
+    internal var lastPersistedPositionJson: String? = null
     internal val lastChapterMilestone = AtomicReference<ChapterMilestoneMarker?>()
 
     /** Measured visual page counts per EPUB spine section. */
@@ -85,6 +90,7 @@ internal class ReaderProgressController(
         val epubAccumulatedPages = accumulatedTotalPagesForEpub()
         val sectionSnapshot = sectionPageCounts.snapshot()
         val totalPages = if (epubAccumulatedPages > 0) epubAccumulatedPages else _uiState.value.totalPages
+        val positionJson = buildPositionJson(_uiState.value, comic.format, page)
         if (!ReaderProgressPolicy.shouldPersist(
                 totalPages = totalPages,
                 isHeavyReflowable = comic.format.isHeavyReflowableFormat(),
@@ -92,20 +98,79 @@ internal class ReaderProgressController(
                 epubAccumulatedPages = epubAccumulatedPages,
                 paginatedSectionCount = sectionSnapshot.size
             )
-        ) return
+        ) {
+            // Keep exact text position even while page-count/progress metrics are provisional.
+            positionJson?.let { enqueuePositionOnlySave(comic, page, it) }
+            return
+        }
         val accuratePage = ReaderProgressPolicy.pageForPersistence(
             format = comic.format,
             readerPage = page,
             epubAbsolutePage = calculateAccuratePage(page)
         )
+        val state = _uiState.value
         val pending = PendingProgressSave(
             comicId = comic.id,
             page = accuratePage,
             totalPages = totalPages,
             countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING,
-            characterOffset = _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
+            characterOffset = if (state.readingMode == ReadingMode.WEBTOON) {
+                state.freeScrollCharacterOffset.takeIf { it >= 0 }
+            } else {
+                state.sectionCharacterOffset.takeIf { it > 0 }
+            },
+            positionJson = positionJson
         )
-        if (pending == pendingProgressSave || isProgressAlreadyPersisted(comic.id, accuratePage)) return
+        if (
+            pending == pendingProgressSave ||
+            (
+                isProgressAlreadyPersisted(comic.id, accuratePage) &&
+                    isSamePersistedPosition(lastPersistedPositionJson, positionJson)
+                )
+        ) return
+        pendingProgressSave = pending
+        progressSaveJob?.cancel()
+        progressSaveJob = viewModelScope.launch {
+            delay(220)
+            flushPendingProgressSave()
+        }
+    }
+
+    /**
+     * Debounced structured-position snapshot used by free-scroll Webtoon updates and close.
+     * It intentionally bypasses page-progress/completion rules: a one-section EPUB can still
+     * have a meaningful character cursor even when its global page metrics are provisional.
+     */
+    fun savePositionSnapshot() {
+        val comic = _uiState.value.comic ?: return
+        val positionJson = buildPositionJson(_uiState.value, comic.format, _uiState.value.currentPage)
+            ?: return
+        enqueuePositionOnlySave(comic, _uiState.value.currentPage, positionJson)
+    }
+
+    private fun enqueuePositionOnlySave(
+        comic: io.leostrange.mrcomic.core.model.Comic,
+        page: Int,
+        positionJson: String
+    ) {
+        val normalizedPage = page.coerceAtLeast(0)
+        val pending = PendingProgressSave(
+            comicId = comic.id,
+            page = normalizedPage,
+            totalPages = _uiState.value.totalPages.coerceAtLeast(1),
+            countsTowardReadingProgress = false,
+            characterOffset = if (_uiState.value.readingMode == ReadingMode.WEBTOON) {
+                _uiState.value.freeScrollCharacterOffset.takeIf { it >= 0 }
+            } else {
+                _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
+            },
+            positionJson = positionJson,
+            positionOnly = true
+        )
+        if (
+            pending == pendingProgressSave ||
+            isSamePersistedPosition(lastPersistedPositionJson, positionJson)
+        ) return
         pendingProgressSave = pending
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
@@ -123,12 +188,21 @@ internal class ReaderProgressController(
                 ?.page
             val storedPageCount = libraryRepository.getComicById(pending.comicId)?.pageCount ?: 0
             val safeTotalPages = maxOf(pending.totalPages, storedPageCount).coerceAtLeast(1)
-            libraryRepository.updateProgress(
-                comicId = pending.comicId,
-                currentPage = pending.page,
-                totalPages = safeTotalPages,
-                characterOffset = pending.characterOffset
-            )
+            if (!pending.positionOnly) {
+                libraryRepository.updateProgress(
+                    comicId = pending.comicId,
+                    currentPage = pending.page,
+                    totalPages = safeTotalPages,
+                    characterOffset = pending.characterOffset
+                )
+            }
+            // TEXT-01: persist the structured position alongside the legacy fields. Null keeps
+            // the stored record untouched (legacy-only) — never overwrite with a coarse fallback.
+            pending.positionJson?.let { positionJson ->
+                libraryRepository.updateReaderPosition(pending.comicId, positionJson)
+            }
+            lastPersistedPositionJson = pending.positionJson
+            if (pending.positionOnly) return
             val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
             val goalProgressDelta = navigationProgressDelta(
                 previousPersistedPage = previousPersistedPage,
@@ -158,20 +232,21 @@ internal class ReaderProgressController(
                     totalPages = pending.totalPages
                 )
             )
-            lastPersistedProgress = PersistedProgressMarker(
-                comicId = pending.comicId,
-                page = pending.page
-            )
+            lastPersistedProgress = persistedPageMarkerAfterFlush(lastPersistedProgress, pending)
+            lastPersistedPositionJson = pending.positionJson
             val currentComic = _uiState.value.comic ?: return
             val authoritativeTotal = maxOf(pending.totalPages, storedPageCount)
             val reachedLastPageSafe = authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1
+            val isHeavy = currentComic.format.isHeavyReflowableFormat() || currentComic.format.isTextReadingFormat()
             val titleCompletionPolicy = resolveTitleCompletionPolicy(
                 reachedLastPage = reachedLastPageSafe,
                 currentComicIdMatches = currentComic.id == pending.comicId,
                 alreadyCompleted = currentComic.isCompleted,
                 countsTowardReadingProgress = pending.countsTowardReadingProgress,
                 sessionManualPageTurns = readerSessionCoordinator.currentManualPageTurns,
-                goalProgressDelta = goalProgressDelta
+                goalProgressDelta = goalProgressDelta,
+                isHeavyReflowable = isHeavy,
+                totalPages = authoritativeTotal
             )
             if (titleCompletionPolicy.shouldComplete) {
                 libraryRepository.markCompleted(pending.comicId, completed = true)
@@ -215,7 +290,7 @@ internal class ReaderProgressController(
     }
 
     fun isProgressAlreadyPersisted(comicId: String?, page: Int): Boolean =
-        comicId != null && lastPersistedProgress == PersistedProgressMarker(comicId = comicId, page = page)
+        isSamePersistedPage(lastPersistedProgress, comicId, page)
 
     // ── Chapter milestones ─────────────────────────────────────────────────
 
@@ -359,6 +434,9 @@ internal class ReaderProgressController(
     // ── Session lifecycle ──────────────────────────────────────────────────
 
     fun emitReaderClosed(appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope) {
+        // Close can happen between scroll callbacks; enqueue one final semantic snapshot before
+        // the ViewModel cancels its local debounce job.
+        savePositionSnapshot()
         val state = _uiState.value
         val currentComic = state.comic
         val closedSession = readerSessionCoordinator.close(
@@ -393,6 +471,44 @@ internal class ReaderProgressController(
                 sessionMetrics = sessionMetrics
             )
         )
+    }
+
+    // ── Structured position (TEXT-01) ──────────────────────────────────────
+
+    /**
+     * Builds the structured [ReaderPosition] JSON for the current UI state.
+     * Text formats split engine section / visual sub-page / character offset; raster formats
+     * map the page onto both section and visual index. Returns null when the record cannot be
+     * represented meaningfully (e.g. before page-count resolution), so legacy fields are kept.
+     */
+    private fun buildPositionJson(
+        state: ReaderUiState,
+        format: ComicFormat,
+        page: Int,
+    ): String? {
+        val mode = state.readingMode
+        val isText = format.isTextReadingFormat()
+        val webtoonFraction = if (mode == ReadingMode.WEBTOON) {
+            state.freeScrollProgression.takeIf { it in 0.0..1.0 }?.toFloat()
+        } else {
+            null
+        }
+        val position = ReaderPosition(
+            engineSectionIndex = if (isText) state.currentPage.coerceAtLeast(0) else page.coerceAtLeast(0),
+            visualPageIndex = if (isText) state.sectionCurrentPage.coerceAtLeast(0) else page.coerceAtLeast(0),
+            characterOffset = if (mode == ReadingMode.WEBTOON) {
+                state.freeScrollCharacterOffset.takeIf { it >= 0 }
+                    ?: state.sectionCharacterOffset.takeIf { it > 0 }
+            } else {
+                state.sectionCharacterOffset.takeIf { it > 0 }
+            },
+            domAnchor = state.pendingScrollToAnchor,
+            mode = mode,
+            webtoonScrollFraction = webtoonFraction,
+            updatedAtMillis = System.currentTimeMillis(),
+            schemaVersion = ReaderPosition.SCHEMA_VERSION
+        )
+        return ReaderPositionCodec.encode(position)
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────

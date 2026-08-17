@@ -3,7 +3,6 @@ package io.leostrange.mrcomic.engine.formats.text.pagination
 import io.leostrange.mrcomic.engine.formats.text.TextDocumentSection
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Jsoup
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

@@ -71,4 +71,14 @@ class ComicsMigrationCoverageTest {
         assertEquals(8, AppDatabaseMigrations.MIGRATION_8_9.startVersion)
         assertEquals(9, AppDatabaseMigrations.MIGRATION_8_9.endVersion)
     }
+
+    @Test
+    fun migration9to10_addsReaderPositionJson() {
+        // TEXT-01: the structured position column must exist for users already on v9.
+        assertEquals(9, AppDatabaseMigrations.MIGRATION_9_10.startVersion)
+        assertEquals(10, AppDatabaseMigrations.MIGRATION_9_10.endVersion)
+        // The column is also declared in the idempotent v9 map so the coverage test above
+        // keeps guarding the entity↔migration invariant.
+        assertTrue(AppDatabaseMigrations.COMICS_EXPECTED_COLUMNS_V9.containsKey("readerPositionJson"))
+    }
 }

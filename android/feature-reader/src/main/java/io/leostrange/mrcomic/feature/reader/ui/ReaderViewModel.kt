@@ -16,7 +16,6 @@ import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.repository.ImportRepository
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
-import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.domain.translation.DictionaryEngine
 import io.leostrange.mrcomic.core.domain.translation.LanguageDetector
 import io.leostrange.mrcomic.core.domain.translation.LlmExplainEngine
@@ -92,6 +91,12 @@ class ReaderViewModel @Inject constructor(
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
         dataStore = context.dataStore
+    )
+    internal val autoScrollRuntimeController = ReaderAutoScrollRuntimeController(uiState = _uiState)
+    internal val autoScrollSettingsController = ReaderAutoScrollSettingsController(
+        uiState = _uiState,
+        scope = viewModelScope,
+        preferences = readerPreferences,
     )
     internal val chromeController = ReaderChromeController(_uiState = _uiState)
     internal val translationController = ReaderTranslationController(
@@ -261,7 +266,9 @@ class ReaderViewModel @Inject constructor(
         prewarmHtmlPagesAround = { pageCacheController.prewarmHtmlPagesAround(it) },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
         markReaderPresetCustom = { settingsController.markReaderPresetCustom() },
-        getLastTextWebtoonSection = { navigationController.lastTextWebtoonVisibleSection }
+        getLastTextWebtoonCursor = { navigationController.lastTextWebtoonCursor },
+        seedTextWebtoonCursor = { navigationController.seedTextWebtoonCursor(it) },
+        onAutoScrollModeChanged = { mode -> autoScrollSettingsController.switchMode(mode) }
     )
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
 
@@ -376,6 +383,28 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    internal fun onFreeScrollPositionChanged(position: ReaderWebViewRestoreTarget) {
+        position.sectionIndex?.takeIf { it >= 0 }?.let {
+            navigationController.updateTextWebtoonVisibleSection(it)
+        }
+        _uiState.update {
+            it.copy(
+                freeScrollCharacterOffset = position.characterOffset ?: -1,
+                freeScrollProgression = position.progression ?: -1.0
+            )
+        }
+        if (_uiState.value.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
+            navigationController.updateTextWebtoonVisiblePosition(
+                characterOffset = position.characterOffset,
+                progression = position.progression
+            )
+            // A Webtoon scroll changes the semantic position without changing the engine page.
+            // Persist the structured cursor through the position-only path so single-spine books
+            // are restorable even when the normal EPUB page-progress guard is still provisional.
+            progressController.savePositionSnapshot()
+        }
+    }
+
     fun tocDisplayPage(enginePageIndex: Int): Int =
         pageCacheController.tocDisplayPage(enginePageIndex)
 
@@ -453,6 +482,7 @@ class ReaderViewModel @Inject constructor(
             disableAnimations = renderProfile.disableAnimations
         )
         if (p.needsPersistStylePresets) settingsController.persistReaderStylePresetEntries(p.readerStylePresetEntries)
+        autoScrollSettingsController.restoreSpeedFor(_uiState.value.readingMode)
         eyeRestController.restartEyeRestTimer()
     }
 

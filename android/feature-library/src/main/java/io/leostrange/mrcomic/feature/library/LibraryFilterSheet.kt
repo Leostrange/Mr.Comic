@@ -31,6 +31,7 @@ import io.leostrange.mrcomic.core.model.SortOrder
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FilterSheet(
     sortOrder: SortOrder,

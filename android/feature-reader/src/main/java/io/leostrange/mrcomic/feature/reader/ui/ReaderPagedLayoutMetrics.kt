@@ -1,6 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.feature.reader.ui.gesture.ReaderHtmlHelpers
+import io.leostrange.mrcomic.feature.reader.ui.geometry.PagedViewportContract
 
 /** Typed result returned by the WebView-side PAGE layout script. */
 internal data class ReaderPagedLayoutMetrics(
@@ -15,18 +15,10 @@ internal data class ReaderPagedLayoutMetrics(
         handled &&
             pageCount >= 1 &&
             pageIndex in 0 until pageCount &&
-            clipHeight >= 320 &&
-            usableHeight >= 72
+            clipHeight >= PagedViewportContract.MIN_CLIP_HEIGHT_PX &&
+            usableHeight >= PagedViewportContract.MIN_USABLE_HEIGHT_CSS_PX
 }
 
 internal fun decodeReaderPagedLayoutMetrics(rawValue: String?): ReaderPagedLayoutMetrics? {
-    val metrics = ReaderHtmlHelpers.decodePagedLayoutMetrics(rawValue) ?: return null
-    return ReaderPagedLayoutMetrics(
-        handled = metrics.handled,
-        pageIndex = metrics.pageIndex,
-        pageCount = metrics.pageCount,
-        characterOffset = metrics.characterOffset,
-        clipHeight = metrics.clipHeight,
-        usableHeight = metrics.usableHeight
-    )
+    return ReaderWebViewProtocolCodec.decodePagedLayoutMetrics(rawValue)
 }

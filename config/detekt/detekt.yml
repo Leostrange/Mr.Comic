@@ -30,3 +30,7 @@ complexity:
     active: true
     functionThreshold: 65
     constructorThreshold: 65
+
+style:
+  UnusedImports:
+    active: true

@@ -11,8 +11,8 @@ internal enum class ReaderChromeButton(val storedValue: String) {
 
     companion object {
         val defaultOrder: List<ReaderChromeButton> = listOf(
-            TOC,
             STYLE,
+            TOC,
             AUDIO,
             DIRECTION,
             TRANSLATE,

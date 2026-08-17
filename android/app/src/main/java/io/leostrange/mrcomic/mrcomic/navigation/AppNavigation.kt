@@ -6,6 +6,9 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,7 +73,6 @@ import io.leostrange.mrcomic.feature.settings.ui.SettingsScreen
 import io.leostrange.mrcomic.home.ContinueLibraryChrome
 import io.leostrange.mrcomic.home.ContinueScreen
 import io.leostrange.mrcomic.icons.AppIconSettingsScreen
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -160,23 +162,11 @@ fun AppNavHost(
         animationSpec = tween(appNavTransitionDurationMillis(effectiveTransitionStyle)),
         label = "rootBottomChromeOffset"
     )
-    val keepBottomBarSlot = showBottomBar || bottomChromeAlpha > 0.01f
-
     LaunchedEffect(currentRoute, effectiveTransitionStyle) {
         val route = currentRoute
         val lastRoute = previousRoute
         previousRoute = route
-        when {
-            route !in rootRoutes -> rootChromeVisible = false
-            lastRoute == null || lastRoute in rootRoutes || effectiveTransitionStyle == "NONE" -> {
-                rootChromeVisible = true
-            }
-            else -> {
-                rootChromeVisible = false
-                delay(appRootChromeRevealDelayMillis(effectiveTransitionStyle))
-                rootChromeVisible = true
-            }
-        }
+        rootChromeVisible = (route in rootRoutes)
     }
 
     fun navigateToFullscreen(route: String) {
@@ -186,7 +176,17 @@ fun AppNavHost(
 
     Scaffold(
         bottomBar = {
-            if (keepBottomBarSlot) {
+            AnimatedVisibility(
+                visible = rootChromeVisible,
+                enter = expandVertically(expandFrom = androidx.compose.ui.Alignment.Bottom) +
+                    androidx.compose.animation.fadeIn(
+                        animationSpec = tween(appNavTransitionDurationMillis(effectiveTransitionStyle))
+                    ),
+                exit = shrinkVertically(shrinkTowards = androidx.compose.ui.Alignment.Bottom) +
+                    androidx.compose.animation.fadeOut(
+                        animationSpec = tween(appNavTransitionDurationMillis(effectiveTransitionStyle))
+                    )
+            ) {
                 Column(
                     modifier = Modifier
                         .graphicsLayer { alpha = bottomChromeAlpha }

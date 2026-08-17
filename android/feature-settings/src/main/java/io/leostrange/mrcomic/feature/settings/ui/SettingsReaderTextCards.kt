@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
@@ -39,7 +38,7 @@ import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.style
-import io.leostrange.mrcomic.feature.reader.ui.ReaderTextFontCatalog
+import io.leostrange.mrcomic.core.ui.fonts.ReaderTextFontCatalog
 import java.util.Locale
 
 /* ──── ReaderTextStyleCard ──── */

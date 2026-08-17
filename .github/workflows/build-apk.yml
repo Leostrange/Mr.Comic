@@ -15,6 +15,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secrets-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Scan for hardcoded secrets
+        run: bash scripts/scan-secrets.sh
+
+      - name: Scan new commits for introduced secrets
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "No comparable base ref; skipping history scan."
+            exit 0
+          fi
+          bash scripts/scan-secrets.sh "$BASE...$HEAD_SHA"
   unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -209,7 +237,11 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          script: ./gradlew --no-daemon --console=plain connectedDebugAndroidTest
+          script: >-
+            ./gradlew --no-daemon --console=plain
+            :core-data:connectedDebugAndroidTest
+            :feature-reader:connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.notAnnotation=androidx.test.filters.LargeTest
 
       - name: Upload test results
         uses: actions/upload-artifact@v7
@@ -217,4 +249,52 @@ jobs:
         with:
           name: instrumented-test-results
           path: android/*/build/reports/androidTests/
+          if-no-files-found: ignore
+
+  reader-release-runtime:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [unit-tests]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run reader release matrix and lifecycle soak
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          script: >-
+            ./gradlew --no-daemon --console=plain :feature-reader:connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.class=io.leostrange.mrcomic.feature.reader.harness.ReaderFormatMatrixTest,io.leostrange.mrcomic.feature.reader.ReaderRestoreIntegrationTest,io.leostrange.mrcomic.feature.reader.ReaderRuntimeSoakTest
+
+      - name: Upload reader runtime evidence
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: reader-release-runtime-results
+          path: |
+            android/feature-reader/build/reports/androidTests/
+            android/feature-reader/build/outputs/androidTest-results/
           if-no-files-found: ignore

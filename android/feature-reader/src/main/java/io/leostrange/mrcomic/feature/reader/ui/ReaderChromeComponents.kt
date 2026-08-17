@@ -3,6 +3,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.BrightnessLow
@@ -41,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -88,11 +91,12 @@ fun ReaderMinimalBar(
 private fun ReaderChromeIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    buttonSize: Dp = 42.dp,
     content: @Composable () -> Unit
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(42.dp)
+        modifier = modifier.size(buttonSize)
     ) {
         content()
     }
@@ -240,146 +244,165 @@ private fun ReaderExpandedActionButtons(
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
     val actions = buildList {
-        if (showTextSettings) {
-            add(
-                ReaderChromeActionSpec(
-                    key = ReaderChromeButton.STYLE.storedValue,
-                    content = {
-                        ReaderChromeIconButton(onClick = onToggleTextSettings) {
-                            Icon(
-                                Icons.Default.Settings,
-                                contentDescription = strings.readerTextStyle,
-                                tint = chromeIconTint
+        ReaderChromeButton.resolveOrder(chromeIconOrder).forEach { action ->
+            when (action) {
+                ReaderChromeButton.STYLE ->
+                    if (showTextSettings && showTextSettingsIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onToggleTextSettings, buttonSize = buttonSize) {
+                                        Icon(
+                                            Icons.Default.Settings,
+                                            contentDescription = strings.readerTextStyle,
+                                            tint = chromeIconTint
+                                        )
+                                    }
+                                }
                             )
-                        }
+                        )
                     }
-                )
-            )
-        }
-        addAll(
-            ReaderChromeButton.resolveOrder(chromeIconOrder)
-                .filterNot { it == ReaderChromeButton.STYLE }
-                .mapNotNull { action ->
-        when (action) {
-            ReaderChromeButton.TOC ->
-                if (canShowToc && showTocIcon) {
-                    ReaderChromeActionSpec(
-                        key = action.storedValue,
-                        content = {
-                            ReaderChromeIconButton(onClick = onToggleToc) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.FormatListBulleted,
-                                    contentDescription = strings.readerToc,
-                                    tint = chromeIconTint
-                                )
-                            }
-                        }
-                    )
-                } else null
 
-            ReaderChromeButton.STYLE ->
-                null
-
-            ReaderChromeButton.AUDIO ->
-                if (showTtsAction && showAudioIcon) {
-                    ReaderChromeActionSpec(
-                        key = action.storedValue,
-                        content = {
-                            ReaderChromeIconButton(onClick = onToggleTtsControls) {
-                                Icon(
-                                    Icons.Default.Headphones,
-                                    contentDescription = readerText.servicesTtsTitle,
-                                    tint = chromeIconTint
-                                )
-                            }
-                        }
-                    )
-                } else null
-
-            ReaderChromeButton.DIRECTION ->
-                if (canSwapDirection && showDirectionIcon) {
-                    ReaderChromeActionSpec(
-                        key = action.storedValue,
-                        content = {
-                            ReaderChromeIconButton(onClick = onSwapDirection) {
-                                Icon(
-                                    Icons.Default.SwapHoriz,
-                                    contentDescription = readerText.directionToggle,
-                                    tint = if (directionShortcutActive) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
+                ReaderChromeButton.TOC ->
+                    if (canShowToc && showTocIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onToggleToc, buttonSize = buttonSize) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.FormatListBulleted,
+                                            contentDescription = strings.readerToc,
+                                            tint = chromeIconTint
+                                        )
                                     }
-                                )
-                            }
-                        }
-                    )
-                } else null
+                                }
+                            )
+                        )
+                    }
 
-            ReaderChromeButton.AUTO_SCROLL ->
-                if (showAutoScrollIcon) {
-                    ReaderChromeActionSpec(
-                        key = action.storedValue,
-                        content = {
-                            ReaderChromeIconButton(onClick = onAutoScrollToggle) {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = "Auto-scroll",
-                                    tint = if (autoScrollActive) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
+                ReaderChromeButton.AUDIO ->
+                    if (showTtsAction && showAudioIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onToggleTtsControls, buttonSize = buttonSize) {
+                                        Icon(
+                                            Icons.Default.Headphones,
+                                            contentDescription = readerText.servicesTtsTitle,
+                                            tint = chromeIconTint
+                                        )
                                     }
-                                )
-                            }
-                        }
-                    )
-                } else null
+                                }
+                            )
+                        )
+                    }
 
-            ReaderChromeButton.TRANSLATE ->
-                if (showOcrAction && showTranslateIcon) {
-                    ReaderChromeActionSpec(
-                        key = action.storedValue,
-                        content = {
-                            ReaderChromeIconButton(onClick = onRequestOcr) {
-                                Icon(
-                                    Icons.Default.Translate,
-                                    contentDescription = readerText.ocrTranslation,
-                                    tint = chromeIconTint
-                                )
-                            }
-                        }
-                    )
-                } else null
+                ReaderChromeButton.DIRECTION ->
+                    if (canSwapDirection && showDirectionIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onSwapDirection, buttonSize = buttonSize) {
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = readerText.directionToggle,
+                                            tint = if (directionShortcutActive) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        )
+                    }
 
-            ReaderChromeButton.BRIGHTNESS ->
-                if (showBrightnessIcon) {
-                    ReaderChromeActionSpec(
-                        key = action.storedValue,
-                        content = {
-                            ReaderChromeIconButton(onClick = onToggleBrightness) {
-                                Icon(
-                                    if (showBrightnessRow) Icons.Default.BrightnessHigh else Icons.Default.BrightnessLow,
-                                    contentDescription = strings.readerBrightness,
-                                    tint = if (showBrightnessRow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    )
-                } else null
+                ReaderChromeButton.AUTO_SCROLL ->
+                    if (showAutoScrollIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onAutoScrollToggle, buttonSize = buttonSize) {
+                                        Icon(
+                                            imageVector = if (autoScrollActive) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                            contentDescription = "Auto-scroll",
+                                            tint = if (autoScrollActive) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        )
+                    }
+
+                ReaderChromeButton.TRANSLATE ->
+                    if (showOcrAction && showTranslateIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onRequestOcr, buttonSize = buttonSize) {
+                                        Icon(
+                                            Icons.Default.Translate,
+                                            contentDescription = readerText.ocrTranslation,
+                                            tint = chromeIconTint
+                                        )
+                                    }
+                                }
+                            )
+                        )
+                    }
+
+                ReaderChromeButton.BRIGHTNESS ->
+                    if (showBrightnessIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(onClick = onToggleBrightness, buttonSize = buttonSize) {
+                                        Icon(
+                                            if (showBrightnessRow) Icons.Default.BrightnessHigh else Icons.Default.BrightnessLow,
+                                            contentDescription = strings.readerBrightness,
+                                            tint = if (showBrightnessRow) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            )
+                        )
+                    }
+            }
         }
-                }
-        )
     }
 
-    actions.forEach { action ->
-        action.content()
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val buttonSize = readerChromeActionButtonSizeDp(
+            availableWidthDp = maxWidth.value,
+            actionCount = actions.size,
+        ).dp
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            actions.forEach { action ->
+                action.content(buttonSize)
+            }
+        }
     }
 }
 
 private data class ReaderChromeActionSpec(
     val key: String,
-    val content: @Composable () -> Unit
+    val content: @Composable (Dp) -> Unit
 )
 
 @Composable
