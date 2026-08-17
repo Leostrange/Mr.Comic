@@ -174,7 +174,18 @@ class HyphenationAndLineBreakTest {
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                    body { font-family: Georgia, serif; font-size: 18px; line-height: 1.6; margin: 0; padding: 1em; }
+                    body {
+                        font-family: Georgia, serif;
+                        font-size: 18px;
+                        line-height: 1.6;
+                        margin: 0;
+                        padding: 1em;
+                        max-width: 100vw;
+                        box-sizing: border-box;
+                        overflow-x: hidden;
+                        overflow-wrap: anywhere;
+                    }
+                    *, *::before, *::after { box-sizing: border-box; max-width: 100%; }
                     h1 { font-size: 1.5em; text-align: center; }
                     p { text-indent: 1.5em; margin: 0.5em 0; }
                 </style>

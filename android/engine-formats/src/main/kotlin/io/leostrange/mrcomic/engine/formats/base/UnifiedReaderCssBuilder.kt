@@ -216,6 +216,16 @@ internal val EPUB_READER_DOCUMENT_CSS =
       color: #1a6f9a; }
     p.note-item, aside[epub\\:type~="footnote"], section[epub\\:type~="footnote"] > p:first-child {
       margin: 0.6em 0; padding-left: 2.8em; text-indent: -2.8em; text-align: left; }
+    section[epub\\:type~="footnotes"],
+    [epub\\:type~="footnote"],
+    [role="doc-footnote"], [role="doc-endnote"],
+    div[id^="fn"], div[id^="note"] {
+      display: none !important;
+      position: absolute !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
     .note-num, .footnote-label { color: #1a6f9a; font-weight: bold; display: inline-block; min-width: 2.8em; text-indent: 0; }
     @media (prefers-color-scheme: dark) {
       body { color: #e8e8e8; background: #1a1a1a; }
