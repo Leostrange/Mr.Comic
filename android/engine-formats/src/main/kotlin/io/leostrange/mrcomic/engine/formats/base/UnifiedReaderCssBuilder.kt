@@ -210,14 +210,14 @@ internal val EPUB_READER_DOCUMENT_CSS =
     .center, .align-center, [align="center"] { text-align: center !important; text-indent: 0; }
     .right, .align-right, [align="right"] { text-align: right !important; text-indent: 0; }
     .left, .align-left, [align="left"] { text-align: left !important; }
-    a.fn, a[epub\\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][href*="#"] {
+    a.fn, a[epub\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][href*="#"] {
       font-size: 0.75em; vertical-align: super; line-height: 1; color: #1a6f9a; font-weight: bold; text-decoration: none; }
-    a.fn *, a[epub\\:type~="noteref"] *, a[href*="FbAutId_"] *, a[href*="#FbAutId_"] *, a[href^="fbanchor://"] *, a[title][href*="#"] * {
+    a.fn *, a[epub\:type~="noteref"] *, a[href*="FbAutId_"] *, a[href*="#FbAutId_"] *, a[href^="fbanchor://"] *, a[title][href*="#"] * {
       color: #1a6f9a; }
-    p.note-item, aside[epub\\:type~="footnote"], section[epub\\:type~="footnote"] > p:first-child {
+    p.note-item, aside[epub\:type~="footnote"], section[epub\:type~="footnote"] > p:first-child {
       margin: 0.6em 0; padding-left: 2.8em; text-indent: -2.8em; text-align: left; }
-    section[epub\\:type~="footnotes"],
-    [epub\\:type~="footnote"],
+    section[epub\:type~="footnotes"],
+    [epub\:type~="footnote"],
     [role="doc-footnote"], [role="doc-endnote"],
     div[id^="fn"], div[id^="note"] {
       display: none !important;
@@ -233,8 +233,8 @@ internal val EPUB_READER_DOCUMENT_CSS =
       blockquote, cite { border-left-color: #555; color: #aaa; }
       td, th { border-color: #444; }
       a[href] { color: #5ab4dc; }
-      a.fn, a[epub\\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][href*="#"], .note-num, .footnote-label { color: #5ab4dc; }
-      a.fn *, a[epub\\:type~="noteref"] *, a[href*="FbAutId_"] *, a[href*="#FbAutId_"] *, a[href^="fbanchor://"] *, a[title][href*="#"] * { color: #5ab4dc; }
+      a.fn, a[epub\:type~="noteref"], a[href*="FbAutId_"], a[href*="#FbAutId_"], a[href^="fbanchor://"], a[title][href*="#"], .note-num, .footnote-label { color: #5ab4dc; }
+      a.fn *, a[epub\:type~="noteref"] *, a[href*="FbAutId_"] *, a[href*="#FbAutId_"] *, a[href^="fbanchor://"] *, a[title][href*="#"] * { color: #5ab4dc; }
     }
         """.trimIndent()
     )

@@ -140,7 +140,7 @@ class FootnoteExtractionTest {
         val fnSectionVisible = runner.executeJs(
             """
             (function() {
-                var section = document.querySelector('[epub\\:type="footnotes"]');
+                var section = document.querySelector('[epub\:type="footnotes"]');
                 if (!section) return 'not_found';
                 var style = window.getComputedStyle(section);
                 return style.display;
@@ -185,8 +185,8 @@ class FootnoteExtractionTest {
                     *, *::before, *::after { box-sizing: border-box; max-width: 100%; }
                     h1 { font-size: 1.5em; text-align: center; }
                     p { text-indent: 1.5em; margin: 0.5em 0; }
-                    section[epub\\:type="footnotes"],
-                    [epub\\:type="footnote"],
+                    section[epub\:type="footnotes"],
+                    [epub\:type="footnote"],
                     [role="doc-footnote"],
                     [role="doc-endnote"],
                     [id^="fn"],
