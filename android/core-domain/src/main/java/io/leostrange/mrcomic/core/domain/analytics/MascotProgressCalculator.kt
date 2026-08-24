@@ -1,19 +1,26 @@
 package io.leostrange.mrcomic.core.domain.analytics
 
 import io.leostrange.mrcomic.core.model.Comic
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.model.MascotStage
 import io.leostrange.mrcomic.core.model.MascotProgressState
 import io.leostrange.mrcomic.core.model.MascotStageTimelineEntry
 import io.leostrange.mrcomic.core.model.MascotStageTimeline
 import io.leostrange.mrcomic.core.model.MascotStageArchiveEntry
 import io.leostrange.mrcomic.core.model.MascotStageArchive
+import javax.inject.Inject
 
-typealias MascotStage = MascotStage
-typealias MascotProgressState = MascotProgressState
-typealias MascotStageTimelineEntry = MascotStageTimelineEntry
-typealias MascotStageTimeline = MascotStageTimeline
-typealias MascotStageArchiveEntry = MascotStageArchiveEntry
-typealias MascotStageArchive = MascotStageArchive
+/** Injectable facade for the pure mascot progress calculation. */
+class MascotProgressCalculator @Inject constructor() {
+    fun calculate(comics: List<Comic>): MascotProgressState = calculateMascotProgress(comics)
+}
+
+typealias MascotStage = io.leostrange.mrcomic.core.model.MascotStage
+typealias MascotProgressState = io.leostrange.mrcomic.core.model.MascotProgressState
+typealias MascotStageTimelineEntry = io.leostrange.mrcomic.core.model.MascotStageTimelineEntry
+typealias MascotStageTimeline = io.leostrange.mrcomic.core.model.MascotStageTimeline
+typealias MascotStageArchiveEntry = io.leostrange.mrcomic.core.model.MascotStageArchiveEntry
+typealias MascotStageArchive = io.leostrange.mrcomic.core.model.MascotStageArchive
 
 fun calculateMascotProgress(comics: List<Comic>): MascotProgressState {
     val approxPagesRead = comics.sumOf { comic -> approximateReadPages(comic) }
@@ -128,7 +135,7 @@ fun resolveMascotStageArchive(
 private fun approximateReadPages(comic: Comic): Int = when {
     comic.isCompleted && comic.pageCount > 0 -> comic.pageCount
     comic.isCompleted -> maxOf(comic.currentPage + 1, 1)
-    comic.readingProgress <= 0f && comic.currentPage <= 0 && comic.lastReadDate == null -> 0
+    comic.displayReadingProgress() <= 0f && comic.currentPage <= 0 && comic.lastReadDate == null -> 0
     comic.pageCount > 0 -> (comic.currentPage + 1).coerceIn(1, comic.pageCount)
     else -> maxOf(comic.currentPage + 1, 1)
 }
