@@ -19,8 +19,8 @@ class DictionaryDownloaderTest {
             extractedFileName = "dictionary_en_room_asset_v3.db"
         )
         
-        // Expected URL format
-        val expectedUrl = "https://github.com/Leostrange/Mr.Comic/releases/download/v2.3.0/en.dbpack.gz"
+        // Expected URL format: release assets are published as dictionary_<lang>.dbpack
+        val expectedUrl = "https://github.com/Leostrange/Mr.Comic/releases/download/v2.3.0/dictionary_en.dbpack"
         
         // We can't easily test the private buildReleaseUrl method without reflection
         // But we can verify the config structure is correct
