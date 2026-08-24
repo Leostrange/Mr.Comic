@@ -156,6 +156,13 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                 isHapticFeedbackEnabled = actEnabled
             }
         },
+        setUserSelectNone = { enabled ->
+            val value = if (enabled) "none" else "auto"
+            evaluateJavascript(
+                """try{document.body.style.userSelect="$value";document.body.style.webkitUserSelect="$value";}catch(e){}""",
+                null
+            )
+        },
         onFreeScrollGestureFinished = {
             if (pendingFreeScrollRestoreTarget == null) {
                 scheduleFreeScrollPositionCapture()

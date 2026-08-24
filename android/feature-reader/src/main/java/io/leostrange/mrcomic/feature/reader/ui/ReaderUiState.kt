@@ -26,6 +26,7 @@ data class PreparedReaderOpen(
 
 internal const val DEFAULT_TEXT_FONT_SIZE = 18
 internal const val DEFAULT_TEXT_COLOR_SCHEME = "DAY"
+internal const val DEFAULT_GRAPHIC_COLOR_SCHEME = "NIGHT"
 internal const val DEFERRED_PAGE_COUNT_MAX_RETRIES = 2
 internal const val DEFERRED_PAGE_COUNT_RETRY_DELAY_MILLIS = 750L
 internal const val DEFAULT_TEXT_FONT_FAMILY = "Georgia"
@@ -137,6 +138,8 @@ data class ReaderUiState(
     val textFontSize: Int = 18,
     /** Color scheme for text books: "DAY" | "SEPIA" | "NIGHT" */
     val textColorScheme: String = "DAY",
+    /** Color scheme for graphic (raster) reader: "DAY" | "SEPIA" | "NIGHT" */
+    val graphicColorScheme: String = "NIGHT",
     /** Optional manual text color override for text books. */
     val textCustomTextColor: Long? = null,
     /** Optional manual background color override for text books. */
@@ -180,6 +183,8 @@ data class ReaderUiState(
     /** DOM anchor used to preserve the free-scroll text position across rotations. */
     val freeScrollCharacterOffset: Int = -1,
     val freeScrollProgression: Double = -1.0,
+    /** BUG-VERTICAL-01: Scroll progression (0..1) for raster webtoon seekbar sync. */
+    val rasterWebtoonScrollProgression: Double = -1.0,
     /** Accumulated total visual pages across all visited EPUB sections (0 when not EPUB or no data). */
     val epubAccumulatedTotalPages: Int = 0,
     /** Accumulated current visual page position across all visited EPUB sections. */
@@ -247,7 +252,33 @@ data class ReaderUiState(
     val chromeShowTranslateIcon: Boolean = true,
     val chromeShowBrightnessIcon: Boolean = true,
     val chromeShowAutoScrollIcon: Boolean = true
-)
+) {
+    /**
+     * BUG-READER-01: Unified effective total pages.
+     * Returns accumulated visual pages for EPUB when available, otherwise raw totalPages.
+     * All UI components should use this instead of accessing totalPages directly.
+     */
+    val effectiveTotalPages: Int
+        get() = if (epubAccumulatedTotalPages > 0) epubAccumulatedTotalPages else totalPages.coerceAtLeast(1)
+
+    /**
+     * BUG-READER-01: Unified effective current page.
+     * Returns accumulated current page for EPUB when available, otherwise raw currentPage.
+     */
+    val effectiveCurrentPage: Int
+        get() = if (epubAccumulatedTotalPages > 0) epubAccumulatedCurrentPage else currentPage.coerceAtLeast(0)
+
+    /**
+     * BUG-READER-01: Unified reading progress (0..100).
+     * All UI components should use this for consistent progress display.
+     */
+    val effectiveProgressPercent: Int
+        get() {
+            val total = effectiveTotalPages
+            val current = effectiveCurrentPage
+            return if (total > 1) (current.toFloat() / (total - 1) * 100f).toInt().coerceIn(0, 100) else 0
+        }
+}
 
 data class SelectedTextTranslationState(
     val originalText: String,

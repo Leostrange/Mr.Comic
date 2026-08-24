@@ -129,7 +129,7 @@ fun ReaderScreen(
         readerMaterialColorScheme(
             isTextReader = effectiveIsTextReader,
             readerPreset = activeReaderPreset,
-            textColorScheme = uiState.textColorScheme,
+            textColorScheme = if (effectiveIsTextReader) uiState.textColorScheme else uiState.graphicColorScheme,
             fallback = inheritedColorScheme
         )
     }
@@ -199,20 +199,23 @@ fun ReaderScreen(
             currentPage = uiState.currentPage
         )
     }
+    // BUG-READER-01: Use unified page count from ReaderUiState.
+    val effectiveTotalPages = uiState.effectiveTotalPages
+    val effectiveCurrentPage = uiState.effectiveCurrentPage
     fun resolveOverlayLine(left: String, center: String, right: String) =
         resolveReaderInfoOverlayLine(
             startSlot = left, centerSlot = center, endSlot = right,
             comicTitle = uiState.comic?.title, chapterTitle = currentChapterTitle,
-            clockText = clockText, currentPage = uiState.currentPage,
-            totalPages = uiState.totalPages, readingMode = uiState.readingMode
+            clockText = clockText, currentPage = effectiveCurrentPage,
+            totalPages = effectiveTotalPages, readingMode = uiState.readingMode
         )
     val headerOverlayLine = remember(
         uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot,
-        uiState.comic?.title, currentChapterTitle, clockText, uiState.currentPage, uiState.totalPages, uiState.readingMode
+        uiState.comic?.title, currentChapterTitle, clockText, effectiveCurrentPage, effectiveTotalPages, uiState.readingMode
     ) { resolveOverlayLine(uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot) }
     val footerOverlayLine = remember(
         uiState.footerLeftSlot, uiState.footerCenterSlot, uiState.footerRightSlot,
-        uiState.comic?.title, currentChapterTitle, clockText, uiState.currentPage, uiState.totalPages, uiState.readingMode
+        uiState.comic?.title, currentChapterTitle, clockText, effectiveCurrentPage, effectiveTotalPages, uiState.readingMode
     ) { resolveOverlayLine(uiState.footerLeftSlot, uiState.footerCenterSlot, uiState.footerRightSlot) }
     val showHeaderFooterOverlay = !uiState.chromeAutoHideEnabled &&
         uiState.chromeState == ReaderChromeState.HIDDEN &&
@@ -239,11 +242,15 @@ fun ReaderScreen(
     var baselineBottomChromeReservePx by remember {
         mutableIntStateOf(0)
     }
+    // BUG-PAGED-02: Use symmetric system inset calculation for top and bottom.
     val systemTopInsetPx = maxOf(
         WindowInsets.statusBars.getTop(density),
         WindowInsets.displayCutout.getTop(density)
     )
-    val systemBottomInsetPx = WindowInsets.navigationBars.getBottom(density)
+    val systemBottomInsetPx = maxOf(
+        WindowInsets.navigationBars.getBottom(density),
+        WindowInsets.displayCutout.getBottom(density)
+    )
     val textSentenceInsetPx = with(density) {
         (uiState.textFontSize.sp.toPx() * uiState.textLineHeight)
             .roundToInt()
@@ -343,6 +350,7 @@ fun ReaderScreen(
         densityScale = density.density.takeIf { it > 0f } ?: 1f
     )
 
+    var lastPageTurnTimeMs by remember { mutableLongStateOf(0L) }
     val handleTapZoneAction: (ReaderTapZoneAction) -> Unit = remember(
         tapZoneLayout,
         uiState.currentPage,
@@ -350,8 +358,20 @@ fun ReaderScreen(
     ) {
         { action ->
             when (action) {
-                ReaderTapZoneAction.PREVIOUS_PAGE -> viewModel.navigationController.prevPage()
-                ReaderTapZoneAction.NEXT_PAGE -> viewModel.navigationController.nextPage()
+                ReaderTapZoneAction.PREVIOUS_PAGE -> {
+                    val now = System.currentTimeMillis()
+                    if (now - lastPageTurnTimeMs >= 300) {
+                        lastPageTurnTimeMs = now
+                        viewModel.navigationController.prevPage()
+                    }
+                }
+                ReaderTapZoneAction.NEXT_PAGE -> {
+                    val now = System.currentTimeMillis()
+                    if (now - lastPageTurnTimeMs >= 300) {
+                        lastPageTurnTimeMs = now
+                        viewModel.navigationController.nextPage()
+                    }
+                }
                 ReaderTapZoneAction.MENU,
                 ReaderTapZoneAction.TOGGLE_UI -> {
                     showBrightnessRow = false
@@ -523,18 +543,12 @@ fun ReaderScreen(
                     } else {
                         Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
                     }
-                    val autoScrollDockHeight = readerAutoScrollDockHeightDp(
-                        containerKind = uiState.readerContainerKind,
-                        chromeHidden = uiState.chromeState == ReaderChromeState.HIDDEN,
-                        enabled = uiState.autoScrollEnabled,
-                    ).dp
                     val textReaderModifier = Modifier
                         .fillMaxSize()
                         .then(textSystemInsetsModifier)
                         .padding(
                             vertical = with(density) { textSentenceInsetPx.toDp() }
                         )
-                        .padding(bottom = autoScrollDockHeight)
                     val textChromeLayoutInsets = resolveReaderTextChromeLayoutInsets(
                         measuredTopCssPx = viewportGeometry.chromeTopInsetCssPx,
                         measuredBottomCssPx = viewportGeometry.chromeBottomInsetCssPx,
@@ -551,7 +565,6 @@ fun ReaderScreen(
                                     Modifier.windowInsetsPadding(WindowInsets.safeDrawing)
                             }
                         )
-                        .padding(bottom = autoScrollDockHeight)
 
                     ReaderContainerHost(
                         uiState = uiState,

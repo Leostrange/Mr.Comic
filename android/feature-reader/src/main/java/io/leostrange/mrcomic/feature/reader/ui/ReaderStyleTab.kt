@@ -232,6 +232,24 @@ internal fun ReaderStyleTab(
                     )
                 }
             }
+            item { ReaderSectionTitle(readerText.colorSchemeTitle) }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(
+                        listOf(
+                            "DAY" to readerText.day,
+                            "SEPIA" to readerText.sepia,
+                            "NIGHT" to readerText.night
+                        )
+                    ) { (id, label) ->
+                        ReaderChoiceChip(
+                            selected = uiState.graphicColorScheme == id,
+                            onClick = { onColorSchemeChange(id) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
         } else {
             item { ReaderSectionTitle(readerText.quickPresetsTitle) }
             item {
@@ -277,55 +295,55 @@ internal fun ReaderStyleTab(
                 }
             }
         }
-        item {
-            Text(
-                text = readerSavedStylesHint(strings.languageCode),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        items(
-            uiState.readerStylePresetEntries.sortedWith(
-                compareByDescending<ReaderStylePresetEntry> { entry ->
-                    entry.snapshot.matchesUiState(uiState)
-                }.thenByDescending { entry ->
-                    entry.snapshot.displayName?.isNotBlank() == true
-                }.thenBy { entry ->
-                    entry.snapshot.displayName ?: entry.id
-                }
-            ),
-            key = { "reader_style_${it.id}" }
-        ) { entry ->
-            val active = entry.snapshot.matchesUiState(uiState)
-            ReaderStylePresetListItem(
-                slot = ReaderStylePresetSlot(
-                    index = uiState.readerStylePresetEntries.indexOfFirst { it.id == entry.id } + 1,
-                    serialized = entry.snapshot.serialize()
+        if (isTextReader) {
+            item {
+                Text(
+                    text = readerSavedStylesHint(strings.languageCode),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            items(
+                uiState.readerStylePresetEntries.sortedWith(
+                    compareByDescending<ReaderStylePresetEntry> { entry ->
+                        entry.snapshot.matchesUiState(uiState)
+                    }.thenByDescending { entry ->
+                        entry.snapshot.displayName?.isNotBlank() == true
+                    }.thenBy { entry ->
+                        entry.snapshot.displayName ?: entry.id
+                    }
                 ),
-                language = strings.languageCode,
-                isActive = active,
-                onSave = { onOverwriteReaderStylePreset(entry.id) },
-                onApply = { onApplyReaderStylePreset(entry.id) },
-                onClear = { onDeleteReaderStylePreset(entry.id) }
-            )
-        }
-        item { ReaderSectionTitle(readerText.colorSchemeTitle) }
-        item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(listOf(
-                    "DAY" to readerText.day,
-                    "SEPIA" to readerText.sepia,
-                    "NIGHT" to readerText.night
-                )) { (id, label) ->
-                    ReaderChoiceChip(
-                        selected = uiState.textColorScheme == id,
-                        onClick = { onColorSchemeChange(id) },
-                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
-                    )
+                key = { "reader_style_${it.id}" }
+            ) { entry ->
+                val active = entry.snapshot.matchesUiState(uiState)
+                ReaderStylePresetListItem(
+                    slot = ReaderStylePresetSlot(
+                        index = uiState.readerStylePresetEntries.indexOfFirst { it.id == entry.id } + 1,
+                        serialized = entry.snapshot.serialize()
+                    ),
+                    language = strings.languageCode,
+                    isActive = active,
+                    onSave = { onOverwriteReaderStylePreset(entry.id) },
+                    onApply = { onApplyReaderStylePreset(entry.id) },
+                    onClear = { onDeleteReaderStylePreset(entry.id) }
+                )
+            }
+            item { ReaderSectionTitle(readerText.colorSchemeTitle) }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(listOf(
+                        "DAY" to readerText.day,
+                        "SEPIA" to readerText.sepia,
+                        "NIGHT" to readerText.night
+                    )) { (id, label) ->
+                        ReaderChoiceChip(
+                            selected = uiState.textColorScheme == id,
+                            onClick = { onColorSchemeChange(id) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
                 }
             }
-        }
-        if (isTextReader) {
             item { ReaderSectionTitle(readerText.fontTitle) }
             item {
                 ReaderOutlinedActionButton(

@@ -68,10 +68,20 @@ internal fun textSettingsJs(
     } else {
         ""
     }
-    val pagedTocLinkCss = if (pagedMode) {
-        "body table a[href],body table[summary] a[href],body #pgepubid00002 a[href]{pointer-events:none !important;cursor:default !important;-webkit-tap-highlight-color:transparent !important;text-decoration:none !important;color:inherit !important;}"
+    val paragraphAlignmentCss = if (effectiveAlign == "justify") {
+        "body:not([data-mrcomic-preserve-layout='true']) p:not([align]):not(.center):not(.right):not(.left)," +
+            "body:not([data-mrcomic-preserve-layout='true']) div.paragraph," +
+            "body:not([data-mrcomic-preserve-layout='true']) li:not([align])," +
+            "body:not([data-mrcomic-preserve-layout='true']) blockquote:not([align])," +
+            "body:not([data-mrcomic-preserve-layout='true']) dd:not([align])" +
+            "{text-align:justify !important;text-align-last:start !important;hyphens:auto !important;-webkit-hyphens:auto !important;}"
     } else {
-        ""
+        "body:not([data-mrcomic-preserve-layout='true']) p:not([align]):not(.center):not(.right):not(.left)," +
+            "body:not([data-mrcomic-preserve-layout='true']) div.paragraph," +
+            "body:not([data-mrcomic-preserve-layout='true']) li:not([align])," +
+            "body:not([data-mrcomic-preserve-layout='true']) blockquote:not([align])," +
+            "body:not([data-mrcomic-preserve-layout='true']) dd:not([align])" +
+            "{text-align:$effectiveAlign !important;text-align-last:auto !important;}"
     }
     val selectionBackgroundColor = readerSelectionOverlayColor(
         color = resolvedAccentColor,
@@ -102,6 +112,9 @@ internal fun textSettingsJs(
           "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) div,body:not([data-mrcomic-preserve-layout='true']) li{width:auto !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) p,body:not([data-mrcomic-preserve-layout='true']) li,body:not([data-mrcomic-preserve-layout='true']) blockquote,body:not([data-mrcomic-preserve-layout='true']) dd{orphans:2 !important;widows:2 !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) h1,body:not([data-mrcomic-preserve-layout='true']) h2,body:not([data-mrcomic-preserve-layout='true']) h3,body:not([data-mrcomic-preserve-layout='true']) h4,body:not([data-mrcomic-preserve-layout='true']) h5,body:not([data-mrcomic-preserve-layout='true']) h6{page-break-after:avoid !important;break-after:avoid-page !important;page-break-inside:avoid !important;break-inside:avoid !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true'])>h1:first-child,body:not([data-mrcomic-preserve-layout='true']) .mc-title-block,body:not([data-mrcomic-preserve-layout='true']) .titlepage h1,body:not([data-mrcomic-preserve-layout='true']) .title-page h1{width:auto !important;max-width:100% !important;font-size:clamp(1.6em,10vw,2.6em) !important;line-height:1.2 !important;white-space:normal !important;overflow-wrap:anywhere !important;word-break:normal !important;text-align:center !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) nav.toc,body:not([data-mrcomic-preserve-layout='true']) .toc,body:not([data-mrcomic-preserve-layout='true']) .table-of-contents{display:table !important;width:auto !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important;text-align:start !important;}"+
+          "body:not([data-mrcomic-preserve-layout='true']) nav.toc table,body:not([data-mrcomic-preserve-layout='true']) .toc table,body:not([data-mrcomic-preserve-layout='true']) .table-of-contents table{width:auto !important;max-width:100% !important;margin-left:auto !important;margin-right:auto !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) blockquote,body:not([data-mrcomic-preserve-layout='true']) figure,body:not([data-mrcomic-preserve-layout='true']) table,body:not([data-mrcomic-preserve-layout='true']) dt,body:not([data-mrcomic-preserve-layout='true']) dd{page-break-inside:avoid !important;break-inside:avoid !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) .mrcomic-footnote-block{break-inside:avoid !important;page-break-inside:avoid !important;}"+
           "body:not([data-mrcomic-preserve-layout='true']) img,body:not([data-mrcomic-preserve-layout='true']) video,body:not([data-mrcomic-preserve-layout='true']) canvas,body:not([data-mrcomic-preserve-layout='true']) figure,body:not([data-mrcomic-preserve-layout='true']) table{page-break-inside:avoid !important;break-inside:avoid !important;}"+
@@ -132,7 +145,7 @@ internal fun textSettingsJs(
            "a.fn,a.fnt,a.footnote-ref,a.noteref,a.doc-noteref,a.doc-fn,a.doc-backref,a.backnote,a.supnote,a.text-fn,a.pagenote,a.annref,a.annotation,a[role='doc-noteref'],a[role='noteref'],a[role='footnote'],a[role='doc-fn'],a[role='doc-backref'],a[epub\\\\:type~='noteref'],a[epub\\\\:type~='footnote'],a[epub\\\\:type~='annref'],a[epub\\\\:type~='annotation'],a[data-footnote-id],a[data-footnote],a[data-type='annotation'],a[href*='FbAutId_'],a[href*='#FbAutId_'],a[href^='fbanchor://'],a[href^='noteref:'],a[href^='#fn'],a[href^='#fnt'],a[href^='#note'],a[href^='#footnote'],a[href^='#endnote'],a[href^='#rearnote'],a[href^='#text-fn'],a[href^='#pagenote'],a[href^='#ann'],a[href^='#annotation'],a[href^='#sup'],a[href^='#back'],a[href^='#docx-footnote'],a[href*='filepos'],a[href*='#filepos']{color:$noteColor !important;text-decoration:none !important;font-weight:bold !important;}"+
           "a.fn *,a.fnt *,a.footnote-ref *,a.noteref *,a.doc-noteref *,a.doc-fn *,a.doc-backref *,a.backnote *,a.supnote *,a.text-fn *,a.pagenote *,a.annref *,a.annotation *,a[role='doc-noteref'] *,a[role='noteref'] *,a[role='footnote'] *,a[role='doc-fn'] *,a[role='doc-backref'] *,a[epub\\\\:type~='noteref'] *,a[epub\\\\:type~='footnote'] *,a[epub\\\\:type~='annref'] *,a[epub\\\\:type~='annotation'] *,a[data-footnote-id] *,a[data-footnote] *,a[data-type='annotation'] *,a[href*='FbAutId_'] *,a[href*='#FbAutId_'] *,a[href^='fbanchor://'] *,a[href^='noteref:'] *,a[href^='#fn'] *,a[href^='#fnt'] *,a[href^='#note'] *,a[href^='#footnote'] *,a[href^='#endnote'] *,a[href^='#rearnote'] *,a[href^='#text-fn'] *,a[href^='#pagenote'] *,a[href^='#ann'] *,a[href^='#annotation'] *,a[href^='#sup'] *,a[href^='#back'] *,a[href^='#docx-footnote'] *,a[href*='filepos'] *,a[href*='#filepos'] *{color:$noteColor !important;}"+
           ".note-num,.footnote-label{color:$noteColor !important;}"+
-          "$pagedTocLinkCss"+
+          "$paragraphAlignmentCss"+
           "$rtlBodyCss";
         if(!themeStyle.parentNode){(__mrcomicHead||document.head||document.documentElement).appendChild(themeStyle);}
     """.trimIndent()
@@ -303,12 +316,6 @@ internal fun textSettingsJs(
         document.body.style.setProperty('text-align-last','auto','important');
         document.body.style.setProperty('padding-top','0px','important');
         document.body.style.setProperty('padding-bottom','0px','important');
-        try{
-          Array.prototype.forEach.call(document.body.querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6'),function(el){
-            el.style.setProperty('text-align','$effectiveAlign','important');
-            el.style.setProperty('text-align-last','auto','important');
-          });
-        }catch(e){}
         try{window.scrollTo(0,0);document.documentElement.scrollTop=0;(document.scrollingElement||document.documentElement).scrollTop=0;}catch(e){}
         """.trimIndent()
     } else {

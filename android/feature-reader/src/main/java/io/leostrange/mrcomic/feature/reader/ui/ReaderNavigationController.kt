@@ -84,17 +84,25 @@ internal class ReaderNavigationController(
 
     fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1, charOffset: Int = -1) {
         val current = _uiState.value.currentPage
-        if (sectionIndex >= 0 && sectionIndex != current) {
-            _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
-            navigateTo(sectionIndex, progressSource = ReaderNavigationProgressSource.JUMP)
+        val targetSection = if (sectionIndex >= 0) sectionIndex else page
+        // BUG-READER-07: Normalize anchor — empty string should be treated as null
+        // to avoid setting pendingScrollToAnchor to a blank value that gets filtered out.
+        val normalizedAnchor = anchorId.takeIf { it.isNotBlank() }
+        if (targetSection != current) {
+            _uiState.update { it.copy(pendingScrollToAnchor = normalizedAnchor) }
+            navigateTo(targetSection, progressSource = ReaderNavigationProgressSource.JUMP)
             return
         }
-        if (page == current) {
-            _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
-            return
+        // Same section: reset sub-page to start and apply anchor scroll.
+        // This handles the case where the user is mid-section and taps a TOC entry
+        // that points to the same section — we still need to scroll to the anchor.
+        _uiState.update {
+            it.copy(
+                pendingScrollToAnchor = normalizedAnchor,
+                sectionCurrentPage = 0,
+                sectionCharacterOffset = if (charOffset >= 0) charOffset else 0
+            )
         }
-        _uiState.update { it.copy(pendingScrollToAnchor = anchorId) }
-        navigateTo(page, progressSource = ReaderNavigationProgressSource.JUMP)
     }
 
     fun nextPage() = navigateTo(

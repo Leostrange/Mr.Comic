@@ -72,7 +72,8 @@ internal fun buildReaderDocumentCss(
         append("""
     p, div.paragraph {
       margin: var(--mrcomic-paragraph-spacing) 0;
-      ${if (!textAlignOnBody) "text-align: var(--mrcomic-text-align); " else ""}text-indent: 1.5em;
+      ${if (!textAlignOnBody) "text-align: var(--mrcomic-text-align); " else ""}text-align-last: start;
+      text-indent: 1.5em;
     }
     p:first-child,
     div.paragraph:first-child,
@@ -87,6 +88,11 @@ internal fun buildReaderDocumentCss(
       font-weight: var(--mrcomic-heading-font-weight);
       line-height: var(--mrcomic-heading-line-height);
       margin: var(--mrcomic-heading-margin);
+      overflow-wrap: break-word;
+      word-break: normal;
+      width: auto !important;
+      max-width: 100% !important;
+      box-sizing: border-box;
       $hyphenDecl
     }
     h1 { font-size: clamp(1.1em, 1.7em, 2rem); letter-spacing: 0.04em; text-transform: uppercase; }
@@ -97,7 +103,9 @@ internal fun buildReaderDocumentCss(
     }
 
     append("""
-    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: var(--mrcomic-img-margin); page-break-inside: avoid; break-inside: avoid; }
+    img { width: auto; max-width: 100% !important; height: auto !important; display: block; margin: var(--mrcomic-img-margin); page-break-inside: avoid; break-inside: avoid; box-sizing: border-box; }
+    table { max-width: 100% !important; box-sizing: border-box; }
+    hr { max-width: 100%; box-sizing: border-box; }
     a[href] { -webkit-user-select: text; user-select: text; }
     """.trimIndent())
 
@@ -137,6 +145,26 @@ internal fun buildReaderDocumentCss(
     center, [align="center"], .center { text-align: center; text-indent: 0; }
     [align="right"], .right { text-align: right; text-indent: 0; }
     [align="left"], .left { text-align: left; }
+    body > h1:first-child, .mc-title-block, .titlepage h1, .title-page h1 {
+      width: auto !important;
+      max-width: 100% !important;
+      font-size: clamp(1.6em, 10vw, 2.6em) !important;
+      line-height: 1.2 !important;
+      text-align: center !important;
+      text-indent: 0 !important;
+      overflow-wrap: anywhere !important;
+      word-break: normal !important;
+      white-space: normal !important;
+    }
+    nav.toc, .toc, .table-of-contents {
+      display: table;
+      width: auto;
+      max-width: 100%;
+      margin-inline: auto;
+      text-align: start;
+      text-indent: 0;
+    }
+    nav.toc table, .toc table, .table-of-contents table { width: auto; max-width: 100%; margin-inline: auto; }
     """.trimIndent())
     }
 

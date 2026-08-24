@@ -84,7 +84,7 @@ internal fun TextFormatReader.markupPages(
 
 internal fun TextFormatReader.splitMarkupPages(raw: String): List<String> {
     val delimiter = Regex(
-        """<(?:mbp:pagebreak|pagebreak|hr)\b[^>]*(?:/?>|>.*?</(?:mbp:pagebreak|pagebreak|hr)>)""",
+        """<(?:mbp:pagebreak|pagebreak)\b[^>]*(?:/?>|>.*?</(?:mbp:pagebreak|pagebreak)>)|<hr\b(?=[^>]*(?:data-mrcomic-pagebreak\s*=\s*["']?true|class\s*=\s*["'][^"']*mrcomic-pagebreak))[^>]*/?>""",
         setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE)
     )
     return raw.split(delimiter)
@@ -181,7 +181,7 @@ internal fun TextFormatReader.paginateHtmlDocument(
         title.isNotBlank() &&
         childBlocks.none { it.contains(title, ignoreCase = true) }
     ) {
-        childBlocks.add(0, "<h1>${htmlEscapeText(title)}</h1>")
+        childBlocks.add(0, "<h1 class=\"mc-title-block\">${htmlEscapeText(title)}</h1>")
     }
 
     if (childBlocks.isEmpty()) {

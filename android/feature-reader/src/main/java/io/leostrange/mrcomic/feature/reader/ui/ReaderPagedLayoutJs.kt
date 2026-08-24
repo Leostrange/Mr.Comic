@@ -118,7 +118,7 @@ internal fun readerPagedCoreJs(
     viewport.style.boxSizing='border-box';
     viewport.style.paddingTop='0px';
     viewport.style.paddingBottom='0px';
-    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-Math.max(4,lineHeight*0.18));
+    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-Math.max(6,Math.ceil(lineHeight*0.25)));
     var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
     var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
     root.style.setProperty('--mrcomic-page-visible-height',usableHeight+'px');
@@ -327,7 +327,7 @@ internal fun readerPagedCoreJs(
       while(current<contentHeight&&guard++<2000){
         var pageTopInset=pageInsetTop;
         var pageBottomInset=pageInsetBottom;
-        var pageBudget=Math.max(lineHeight*3,clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom-Math.max(2,lineHeight*0.12));
+        var pageBudget=Math.max(lineHeight*3,clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom-Math.max(4,Math.ceil(lineHeight*0.20)));
         if(pages.length===0&&current<=firstPageOffset+1&&mediaFirstPageBottom>current+lineHeight*2){
           var nextStartAfterMedia=contentHeight;
           for(var frontIdx=0;frontIdx<blockStarts.length;frontIdx++){
@@ -551,13 +551,13 @@ internal fun readerPagedCoreJs(
         viewport.appendChild(shield);
       }
       var isMediaPage=!!page.mediaPage;
-      // Keep the shield one pixel below the measured content boundary. Starting
+      // Keep the shield two pixels below the measured content boundary. Starting
       // inside that boundary clips descenders and can expose a partial final line.
       var shieldTop=Math.max(
         0,
         Math.min(
           visibleHeight,
-          Math.max(0,rawVisibleHeight+1)
+          Math.max(0,rawVisibleHeight+2)
         )
       );
       var rootStyle=window.getComputedStyle?window.getComputedStyle(document.documentElement):null;

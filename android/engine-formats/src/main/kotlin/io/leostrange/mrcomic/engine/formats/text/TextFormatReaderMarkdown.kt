@@ -264,7 +264,7 @@ internal fun TextFormatReader.processTechnicalMarkdown(raw: String): List<String
 
         val headerHtml = buildString {
             if (title.isNotBlank()) {
-                append("<h1>${htmlEscapeText(title)}</h1>")
+                append("<h1 class=\"mc-title-block\">${htmlEscapeText(title)}</h1>")
             }
             if (author.isNotBlank()) {
                 append("<p><strong>Author:</strong> ${htmlEscapeText(author)}</p>")
