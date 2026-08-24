@@ -1,25 +1,52 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryAssetCatalog
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryInstallInfo
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Language metadata
+// ─────────────────────────────────────────────────────────────────────────────
+
+private val languageEmojis = mapOf(
+    "en" to "\uD83C\uDDEC\uD83C\uDDE7", // 🇬🇧
+    "fr" to "\uD83C\uDDEB\uD83C\uDDF7", // 🇫🇷
+    "it" to "\uD83C\uDDEE\uD83C\uDDF9", // 🇮🇹
+    "ja" to "\uD83C\uDDEF\uD83C\uDDF5", // 🇯🇵
+    "ko" to "\uD83C\uDDF0\uD83C\uDDF7", // 🇰🇷
+    "pl" to "\uD83C\uDDF5\uD83C\uDDF1", // 🇵🇱
+    "pt" to "\uD83C\uDDF5\uD83C\uDDF9", // 🇵🇹
+    "ru" to "\uD83C\uDDF7\uD83C\uDDFA", // 🇷🇺
+    "tr" to "\uD83C\uDDF9\uD83C\uDDF7", // 🇹🇷
+    "zh" to "\uD83C\uDDE8\uD83C\uDDF3", // 🇨🇳
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main section composable
+// ─────────────────────────────────────────────────────────────────────────────
+
 /**
- * Section for managing dictionary downloads.
- * Allows users to download dictionary databases on demand.
+ * Dictionary management section — full rewrite with M3 cards, per-language
+ * cards, download/delete/export, SAF import/export, zip backup.
  */
 @Composable
 internal fun DictionarySection(
@@ -28,249 +55,370 @@ internal fun DictionarySection(
     viewModel: SettingsViewModel,
     modifier: Modifier = Modifier
 ) {
-    val language = strings.languageCode
-    val downloadState by viewModel.dictionaryDownloadState.collectAsStateWithLifecycle()
-    
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item {
-            SettingsCompactSummaryCard(
-                title = dictionarySectionTitle(language),
-                hint = dictionarySectionHint(language),
-                items = listOf(
-                    dictionaryStatusLabel(language) to "10",
-                    dictionaryDownloadedLabel(language) to "${downloadState.downloadedLanguages.size}/10"
-                )
-            )
-        }
-        item {
-            DictionaryDownloadCard(
-                downloadState = downloadState,
+    val dictItems by viewModel.dictionaryItems.collectAsStateWithLifecycle()
+    val operationState by viewModel.dictionaryOperationState.collectAsStateWithLifecycle()
+    val pendingDownload by viewModel.pendingDownloadLanguage.collectAsStateWithLifecycle()
+    val needsLangSelection by viewModel.needsImportLanguageSelection.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+
+    // ── SAF launchers ────────────────────────────────────────────────────
+
+    val exportAllLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        viewModel.exportAllDictionaries(uri, context.contentResolver)
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        viewModel.importDictionaryFromUri(uri, context.contentResolver)
+    }
+
+    // ── Summary counts ───────────────────────────────────────────────────
+
+    val installedCount = dictItems.count { it.sizeBytes > 0L }
+    val totalSizeBytes = dictItems.sumOf { it.sizeBytes }
+    val totalSizeFormatted = formatDictionarySize(totalSizeBytes)
+
+    // ── Language picker dialog for single-file import ─────────────────────
+
+    if (needsLangSelection) {
+        var showLangPicker by remember { mutableStateOf(true) }
+        if (showLangPicker) {
+            ImportLanguagePickerDialog(
                 strings = strings,
-                viewModel = viewModel
+                items = dictItems,
+                onSelect = { lang ->
+                    showLangPicker = false
+                    viewModel.completePendingImport(lang)
+                },
+                onDismiss = {
+                    showLangPicker = false
+                    viewModel.cancelPendingImport()
+                }
             )
         }
-        item { Spacer(Modifier.height(16.dp)) }
     }
-}
 
-@Composable
-private fun DictionaryDownloadCard(
-    downloadState: DictionaryDownloadState,
-    strings: AppStrings,
-    viewModel: SettingsViewModel
-) {
-    val language = strings.languageCode
-    val isDownloading = downloadState.isDownloading
-    
-    SettingsCard(title = dictionaryDownloadTitle(language)) {
-        Text(
-            text = dictionaryDownloadDescription(language),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(12.dp))
-        
-        if (isDownloading) {
-            // Show overall progress
-            val totalProgress = downloadState.progress.values.average().toInt()
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    CircularProgressIndicator(
-                        progress = { totalProgress / 100f },
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.dp
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = downloadState.currentLanguage?.let { lang ->
-                            "${languageNames[lang] ?: lang}... $totalProgress%"
-                        } ?: "Downloading...",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+    // ── Download confirmation dialog ──────────────────────────────────────
+
+    pendingDownload?.let { lang ->
+        val config = DictionaryAssetCatalog.configForLanguage(lang)
+        val sizeStr = formatDictionarySize(config?.approxDownloadBytes ?: 0L)
+        val displayName = dictDisplayName(viewModel, lang)
+        AlertDialog(
+            onDismissRequest = { viewModel.cancelPendingDownload() },
+            title = { Text(strings.dictConfirmDownloadTitle) },
+            text = { Text(strings.dictConfirmDownloadMessage.format(displayName, sizeStr)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmPendingDownload() }) {
+                    Text(strings.dictBtnDownload)
                 }
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { totalProgress / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.cancelPendingDownload() }) {
+                    Text(strings.cancel)
+                }
             }
-        } else {
-            MrComicButton(
-                onClick = { viewModel.downloadAllDictionaries() },
-                enabled = !isDownloading,
-                modifier = Modifier.fillMaxWidth(),
-                variant = MrComicButtonVariant.Tonal
+        )
+    }
+
+    // ── Main content ──────────────────────────────────────────────────────
+
+    Column(
+        modifier = modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        // Summary card
+        SettingsCompactSummaryCard(
+            title = strings.dictSectionTitle,
+            hint = strings.dictSectionHint,
+            items = listOf(
+                strings.dictInstalledLabel to "$installedCount / ${dictItems.size}",
+                strings.dictTotalSizeLabel to totalSizeFormatted
+            )
+        )
+
+        // Toolbar: Export all + Import
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(
+                onClick = { exportAllLauncher.launch("mrcomic_dictionaries.zip") },
+                enabled = installedCount > 0 && operationState is DictionaryOperationState.Idle,
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    Icons.Default.CloudDownload,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
+                Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(dictionaryDownloadAllButton(language))
+                Text(strings.dictBtnExportAll, style = MaterialTheme.typography.labelMedium)
+            }
+            OutlinedButton(
+                onClick = {
+                    importLauncher.launch(
+                        arrayOf(
+                            "application/zip",
+                            "application/gzip",
+                            "application/x-gzip",
+                            "application/octet-stream",
+                            "application/x-sqlite3",
+                            "*/*"
+                        )
+                    )
+                },
+                enabled = operationState is DictionaryOperationState.Idle,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(strings.dictBtnImport, style = MaterialTheme.typography.labelMedium)
             }
         }
-        
-        Spacer(Modifier.height(12.dp))
-        
-        // List of downloaded dictionaries
-        DictionaryStatusList(
-            downloadedLanguages = downloadState.downloadedLanguages,
-            progressMap = downloadState.progress,
-            isDownloading = isDownloading,
-            language = language
-        )
+
+        // Language cards (plain Column — only 10 items, no laziness needed)
+        dictItems.forEach { info ->
+            DictionaryLanguageCard(
+                info = info,
+                strings = strings,
+                viewModel = viewModel,
+                operationState = operationState,
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
     }
 }
 
-private val languageNames = mapOf(
-    "en" to "English",
-    "fr" to "Français",
-    "it" to "Italiano",
-    "ja" to "日本語",
-    "ko" to "한국어",
-    "pl" to "Polski",
-    "pt" to "Português",
-    "ru" to "Русский",
-    "tr" to "Türkçe",
-    "zh" to "中文"
-)
-
-private val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-language card
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun DictionaryStatusList(
-    downloadedLanguages: Set<String>,
-    progressMap: Map<String, Int>,
-    isDownloading: Boolean,
-    language: String
+private fun DictionaryLanguageCard(
+    info: DictionaryInstallInfo,
+    strings: AppStrings,
+    viewModel: SettingsViewModel,
+    operationState: DictionaryOperationState,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        allLanguages.forEach { lang ->
-            val isDownloaded = lang in downloadedLanguages
-            val progress = progressMap[lang]
-            val isCurrentLang = isDownloading && progress != null
-            
+    val context = LocalContext.current
+    val isInstalled = info.sizeBytes > 0L
+    val isDownloadingThis = operationState is DictionaryOperationState.Downloading && operationState.language == info.language
+    val isAnyOperationActive = operationState !is DictionaryOperationState.Idle
+
+    val displayName = dictDisplayName(viewModel, info.language)
+    val emoji = languageEmojis[info.language] ?: "🌐"
+
+    // Export launcher for this language
+    val langCode = info.language
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/x-sqlite3")
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        viewModel.exportDictionary(langCode, uri, context.contentResolver)
+    }
+
+    MrComicCardSurface(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Header row: emoji + name + status chip
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 2.dp)
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = when {
-                        isDownloaded -> Icons.Default.Check
-                        isCurrentLang -> Icons.Default.CloudDownload
-                        else -> Icons.Default.Language
-                    },
-                    contentDescription = null,
-                    tint = when {
-                        isDownloaded -> MaterialTheme.colorScheme.primary
-                        isCurrentLang -> MaterialTheme.colorScheme.tertiary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = languageNames[lang] ?: lang,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f)
+                    text = emoji,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(end = 8.dp)
                 )
-                if (isDownloaded) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "✓",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        text = displayName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
                     )
-                } else if (isCurrentLang) {
+                    // Size info
+                    val sizeText = if (isInstalled) {
+                        formatDictionarySize(info.sizeBytes)
+                    } else {
+                        val approx = DictionaryAssetCatalog.configForLanguage(info.language)?.approxDownloadBytes ?: 0L
+                        "~${formatDictionarySize(approx)}"
+                    }
                     Text(
-                        text = "${progress}%",
+                        text = sizeText,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // Status chip
+                DictionaryStatusChip(
+                    info = info,
+                    strings = strings
+                )
+            }
+
+            // Progress indicator when downloading
+            if (isDownloadingThis) {
+                val progress = (operationState as DictionaryOperationState.Downloading).progress
+                Column {
+                    LinearProgressIndicator(
+                        progress = { progress / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        text = "$progress%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
             }
-            // Show progress bar for current language
-            if (isCurrentLang) {
-                LinearProgressIndicator(
-                    progress = { (progress ?: 0) / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp)
-                        .padding(start = 24.dp),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
+
+            // Action buttons row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
+            ) {
+                if (!isInstalled) {
+                    // Download button
+                    IconButton(
+                        onClick = { viewModel.requestDownload(info.language) },
+                        enabled = !isAnyOperationActive,
+                    ) {
+                        Icon(Icons.Default.CloudDownload, contentDescription = strings.dictBtnDownload)
+                    }
+                } else {
+                    // Delete button (not for bundled-only)
+                    if (!info.isBundled) {
+                        IconButton(
+                            onClick = { viewModel.deleteDictionary(info.language) },
+                            enabled = !isAnyOperationActive,
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = strings.dictBtnDelete, tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    // Export button
+                    IconButton(
+                        onClick = { exportLauncher.launch("dictionary_${info.language}.dbpack") },
+                        enabled = !isAnyOperationActive,
+                    ) {
+                        Icon(Icons.Default.FileDownload, contentDescription = strings.dictBtnExport)
+                    }
+                }
             }
         }
     }
 }
 
-// Text functions for i18n
-private fun dictionarySectionTitle(language: String): String = when (language) {
-    "en" -> "Dictionaries"
-    "ja" -> "辞書"
-    "zh" -> "词典"
-    "ko" -> "사전"
-    else -> "Словари"
+// ─────────────────────────────────────────────────────────────────────────────
+// Status chip
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun DictionaryStatusChip(
+    info: DictionaryInstallInfo,
+    strings: AppStrings
+) {
+    val (label, color) = when {
+        info.sizeBytes > 0L && info.isBundled -> strings.dictStatusBundled to MaterialTheme.colorScheme.tertiaryContainer
+        info.sizeBytes > 0L -> strings.dictStatusInstalled to MaterialTheme.colorScheme.primaryContainer
+        else -> strings.dictStatusNotInstalled to MaterialTheme.colorScheme.surfaceVariant
+    }
+    val onColor = when {
+        info.sizeBytes > 0L && info.isBundled -> MaterialTheme.colorScheme.onTertiaryContainer
+        info.sizeBytes > 0L -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = color,
+        contentColor = onColor
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
 }
 
-private fun dictionarySectionHint(language: String): String = when (language) {
-    "en" -> "Download offline dictionaries for translation and lookup."
-    "ja" -> "翻訳・辞書検索用のオフライン辞書をダウンロード。"
-    "zh" -> "下载离线词典用于翻译和查询。"
-    "ko" -> "번역 및 조회를 위한 오프라인 사전을 다운로드합니다."
-    else -> "Скачать оффлайн-словари для перевода и поиска."
+// ─────────────────────────────────────────────────────────────────────────────
+// Language picker dialog (for single-file import)
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun ImportLanguagePickerDialog(
+    strings: AppStrings,
+    items: List<DictionaryInstallInfo>,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings.dictImportSelectLanguage) },
+        text = {
+            LazyColumn {
+                items(items = items) { info ->
+                    val displayName = when (info.language) {
+                        "en" -> strings.dictLangEnglish
+                        "fr" -> strings.dictLangFrench
+                        "it" -> strings.dictLangItalian
+                        "ja" -> strings.dictLangJapanese
+                        "ko" -> strings.dictLangKorean
+                        "pl" -> strings.dictLangPolish
+                        "pt" -> strings.dictLangPortuguese
+                        "ru" -> strings.dictLangRussian
+                        "tr" -> strings.dictLangTurkish
+                        "zh" -> strings.dictLangChinese
+                        else -> info.language.uppercase()
+                    }
+                    val emoji = languageEmojis[info.language] ?: "🌐"
+                    TextButton(
+                        onClick = { onSelect(info.language) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "$emoji  $displayName",
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(strings.cancel)
+            }
+        }
+    )
 }
 
-private fun dictionaryStatusLabel(language: String): String = when (language) {
-    "en" -> "Available"
-    "ja" -> "利用可能"
-    "zh" -> "可用"
-    "ko" -> "사용 가능"
-    else -> "Доступно"
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+private fun dictDisplayName(viewModel: SettingsViewModel, lang: String): String {
+    return viewModel.dictDisplayName(lang)
 }
 
-private fun dictionaryDownloadedLabel(language: String): String = when (language) {
-    "en" -> "Downloaded"
-    "ja" -> "ダウンロード済み"
-    "zh" -> "已下载"
-    "ko" -> "다운로드됨"
-    else -> "Загружено"
-}
-
-private fun dictionaryDownloadTitle(language: String): String = when (language) {
-    "en" -> "Download dictionaries"
-    "ja" -> "辞書をダウンロード"
-    "zh" -> "下载词典"
-    "ko" -> "사전 다운로드"
-    else -> "Скачать словари"
-}
-
-private fun dictionaryDownloadDescription(language: String): String = when (language) {
-    "en" -> "Download dictionary databases for offline translation. Files are ~750 MB total."
-    "ja" -> "オフライン翻訳用の辞書データベースをダウンロード。合計約750 MB。"
-    "zh" -> "下载离线翻译词典数据库。文件总计约750 MB。"
-    "ko" -> "오프라인 번역을 위한 사전 데이터베이스를 다운로드합니다. 총 약 750 MB."
-    else -> "Скачать базы данных словарей для оффлайн-перевода. Общий размер ~750 МБ."
-}
-
-private fun dictionaryDownloadAllButton(language: String): String = when (language) {
-    "en" -> "Download all dictionaries"
-    "ja" -> "すべての辞書をダウンロード"
-    "zh" -> "下载所有词典"
-    "ko" -> "모든 사전 다운로드"
-    else -> "Скачать все словари"
+private fun formatDictionarySize(bytes: Long): String {
+    if (bytes <= 0L) return "0 B"
+    if (bytes < 1024) return "$bytes B"
+    val kb = bytes / 1024.0
+    if (kb < 1024) return String.format("%.1f KB", kb)
+    val mb = kb / 1024.0
+    if (mb < 1024) return String.format("%.1f MB", mb)
+    val gb = mb / 1024.0
+    return String.format("%.2f GB", gb)
 }
