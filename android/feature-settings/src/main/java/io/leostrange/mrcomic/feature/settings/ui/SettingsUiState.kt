@@ -166,7 +166,6 @@ data class SettingsUiState(
     val libraryGraphicCoverStyle: String = DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE,
     val librarySortOrder: String = "DATE_ADDED_DESC",
     val libraryGroupBy: String = "FOLDER",
-    val appThemePresetSlots: List<AppThemePresetSlot> = emptyList(),
     val libraryThemePresetSlots: List<LibraryThemePresetSlot> = emptyList(),
     val readerStylePresetSlots: List<ReaderStylePresetSlot> = emptyList(),
     val readerStylePresetEntries: List<ReaderStylePresetEntry> = emptyList(),
@@ -251,6 +250,16 @@ data class DictionaryDownloadState(
     val progress: Map<String, Int> = emptyMap() // language -> progress (0-100)
 )
 
+/* ──── DictionaryOperationState (sealed) ──── */
+sealed interface DictionaryOperationState {
+    data object Idle : DictionaryOperationState
+    data class Downloading(val language: String, val progress: Int = 0) : DictionaryOperationState
+    data class Deleting(val language: String) : DictionaryOperationState
+    data class Importing(val language: String) : DictionaryOperationState
+    data class Exporting(val language: String) : DictionaryOperationState
+    data class Error(val message: String) : DictionaryOperationState
+}
+
 /* ──── StatusState (data class) ──── */
 internal data class StatusState(
     val isClearingCache: Boolean = false,
@@ -266,4 +275,3 @@ internal data class SettingsTranslationAvailabilityState(
     val snapshot: TranslationAvailabilitySnapshot = TranslationAvailabilitySnapshot(),
     val pairKnown: Boolean = false
 )
-

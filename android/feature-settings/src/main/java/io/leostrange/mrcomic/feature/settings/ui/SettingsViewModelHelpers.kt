@@ -101,13 +101,6 @@ internal fun libraryThemePresetKey(slot: Int) = when (slot.coerceIn(1, 3)) {
     else -> PreferencesKeys.LIBRARY_THEME_PRESET_3
 }
 
-/* ──── appThemePresetKey ──── */
-internal fun appThemePresetKey(slot: Int) = when (slot.coerceIn(1, 3)) {
-    1 -> PreferencesKeys.APP_THEME_PRESET_1
-    2 -> PreferencesKeys.APP_THEME_PRESET_2
-    else -> PreferencesKeys.APP_THEME_PRESET_3
-}
-
 /* ──── readerStylePresetKey ──── */
 internal fun readerStylePresetKey(slot: Int) = when (slot.coerceIn(1, 3)) {
     1 -> PreferencesKeys.READER_STYLE_PRESET_1
@@ -148,23 +141,6 @@ internal fun SettingsUiState.toLibraryThemePresetSnapshot(): LibraryThemePresetS
         graphicCoverStyle = libraryGraphicCoverStyle,
         coverScale = libraryCoverScale,
         surfaceOpacity = surfaceOpacity
-    )
-
-/* ──── toAppThemePresetSnapshot ──── */
-internal fun SettingsUiState.toAppThemePresetSnapshot(): AppThemePresetSnapshot =
-    AppThemePresetSnapshot(
-        themePreset = themePreset,
-        themeMode = themeMode.name,
-        useDynamicColor = useDynamicColor,
-        useAmoledDark = useAmoledDark,
-        customPrimaryColor = customPrimaryColor,
-        customSecondaryColor = customSecondaryColor,
-        customBackgroundColor = customBackgroundColor,
-        customSurfaceColor = customSurfaceColor,
-        surfaceOpacity = surfaceOpacity,
-        uiFontScale = uiFontScale,
-        uiDensityScale = uiDensityScale,
-        uiCornerRadius = uiCornerRadius
     )
 
 /* ──── toReaderStylePresetSnapshot ──── */

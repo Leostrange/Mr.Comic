@@ -1,8 +1,6 @@
 package io.leostrange.mrcomic.feature.settings.ui
 
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
-import io.leostrange.mrcomic.core.ui.theme.ThemeMode
-import io.leostrange.mrcomic.core.ui.theme.ThemePreset
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
@@ -15,11 +13,6 @@ import java.util.Locale
  */
 
 data class LibraryThemePresetSlot(
-    val index: Int,
-    val serialized: String? = null
-)
-
-data class AppThemePresetSlot(
     val index: Int,
     val serialized: String? = null
 )
@@ -120,58 +113,6 @@ internal fun JSONObject.optReaderColorLong(vararg keys: String): Long? = keys.fi
         else -> null
     }
 }
-
-data class AppThemePresetSnapshot(
-    val themePreset: String,
-    val themeMode: String,
-    val useDynamicColor: Boolean,
-    val useAmoledDark: Boolean,
-    val customPrimaryColor: Long?,
-    val customSecondaryColor: Long?,
-    val customBackgroundColor: Long?,
-    val customSurfaceColor: Long?,
-    val surfaceOpacity: Float,
-    val uiFontScale: Float,
-    val uiDensityScale: Float,
-    val uiCornerRadius: Int
-) {
-    fun serialize(): String = JSONObject().apply {
-        put("themePreset", themePreset)
-        put("themeMode", themeMode)
-        put("useDynamicColor", useDynamicColor)
-        put("useAmoledDark", useAmoledDark)
-        put("customPrimaryColor", customPrimaryColor?.toString())
-        put("customSecondaryColor", customSecondaryColor?.toString())
-        put("customBackgroundColor", customBackgroundColor?.toString())
-        put("customSurfaceColor", customSurfaceColor?.toString())
-        put("surfaceOpacity", surfaceOpacity.toDouble())
-        put("uiFontScale", uiFontScale.toDouble())
-        put("uiDensityScale", uiDensityScale.toDouble())
-        put("uiCornerRadius", uiCornerRadius)
-    }.toString()
-}
-
-fun parseAppThemePreset(serialized: String?): AppThemePresetSnapshot? = serialized
-    ?.takeIf { it.isNotBlank() }
-    ?.let { raw ->
-        runCatching {
-            val json = JSONObject(raw)
-            AppThemePresetSnapshot(
-                themePreset = json.optString("themePreset", ThemePreset.CUSTOM.name),
-                themeMode = json.optString("themeMode", ThemeMode.SYSTEM.name),
-                useDynamicColor = json.optBoolean("useDynamicColor", true),
-                useAmoledDark = json.optBoolean("useAmoledDark", false),
-                customPrimaryColor = json.optString("customPrimaryColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                customSecondaryColor = json.optString("customSecondaryColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                customBackgroundColor = json.optString("customBackgroundColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                customSurfaceColor = json.optString("customSurfaceColor").takeIf { it.isNotBlank() }?.toLongOrNull(),
-                surfaceOpacity = json.optDouble("surfaceOpacity", 1.0).toFloat().coerceIn(0.35f, 1f),
-                uiFontScale = json.optDouble("uiFontScale", 1.0).toFloat().coerceIn(0.85f, 1.3f),
-                uiDensityScale = json.optDouble("uiDensityScale", 1.0).toFloat().coerceIn(0.82f, 1.18f),
-                uiCornerRadius = json.optInt("uiCornerRadius", 12).coerceIn(0, 32)
-            )
-        }.getOrNull()
-    }
 
 fun parseReaderStylePreset(serialized: String?): ReaderStylePresetSnapshot? = serialized
     ?.takeIf { it.isNotBlank() }

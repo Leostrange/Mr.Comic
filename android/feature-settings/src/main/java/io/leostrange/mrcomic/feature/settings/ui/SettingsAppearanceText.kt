@@ -22,8 +22,6 @@ internal data class AppearanceSectionText(
     val sizeShapeTitle: String,
     val accentColorsTitle: String,
     val accentColorsDescription: String,
-    val surfacesTitle: String,
-    val surfacesDescription: String,
     val paletteResetLabel: String,
     val serviceElementsTitle: String,
     val mascotRecapTitle: String,
@@ -101,14 +99,12 @@ internal fun appearanceSectionText(language: String): AppearanceSectionText = wh
             AppearanceSettingsTab.BASICS to "Language and global preview.",
             AppearanceSettingsTab.THEME to "Presets, light/dark mode and dynamic colors.",
             AppearanceSettingsTab.SCALE to "Font scale, interface density and corner radius.",
-            AppearanceSettingsTab.COLORS to "Accent, background, surfaces and transparency.",
+            AppearanceSettingsTab.COLORS to "Accent colors and surface transparency.",
             AppearanceSettingsTab.EXTRA to "UI sounds and service elements."
         ),
         sizeShapeTitle = "Size and shape",
         accentColorsTitle = "Accent and signal colors",
         accentColorsDescription = "Accent affects buttons, active chips, progress indicators and key actions.",
-        surfacesTitle = "Background and surfaces",
-        surfacesDescription = "Background, cards and overlays are tuned separately so light and dark themes stay coherent.",
         paletteResetLabel = "Reset palette",
         serviceElementsTitle = "Service elements",
         mascotRecapTitle = "Mascot companion surfaces",
@@ -131,14 +127,12 @@ internal fun appearanceSectionText(language: String): AppearanceSectionText = wh
             AppearanceSettingsTab.BASICS to "言語と全体プレビュー。",
             AppearanceSettingsTab.THEME to "プリセット、ライト/ダーク、ダイナミックカラー。",
             AppearanceSettingsTab.SCALE to "文字倍率、UI密度、角丸。",
-            AppearanceSettingsTab.COLORS to "アクセント、背景、サーフェス、透明度。",
+            AppearanceSettingsTab.COLORS to "アクセントとサーフェスの透明度。",
             AppearanceSettingsTab.EXTRA to "UIサウンドと補助要素。"
         ),
         sizeShapeTitle = "サイズと形",
         accentColorsTitle = "アクセントとシグナル色",
         accentColorsDescription = "アクセントはボタン、選択チップ、進捗表示、主要アクションに使われます。",
-        surfacesTitle = "背景とサーフェス",
-        surfacesDescription = "背景、カード、オーバーレイを分けて調整し、ライト/ダークの整合性を保ちます。",
         paletteResetLabel = "パレットをリセット",
         serviceElementsTitle = "補助要素",
         mascotRecapTitle = "マスコット表示",
@@ -161,14 +155,12 @@ internal fun appearanceSectionText(language: String): AppearanceSectionText = wh
             AppearanceSettingsTab.BASICS to "语言与整体预览。",
             AppearanceSettingsTab.THEME to "预设、明暗模式和动态配色。",
             AppearanceSettingsTab.SCALE to "字体比例、界面密度与圆角。",
-            AppearanceSettingsTab.COLORS to "强调色、背景、表面和透明度。",
+            AppearanceSettingsTab.COLORS to "强调色与表层透明度。",
             AppearanceSettingsTab.EXTRA to "界面音效与附加元素。"
         ),
         sizeShapeTitle = "尺寸与形状",
         accentColorsTitle = "强调与提示颜色",
         accentColorsDescription = "强调色影响按钮、选中标签、进度指示和主要操作。",
-        surfacesTitle = "背景与表面",
-        surfacesDescription = "背景、卡片和遮罩分开调整，让亮色和暗色主题保持一致。",
         paletteResetLabel = "重置配色",
         serviceElementsTitle = "附加元素",
         mascotRecapTitle = "Mr.Comic 辅助界面",
@@ -191,14 +183,12 @@ internal fun appearanceSectionText(language: String): AppearanceSectionText = wh
             AppearanceSettingsTab.BASICS to "언어와 전체 미리보기.",
             AppearanceSettingsTab.THEME to "프리셋, 라이트/다크, 동적 색상.",
             AppearanceSettingsTab.SCALE to "글자 크기, UI 밀도, 코너 반경.",
-            AppearanceSettingsTab.COLORS to "강조색, 배경, 표면, 투명도.",
+            AppearanceSettingsTab.COLORS to "강조색과 표면 투명도.",
             AppearanceSettingsTab.EXTRA to "UI 사운드와 보조 요소."
         ),
         sizeShapeTitle = "크기와 형태",
         accentColorsTitle = "강조 및 상태 색상",
         accentColorsDescription = "강조색은 버튼, 활성 칩, 진행 표시, 핵심 액션에 반영됩니다.",
-        surfacesTitle = "배경과 표면",
-        surfacesDescription = "배경, 카드, 오버레이를 따로 조정해 라이트/다크가 어긋나지 않게 합니다.",
         paletteResetLabel = "팔레트 초기화",
         serviceElementsTitle = "보조 요소",
         mascotRecapTitle = "마스코트 보조 표면",
@@ -221,14 +211,12 @@ internal fun appearanceSectionText(language: String): AppearanceSectionText = wh
             AppearanceSettingsTab.BASICS to "Язык интерфейса и общее превью.",
             AppearanceSettingsTab.THEME to "Пресеты, светлая/тёмная тема и динамические цвета.",
             AppearanceSettingsTab.SCALE to "Масштаб шрифта, плотность интерфейса и скругления.",
-            AppearanceSettingsTab.COLORS to "Акцент, фон, поверхности и прозрачность.",
+            AppearanceSettingsTab.COLORS to "Акцент и прозрачность поверхностей.",
             AppearanceSettingsTab.EXTRA to "Звуки интерфейса и служебные элементы."
         ),
         sizeShapeTitle = "Размер и форма",
         accentColorsTitle = "Акцент и сигнальные цвета",
         accentColorsDescription = "Акцент влияет на кнопки, активные чипы, индикаторы прогресса и ключевые элементы интерфейса.",
-        surfacesTitle = "Фон и поверхности",
-        surfacesDescription = "Фон, карточки и наложения настраиваются отдельно, чтобы светлые и тёмные темы не конфликтовали.",
         paletteResetLabel = "Сбросить палитру",
         serviceElementsTitle = "Служебные элементы",
         mascotRecapTitle = "Поверхности с маскотом",
@@ -286,11 +274,11 @@ internal fun appearancePageNavItems(
         title = appearanceColorsTitle(language),
         description = text.tabHints[AppearanceSettingsTab.COLORS].orEmpty(),
         summary = when (language) {
-            "en" -> "Accent, surfaces, transparency"
-            "ja" -> "アクセント、面、透明度"
-            "zh" -> "强调色、表面、透明度"
-            "ko" -> "강조색, 표면, 투명도"
-            else -> "Акцент, поверхности, прозрачность"
+            "en" -> "Accent colors, surface transparency"
+            "ja" -> "アクセント色、サーフェス透明度"
+            "zh" -> "强调色、表层透明度"
+            "ko" -> "강조색, 표면 투명도"
+            else -> "Акцентные цвета, прозрачность"
         },
         icon = Icons.Default.ColorLens
     ),
@@ -306,7 +294,7 @@ internal fun appearancePageNavItems(
             else -> "Шрифт, плотность, скругления"
         },
         icon = Icons.Default.Tune
-    )
+    ),
 )
 
 /* ──── appearancePageTitle (fun) ──── */
@@ -318,7 +306,6 @@ internal fun appearancePageTitle(
     AppearanceSettingsPage.OVERVIEW -> text.leadTitle
     AppearanceSettingsPage.BASICS -> text.tabLabels[AppearanceSettingsTab.BASICS].orEmpty()
     AppearanceSettingsPage.LIBRARY -> appearanceLibraryVisualsTitle(language)
-    AppearanceSettingsPage.THEME_STUDIO -> appearanceThemeStudioTitle(language)
     AppearanceSettingsPage.THEME -> appearanceThemeTitle(language)
     AppearanceSettingsPage.SCALE -> appearanceScaleTitle(language)
     AppearanceSettingsPage.COLORS -> appearanceColorsTitle(language)
@@ -334,7 +321,6 @@ internal fun appearancePageDescription(
     AppearanceSettingsPage.OVERVIEW -> text.leadDescription
     AppearanceSettingsPage.BASICS -> text.tabHints[AppearanceSettingsTab.BASICS].orEmpty()
     AppearanceSettingsPage.LIBRARY -> appearanceLibraryVisualsDescription(language)
-    AppearanceSettingsPage.THEME_STUDIO -> appearanceThemeStudioDescription(language)
     AppearanceSettingsPage.THEME -> when (language) {
         "en" -> "Presets, light and dark modes, dynamic color, and the overall mood of the app."
         "ja" -> "プリセット、ライト/ダーク、ダイナミックカラーなど、アプリ全体の雰囲気をまとめます。"
@@ -344,11 +330,11 @@ internal fun appearancePageDescription(
     }
     AppearanceSettingsPage.SCALE -> text.tabHints[AppearanceSettingsTab.SCALE].orEmpty()
     AppearanceSettingsPage.COLORS -> when (language) {
-        "en" -> "Accent, background, cards, overlays, and transparency are tuned as one palette layer."
-        "ja" -> "アクセント、背景、カード、オーバーレイ、透明度を1つのパレットとして整えます。"
-        "zh" -> "把强调色、背景、卡片、遮罩和透明度当作一层调色板来统一调整。"
-        "ko" -> "강조색, 배경, 카드, 오버레이, 투명도를 하나의 팔레트 층으로 정리합니다."
-        else -> "Акцент, фон, карточки, наложения и прозрачность собраны в один палитровый слой."
+        "en" -> "Accent colors and surface transparency."
+        "ja" -> "アクセントとサーフェスの透明度を整えます。"
+        "zh" -> "调整强调色和表层透明度。"
+        "ko" -> "강조색과 표면 투명도를 조정합니다."
+        else -> "Акцентные цвета и прозрачность поверхностей."
     }
     AppearanceSettingsPage.EXTRA -> text.tabHints[AppearanceSettingsTab.EXTRA].orEmpty()
 }

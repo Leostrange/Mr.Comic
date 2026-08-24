@@ -75,17 +75,6 @@ class SettingsPresetsControllerTest {
     }
 
     @Test
-    fun saveAppThemePresetPersistsSerializedSnapshot() = runTest {
-        coEvery { preferences.set(any(), any<Any>()) } returns Unit
-        val controller = createController { SettingsUiState() }
-
-        controller.saveAppThemePreset(3)
-        advanceUntilIdle()
-
-        coVerify(exactly = 1) { preferences.set(PreferencesKeys.APP_THEME_PRESET_3, any()) }
-    }
-
-    @Test
     fun applyLibraryZonePresetWritesDarkStudyChain() = runTest {
         coEvery { preferences.set(any(), any<Any>()) } returns Unit
         val controller = createController { SettingsUiState() }

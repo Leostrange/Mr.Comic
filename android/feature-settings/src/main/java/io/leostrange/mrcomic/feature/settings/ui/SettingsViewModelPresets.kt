@@ -12,12 +12,6 @@ internal fun SettingsViewModel.applyLibraryThemePreset(slot: Int) = presetsContr
 
 internal fun SettingsViewModel.clearLibraryThemePreset(slot: Int) = presetsController.clearLibraryThemePreset(slot)
 
-internal fun SettingsViewModel.saveAppThemePreset(slot: Int) = presetsController.saveAppThemePreset(slot)
-
-internal fun SettingsViewModel.applyAppThemePreset(slot: Int) = presetsController.applyAppThemePreset(slot)
-
-internal fun SettingsViewModel.clearAppThemePreset(slot: Int) = presetsController.clearAppThemePreset(slot)
-
 internal fun SettingsViewModel.saveReaderStylePreset(slot: Int) = presetsController.saveReaderStylePreset(slot)
 
 internal fun SettingsViewModel.applyReaderStylePreset(slot: Int) = presetsController.applyReaderStylePreset(slot)

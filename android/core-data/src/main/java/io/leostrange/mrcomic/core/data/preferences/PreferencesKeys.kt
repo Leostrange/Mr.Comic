@@ -88,9 +88,6 @@ object PreferencesKeys {
     val UI_CORNER_RADIUS          = intPreferencesKey("ui_corner_radius")      // 4/8/12/16/20 dp
     val UI_REDUCED_MOTION         = booleanPreferencesKey("ui_reduced_motion")
     val UI_REDUCED_VISUAL_EFFECTS = booleanPreferencesKey("ui_reduced_visual_effects")
-    val APP_THEME_PRESET_1        = stringPreferencesKey("app_theme_preset_1")
-    val APP_THEME_PRESET_2        = stringPreferencesKey("app_theme_preset_2")
-    val APP_THEME_PRESET_3        = stringPreferencesKey("app_theme_preset_3")
     // Перевод
     val TRANSLATION_MODE          = stringPreferencesKey("translation_mode")   // OFF/OCR/DICTIONARY
     val TRANSLATION_SOURCE_LANGUAGE = stringPreferencesKey("translation_source_language") // AUTO/RU/EN/JA/ZH/KO/FR/IT/PL/TR/PT
@@ -162,6 +159,7 @@ object PreferencesKeys {
     // Настройки текстового ридера (FB2 / EPUB)
     val TEXT_FONT_SIZE            = intPreferencesKey("text_font_size")      // 12..32, default 18
     val TEXT_COLOR_SCHEME         = stringPreferencesKey("text_color_scheme") // DAY/SEPIA/NIGHT
+    val GRAPHIC_COLOR_SCHEME      = stringPreferencesKey("graphic_color_scheme") // DAY/SEPIA/NIGHT for raster reader
     val TEXT_FONT_FAMILY          = stringPreferencesKey("text_font_family")  // Georgia/Merriweather/…
     val TEXT_LINE_HEIGHT          = floatPreferencesKey("text_line_height")   // 1.0..3.0, default 1.8
     val TEXT_LETTER_SPACING       = floatPreferencesKey("text_letter_spacing") // 0.0..0.2 em
