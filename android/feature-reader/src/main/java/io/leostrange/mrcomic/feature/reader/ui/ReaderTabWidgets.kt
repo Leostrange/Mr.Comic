@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
@@ -147,7 +148,12 @@ internal fun ReaderSwitchRow(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
-                Text(text = title, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
                 subtitle?.let {
                     Text(
                         text = it,
@@ -191,7 +197,13 @@ internal fun ReaderSliderRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = title, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
                 Text(
                     text = valueText,
                     style = MaterialTheme.typography.labelSmall,
