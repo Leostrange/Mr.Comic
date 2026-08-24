@@ -33,6 +33,7 @@ import io.leostrange.mrcomic.core.ui.theme.style
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryDownloader
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryInstallInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -46,6 +47,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 // Preset data classes and parsing extracted to SettingsPresets.kt
@@ -176,6 +178,12 @@ class SettingsViewModel @Inject constructor(
     // the init block leaves the backing field null during constructor startup.
     internal val _dictionaryDownloadState = MutableStateFlow(DictionaryDownloadState())
     val dictionaryDownloadState: StateFlow<DictionaryDownloadState> = _dictionaryDownloadState
+    internal val _dictionaryItems = MutableStateFlow<List<DictionaryInstallInfo>>(emptyList())
+    internal val _dictionaryOperationState = MutableStateFlow<DictionaryOperationState>(DictionaryOperationState.Idle)
+    internal val _pendingDownloadLanguage = MutableStateFlow<String?>(null)
+    internal val _dictionaryDownloadProgress = MutableStateFlow<Float?>(null)
+    internal val _pendingImportFile = MutableStateFlow<File?>(null)
+    internal val _needsImportLanguageSelection = MutableStateFlow(false)
 
     init {
         viewModelScope.launch {

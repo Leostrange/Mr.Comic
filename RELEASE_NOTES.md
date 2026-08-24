@@ -1,46 +1,31 @@
-# Release Notes
+# Mr.Comic v2.4.0
 
-## v2.1.0 - 2026-06-22
+Этот выпуск возвращает предсказуемое чтение, исправляет оформление библиотеки и превращает словари в действительно дополнительные модули.
 
-Mr.Comic v2.1.0 focuses on reader stability, format routing and a cleaner public repository.
+## Главное
 
-### Reader
+- Текст больше не должен смещаться или обрезаться при показе и скрытии панелей ридера.
+- Улучшены вертикальные отступы, переносы, титульные страницы, заголовки глав и обработка сносок.
+- Свайп защищён от случайного системного выделения текста.
+- В графическом ридере восстановлены настройки и пресеты **День / Сепия / Ночь**; текстовые параметры там не показываются.
+- Исправлены белые информационные подложки на обложках библиотеки.
+- Удалён дублирующий конструктор тем; применение темы и предпросмотр стали согласованнее.
+- Исправлена компиляция моделей геймификации и расчёт прогресса.
 
-- Consolidated text reader containers and CSS building.
-- Improved page/webtoon text behavior, safe body insets and pagination resilience.
-- Added crash recovery around renderer failures.
-- Improved hyphenation, language attributes and favicon filtering for text/HTML content.
-- Improved quote, footnote and reader chrome behavior.
+## Словари теперь отдельно
 
-### Formats
+Словарные базы больше не входят в APK. Их можно скачать, импортировать, экспортировать и удалить независимо от приложения.
 
-- Improved EPUB close behavior to avoid deadlocks.
-- Improved EPUB asset base-path handling, progress calculation and HTML/CSS/JS tests.
-- Added mojibake recovery for text decoding.
-- Improved FB2, MOBI, archive delegation and text archive routing.
-- Added reader format catalog and open/import policy coverage.
+**[Открыть Dictionary Modules v1.0.0](https://github.com/Leostrange/Mr.Comic/releases/tag/dictionary-modules-v1.0.0)**
 
-### Explain Engine
+## Установка
 
-- Added LOCAL/ONLINE explain-engine provider selection.
-- Added OpenRouter explain engine integration.
+Скачайте APK из раздела Assets этого релиза. Debug APK предназначен для тестирования; подписанный Release APK публикуется автоматически, если для сборки настроен ключ подписи.
 
-### Tests
+## Известные ограничения
 
-- Expanded unit coverage for reader CSS, EPUB assets, EPUB close behavior, mojibake recovery, content policy, concurrency, footnote patterns, body inset injection, webtoon document building, format catalog and import/open routing.
+- Совместимость сложной типографики и точность пагинации продолжают улучшаться.
+- Сноски, OCR, перевод, словари и LLM-объяснения остаются частично реализованными направлениями.
+- Некоторые сложные RTF/MOBI/AZW3/DOCX/ODT документы могут отображаться не полностью идентично исходному редактору.
 
-### Repository
-
-- Refreshed README with release badges, stack, supported formats and clean build commands.
-- Added license, contributors and third-party notices.
-- Kept local logs, screenshots, build outputs, private samples and analysis dumps out of git.
-
-### Build
-
-Windows build command:
-
-```powershell
-.\gradlew.bat --no-daemon --console=plain :app:assembleDebug
-```
-
-Release tag: `v2.1.0`
+Полный журнал: [CHANGELOG.md](CHANGELOG.md).

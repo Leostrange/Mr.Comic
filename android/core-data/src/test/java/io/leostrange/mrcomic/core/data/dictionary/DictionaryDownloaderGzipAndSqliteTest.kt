@@ -6,6 +6,8 @@ import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
+import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
 /**
@@ -54,6 +56,18 @@ class DictionaryDownloaderGzipAndSqliteTest {
         assertTrue(DictionaryDownloader.isGzip(stream))
     }
 
+    @Test
+    fun writeGzipWithoutClosingTarget_keepsArchiveStreamOpen() {
+        val payload = "dictionary payload".toByteArray()
+        val target = CloseTrackingOutputStream()
+
+        DictionaryDownloader.writeGzipWithoutClosingTarget(payload.inputStream(), target)
+
+        assertFalse(target.closed)
+        val restored = GZIPInputStream(target.bytes().inputStream()).use { it.readBytes() }
+        assertTrue(restored.contentEquals(payload))
+    }
+
     // ── isValidSqlite ────────────────────────────────────────────────────
 
     @Test
@@ -92,6 +106,25 @@ class DictionaryDownloaderGzipAndSqliteTest {
         val file = File.createTempFile("sqlite_test_", ".db", null)
         file.writeBytes(content)
         return file
+    }
+
+    private class CloseTrackingOutputStream : OutputStream() {
+        private val delegate = ByteArrayOutputStream()
+        var closed: Boolean = false
+            private set
+
+        override fun write(value: Int) = delegate.write(value)
+
+        override fun write(buffer: ByteArray, offset: Int, length: Int) =
+            delegate.write(buffer, offset, length)
+
+        override fun flush() = delegate.flush()
+
+        override fun close() {
+            closed = true
+        }
+
+        fun bytes(): ByteArray = delegate.toByteArray()
     }
 
     companion object {

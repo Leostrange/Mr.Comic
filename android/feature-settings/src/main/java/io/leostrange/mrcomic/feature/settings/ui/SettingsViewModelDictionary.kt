@@ -5,16 +5,18 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentResolver
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryInstallInfo
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryAssetCatalog
 import io.leostrange.mrcomic.core.ui.locale.DictionaryStrings
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.IOException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -57,10 +59,6 @@ val SettingsViewModel.dictionaryOperationState: StateFlow<DictionaryOperationSta
 val SettingsViewModel.pendingDownloadLanguage: StateFlow<String?>
     get() = _pendingDownloadLanguage
 
-private val _dictionaryItems = MutableStateFlow<List<DictionaryInstallInfo>>(emptyList())
-private val _dictionaryOperationState = MutableStateFlow<DictionaryOperationState>(DictionaryOperationState.Idle)
-private val _pendingDownloadLanguage = MutableStateFlow<String?>(null)
-
 // ─── Init hook (call from SettingsViewModel.init) ─────────────────────────────
 
 fun SettingsViewModel.initDictionaryState() {
@@ -95,14 +93,14 @@ fun SettingsViewModel.cancelPendingDownload() {
 
 fun SettingsViewModel.cancelPendingImport() {
     _needsImportLanguageSelection.value = false
-    _pendingImportBytes.value = null
+    _pendingImportFile.value?.delete()
+    _pendingImportFile.value = null
     _dictionaryOperationState.value = DictionaryOperationState.Idle
 }
 
 // ─── Single dictionary download ───────────────────────────────────────────────
 
 // Per-language download progress (0f–1f). null = no active download.
-private val _dictionaryDownloadProgress = MutableStateFlow<Float?>(null)
 val SettingsViewModel.dictionaryDownloadProgress: StateFlow<Float?>
     get() = _dictionaryDownloadProgress
 
@@ -133,8 +131,9 @@ fun SettingsViewModel.downloadDictionary(lang: String) {
                     )
                 }
             }
-        } catch (_: Exception) {
-            // error swallowed — UI stays on Idle after finally
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Dictionary download failed for $lang", error)
+            statusState.update { it.copy(message = formatDictionaryOpError()) }
         } finally {
             _dictionaryOperationState.value = DictionaryOperationState.Idle
             _dictionaryDownloadProgress.value = null
@@ -153,6 +152,9 @@ fun SettingsViewModel.deleteDictionary(lang: String) {
         _dictionaryOperationState.value = DictionaryOperationState.Deleting(lang)
         try {
             withContext(Dispatchers.IO) { dictionaryDownloader.deleteDictionary(lang) }
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Dictionary deletion failed for $lang", error)
+            statusState.update { it.copy(message = formatDictionaryOpError()) }
         } finally {
             _dictionaryOperationState.value = DictionaryOperationState.Idle
             refreshDictionaryItems()
@@ -175,6 +177,9 @@ fun SettingsViewModel.exportDictionary(lang: String, uri: Uri, contentResolver: 
             statusState.update {
                 it.copy(message = if (success) formatDictionaryExportSuccess() else formatDictionaryOpError())
             }
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Dictionary export failed for $lang", error)
+            statusState.update { it.copy(message = formatDictionaryOpError()) }
         } finally {
             _dictionaryOperationState.value = DictionaryOperationState.Idle
         }
@@ -197,6 +202,9 @@ fun SettingsViewModel.importDictionary(lang: String, uri: Uri, contentResolver: 
                 it.copy(message = if (result != null) formatDictionaryImportSuccess() else formatDictionaryImportInvalid())
             }
             if (result != null) refreshDictionaryItems()
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Dictionary import failed for $lang", error)
+            statusState.update { it.copy(message = formatDictionaryImportInvalid()) }
         } finally {
             _dictionaryOperationState.value = DictionaryOperationState.Idle
         }
@@ -219,7 +227,9 @@ fun SettingsViewModel.exportAllDictionaries(uri: Uri, contentResolver: ContentRe
                         for (info in installed) {
                             val entryName = "dictionary_${info.language}.dbpack"
                             zos.putNextEntry(ZipEntry(entryName))
-                            dictionaryDownloader.exportDictionary(info.language, zos)
+                            if (!dictionaryDownloader.exportDictionary(info.language, zos)) {
+                                throw IOException("Could not export dictionary ${info.language}")
+                            }
                             zos.closeEntry()
                         }
                     }
@@ -229,6 +239,9 @@ fun SettingsViewModel.exportAllDictionaries(uri: Uri, contentResolver: ContentRe
             statusState.update {
                 it.copy(message = if (success) formatDictionaryExportSuccess() else formatDictionaryOpError())
             }
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Dictionary archive export failed", error)
+            statusState.update { it.copy(message = formatDictionaryOpError()) }
         } finally {
             _dictionaryOperationState.value = DictionaryOperationState.Idle
         }
@@ -242,13 +255,31 @@ fun SettingsViewModel.importDictionaryFromUri(uri: Uri, contentResolver: Content
     viewModelScope.launch {
         _dictionaryOperationState.value = DictionaryOperationState.Importing("__auto__")
         try {
-            val bytes = withContext(Dispatchers.IO) {
-                contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            val importFile = withContext(Dispatchers.IO) {
+                val target = File.createTempFile("dictionary_import_", ".tmp", context.cacheDir)
+                val copied = try {
+                    contentResolver.openInputStream(uri)?.use { input ->
+                        target.outputStream().use { output -> input.copyTo(output) }
+                        true
+                    } ?: false
+                } catch (error: Exception) {
+                    target.delete()
+                    throw error
+                }
+                if (copied && target.length() > 0L) {
+                    target
+                } else {
+                    target.delete()
+                    null
+                }
             }
-            when (detectDictionaryImportKind(bytes)) {
+            when (detectDictionaryImportKind(importFile)) {
                 DictionaryImportKind.ZIP -> {
-                    val imported = withContext(Dispatchers.IO) {
-                        importFromZip(requireNotNull(bytes))
+                    val zipFile = requireNotNull(importFile)
+                    val imported = try {
+                        withContext(Dispatchers.IO) { importFromZip(zipFile) }
+                    } finally {
+                        zipFile.delete()
                     }
                     statusState.update {
                         it.copy(message = if (imported) formatDictionaryImportSuccess() else formatDictionaryImportInvalid())
@@ -257,57 +288,60 @@ fun SettingsViewModel.importDictionaryFromUri(uri: Uri, contentResolver: Content
                     _dictionaryOperationState.value = DictionaryOperationState.Idle
                 }
                 DictionaryImportKind.SINGLE -> {
-                    // SAF streams are scoped to the activity result callback. Keep bytes,
-                    // not the closed stream, while the user chooses the language.
-                    _pendingImportBytes.value = requireNotNull(bytes)
+                    // Keep a disk-backed copy while the user chooses the language;
+                    // dictionary modules are too large to retain safely in RAM.
+                    _pendingImportFile.value = requireNotNull(importFile)
                     _needsImportLanguageSelection.value = true
                     _dictionaryOperationState.value = DictionaryOperationState.Idle
                 }
                 DictionaryImportKind.INVALID -> {
+                    importFile?.delete()
                     statusState.update { it.copy(message = formatDictionaryImportInvalid()) }
                     _dictionaryOperationState.value = DictionaryOperationState.Idle
                 }
             }
-        } catch (_: Exception) {
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Dictionary import detection failed", error)
             statusState.update { it.copy(message = formatDictionaryImportInvalid()) }
-            _dictionaryOperationState.value = DictionaryOperationState.Idle
         } finally {
-            // Every branch above sets the operation back to Idle. This is also
-            // required after a SAF/provider failure so the import button recovers.
+            _dictionaryOperationState.value = DictionaryOperationState.Idle
         }
     }
 }
 
 /** Called after the user picks a language for the pending single-file import. */
 fun SettingsViewModel.completePendingImport(lang: String) {
-    val bytes = _pendingImportBytes.value ?: return
+    val importFile = _pendingImportFile.value ?: return
     _needsImportLanguageSelection.value = false
-    _pendingImportBytes.value = null
+    _pendingImportFile.value = null
     viewModelScope.launch {
         _dictionaryOperationState.value = DictionaryOperationState.Importing(lang)
         try {
             val result = withContext(Dispatchers.IO) {
-                dictionaryDownloader.importDictionary(lang, bytes.inputStream())
+                importFile.inputStream().use { input ->
+                    dictionaryDownloader.importDictionary(lang, input)
+                }
             }
             statusState.update {
                 it.copy(message = if (result != null) formatDictionaryImportSuccess() else formatDictionaryImportInvalid())
             }
             if (result != null) refreshDictionaryItems()
+        } catch (error: Exception) {
+            Log.e(DICTIONARY_LOG_TAG, "Pending dictionary import failed for $lang", error)
+            statusState.update { it.copy(message = formatDictionaryImportInvalid()) }
         } finally {
+            importFile.delete()
             _dictionaryOperationState.value = DictionaryOperationState.Idle
         }
     }
 }
 
-private val _pendingImportBytes = MutableStateFlow<ByteArray?>(null)
-private val _needsImportLanguageSelection = MutableStateFlow(false)
-
 val SettingsViewModel.needsImportLanguageSelection: StateFlow<Boolean>
     get() = _needsImportLanguageSelection
 
-private fun SettingsViewModel.importFromZip(bytes: ByteArray): Boolean {
+private fun SettingsViewModel.importFromZip(file: File): Boolean {
     var anyImported = false
-    ZipInputStream(bytes.inputStream()).use { zis ->
+    ZipInputStream(file.inputStream().buffered()).use { zis ->
         var entry = zis.nextEntry
         while (entry != null) {
             val name = entry.name
@@ -318,8 +352,7 @@ private fun SettingsViewModel.importFromZip(bytes: ByteArray): Boolean {
                 else -> null
             }
             if (lang != null && DictionaryAssetCatalog.configForLanguage(lang) != null) {
-                val tempBytes = zis.readBytes()
-                val result = dictionaryDownloader.importDictionary(lang, tempBytes.inputStream())
+                val result = dictionaryDownloader.importDictionary(lang, zis)
                 if (result != null) anyImported = true
             }
             entry = zis.nextEntry
@@ -342,9 +375,22 @@ internal fun detectDictionaryImportKind(bytes: ByteArray?): DictionaryImportKind
     return if (isZip) DictionaryImportKind.ZIP else DictionaryImportKind.SINGLE
 }
 
+private fun detectDictionaryImportKind(file: File?): DictionaryImportKind {
+    if (file == null || !file.isFile || file.length() == 0L) return DictionaryImportKind.INVALID
+    val header = file.inputStream().use { input ->
+        byteArrayOf(input.read().toByte(), input.read().toByte())
+    }
+    return if (header[0] == 0x50.toByte() && header[1] == 0x4B.toByte()) {
+        DictionaryImportKind.ZIP
+    } else {
+        DictionaryImportKind.SINGLE
+    }
+}
+
 // ─── Download notification helpers ────────────────────────────────────────────
 
 private const val DICT_NOTIFICATION_CHANNEL_ID = "downloads"
+private const val DICTIONARY_LOG_TAG = "SettingsDictionary"
 private const val DICT_NOTIFICATION_BASE_ID = 0xD1C7 // 53703 — distinctive base
 private var nextDictNotifSlot = 0
 

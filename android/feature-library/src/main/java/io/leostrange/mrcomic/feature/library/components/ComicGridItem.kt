@@ -222,7 +222,6 @@ private fun GridCard(
                 comic = comic,
                 shape = cardShape,
                 graphicCoverStyle = graphicCoverStyle,
-                showCompletedFold = false,
                 modifier = Modifier.fillMaxSize()
             )
             GridCardBadges(

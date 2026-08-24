@@ -42,11 +42,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItem
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItemTrailing
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCompactValueRow
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSectionHeader
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSlider
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
 import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
@@ -70,18 +70,7 @@ internal fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    // Editorial Ink: section header (no card frame). Sub-cards inside
-    // (e.g. AppearanceLanguageCard) still render their own previews, but
-    // the outer wrapper no longer adds a second layer of background and
-    // border. Subsequent passes will flatten the inner rows to MrComicListItem.
-    Column(modifier = Modifier.fillMaxWidth()) {
-        MrComicSectionHeader(title = title)
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = content,
-        )
-    }
+    MrComicPanelCard(title = title, content = content)
 }
 
 @Composable
@@ -109,19 +98,15 @@ internal fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true
 ) {
-    MrComicListItem(
+    MrComicSwitchRow(
         title = title,
         subtitle = subtitle,
+        checked = checked,
         enabled = enabled,
-        onClick = null,
-        trailing = MrComicListItemTrailing.Switch(
-            checked = checked,
-            onCheckedChange = { value ->
-                UIFeedback.playSelect()
-                onCheckedChange(value)
-            },
-            enabled = enabled,
-        ),
+        onCheckedChange = { value ->
+            UIFeedback.playSelect()
+            onCheckedChange(value)
+        }
     )
 }
 
@@ -131,16 +116,17 @@ internal fun SettingsPickerTile(
     value: String,
     onClick: () -> Unit,
     subtitle: String? = null,
-    @Suppress("UNUSED_PARAMETER") compact: Boolean = false
+    compact: Boolean = false
 ) {
-    MrComicListItem(
+    MrComicCompactValueRow(
         title = title,
         subtitle = subtitle,
-        trailing = MrComicListItemTrailing.Value(value),
+        value = value,
         onClick = {
             UIFeedback.playSelect()
             onClick()
         },
+        compact = compact
     )
 }
 
@@ -154,24 +140,15 @@ internal fun SettingsSliderTile(
     steps: Int = 0,
     subtitle: String? = null
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        MrComicListItem(
-            title = title,
-            subtitle = subtitle,
-            trailing = MrComicListItemTrailing.Value(valueLabel),
-            onClick = null,
-            divider = false,
-        )
-        MrComicSlider(
-            value = value,
-            onValueChange = onValueChange,
-            valueRange = valueRange,
-            steps = steps,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 4.dp),
-        )
-    }
+    MrComicSliderTile(
+        title = title,
+        valueLabel = valueLabel,
+        value = value,
+        onValueChange = onValueChange,
+        valueRange = valueRange,
+        steps = steps,
+        subtitle = subtitle
+    )
 }
 
 @Composable

@@ -96,11 +96,11 @@ class DictionaryDownloader @Inject constructor(
         }
     }
 
-    private fun buildReleaseUrl(config: DictionaryAssetConfig): String {
-        // Release v2.3.0 assets are published as `dictionary_<lang>.dbpack` (plain).
+    internal fun buildReleaseUrl(config: DictionaryAssetConfig): String {
+        // Dictionary modules are published independently from application releases.
         // Keep the gzip auto-detection in extractDatabase so future .gz uploads
         // continue to work without a code change.
-        return "https://github.com/Leostrange/Mr.Comic/releases/download/$DICTIONARY_RELEASE_TAG/dictionary_${config.language}.dbpack"
+        return dictionaryReleaseUrl(config.language)
     }
 
     private fun downloadFile(
@@ -219,9 +219,7 @@ class DictionaryDownloader @Inject constructor(
         if (!extractedFile.exists() || extractedFile.length() == 0L) return false
         return try {
             extractedFile.inputStream().use { input ->
-                GZIPOutputStream(target).use { gzip ->
-                    input.copyTo(gzip)
-                }
+                writeGzipWithoutClosingTarget(input, target)
             }
             true
         } catch (e: Exception) {
@@ -316,7 +314,18 @@ class DictionaryDownloader @Inject constructor(
 
     companion object {
         private const val TAG = "DictionaryDownloader"
-        private const val DICTIONARY_RELEASE_TAG = "v2.3.0"
+        private const val DICTIONARY_RELEASE_TAG = "dictionary-modules-v1.0.0"
+
+        internal fun dictionaryReleaseUrl(language: String): String =
+            "https://github.com/Leostrange/Mr.Comic/releases/download/" +
+                "$DICTIONARY_RELEASE_TAG/dictionary_${language}.dbpack"
+
+        internal fun writeGzipWithoutClosingTarget(input: InputStream, target: OutputStream) {
+            val gzip = GZIPOutputStream(target)
+            input.copyTo(gzip)
+            gzip.finish()
+            gzip.flush()
+        }
 
         /**
          * Detects gzip magic bytes (0x1F, 0x8B) on a stream.
