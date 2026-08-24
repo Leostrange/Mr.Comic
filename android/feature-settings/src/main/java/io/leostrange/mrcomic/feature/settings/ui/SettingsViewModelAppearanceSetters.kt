@@ -2,31 +2,16 @@ package io.leostrange.mrcomic.feature.settings.ui
 
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
-import io.leostrange.mrcomic.core.ui.theme.toConfig
 import kotlinx.coroutines.launch
 
 internal fun SettingsSettersController.setAppLanguage(code: String) = settingsPreferencesController.setAppLanguage(code)
 
-    /**
-     * Applies a theme preset: writes all preset color values and flags into DataStore,
-     * then marks the active preset. Selecting CUSTOM only marks the preset key.
-     */
+    /** Applies a complete preset as one observable DataStore snapshot. */
 internal fun SettingsSettersController.setThemePreset(preset: ThemePreset) {
-        scope.launch {
-            themePreferencesRepository.setThemePreset(preset)
-            if (preset != ThemePreset.CUSTOM) {
-                val cfg = preset.toConfig()
-                themePreferencesRepository.setThemeMode(cfg.themeMode)
-                themePreferencesRepository.setUseDynamicColor(cfg.useDynamicColor)
-                themePreferencesRepository.setUseAmoledDark(cfg.useAmoledDark)
-                themePreferencesRepository.setCustomPrimaryColor(cfg.primaryColor)
-                themePreferencesRepository.setCustomSecondaryColor(cfg.secondaryColor)
-                themePreferencesRepository.setCustomBackgroundColor(cfg.backgroundColor)
-                themePreferencesRepository.setCustomSurfaceColor(null)
-                themePreferencesRepository.setSurfaceOpacity(1f)
-            }
-        }
+    scope.launch {
+        themePreferencesRepository.applyThemePreset(preset)
     }
+}
 
 internal fun SettingsSettersController.setThemeMode(mode: ThemeMode) {
         scope.launch {

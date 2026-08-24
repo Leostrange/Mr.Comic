@@ -17,9 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
@@ -29,6 +31,7 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.style
+import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 
 /**
  * Reader preview cards (Phase M, 2026-08-03): pure visual composables
@@ -48,6 +51,30 @@ internal fun ReaderTextAppearancePreviewCard(
         "center" -> Alignment.CenterHorizontally
         else -> Alignment.Start
     }
+    val textAlign = when (uiState.textAlignment) {
+        "right" -> TextAlign.End
+        "center" -> TextAlign.Center
+        else -> if (uiState.textAlignment == "justify") TextAlign.Justify else TextAlign.Start
+    }
+    val schemeColors = when (uiState.textColorScheme.uppercase()) {
+        "SEPIA" -> Color(0xFFF4ECD8) to Color(0xFF4B3822)
+        "NIGHT" -> Color(0xFF101216) to Color(0xFFE8E1D4)
+        else -> Color(0xFFF6F1E7) to Color(0xFF2B2118)
+    }
+    val previewBackground = uiState.textCustomBackgroundColor
+        ?.let(::argbLongToThemeColor)
+        ?: schemeColors.first
+    val previewText = uiState.textCustomTextColor
+        ?.let(::argbLongToThemeColor)
+        ?: schemeColors.second
+    val previewAccent = uiState.textCustomAccentColor
+        ?.let(::argbLongToThemeColor)
+        ?: MaterialTheme.colorScheme.primary
+    val previewFontFamily = when (uiState.textFontFamily.lowercase()) {
+        "roboto", "open sans", "sans-serif" -> FontFamily.SansSerif
+        "monospace", "source code pro" -> FontFamily.Monospace
+        else -> FontFamily.Serif
+    }
     SettingsCard(title = strings.preview) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -55,7 +82,7 @@ internal fun ReaderTextAppearancePreviewCard(
         ) {
             MrComicCardSurface(
                 shape = MaterialTheme.shapes.large,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                containerColor = previewBackground
             ) {
                 Column(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -65,8 +92,11 @@ internal fun ReaderTextAppearancePreviewCard(
                         text = strings.readerTextPreviewTitle,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = if (uiState.textBold) FontWeight.Bold else FontWeight.SemiBold,
-                            fontSize = (uiState.textFontSize + 2).sp
-                        )
+                            fontSize = (uiState.textFontSize + 2).sp,
+                            fontFamily = previewFontFamily,
+                            color = previewAccent
+                        ),
+                        color = previewAccent
                     )
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -77,8 +107,15 @@ internal fun ReaderTextAppearancePreviewCard(
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontSize = uiState.textFontSize.sp,
                                 lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
-                                fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal
-                            )
+                                fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal,
+                                fontFamily = previewFontFamily,
+                                letterSpacing = uiState.textLetterSpacing.em,
+                                color = previewText
+                            ),
+                            color = previewText,
+                            textAlign = textAlign,
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 8
                         )
                     }
                 }
