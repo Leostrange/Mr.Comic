@@ -440,7 +440,7 @@ internal fun libraryGroupByLabel(groupBy: String, language: String): String = wh
 // Phase T (2026-08-04): private fun parseLibrarySettingsPage moved here from SettingsScreen.kt
 
 internal fun parseLibrarySettingsPage(raw: String): LibrarySettingsPage = when (raw) {
-    "DISPLAY", "COVERS", "CANVAS", "THEME_STUDIO", "SORTING" -> LibrarySettingsPage.OVERVIEW
+    "DISPLAY", "COVERS", "CANVAS", "SORTING" -> LibrarySettingsPage.OVERVIEW
     else -> runCatching { LibrarySettingsPage.valueOf(raw) }.getOrDefault(LibrarySettingsPage.OVERVIEW)
 }
 

@@ -42,15 +42,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicCompactValueRow
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItem
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItemTrailing
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
-import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
-import io.leostrange.mrcomic.core.ui.library.RootChromeTone
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSectionHeader
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSlider
 import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
-import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -73,10 +70,18 @@ internal fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    MrComicPanelCard(
-        title = title,
-        content = content
-    )
+    // Editorial Ink: section header (no card frame). Sub-cards inside
+    // (e.g. AppearanceLanguageCard) still render their own previews, but
+    // the outer wrapper no longer adds a second layer of background and
+    // border. Subsequent passes will flatten the inner rows to MrComicListItem.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        MrComicSectionHeader(title = title)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            content = content,
+        )
+    }
 }
 
 @Composable
@@ -104,15 +109,19 @@ internal fun SwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true
 ) {
-    MrComicSwitchRow(
+    MrComicListItem(
         title = title,
         subtitle = subtitle,
-        checked = checked,
         enabled = enabled,
-        onCheckedChange = { value ->
-            UIFeedback.playSelect()
-            onCheckedChange(value)
-        }
+        onClick = null,
+        trailing = MrComicListItemTrailing.Switch(
+            checked = checked,
+            onCheckedChange = { value ->
+                UIFeedback.playSelect()
+                onCheckedChange(value)
+            },
+            enabled = enabled,
+        ),
     )
 }
 
@@ -122,17 +131,16 @@ internal fun SettingsPickerTile(
     value: String,
     onClick: () -> Unit,
     subtitle: String? = null,
-    compact: Boolean = false
+    @Suppress("UNUSED_PARAMETER") compact: Boolean = false
 ) {
-    MrComicCompactValueRow(
+    MrComicListItem(
         title = title,
         subtitle = subtitle,
-        value = value,
+        trailing = MrComicListItemTrailing.Value(value),
         onClick = {
             UIFeedback.playSelect()
             onClick()
         },
-        compact = compact
     )
 }
 
@@ -146,15 +154,24 @@ internal fun SettingsSliderTile(
     steps: Int = 0,
     subtitle: String? = null
 ) {
-    MrComicSliderTile(
-        title = title,
-        valueLabel = valueLabel,
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        steps = steps,
-        subtitle = subtitle
-    )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        MrComicListItem(
+            title = title,
+            subtitle = subtitle,
+            trailing = MrComicListItemTrailing.Value(valueLabel),
+            onClick = null,
+            divider = false,
+        )
+        MrComicSlider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+        )
+    }
 }
 
 @Composable
@@ -337,83 +354,6 @@ internal fun SettingsCompactSummaryCard(
             }
             if (index != items.lastIndex) {
                 HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-                )
-            }
-        }
-    }
-}
-
-internal data class SettingsStudioOverviewItem(
-    val icon: ImageVector,
-    val title: String,
-    val description: String,
-    val summary: String? = null,
-    val onClick: () -> Unit
-)
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun SettingsStudioOverviewCard(
-    title: String,
-    hint: String,
-    summaryItems: List<Pair<String, String>>,
-    sectionsTitle: String,
-    sections: List<SettingsStudioOverviewItem>
-) {
-    SettingsCard(title = title) {
-        Text(
-            text = hint,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (summaryItems.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                summaryItems.forEach { (label, value) ->
-                    Surface(
-                        shape = RootChromePillShape,
-                        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = value,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = sectionsTitle,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        sections.forEachIndexed { index, item ->
-            SettingsNavItem(
-                icon = item.icon,
-                title = item.title,
-                description = item.description,
-                summary = item.summary,
-                onClick = item.onClick
-            )
-            if (index != sections.lastIndex) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 56.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                 )
             }
