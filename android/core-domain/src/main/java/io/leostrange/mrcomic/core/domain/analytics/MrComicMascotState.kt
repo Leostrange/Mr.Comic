@@ -2,6 +2,7 @@ package io.leostrange.mrcomic.core.domain.analytics
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 
 import io.leostrange.mrcomic.core.model.Comic
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 
 enum class MrComicMascotContext {
     HOME,
@@ -48,7 +49,7 @@ fun resolveMrComicMascotState(
     acknowledgedStageName: String? = null,
     previewEnabled: Boolean = true
 ): MrComicMascotState {
-    val hasActiveRead = recentComic?.readingProgress?.let { it in 0.05f..0.98f } == true
+    val hasActiveRead = recentComic?.displayReadingProgress()?.let { it in 0.05f..0.98f } == true
     val hasArchiveTrail = bookmarkedTitles >= 2 || quotesCount >= 3
     val hasAchievementShelf = secretUnlocked || (totalCount > 0 && unlockedCount * 2 >= totalCount)
     val hasLockedRhythm = goalState.enabled &&

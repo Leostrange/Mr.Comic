@@ -88,7 +88,6 @@ fun SettingsScreen(
         .let {
             when (it) {
                 AppearanceSettingsPage.BASICS,
-                AppearanceSettingsPage.THEME_STUDIO,
                 AppearanceSettingsPage.EXTRA -> AppearanceSettingsPage.OVERVIEW
                 else -> it
             }
@@ -285,7 +284,6 @@ fun SettingsScreen(
             AppearanceSettingsPage.OVERVIEW -> settingsSectionMeta(SettingsSection.APPEARANCE, strings.languageCode, strings).title
             AppearanceSettingsPage.BASICS -> appearanceText.tabLabels[AppearanceSettingsTab.BASICS].orEmpty()
             AppearanceSettingsPage.LIBRARY -> appearanceLibraryVisualsTitle(strings.languageCode)
-            AppearanceSettingsPage.THEME_STUDIO -> appearanceThemeStudioTitle(strings.languageCode)
             AppearanceSettingsPage.THEME -> appearanceThemeTitle(strings.languageCode)
             AppearanceSettingsPage.SCALE -> appearanceText.tabLabels[AppearanceSettingsTab.SCALE].orEmpty()
             AppearanceSettingsPage.COLORS -> appearanceColorsTitle(strings.languageCode)

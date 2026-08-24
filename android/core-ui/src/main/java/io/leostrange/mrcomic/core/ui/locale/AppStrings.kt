@@ -289,7 +289,45 @@ data class AppStrings(
     val achSecretCat: String,
     val achSecretCatDesc: String,
     val achSecretHint: String
-)
+) {
+
+    // ──── Dictionary strings: delegated to DictionaryStrings (JVM 254-param ctor limit fix) ────
+
+    private val dictStrings: DictionaryStrings by lazy { DictionaryStrings.forLanguage(languageCode) }
+    val dictSectionTitle: String get() = dictStrings.dictSectionTitle
+    val dictSectionHint: String get() = dictStrings.dictSectionHint
+    val dictInstalledLabel: String get() = dictStrings.dictInstalledLabel
+    val dictTotalSizeLabel: String get() = dictStrings.dictTotalSizeLabel
+    val dictLangEnglish: String get() = dictStrings.dictLangEnglish
+    val dictLangFrench: String get() = dictStrings.dictLangFrench
+    val dictLangItalian: String get() = dictStrings.dictLangItalian
+    val dictLangJapanese: String get() = dictStrings.dictLangJapanese
+    val dictLangKorean: String get() = dictStrings.dictLangKorean
+    val dictLangPolish: String get() = dictStrings.dictLangPolish
+    val dictLangPortuguese: String get() = dictStrings.dictLangPortuguese
+    val dictLangRussian: String get() = dictStrings.dictLangRussian
+    val dictLangTurkish: String get() = dictStrings.dictLangTurkish
+    val dictLangChinese: String get() = dictStrings.dictLangChinese
+    val dictStatusBundled: String get() = dictStrings.dictStatusBundled
+    val dictStatusInstalled: String get() = dictStrings.dictStatusInstalled
+    val dictStatusNotInstalled: String get() = dictStrings.dictStatusNotInstalled
+    val dictBtnDownload: String get() = dictStrings.dictBtnDownload
+    val dictBtnDelete: String get() = dictStrings.dictBtnDelete
+    val dictBtnExport: String get() = dictStrings.dictBtnExport
+    val dictConfirmDownloadTitle: String get() = dictStrings.dictConfirmDownloadTitle
+    val dictConfirmDownloadMessage: String get() = dictStrings.dictConfirmDownloadMessage
+    val dictBtnDownloadAll: String get() = dictStrings.dictBtnDownloadAll
+    val dictBtnExportAll: String get() = dictStrings.dictBtnExportAll
+    val dictBtnImport: String get() = dictStrings.dictBtnImport
+    val dictImportSelectLanguage: String get() = dictStrings.dictImportSelectLanguage
+    val dictOpDeleting: String get() = dictStrings.dictOpDeleting
+    val dictOpImporting: String get() = dictStrings.dictOpImporting
+    val dictOpExporting: String get() = dictStrings.dictOpExporting
+    val dictOpError: String get() = dictStrings.dictOpError
+    val dictImportSuccess: String get() = dictStrings.dictImportSuccess
+    val dictImportInvalidFile: String get() = dictStrings.dictImportInvalidFile
+    val dictExportSuccess: String get() = dictStrings.dictExportSuccess
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CompositionLocal

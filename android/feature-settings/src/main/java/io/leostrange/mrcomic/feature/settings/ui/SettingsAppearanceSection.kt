@@ -23,7 +23,6 @@ internal fun AppearanceSection(
 ) {
     val menuText = remember(uiState.appLanguage) { mainMenuText(uiState.appLanguage) }
     val sectionText = remember(uiState.appLanguage) { appearanceSectionText(uiState.appLanguage) }
-    val appThemePresetText = remember(uiState.appLanguage) { appThemePresetText(uiState.appLanguage) }
     val libraryText = remember(uiState.appLanguage) { librarySectionText(uiState.appLanguage) }
 
     LazyColumn(
@@ -59,24 +58,6 @@ internal fun AppearanceSection(
                     sectionText = sectionText,
                     strings = strings,
                     onPageChange = onPageChange
-                )
-            }
-        }
-        if (currentPage == AppearanceSettingsPage.THEME_STUDIO) {
-            item {
-                AppearanceStudioOverviewCard(
-                    uiState = uiState,
-                    strings = strings,
-                    sectionText = sectionText,
-                    onPageChange = onPageChange
-                )
-            }
-            item {
-                AppearanceAppThemePresetsCard(
-                    uiState = uiState,
-                    strings = strings,
-                    text = appThemePresetText,
-                    viewModel = viewModel
                 )
             }
         }
@@ -132,15 +113,6 @@ internal fun AppearanceSection(
                 uiState = uiState,
                 strings = strings,
                 sectionText = sectionText,
-                viewModel = viewModel
-            )
-        }
-        if (currentPage == AppearanceSettingsPage.COLORS) item {
-            AppearanceSurfacesCard(
-                uiState = uiState,
-                strings = strings,
-                sectionText = sectionText,
-                menuText = menuText,
                 viewModel = viewModel
             )
         }

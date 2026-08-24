@@ -29,6 +29,22 @@ class HtmlSupportTest {
     }
 
     @Test
+    fun linksPlainNumericSuperscriptToMatchingSemanticFootnoteBody() {
+        val extraction = extractReaderHtmlFootnotes(
+            """
+            <html><body>
+              <p>Visible text<sup>[1]</sup>.</p>
+              <aside id="note-1" role="doc-footnote">[1] Footnote body.</aside>
+            </body></html>
+            """.trimIndent()
+        )
+
+        assertTrue(extraction.contentHtml.contains("href=\"#note-1\""))
+        assertTrue(extraction.contentHtml.contains("mrcomic-generated-noteref"))
+        assertEquals("[1] Footnote body.", extraction.footnoteMap["note-1"])
+    }
+
+    @Test
     fun rendersUtf8HtmlCorpusSample() {
         val samplePath = locateCorpusFile("html_utf8_tika.html")
         assumeTrue("HTML corpus sample not available", samplePath.exists())
@@ -94,7 +110,7 @@ class HtmlSupportTest {
     }
 
     @Test
-    fun complexHtmlKeepsPreserveLayoutMode() {
+    fun semanticTableReflowsInsteadOfLockingTheWholeDocumentWidth() {
         val raw = """
             <html><body>
             <table><tr><td>Grid</td><td>Layout</td></tr></table>
@@ -103,7 +119,58 @@ class HtmlSupportTest {
 
         val html = renderHtmlToReaderDocument(raw)
 
-        assertTrue(html.contains("data-mrcomic-preserve-layout=\"true\"", ignoreCase = true))
+        val bodyTag = Regex("<body[^>]*>", RegexOption.IGNORE_CASE).find(html)?.value ?: ""
+        assertFalse(bodyTag.contains("data-mrcomic-preserve-layout", ignoreCase = true))
+    }
+
+    @Test
+    fun gutenbergHtmlReflowsSoLongTitleCannotBeClippedByPublisherGeometry() {
+        val raw = """
+            <!doctype html public "-//W3C//DTD XHTML 1.0 Strict//EN">
+            <html><head><title>Alice's Adventures in Wonderland</title></head><body>
+              <h1 style="width: 900px; font-size: 96px">Alice's Adventures in Wonderland</h1>
+              <p>Project Gutenberg sample.</p>
+            </body></html>
+        """.trimIndent()
+
+        val html = renderHtmlToReaderDocument(raw)
+        val bodyTag = Regex("<body[^>]*>", RegexOption.IGNORE_CASE).find(html)?.value ?: ""
+
+        assertFalse(bodyTag.contains("data-mrcomic-preserve-layout", ignoreCase = true))
+        assertTrue(html.contains(".mc-title-block"))
+        assertTrue(html.contains("overflow-wrap: anywhere"))
+    }
+
+    @Test
+    fun legacySourcePagebreakDoesNotCreateAStandaloneMostlyEmptyReaderPage() {
+        val html = renderHtmlToReaderDocument(
+            """
+            <html><body>
+              <p>Short front matter.</p>
+              <mbp:pagebreak/>
+              <p>TEXT FORMATTING</p>
+            </body></html>
+            """.trimIndent()
+        )
+
+        assertFalse(html.contains("mrcomic-pagebreak"))
+        assertTrue(html.contains("Short front matter"))
+        assertTrue(html.contains("TEXT FORMATTING"))
+    }
+
+    @Test
+    fun explicitReaderPagebreakRemainsAvailableForSemanticBoundaries() {
+        val html = renderHtmlToReaderDocument(
+            """
+            <html><body>
+              <p>Cover.</p>
+              <hr data-mrcomic-pagebreak="true"/>
+              <h1>Chapter One</h1>
+            </body></html>
+            """.trimIndent()
+        )
+
+        assertTrue(html.contains("data-mrcomic-pagebreak=\"true\""))
     }
 
     private fun locateCorpusFile(name: String): java.io.File {

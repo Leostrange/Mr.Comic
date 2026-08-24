@@ -69,27 +69,35 @@ internal fun ThemePreviewCard(
         ThemeMode.SYSTEM,
         ThemeMode.DYNAMIC -> currentScheme.background.luminance() < 0.45f
     }
-    val previewBackground = uiState.customBackgroundColor?.let(::argbLongToThemeColor) ?: when {
+    val previewBackgroundTarget = uiState.customBackgroundColor?.let(::argbLongToThemeColor) ?: when {
         uiState.themeMode == ThemeMode.LIGHT -> Color(0xFFF7F3EE)
         uiState.themeMode == ThemeMode.DARK && uiState.useAmoledDark -> Color(0xFF000000)
         uiState.themeMode == ThemeMode.DARK -> Color(0xFF121216)
         uiState.themeMode == ThemeMode.SYSTEM && uiState.useAmoledDark && isDarkPreview -> Color(0xFF000000)
         else -> currentScheme.background
     }
-    val previewSurface = uiState.customSurfaceColor?.let(::argbLongToThemeColor) ?: when {
-        previewBackground == Color(0xFF000000) -> Color(0xFF0A0A0A)
+    val previewSurfaceTarget = uiState.customSurfaceColor?.let(::argbLongToThemeColor) ?: when {
+        previewBackgroundTarget == Color(0xFF000000) -> Color(0xFF0A0A0A)
         isDarkPreview -> Color(0xFF1B1B1F)
         uiState.themeMode == ThemeMode.LIGHT -> Color(0xFFFFFFFF)
         else -> currentScheme.surface.copy(alpha = 1f)
     }
-    val previewPrimary = uiState.customPrimaryColor?.let(::argbLongToThemeColor) ?: currentScheme.primary
-    val previewSecondary = uiState.customSecondaryColor?.let(::argbLongToThemeColor) ?: currentScheme.secondary
-    val previewPrimaryContainer = uiState.customPrimaryColor?.let {
-        lerp(previewSurface, previewPrimary, if (isDarkPreview) 0.36f else 0.18f)
+    val previewPrimaryTarget = uiState.customPrimaryColor?.let(::argbLongToThemeColor) ?: currentScheme.primary
+    val previewSecondaryTarget = uiState.customSecondaryColor?.let(::argbLongToThemeColor) ?: currentScheme.secondary
+    val previewPrimaryContainerTarget = uiState.customPrimaryColor?.let {
+        lerp(previewSurfaceTarget, previewPrimaryTarget, if (isDarkPreview) 0.36f else 0.18f)
     } ?: currentScheme.primaryContainer.copy(alpha = 1f)
-    val previewSecondaryContainer = uiState.customSecondaryColor?.let {
-        lerp(previewSurface, previewSecondary, if (isDarkPreview) 0.34f else 0.18f)
+    val previewSecondaryContainerTarget = uiState.customSecondaryColor?.let {
+        lerp(previewSurfaceTarget, previewSecondaryTarget, if (isDarkPreview) 0.34f else 0.18f)
     } ?: currentScheme.secondaryContainer.copy(alpha = 1f)
+
+    // Keep the preview a single, coherent snapshot of the selected theme.
+    // Per-element animations made the preview show mixed old/new themes.
+    val previewBackground = previewBackgroundTarget
+    val previewSurface = previewSurfaceTarget
+    val previewPrimary = previewPrimaryTarget
+    val previewPrimaryContainer = previewPrimaryContainerTarget
+    val previewSecondaryContainer = previewSecondaryContainerTarget
     val onPreview = if (previewBackground.luminance() > 0.18f) {
         Color(0xFF000000)
     } else {
@@ -195,40 +203,6 @@ internal fun ThemePreviewCard(
                         .background(onPreviewSurface.copy(alpha = 0.14f))
                 )
             }
-            // surfaceContainer preview — nested card
-            val previewSurfaceContainer = lerp(
-                previewSurface, if (isDarkPreview) Color.Black else Color.White,
-                if (isDarkPreview) 0.4f else 0.2f
-            ).let { anchor -> lerp(anchor, previewSurface, if (isDarkPreview) 0.62f else 0.78f) }
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = previewSurfaceContainer
-            ) {
-                Text(
-                    strings.previewCard,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onPreviewSurface,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
-            // error preview
-            val previewError = if (isDarkPreview) Color(0xFFF2B8B5) else Color(0xFFBA1A1A)
-            val previewErrorContainer = if (isDarkPreview) Color(0xFF93000A) else Color(0xFFFFDAD6)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = previewErrorContainer
-                ) {
-                    Text(
-                        "⚠",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = previewError,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
             Surface(
                 shape = MaterialTheme.shapes.large,
                 color = previewSecondaryContainer
@@ -263,46 +237,6 @@ internal fun ThemePreviewCard(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         )
                     }
-                }
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    color = previewSurface
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.BookmarkBorder,
-                            contentDescription = null,
-                            tint = previewPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            strings.previewCard,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = onPreviewSurface
-                        )
-                    }
-                }
-                FilledTonalButton(
-                    onClick = {},
-                    modifier = Modifier.height(36.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = previewPrimary,
-                        contentColor = if (previewPrimary.luminance() > 0.18f) Color.Black else Color.White
-                    )
-                ) {
-                    Text(strings.previewButton)
                 }
             }
         }

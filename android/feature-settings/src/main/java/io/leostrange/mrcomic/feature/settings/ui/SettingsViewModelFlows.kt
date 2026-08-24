@@ -197,24 +197,12 @@ internal fun SettingsUiStateFlowBuilder.createExtrasFlow6c() = combine(
         )
     }
 
-internal fun SettingsUiStateFlowBuilder.createExtrasFlow6d() = combine(
-        preferences.get(PreferencesKeys.APP_THEME_PRESET_1, ""),
-        preferences.get(PreferencesKeys.APP_THEME_PRESET_2, ""),
-        preferences.get(PreferencesKeys.APP_THEME_PRESET_3, "")
-    ) { preset1, preset2, preset3 ->
-        listOf<Any>(
-            AppThemePresetSlot(index = 1, serialized = preset1.ifBlank { null }),
-            AppThemePresetSlot(index = 2, serialized = preset2.ifBlank { null }),
-            AppThemePresetSlot(index = 3, serialized = preset3.ifBlank { null })
-        )
-    }
-
 internal fun SettingsUiStateFlowBuilder.createExtrasFlow345() = combine(createExtrasFlow3(), createExtrasFlow4(), createExtrasFlow5()) { e3, e4, e5 -> e3 + e4 + e5 }
 internal fun SettingsUiStateFlowBuilder.createExtrasFlow6() = combine(createExtrasFlow6a(), createExtrasFlow6b(), createExtrasFlow6c(), createExtrasFlow6e()) { left, middle, right, style ->
         left + middle + right + style
     }
-internal fun SettingsUiStateFlowBuilder.createExtrasFlow3456() = combine(createExtrasFlow345(), createExtrasFlow6(), createExtrasFlow6d()) { left, middle, right ->
-        left + middle + right
+internal fun SettingsUiStateFlowBuilder.createExtrasFlow3456() = combine(createExtrasFlow345(), createExtrasFlow6()) { left, right ->
+        left + right
     }
 internal fun SettingsUiStateFlowBuilder.createExtrasFlow7a() = combine(
         preferences.get(PreferencesKeys.READER_EYE_REST_ENABLED, false),
@@ -409,11 +397,6 @@ internal fun SettingsUiStateFlowBuilder.createCombinedSettingsUiState(): Flow<Se
             libraryCardStroke = e345[34] as Float,
             libraryCardCornerRadius = e345[35] as Int,
             libraryTitlePanelOpacity = e345[36] as Float,
-            appThemePresetSlots = listOf(
-                e345[37] as AppThemePresetSlot,
-                e345[38] as AppThemePresetSlot,
-                e345[39] as AppThemePresetSlot
-            ),
             libraryThemePresetSlots = listOf(
                 e345[29] as LibraryThemePresetSlot,
                 e345[30] as LibraryThemePresetSlot,

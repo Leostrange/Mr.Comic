@@ -33,6 +33,8 @@ import io.leostrange.mrcomic.core.ui.theme.style
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryDownloader
+import io.leostrange.mrcomic.core.data.dictionary.DictionaryInstallInfo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -44,6 +46,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 // Preset data classes and parsing extracted to SettingsPresets.kt
@@ -69,7 +73,7 @@ class SettingsViewModel @Inject constructor(
     private val dictionaryEngine: DictionaryEngine,
     private val offlineTranslationEngine: OfflineTranslationEngine,
     private val onlineTranslationEngine: OnlineTranslationEngine,
-    private val dictionaryDownloader: DictionaryDownloader
+    internal val dictionaryDownloader: DictionaryDownloader
 ) : ViewModel() {
 
     internal val preferences = UserPreferences(context.dataStore)
@@ -169,6 +173,18 @@ class SettingsViewModel @Inject constructor(
         initialValue = SettingsUiState()
     )
 
+    // Must be initialized before initDictionaryState() starts its coroutine.
+    // Kotlin initializes class properties in source order; keeping this below
+    // the init block leaves the backing field null during constructor startup.
+    internal val _dictionaryDownloadState = MutableStateFlow(DictionaryDownloadState())
+    val dictionaryDownloadState: StateFlow<DictionaryDownloadState> = _dictionaryDownloadState
+    internal val _dictionaryItems = MutableStateFlow<List<DictionaryInstallInfo>>(emptyList())
+    internal val _dictionaryOperationState = MutableStateFlow<DictionaryOperationState>(DictionaryOperationState.Idle)
+    internal val _pendingDownloadLanguage = MutableStateFlow<String?>(null)
+    internal val _dictionaryDownloadProgress = MutableStateFlow<Float?>(null)
+    internal val _pendingImportFile = MutableStateFlow<File?>(null)
+    internal val _needsImportLanguageSelection = MutableStateFlow(false)
+
     init {
         viewModelScope.launch {
             val existingEntries = parseReaderStylePresetEntries(
@@ -185,6 +201,7 @@ class SettingsViewModel @Inject constructor(
                 persistReaderStylePresetEntries(migrated)
             }
         }
+        initDictionaryState()
     }
 
     // Phase Z (2026-08-04): setter functions → SettingsViewModelSetters.kt.
@@ -327,10 +344,6 @@ class SettingsViewModel @Inject constructor(
 
     // Phase X (2026-08-04): backup/cache/repair → SettingsViewModelBackup.kt.
 
-    // Dictionary download state
-    private val _dictionaryDownloadState = MutableStateFlow(DictionaryDownloadState())
-    val dictionaryDownloadState: StateFlow<DictionaryDownloadState> = _dictionaryDownloadState
-
     fun downloadAllDictionaries() {
         viewModelScope.launch {
             _dictionaryDownloadState.value = DictionaryDownloadState(
@@ -339,6 +352,8 @@ class SettingsViewModel @Inject constructor(
             try {
                 val allLanguages = listOf("en", "fr", "it", "ja", "ko", "pl", "pt", "ru", "tr", "zh")
                 val downloaded = mutableSetOf<String>()
+                @Suppress("InjectDispatcher") // IO work inside withContext below
+                withContext(Dispatchers.IO) {
                 allLanguages.forEach { lang ->
                     _dictionaryDownloadState.update { it.copy(currentLanguage = lang) }
                     val result = dictionaryDownloader.ensureDictionary(lang) { progress ->
@@ -356,6 +371,7 @@ class SettingsViewModel @Inject constructor(
                         }
                     }
                 }
+                } // end withContext(IO)
                 _dictionaryDownloadState.value = DictionaryDownloadState(
                     downloadedLanguages = downloaded.toSet()
                 )

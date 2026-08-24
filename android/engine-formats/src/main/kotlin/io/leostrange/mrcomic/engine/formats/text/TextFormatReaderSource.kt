@@ -27,29 +27,19 @@ internal fun TextFormatReader.sectionHtmlDocument(raw: String): TextDocumentData
     val footnotes = extractReaderHtmlFootnotes(raw)
     val contentHtml = footnotes.contentHtml
     val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(contentHtml)
-    val pages = if (isGutenbergHtml(contentHtml)) {
-        paginateHtmlDocument(
-            raw = contentHtml,
-            baseUrl = readerBaseUrl,
-            preservePublisherLayout = true,
-            baseCss = PRESERVE_LAYOUT_HTML_CSS,
-            keepWholeDocument = true
-        )
-    } else {
-        paginateHtmlDocument(
-            raw = contentHtml,
-            baseUrl = readerBaseUrl,
-            preservePublisherLayout = preservePublisherLayout,
-            baseCss = if (preservePublisherLayout) {
-                PRESERVE_LAYOUT_HTML_CSS
-            } else {
-                DEFAULT_READER_HTML_CSS
-            },
-            keepWholeDocument = true
-        )
-    }
+    val pages = paginateHtmlDocument(
+        raw = contentHtml,
+        baseUrl = readerBaseUrl,
+        preservePublisherLayout = preservePublisherLayout,
+        baseCss = if (preservePublisherLayout) {
+            PRESERVE_LAYOUT_HTML_CSS
+        } else {
+            DEFAULT_READER_HTML_CSS
+        },
+        keepWholeDocument = true
+    )
     val anchored = addHtmlHeadingAnchorsToPages(pages)
-    val sections = if (preservePublisherLayout || isGutenbergHtml(contentHtml)) {
+    val sections = if (preservePublisherLayout) {
         anchored.pages.mapIndexed { index, html ->
             TextDocumentSection(index = index, html = html, baseUrl = readerBaseUrl)
         }

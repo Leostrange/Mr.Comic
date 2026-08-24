@@ -56,7 +56,12 @@ class ReaderSettingsController(
         _uiState.update { ReaderStylePresetReducer.setColorScheme(it, scheme) }
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READER_PRESET, ReadingPreset.CUSTOM.name)
-            readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme)
+            val isText = _uiState.value.readerContainerKind.isTextContainer()
+            if (isText) {
+                readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, scheme)
+            } else {
+                readerPreferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, scheme)
+            }
         }
     }
 
@@ -146,6 +151,7 @@ class ReaderSettingsController(
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, DEFAULT_TEXT_FONT_SIZE)
             readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, DEFAULT_TEXT_COLOR_SCHEME)
+            readerPreferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, DEFAULT_GRAPHIC_COLOR_SCHEME)
             readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, DEFAULT_TEXT_FONT_FAMILY)
             readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, DEFAULT_TEXT_LINE_HEIGHT)
             readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, DEFAULT_TEXT_LETTER_SPACING)
@@ -178,6 +184,7 @@ class ReaderSettingsController(
             readerPreferences.set(PreferencesKeys.READER_IMMERSIVE_MODE, style.immersiveMode)
             readerPreferences.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
             readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
+            readerPreferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, style.textColorScheme)
             readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, style.fontFamily)
             readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, style.lineHeight)
             readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, style.letterSpacing)

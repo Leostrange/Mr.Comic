@@ -156,6 +156,33 @@ class UnifiedReaderCssBuilderTest {
     }
 
     @Test
+    fun documentCss_doesNotBreakOrdinaryWordsAndKeepsJustifiedLastLinesNatural() {
+        val css = buildReaderDocumentCss(includeHyphens = true)
+
+        assertTrue(css.contains("overflow-wrap: break-word"))
+        assertTrue(css.contains("word-break: normal"))
+        assertTrue(css.contains("text-align-last: start"))
+        val bodyRule = Regex("body \\{(.*?)\\n    \\}", setOf(RegexOption.DOT_MATCHES_ALL))
+            .find(css)
+            ?.groupValues
+            ?.get(1)
+            .orEmpty()
+        assertFalse(bodyRule.contains("overflow-wrap: anywhere"))
+    }
+
+    @Test
+    fun darkReaderOverrideDoesNotForceBlurryFontRasterization() {
+        val head = buildReaderDocumentHead(
+            baseCss = READER_BASE_DOCUMENT_CSS,
+            textColorOverride = "#E8E1D4",
+            backgroundColorOverride = "#000000"
+        )
+
+        assertFalse(head.contains("font-smoothing"))
+        assertFalse(head.contains("geometricPrecision"))
+    }
+
+    @Test
     fun buildReaderDocumentCss_customExtraCss() {
         val extra = ".custom { color: red; }"
         val css = buildReaderDocumentCss(extraCss = extra)

@@ -74,6 +74,30 @@ class ThemePreferencesRepository @Inject constructor(
         dataStore.edit { prefs -> prefs[THEME_PRESET_KEY] = preset.name }
     }
 
+    /**
+     * Writes a preset and every value it owns in one DataStore transaction.
+     * A preset must never be observed as a mixture of its old and new colors.
+     */
+    suspend fun applyThemePreset(preset: ThemePreset) {
+        dataStore.edit { prefs ->
+            prefs[THEME_PRESET_KEY] = preset.name
+            if (preset == ThemePreset.CUSTOM) return@edit
+
+            val config = preset.toConfig()
+            prefs[THEME_MODE_KEY] = config.themeMode.name
+            prefs[USE_DYNAMIC_COLOR_KEY] = config.useDynamicColor
+            prefs[USE_AMOLED_KEY] = config.useAmoledDark
+            if (config.primaryColor == null) prefs.remove(CUSTOM_PRIMARY_COLOR_KEY)
+            else prefs[CUSTOM_PRIMARY_COLOR_KEY] = config.primaryColor.toString()
+            if (config.secondaryColor == null) prefs.remove(CUSTOM_SECONDARY_COLOR_KEY)
+            else prefs[CUSTOM_SECONDARY_COLOR_KEY] = config.secondaryColor.toString()
+            if (config.backgroundColor == null) prefs.remove(CUSTOM_BACKGROUND_COLOR_KEY)
+            else prefs[CUSTOM_BACKGROUND_COLOR_KEY] = config.backgroundColor.toString()
+            prefs.remove(CUSTOM_SURFACE_COLOR_KEY)
+            prefs[SURFACE_OPACITY_KEY] = 1f
+        }
+    }
+
     /** Pass null to reset to theme default. Non-null values are persisted as decimal Long strings. */
     suspend fun setCustomPrimaryColor(color: Long?) {
         dataStore.edit { prefs ->

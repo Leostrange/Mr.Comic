@@ -29,7 +29,7 @@ class MrComicMascotStateTest {
             progress = MascotProgressState(stage = MascotStage.TEEN),
             totalTitles = 4,
             completedTitles = 1,
-            recentComic = Comic(title = "Test", readingProgress = 0.42f)
+            recentComic = Comic(title = "Test", readingProgress = 0.42f, lastReadDate = System.currentTimeMillis())
         )
 
         assertEquals(MrComicMascotMood.LOCKED_IN, state.mood)

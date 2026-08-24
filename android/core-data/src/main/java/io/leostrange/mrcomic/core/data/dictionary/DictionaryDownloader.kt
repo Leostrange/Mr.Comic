@@ -5,11 +5,24 @@ import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.GZIPInputStream
+import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Information about an installed dictionary.
+ */
+data class DictionaryInstallInfo(
+    val language: String,
+    val isBundled: Boolean,
+    val downloadedFile: File?,
+    val sizeBytes: Long,
+)
 
 /**
  * Downloads dictionary databases from GitHub Releases on first use.
@@ -64,15 +77,15 @@ class DictionaryDownloader @Inject constructor(
             val downloadUrl = buildReleaseUrl(config)
             Log.i(TAG, "Downloading dictionary for ${config.language} from $downloadUrl")
 
-            val compressedFile = File(downloadsDir, "${config.language}.dbpack.gz")
-            downloadFile(downloadUrl, compressedFile, onProgress)
+            val downloadedFile = File(downloadsDir, "${config.language}.dbpack")
+            downloadFile(downloadUrl, downloadedFile, onProgress)
 
             onProgress?.invoke(95)
             val extractedFile = File(extractedDir, config.extractedFileName)
-            extractGzip(compressedFile, extractedFile)
+            extractDatabase(downloadedFile, extractedFile)
 
-            // Clean up compressed file
-            compressedFile.delete()
+            // Clean up downloaded file
+            downloadedFile.delete()
 
             onProgress?.invoke(100)
             Log.i(TAG, "Successfully downloaded and extracted dictionary for ${config.language}")
@@ -83,9 +96,11 @@ class DictionaryDownloader @Inject constructor(
         }
     }
 
-    private fun buildReleaseUrl(config: DictionaryAssetConfig): String {
-        // Format: https://github.com/Leostrange/Mr.Comic/releases/download/v2.3.0/dictionary_en.dbpack.gz
-        return "https://github.com/Leostrange/Mr.Comic/releases/download/$DICTIONARY_RELEASE_TAG/${config.language}.dbpack.gz"
+    internal fun buildReleaseUrl(config: DictionaryAssetConfig): String {
+        // Dictionary modules are published independently from application releases.
+        // Keep the gzip auto-detection in extractDatabase so future .gz uploads
+        // continue to work without a code change.
+        return dictionaryReleaseUrl(config.language)
     }
 
     private fun downloadFile(
@@ -124,12 +139,18 @@ class DictionaryDownloader @Inject constructor(
         }
     }
 
-    private fun extractGzip(compressedFile: File, targetFile: File) {
-        compressedFile.inputStream().use { raw ->
-            GZIPInputStream(raw).use { gzip ->
-                FileOutputStream(targetFile).use { out ->
-                    gzip.copyTo(out)
-                }
+    /**
+     * Extracts the downloaded database into [targetFile].
+     * Detects gzip by magic bytes (1F 8B) so both plain .dbpack and
+     * gzipped uploads are supported transparently.
+     */
+    private fun extractDatabase(downloadedFile: File, targetFile: File) {
+        val gzipped = downloadedFile.inputStream().use { isGzip(it) }
+        downloadedFile.inputStream().use { raw ->
+            if (gzipped) {
+                GZIPInputStream(raw).use { gzip -> FileOutputStream(targetFile).use { out -> gzip.copyTo(out) } }
+            } else {
+                FileOutputStream(targetFile).use { out -> raw.copyTo(out) }
             }
         }
     }
@@ -139,8 +160,206 @@ class DictionaryDownloader @Inject constructor(
         true
     }.getOrDefault(false)
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Public API: dictionary management
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns info about every shipped dictionary — whether it is bundled,
+     * downloaded, and the size of the on-disk file (or zero for not-yet-fetched).
+     */
+    fun installedDictionaries(): List<DictionaryInstallInfo> {
+        return DictionaryAssetCatalog.shippedLanguages().map { lang ->
+            val config = DictionaryAssetCatalog.configForLanguage(lang)!!
+            val extractedFile = File(extractedDir, config.extractedFileName)
+            val isExtracted = extractedFile.exists() && extractedFile.length() > 0L
+            val hasBundled = hasAsset(config.assetPath)
+            val downloadedFile = File(downloadsDir, "$lang.dbpack")
+            val downloadedExists = downloadedFile.exists() && downloadedFile.length() > 0L
+            val sizeBytes = when {
+                isExtracted -> extractedFile.length()
+                downloadedExists -> downloadedFile.length()
+                else -> 0L
+            }
+            DictionaryInstallInfo(
+                language = lang,
+                isBundled = hasBundled,
+                downloadedFile = if (downloadedExists) downloadedFile else null,
+                sizeBytes = sizeBytes,
+            )
+        }
+    }
+
+    /**
+     * Deletes the extracted database and any downloaded .dbpack for the given language.
+     * Note: does NOT check if a download is currently in progress — callers should
+     * guard via [DictionaryOperationState] before calling.
+     *
+     * @return true if at least one file was deleted
+     */
+    fun deleteDictionary(language: String): Boolean {
+        val config = DictionaryAssetCatalog.configForLanguage(language) ?: return false
+        val extractedFile = File(extractedDir, config.extractedFileName)
+        val downloadedFile = File(downloadsDir, "$language.dbpack")
+        var deleted = false
+        if (extractedFile.exists()) { extractedFile.delete(); deleted = true }
+        if (downloadedFile.exists()) { downloadedFile.delete(); deleted = true }
+        return deleted
+    }
+
+    /**
+     * Exports the extracted database for [language] as gzip into [target].
+     * The caller is responsible for closing the stream.
+     *
+     * @return true if the export succeeded
+     */
+    fun exportDictionary(language: String, target: OutputStream): Boolean {
+        val config = DictionaryAssetCatalog.configForLanguage(language) ?: return false
+        val extractedFile = File(extractedDir, config.extractedFileName)
+        if (!extractedFile.exists() || extractedFile.length() == 0L) return false
+        return try {
+            extractedFile.inputStream().use { input ->
+                writeGzipWithoutClosingTarget(input, target)
+            }
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to export dictionary for $language", e)
+            false
+        }
+    }
+
+    /**
+     * Imports a dictionary from [source] for the given [language].
+     * The source may be gzip-compressed (auto-detected via magic bytes) or plain SQLite.
+     * The extracted file is validated to be a SQLite database (header starts with "SQLite format 3").
+     *
+     * @return The extracted File on success, or null if the source is invalid / not SQLite.
+     */
+    fun importDictionary(language: String, source: InputStream): File? {
+        val config = DictionaryAssetCatalog.configForLanguage(language) ?: return null
+        val tempFile = File(downloadsDir, "${language}_import_tmp.dbpack")
+        val extractedFile = File(extractedDir, config.extractedFileName)
+        val stagedExtractedFile = File(extractedDir, "${language}_import_tmp.db")
+        val backupFile = File(extractedDir, "${language}_import_backup.db")
+        return try {
+            // Write source to temp file
+            tempFile.outputStream().use { out -> source.copyTo(out) }
+            if (tempFile.length() == 0L) {
+                tempFile.delete()
+                return null
+            }
+
+            // Detect gzip and decompress
+            val isGz = tempFile.inputStream().use { isGzip(it) }
+            extractedFile.parentFile?.mkdirs()
+            stagedExtractedFile.delete()
+            backupFile.delete()
+
+            tempFile.inputStream().use { raw ->
+                if (isGz) {
+                    GZIPInputStream(raw).use { gzip ->
+                        FileOutputStream(stagedExtractedFile).use { out -> gzip.copyTo(out) }
+                    }
+                } else {
+                    FileOutputStream(stagedExtractedFile).use { out -> raw.copyTo(out) }
+                }
+            }
+
+            // Validate SQLite header
+            if (!isValidSqlite(stagedExtractedFile)) {
+                stagedExtractedFile.delete()
+                tempFile.delete()
+                Log.w(TAG, "Imported file for $language is not a valid SQLite database")
+                return null
+            }
+
+            // Keep the old database recoverable until the staged replacement
+            // has been installed successfully.
+            if (extractedFile.exists() && !extractedFile.renameTo(backupFile)) {
+                throw IllegalStateException("Could not stage existing dictionary")
+            }
+            if (!stagedExtractedFile.renameTo(extractedFile)) {
+                if (backupFile.exists()) backupFile.renameTo(extractedFile)
+                throw IllegalStateException("Could not install imported dictionary")
+            }
+            backupFile.delete()
+
+            tempFile.delete()
+            Log.i(TAG, "Successfully imported dictionary for $language")
+            extractedFile
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to import dictionary for $language", e)
+            tempFile.delete()
+            stagedExtractedFile.delete()
+            if (!extractedFile.exists() && backupFile.exists()) {
+                backupFile.renameTo(extractedFile)
+            }
+            backupFile.delete()
+            null
+        }
+    }
+
+    /**
+     * Sum of all extracted dictionary file sizes in bytes.
+     */
+    fun dictionariesTotalSizeBytes(): Long {
+        var total = 0L
+        for (lang in DictionaryAssetCatalog.shippedLanguages()) {
+            val config = DictionaryAssetCatalog.configForLanguage(lang) ?: continue
+            val extractedFile = File(extractedDir, config.extractedFileName)
+            if (extractedFile.exists()) total += extractedFile.length()
+        }
+        return total
+    }
+
     companion object {
         private const val TAG = "DictionaryDownloader"
-        private const val DICTIONARY_RELEASE_TAG = "v2.3.0"
+        private const val DICTIONARY_RELEASE_TAG = "dictionary-modules-v1.0.0"
+
+        internal fun dictionaryReleaseUrl(language: String): String =
+            "https://github.com/Leostrange/Mr.Comic/releases/download/" +
+                "$DICTIONARY_RELEASE_TAG/dictionary_${language}.dbpack"
+
+        internal fun writeGzipWithoutClosingTarget(input: InputStream, target: OutputStream) {
+            val gzip = GZIPOutputStream(target)
+            input.copyTo(gzip)
+            gzip.finish()
+            gzip.flush()
+        }
+
+        /**
+         * Detects gzip magic bytes (0x1F, 0x8B) on a stream.
+         * Uses a BufferedInputStream so the peeked bytes are not lost.
+         * The stream is NOT closed — the caller owns it.
+         */
+        internal fun isGzip(stream: InputStream): Boolean {
+            val buffered = if (stream is java.io.BufferedInputStream) stream else java.io.BufferedInputStream(stream)
+            buffered.mark(2)
+            val b1 = buffered.read()
+            val b2 = buffered.read()
+            buffered.reset()
+            return b1 == 0x1F && b2 == 0x8B
+        }
+
+        /**
+         * Validates that the file starts with the SQLite header "SQLite format 3\000".
+         * The magic string is exactly 16 bytes including the trailing NUL.
+         */
+        internal fun isValidSqlite(file: File): Boolean {
+            return try {
+                val expected = byteArrayOf(
+                    0x53, 0x51, 0x4C, 0x69, 0x74, 0x65, 0x20, 0x66, // "SQLite f"
+                    0x6F, 0x72, 0x6D, 0x61, 0x74, 0x20, 0x33, 0x00, // "ormat 3\0"
+                )
+                file.inputStream().use { input ->
+                    val header = ByteArray(16)
+                    val read = input.read(header)
+                    if (read < 16) return false
+                    header.contentEquals(expected)
+                }
+            } catch (_: Exception) {
+                false
+            }
+        }
     }
 }

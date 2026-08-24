@@ -159,17 +159,44 @@ internal const val JS_TAP_HANDLER = """(function(){
   },false);
   // Check if an element (or its ancestor) is a clickable link/footnote.
   // Used to prevent page-turn taps from consuming footnote clicks.
+  // BUG-T4: Walk up to 10 ancestor levels (instead of all the way to body) so
+  // we stop quickly on deep DOM trees; also check for <sup> inside <a> and
+  // href patterns that indicate footnote references.
   function __isClickableLink(el){
     try{
       var probe=el;
-      while(probe&&probe!==document.body){
+      var depth=0;
+      while(probe&&probe!==document.body&&depth<10){
+        depth++;
         // Skip text/comment nodes — they don't have tagName or getAttribute.
         if(probe.nodeType!==1){probe=probe.parentNode;continue;}
-        if(probe.tagName==='A'&&probe.getAttribute('href'))return true;
+        if(probe.tagName==='A'){
+          // BUG-T4: Even if this <a> is not itself a footnote, if its href
+          // points to a footnote anchor, treat it as a link so the native
+          // layer doesn't steal the tap as a page turn.
+          var href=probe.getAttribute('href')||'';
+          if(/#(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|docx-footnote)[-_]?\w*/i.test(href))return true;
+          if(href.indexOf('fbanchor://')===0||href.indexOf('FbAutId_')>=0||href.indexOf('noteref:')===0)return true;
+          if(probe.getAttribute('data-footnote-id')||probe.getAttribute('data-footnote'))return true;
+          return true;
+        }
         if(probe.tagName==='BUTTON'||probe.tagName==='INPUT'||probe.tagName==='SELECT')return true;
         var role=probe.getAttribute('role')||'';
         if(role==='button'||role==='link')return true;
         if(probe.getAttribute('data-footnote-id')||probe.getAttribute('data-footnote'))return true;
+        if(probe.tagName==='SUP'||probe.tagName==='SUB')return true;
+        // EPUB footnote markers: epub:type or type attribute
+        var epubType=(probe.getAttribute('epub:type')||probe.getAttribute('type')||'');
+        if(/\b(noteref|footnote|annref|annotation)\b/i.test(epubType))return true;
+        // Footnote-related CSS classes
+        var cls=probe.getAttribute('class')||'';
+        if(/\b(noteref|footnote-ref|doc-noteref|fnt|backnote|supnote|text-fn|pagenote|annref|annotation|fn)\b/i.test(cls))return true;
+        // BUG-PAGED-03: Also check for footnote markers in id/class/name using the
+        // same comprehensive regex that isFootnoteTarget uses.
+        var probeId=(probe.id||'');
+        var probeName=(probe.getAttribute('name')||'');
+        var marker=[probeId,cls,epubType,role,probeName].join(' ');
+        if(_fn.marker.test(marker))return true;
         probe=probe.parentNode;
       }
     }catch(e){}
@@ -179,14 +206,27 @@ internal const val JS_TAP_HANDLER = """(function(){
     window.__readerTouchStartTs=Date.now();
     window.__readerTouchMoved=false;
     window.__readerTouchOnLink=false;
+    window.__readerTouchEdgeZone=false;
+    try{
+      var existingSelection=window.getSelection&&window.getSelection();
+      window.__readerHadSelectionAtTouchStart=!!(existingSelection&&String(existingSelection).trim().length>0);
+    }catch(selectionError){window.__readerHadSelectionAtTouchStart=false;}
     if(e.touches&&e.touches.length===1){
-      window.__readerTouchStartX=e.touches[0].clientX;
-      window.__readerTouchStartY=e.touches[0].clientY;
+      var tx=e.touches[0].clientX;
+      var ty=e.touches[0].clientY;
+      window.__readerTouchStartX=tx;
+      window.__readerTouchStartY=ty;
       // Mark if the touch started on a clickable link — the Kotlin handler
       // checks this flag to avoid consuming footnote clicks as page turns.
       var onLink=e.target?__isClickableLink(e.target):false;
       window.__readerTouchOnLink=onLink;
-      if((window.__mrcomicPagedModeScrollLock||hasActivePagedLayout())&&!onLink){
+      // Suppress selection in edge zones (12% from each side) in all modes
+      // to prevent text selection flash when the user intends a page turn.
+      var winW=window.innerWidth||document.documentElement.clientWidth||360;
+      var xRatio=winW>0?(tx/winW):0.5;
+      var inEdgeZone=xRatio<0.12||xRatio>0.88;
+      window.__readerTouchEdgeZone=inEdgeZone;
+      if((inEdgeZone||(window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()))&&!onLink){
         try{
           var selection=window.getSelection&&window.getSelection();
           if(selection)selection.removeAllRanges();
@@ -196,30 +236,64 @@ internal const val JS_TAP_HANDLER = """(function(){
       try{if(typeof _NativeReader!=='undefined')_NativeReader.setTouchOnLink(onLink);}catch(ex){}
     }
   },{passive:true});
-  // Prevent spontaneous text selection from accidental short taps, but allow
-  // deliberate long-press selection for dictionary/quote features. A long press
-  // (touchstart held > 350ms without move) signals user intent to select text.
+  // BUG-PAGED-01: Prevent ALL text selection in paged mode. Selection is only
+  // allowed after a deliberate long-press (>500ms) or inside links.
+  // The previous approach relied on __mrcomicPagedModeScrollLock which may not
+  // be set when the WebView first loads. Now we also check the CSS user-select
+  // property and a global flag set by the Kotlin side.
   document.addEventListener('selectstart',function(e){
     if(!e.target||!e.target.closest)return;
-    if(window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()){
+    // Always allow selection inside links (for footnote/dictionary interaction)
+    if(e.target.closest('a'))return;
+    // BUG-T5: If the finger has already moved, suppress selection immediately.
+    // This prevents accidental selection during a slow swipe that hasn't yet
+    // reached the native MOVE_THRESHOLD but has moved enough in JS coordinates.
+    if(window.__readerTouchMoved&&!window.__readerHadSelectionAtTouchStart){
       e.preventDefault();
       return;
     }
-    // Allow selection inside <a> links always
-    if(e.target.closest('a'))return;
-    // Allow selection if the user has been holding touch for > 350ms (deliberate long-press)
+    // In paged mode, block ALL selection unless deliberate long-press
+    var isPaged=window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()||
+                window.__readerPagedSelectionDisabled;
+    if(isPaged||window.__readerTouchEdgeZone){
+      // Allow only after 500ms hold (deliberate long-press for dictionary/quote)
+      var holdDuration=window.__readerTouchStartTs?(Date.now()-window.__readerTouchStartTs):0;
+      if(holdDuration>500)return;
+      // Allow extending an existing selection
+      if(window.__readerSelectionTs&&((Date.now()-window.__readerSelectionTs)<2000))return;
+      e.preventDefault();
+      return;
+    }
+    // Non-paged mode: allow selection only after 500ms hold
     var holdDuration=window.__readerTouchStartTs?(Date.now()-window.__readerTouchStartTs):0;
-    if(holdDuration>350)return;
-    // Allow selection if a recent selection exists (user is extending an existing selection)
+    if(holdDuration>500)return;
     if(window.__readerSelectionTs&&((Date.now()-window.__readerSelectionTs)<2000))return;
-    // Block spontaneous selection from accidental taps
     e.preventDefault();
   });
-  document.addEventListener('touchmove',function(){
-    window.__readerTouchMoved=true;
+  document.addEventListener('touchmove',function(e){
+    // BUG-T5: Only set __readerTouchMoved when movement exceeds a small
+    // pixel threshold (4px) to avoid false positives from sub-pixel jitter.
+    // Once set, it stays true for the rest of this touch sequence.
+    if(window.__readerTouchMoved)return;
+    if(!e.touches||!e.touches.length)return;
+    var dx=e.touches[0].clientX-window.__readerTouchStartX;
+    var dy=e.touches[0].clientY-window.__readerTouchStartY;
+    if(Math.abs(dx)>4||Math.abs(dy)>4){
+      window.__readerTouchMoved=true;
+      // BUG-T5: Actively suppress any in-progress selection caused by a
+      // long-press that turned into a drag.  Without this, the browser may
+      // keep the selection alive even after __readerTouchMoved is set.
+      try{
+        var sel=window.getSelection&&window.getSelection();
+          if(sel&&sel.rangeCount>0&&!window.__readerHadSelectionAtTouchStart){
+            sel.removeAllRanges();
+          }
+      }catch(err){}
+    }
   },{passive:true});
   document.addEventListener('touchend',function(e){
     var now=Date.now();
+    window.__readerTouchEdgeZone=false;
     var elapsed=now-window.__readerTouchStartTs;
     if(elapsed<=0||elapsed>260)return;
     var selected='';

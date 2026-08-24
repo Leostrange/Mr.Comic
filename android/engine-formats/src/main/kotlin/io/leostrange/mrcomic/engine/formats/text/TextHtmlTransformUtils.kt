@@ -18,7 +18,7 @@ internal val HTML_READER_SAFE_LIST: Safelist = Safelist.relaxed()
     )
     .addAttributes(":all", "id", "class", "title", "lang", "dir", "style", "align", "data-mrcomic-pagebreak")
     .addAttributes("img", "src", "alt", "title", "width", "height", "loading", "align")
-    .addAttributes("a", "href", "name", "target")
+    .addAttributes("a", "href", "name", "target", "role", "epub:type", "data-footnote-id", "data-footnote")
     .addAttributes("font", "size", "face", "color")
     .addAttributes("th", "colspan", "rowspan")
     .addAttributes("td", "colspan", "rowspan")
@@ -44,6 +44,8 @@ internal fun extractReaderHtmlFootnotes(raw: String): ReaderHtmlFootnoteExtracti
     val noteBodies = document.allElements.filter(::isReaderHtmlFootnoteBody)
         .filter { element -> element.parents().none(::isReaderHtmlFootnoteBody) }
 
+    linkPlainNumericFootnoteMarkers(document, noteBodies)
+
     noteBodies.forEach { note ->
         val anchorId = note.id().trim()
         val text = note.text().replace(Regex("\\s+"), " ").trim()
@@ -56,6 +58,26 @@ internal fun extractReaderHtmlFootnotes(raw: String): ReaderHtmlFootnoteExtracti
         contentHtml = document.outerHtml(),
         footnoteMap = footnoteMap
     )
+}
+
+private fun linkPlainNumericFootnoteMarkers(document: Document, noteBodies: List<Element>) {
+    val targetIds = noteBodies.map(Element::id).filter(String::isNotBlank)
+    if (targetIds.isEmpty()) return
+
+    document.select("sup, sub, span.footnote-ref, span.noteref, span.note-ref")
+        .filterNot { marker -> marker.parents().any { it.normalName() == "a" || isReaderHtmlFootnoteBody(it) } }
+        .forEach { marker ->
+            val markerNumber = Regex("""\d{1,4}""").find(marker.text())?.value ?: return@forEach
+            val targetId = targetIds.firstOrNull { id ->
+                id == markerNumber || Regex("""(?:^|[-_])${Regex.escape(markerNumber)}$""", RegexOption.IGNORE_CASE)
+                    .containsMatchIn(id)
+            } ?: return@forEach
+            val link = Element("a")
+                .attr("href", "#$targetId")
+                .addClass("mrcomic-generated-noteref")
+            marker.replaceWith(link)
+            link.appendChild(marker)
+        }
 }
 
 private fun isReaderHtmlFootnoteBody(element: Element): Boolean {
@@ -134,21 +156,13 @@ internal fun preserveGutenbergHtmlDocument(raw: String, baseUrl: String?): Strin
 }
 
 internal fun shouldPreserveHtmlPublisherLayout(raw: String): Boolean {
-    if (isGutenbergHtml(raw)) return true
     val lowerRaw = raw.lowercase()
-    if (Regex("""<(table|thead|tbody|tfoot|tr|td|th|frameset|frame|svg|canvas)\b""", RegexOption.IGNORE_CASE)
-            .containsMatchIn(raw)
-    ) {
-        return true
-    }
-    if (Regex(
-            """style\s*=\s*["'][^"']*(?:position\s*:|left\s*:|top\s*:|right\s*:|bottom\s*:|float\s*:|display\s*:\s*(?:grid|flex|inline-block|table)|width\s*:\s*\d|height\s*:\s*\d)""",
-            RegexOption.IGNORE_CASE
-        ).containsMatchIn(raw)
-    ) {
-        return true
-    }
-    return "<body" in lowerRaw && "data-mrcomic-preserve-layout" in lowerRaw
+    if ("<body" in lowerRaw && "data-mrcomic-preserve-layout" in lowerRaw) return true
+    if (Regex("""<(frameset|frame)\b""", RegexOption.IGNORE_CASE).containsMatchIn(raw)) return true
+    return Regex(
+        """style\s*=\s*["'][^"']*position\s*:\s*(?:absolute|fixed)\b""",
+        RegexOption.IGNORE_CASE
+    ).containsMatchIn(raw)
 }
 
 internal fun normalizeReaderHtmlFragment(html: String): String = runCatching {
@@ -183,7 +197,7 @@ internal fun buildReaderHtmlDocument(
 internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): String {
     val normalizedRaw = raw.replace(
         Regex("""(?is)<(?:mbp:pagebreak|pagebreak)\b[^>]*(?:/?>|>.*?</(?:mbp:pagebreak|pagebreak)>)"""),
-        """<hr class="mrcomic-pagebreak" data-mrcomic-pagebreak="true"/>"""
+        ""
     )
     val preservePublisherLayout = shouldPreserveHtmlPublisherLayout(normalizedRaw)
     val baseCss = if (preservePublisherLayout) PRESERVE_LAYOUT_HTML_CSS else DEFAULT_READER_HTML_CSS
@@ -219,12 +233,12 @@ internal fun renderHtmlToReaderDocument(raw: String, baseUrl: String? = null): S
             !cleanedBody.contains(title, ignoreCase = true) &&
             !document.body().hasAttr("data-mrcomic-preserve-layout")
     }
-        ?.let { "<h1>${htmlEscapeText(it)}</h1>" }
+        ?.let { "<h1 class=\"mc-title-block\">${htmlEscapeText(it)}</h1>" }
         .orEmpty()
     val content = when {
         cleanedBody.isNotBlank() -> titleBlock + normalizeReaderHtmlFragment(cleanedBody)
         body.text().isNotBlank() -> titleBlock + "<p>${htmlEscapeText(body.text())}</p>"
-        title.isNotBlank() -> "<h1>${htmlEscapeText(title)}</h1>"
+        title.isNotBlank() -> "<h1 class=\"mc-title-block\">${htmlEscapeText(title)}</h1>"
         else -> "<p></p>"
     }
     return buildReaderHtmlDocument(

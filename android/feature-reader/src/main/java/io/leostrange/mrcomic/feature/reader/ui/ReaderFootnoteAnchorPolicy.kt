@@ -15,7 +15,11 @@ internal object ReaderFootnoteAnchorPolicy {
         RegexOption.IGNORE_CASE
     )
     private val identifierPattern = Regex(
-        """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id|fbanchor|ref|kobo-side-note)[-_]?\d*$""",
+        // BUG-T4: bare numeric ids ("1", "42") are the most common EPUB/HTML
+        // footnote anchor form and must classify as footnote anchors; prefixed
+        // forms stay as before. Word-like chapter anchors ("chapter-1",
+        // "contents") still never match.
+        """^(?:fn|fnt|note|footnote|endnote|rearnote|back|sup|text-fn|pn|ann|annotation|FbAutId|id|fbanchor|ref|kobo-side-note)[-_]?\d*$|^\d+$""",
         RegexOption.IGNORE_CASE
     )
 

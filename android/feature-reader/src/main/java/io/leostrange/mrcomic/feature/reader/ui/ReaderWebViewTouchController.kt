@@ -17,13 +17,14 @@ internal class ReaderWebViewTouchController(
     private val suppressNextClick: () -> Unit,
     private val clearSelection: () -> Unit,
     private val setSelectionEnabled: (Boolean) -> Unit,
-    private val onFreeScrollGestureFinished: () -> Unit
+    private val onFreeScrollGestureFinished: () -> Unit,
+    private val setUserSelectNone: ((Boolean) -> Unit)? = null
 ) {
     private var touchStartX: Float = 0f
     private var touchStartY: Float = 0f
     private var touchStartTimeMs: Long = 0L
-    private var nativePagedEdgeTapXPercent: Float? = null
     private var nativePagedGestureMoved: Boolean = false
+    private var selectionWasActiveAtDown: Boolean = false
     var pagedDragSuppressesSelection: Boolean = false
         private set
     @Volatile var nativeTapConsumed: Boolean = false
@@ -52,16 +53,9 @@ internal class ReaderWebViewTouchController(
                 touchStartY = event.y
                 touchStartTimeMs = SystemClock.uptimeMillis()
                 nativePagedGestureMoved = false
+                selectionWasActiveAtDown = hasActiveSelection
                 pagedDragSuppressesSelection = false
-                val xPercent = if (viewWidth > 0) (event.x / viewWidth).coerceIn(0f, 1f) else 0.5f
-                val isEdgeTap = PagedGesturePolicy.isEdgeTap(xPercent)
-                nativePagedEdgeTapXPercent = xPercent.takeIf { isEdgeTap }
-                if (nativePagedEdgeTapXPercent != null && !touchStartedOnLink) {
-                    return true
-                }
-                nativePagedEdgeTapXPercent = null
-                superOnTouchEvent(event)
-                return true
+                touchStartedOnLink = false
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.x - touchStartX
@@ -69,13 +63,10 @@ internal class ReaderWebViewTouchController(
                 val moved = PagedGesturePolicy.hasMoved(dx, dy)
                 if (moved) {
                     nativePagedGestureMoved = true
-                    nativePagedEdgeTapXPercent = null
-                    if (PagedGesturePolicy.shouldSuppressSelectionOnMove(moved, !hasActiveSelection)) {
-                        suppressPagedDragSelection()
-                    }
+                    if (!selectionWasActiveAtDown) suppressPagedDragSelection()
                     suppressNextClick()
                 }
-                if (PagedGesturePolicy.shouldInterceptMove(dx, dy, hasActiveSelection)) {
+                if (PagedGesturePolicy.shouldInterceptMove(dx, dy, selectionWasActiveAtDown)) {
                     return true
                 }
             }
@@ -84,29 +75,38 @@ internal class ReaderWebViewTouchController(
                 val dy = event.y - touchStartY
                 val elapsed = SystemClock.uptimeMillis() - touchStartTimeMs
                 val xPercent = if (viewWidth > 0) (event.x / viewWidth).coerceIn(0f, 1f) else 0.5f
-                val isEdgeTap = nativePagedEdgeTapXPercent != null
+                // Every stationary tap goes through WebView/DOM first. The JS handler
+                // resolves links and footnotes at the exact tap point before routing an
+                // ordinary tap to page navigation. Native interception is only needed
+                // for real swipes after the movement threshold.
+                if (!nativePagedGestureMoved && !PagedGesturePolicy.hasMoved(dx, dy)) {
+                    touchStartedOnLink = false
+                    selectionWasActiveAtDown = false
+                    restorePagedDragSelection()
+                    return superOnTouchEvent(event)
+                }
 
                 val gesture = PagedGesturePolicy.classifyPagedGesture(
                     dx = dx,
                     dy = dy,
                     elapsed = elapsed,
-                    xPercent = nativePagedEdgeTapXPercent ?: xPercent,
-                    isEdgeTap = isEdgeTap,
+                    xPercent = xPercent,
+                    isEdgeTap = false,
                     hasMoved = nativePagedGestureMoved,
-                    hasActiveSelection = hasActiveSelection,
+                    hasActiveSelection = selectionWasActiveAtDown,
                     touchStartedOnLink = touchStartedOnLink
                 )
 
                 when (gesture) {
                     PagedGestureAction.PASS_THROUGH -> {
                         touchStartedOnLink = false
-                        nativePagedEdgeTapXPercent = null
+                        selectionWasActiveAtDown = false
                         restorePagedDragSelection()
                     }
                     PagedGestureAction.RESOLVED -> {
                         suppressNextClick()
                         nativePagedGestureMoved = false
-                        nativePagedEdgeTapXPercent = null
+                        selectionWasActiveAtDown = false
                         restorePagedDragSelection()
                         return true
                     }
@@ -116,7 +116,7 @@ internal class ReaderWebViewTouchController(
                         suppressNextClick()
                         nativeTapConsumed = true
                         nativePagedGestureMoved = false
-                        nativePagedEdgeTapXPercent = null
+                        selectionWasActiveAtDown = false
                         onNativePagedTap(0.1f)
                         return true
                     }
@@ -126,15 +126,15 @@ internal class ReaderWebViewTouchController(
                         suppressNextClick()
                         nativeTapConsumed = true
                         nativePagedGestureMoved = false
-                        nativePagedEdgeTapXPercent = null
+                        selectionWasActiveAtDown = false
                         onNativePagedTap(0.9f)
                         return true
                     }
                 }
             }
             MotionEvent.ACTION_CANCEL -> {
-                nativePagedEdgeTapXPercent = null
                 nativePagedGestureMoved = false
+                selectionWasActiveAtDown = false
                 touchStartedOnLink = false
                 restorePagedDragSelection()
             }
@@ -193,11 +193,13 @@ internal class ReaderWebViewTouchController(
         pagedDragSuppressesSelection = true
         clearSelection()
         setSelectionEnabled(false)
+        setUserSelectNone?.invoke(true)
     }
 
     private fun restorePagedDragSelection() {
         if (!pagedDragSuppressesSelection) return
         pagedDragSuppressesSelection = false
         setSelectionEnabled(true)
+        setUserSelectNone?.invoke(false)
     }
 }

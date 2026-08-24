@@ -2,6 +2,7 @@ package io.leostrange.mrcomic.feature.library.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -26,7 +28,6 @@ import io.leostrange.mrcomic.core.model.ComicReadingStatus
 import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.model.readingStatus
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicStatusBadge
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicStatusTone
@@ -260,7 +261,6 @@ private fun BoxScope.GridCardBadges(
         readingStatus = readingStatus,
         readingProgress = comic.displayReadingProgress()
     )
-    val titleBottomPadding = 8.dp
     // Format badge — top-left corner (design system spec)
     if (formatLabel != null) {
         FormatBadge(
@@ -272,52 +272,61 @@ private fun BoxScope.GridCardBadges(
         )
     }
     if (showCoverTitles) {
-        MrComicPill(
+        // Keep the title backing opaque enough to remain readable on artwork.
+        // A transparent gradient lets the title collide with the cover/icon.
+        val titlePanelColor = MaterialTheme.colorScheme.surface.copy(
+            alpha = (0.92f + titlePanelOpacity.coerceIn(0f, 1f) * 0.08f).coerceIn(0.92f, 1f)
+        )
+        val scaledFontSize = 12.sp * titleScale.coerceIn(0.85f, 1.3f)
+        Column(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 6.dp, end = 6.dp, bottom = titleBottomPadding)
-                .fillMaxWidth(0.88f),
-            containerColor = MaterialTheme.colorScheme.surface.copy(
-                alpha = (0.82f + titlePanelOpacity.coerceIn(0.18f, 0.78f) * 0.12f).coerceIn(0.84f, 0.94f)
-            ),
-            border = BorderStroke(
-                0.6.dp,
-                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.28f)
-            ),
-            contentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(titlePanelColor)
+                .padding(horizontal = 8.dp, vertical = 5.dp)
         ) {
             Text(
                 text = comic.title,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = (12.sp * titleScale.coerceIn(0.85f, 1.3f))),
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = scaledFontSize,
+                    lineHeight = scaledFontSize * 1.32f,
+                    fontWeight = FontWeight.SemiBold
+                ),
                 maxLines = titleLines.coerceIn(1, 3),
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.96f)
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.97f)
             )
         }
     }
 
-    if (showCompletedChip) {
-        val completedColor = mrComicCompletedColor()
-        MrComicStatusBadge(
-            text = "100%",
-            tone = MrComicStatusTone.Success,
-            leadingIcon = Icons.Filled.CheckCircle,
-            contentDescription = strings.libraryStatusCompleted,
+    if (showCompletedChip || showProgressChip) {
+        // BUG-B2: All top-end badges share a Row to prevent overlap when
+        // multiple indicators are present simultaneously.
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(end = 6.dp, top = 6.dp),
-            containerColor = completedColor.copy(alpha = 0.18f),
-            contentColor = completedColor
-        )
-    } else if (showProgressChip) {
-        MrComicStatusBadge(
-            text = "${(comic.displayReadingProgress() * 100).toInt()}%",
-            tone = MrComicStatusTone.Info,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 6.dp, top = 6.dp)
-        )
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (showCompletedChip) {
+                val completedColor = mrComicCompletedColor()
+                MrComicStatusBadge(
+                    text = "100%",
+                    tone = MrComicStatusTone.Success,
+                    leadingIcon = Icons.Filled.CheckCircle,
+                    contentDescription = strings.libraryStatusCompleted,
+                    containerColor = completedColor.copy(alpha = 0.18f),
+                    contentColor = completedColor
+                )
+            } else if (showProgressChip) {
+                // BUG-B1: white surface background instead of Info tone gray.
+                MrComicStatusBadge(
+                    text = "${(comic.displayReadingProgress() * 100).toInt()}%",
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
     }
 
     if (showProgressLine) {

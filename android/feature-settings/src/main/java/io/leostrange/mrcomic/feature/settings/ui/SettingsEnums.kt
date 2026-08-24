@@ -12,7 +12,7 @@ internal enum class SettingsSection {
     READ_ALOUD, TRANSLATION, AI_SERVICES, STORAGE, ADVANCED, ABOUT
 }
 
-internal enum class AppearanceSettingsPage { OVERVIEW, BASICS, LIBRARY, THEME_STUDIO, THEME, SCALE, COLORS, EXTRA }
+internal enum class AppearanceSettingsPage { OVERVIEW, BASICS, LIBRARY, THEME, SCALE, COLORS, EXTRA }
 internal enum class ReaderSettingsPage { OVERVIEW, TEXT_APPEARANCE, PAGE_LAYOUT, HEADERS, PAGING, BEHAVIOR }
 internal enum class LibrarySettingsPage { OVERVIEW, ACCESS, CACHE, IMPORT_EXPORT }
 internal enum class SyncSettingsPage { OVERVIEW, BACKUP }

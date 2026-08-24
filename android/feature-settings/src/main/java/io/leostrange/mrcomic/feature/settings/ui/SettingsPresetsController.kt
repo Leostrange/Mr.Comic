@@ -15,7 +15,6 @@ import io.leostrange.mrcomic.core.ui.library.LibraryThemePresetSnapshot
 import io.leostrange.mrcomic.core.ui.library.parseLibraryThemePreset
 import io.leostrange.mrcomic.core.ui.library.libraryQuickPresetSpec
 import io.leostrange.mrcomic.core.ui.library.normalizeLibraryBackgroundStyle
-import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.ThemePreset
 import io.leostrange.mrcomic.core.ui.theme.ThemePreferencesRepository
 import kotlinx.coroutines.CoroutineScope
@@ -48,28 +47,6 @@ internal class SettingsPresetsController(
     fun clearLibraryThemePreset(slot: Int) {
         scope.launch {
             preferences.set(libraryThemePresetKey(slot), "")
-        }
-    }
-
-    fun saveAppThemePreset(slot: Int) {
-        val snapshot = uiState().toAppThemePresetSnapshot()
-        scope.launch {
-            preferences.set(appThemePresetKey(slot), snapshot.serialize())
-        }
-    }
-
-    fun applyAppThemePreset(slot: Int) {
-        val snapshot = parseAppThemePreset(
-            uiState().appThemePresetSlots.firstOrNull { it.index == slot }?.serialized
-        ) ?: return
-        scope.launch {
-            applyAppThemePresetSnapshot(snapshot)
-        }
-    }
-
-    fun clearAppThemePreset(slot: Int) {
-        scope.launch {
-            preferences.set(appThemePresetKey(slot), "")
         }
     }
 
@@ -295,33 +272,13 @@ internal class SettingsPresetsController(
         }
     }
 
-    private suspend fun applyAppThemePresetSnapshot(
-        snapshot: AppThemePresetSnapshot
-    ) {
-        themePreferencesRepository.setThemePreset(
-            runCatching { ThemePreset.valueOf(snapshot.themePreset) }.getOrDefault(ThemePreset.CUSTOM)
-        )
-        themePreferencesRepository.setThemeMode(
-            runCatching { ThemeMode.valueOf(snapshot.themeMode) }.getOrDefault(ThemeMode.SYSTEM)
-        )
-        themePreferencesRepository.setUseDynamicColor(snapshot.useDynamicColor)
-        themePreferencesRepository.setUseAmoledDark(snapshot.useAmoledDark)
-        themePreferencesRepository.setCustomPrimaryColor(snapshot.customPrimaryColor)
-        themePreferencesRepository.setCustomSecondaryColor(snapshot.customSecondaryColor)
-        themePreferencesRepository.setCustomBackgroundColor(snapshot.customBackgroundColor)
-        themePreferencesRepository.setCustomSurfaceColor(snapshot.customSurfaceColor)
-        themePreferencesRepository.setSurfaceOpacity(snapshot.surfaceOpacity)
-        preferences.set(PreferencesKeys.UI_FONT_SCALE, snapshot.uiFontScale)
-        preferences.set(PreferencesKeys.UI_DENSITY_SCALE, snapshot.uiDensityScale)
-        preferences.set(PreferencesKeys.UI_CORNER_RADIUS, snapshot.uiCornerRadius)
-    }
-
     private suspend fun applyReaderStylePresetSnapshot(
         snapshot: ReaderStylePresetSnapshot
     ) {
         preferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
         preferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
         preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
+        preferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, snapshot.textColorScheme)
         persistNullableColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, snapshot.textCustomTextColor)
         persistNullableColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, snapshot.textCustomBackgroundColor)
         persistNullableColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, snapshot.textCustomAccentColor)

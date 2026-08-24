@@ -53,23 +53,16 @@ class SettingsSettersControllerTest {
     )
 
     @Test
-    fun setThemePresetAppliesConfigAndMarksPreset() = runTest {
-        coEvery { themePreferencesRepository.setThemePreset(any()) } returns Unit
-        coEvery { themePreferencesRepository.setThemeMode(any()) } returns Unit
-        coEvery { themePreferencesRepository.setUseDynamicColor(any()) } returns Unit
-        coEvery { themePreferencesRepository.setUseAmoledDark(any()) } returns Unit
-        coEvery { themePreferencesRepository.setCustomPrimaryColor(any()) } returns Unit
-        coEvery { themePreferencesRepository.setCustomSecondaryColor(any()) } returns Unit
-        coEvery { themePreferencesRepository.setCustomBackgroundColor(any()) } returns Unit
-        coEvery { themePreferencesRepository.setCustomSurfaceColor(any()) } returns Unit
-        coEvery { themePreferencesRepository.setSurfaceOpacity(any()) } returns Unit
+    fun setThemePresetAppliesWholePresetAtomically() = runTest {
+        coEvery { themePreferencesRepository.applyThemePreset(any()) } returns Unit
         val controller = createController()
 
         controller.setThemePreset(ThemePreset.AMOLED)
         advanceUntilIdle()
 
-        coVerify(exactly = 1) { themePreferencesRepository.setThemePreset(ThemePreset.AMOLED) }
-        coVerify { themePreferencesRepository.setUseDynamicColor(any()) }
+        coVerify(exactly = 1) { themePreferencesRepository.applyThemePreset(ThemePreset.AMOLED) }
+        coVerify(exactly = 0) { themePreferencesRepository.setThemeMode(any()) }
+        coVerify(exactly = 0) { themePreferencesRepository.setCustomBackgroundColor(any()) }
     }
 
     @Test

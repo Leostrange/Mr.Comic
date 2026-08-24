@@ -47,10 +47,7 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
-import io.leostrange.mrcomic.core.ui.library.RootChromePillShape
-import io.leostrange.mrcomic.core.ui.library.RootChromeTone
 import io.leostrange.mrcomic.core.ui.library.rootChromeIconContainerColor
-import io.leostrange.mrcomic.core.ui.library.rootChromePanelColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContainerColor
 import io.leostrange.mrcomic.core.ui.library.rootChromePillContentColor
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -73,10 +70,7 @@ internal fun SettingsCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    MrComicPanelCard(
-        title = title,
-        content = content
-    )
+    MrComicPanelCard(title = title, content = content)
 }
 
 @Composable
@@ -337,83 +331,6 @@ internal fun SettingsCompactSummaryCard(
             }
             if (index != items.lastIndex) {
                 HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-                )
-            }
-        }
-    }
-}
-
-internal data class SettingsStudioOverviewItem(
-    val icon: ImageVector,
-    val title: String,
-    val description: String,
-    val summary: String? = null,
-    val onClick: () -> Unit
-)
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun SettingsStudioOverviewCard(
-    title: String,
-    hint: String,
-    summaryItems: List<Pair<String, String>>,
-    sectionsTitle: String,
-    sections: List<SettingsStudioOverviewItem>
-) {
-    SettingsCard(title = title) {
-        Text(
-            text = hint,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        if (summaryItems.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                summaryItems.forEach { (label, value) ->
-                    Surface(
-                        shape = RootChromePillShape,
-                        color = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = value,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = sectionsTitle,
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        sections.forEachIndexed { index, item ->
-            SettingsNavItem(
-                icon = item.icon,
-                title = item.title,
-                description = item.description,
-                summary = item.summary,
-                onClick = item.onClick
-            )
-            if (index != sections.lastIndex) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(start = 56.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
                 )
             }

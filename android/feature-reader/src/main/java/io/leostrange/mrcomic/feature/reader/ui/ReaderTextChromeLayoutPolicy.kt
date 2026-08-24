@@ -6,8 +6,9 @@ internal data class ReaderTextChromeLayoutInsets(
 )
 
 /**
- * Reader chrome is an overlay and must not change text wrapping or page boundaries.
- * Safe system bars and the auto-scroll dock are handled by the Compose modifier.
+ * Reader chrome is an overlay and must not change text wrapping or page
+ * boundaries. Safe system bars and the persistent one-line text gutter are
+ * handled by the Compose modifier around the WebView.
  */
 internal fun resolveReaderTextChromeLayoutInsets(
     measuredTopCssPx: Int,
