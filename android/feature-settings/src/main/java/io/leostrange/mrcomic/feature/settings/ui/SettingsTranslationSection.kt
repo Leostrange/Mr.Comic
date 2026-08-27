@@ -20,7 +20,8 @@ import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItem
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItemTrailing
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.locale.ocrSourceLanguageOptions
 import io.leostrange.mrcomic.core.ui.locale.translationLanguageOptions
@@ -344,19 +345,21 @@ internal fun OcrFiltersCard(
 ) {
     SettingsCard(title = sectionText.comicFiltersCard) {
         LabelText(sectionText.comicFiltersHint)
-        Spacer(Modifier.height(8.dp))
-        MrComicSwitchRow(
+        MrComicListItem(
             title = sectionText.dialoguesOnlyTitle,
             subtitle = sectionText.dialoguesOnlySubtitle,
-            checked = uiState.ocrDialoguesOnly,
-            onCheckedChange = viewModel::setOcrDialoguesOnly
+            trailing = MrComicListItemTrailing.Switch(
+                checked = uiState.ocrDialoguesOnly,
+                onCheckedChange = viewModel::setOcrDialoguesOnly,
+            ),
         )
-        Spacer(Modifier.height(12.dp))
-        MrComicSwitchRow(
+        MrComicListItem(
             title = sectionText.includeSfxTitle,
             subtitle = sectionText.includeSfxSubtitle,
-            checked = uiState.ocrIncludeSfx,
-            onCheckedChange = viewModel::setOcrIncludeSfx
+            trailing = MrComicListItemTrailing.Switch(
+                checked = uiState.ocrIncludeSfx,
+                onCheckedChange = viewModel::setOcrIncludeSfx
+            ),
         )
     }
 }

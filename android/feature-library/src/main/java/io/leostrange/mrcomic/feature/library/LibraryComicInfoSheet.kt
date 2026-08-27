@@ -47,6 +47,7 @@ import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicLibraryShelf
 import io.leostrange.mrcomic.core.model.ComicReadingStatus
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.model.libraryShelfCategory
 import io.leostrange.mrcomic.core.model.readingStatus
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
@@ -195,13 +196,13 @@ internal fun ComicInfoSheet(
                         strings.libraryProgressTemplate.format(
                             comic.currentPage + 1,
                             comic.pageCount,
-                            (comic.readingProgress * 100).toInt()
+                            (comic.displayReadingProgress() * 100).toInt()
                         ),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
                 MrComicProgressLine(
-                    progress = { comic.readingProgress },
+                    progress = { comic.displayReadingProgress() },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

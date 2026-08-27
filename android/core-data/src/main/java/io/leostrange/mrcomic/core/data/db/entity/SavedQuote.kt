@@ -24,5 +24,11 @@ data class SavedQuote(
     val targetLanguage: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val contentHash: String
+    val contentHash: String,
+    /** BUG-CANDIDATE-01: Structured position JSON for precise quote navigation. */
+    val positionJson: String? = null,
+    /** BUG-CANDIDATE-01: Character offset for text-based relocation. */
+    val characterOffset: Int? = null,
+    /** BUG-CANDIDATE-01: DOM anchor for fragment-based navigation. */
+    val domAnchor: String? = null
 )

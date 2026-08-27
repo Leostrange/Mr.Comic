@@ -10,6 +10,9 @@ import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
  */
 internal object ReaderColorScheme {
 
+    /** The only quick schemes exposed by the graphic (PDF/DJVU/raster) reader. */
+    val graphicQuickChoices: List<String> = listOf("DAY", "SEPIA", "NIGHT")
+
     /** Background → foreground color pair for a named color scheme. */
     fun palette(scheme: String): Pair<String, String> = when (scheme) {
         "SEPIA" -> "#f4ecd8" to "#3b2a1a"

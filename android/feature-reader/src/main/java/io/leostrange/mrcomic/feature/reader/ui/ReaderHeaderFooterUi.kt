@@ -162,7 +162,9 @@ private fun resolveReaderProgressLabel(
     totalPages: Int
 ): String {
     if (totalPages <= 0 || visiblePages.isEmpty()) return ""
-    val progress = (((visiblePages.last() + 1).toFloat() / totalPages.toFloat()) * 100f)
+    // Use the first visible page for progress calculation to match library display.
+    // For DUAL_PAGE mode, this shows progress for the left page, which is the canonical position.
+    val progress = (((visiblePages.first() + 1).toFloat() / totalPages.toFloat()) * 100f)
         .roundToInt()
         .coerceIn(0, 100)
     return "$progress%"

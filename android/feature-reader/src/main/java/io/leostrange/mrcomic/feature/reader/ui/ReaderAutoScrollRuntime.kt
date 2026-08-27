@@ -29,15 +29,7 @@ internal fun readerAutoScrollDockHeightDp(
     containerKind: ReaderContainerKind,
     chromeHidden: Boolean,
     enabled: Boolean,
-): Int = if (
-    chromeHidden && enabled &&
-        (containerKind == ReaderContainerKind.TEXT_PAGE ||
-            containerKind == ReaderContainerKind.RASTER_PAGE)
-) {
-    72
-} else {
-    0
-}
+): Int = 0
 
 internal fun requestReaderAutoPageAdvance(
     containerKind: ReaderContainerKind,

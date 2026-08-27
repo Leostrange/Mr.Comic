@@ -69,7 +69,9 @@ object MrComicColorTokens {
     const val InkPaperSurfaceContainerHighArgb   = 0xFFE6DFD7L
     const val InkPaperSurfaceContainerHighestArgb = 0xFFE0D9D0L
     const val InkPaperOutlineArgb = 0xFF7C756AL
-    const val InkPaperCompletedArgb = 0xFF4CAF50L
+    // STYLE-PASTEL: soft sage instead of vivid Material green — calmer on cream
+    // paper backgrounds and slightly higher contrast for the completed badge.
+    const val InkPaperCompletedArgb = 0xFF5E9C67L
 
     const val InkPaperDarkPrimaryArgb = 0xFFAEC8EFL
     const val InkPaperDarkSecondaryArgb = 0xFFE6C79BL
@@ -164,8 +166,11 @@ object MrComicThemePresetTokens {
         backgroundArgb = null,
     )
     val neon = MrComicThemePresetToken(
-        primaryArgb = 0xFFE91E63L,
-        secondaryArgb = 0xFF00BCD4L,
+        // STYLE-PASTEL: "neon" re-tuned from hot magenta/cyan (0xFFE91E63 /
+        // 0xFF00BCD4) to gentle dusk pastels — soft lavender over soft teal.
+        // The preset keeps its id for backward compatibility with saved configs.
+        primaryArgb = 0xFFB79CEDL,
+        secondaryArgb = 0xFF93CFC4L,
         backgroundArgb = 0xFF0D0D1AL,
     )
     val gray = MrComicThemePresetToken(

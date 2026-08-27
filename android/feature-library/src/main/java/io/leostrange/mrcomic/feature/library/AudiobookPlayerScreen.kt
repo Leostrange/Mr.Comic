@@ -30,8 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -47,8 +45,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,7 +69,10 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSlider
-import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicTopAppBar
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicType
+import io.leostrange.mrcomic.feature.library.components.LibraryFallbackCover
+import io.leostrange.mrcomic.feature.library.components.LibraryFallbackCoverKind
 import coil.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -102,29 +101,10 @@ fun AudiobookPlayerScreen(
         containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            RootChromeTopBarHost {
-                TopAppBar(
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    windowInsets = WindowInsets(0, 0, 0, 0),
-                    title = {
-                        Text(
-                            text = audiobook?.title ?: "",
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    navigationIcon = {
-                        MrComicIconButton(
-                            onClick = onNavigateBack,
-                            variant = MrComicIconButtonVariant.Tonal
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                        }
-                    }
-                )
-            }
+            MrComicTopAppBar(
+                title = audiobook?.title.orEmpty(),
+                onNavigateUp = onNavigateBack
+            )
         }
     ) { padding ->
         Column(
@@ -140,10 +120,19 @@ fun AudiobookPlayerScreen(
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .heightIn(max = 180.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surface),
+                    .clip(RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
+                val playerFallbackKind = if (audiobook?.sourceIsFolder == true) {
+                    LibraryFallbackCoverKind.AUDIO_FOLDER
+                } else {
+                    LibraryFallbackCoverKind.AUDIO_FILE
+                }
+                LibraryFallbackCover(
+                    title = audiobook?.title.orEmpty(),
+                    kind = playerFallbackKind,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 if (audiobook?.coverUri != null) {
                     AsyncImage(
                         model = audiobook.coverUri,
@@ -151,21 +140,13 @@ fun AudiobookPlayerScreen(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Headphones,
-                        contentDescription = null,
-                        modifier = Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
             }
 
             Text(
                 text = audiobook?.title ?: "",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
+                style = MrComicType.h3,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 24.dp)
             )
@@ -174,7 +155,7 @@ fun AudiobookPlayerScreen(
                 val chapter = audiobook.chapters.getOrNull(uiState.currentChapterIndex)
                 Text(
                     text = chapter?.title ?: "Глава ${uiState.currentChapterIndex + 1}",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MrComicType.bodySm,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -203,12 +184,12 @@ fun AudiobookPlayerScreen(
                 ) {
                     Text(
                         text = uiState.positionMs.toTimeString(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MrComicType.meta,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = uiState.durationMs.toTimeString(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MrComicType.meta,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

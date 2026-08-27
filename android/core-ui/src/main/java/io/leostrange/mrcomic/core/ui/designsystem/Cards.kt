@@ -8,52 +8,23 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-@Composable
-fun MrComicPanelCard(
-    title: String,
-    modifier: Modifier = Modifier,
-    hint: String? = null,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val lightChrome = colorScheme.background.luminance() > 0.45f
-    OutlinedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(MrComicRadiusTokens.xl),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colorScheme.outlineVariant.copy(alpha = if (lightChrome) 0.44f else 0.28f)
-        ),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = colorScheme.surface.copy(alpha = if (lightChrome) 0.94f else 0.9f)
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = MrComicSpacingTokens.x4, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp)
-        ) {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            if (!hint.isNullOrBlank()) {
-                Text(hint, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            content()
-        }
-    }
-}
+/**
+ * Editorial Ink cards.
+ *
+ * `MrComicPanelCard` was removed in the Editorial Ink migration. Use
+ * [MrComicSectionHeader] + flat content (a Column of [MrComicListItem] rows) for
+ * section groups, or [MrComicCardSurface] / [MrComicSurfaceCard] for visual
+ * surfaces that need a container.
+ */
 
 @Composable
 fun MrComicCard(
@@ -65,7 +36,7 @@ fun MrComicCard(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     border: BorderStroke? = null,
     shape: Shape? = null,
-    cornerRadius: Dp = MrComicRadiusTokens.xl,
+    cornerRadius: Dp = MrComicCornerScale.xl,
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     contentPadding: PaddingValues = PaddingValues(MrComicSpacingTokens.x4),
@@ -103,21 +74,29 @@ fun MrComicCardSurface(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     border: BorderStroke? = null,
     shape: Shape? = null,
-    cornerRadius: Dp = MrComicRadiusTokens.xl,
+    cornerRadius: Dp = MrComicCornerScale.xl,
     tonalElevation: Dp = 0.dp,
     shadowElevation: Dp = 0.dp,
     content: @Composable () -> Unit
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    // Editorial Ink: container roles are pure M3 tones, no alpha dimming.
+    // Material 3 already exposes surfaceContainer*, primaryContainer, etc.
+    // with predictable luminance, so transparent overlays are no longer
+    // needed to keep contrast on decorative backgrounds.
     val resolvedContainer = containerColor ?: when {
-        selected -> colorScheme.primaryContainer.copy(alpha = 0.84f)
-        variant == MrComicCardVariant.Muted -> colorScheme.surfaceContainerHigh.copy(alpha = 0.62f)
-        variant == MrComicCardVariant.Primary -> colorScheme.primaryContainer.copy(alpha = 0.42f)
-        variant == MrComicCardVariant.Secondary -> colorScheme.secondaryContainer.copy(alpha = 0.34f)
-        variant == MrComicCardVariant.Tertiary -> colorScheme.tertiaryContainer.copy(alpha = 0.26f)
+        selected -> colorScheme.primaryContainer
+        variant == MrComicCardVariant.Muted -> colorScheme.surfaceContainerLow
+        variant == MrComicCardVariant.Primary -> colorScheme.primaryContainer
+        variant == MrComicCardVariant.Secondary -> colorScheme.secondaryContainer
+        variant == MrComicCardVariant.Tertiary -> colorScheme.tertiaryContainer
         else -> colorScheme.surface
     }
-    val resolvedBorder = border ?: if (selected) BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.34f)) else null
+    val resolvedBorder = border ?: if (selected) {
+        BorderStroke(1.dp, colorScheme.primary.copy(alpha = MrComicAlphaTokens.Subtle))
+    } else {
+        null
+    }
     Surface(
         modifier = if (fillMaxWidth) modifier.fillMaxWidth() else modifier,
         shape = shape ?: RoundedCornerShape(cornerRadius),
@@ -139,12 +118,14 @@ fun MrComicSurfaceCard(
     verticalSpacing: Dp = MrComicSpacingTokens.x1,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    // Editorial Ink: surfaceContainerHigh is a pure M3 tone (no alpha dimming).
+    val colorScheme = MaterialTheme.colorScheme
     MrComicCard(
         modifier = modifier,
         fillMaxWidth = fillMaxWidth,
         selected = selected,
-        containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.84f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f),
-        cornerRadius = MrComicRadiusTokens.lg,
+        containerColor = if (selected) colorScheme.primaryContainer else colorScheme.surfaceContainerHigh,
+        cornerRadius = MrComicCornerScale.lg,
         contentPadding = contentPadding,
         verticalSpacing = verticalSpacing,
         content = content

@@ -36,6 +36,7 @@ internal class ReaderWebViewLoadController {
             is ReaderWebViewRuntimeEvent.DocumentCommitted -> handleCommitted(event.generation)
             is ReaderWebViewRuntimeEvent.LayoutReady -> handleLayoutReady(event)
             is ReaderWebViewRuntimeEvent.RestoreAcknowledged -> handleRestoreAcknowledged(event.generation)
+            is ReaderWebViewRuntimeEvent.RestoreRejected -> handleRestoreRejected(event.generation)
             is ReaderWebViewRuntimeEvent.LoadFailed -> handleFailure(event.generation, event.reason.ifBlank { "load failed" })
             is ReaderWebViewRuntimeEvent.ContentBlank -> handleFailure(event.generation, blankReason())
             ReaderWebViewRuntimeEvent.Disposed -> {
@@ -101,9 +102,16 @@ internal class ReaderWebViewLoadController {
             if (runtimeState.restoreIssued) return emptyList()
             runtimeState = runtimeState.copy(
                 phase = ReaderWebViewRuntimePhase.RESTORING,
-                restoreIssued = true
+                restoreIssued = true,
+                restoreAttempt = FIRST_RESTORE_ATTEMPT
             )
-            return listOf(ReaderWebViewRuntimeEffect.Restore(runtimeState.generation, restoreTarget))
+            return listOf(
+                ReaderWebViewRuntimeEffect.Restore(
+                    runtimeState.generation,
+                    restoreTarget,
+                    FIRST_RESTORE_ATTEMPT
+                )
+            )
         }
         if (runtimeState.phase == ReaderWebViewRuntimePhase.READY) return emptyList()
         runtimeState = runtimeState.copy(phase = ReaderWebViewRuntimePhase.READY)
@@ -119,6 +127,24 @@ internal class ReaderWebViewLoadController {
         return listOf(ReaderWebViewRuntimeEffect.PublishReady(generation, metrics))
     }
 
+    private fun handleRestoreRejected(generation: Long): List<ReaderWebViewRuntimeEffect> {
+        if (!isActive(generation) || runtimeState.phase != ReaderWebViewRuntimePhase.RESTORING) {
+            return emptyList()
+        }
+        val target = runtimeState.restoreTarget ?: return emptyList()
+        if (runtimeState.restoreAttempt >= MAX_RESTORE_ATTEMPTS) {
+            val metrics = runtimeState.layoutMetrics ?: return emptyList()
+            runtimeState = runtimeState.copy(
+                phase = ReaderWebViewRuntimePhase.READY,
+                error = "restore target unavailable"
+            )
+            return listOf(ReaderWebViewRuntimeEffect.PublishReady(generation, metrics))
+        }
+        val nextAttempt = runtimeState.restoreAttempt + 1
+        runtimeState = runtimeState.copy(restoreAttempt = nextAttempt)
+        return listOf(ReaderWebViewRuntimeEffect.Restore(generation, target, nextAttempt))
+    }
+
     private fun handleFailure(
         generation: Long,
         reason: String
@@ -131,6 +157,7 @@ internal class ReaderWebViewLoadController {
                 committed = false,
                 layoutMetrics = null,
                 restoreIssued = false,
+                restoreAttempt = 0,
                 error = reason
             )
             return listOf(
@@ -222,5 +249,7 @@ internal class ReaderWebViewLoadController {
     private companion object {
         const val PRIMARY_LOAD_ATTEMPT = 1
         const val FALLBACK_LOAD_ATTEMPT = 2
+        const val FIRST_RESTORE_ATTEMPT = 1
+        const val MAX_RESTORE_ATTEMPTS = 5
     }
 }

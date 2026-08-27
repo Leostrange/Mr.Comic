@@ -45,6 +45,7 @@ class OnboardingViewModel @Inject constructor(
         prefs.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
         prefs.set(PreferencesKeys.READER_PAGE_SOUND, false)
         prefs.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
+        prefs.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, style.textColorScheme)
         prefs.set(PreferencesKeys.TEXT_FONT_FAMILY, style.fontFamily)
         prefs.set(PreferencesKeys.TEXT_LINE_HEIGHT, style.lineHeight)
         prefs.set(PreferencesKeys.TEXT_LETTER_SPACING, style.letterSpacing)

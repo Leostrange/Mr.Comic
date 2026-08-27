@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.model.Comic
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.feature.library.components.LibraryAchievement
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -88,7 +89,7 @@ internal fun mrComicPresenceText(
         "ko" -> "작품이 몇 권 더 모이면 이 코너가 제대로 된 읽기 허브가 됩니다."
         else -> "Добавь несколько тайтлов, и этот уголок превратится в полноценный читательский центр."
     }
-    recentComic != null && recentComic.readingProgress in 0.05f..0.98f -> when (language) {
+    recentComic != null && recentComic.displayReadingProgress() in 0.05f..0.98f -> when (language) {
         "en" -> "You are mid-run on \"${recentComic.title}\". The shelf is already warmed up for the next session."
         "ja" -> "「${recentComic.title}」を読み進めています。次の読書セッションの準備はできています。"
         "zh" -> "你还在读《${recentComic.title}》，书架已经为下一次阅读准备好了。"

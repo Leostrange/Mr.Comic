@@ -5,6 +5,7 @@ import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
+import io.leostrange.mrcomic.feature.reader.ui.isTextContainer
 
 /**
  * Pure state reducer for reader style presets.
@@ -37,8 +38,11 @@ object ReaderStylePresetReducer {
     /**
      * Applies a built-in [ReadingPreset] to the state.
      *
-     * For non-CUSTOM presets, all typography fields are replaced with the
-     * preset's values and custom colors are cleared. Chrome is expanded.
+     * BUG-PAGED-02 / T3: Only colors and chrome-related settings are updated
+     * when switching presets. Typography (fontSize, lineHeight, letterSpacing,
+     * wordSpacing, paragraphSpacing, alignment, bold, fontFamily) is preserved
+     * from the current state so color-only preset changes don't trigger
+     * re-pagination or shift text.
      *
      * For [ReadingPreset.CUSTOM], only the preset name is updated (the user
      * keeps their current typography values).
@@ -54,19 +58,16 @@ object ReaderStylePresetReducer {
         return state.copy(
             readerPreset = preset.name,
             textColorScheme = style.textColorScheme,
+            graphicColorScheme = style.textColorScheme,
             textCustomTextColor = null,
             textCustomBackgroundColor = null,
             textCustomAccentColor = null,
-            textFontFamily = style.fontFamily,
-            textLineHeight = style.lineHeight,
-            textLetterSpacing = style.letterSpacing,
-            textWordSpacing = style.wordSpacing,
-            textParagraphSpacing = style.paragraphSpacing,
-            textAlignment = style.textAlignment,
-            textBold = style.textBold,
             immersiveMode = style.immersiveMode,
             readerPageAnimation = style.pageAnimation,
             chromeState = ReaderChromeState.EXPANDED
+            // Typography fields (textFontFamily, textLineHeight, textLetterSpacing,
+            // textWordSpacing, textParagraphSpacing, textAlignment, textBold) are
+            // deliberately preserved from the current state to avoid re-pagination.
         )
     }
 
@@ -91,6 +92,7 @@ object ReaderStylePresetReducer {
             readerPreset = ReadingPreset.CUSTOM.name,
             textFontSize = DEFAULT_FONT_SIZE,
             textColorScheme = DEFAULT_COLOR_SCHEME,
+            graphicColorScheme = io.leostrange.mrcomic.feature.reader.ui.DEFAULT_GRAPHIC_COLOR_SCHEME,
             textCustomTextColor = null,
             textCustomBackgroundColor = null,
             textCustomAccentColor = null,
@@ -120,8 +122,14 @@ object ReaderStylePresetReducer {
     fun setFontSize(state: ReaderUiState, size: Int): ReaderUiState =
         state.copy(readerPreset = ReadingPreset.CUSTOM.name, textFontSize = size)
 
-    fun setColorScheme(state: ReaderUiState, scheme: String): ReaderUiState =
-        state.copy(readerPreset = ReadingPreset.CUSTOM.name, textColorScheme = scheme)
+    fun setColorScheme(state: ReaderUiState, scheme: String): ReaderUiState {
+        val isText = state.readerContainerKind.isTextContainer()
+        return state.copy(
+            readerPreset = ReadingPreset.CUSTOM.name,
+            textColorScheme = if (isText) scheme else state.textColorScheme,
+            graphicColorScheme = if (!isText) scheme else state.graphicColorScheme
+        )
+    }
 
     fun setFontFamily(state: ReaderUiState, family: String): ReaderUiState =
         state.copy(readerPreset = ReadingPreset.CUSTOM.name, textFontFamily = family)

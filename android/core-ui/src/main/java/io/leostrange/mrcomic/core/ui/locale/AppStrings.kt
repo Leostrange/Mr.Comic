@@ -293,6 +293,8 @@ data class AppStrings(
     val dictLangTurkish: String get() = dictStrings.dictLangTurkish
     val dictLangChinese: String get() = dictStrings.dictLangChinese
     val dictStatusBundled: String get() = dictStrings.dictStatusBundled
+    val dictStatusDownloaded: String get() = dictStrings.dictStatusDownloaded
+    val dictStatusImported: String get() = dictStrings.dictStatusImported
     val dictStatusInstalled: String get() = dictStrings.dictStatusInstalled
     val dictStatusNotInstalled: String get() = dictStrings.dictStatusNotInstalled
     val dictBtnDownload: String get() = dictStrings.dictBtnDownload

@@ -22,8 +22,6 @@ sealed class Screen(val route: String) {
         }
     }
 
-    data object OpdsCatalog : Screen("opds_catalog")
-
     data object AudiobookPlayer : Screen("audiobook_player/{audiobookId}") {
         fun create(audiobookId: String) = "audiobook_player/$audiobookId"
     }

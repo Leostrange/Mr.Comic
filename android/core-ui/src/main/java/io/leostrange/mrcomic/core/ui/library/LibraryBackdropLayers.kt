@@ -549,6 +549,34 @@ fun LibraryBackdropLayer(
 
     Box(modifier = modifier.fillMaxSize().background(spec.baseColor))
 
+    // AMBIENT-WASH: three soft scheme-tinted radial blobs give every backdrop
+    // style a gentle sense of depth and tie the background to the active theme
+    // palette without touching any individual style spec. Skipped for IMAGE
+    // (user photo already carries color) and reduced-visual-effects mode.
+    if (!performanceHints.reducedVisualEffects && normalizedStyle != "IMAGE") {
+        Canvas(modifier = modifier.fillMaxSize()) {
+            val dim = maxOf(size.width, size.height)
+            val washAlpha = (0.05f + effectiveBackdropStrength.coerceIn(0f, 1f) * 0.15f) *
+                when (variant) {
+                    LibraryBackdropVariant.LIGHT -> 1.00f
+                    LibraryBackdropVariant.DARK -> 0.78f
+                    LibraryBackdropVariant.AMOLED -> 0.38f
+                }
+            fun drawTintBlob(color: Color, alpha: Float, cx: Float, cy: Float, radiusScale: Float) {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(color.copy(alpha = alpha), Color.Transparent),
+                        center = Offset(size.width * cx, size.height * cy),
+                        radius = dim * radiusScale
+                    )
+                )
+            }
+            drawTintBlob(colorScheme.primary, washAlpha, 0.14f, 0.10f, 0.85f)
+            drawTintBlob(colorScheme.secondary, washAlpha * 0.90f, 0.90f, 0.34f, 0.75f)
+            drawTintBlob(colorScheme.tertiary, washAlpha * 0.70f, 0.42f, 0.98f, 0.90f)
+        }
+    }
+
      if (normalizedStyle == "IMAGE" && !backgroundImageUri.isNullOrBlank()) {
          AsyncImage(
               model = Uri.parse(backgroundImageUri),

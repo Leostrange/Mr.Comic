@@ -19,7 +19,7 @@ import io.leostrange.mrcomic.core.data.db.entity.TranslationCacheEntry
         TextHighlight::class,
         TranslationCacheEntry::class
     ],
-    version = 10,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

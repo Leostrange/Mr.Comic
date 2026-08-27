@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Crop169
 import androidx.compose.material.icons.filled.CropSquare
 import androidx.compose.material.icons.filled.FolderOpen
@@ -34,10 +33,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicTypographyTokens
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicType
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
 import io.leostrange.mrcomic.core.model.SortOrder
@@ -69,7 +67,6 @@ fun LibraryTopBar(
     onThumbnailModeChange: (String) -> Unit,
     onAddFileClick: () -> Unit,
     onAddFolderClick: () -> Unit,
-    onOpdsCatalogClick: (() -> Unit)? = null,
     canNavigateUp: Boolean,
     onNavigateUp: () -> Unit,
     onSettingsClick: () -> Unit
@@ -102,11 +99,7 @@ fun LibraryTopBar(
                         LibraryContentSection.ACHIEVEMENTS -> strings.libraryAchievements
                         else -> strings.navLibrary
                     },
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontSize = MrComicTypographyTokens.libraryTitle,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = MrComicTypographyTokens.LetterSpacing.display
-                    ),
+                    style = MrComicType.h1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -222,17 +215,6 @@ fun LibraryTopBar(
                                             addMenuExpanded = false
                                             onAddFolderClick()
                                         }
-                                    )
-                                }
-                            }
-                            if (onOpdsCatalogClick != null) {
-                                MrComicIconButton(
-                                    onClick = onOpdsCatalogClick,
-                                    variant = MrComicIconButtonVariant.Tonal
-                                ) {
-                                    Icon(
-                                        Icons.Default.CloudDownload,
-                                        contentDescription = strings.opdsCatalog
                                     )
                                 }
                             }

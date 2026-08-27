@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
@@ -59,6 +61,7 @@ fun PageView(
 ) {
     val isEInk = LocalEInkMode.current
     val isDualPage = uiState.readingMode == ReadingMode.DUAL_PAGE
+    val isDjvu = uiState.comic?.format == ComicFormat.DJVU
     val leftPage = uiState.currentPage
     val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
         ReaderImageCrop(
@@ -123,6 +126,8 @@ fun PageView(
                         alignment = Alignment.CenterEnd,
                         imageScaleMode = imageScaleMode,
                         crop = imageCrop,
+                        pageOffsetX = if (isDjvu) (-8).dp else 0.dp,
+                        pageOffsetY = if (isDjvu) 20.dp else 0.dp,
                         modifier = Modifier.weight(1f)
                     )
                     if (rightPage != null) {
@@ -132,6 +137,8 @@ fun PageView(
                             alignment = Alignment.CenterStart,
                             imageScaleMode = imageScaleMode,
                             crop = imageCrop,
+                            pageOffsetX = if (isDjvu) (-8).dp else 0.dp,
+                            pageOffsetY = if (isDjvu) 20.dp else 0.dp,
                             modifier = Modifier.weight(1f)
                         )
                     } else {
@@ -164,6 +171,8 @@ fun PageView(
                         contentDescription = "Page ${page + 1}",
                         imageScaleMode = imageScaleMode,
                         crop = imageCrop,
+                        pageOffsetX = if (isDjvu) (-8).dp else 0.dp,
+                        pageOffsetY = if (isDjvu) 20.dp else 0.dp,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -179,7 +188,9 @@ private fun PagePane(
     modifier: Modifier = Modifier,
     alignment: Alignment = Alignment.Center,
     imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
-    crop: ReaderImageCrop = ReaderImageCrop()
+    crop: ReaderImageCrop = ReaderImageCrop(),
+    pageOffsetX: androidx.compose.ui.unit.Dp = 0.dp,
+    pageOffsetY: androidx.compose.ui.unit.Dp = 0.dp
 ) {
     BoxWithConstraints(modifier = modifier.clipToBounds(), contentAlignment = alignment) {
         if (bitmap == null) {
@@ -222,6 +233,7 @@ private fun PagePane(
             modifier = Modifier
                 .width(imageWidth)
                 .height(imageHeight)
+                .offset(x = pageOffsetX, y = pageOffsetY)
         ) {
             CroppedBitmapImage(
                 bitmap = bitmap,

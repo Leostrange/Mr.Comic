@@ -16,6 +16,7 @@ internal suspend fun persistReaderStylePresetSnapshot(
     readerPreferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
     readerPreferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
     readerPreferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
+    readerPreferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, snapshot.textColorScheme)
     readerPreferences.set(PreferencesKeys.TEXT_FONT_FAMILY, snapshot.textFontFamily)
     readerPreferences.set(PreferencesKeys.TEXT_LINE_HEIGHT, snapshot.textLineHeight)
     readerPreferences.set(PreferencesKeys.TEXT_LETTER_SPACING, snapshot.textLetterSpacing)

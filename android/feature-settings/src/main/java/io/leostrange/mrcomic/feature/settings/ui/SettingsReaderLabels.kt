@@ -106,8 +106,20 @@ internal fun readerTapZoneActionLabel(language: String, action: String): String 
 }
 internal fun readerInfoSlotPreviewValue(language: String, slot: String): String = when (ReaderInfoSlot.fromStored(slot)) {
     ReaderInfoSlot.NONE -> ""
-    ReaderInfoSlot.BOOK_TITLE -> if (language == "en") "Book title" else "Название книги"
-    ReaderInfoSlot.CHAPTER_TITLE -> if (language == "en") "Chapter 3" else "Глава 3"
+    ReaderInfoSlot.BOOK_TITLE -> when (language) {
+        "en" -> "Book title"
+        "ja" -> "本のタイトル"
+        "zh" -> "书名"
+        "ko" -> "책 제목"
+        else -> "Название книги"
+    }
+    ReaderInfoSlot.CHAPTER_TITLE -> when (language) {
+        "en" -> "Chapter 3"
+        "ja" -> "第3章"
+        "zh" -> "第3章"
+        "ko" -> "제3장"
+        else -> "Глава 3"
+    }
     ReaderInfoSlot.TIME -> "12:48"
     ReaderInfoSlot.PROGRESS -> "78%"
     ReaderInfoSlot.PAGE -> "124 / 320"

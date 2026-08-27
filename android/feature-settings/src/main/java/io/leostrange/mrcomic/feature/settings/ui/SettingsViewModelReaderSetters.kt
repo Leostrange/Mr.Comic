@@ -23,6 +23,7 @@ internal fun SettingsSettersController.setReaderPreset(presetName: String) {
             preferences.set(PreferencesKeys.READER_PAGE_ANIMATION, style.pageAnimation)
             preferences.set(PreferencesKeys.READER_PAGE_SOUND, false)
             preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, style.textColorScheme)
+            preferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, style.textColorScheme)
             persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, null)
             persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, null)
             persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, null)

@@ -122,10 +122,34 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun textSettingsJs_justifiesOnlyReadingParagraphsAndKeepsTheirLastLineNatural() {
+        val js = textSettingsJs(
+            fontSize = 18,
+            bg = "#fafafa",
+            fg = "#1a1a1a",
+            align = "justify",
+            pagedMode = true
+        )
+
+        assertTrue(js.contains("text-align-last:start !important"))
+        assertTrue(js.contains("hyphens:auto !important"))
+        assertFalse(
+            "headings and structural containers must retain publisher alignment",
+            js.contains("querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6')")
+        )
+    }
+
+    @Test
     fun tapHandler_blocksSelectionInPagedMode() {
         assertTrue(JS_TAP_HANDLER.contains("window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()"))
         assertTrue(JS_TAP_HANDLER.contains("selection.removeAllRanges()"))
         assertTrue(JS_TAP_HANDLER.contains("e.preventDefault();"))
+    }
+
+    @Test
+    fun tapHandler_distinguishesAHandleDragFromSelectionCreatedByPageSwipe() {
+        assertTrue(JS_TAP_HANDLER.contains("window.__readerHadSelectionAtTouchStart"))
+        assertTrue(JS_TAP_HANDLER.contains("&&!window.__readerHadSelectionAtTouchStart"))
     }
 
     @Test
@@ -305,7 +329,7 @@ class ReaderHtmlCssJsTest {
         )
         assertTrue(
             "media pages keep the bottom shield below the last content line",
-            js.contains("var shieldTop=Math.max(") && js.contains("rawVisibleHeight+1")
+            js.contains("var shieldTop=Math.max(") && js.contains("rawVisibleHeight+2")
         )
     }
 
@@ -317,7 +341,7 @@ class ReaderHtmlCssJsTest {
 
         assertTrue(
             "shield must start after the last content line",
-            js.contains("rawVisibleHeight+1")
+            js.contains("rawVisibleHeight+2")
         )
         assertFalse(
             "shield must not be raised by a bottom text gutter",
@@ -359,7 +383,7 @@ class ReaderHtmlCssJsTest {
 
         assertTrue(
             "the bottom shield must not cover the last legal line",
-            js.contains("rawVisibleHeight+1")
+            js.contains("rawVisibleHeight+2")
         )
     }
 
@@ -426,7 +450,7 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
-    fun readerHtmlPageSourceReloadKeyUsesDocumentIdentityOnly() {
+    fun readerHtmlPageSourceReloadKeyUsesDocumentIdentityAndTheme() {
         val key = readerHtmlPageSourceReloadKey(
             html = "<p>Hello</p>",
             resolvedBaseUrl = "https://appassets.androidplatform.net/content/book.xhtml",

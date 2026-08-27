@@ -103,7 +103,10 @@ internal class EpubTocResolver(
         return result.sortedBy { it.order }.mapNotNull { nav ->
             if (EpubFootnoteResolver.isFootnoteTocEntry(nav.src, nav.title)) return@mapNotNull null
             val href = try { URLDecoder.decode(nav.src, "UTF-8") } catch (_: Exception) { nav.src }
-            srcToPageIndex(href, ncxDir, fallbackBaseDir = opfDir)?.let { TocEntry(nav.title, it) }
+            val anchorId = href.substringAfter('#', "").takeIf { it.isNotBlank() }
+            srcToPageIndex(href, ncxDir, fallbackBaseDir = opfDir)?.let {
+                TocEntry(nav.title, it, anchorId = anchorId, sectionIndex = it)
+            }
         }
     }
 
@@ -126,8 +129,9 @@ internal class EpubTocResolver(
             val title = CHUNK_HTML_TAG_RE.replace(match.groupValues[2], "").trim()
             if (title.isEmpty()) continue
             if (EpubFootnoteResolver.isFootnoteTocEntry(href, title)) continue
+            val anchorId = href.substringAfter('#', "").takeIf { it.isNotBlank() }
             val pageIdx = srcToPageIndex(href, navDir, fallbackBaseDir = opfDir) ?: continue
-            result.add(TocEntry(title, pageIdx))
+            result.add(TocEntry(title, pageIdx, anchorId = anchorId, sectionIndex = pageIdx))
         }
         return result
     }

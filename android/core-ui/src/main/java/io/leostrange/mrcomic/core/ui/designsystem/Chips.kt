@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -41,7 +42,7 @@ fun MrComicFilterChip(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.heightIn(min = minHeight),
-        shape = RoundedCornerShape(MrComicRadiusTokens.pill),
+        shape = RoundedCornerShape(MrComicCornerScale.pill),
         colors = FilterChipDefaults.filterChipColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -66,7 +67,7 @@ fun MrComicPill(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(MrComicRadiusTokens.pill),
+        shape = RoundedCornerShape(MrComicCornerScale.pill),
         color = containerColor,
         contentColor = contentColor,
         border = border
@@ -82,23 +83,40 @@ fun MrComicPill(
 
 @Composable
 fun MrComicFormatBadge(label: String, isGraphic: Boolean, modifier: Modifier = Modifier) {
-    val container = MaterialTheme.colorScheme.surface.copy(alpha = if (isGraphic) 0.9f else 0.92f)
-    val borderAlpha = if (isGraphic) 0.3f else 0.26f
-    Surface(
+    val colorScheme = MaterialTheme.colorScheme
+    // BUG-UI-01: Ensure sufficient contrast for badge text on all backgrounds.
+    val containerColor = colorScheme.surface.copy(alpha = if (isGraphic) 0.92f else 0.94f)
+    val contentColor = ensureBadgeContrast(colorScheme.onSurface, containerColor)
+    MrComicPill(
         modifier = modifier,
-        shape = RoundedCornerShape(MrComicRadiusTokens.sm),
-        color = container,
-        border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = borderAlpha))
+        containerColor = containerColor,
+        contentColor = contentColor,
+        border = BorderStroke(0.6.dp, colorScheme.outlineVariant.copy(alpha = if (isGraphic) 0.35f else 0.3f)),
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp)
     ) {
         Text(
             text = label,
-            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontSize = MrComicTypographyTokens.badge),
-            color = MaterialTheme.colorScheme.onSurface,
+            color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
+}
+
+/**
+ * Ensures badge text has sufficient contrast against its container.
+ * Falls back to black or white if the contrast ratio is below 3:1.
+ */
+private fun ensureBadgeContrast(foreground: Color, background: Color): Color {
+    val bgLum = background.luminance().coerceIn(0.001f, 0.999f)
+    val fgLum = foreground.luminance().coerceIn(0.001f, 0.999f)
+    val ratio = if (bgLum > fgLum) (bgLum + 0.05f) / (fgLum + 0.05f)
+                else (fgLum + 0.05f) / (bgLum + 0.05f)
+    if (ratio >= 3f) return foreground
+    val blackRatio = (bgLum + 0.05f) / (0.0f + 0.05f)
+    val whiteRatio = (1.0f + 0.05f) / (bgLum + 0.05f)
+    return if (blackRatio >= whiteRatio) Color.Black else Color.White
 }
 
 @Composable
@@ -113,11 +131,11 @@ fun MrComicStatusBadge(
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val (toneContainerColor, toneContentColor) = when (tone) {
-        MrComicStatusTone.Neutral -> colorScheme.surface.copy(alpha = 0.9f) to colorScheme.onSurface
-        MrComicStatusTone.Info -> colorScheme.primary.copy(alpha = 0.14f) to colorScheme.primary
-        MrComicStatusTone.Success -> colorScheme.tertiary.copy(alpha = 0.16f) to colorScheme.tertiary
-        MrComicStatusTone.Warning -> colorScheme.secondary.copy(alpha = 0.18f) to colorScheme.secondary
-        MrComicStatusTone.Error -> colorScheme.error.copy(alpha = 0.14f) to colorScheme.error
+        MrComicStatusTone.Neutral -> colorScheme.surface.copy(alpha = 0.92f) to colorScheme.onSurface
+        MrComicStatusTone.Info -> colorScheme.primary.copy(alpha = 0.22f) to colorScheme.primary
+        MrComicStatusTone.Success -> colorScheme.tertiary.copy(alpha = 0.24f) to colorScheme.tertiary
+        MrComicStatusTone.Warning -> colorScheme.secondary.copy(alpha = 0.24f) to colorScheme.secondary
+        MrComicStatusTone.Error -> colorScheme.error.copy(alpha = 0.22f) to colorScheme.error
     }
     val resolvedContainerColor = containerColor ?: toneContainerColor
     val resolvedContentColor = contentColor ?: toneContentColor

@@ -81,12 +81,13 @@ internal fun ReaderTextAppearancePreviewCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             MrComicCardSurface(
+                modifier = Modifier.heightIn(max = 196.dp),
                 shape = MaterialTheme.shapes.large,
                 containerColor = previewBackground
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Text(
                         text = strings.readerTextPreviewTitle,
@@ -100,23 +101,29 @@ internal fun ReaderTextAppearancePreviewCard(
                     )
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = align
-                    ) {
-                        Text(
-                            text = strings.readerTextPreviewDescription,
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = uiState.textFontSize.sp,
-                                lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
-                                fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal,
-                                fontFamily = previewFontFamily,
-                                letterSpacing = uiState.textLetterSpacing.em,
-                                color = previewText
-                            ),
-                            color = previewText,
-                            textAlign = textAlign,
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 8
+                        horizontalAlignment = align,
+                        verticalArrangement = Arrangement.spacedBy(
+                            uiState.textParagraphSpacing.coerceIn(0f, 32f).dp
                         )
+                    ) {
+                        repeat(2) {
+                            Text(
+                                text = strings.readerTextPreviewDescription,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = uiState.textFontSize.sp,
+                                    lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
+                                    fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal,
+                                    fontFamily = previewFontFamily,
+                                    letterSpacing = uiState.textLetterSpacing.em,
+                                    color = previewText
+                                ),
+                                color = previewText,
+                                textAlign = textAlign,
+                                modifier = Modifier.fillMaxWidth(),
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -147,13 +154,14 @@ internal fun ReaderPageLayoutPreviewCard(
         val previewShape = MaterialTheme.shapes.large
         MrComicCardSurface(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .heightIn(max = 172.dp),
             shape = previewShape,
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -240,7 +248,9 @@ internal fun ReaderHeaderFooterPreviewCard(
         }
     ) {
         MrComicCardSurface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 172.dp),
             shape = MaterialTheme.shapes.large,
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
@@ -277,9 +287,9 @@ internal fun ReaderHeaderFooterPreviewCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(18.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         readerInfoSlotPreviewValue(language, uiState.readerFooterLeftSlot),

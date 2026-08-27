@@ -309,6 +309,44 @@ class ReaderBookOpeningControllerTest {
             greenPath
         )
     }
-    // (close-tests are covered below by the dedicated SessionCoordinatorTest;
-    //  this file focuses on the open-side integration only.)
+    // ── BUG-READER-03: legacy fallback must route through planReaderPositionRestore ──
+
+    @Test
+    fun legacyFallback_currentPageBecomesStartPage() = runTest {
+        // A legacy record has readerPositionJson=null and currentPage=5.
+        // The opening pipeline must synthesize a ReaderPosition from currentPage and
+        // route it through planReaderPositionRestore so the structured path is always used.
+        val comic = comic(currentPage = 5)
+        createController(fetchResult = comic)
+
+        assertEquals("Legacy currentPage=5 should become startPage=5", 5, uiState.value.currentPage)
+        assertEquals("c1", uiState.value.comic?.id)
+    }
+
+    @Test
+    fun legacyFallback_zeroPageStartsAtZero() = runTest {
+        // currentPage=0 with no structured position means "start from the beginning".
+        val comic = comic(currentPage = 0)
+        createController(fetchResult = comic)
+
+        assertEquals(0, uiState.value.currentPage)
+    }
+
+    @Test
+    fun structuredPosition_takesPrecedenceOverCurrentPage() = runTest {
+        // When a valid readerPositionJson exists, it must be used instead of currentPage.
+        val structuredPosition = io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition(
+            engineSectionIndex = 3,
+            mode = io.leostrange.mrcomic.core.model.ReadingMode.PAGE_LTR,
+        )
+        val encodedJson = io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec.encode(structuredPosition)
+        val comic = comic(currentPage = 99).copy(readerPositionJson = encodedJson)
+        createController(fetchResult = comic)
+
+        assertEquals(
+            "Structured position (section=3) must win over legacy currentPage=99",
+            3,
+            uiState.value.currentPage
+        )
+    }
 }

@@ -3,12 +3,12 @@ package io.leostrange.mrcomic.feature.library
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
@@ -38,6 +37,8 @@ import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
+import io.leostrange.mrcomic.feature.library.components.LibraryFallbackCover
+import io.leostrange.mrcomic.feature.library.components.LibraryFallbackCoverKind
 import io.leostrange.mrcomic.core.ui.locale.audiobookPauseActionLabel
 import io.leostrange.mrcomic.core.ui.locale.audiobookPlayActionLabel
 import io.leostrange.mrcomic.core.ui.locale.audiobookStopActionLabel
@@ -98,23 +99,25 @@ fun MiniAudiobookPlayer(
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                            .clip(RoundedCornerShape(6.dp)),
                         contentAlignment = Alignment.Center
                     ) {
+                        val miniFallbackKind = if (audiobook.sourceIsFolder) {
+                            LibraryFallbackCoverKind.AUDIO_FOLDER
+                        } else {
+                            LibraryFallbackCoverKind.AUDIO_FILE
+                        }
+                        LibraryFallbackCover(
+                            title = audiobook.title,
+                            kind = miniFallbackKind,
+                            modifier = Modifier.fillMaxSize(),
+                        )
                         if (audiobook.coverUri != null) {
                             AsyncImage(
                                 model = audiobook.coverUri,
                                 contentDescription = null,
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp))
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Headphones,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

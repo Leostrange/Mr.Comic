@@ -302,4 +302,189 @@ class PagedGesturePolicyTest {
             )
         )
     }
+
+    // ── BUG-T4 regression: footnote link at screen edge ────────────────────
+
+    /**
+     * When the user taps a footnote link at the left edge (xPercent=0.05),
+     * the gesture policy must return PASS_THROUGH so the WebView can handle
+     * the link click, not turn the page.
+     */
+    @Test
+    fun classifyPagedGesture_tapOnFootnoteAtLeftEdge_passThrough() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 2f, dy = 1f,
+            elapsed = 150L,
+            xPercent = 0.05f,
+            isEdgeTap = true,
+            hasMoved = false,
+            hasActiveSelection = false,
+            touchStartedOnLink = true
+        )
+        assertEquals(PagedGestureAction.PASS_THROUGH, result)
+    }
+
+    /**
+     * When the user taps a footnote link at the right edge (xPercent=0.95),
+     * the gesture policy must return PASS_THROUGH so the WebView can handle
+     * the link click, not turn the page.
+     */
+    @Test
+    fun classifyPagedGesture_tapOnFootnoteAtRightEdge_passThrough() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 2f, dy = 1f,
+            elapsed = 150L,
+            xPercent = 0.95f,
+            isEdgeTap = true,
+            hasMoved = false,
+            hasActiveSelection = false,
+            touchStartedOnLink = true
+        )
+        assertEquals(PagedGestureAction.PASS_THROUGH, result)
+    }
+
+    /**
+     * When a tap at the left edge is NOT on a link, it should still be
+     * classified as TAP_LEFT (page turn) — this is the normal edge-tap
+     * behavior that must not be broken.
+     */
+    @Test
+    fun classifyPagedGesture_edgeTapNotOnLink_tapLeft() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 2f, dy = 1f,
+            elapsed = 150L,
+            xPercent = 0.05f,
+            isEdgeTap = true,
+            hasMoved = false,
+            hasActiveSelection = false,
+            touchStartedOnLink = false
+        )
+        assertEquals(PagedGestureAction.TAP_LEFT, result)
+    }
+
+    /**
+     * Edge tap on a link in the center zone should still pass through
+     * (the link click should be handled by WebView).
+     */
+    @Test
+    fun classifyPagedGesture_linkInCenter_passThrough() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 2f, dy = 1f,
+            elapsed = 150L,
+            xPercent = 0.5f,
+            isEdgeTap = false,
+            hasMoved = false,
+            hasActiveSelection = false,
+            touchStartedOnLink = true
+        )
+        assertEquals(PagedGestureAction.PASS_THROUGH, result)
+    }
+
+    // ── BUG-T5 regression: accidental selection during swipe ───────────────
+
+    /**
+     * When the finger has moved and there's no active selection, selection
+     * should always be suppressed — even when the user has held for >500ms
+     * before moving.
+     */
+    @Test
+    fun shouldSuppressSelectionOnMove_movedEvenWithLongHold_returnsTrue() {
+        assertTrue(
+            PagedGesturePolicy.shouldSuppressSelectionOnMove(
+                hasMoved = true,
+                hasActiveSelection = false
+            )
+        )
+    }
+
+    /**
+     * A slow vertical swipe (small dx, moderate dy) should be classified
+     * as RESOLVED (consumed as page gesture), preventing any selection.
+     */
+    @Test
+    fun classifyPagedGesture_slowVerticalSwipe_resolved() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 3f, dy = 35f,
+            elapsed = 600L,
+            xPercent = 0.5f,
+            isEdgeTap = false,
+            hasMoved = true,
+            hasActiveSelection = false,
+            touchStartedOnLink = false
+        )
+        assertEquals(PagedGestureAction.RESOLVED, result)
+    }
+
+    /**
+     * When the user is dragging a selection handle (hasActiveSelection=true),
+     * even a large vertical swipe should pass through so the WebView handles
+     * the selection extension.
+     */
+    @Test
+    fun classifyPagedGesture_verticalSwipeWithActiveSelection_passThrough() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 3f, dy = 50f,
+            elapsed = 400L,
+            xPercent = 0.5f,
+            isEdgeTap = false,
+            hasMoved = true,
+            hasActiveSelection = true,
+            touchStartedOnLink = false
+        )
+        assertEquals(PagedGestureAction.PASS_THROUGH, result)
+    }
+
+    /**
+     * A horizontal swipe with small vertical component should still be
+     * classified as a page turn (TAP_LEFT), not pass through.
+     */
+    @Test
+    fun classifyPagedGesture_horizontalSwipeWithSmallVertical_tapLeft() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = -70f, dy = 15f,
+            elapsed = 400L,
+            xPercent = 0.5f,
+            isEdgeTap = false,
+            hasMoved = true,
+            hasActiveSelection = false,
+            touchStartedOnLink = false
+        )
+        assertEquals(PagedGestureAction.TAP_LEFT, result)
+    }
+
+    /**
+     * A tap near the left edge that hasn't moved and isn't on a link should
+     * be TAP_LEFT (normal page-turn edge tap).
+     */
+    @Test
+    fun classifyPagedGesture_nearLeftEdgeTap_tapLeft() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 1f, dy = 1f,
+            elapsed = 100L,
+            xPercent = 0.10f,
+            isEdgeTap = true,
+            hasMoved = false,
+            hasActiveSelection = false,
+            touchStartedOnLink = false
+        )
+        assertEquals(PagedGestureAction.TAP_LEFT, result)
+    }
+
+    /**
+     * A tap near the right edge that hasn't moved and isn't on a link should
+     * be TAP_RIGHT (normal page-turn edge tap).
+     */
+    @Test
+    fun classifyPagedGesture_nearRightEdgeTap_tapRight() {
+        val result = PagedGesturePolicy.classifyPagedGesture(
+            dx = 1f, dy = 1f,
+            elapsed = 100L,
+            xPercent = 0.90f,
+            isEdgeTap = true,
+            hasMoved = false,
+            hasActiveSelection = false,
+            touchStartedOnLink = false
+        )
+        assertEquals(PagedGestureAction.TAP_RIGHT, result)
+    }
 }

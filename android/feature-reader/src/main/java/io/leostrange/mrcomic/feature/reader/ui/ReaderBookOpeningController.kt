@@ -6,6 +6,7 @@ import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.api.RenderDeviceTier
@@ -145,6 +146,8 @@ internal class ReaderBookOpeningController(
             loadInitialPages(comic, prepared, activeReader, config)
             scheduleDeferredPageCountIfNeeded(comic, activeReader, prepared, config, requestToken)
             schedulePostOpenTasks(comic, config.startPage, config.initialPages)
+            // BUG-READER-03: start periodic position snapshots to survive process kills.
+            progressController.startPeriodicPositionSave()
             sessionLifecycleCoordinator.markReadyAfterBeginOpen()
         } catch (e: CancellationException) {
             sessionLifecycleCoordinator.reset()
@@ -269,7 +272,26 @@ internal class ReaderBookOpeningController(
         val requestedPage = pendingRequestedPage
         val shouldDeferCount = prepared.deferPageCount
         val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
-        val requestedStartPage = requestedPage ?: restoredPosition?.engineSectionIndex ?: comic.currentPage
+        // BUG-READER-03: legacy records without readerPositionJson fall back to comic.currentPage.
+        // That raw int is a visual-page index from the old persistence, not a section index.
+        // Wrapping it in a synthetic ReaderPosition and routing through planReaderPositionRestore
+        // ensures the structured restore path (section → sub-page → anchor) is always used,
+        // even for records that predate the structured schema.
+        val effectivePosition = restoredPosition ?: comic.currentPage.takeIf { it > 0 }?.let {
+            ReaderPosition(engineSectionIndex = it, mode = openingMode)
+        }
+        val requestedStartPage = requestedPage ?: effectivePosition?.let { pos ->
+            if (initialPages > 0) {
+                planReaderPositionRestore(
+                    position = pos,
+                    openingMode = openingMode,
+                    resolvedTotalPages = initialPages,
+                    normalizePage = { page, mode, total -> navigationController.normalizePageForMode(page, mode, total) }
+                )?.startPage
+            } else {
+                pos.engineSectionIndex
+            }
+        } ?: 0
         val startPage = navigationController.normalizePageForMode(requestedStartPage, openingMode, initialPages)
         pendingRequestedPage = null
         progressController.lastPersistedProgress = PersistedProgressMarker(
@@ -287,7 +309,9 @@ internal class ReaderBookOpeningController(
             startPage = startPage,
             requestedStartPage = requestedStartPage,
             requestedPage = requestedPage,
-            restoredPosition = restoredPosition
+            // BUG-READER-03: pass the synthetic position so the deferred page-count
+            // resolution path also uses the structured restore for legacy records.
+            restoredPosition = effectivePosition
         )
     }
 
@@ -492,24 +516,34 @@ internal class ReaderBookOpeningController(
                 normalizePage = { page, mode, total -> navigationController.normalizePageForMode(page, mode, total) }
             )
         }
-        val resolvedStartPage = restorePlan?.startPage ?: normalizedStartPage
+        val restoredStartPage = restorePlan?.startPage ?: normalizedStartPage
         val restoresWebtoon = openingMode == ReadingMode.WEBTOON
+        // T6 FIX: Only apply the restored start page if the user hasn't navigated away
+        // from it. During the deferred resolution delay, the user may have turned pages.
+        // Overwriting their current position causes the "page flip rolls back" bug.
+        val currentPage = _uiState.value.currentPage
+        val userHasNavigated = currentPage != restoredStartPage && currentPage != 0
+        val resolvedStartPage = if (userHasNavigated) currentPage else restoredStartPage
         _uiState.update {
             it.copy(
                 totalPages = realPages,
                 currentPage = resolvedStartPage,
                 isLoading = false,
-                sectionCurrentPage = if (restoresWebtoon) {
-                    0
+                sectionCurrentPage = if (userHasNavigated || restoresWebtoon) {
+                    if (restoresWebtoon) 0 else it.sectionCurrentPage
                 } else {
                     restorePlan?.sectionCurrentPage ?: it.sectionCurrentPage
                 },
-                sectionCharacterOffset = if (restoresWebtoon) {
-                    0
+                sectionCharacterOffset = if (userHasNavigated || restoresWebtoon) {
+                    if (restoresWebtoon) 0 else it.sectionCharacterOffset
                 } else {
                     restorePlan?.characterOffset ?: it.sectionCharacterOffset
                 },
-                pendingScrollToAnchor = restorePlan?.domAnchor ?: it.pendingScrollToAnchor,
+                pendingScrollToAnchor = if (userHasNavigated) {
+                    it.pendingScrollToAnchor
+                } else {
+                    restorePlan?.domAnchor ?: it.pendingScrollToAnchor
+                },
                 pendingWebtoonSectionIndex = if (restoresWebtoon) {
                     restorePlan?.webtoonSectionIndex ?: it.pendingWebtoonSectionIndex
                 } else {
@@ -540,6 +574,15 @@ internal class ReaderBookOpeningController(
             }
         }
         bookmarkController.loadBookmarks(comic.id, realPages)
+        // BUG-READER-01: persist the resolved page count immediately so the library card,
+        // progress bar, and next-open restore all see the correct total — even if the user
+        // closes the reader without turning another page. Without this, pageCount stays 0
+        // in the database until the next saveProgress call, causing displayReadingProgress()
+        // to fall back to the stored (possibly stale) readingProgress value.
+        progressController.saveProgress(
+            page = resolvedStartPage,
+            progressSource = ReaderNavigationProgressSource.READING
+        )
     }
 
     private fun schedulePostOpenTasks(comic: Comic, startPage: Int, initialPages: Int) {

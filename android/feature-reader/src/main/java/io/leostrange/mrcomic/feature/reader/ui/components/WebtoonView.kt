@@ -104,21 +104,49 @@ fun WebtoonView(
         viewModel.pageLoader.preloadWebtoonWindow(pages)
     }
 
-    // User scrolled the list в†’ update the ViewModel's current page.
-    // snapshotFlow + distinctUntilChanged prevents re-entrancy: the emission
-    // only fires when firstVisibleItemIndex *actually* changes, and navigateTo()
-    // updating uiState.currentPage does NOT scroll the list here (that's the
-    // second effect below), so there is no feedback loop.
+    // Guard against feedback loop: suppress scroll->page sync while applying external page->scroll.
+    var suppressScrollSync by remember(uiState.comic?.id) { mutableStateOf(false) }
+
+    // User scrolled the list -> update the ViewModel’s current page.
     LaunchedEffect(listState, uiState.comic?.id) {
         snapshotFlow { listState.firstVisibleItemIndex }
             .distinctUntilChanged()
-            .collect { index -> viewModel.navigationController.navigateTo(index, ReaderNavigationProgressSource.JUMP) }
+            .collect { index ->
+                if (!suppressScrollSync) {
+                    viewModel.navigationController.navigateTo(index, ReaderNavigationProgressSource.JUMP)
+                }
+            }
     }
 
-    // External page change (e.g. bottom bar slider) в†’ scroll the list.
+    // BUG-VERTICAL-01: Track scroll progression (0..1) for seekbar synchronization.
+    LaunchedEffect(listState, uiState.comic?.id, uiState.totalPages) {
+        snapshotFlow {
+            val totalItems = uiState.totalPages.coerceAtLeast(1)
+            val firstVisible = listState.firstVisibleItemIndex
+            val scrollOffset = listState.firstVisibleItemScrollOffset
+            val visibleItem = listState.layoutInfo.visibleItemsInfo.firstOrNull()
+            val itemHeight = visibleItem?.size?.coerceAtLeast(1) ?: 1
+            val progression = if (totalItems > 0) {
+                ((firstVisible.toFloat() + scrollOffset.toFloat() / itemHeight) / totalItems)
+                    .coerceIn(0f, 1f)
+            } else 0f
+            progression
+        }
+            .distinctUntilChanged()
+            .debounce(50L)
+            .collect { progression ->
+                if (!suppressScrollSync) {
+                    viewModel.onRasterWebtoonScrollProgressionChanged(progression)
+                }
+            }
+    }
+
+    // External page change (e.g. bottom bar slider) -> scroll the list.
     LaunchedEffect(uiState.comic?.id, uiState.currentPage) {
         if (listState.firstVisibleItemIndex != uiState.currentPage) {
+            suppressScrollSync = true
             listState.scrollToItem(uiState.currentPage)
+            suppressScrollSync = false
         }
         if (uiState.totalPages > 0) {
             val start = (uiState.currentPage - webtoonPreloadBehind).coerceAtLeast(0)

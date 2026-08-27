@@ -3,6 +3,8 @@ package io.leostrange.mrcomic
 import android.app.Application
 import android.content.ComponentCallbacks2
 import android.util.Log
+import coil.ImageLoader
+import coil.ImageLoaderFactory
 import io.leostrange.mrcomic.core.data.preferences.PerformanceDefaults
 import io.leostrange.mrcomic.core.data.preferences.PerformancePreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
@@ -23,8 +25,19 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
-class ComicApplication : Application() {
+class ComicApplication : Application(), ImageLoaderFactory {
     companion object { private const val TAG = "ComicApp" }
+
+    /**
+     * STYLE-SMOOTH: one global Coil loader with a gentle 180ms crossfade so every
+     * AsyncImage in the app fades covers in instead of popping them in. Coil 2 has
+     * no per-call crossfade parameter on AsyncImage — the canonical place for it is
+     * the shared ImageLoader.
+     */
+    override fun newImageLoader(): ImageLoader =
+        ImageLoader.Builder(this)
+            .crossfade(180)
+            .build()
 
     var splashPlayedInProcess: Boolean = false
 

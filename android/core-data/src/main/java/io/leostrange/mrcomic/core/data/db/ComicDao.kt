@@ -49,7 +49,7 @@ interface ComicDao {
         SET currentPage = :currentPage,
             readingProgress = :progress,
             lastReadDate = :lastReadDate,
-            pageCount = CASE WHEN :pageCount > pageCount THEN :pageCount ELSE pageCount END,
+            pageCount = :pageCount,
             readerLocatorPosition = CASE
                 WHEN :characterOffset IS NOT NULL THEN :characterOffset
                 ELSE readerLocatorPosition

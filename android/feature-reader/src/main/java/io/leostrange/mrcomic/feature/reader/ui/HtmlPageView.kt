@@ -333,6 +333,7 @@ internal fun HtmlPageView(
             }
         },
         update = { webView ->
+            webView.setBackgroundColor(bgColor)
             webView.pagedModeScrollLock = pagedMode
             webView.onFreeScrollPositionChanged = if (pagedMode) {
                 null
@@ -434,8 +435,12 @@ internal fun HtmlPageView(
                         return false;
                     })();
                 """.trimIndent()
-                webView.evaluateJavascript(script) { _ ->
-                    onConsumeWebtoonSectionState.value()
+                webView.evaluateJavascript(script) { rawValue ->
+                    // Keep the cursor pending until the target section exists and
+                    // the runtime confirms that it actually scrolled to it.
+                    if (rawValue?.trim('"') == "true") {
+                        onConsumeWebtoonSectionState.value()
+                    }
                 }
             }
             val viewportWidthPx = webView.readerCssViewportWidthPxOrNull()

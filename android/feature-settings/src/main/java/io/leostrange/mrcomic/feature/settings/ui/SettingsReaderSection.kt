@@ -103,11 +103,13 @@ internal fun ReaderSection(
                 }
             }
                 ReaderSettingsPage.TEXT_APPEARANCE -> {
-                item {
-                    ReaderTextAppearancePreviewCard(
-                        uiState = uiState,
-                        strings = strings
-                    )
+                stickyHeader(key = "reader_text_appearance_preview") {
+                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                        ReaderTextAppearancePreviewCard(
+                            uiState = uiState,
+                            strings = strings
+                        )
+                    }
                 }
                 item {
                     ReaderTextStyleCard(
@@ -124,8 +126,10 @@ internal fun ReaderSection(
                 }
             }
             ReaderSettingsPage.PAGE_LAYOUT -> {
-                item {
-                    ReaderPageLayoutPreviewCard(uiState = uiState, strings = strings)
+                stickyHeader(key = "reader_page_layout_preview") {
+                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                        ReaderPageLayoutPreviewCard(uiState = uiState, strings = strings)
+                    }
                 }
                 item {
                     ReaderModeCard(uiState = uiState, strings = strings, viewModel = viewModel)
@@ -155,8 +159,10 @@ internal fun ReaderSection(
                 }
             }
             ReaderSettingsPage.PAGING -> {
-                item {
-                    ReaderPagingPreviewCard(uiState = uiState, language = uiState.appLanguage)
+                stickyHeader(key = "reader_paging_preview") {
+                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
+                        ReaderPagingPreviewCard(uiState = uiState, language = uiState.appLanguage)
+                    }
                 }
                 item {
                     ReaderPagingSettingsCard(

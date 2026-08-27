@@ -156,6 +156,10 @@ internal object ReaderContentPathResolver {
     }
 
     fun hasReadAccess(context: Context, path: String): Boolean {
+        if (!path.startsWith("content://")) {
+            // Fast path for local files: avoid opening an InputStream just to test permission.
+            return isLocalFileReadable(path)
+        }
         return try {
             context.contentResolver.openInputStream(Uri.parse(path))?.use { true } ?: false
         } catch (_: Exception) {

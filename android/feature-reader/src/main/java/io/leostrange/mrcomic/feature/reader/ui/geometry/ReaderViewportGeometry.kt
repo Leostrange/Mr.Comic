@@ -39,28 +39,31 @@ data class ReaderViewportGeometry(
 
     /**
      * Top inset for CSS injection (in CSS pixels).
-     * Accounts for: status bar + cutout + toolbar (if visible) + reader padding.
+     * Accounts for: toolbar (if visible) + reader padding + safety margin.
+     * Note: System insets (status bar, cutout) are NOT included —
+     * they are already handled by Compose WindowInsetsPadding modifier.
      * VERTICAL-01: Includes safety margin for edge-to-edge mode.
      */
     val contentTopInsetCssPx: Int
         get() {
-            val systemInset = maxOf(statusBarInsetPx, displayCutoutInsetPx)
             val chromeReserve = if (hideToolbarsWhileReading) 0 else topToolbarHeightPx
             val safetyMarginPx = if (hideToolbarsWhileReading) MIN_SAFETY_MARGIN_PX else 0
-            val totalPx = systemInset + chromeReserve + readerTopPaddingPx + safetyMarginPx
+            val totalPx = chromeReserve + readerTopPaddingPx + safetyMarginPx
             return (totalPx / densityScale).roundToInt().coerceAtLeast(MIN_INSET_CSS_PX)
         }
 
     /**
      * Bottom inset for CSS injection (in CSS pixels).
-     * Accounts for: navigation bar + toolbar (if visible) + reader padding.
-     * VERTICAL-02: Includes safety margin for edge-to-edge mode.
+     * Accounts for: toolbar (if visible) + reader padding + safety margin.
+     * Note: System insets (navigation bar, cutout) are NOT included —
+     * they are already handled by Compose WindowInsetsPadding modifier.
+     * BUG-PAGED-02: Use symmetric calculation with top inset.
      */
     val contentBottomInsetCssPx: Int
         get() {
             val chromeReserve = if (hideToolbarsWhileReading) 0 else bottomToolbarHeightPx
             val safetyMarginPx = if (hideToolbarsWhileReading) MIN_SAFETY_MARGIN_PX else 0
-            val totalPx = navigationBarInsetPx + chromeReserve + readerBottomPaddingPx + safetyMarginPx
+            val totalPx = chromeReserve + readerBottomPaddingPx + safetyMarginPx
             return (totalPx / densityScale).roundToInt().coerceAtLeast(MIN_INSET_CSS_PX)
         }
 
@@ -77,11 +80,13 @@ data class ReaderViewportGeometry(
 
     /**
      * Bottom inset for paged layout calculation (in physical pixels).
+     * BUG-PAGED-02: Use symmetric calculation with top inset.
      */
     val contentBottomInsetPx: Int
         get() {
+            val systemInset = maxOf(navigationBarInsetPx, displayCutoutInsetPx)
             val chromeReserve = if (hideToolbarsWhileReading) 0 else bottomToolbarHeightPx
-            return navigationBarInsetPx + chromeReserve + readerBottomPaddingPx
+            return systemInset + chromeReserve + readerBottomPaddingPx
         }
 
     /**
@@ -104,12 +109,15 @@ data class ReaderViewportGeometry(
     // ── Chrome-reserve-only CSS insets ─────────────────────────────────
     // System bars are handled by Compose WindowInsetsPadding modifiers and
     // the sentence gutter by vertical padding on the text reader modifier;
-    // only the visible chrome reserve is injected into CSS.  When toolbars
-    // are hidden the reserve (and therefore the CSS inset) is zero.
+    // only the chrome reserve is injected into CSS.  The value is constant
+    // while toolbars are pinned (auto-hide off), so toggling chrome never
+    // reflows text (BUG-PAGED-02 / T1/T2).
 
     /**
      * Top chrome-reserve inset in CSS pixels.
-     * Returns 0 when toolbars are hidden.
+     * Constant for pinned toolbars regardless of transient visibility.
+     * Note: System insets (status bar, cutout) are NOT included here —
+     * they are already handled by Compose WindowInsetsPadding modifier.
      */
     val chromeTopInsetCssPx: Int
         get() {
@@ -120,6 +128,8 @@ data class ReaderViewportGeometry(
     /**
      * Bottom chrome-reserve inset in CSS pixels.
      * Returns 0 when toolbars are hidden.
+     * Note: System insets (navigation bar, cutout) are NOT included here —
+     * they are already handled by Compose WindowInsetsPadding modifier.
      */
     val chromeBottomInsetCssPx: Int
         get() {
@@ -129,9 +139,9 @@ data class ReaderViewportGeometry(
 
     companion object {
         /** Minimum safety margin in physical pixels for edge-to-edge mode. */
-        private const val MIN_SAFETY_MARGIN_PX = 8
+        private const val MIN_SAFETY_MARGIN_PX = 4
         /** Minimum CSS inset to prevent text from touching screen edges. */
-        private const val MIN_INSET_CSS_PX = 4
+        private const val MIN_INSET_CSS_PX = 2
         /**
          * Creates a [ReaderViewportGeometry] from measured Compose values.
          *

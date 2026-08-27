@@ -174,7 +174,7 @@ internal fun ReaderTextStyleCard(
             modifier = Modifier.fillMaxWidth(),
             variant = MrComicButtonVariant.Outlined
         ) {
-            Text(if (strings.languageCode == "ru") "Сохранить текущий стиль как новый" else "Save current style as new")
+            Text(styleText.savedStyleSave)
         }
         Spacer(Modifier.height(8.dp))
         Column(

@@ -605,6 +605,37 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                   else{target.scrollIntoView({block:'start',inline:'nearest'});}
                   return true;
                 }
+                if($sectionIndex>=0){
+                  var secTarget=document.querySelector('.mrcomic-text-webtoon-section[data-mrcomic-page-index="'+$sectionIndex+'"]');
+                  if(secTarget){
+                    if($characterOffset>0){
+                      var walker=document.createTreeWalker(secTarget,NodeFilter.SHOW_TEXT,null);
+                      var remaining=$characterOffset;
+                      var node=null;
+                      while((node=walker.nextNode())){
+                        var length=(node.nodeValue||'').length;
+                        if(remaining<=length)break;
+                        remaining-=length;
+                      }
+                      if(node){
+                        var range=document.createRange();
+                        var start=Math.max(0,Math.min((node.nodeValue||'').length,remaining));
+                        range.setStart(node,start);
+                        range.setEnd(node,Math.min((node.nodeValue||'').length,start+1));
+                        var rect=range.getBoundingClientRect();
+                        if(rect&&isFinite(rect.top)){
+                          window.scrollBy(0,Math.round(rect.top-16));
+                          range.detach&&range.detach();
+                          return true;
+                        }
+                        range.detach&&range.detach();
+                      }
+                    }
+                    if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(secTarget);}
+                    else{secTarget.scrollIntoView({block:'start',inline:'nearest'});}
+                    return true;
+                  }
+                }
                 if($characterOffset>=0){
                   var content=document.querySelector($characterScopeSelector)||
                     document.querySelector('[data-mrcomic-text-webtoon-document]')||document.body;
@@ -634,14 +665,6 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
                   var root=document.scrollingElement||document.documentElement||document.body;
                   var max=Math.max(0,(root.scrollHeight||0)-(window.innerHeight||0));
                   window.scrollTo(0,Math.round(max*$progression));
-                  return true;
-                }
-                if($sectionIndex>=0){
-                  target=document.querySelector('.mrcomic-text-webtoon-section[data-mrcomic-page-index="'+$sectionIndex+'"]');
-                }
-                if(target){
-                  if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(target);}
-                  else{target.scrollIntoView({block:'start',inline:'nearest'});}
                   return true;
                 }
                 return false;

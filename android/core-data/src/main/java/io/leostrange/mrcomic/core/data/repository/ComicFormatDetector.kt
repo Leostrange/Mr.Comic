@@ -54,7 +54,7 @@ internal class ComicFormatDetector(
     ) {
         "cbz" -> ComicFormat.CBZ
         "zip" -> ComicFormat.ZIP
-        "cbr" -> ComicFormat.RAR
+        "cbr" -> ComicFormat.CBR
         "rar" -> ComicFormat.RAR
         "cb7", "7z" -> ComicFormat.SEVENZ
         "cbt", "tar" -> ComicFormat.TAR

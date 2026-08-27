@@ -126,7 +126,8 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
     isBookmarkSection: Boolean,
     isAchievementSection: Boolean,
     strings: AppStrings,
-    onQuoteClick: (String, Int) -> Unit,
+    /** BUG-CANDIDATE-01: Pass the full SavedQuote so the reader can use structured position. */
+    onQuoteClick: (comicId: String, page: Int, quote: SavedQuote?) -> Unit,
     onComicClick: (String) -> Unit,
     onAudiobookClick: (String) -> Unit,
     onSelectComicId: (String) -> Unit,
@@ -142,11 +143,11 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
                 EmptyQuotesPlaceholder(showMascot = uiState.mascotUiEnabled)
             }
         } else {
-            items(uiState.quotes, key = { "quote_${it.id}" }) { quote ->
+            items(uiState.quotes, key = { "quote_${it.id}" }, contentType = { "quote" }) { quote ->
                 QuoteCard(
                     quote = quote,
                     sourceAvailable = quote.comicId in uiState.availableQuoteComicIds,
-                    onClick = { onQuoteClick(quote.comicId, quote.page) },
+                    onClick = { onQuoteClick(quote.comicId, quote.page, quote) },
                     onLongClick = { onSetQuoteToDelete(quote) },
                     onUnavailableSourceClick = onShowMissingSourceSnackbar
                 )
@@ -202,7 +203,7 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
                             .padding(top = 8.dp, bottom = 4.dp)
                     )
                 }
-                items(comics, key = { it.id }) { comic ->
+                items(comics, key = { it.id }, contentType = { "comic" }) { comic ->
                     LibraryGridCell(
                         isGrid = uiState.viewMode != LibraryViewMode.LIST,
                         tileSizeDp = uiState.tileSizeDp
@@ -282,6 +283,14 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
             items(
                 items = activeDisplayItems,
                 key = { it.key },
+                contentType = { item ->
+                    when (item) {
+                        is LibrarySectionDividerItem -> "divider"
+                        is LibraryComicItem -> "comic"
+                        is LibraryFolderItem -> "folder"
+                        else -> "unknown"
+                    }
+                },
                 span = { item ->
                     if (item is LibrarySectionDividerItem) {
                         GridItemSpan(maxLineSpan)
@@ -364,7 +373,7 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
                         icon = Icons.Default.Headphones
                     )
                 }
-                items(visibleAudiobooks, key = { "ab_${it.id}" }) { audiobook ->
+                items(visibleAudiobooks, key = { "ab_${it.id}" }, contentType = { "audiobook" }) { audiobook ->
                     LibraryGridCell(
                         isGrid = uiState.viewMode != LibraryViewMode.LIST,
                         tileSizeDp = uiState.tileSizeDp

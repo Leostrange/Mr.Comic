@@ -54,6 +54,28 @@ class ReaderWebViewRuntimeControllerTest {
     }
 
     @Test
+    fun rejectedRestoreRetriesBeforePublishingReady() {
+        val controller = ReaderWebViewLoadController()
+        controller.dispatch(ReaderWebViewRuntimeEvent.LoadRequested("book/page", 12L, target))
+        controller.dispatch(ReaderWebViewRuntimeEvent.DocumentCommitted(12L))
+        controller.dispatch(ReaderWebViewRuntimeEvent.LayoutReady(12L, metrics))
+
+        repeat(4) { rejectedAttempt ->
+            assertEquals(
+                listOf(ReaderWebViewRuntimeEffect.Restore(12L, target, rejectedAttempt + 2)),
+                controller.dispatch(ReaderWebViewRuntimeEvent.RestoreRejected(12L))
+            )
+            assertEquals(ReaderWebViewRuntimePhase.RESTORING, controller.runtimeState.phase)
+        }
+        assertEquals(
+            listOf(ReaderWebViewRuntimeEffect.PublishReady(12L, metrics)),
+            controller.dispatch(ReaderWebViewRuntimeEvent.RestoreRejected(12L))
+        )
+        assertEquals(ReaderWebViewRuntimePhase.READY, controller.runtimeState.phase)
+        assertEquals(target, controller.runtimeState.restoreTarget)
+    }
+
+    @Test
     fun staleGenerationEventsNeverMutateTheActiveLoad() {
         val controller = ReaderWebViewLoadController()
         controller.dispatch(ReaderWebViewRuntimeEvent.LoadRequested("book/a", 10L))

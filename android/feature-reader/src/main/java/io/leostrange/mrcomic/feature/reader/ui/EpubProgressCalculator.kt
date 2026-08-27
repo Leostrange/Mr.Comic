@@ -21,12 +21,18 @@ internal object EpubProgressCalculator {
      * The fractional average is deliberately applied before conversion to Int so the
      * persisted total stays consistent with the previous reader progress calculation.
      */
-    fun estimatedTotalPages(sectionPageCounts: Map<Int, Int>, totalSections: Int): Int {
+    fun estimatedTotalPages(
+        sectionPageCounts: Map<Int, Int>,
+        totalSections: Int,
+        stableEstimateOverride: Int? = null
+    ): Int {
         if (sectionPageCounts.isEmpty()) return 0
         val orderedCounts = orderedSectionPageCounts(sectionPageCounts)
         val visitedPages = orderedCounts.values.sum()
         val visitedSections = orderedCounts.size
         if (totalSections <= visitedSections) return visitedPages
+        val estimate = stableEstimateOverride?.coerceAtLeast(1)
+        if (estimate != null) return estimate * totalSections
         return visitedPages + stableEstimate(orderedCounts) * (totalSections - visitedSections)
     }
 
@@ -47,31 +53,54 @@ internal object EpubProgressCalculator {
         sectionPageCounts: Map<Int, Int>,
         sectionIndex: Int,
         sectionPageIndex: Int,
-        totalSections: Int = 0
+        totalSections: Int = 0,
+        stableEstimateOverride: Int? = null
     ): AccumulatedProgress {
         if (sectionPageCounts.isEmpty()) return AccumulatedProgress(0, 0)
         val orderedCounts = orderedSectionPageCounts(sectionPageCounts)
         val safePageIndex = sectionPageIndex.coerceAtLeast(0)
         val visitedTotal = orderedCounts.values.sum()
-        val stableEstimate = stableEstimate(orderedCounts)
+        val stableEstimate = stableEstimateOverride?.coerceAtLeast(1)
+            ?: stableEstimate(orderedCounts)
         var current = 0
         for (index in 0 until sectionIndex) {
             current += orderedCounts[index] ?: stableEstimate
         }
         current += safePageIndex
+        // The effective section count must be at least large enough to cover the
+        // section we are currently in, even when totalBookSections is still
+        // provisional (deferred page-count not yet resolved). Without this floor,
+        // the total can be smaller than current, causing the progress bar to
+        // show 100% (or even a "page N / N" where N < current after coercion).
+        val effectiveTotalSections = totalSections.coerceAtLeast(sectionIndex + 1)
         // Estimate total using the stable baseline for unvisited sections.
         // This prevents the "floating total" where progress jumps backwards
         // when a new section loads with more pages than the running average.
-        val total = if (totalSections > orderedCounts.size) {
-            val unvisitedSections = totalSections - orderedCounts.size
-            visitedTotal + stableEstimate * unvisitedSections
+        val total = if (effectiveTotalSections > orderedCounts.size) {
+            if (stableEstimateOverride != null) {
+                stableEstimate * effectiveTotalSections
+            } else {
+                val unvisitedSections = effectiveTotalSections - orderedCounts.size
+                visitedTotal + stableEstimate * unvisitedSections
+            }
         } else {
             visitedTotal
         }
+        val isResolved = effectiveTotalSections > 0 && orderedCounts.size >= effectiveTotalSections
         return AccumulatedProgress(
             accumulatedTotalPages = total,
-            accumulatedCurrentPage = current.coerceAtMost(total)
+            accumulatedCurrentPage = current.coerceAtMost(total),
+            isResolved = isResolved
         )
+    }
+
+    /**
+     * Returns true if all spine sections have measured visual page counts.
+     */
+    fun isResolved(sectionPageCounts: Map<Int, Int>, totalSections: Int): Boolean {
+        if (totalSections <= 0 || sectionPageCounts.isEmpty()) return false
+        val orderedCounts = orderedSectionPageCounts(sectionPageCounts)
+        return orderedCounts.size >= totalSections
     }
 
     /**
@@ -112,7 +141,8 @@ internal object EpubProgressCalculator {
 
     data class AccumulatedProgress(
         val accumulatedTotalPages: Int,
-        val accumulatedCurrentPage: Int
+        val accumulatedCurrentPage: Int,
+        val isResolved: Boolean = false
     )
 
     /**

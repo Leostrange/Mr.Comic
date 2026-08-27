@@ -163,7 +163,7 @@ internal fun ReaderBottomSheets(
         )
     }
 
-    // ── Настройки текста (ModalBottomSheet) ────────────────────────────────────
+    // ── Настройки ридера (Control center: STYLE/READING/SERVICES tabs) ──────
     if (uiState.showTextSettings) {
         ReaderControlCenterSheet(
             uiState = uiState,
@@ -233,7 +233,14 @@ internal fun ReaderBottomSheets(
             onTtsSpeedChange = viewModel.settingsController::setTtsSpeed,
             onTtsPitchChange = viewModel.settingsController::setTtsPitch,
             onTtsVolumeChange = viewModel.settingsController::setTtsVolume,
-            onTtsSleepTimerChange = viewModel.settingsController::setTtsSleepTimerMode
+            onTtsSleepTimerChange = viewModel.settingsController::setTtsSleepTimerMode,
+            autoScrollActions = ReaderAutoScrollActions(
+                toggle = viewModel.autoScrollSettingsController::toggle,
+                previewSpeed = viewModel.autoScrollSettingsController::previewSpeed,
+                commitSpeed = { speed ->
+                    viewModel.autoScrollSettingsController.commitSpeed(uiState.readingMode, speed)
+                }
+            )
         )
     }
     pendingCustomFontDeletion?.let { fontName ->

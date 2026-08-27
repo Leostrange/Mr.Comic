@@ -17,9 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
 import io.leostrange.mrcomic.core.model.*
 import io.leostrange.mrcomic.core.ui.library.*
 import io.leostrange.mrcomic.core.ui.locale.*
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCornerScale
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicType
 import io.leostrange.mrcomic.feature.library.components.ComicGridItem
 
 @Composable
@@ -69,7 +72,7 @@ internal fun LibrarySectionChip(
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RootChromePillShape,
+        shape = RoundedCornerShape(MrComicCornerScale.md),
         color = if (enabled) {
             rootChromePillContainerColor(colorScheme, selected)
         } else {
@@ -79,8 +82,8 @@ internal fun LibrarySectionChip(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            style = MrComicType.button,
             color = if (enabled) {
                 rootChromePillContentColor(colorScheme, selected)
             } else {

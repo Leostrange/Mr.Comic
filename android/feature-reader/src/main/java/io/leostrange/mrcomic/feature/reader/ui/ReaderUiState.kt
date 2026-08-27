@@ -189,6 +189,8 @@ data class ReaderUiState(
     val epubAccumulatedTotalPages: Int = 0,
     /** Accumulated current visual page position across all visited EPUB sections. */
     val epubAccumulatedCurrentPage: Int = 0,
+    /** Whether all sections in the book have completed visual pagination. */
+    val isTextPaginationResolved: Boolean = false,
     /** Whether hardware volume buttons should turn pages inside the reader. */
     val volumeKeysPagingEnabled: Boolean = false,
     /** System TTS defaults used by the reader services tab. */

@@ -43,10 +43,11 @@ import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.data.preferences.PerfProfile
 import io.leostrange.mrcomic.core.data.preferences.PerfRenderQuality
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicFilterChip
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPanelCard
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSliderTile
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItem
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicListItemTrailing
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSectionHeader
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSlider
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicSurfaceCard
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicSwitchRow
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -433,8 +434,22 @@ private fun PerfCard(
     hint: String? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    MrComicPanelCard(title = title, hint = hint) {
-        content()
+    // Editorial Ink: flat section header + body. No outer card frame.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        MrComicSectionHeader(title = title)
+        if (!hint.isNullOrBlank()) {
+            Text(
+                text = hint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+            )
+        }
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            content = content,
+        )
     }
 }
 
@@ -538,15 +553,23 @@ private fun PerfSliderRow(
     steps: Int,
     onValueChange: (Float) -> Unit
 ) {
-    MrComicSliderTile(
-        title = title,
-        valueLabel = subtitle,
-        value = value,
-        onValueChange = onValueChange,
-        valueRange = valueRange,
-        steps = steps,
-        modifier = Modifier.padding(vertical = 10.dp)
-    )
+    Column(modifier = Modifier.fillMaxWidth()) {
+        MrComicListItem(
+            title = title,
+            trailing = MrComicListItemTrailing.Value(subtitle),
+            onClick = null,
+            divider = false,
+        )
+        MrComicSlider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 4.dp),
+        )
+    }
 }
 
 @Composable
@@ -590,11 +613,13 @@ private fun PerfSwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
-    MrComicSwitchRow(
+    MrComicListItem(
         title = title,
         subtitle = subtitle,
-        checked = checked,
-        onCheckedChange = onCheckedChange
+        trailing = MrComicListItemTrailing.Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        ),
     )
 }
 

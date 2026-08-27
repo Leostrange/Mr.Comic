@@ -2,11 +2,14 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -14,6 +17,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -26,9 +31,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCornerScale
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicType
 import kotlin.math.roundToInt
 
 /**
@@ -138,17 +144,16 @@ internal fun ReaderAutoScrollChromeControls(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "Автопрокрутка",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
+                    style = MrComicType.h3,
                 )
                 Text(
                     text = when {
                         isTemporarilyPaused -> "Временно приостановлена"
                         autoScrollEnabled && readingMode == ReadingMode.WEBTOON -> "Плавная прокрутка ленты"
-                        autoScrollEnabled -> "До следующей страницы"
+                        autoScrollEnabled -> "Автопереход по страницам"
                         else -> "Выключена"
                     },
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MrComicType.bodySm,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -156,9 +161,59 @@ internal fun ReaderAutoScrollChromeControls(
             Spacer(Modifier.width(8.dp))
             Text(
                 text = ReaderAutoScrollPrecision.valueLabel(draftSpeed, readingMode),
-                style = MaterialTheme.typography.labelMedium,
+                style = MrComicType.meta,
                 color = MaterialTheme.colorScheme.primary,
             )
+        }
+
+        Text(
+            text = if (readingMode == ReadingMode.WEBTOON) {
+                "Скорость плавной ленты"
+            } else {
+                "Задержка между страницами"
+            },
+            style = MrComicType.meta,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf(30f, 80f, 180f).forEach { preset ->
+                val selected = ReaderAutoScrollPrecision.normalize(draftSpeed) == preset
+                OutlinedButton(
+                    onClick = {
+                        val normalized = ReaderAutoScrollPrecision.normalize(preset)
+                        draftSpeed = normalized
+                        onSpeedPreview(normalized)
+                        onSpeedCommit(normalized)
+                    },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(MrComicCornerScale.md),
+                    border = BorderStroke(
+                        width = if (selected) 2.dp else 1.dp,
+                        color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surfaceContainerLow,
+                        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+                        else MaterialTheme.colorScheme.onSurface,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = when (preset) {
+                            30f -> "Медленно"
+                            80f -> "Обычно"
+                            else -> "Быстро"
+                        },
+                        style = MrComicType.button,
+                        maxLines = 1,
+                    )
+                }
+            }
         }
 
         Slider(

@@ -31,7 +31,11 @@ class QuoteRepository @Inject constructor(
         text: String,
         translatedText: String? = null,
         sourceLanguage: String? = null,
-        targetLanguage: String? = null
+        targetLanguage: String? = null,
+        /** BUG-CANDIDATE-01: Structured position for precise quote navigation. */
+        positionJson: String? = null,
+        characterOffset: Int? = null,
+        domAnchor: String? = null
     ): SaveQuoteResult? {
         val normalizedText = normalizeQuoteText(text)
         if (normalizedText.isBlank()) return null
@@ -49,7 +53,11 @@ class QuoteRepository @Inject constructor(
                 translatedText = normalizedTranslation ?: existing.translatedText,
                 sourceLanguage = sourceLanguage ?: existing.sourceLanguage,
                 targetLanguage = targetLanguage ?: existing.targetLanguage,
-                updatedAt = System.currentTimeMillis()
+                updatedAt = System.currentTimeMillis(),
+                // BUG-CANDIDATE-01: Update position if provided
+                positionJson = positionJson ?: existing.positionJson,
+                characterOffset = characterOffset ?: existing.characterOffset,
+                domAnchor = domAnchor ?: existing.domAnchor
             )
             quoteDao.updateQuote(merged)
             return SaveQuoteResult(merged, inserted = false)
@@ -64,7 +72,10 @@ class QuoteRepository @Inject constructor(
             translatedText = normalizedTranslation,
             sourceLanguage = sourceLanguage,
             targetLanguage = targetLanguage,
-            contentHash = contentHash
+            contentHash = contentHash,
+            positionJson = positionJson,
+            characterOffset = characterOffset,
+            domAnchor = domAnchor
         )
         quoteDao.insertQuote(quote)
         return SaveQuoteResult(quote, inserted = true)

@@ -29,6 +29,7 @@ import io.leostrange.mrcomic.core.data.repository.ComicRepository
 import io.leostrange.mrcomic.core.data.repository.QuoteRepository
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
@@ -374,7 +375,7 @@ internal class SettingsBackupController(
                 put("addedDate", comic.addedDate)
                 put("lastModified", comic.lastModified)
                 put("folderId", comic.folderId)
-                put("readingProgress", comic.readingProgress.toDouble())
+                put("readingProgress", comic.displayReadingProgress().toDouble())
                 put("lastReadDate", comic.lastReadDate ?: 0L)
                 put("isBookmarked", comic.isBookmarked)
                 put("tags", comic.tags)

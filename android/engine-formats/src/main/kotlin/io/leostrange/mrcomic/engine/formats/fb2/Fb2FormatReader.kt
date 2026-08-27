@@ -605,7 +605,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         val tocEntries = tocRaw.mapNotNull { (title, rawSectionIdx) ->
             val clampedIdx = rawSectionIdx.coerceAtMost((rawSections.size - 1).coerceAtLeast(0))
             val pageIdx = rawToMergedPage[clampedIdx] ?: 0
-            TocEntry(title, pageIdx)
+            TocEntry(title, pageIdx, sectionIndex = pageIdx)
         }.toMutableList()
         val anchorPageMap = sectionRawStarts.mapValues { (_, rawSectionIdx) ->
             val clampedIdx = rawSectionIdx.coerceAtMost((rawSections.size - 1).coerceAtLeast(0))

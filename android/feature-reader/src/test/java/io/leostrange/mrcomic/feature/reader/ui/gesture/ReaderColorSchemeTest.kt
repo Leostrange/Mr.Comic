@@ -11,6 +11,11 @@ import org.junit.Test
 class ReaderColorSchemeTest {
 
     @Test
+    fun graphicQuickChoices_exposesOnlyDaySepiaAndNight() {
+        assertEquals(listOf("DAY", "SEPIA", "NIGHT"), ReaderColorScheme.graphicQuickChoices)
+    }
+
+    @Test
     fun palette_dayReturnsLightColors() {
         val (bg, fg) = ReaderColorScheme.palette("DAY")
         assertEquals("#fafafa", bg)

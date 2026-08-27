@@ -113,6 +113,7 @@ internal suspend fun SettingsSettersController.importReaderTypographyFromJson(ra
         preferences.set(PreferencesKeys.READER_PRESET, imported.readerPreset.name)
         preferences.set(PreferencesKeys.TEXT_FONT_SIZE, imported.textFontSize)
         preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, imported.textColorScheme)
+        preferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, imported.textColorScheme)
         persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, imported.textCustomTextColor)
         persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, imported.textCustomBackgroundColor)
         persistNullableReaderColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, imported.textCustomAccentColor)

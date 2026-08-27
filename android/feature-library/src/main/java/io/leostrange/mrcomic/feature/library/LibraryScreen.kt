@@ -40,6 +40,7 @@ import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
 import io.leostrange.mrcomic.core.data.db.entity.SavedQuote
 import io.leostrange.mrcomic.core.model.Audiobook
 import io.leostrange.mrcomic.core.model.isReadCompleted
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicSpacingTokens
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.core.ui.locale.libraryQuoteSourceMissingLabel
 import io.leostrange.mrcomic.feature.library.components.AchievementQuestTransition
@@ -53,13 +54,13 @@ import kotlinx.coroutines.launch
 @Composable
 fun LibraryScreen(
     onComicClick: (String) -> Unit,
-    onQuoteClick: (String, Int) -> Unit,
+    /** BUG-CANDIDATE-01: Pass the full SavedQuote so the reader can use structured position. */
+    onQuoteClick: (comicId: String, page: Int, quote: io.leostrange.mrcomic.core.data.db.entity.SavedQuote?) -> Unit,
     onAddFileClick: () -> Unit,
     onAddFolderClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAudiobookClick: (String) -> Unit,
     onProgressProfileClick: (() -> Unit)? = null,
-    onOpdsCatalogClick: (() -> Unit)? = null,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -334,7 +335,6 @@ fun LibraryScreen(
                 onThumbnailModeChange = viewModel::setThumbnailMode,
                 onAddFileClick = onAddFileClick,
                 onAddFolderClick = onAddFolderClick,
-                onOpdsCatalogClick = onOpdsCatalogClick,
                 canNavigateUp = canNavigateUpWithinLibrary,
                 onNavigateUp = navigateUpWithinLibrary,
                 onSettingsClick = onSettingsClick
@@ -356,9 +356,12 @@ fun LibraryScreen(
             LibraryBackground(
                 backgroundStyle = uiState.backgroundStyle,
                 backgroundImageUri = uiState.backgroundImageUri,
-                backdropStrength = (uiState.backdropStrength * 1.2f).coerceIn(0f, 1f),
+                // Editorial Ink: use the user-controlled strength directly
+                // (no 1.2× boost). BUG-UI-04 — backdrops were overpowering
+                // content and washing out card contrast.
+                backdropStrength = uiState.backdropStrength.coerceIn(0f, 1f),
                 backgroundBlur = uiState.backgroundBlur,
-                backgroundVeil = (uiState.backgroundVeil * 1.2f).coerceIn(0f, 1f)
+                backgroundVeil = uiState.backgroundVeil.coerceIn(0f, 1f)
             )
 
             Box(
@@ -467,7 +470,12 @@ fun LibraryScreen(
                     }
                     LazyVerticalGrid(
                         columns = columns,
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+                        contentPadding = PaddingValues(
+                            start = MrComicSpacingTokens.x5,
+                            end = MrComicSpacingTokens.x5,
+                            top = MrComicSpacingTokens.x3,
+                            bottom = MrComicSpacingTokens.x6,
+                        ),
                         horizontalArrangement = Arrangement.spacedBy(itemSpacing),
                         verticalArrangement = Arrangement.spacedBy(itemSpacing),
                         modifier = Modifier.fillMaxSize()

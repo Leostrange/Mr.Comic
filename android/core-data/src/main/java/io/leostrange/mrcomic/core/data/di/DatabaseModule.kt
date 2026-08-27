@@ -14,6 +14,8 @@ import javax.inject.Named
 import io.leostrange.mrcomic.core.data.db.QuoteDao
 import io.leostrange.mrcomic.core.data.db.TextHighlightDao
 import io.leostrange.mrcomic.core.data.db.TranslationCacheDao
+import io.leostrange.mrcomic.core.data.preferences.UserPreferences
+import io.leostrange.mrcomic.core.data.preferences.dataStore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -38,7 +40,11 @@ object DatabaseModule {
                 AppDatabaseMigrations.MIGRATION_6_7,
                 AppDatabaseMigrations.MIGRATION_7_8,
                 AppDatabaseMigrations.MIGRATION_8_9,
-                AppDatabaseMigrations.MIGRATION_9_10
+                AppDatabaseMigrations.MIGRATION_9_10,
+                AppDatabaseMigrations.MIGRATION_10_11,
+                AppDatabaseMigrations.MIGRATION_11_12,
+                AppDatabaseMigrations.MIGRATION_12_13,
+                AppDatabaseMigrations.MIGRATION_13_14
             )
             // Never silently drop the user's library on a forward-migration gap (a missing
             // migration is a bug to fix, not data to wipe). Destructive recovery is kept only for
@@ -49,6 +55,12 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideQuoteDao(appDatabase: AppDatabase): QuoteDao = appDatabase.quoteDao()
+
+    /** Shared preferences facade over the app DataStore. */
+    @Provides
+    @Singleton
+    fun provideUserPreferences(@ApplicationContext context: Context): UserPreferences =
+        UserPreferences(context.dataStore)
 
     @Provides
     @Singleton
@@ -81,4 +93,5 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideTranslationCacheDao(db: AppDatabase): TranslationCacheDao = db.translationCacheDao()
+
 }

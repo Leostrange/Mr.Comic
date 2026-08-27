@@ -41,8 +41,8 @@ android {
         applicationId = "io.leostrange.mrcomic"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 3
-        versionName = "2.2.0"
+        versionCode = 5
+        versionName = "2.5.0"
         buildConfigField("String", "GIT_SHA", "\"$gitSha\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }

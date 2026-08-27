@@ -2,8 +2,8 @@ package io.leostrange.mrcomic.core.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.ColorScheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
@@ -247,10 +248,8 @@ fun MrComicTheme(
     val context = LocalContext.current
     val systemDark = isSystemInDarkTheme()
 
+    @Suppress("NAME_SHADOWING")
     val colorScheme = if (isEInk) {
-        // On e-ink: always use the high-contrast grayscale scheme.
-        // Ignore user theme settings — e-ink panels are typically monochrome
-        // or have a very limited color gamut where Material colors are meaningless.
         EInkColorScheme
     } else {
         val darkTheme = when (themeConfig.themeMode) {

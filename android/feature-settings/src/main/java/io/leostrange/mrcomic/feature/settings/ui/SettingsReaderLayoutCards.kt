@@ -446,7 +446,11 @@ internal fun ReaderModeCard(
             MrComicFilterChip(
                 selected = uiState.readingMode == ReadingMode.PAGE_LTR ||
                         uiState.readingMode == ReadingMode.PAGE_RTL,
-                onClick = { viewModel.setReadingMode(ReadingMode.PAGE_LTR) },
+                onClick = {
+                    if (shouldApplyPagedReadingMode(uiState.readingMode)) {
+                        viewModel.setReadingMode(ReadingMode.PAGE_LTR)
+                    }
+                },
                 label = { Text(readerModeSettingsLabel(strings.languageCode, ReadingMode.PAGE_LTR)) }
             )
             MrComicFilterChip(
@@ -457,6 +461,10 @@ internal fun ReaderModeCard(
         }
     }
 }
+
+/** A grouped "pages" chip must be idempotent for both LTR and RTL modes. */
+internal fun shouldApplyPagedReadingMode(currentMode: ReadingMode): Boolean =
+    currentMode != ReadingMode.PAGE_LTR && currentMode != ReadingMode.PAGE_RTL
 
 /* ──── ReaderImageLayoutCard ──── */
 @Composable

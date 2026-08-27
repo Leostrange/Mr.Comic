@@ -108,39 +108,22 @@ class ReaderAutoScrollDispatchTest {
     }
 
     @Test
-    fun `hidden chrome reserves a dock only for paged readers`() {
-        assertEquals(
-            72,
-            readerAutoScrollDockHeightDp(
-                containerKind = ReaderContainerKind.TEXT_PAGE,
-                chromeHidden = true,
-                enabled = true,
-            ),
-        )
-        assertEquals(
-            0,
-            readerAutoScrollDockHeightDp(
-                containerKind = ReaderContainerKind.TEXT_WEBTOON,
-                chromeHidden = true,
-                enabled = true,
-            ),
-        )
-        assertEquals(
-            0,
-            readerAutoScrollDockHeightDp(
-                containerKind = ReaderContainerKind.RASTER_WEBTOON,
-                chromeHidden = true,
-                enabled = true,
-            ),
-        )
-        assertEquals(
-            0,
-            readerAutoScrollDockHeightDp(
-                containerKind = ReaderContainerKind.RASTER_PAGE,
-                chromeHidden = true,
-                enabled = false,
-            ),
-        )
+    fun `auto scroll dock height is always zero — page turn uses timer, not scroll`() {
+        ReaderContainerKind.entries.forEach { kind ->
+            listOf(true, false).forEach { chromeHidden ->
+                listOf(true, false).forEach { enabled ->
+                    assertEquals(
+                        "kind=$kind chromeHidden=$chromeHidden enabled=$enabled",
+                        0,
+                        readerAutoScrollDockHeightDp(
+                            containerKind = kind,
+                            chromeHidden = chromeHidden,
+                            enabled = enabled,
+                        ),
+                    )
+                }
+            }
+        }
     }
 
     @Test

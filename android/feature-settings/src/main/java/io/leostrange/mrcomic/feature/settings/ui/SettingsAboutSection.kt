@@ -7,6 +7,7 @@
 
 package io.leostrange.mrcomic.feature.settings.ui
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
@@ -40,6 +42,7 @@ import io.leostrange.mrcomic.core.ui.theme.style
 internal data class AboutSectionText(
     val title: String,
     val description: String,
+    val versionTitle: String,
     val overviewTitle: String,
     val overviewBody: String,
     val featuresTitle: String,
@@ -60,13 +63,14 @@ internal fun aboutSectionText(language: String): AboutSectionText = when (langua
     "en" -> AboutSectionText(
         title = "About the app",
         description = "What the app does, what it is built with, and how to contact the developer.",
+        versionTitle = "Installed version",
         overviewTitle = "Program description",
         overviewBody = "Mr.Comic is an Android reader for books and comics from a local library. It combines file management, reading modes for graphics and text, OCR and dictionary tools, reading progress, and backup features in one app.",
         featuresTitle = "Key features",
         features = listOf(
             "Local library with files, folders, bookmarks, quotes, and the Mr.Comic tab.",
             "Reader modes for page reading, webtoon scrolling, and text formats with saved progress.",
-            "OCR, offline dictionaries, translation, and text explanation tools.",
+            "Developing OCR, offline dictionary, translation, and text explanation tools.",
             "Theme customization, progress export/import, and library access recovery."
         ),
         librariesTitle = "Main libraries",
@@ -92,6 +96,7 @@ internal fun aboutSectionText(language: String): AboutSectionText = when (langua
     "ja" -> AboutSectionText(
         title = "アプリについて",
         description = "アプリの役割、使用している技術、開発者への連絡先をまとめています。",
+        versionTitle = "インストール済みバージョン",
         overviewTitle = "プログラム概要",
         overviewBody = "Mr.Comic は、ローカルライブラリの本とコミックを読むための Android リーダーです。ファイル管理、画像とテキストの読書モード、OCR と辞書、読書進捗、バックアップをひとつにまとめています。",
         featuresTitle = "主な機能",
@@ -124,6 +129,7 @@ internal fun aboutSectionText(language: String): AboutSectionText = when (langua
     "zh" -> AboutSectionText(
         title = "关于应用",
         description = "这里汇总应用用途、技术栈以及开发者联系方式。",
+        versionTitle = "已安装版本",
         overviewTitle = "程序说明",
         overviewBody = "Mr.Comic 是一款用于阅读本地书库中图书和漫画的 Android 阅读器。它把文件管理、图像与文本阅读模式、OCR 与词典工具、阅读进度和备份功能集中在一个应用里。",
         featuresTitle = "主要功能",
@@ -156,6 +162,7 @@ internal fun aboutSectionText(language: String): AboutSectionText = when (langua
     "ko" -> AboutSectionText(
         title = "앱 정보",
         description = "앱의 역할, 사용한 기술, 개발자 연락처를 한곳에 모았습니다.",
+        versionTitle = "설치된 버전",
         overviewTitle = "프로그램 설명",
         overviewBody = "Mr.Comic 은 로컬 라이브러리의 책과 코믹을 읽기 위한 Android 리더입니다. 파일 관리, 그래픽/텍스트 읽기 모드, OCR과 사전 도구, 읽기 진행도와 백업 기능을 하나의 앱으로 묶었습니다.",
         featuresTitle = "주요 기능",
@@ -188,13 +195,14 @@ internal fun aboutSectionText(language: String): AboutSectionText = when (langua
     else -> AboutSectionText(
         title = "О приложении",
         description = "Здесь собраны назначение приложения, стек, лицензии и контакты разработчика.",
+        versionTitle = "Установленная версия",
         overviewTitle = "Описание программы",
         overviewBody = "Mr.Comic — Android-приложение для чтения книг и комиксов из локальной библиотеки. Оно объединяет управление файлами, режимы чтения для графики и текста, OCR и словарные инструменты, прогресс чтения и резервное копирование.",
         featuresTitle = "Основные функции",
         features = listOf(
             "Локальная библиотека: файлы, папки, закладки, цитаты и вкладка Mr.Comic.",
             "Ридер для постраничного чтения, webtoon-режима и текстовых форматов с сохранением прогресса.",
-            "OCR, офлайн-словари, перевод и объяснение выделенного текста.",
+            "Развивающиеся инструменты OCR, офлайн-словарей, перевода и объяснения текста.",
             "Темы и кастомизация, экспорт/импорт прогресса и восстановление доступа к библиотеке."
         ),
         librariesTitle = "Основные библиотеки",
@@ -235,6 +243,17 @@ internal fun AboutSection(
     modifier: Modifier = Modifier
 ) {
     val sectionText = remember(strings.languageCode) { aboutSectionText(strings.languageCode) }
+    val context = LocalContext.current
+    val packageInfo = remember(context.packageName) {
+        context.packageManager.getPackageInfo(context.packageName, 0)
+    }
+    val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        packageInfo.longVersionCode
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo.versionCode.toLong()
+    }
+    val installedVersion = "${packageInfo.versionName.orEmpty()} ($versionCode)"
     val contacts = remember {
         listOf(
             "xmetalcore@outlook.com",
@@ -259,6 +278,15 @@ internal fun AboutSection(
                     sectionText.contactsTitle to aboutCountValue(strings.languageCode, contacts.size)
                 )
             )
+        }
+        item {
+            SettingsCard(title = sectionText.versionTitle) {
+                Text(
+                    text = installedVersion,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
         item {
             SettingsCard(title = sectionText.overviewTitle) {

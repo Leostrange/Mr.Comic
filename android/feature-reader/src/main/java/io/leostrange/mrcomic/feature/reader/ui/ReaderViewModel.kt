@@ -268,7 +268,8 @@ class ReaderViewModel @Inject constructor(
         markReaderPresetCustom = { settingsController.markReaderPresetCustom() },
         getLastTextWebtoonCursor = { navigationController.lastTextWebtoonCursor },
         seedTextWebtoonCursor = { navigationController.seedTextWebtoonCursor(it) },
-        onAutoScrollModeChanged = { mode -> autoScrollSettingsController.switchMode(mode) }
+        onAutoScrollModeChanged = { mode -> autoScrollSettingsController.switchMode(mode) },
+        savePositionImmediate = { progressController.savePositionImmediate() }
     )
     private val openGuard = io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard()
 
@@ -370,7 +371,8 @@ class ReaderViewModel @Inject constructor(
             sectionPageCounts = sectionPageCountSnapshot,
             sectionIndex = sectionIndex,
             sectionPageIndex = safePageIndex,
-            totalSections = progressController.totalBookSections
+            totalSections = progressController.totalBookSections,
+            stableEstimateOverride = progressController.sectionPageCounts.stableEstimate()
         )
         _uiState.update {
             it.copy(
@@ -378,7 +380,8 @@ class ReaderViewModel @Inject constructor(
                 sectionCurrentPage = safePageIndex,
                 sectionCharacterOffset = safeCharacterOffset,
                 epubAccumulatedTotalPages = progress.accumulatedTotalPages,
-                epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
+                epubAccumulatedCurrentPage = progress.accumulatedCurrentPage,
+                isTextPaginationResolved = progress.isResolved
             )
         }
     }
@@ -402,6 +405,16 @@ class ReaderViewModel @Inject constructor(
             // Persist the structured cursor through the position-only path so single-spine books
             // are restorable even when the normal EPUB page-progress guard is still provisional.
             progressController.savePositionSnapshot()
+        }
+    }
+
+    /**
+     * BUG-VERTICAL-01: Called by raster WebtoonView when scroll progression changes.
+     * Updates the seekbar position to match the actual scroll position.
+     */
+    internal fun onRasterWebtoonScrollProgressionChanged(progression: Float) {
+        _uiState.update {
+            it.copy(rasterWebtoonScrollProgression = progression.toDouble())
         }
     }
 
@@ -432,12 +445,23 @@ class ReaderViewModel @Inject constructor(
     private suspend fun localizedReaderText(): ReaderUiText = readerUiText(readerLanguageCode())
 
     override fun onCleared() {
-        // Snapshot the pending IO work, then run it on an application-scoped coroutine so leaving
-        // the reader never blocks the main thread. These paths (progress save, session close) only
-        // touch Room/DataStore/engine registry — all independent of the resources torn down below —
-        // so completing them slightly after onCleared returns is safe. Previously three runBlocking
-        // calls here caused an ANR on slow storage.
-        progressController.emitReaderClosed(appScope)
+        // BUG-READER-03: flush progress synchronously before tearing down resources.
+        // Previously two separate appScope.launch {} fire-and-forget coroutines could both
+        // lose the race against a fast process kill. One runBlocking(Dispatchers.IO) is
+        // acceptable here — Room's suspend DAO already dispatches to its internal IO pool
+        // and the write is a single UPDATE on a single row (~1 ms in the typical case).
+        // The old ANR was caused by THREE sequential runBlocking calls; this is one.
+        progressController.stopPeriodicPositionSave()
+        val closedAnalytics = progressController.emitReaderClosed()
+        progressController.progressSaveJob?.cancel()
+        try {
+            kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+                progressController.flushPendingProgressSave()
+            }
+        } catch (e: Exception) {
+            Log.e("ReaderViewModel", "Failed to flush progress on close", e)
+        }
+        closedAnalytics?.let { progressController.trackReaderClosed(it, appScope) }
         super.onCleared()
         openingController.cancelPendingOpen()
         pageCacheController.cancelPendingToc()
@@ -450,11 +474,8 @@ class ReaderViewModel @Inject constructor(
         // is a no-op and matching reset() runs _after_ the cleanup.
         sessionLifecycleCoordinator.beginClose()
         textReaderOrchestrator.cancelAllJobs()
-        progressController.progressSaveJob?.cancel()
         sessionManager.closeReaderResources()
         appScope.launch {
-            runCatching { progressController.flushPendingProgressSave() }
-                .onFailure { Log.e("ReaderViewModel", "Failed to flush progress on close", it) }
             runCatching { sessionManager.closeBookSessionAsync() }
                 .onFailure { Log.w(TAG, "Failed to close book session on close", it) }
             // markClosed throws if the ledger was Opening when beginClose()

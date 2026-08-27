@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -31,8 +32,14 @@ fun ReaderBottomBar(
     chapterTitle: String? = null,
     epubAccumulatedTotalPages: Int = 0,
     epubAccumulatedCurrentPage: Int = 0,
+    isTextPaginationResolved: Boolean = true,
+    isTextWebtoon: Boolean = false,
+    freeScrollProgression: Double = -1.0,
+    /** BUG-VERTICAL-01: Raster webtoon scroll progression for seekbar sync. */
+    rasterWebtoonScrollProgression: Double = -1.0,
     onReadingModeChange: (ReadingMode) -> Unit,
     onPageChange: (Int) -> Unit,
+    onProgressionChange: ((Float) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -48,10 +55,14 @@ fun ReaderBottomBar(
         sectionPageCount = sectionPageCount,
         epubAccumulatedCurrentPage = epubAccumulatedCurrentPage,
         epubAccumulatedTotalPages = epubAccumulatedTotalPages,
+        isTextPaginationResolved = isTextPaginationResolved,
     )
     val effectiveTotalPages = effectiveProgress.totalPages
     val effectiveCurrentPage = effectiveProgress.currentPage
-    val bookProgress = if (effectiveTotalPages > 0) ((effectiveCurrentPage + 1) * 100f / effectiveTotalPages).toInt() else 0
+    // BUG-READER-04: Use same formula as database: currentPage / (pageCount - 1)
+    val bookProgress = if (effectiveTotalPages > 1) {
+        (effectiveCurrentPage.toFloat() / (effectiveTotalPages - 1) * 100f).toInt().coerceIn(0, 100)
+    } else 0
 
     Column(
         modifier = modifier
@@ -76,7 +87,13 @@ fun ReaderBottomBar(
                     style = MaterialTheme.typography.labelMedium
                 )
                 Text(
-                    text = if (showSectionPage) "${sectionCurrentPage + 1}/$sectionPageCount" else "${currentPage + 1} / $totalPages",
+                    text = if (showSectionPage && effectiveTotalPages <= sectionPageCount) {
+                        "${sectionCurrentPage + 1}/$sectionPageCount"
+                    } else if (!effectiveProgress.isResolved) {
+                        "${effectiveCurrentPage + 1} / …"
+                    } else {
+                        "${effectiveCurrentPage + 1} / $effectiveTotalPages"
+                    },
                     color = MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -110,15 +127,21 @@ fun ReaderBottomBar(
             Spacer(Modifier.height(12.dp))
             if (showPageCountText) {
                 val counterText = when {
+                    chapterTitle != null && !effectiveProgress.isResolved ->
+                        "$chapterTitle (${effectiveCurrentPage + 1}/…)"
                     chapterTitle != null ->
                         "$chapterTitle (${effectiveCurrentPage + 1}/$effectiveTotalPages)"
+                    !effectiveProgress.isResolved ->
+                        "${effectiveCurrentPage + 1} / …"
                     else ->
                         "${effectiveCurrentPage + 1} / $effectiveTotalPages"
                 }
                 Text(
                     text = counterText,
                     color = MaterialTheme.colorScheme.onSurface,
-                    style = MaterialTheme.typography.labelMedium
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (isTextBook && totalPages > 0) {
                     Spacer(Modifier.height(2.dp))
@@ -134,7 +157,37 @@ fun ReaderBottomBar(
             }
         }
 
-        if (totalPages > 1) {
+        if (isTextWebtoon && freeScrollProgression in 0.0..1.0) {
+            // Continuous slider for text webtoon — uses scroll progression (0.0..1.0)
+            Slider(
+                value = freeScrollProgression.toFloat().coerceIn(0f, 1f),
+                onValueChange = { onProgressionChange?.invoke(it) },
+                valueRange = 0f..1f,
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                )
+            )
+        } else if (!isTextWebtoon && readingMode == ReadingMode.WEBTOON && rasterWebtoonScrollProgression in 0.0..1.0) {
+            // BUG-VERTICAL-01: Continuous slider for raster webtoon — uses tracked scroll progression.
+            // Converting progression fraction to page index so the user can scrub through the document.
+            Slider(
+                value = rasterWebtoonScrollProgression.toFloat().coerceIn(0f, 1f),
+                onValueChange = { fraction ->
+                    val targetPage = (fraction * totalPages).toInt().coerceIn(0, (totalPages - 1).coerceAtLeast(0))
+                    onPageChange(targetPage)
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.outlineVariant,
+                )
+            )
+        } else if (totalPages > 1) {
             Slider(
                 value = currentPage.toFloat(),
                 onValueChange = { onPageChange(it.toInt()) },

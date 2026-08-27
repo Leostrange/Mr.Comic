@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,6 +36,8 @@ import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.library.components.CoverArt
 import io.leostrange.mrcomic.feature.library.components.FolderBackgroundStack
 import io.leostrange.mrcomic.feature.library.components.FolderCoverTreatment
+import io.leostrange.mrcomic.feature.library.components.LibraryFallbackCover
+import io.leostrange.mrcomic.feature.library.components.LibraryFallbackCoverKind
 import io.leostrange.mrcomic.feature.library.components.libraryGridCoverRatio
 
 @Composable
@@ -341,6 +342,17 @@ internal fun FolderCover(
             modifier = Modifier.fillMaxSize()
                 .let { if (hasCover) it.clip(RoundedCornerShape(12.dp)) else it }
         )
+        // Cover the FolderOpen icon treatment with the new fallback when there
+        // is no cover, so folder cards without artwork still get a distinct
+        // gradient/monogram instead of a single flat icon.
+        if (!hasCover) {
+            LibraryFallbackCover(
+                title = title,
+                kind = LibraryFallbackCoverKind.FOLDER,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         FolderCoverTreatment(
             title = title,
             hasCover = hasCover,
@@ -479,27 +491,25 @@ internal fun AudiobookGridItem(
                 Box(
                     modifier = Modifier
                         .size(thumbSize.first, thumbSize.second)
-                        .clip(RoundedCornerShape((radiusBase * 0.52f).coerceAtLeast(4.dp)))
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .clip(RoundedCornerShape((radiusBase * 0.52f).coerceAtLeast(4.dp))),
                     contentAlignment = Alignment.Center
                 ) {
+                    val listFallbackKind = if (audiobook.sourceIsFolder) {
+                        LibraryFallbackCoverKind.AUDIO_FOLDER
+                    } else {
+                        LibraryFallbackCoverKind.AUDIO_FILE
+                    }
+                    LibraryFallbackCover(
+                        title = audiobook.title,
+                        kind = listFallbackKind,
+                        modifier = Modifier.fillMaxSize(),
+                    )
                     if (audiobook.coverUri != null) {
                         AsyncImage(
                             model = audiobook.coverUri,
                             contentDescription = audiobook.title,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            Icons.Default.Headphones,
-                            contentDescription = null,
-                            // Scale icon proportionally to the thumb container (~45% of shorter side).
-                            modifier = Modifier.size(
-                                minOf(thumbSize.first.value, thumbSize.second.value)
-                                    .times(0.45f).coerceIn(20f, 40f).dp
-                            ),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.56f)
                         )
                     }
                 }
@@ -530,7 +540,7 @@ internal fun AudiobookGridItem(
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
-                        contentDescription = "Воспроизвести",
+                        contentDescription = null,
                         modifier = Modifier.padding(8.dp).size(20.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -550,24 +560,25 @@ internal fun AudiobookGridItem(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(coverRatio)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .aspectRatio(coverRatio),
                 contentAlignment = Alignment.Center
             ) {
+                val gridFallbackKind = if (audiobook.sourceIsFolder) {
+                    LibraryFallbackCoverKind.AUDIO_FOLDER
+                } else {
+                    LibraryFallbackCoverKind.AUDIO_FILE
+                }
+                LibraryFallbackCover(
+                    title = audiobook.title,
+                    kind = gridFallbackKind,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 if (audiobook.coverUri != null) {
                     AsyncImage(
                         model = audiobook.coverUri,
                         contentDescription = audiobook.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Icon(
-                        Icons.Default.Headphones,
-                        contentDescription = null,
-                        // Scale icon relative to the cover Box so it matches other grid items.
-                        modifier = Modifier.fillMaxSize(0.38f),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
                 if (showCoverTitles) {
@@ -611,7 +622,7 @@ internal fun AudiobookGridItem(
                 ) {
                     Icon(
                         Icons.Default.PlayArrow,
-                        contentDescription = "Воспроизвести",
+                        contentDescription = null,
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onPrimary
                     )

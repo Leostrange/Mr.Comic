@@ -7,6 +7,7 @@ import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.repository.LibraryRepository
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -75,7 +76,7 @@ class AutoBackupManager @Inject constructor(
                             put("title",           comic.title)
                             put("currentPage",     comic.currentPage)
                             put("pageCount",       comic.pageCount)
-                            put("readingProgress", comic.readingProgress.toDouble())
+                            put("readingProgress", comic.displayReadingProgress().toDouble())
                             put("lastReadDate",    comic.lastReadDate ?: 0L)
                             put("isBookmarked",    comic.isBookmarked)
                             put("isCompleted",     comic.isCompleted)

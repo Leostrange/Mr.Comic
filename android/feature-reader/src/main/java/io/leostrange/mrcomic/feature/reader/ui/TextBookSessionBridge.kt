@@ -40,7 +40,13 @@ internal object TextBookSessionBridge {
                 val title = item.title.trim()
                 if (title.isNotBlank()) {
                     resolveBookTocPageIndex(item, reader)?.let { pageIndex ->
-                        entries += TocEntry(title = title, pageIndex = pageIndex)
+                        val anchorId = item.locator?.fragment?.takeIf { it.isNotBlank() }
+                        entries += TocEntry(
+                            title = title,
+                            pageIndex = pageIndex,
+                            anchorId = anchorId,
+                            sectionIndex = pageIndex
+                        )
                     }
                 }
                 if (item.children.isNotEmpty()) {

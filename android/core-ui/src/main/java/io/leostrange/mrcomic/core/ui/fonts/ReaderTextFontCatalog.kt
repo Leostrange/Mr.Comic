@@ -28,6 +28,10 @@ object ReaderTextFontCatalog {
         "Roboto Slab" to "RobotoSlab-Regular.ttf",
         "PT Serif" to "PTSerif-Regular.ttf",
         "Literata" to "Literata-Regular.ttf",
+        "OpenDyslexic" to "OpenDyslexic-Regular.otf",
+        "Accessible DfA" to "AccessibleDfA.otf",
+        "iA Writer Duospace" to "iAWriterDuospace-Regular.ttf",
+        "Liberation Sans" to "LiberationSans-Regular.ttf",
         "Lora" to "Lora-Regular.ttf",
         "Source Serif 4" to "SourceSerif4-Regular.ttf"
     )

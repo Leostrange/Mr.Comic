@@ -64,10 +64,12 @@ internal class ReaderWebViewRuntimeOwner(
                         webView.loadInlineFallbackNow()
                     }
                 }
-                is ReaderWebViewRuntimeEffect.Restore -> webView.restoreRuntimeTarget(
-                    generation = effect.generation,
-                    target = effect.target
-                ) { restored ->
+                is ReaderWebViewRuntimeEffect.Restore -> {
+                    val restore = {
+                        webView.restoreRuntimeTarget(
+                            generation = effect.generation,
+                            target = effect.target
+                        ) { restored ->
                     if (!restored) {
                         Log.w(HTML_READER_TAG, "Restore target was not found for generation=${effect.generation}")
                     } else {
@@ -77,11 +79,18 @@ internal class ReaderWebViewRuntimeOwner(
                     executeEffects(
                         webView = webView,
                         effects = loadController.dispatch(
-                            ReaderWebViewRuntimeEvent.RestoreAcknowledged(effect.generation)
+                            if (restored) {
+                                ReaderWebViewRuntimeEvent.RestoreAcknowledged(effect.generation)
+                            } else {
+                                ReaderWebViewRuntimeEvent.RestoreRejected(effect.generation)
+                            }
                         ),
                         onConsumeAnchor = onConsumeAnchor,
                         onConsumeSection = onConsumeSection
                     )
+                        }
+                    }
+                    if (effect.attempt == 1) restore() else webView.postDelayed(restore, RESTORE_RETRY_DELAY_MS)
                 }
                 is ReaderWebViewRuntimeEffect.PublishReady -> Unit
                 is ReaderWebViewRuntimeEffect.ShowTerminalError -> {
@@ -90,5 +99,9 @@ internal class ReaderWebViewRuntimeOwner(
                 }
             }
         }
+    }
+
+    private companion object {
+        const val RESTORE_RETRY_DELAY_MS = 80L
     }
 }

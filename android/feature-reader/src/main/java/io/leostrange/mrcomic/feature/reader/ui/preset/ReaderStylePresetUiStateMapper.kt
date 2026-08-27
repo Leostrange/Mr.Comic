@@ -33,6 +33,7 @@ internal fun ReaderUiState.applyReaderStylePreset(
     readerPreset = snapshot.readerPreset,
     textFontSize = snapshot.textFontSize,
     textColorScheme = snapshot.textColorScheme,
+    graphicColorScheme = snapshot.textColorScheme,
     textCustomTextColor = snapshot.textCustomTextColor,
     textCustomBackgroundColor = snapshot.textCustomBackgroundColor,
     textCustomAccentColor = snapshot.textCustomAccentColor,

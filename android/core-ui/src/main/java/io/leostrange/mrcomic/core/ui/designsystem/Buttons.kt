@@ -29,7 +29,7 @@ fun MrComicButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = 22.dp, vertical = 10.dp),
     content: @Composable RowScope.() -> Unit
 ) {
-    val shape = RoundedCornerShape(MrComicRadiusTokens.pill)
+    val shape = RoundedCornerShape(MrComicCornerScale.pill)
     when (variant) {
         MrComicButtonVariant.Filled -> Button(
             onClick = onClick,
@@ -63,7 +63,7 @@ fun MrComicButton(
             enabled = enabled,
             shape = shape,
             contentPadding = contentPadding,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.44f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = MrComicAlphaTokens.Subtle)),
             colors = ButtonDefaults.outlinedButtonColors(
                 contentColor = MaterialTheme.colorScheme.primary
             ),

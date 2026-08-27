@@ -4,6 +4,7 @@ import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
+import io.leostrange.mrcomic.feature.reader.ui.ReaderContainerKind
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -20,7 +21,7 @@ class ReaderStylePresetReducerTest {
     // ── Apply built-in preset ──────────────────────────────────────────────
 
     @Test
-    fun applyBuiltInPreset_setsAllTypographyFields() {
+    fun applyBuiltInPreset_setsColorSchemeAndClearsCustomColors() {
         val before = ReaderUiState(
             readerPreset = ReadingPreset.CUSTOM.name,
             textFontSize = 30,
@@ -44,14 +45,17 @@ class ReaderStylePresetReducerTest {
 
         assertEquals(ReadingPreset.PAPER.name, after.readerPreset)
         val style = ReadingPreset.PAPER.style()
+        // Color scheme is updated to preset (both text and graphic for global presets)
         assertEquals(style.textColorScheme, after.textColorScheme)
-        assertEquals(style.fontFamily, after.textFontFamily)
-        assertEquals(style.lineHeight, after.textLineHeight, 0.001f)
-        assertEquals(style.letterSpacing, after.textLetterSpacing, 0.001f)
-        assertEquals(style.wordSpacing, after.textWordSpacing, 0.001f)
-        assertEquals(style.paragraphSpacing, after.textParagraphSpacing, 0.001f)
-        assertEquals(style.textAlignment, after.textAlignment)
-        assertEquals(style.textBold, after.textBold)
+        assertEquals(style.textColorScheme, after.graphicColorScheme)
+        // Typography is PRESERVED from the current state (BUG-PAGED-02 / T3)
+        assertEquals(before.textFontFamily, after.textFontFamily)
+        assertEquals(before.textLineHeight, after.textLineHeight, 0.001f)
+        assertEquals(before.textLetterSpacing, after.textLetterSpacing, 0.001f)
+        assertEquals(before.textWordSpacing, after.textWordSpacing, 0.001f)
+        assertEquals(before.textParagraphSpacing, after.textParagraphSpacing, 0.001f)
+        assertEquals(before.textAlignment, after.textAlignment)
+        assertEquals(before.textBold, after.textBold)
         assertEquals(style.immersiveMode, after.immersiveMode)
         assertEquals(style.pageAnimation, after.readerPageAnimation)
         // Built-in presets clear custom colors
@@ -146,6 +150,7 @@ class ReaderStylePresetReducerTest {
         assertEquals(ReadingPreset.CUSTOM.name, after.readerPreset)
         assertEquals(ReaderStylePresetReducer.DEFAULT_FONT_SIZE, after.textFontSize)
         assertEquals(ReaderStylePresetReducer.DEFAULT_COLOR_SCHEME, after.textColorScheme)
+        assertEquals(io.leostrange.mrcomic.feature.reader.ui.DEFAULT_GRAPHIC_COLOR_SCHEME, after.graphicColorScheme)
         assertNull(after.textCustomTextColor)
         assertNull(after.textCustomBackgroundColor)
         assertNull(after.textCustomAccentColor)
@@ -195,6 +200,7 @@ class ReaderStylePresetReducerTest {
         assertEquals(ReadingPreset.OLED_BLACK.name, after.readerPreset)
         assertEquals(20, after.textFontSize)
         assertEquals("NIGHT", after.textColorScheme)
+        assertEquals("NIGHT", after.graphicColorScheme)
         assertEquals("Roboto", after.textFontFamily)
         assertEquals(1.6f, after.textLineHeight, 0.001f)
         assertEquals(0.02f, after.textLetterSpacing, 0.001f)
@@ -228,12 +234,31 @@ class ReaderStylePresetReducerTest {
 
     @Test
     fun setColorScheme_marksCustomAndUpdatesValue() {
-        val before = ReaderUiState(readerPreset = ReadingPreset.PAPER.name, textColorScheme = "DAY")
+        // Text reader: setTextScheme updates textColorScheme
+        val textState = ReaderUiState(
+            readerPreset = ReadingPreset.PAPER.name,
+            textColorScheme = "DAY",
+            readerContainerKind = ReaderContainerKind.TEXT_PAGE
+        )
+        val textAfter = ReaderStylePresetReducer.setColorScheme(textState, "SEPIA")
+        assertEquals(ReadingPreset.CUSTOM.name, textAfter.readerPreset)
+        assertEquals("SEPIA", textAfter.textColorScheme)
+    }
 
-        val after = ReaderStylePresetReducer.setColorScheme(before, "SEPIA")
-
-        assertEquals(ReadingPreset.CUSTOM.name, after.readerPreset)
-        assertEquals("SEPIA", after.textColorScheme)
+    @Test
+    fun setColorScheme_graphicReaderUpdatesGraphicColorScheme() {
+        // Graphic (raster) reader: setColorScheme updates graphicColorScheme, not textColorScheme
+        val graphicState = ReaderUiState(
+            readerPreset = ReadingPreset.PAPER.name,
+            textColorScheme = "DAY",
+            graphicColorScheme = "NIGHT",
+            readerContainerKind = ReaderContainerKind.RASTER_PAGE
+        )
+        val graphicAfter = ReaderStylePresetReducer.setColorScheme(graphicState, "SEPIA")
+        assertEquals(ReadingPreset.CUSTOM.name, graphicAfter.readerPreset)
+        // textColorScheme stays "DAY" — only graphicColorScheme changes
+        assertEquals("DAY", graphicAfter.textColorScheme)
+        assertEquals("SEPIA", graphicAfter.graphicColorScheme)
     }
 
     @Test

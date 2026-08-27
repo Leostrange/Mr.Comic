@@ -77,6 +77,36 @@ internal class ReaderProgressController(
      */
     internal var totalBookSections: Int = 0
 
+    /** BUG-READER-03: periodic position save job — runs every 5 s while the reader is active. */
+    private var periodicSaveJob: Job? = null
+
+    /**
+     * BUG-READER-03: Start periodic position snapshots so a process-kill between page turns
+     * cannot lose more than ~5 seconds of reading progress. Only one periodic job runs at a time.
+     */
+    fun startPeriodicPositionSave() {
+        periodicSaveJob?.cancel()
+        periodicSaveJob = viewModelScope.launch {
+            while (true) {
+                delay(PERIODIC_SAVE_INTERVAL_MS)
+                val comic = _uiState.value.comic ?: continue
+                val positionJson = buildPositionJson(
+                    _uiState.value, comic.format, _uiState.value.currentPage
+                ) ?: continue
+                // Only write when the position actually changed since the last persist.
+                if (!isSamePersistedPosition(lastPersistedPositionJson, positionJson)) {
+                    enqueuePositionOnlySave(comic, _uiState.value.currentPage, positionJson)
+                }
+            }
+        }
+    }
+
+    /** Stop the periodic position save (called when the reader is closed). */
+    fun stopPeriodicPositionSave() {
+        periodicSaveJob?.cancel()
+        periodicSaveJob = null
+    }
+
     /** Returns a stable, section-ordered snapshot for EPUB progress accumulation. */
     internal fun snapshotSectionPageCounts(): Map<Int, Int> = sectionPageCounts.snapshot()
 
@@ -148,6 +178,70 @@ internal class ReaderProgressController(
         enqueuePositionOnlySave(comic, _uiState.value.currentPage, positionJson)
     }
 
+    /**
+     * Force-persists the current position on reader close, bypassing the dedup guard.
+     *
+     * BUG-READER-03: [savePositionSnapshot] skips the write when the position JSON matches
+     * [lastPersistedPositionJson]. During a rapid exit the WebView may not have reported its
+     * latest scroll back to [_uiState], so the snapshot looks identical — but the database
+     * might actually be empty or stale (e.g. a previous flush was lost to a process kill).
+     * This method always enqueues a position-only write so the close path is lossless.
+     */
+    private fun forceSavePositionOnClose() {
+        val comic = _uiState.value.comic ?: return
+        val positionJson = buildPositionJson(_uiState.value, comic.format, _uiState.value.currentPage)
+            ?: return
+        val normalizedPage = _uiState.value.currentPage.coerceAtLeast(0)
+        val pending = PendingProgressSave(
+            comicId = comic.id,
+            page = normalizedPage,
+            totalPages = _uiState.value.totalPages.coerceAtLeast(1),
+            countsTowardReadingProgress = false,
+            characterOffset = if (_uiState.value.readingMode == ReadingMode.WEBTOON) {
+                _uiState.value.freeScrollCharacterOffset.takeIf { it >= 0 }
+            } else {
+                _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
+            },
+            positionJson = positionJson,
+            positionOnly = true
+        )
+        // Only skip if there is already an identical *pending* save queued (avoids duplicate work
+        // within the same close sequence). We intentionally do NOT check lastPersistedPositionJson
+        // because the close path must always write to the database even if it appears redundant.
+        if (pending == pendingProgressSave) return
+        pendingProgressSave = pending
+    }
+
+    /**
+     * BUG-READER-02: Immediate position save used when the user explicitly changes reading mode.
+     * Unlike [savePositionSnapshot] (debounced 220 ms) this flushes the pending write synchronously
+     * so a rapid close after a mode switch cannot lose the new mode in the structured position.
+     */
+    fun savePositionImmediate() {
+        val comic = _uiState.value.comic ?: return
+        val positionJson = buildPositionJson(_uiState.value, comic.format, _uiState.value.currentPage)
+            ?: return
+        val normalizedPage = _uiState.value.currentPage.coerceAtLeast(0)
+        val pending = PendingProgressSave(
+            comicId = comic.id,
+            page = normalizedPage,
+            totalPages = _uiState.value.totalPages.coerceAtLeast(1),
+            countsTowardReadingProgress = false,
+            characterOffset = if (_uiState.value.readingMode == ReadingMode.WEBTOON) {
+                _uiState.value.freeScrollCharacterOffset.takeIf { it >= 0 }
+            } else {
+                _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
+            },
+            positionJson = positionJson,
+            positionOnly = true
+        )
+        pendingProgressSave = pending
+        progressSaveJob?.cancel()
+        progressSaveJob = viewModelScope.launch {
+            flushPendingProgressSave()
+        }
+    }
+
     private fun enqueuePositionOnlySave(
         comic: io.leostrange.mrcomic.core.model.Comic,
         page: Int,
@@ -186,8 +280,7 @@ internal class ReaderProgressController(
             val previousPersistedPage = lastPersistedProgress
                 ?.takeIf { it.comicId == pending.comicId }
                 ?.page
-            val storedPageCount = libraryRepository.getComicById(pending.comicId)?.pageCount ?: 0
-            val safeTotalPages = maxOf(pending.totalPages, storedPageCount).coerceAtLeast(1)
+            val safeTotalPages = pending.totalPages.coerceAtLeast(1)
             if (!pending.positionOnly) {
                 libraryRepository.updateProgress(
                     comicId = pending.comicId,
@@ -235,8 +328,7 @@ internal class ReaderProgressController(
             lastPersistedProgress = persistedPageMarkerAfterFlush(lastPersistedProgress, pending)
             lastPersistedPositionJson = pending.positionJson
             val currentComic = _uiState.value.comic ?: return
-            val authoritativeTotal = maxOf(pending.totalPages, storedPageCount)
-            val reachedLastPageSafe = authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1
+            val reachedLastPageSafe = pending.totalPages > 0 && pending.page >= pending.totalPages - 1
             val isHeavy = currentComic.format.isHeavyReflowableFormat() || currentComic.format.isTextReadingFormat()
             val titleCompletionPolicy = resolveTitleCompletionPolicy(
                 reachedLastPage = reachedLastPageSafe,
@@ -246,7 +338,7 @@ internal class ReaderProgressController(
                 sessionManualPageTurns = readerSessionCoordinator.currentManualPageTurns,
                 goalProgressDelta = goalProgressDelta,
                 isHeavyReflowable = isHeavy,
-                totalPages = authoritativeTotal
+                totalPages = pending.totalPages
             )
             if (titleCompletionPolicy.shouldComplete) {
                 libraryRepository.markCompleted(pending.comicId, completed = true)
@@ -427,16 +519,37 @@ internal class ReaderProgressController(
     fun accumulatedTotalPagesForEpub(): Int {
         return EpubProgressCalculator.estimatedTotalPages(
             sectionPageCounts = sectionPageCounts.snapshot(),
-            totalSections = totalBookSections
+            totalSections = totalBookSections,
+            stableEstimateOverride = sectionPageCounts.stableEstimate()
         )
     }
 
     // ── Session lifecycle ──────────────────────────────────────────────────
 
-    fun emitReaderClosed(appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope) {
-        // Close can happen between scroll callbacks; enqueue one final semantic snapshot before
-        // the ViewModel cancels its local debounce job.
-        savePositionSnapshot()
+    /**
+     * Prepare the reader-close snapshot and return the analytics payload.
+     *
+     * BUG-READER-03: The actual database flush is **not** done here — it is the caller's
+     * responsibility to invoke [flushPendingProgressSave] synchronously *before* tearing down
+     * reader resources. This two-phase design (prepare → flush) replaces the former
+     * fire-and-forget `appScope.launch { flush }` that could lose the position on a fast
+     * process kill after `onCleared`.
+     */
+    fun emitReaderClosed(): ReaderClosedAnalytics? {
+        // Close can happen between scroll callbacks; enqueue one final semantic snapshot and
+        // flush immediately so the 220ms debounce cannot lose the position on rapid exit.
+        //
+        // BUG-READER-03: use forceSavePositionOnClose instead of savePositionSnapshot.
+        // The normal snapshot is a no-op when the position JSON matches lastPersistedPositionJson,
+        // but during a rapid exit the WebView's scroll position may not have been reported back
+        // to _uiState yet (the 120ms free-scroll debounce hasn't fired). By force-enqueuing
+        // a position-only save and bypassing the dedup check, we guarantee the reader's last
+        // known position is always persisted on close — even if it appears identical to the
+        // previously stored value. The extra write is a single UPDATE on a single row and
+        // only happens once per reader session close.
+        forceSavePositionOnClose()
+        progressSaveJob?.cancel()
+        // NOTE: flush is NOT done here — caller must flush synchronously.
         val state = _uiState.value
         val currentComic = state.comic
         val closedSession = readerSessionCoordinator.close(
@@ -444,16 +557,29 @@ internal class ReaderProgressController(
             currentComicCompleted = currentComic?.isCompleted == true,
             currentPage = state.currentPage
         )
-            ?: return
+            ?: return null
         val session = closedSession.session
         val sessionMetrics = closedSession.metrics
         val finishedAtMillis = System.currentTimeMillis()
-        if (shouldRecordReaderSessionMinutes(sessionMetrics)) {
+        return ReaderClosedAnalytics(
+            session = session,
+            sessionMetrics = sessionMetrics,
+            readingModeName = state.readingMode.name,
+            finishedAtMillis = finishedAtMillis
+        )
+    }
+
+    /**
+     * BUG-READER-03: Record session minutes and track the reader-closed analytics event.
+     * Called from [appScope] after the synchronous flush in [ReaderViewModel.onCleared].
+     */
+    fun trackReaderClosed(analytics: ReaderClosedAnalytics, appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope) {
+        if (shouldRecordReaderSessionMinutes(analytics.sessionMetrics)) {
             appScope.launch {
                 runCatching {
                     dailyReadingGoalStore.recordSessionMinutes(
-                        durationMillis = finishedAtMillis - session.startedAtMillis,
-                        nowMillis = finishedAtMillis
+                        durationMillis = analytics.finishedAtMillis - analytics.session.startedAtMillis,
+                        nowMillis = analytics.finishedAtMillis
                     )
                 }.onFailure { error ->
                     Log.e("ReaderProgressController", "Failed to record reading session minutes", error)
@@ -462,16 +588,24 @@ internal class ReaderProgressController(
         }
         analyticsTracker.track(
             buildReaderClosedAnalyticsEvent(
-                comicId = session.comicId,
-                format = session.format,
-                totalPages = session.totalPages,
-                readingMode = state.readingMode.name,
-                startedAtMillis = session.startedAtMillis,
-                finishedAtMillis = finishedAtMillis,
-                sessionMetrics = sessionMetrics
+                comicId = analytics.session.comicId,
+                format = analytics.session.format,
+                totalPages = analytics.session.totalPages,
+                readingMode = analytics.readingModeName,
+                startedAtMillis = analytics.session.startedAtMillis,
+                finishedAtMillis = analytics.finishedAtMillis,
+                sessionMetrics = analytics.sessionMetrics
             )
         )
     }
+
+    /** Data needed to fire the reader-closed analytics event outside the synchronous flush path. */
+    internal data class ReaderClosedAnalytics(
+        val session: io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot,
+        val sessionMetrics: io.leostrange.mrcomic.feature.reader.domain.session.ReaderClosedSessionMetrics,
+        val readingModeName: String,
+        val finishedAtMillis: Long,
+    )
 
     // ── Structured position (TEXT-01) ──────────────────────────────────────
 
@@ -512,4 +646,9 @@ internal class ReaderProgressController(
     }
 
     // ── Internal helpers ───────────────────────────────────────────────────
+
+    private companion object {
+        /** Interval between periodic position snapshots (BUG-READER-03). */
+        const val PERIODIC_SAVE_INTERVAL_MS = 5_000L
+    }
 }

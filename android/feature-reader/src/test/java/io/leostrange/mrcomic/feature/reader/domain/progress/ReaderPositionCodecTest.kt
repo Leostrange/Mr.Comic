@@ -139,4 +139,21 @@ class ReaderPositionCodecTest {
         assertFalse(json.isBlank())
         assertTrue(json.contains("\"s\":0"))
     }
+
+    // ── BUG-READER-02: mode must survive roundtrip for all reading modes ──
+
+    @Test
+    fun roundTrip_preservesAllReadingModes() {
+        // Every reading mode must survive a JSON roundtrip so per-book mode restore works.
+        for (mode in ReadingMode.entries) {
+            val position = ReaderPosition(
+                engineSectionIndex = 5,
+                mode = mode,
+                schemaVersion = ReaderPosition.SCHEMA_VERSION,
+            )
+            val decoded = ReaderPositionCodec.decode(ReaderPositionCodec.encode(position))
+            assertNotNull("Mode $mode must survive roundtrip", decoded)
+            assertEquals("Mode $mode must be preserved", mode, decoded!!.mode)
+        }
+    }
 }

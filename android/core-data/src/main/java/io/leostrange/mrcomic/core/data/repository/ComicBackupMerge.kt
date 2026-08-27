@@ -2,6 +2,7 @@ package io.leostrange.mrcomic.core.data.repository
 
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import io.leostrange.mrcomic.core.model.readingProgressForPage
 import java.io.File
 
@@ -79,7 +80,7 @@ import java.io.File
             lastModified = maxOf(existing.lastModified, backup.lastModified),
             folderId = existing.folderId ?: backup.folderId,
             lastReadDate = maxOf(existing.lastReadDate ?: 0L, backup.lastReadDate ?: 0L).takeIf { it > 0L },
-            readingProgress = maxOf(existing.readingProgress, mergedProgress),
+            readingProgress = maxOf(existing.displayReadingProgress(), mergedProgress),
             currentPage = maxOf(existing.currentPage, mergedCurrentPage),
             isBookmarked = existing.isBookmarked || backup.isBookmarked,
             tags = existing.tags.ifBlank { backup.tags },

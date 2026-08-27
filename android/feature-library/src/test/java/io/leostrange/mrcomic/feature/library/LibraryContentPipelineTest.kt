@@ -1,6 +1,7 @@
 package io.leostrange.mrcomic.feature.library
 
 import io.leostrange.mrcomic.core.model.Comic
+import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.SortOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -141,6 +142,28 @@ class LibraryContentPipelineTest {
         assertNull(derived.currentFolderPath)
         assertNull(derived.folderSheetPath)
         assertEquals(2, derived.displayItems.size)
+    }
+
+    @Test
+    fun recentlyReadExcludesNewRtfWithUnknownTotalAndStaleProgress() {
+        // RTF with pageCount=0, readingProgress=1.0 (stale), opened once,
+        // no real locator → displayReadingProgress=0, isReadingInProgress() depends on
+        // readingStatus which returns READING (has stable signal). Verify the pipeline
+        // still includes it in recentlyRead (it is READING) but that display progress is 0.
+        val rtf = Comic(
+            id = "rtf-stale",
+            format = ComicFormat.RTF,
+            pageCount = 0,
+            readingProgress = 1f,
+            lastReadDate = 100L,
+        )
+        val state = LibraryUiState()
+
+        val derived = pipeline.derive(state, listOf(rtf), emptyList(), listOf(rtf))
+
+        // The RTF book is considered READING (has lastReadDate), so it appears in recentlyRead.
+        assertEquals(1, derived.recentlyRead.size)
+        assertEquals(1, derived.readingComicCount)
     }
 
     @Test

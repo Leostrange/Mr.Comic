@@ -65,15 +65,36 @@ fun Comic.readingStatus(): ComicReadingStatus {
         storedReaderLocator() != null
     val progressHasAuthority = normalizedProgress > 0.001f &&
         (hasStableReadingSignal || normalizedPageCount > 1)
-    val completedByProgress = normalizedProgress >= 0.999f &&
-        (hasStableReadingSignal || normalizedPageCount > 1)
+    // Reflowable formats (especially legacy RTF records) can persist a stale
+    // `readingProgress = 1` before pagination has produced a real position.
+    // A known page count makes the page index authoritative; only an explicit
+    // completion flag or the last confirmed page may complete the book.
+    val completedByProgress = normalizedProgress >= 0.999f && when {
+        normalizedPageCount > 1 -> hasStableReadingSignal && normalizedCurrentPage >= normalizedPageCount - 1
+        format.isTextReadingFormat() -> {
+            val loc = storedReaderLocator()
+            loc?.progression != null && loc.progression!! >= 0.99f
+        }
+        else -> hasStableReadingSignal
+    }
+    // BUG-B3: For reflowable text formats whose page count is still unknown
+    // (pageCount <= 1, i.e. pagination hasn't resolved yet), a stale
+    // readingProgress=1 must not mark the book as COMPLETED unless a real
+    // reader locator (href/progression) anchors the end position. Neither
+    // lastReadDate ("was opened once") nor a bare currentPage index prove the
+    // end was reached while the total page count is unknown.
+    val reflowableUnverifiedCompletion = format.isTextReadingFormat() &&
+        normalizedPageCount <= 1 &&
+        completedByProgress &&
+        (storedReaderLocator()?.progression?.let { it < 0.99f } ?: true)
+    val effectiveCompleted = completedByProgress && !reflowableUnverifiedCompletion
     val hasReadingActivity = hasStableReadingSignal || progressHasAuthority
     // Completion is driven only by an explicit flag or a confirmed full-progress
     // signal. Landing on the last page index (currentPage >= pageCount - 1) is no
     // longer a completion condition: a crash, a deferred-count clamp or a text book
     // parked on its final section must not fake a 100% badge.
     return when {
-        isCompleted || completedByProgress -> ComicReadingStatus.COMPLETED
+        isCompleted || effectiveCompleted -> ComicReadingStatus.COMPLETED
         hasReadingActivity -> ComicReadingStatus.READING
         else -> ComicReadingStatus.NEW
     }
@@ -97,10 +118,24 @@ fun readingProgressForPage(currentPage: Int, pageCount: Int): Float {
 fun Comic.displayReadingProgress(): Float = when (readingStatus()) {
     ComicReadingStatus.NEW -> 0f
     ComicReadingStatus.COMPLETED -> 1f
-    ComicReadingStatus.READING -> maxOf(
-        readingProgress.coerceIn(0f, 1f),
-        readingProgressForPage(currentPage, pageCount)
-    )
+    ComicReadingStatus.READING -> {
+        // Canonical progress is always derived from currentPage/pageCount when pageCount > 1.
+        // For legacy data where pageCount is unknown (0), fall back to stored readingProgress
+        // so existing library cards and progress bars still show meaningful values.
+        if (pageCount > 1) {
+            readingProgressForPage(currentPage, pageCount)
+        } else if (format.isTextReadingFormat()) {
+            val loc = storedReaderLocator()
+            loc?.progression?.toFloat()?.coerceIn(0f, 1f) ?: 0f
+        } else {
+            // Page count is unresolved (≤ 1): stored readingProgress may be a stale
+            // placeholder from legacy records or backup merges. A full-progress value
+            // (≥ 0.999) without a real reader locator proves no actual reading occurred,
+            // so show 0 % instead of a misleading 100 % badge.
+            val stored = readingProgress.coerceIn(0f, 1f)
+            if (stored >= 0.999f && storedReaderLocator() == null) 0f else stored
+        }
+    }
 }
 
 fun Comic.storedReaderLocator(): ReaderLocator? {
@@ -154,7 +189,6 @@ enum class ComicFormat {
     ODT,
     CHM,
     XPS,
-    OPDS,
     DJVU,
     FOLDER,
     UNKNOWN

@@ -43,8 +43,8 @@ fun ReaderExpandedBottomPanel(
 
     if (useCompactLandscapeImagePanel) {
         ReaderCompactLandscapeBottomPanel(
-            currentPage = uiState.currentPage,
-            totalPages = uiState.totalPages,
+            currentPage = uiState.effectiveCurrentPage,
+            totalPages = uiState.effectiveTotalPages,
             readingMode = uiState.readingMode,
             bookmarked = uiState.currentPage in uiState.bookmarkedPages,
             onToggleBookmark = onToggleBookmark,
@@ -108,6 +108,10 @@ fun ReaderExpandedBottomPanel(
                 ?.title,
             epubAccumulatedTotalPages = uiState.epubAccumulatedTotalPages,
             epubAccumulatedCurrentPage = uiState.epubAccumulatedCurrentPage,
+            isTextPaginationResolved = uiState.isTextPaginationResolved,
+            isTextWebtoon = uiState.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON,
+            freeScrollProgression = uiState.freeScrollProgression,
+            rasterWebtoonScrollProgression = uiState.rasterWebtoonScrollProgression,
             onReadingModeChange = onReadingModeChange,
             onPageChange = onPageChange
         )

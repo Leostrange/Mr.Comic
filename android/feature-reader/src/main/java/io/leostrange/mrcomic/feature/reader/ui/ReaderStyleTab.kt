@@ -25,6 +25,7 @@ import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSlot
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
 import io.leostrange.mrcomic.feature.reader.domain.preset.parseReaderStylePreset
+import io.leostrange.mrcomic.feature.reader.ui.gesture.ReaderColorScheme
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -69,7 +70,10 @@ internal fun ReaderStyleTab(
     var chromeEditorTab by remember { mutableStateOf(ReaderChromeEditorTab.VISIBILITY) }
     val configurableChromeButtons = remember(uiState.chromeIconOrder) {
         ReaderChromeButton.resolveOrder(uiState.chromeIconOrder)
-            .filterNot { it == ReaderChromeButton.STYLE }
+            // The graphic reader must keep the style/settings entry: it is
+            // the only route to image scaling, crop and graphic presets.
+            // Text-reader controls keep the style entry in their own tab.
+            .filterNot { isTextReader && it == ReaderChromeButton.STYLE }
     }
     val supportsMarginCrop = remember(uiState.comic?.format, isTextReader) {
         !isTextReader && (uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU)
@@ -235,13 +239,12 @@ internal fun ReaderStyleTab(
             item { ReaderSectionTitle(readerText.colorSchemeTitle) }
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(
-                        listOf(
-                            "DAY" to readerText.day,
-                            "SEPIA" to readerText.sepia,
-                            "NIGHT" to readerText.night
-                        )
-                    ) { (id, label) ->
+                    items(ReaderColorScheme.graphicQuickChoices) { id ->
+                        val label = when (id) {
+                            "SEPIA" -> readerText.sepia
+                            "NIGHT" -> readerText.night
+                            else -> readerText.day
+                        }
                         ReaderChoiceChip(
                             selected = uiState.graphicColorScheme == id,
                             onClick = { onColorSchemeChange(id) },

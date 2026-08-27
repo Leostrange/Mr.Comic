@@ -32,7 +32,9 @@ internal class ReaderReadingModeController(
     private val markReaderPresetCustom: () -> Unit,
     private val getLastTextWebtoonCursor: () -> ReaderTextWebtoonCursor? = { null },
     private val seedTextWebtoonCursor: (ReaderTextWebtoonCursor?) -> Unit = {},
-    private val onAutoScrollModeChanged: (ReadingMode) -> Unit = {}
+    private val onAutoScrollModeChanged: (ReadingMode) -> Unit = {},
+    /** BUG-READER-02: immediate position save on mode change to survive rapid close. */
+    private val savePositionImmediate: () -> Unit = {}
 ) {
     var portraitReadingMode: ReadingMode = ReadingMode.PAGE_LTR
     var portraitPagedReadingMode: ReadingMode = ReadingMode.PAGE_LTR
@@ -49,11 +51,13 @@ internal class ReaderReadingModeController(
             return
         }
         rememberPortraitMode(mode)
-        markReaderPresetCustom()
         applyReadingMode(mode)
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
         }
+        // BUG-READER-02: Flush the structured position immediately so the new mode
+        // survives a rapid close (the normal 220 ms debounce could lose it).
+        savePositionImmediate()
     }
 
     fun onOrientationChanged(
@@ -118,7 +122,7 @@ internal class ReaderReadingModeController(
                 pagedSubpageIndex = currentState.sectionCurrentPage,
                 pagedSubpageCount = currentState.sectionPageCount,
                 totalWebtoonSections = sectionCount,
-                characterOffset = currentState.sectionCharacterOffset.takeIf { it > 0 },
+                characterOffset = currentState.sectionCharacterOffset.takeIf { it >= 0 },
                 fragment = currentState.pendingScrollToAnchor
             )
             else -> null
@@ -172,8 +176,12 @@ internal class ReaderReadingModeController(
             val textPagePosition = resolvedPosition as? ReaderContainerPosition.TextPage
             val textWebtoonPosition = resolvedPosition as? ReaderContainerPosition.TextWebtoon
             val nextIsTextWebtoon = nextContainerKind == ReaderContainerKind.TEXT_WEBTOON
+            // BUG-READER-05: Explicitly preserve readerPreset and textColorScheme
+            // to ensure mode changes don't reset the theme.
             state.copy(
                 readingMode = mode,
+                readerPreset = state.readerPreset,
+                textColorScheme = state.textColorScheme,
                 currentPage = alignedPage,
                 sectionCurrentPage = when {
                     textPagePosition != null -> textPagePosition.pageInSplit

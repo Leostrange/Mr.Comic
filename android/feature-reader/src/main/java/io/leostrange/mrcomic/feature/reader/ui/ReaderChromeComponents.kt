@@ -46,6 +46,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.library.RootChromeTopBarHost
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicCornerScale
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicType
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +65,7 @@ fun ReaderMinimalBar(
                     text = title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium
+                    style = MrComicType.h3
                 )
             },
             navigationIcon = {
@@ -113,9 +115,9 @@ internal fun ReaderPanelChip(
         selected = selected,
         onClick = onClick,
         modifier = modifier.heightIn(min = 38.dp),
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(MrComicCornerScale.lg),
         colors = FilterChipDefaults.filterChipColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
             labelColor = MaterialTheme.colorScheme.onSurface,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -211,6 +213,18 @@ fun ReaderExpandedBar(
             }
         }
         Spacer(Modifier.width(44.dp))
+    }
+    if (title.isNotBlank()) {
+        Text(
+            text = title,
+            style = MrComicType.meta,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp)
+        )
     }
 }
 

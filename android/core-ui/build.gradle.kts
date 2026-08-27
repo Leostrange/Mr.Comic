@@ -16,6 +16,7 @@ android {
 }
 dependencies {
     implementation(project(":core-model"))
+    implementation(project(":core-interfaces"))
     api(platform(libs.androidx.compose.bom))
     api(libs.androidx.compose.ui)
     api(libs.androidx.compose.ui.tooling.preview)

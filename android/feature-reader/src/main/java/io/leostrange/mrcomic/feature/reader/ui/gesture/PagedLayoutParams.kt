@@ -35,7 +35,7 @@ object PagedLayoutParams {
     ): Int {
         val lineHeight = if (lineHeightPx > 0f) lineHeightPx else 27f // 18sp * 1.5
         val clipHeight = max(lineHeight * 3, viewportHeightPx.toFloat())
-        val safetyMargin = max(2f, lineHeight * 0.12f)
+        val safetyMargin = max(6f, kotlin.math.ceil(lineHeight * 0.25f))
         val rawUsableHeight = max(lineHeight * 3, clipHeight - topInsetPx - bottomInsetPx - safetyMargin)
         val usableLineCount = max(3, floor(rawUsableHeight / lineHeight).toInt())
         return max(lineHeight * 3, usableLineCount * lineHeight).toInt()

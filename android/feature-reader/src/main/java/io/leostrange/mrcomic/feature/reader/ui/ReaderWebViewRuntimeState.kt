@@ -49,6 +49,7 @@ internal data class ReaderWebViewRuntimeState(
     val layoutMetrics: ReaderWebViewLayoutMetrics? = null,
     val restoreTarget: ReaderWebViewRestoreTarget? = null,
     val restoreIssued: Boolean = false,
+    val restoreAttempt: Int = 0,
     val error: String? = null
 )
 
@@ -66,6 +67,7 @@ internal sealed interface ReaderWebViewRuntimeEvent {
     ) : ReaderWebViewRuntimeEvent
 
     data class RestoreAcknowledged(val generation: Long) : ReaderWebViewRuntimeEvent
+    data class RestoreRejected(val generation: Long) : ReaderWebViewRuntimeEvent
     data class LoadFailed(val generation: Long, val reason: String) : ReaderWebViewRuntimeEvent
     data class ContentBlank(val generation: Long) : ReaderWebViewRuntimeEvent
     data object Disposed : ReaderWebViewRuntimeEvent

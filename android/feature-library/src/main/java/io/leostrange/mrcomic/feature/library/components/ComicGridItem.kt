@@ -275,8 +275,11 @@ private fun BoxScope.GridCardBadges(
     if (showCoverTitles) {
         // Keep the title backing opaque enough to remain readable on artwork.
         // A transparent gradient lets the title collide with the cover/icon.
-        val titlePanelColor = MaterialTheme.colorScheme.surface.copy(
-            alpha = (0.92f + titlePanelOpacity.coerceIn(0f, 1f) * 0.08f).coerceIn(0.92f, 1f)
+        // The title must sit on its own opaque paper surface. Blending it with
+        // the artwork made filenames unreadable and visually merged the card
+        // metadata with the cover.
+        val titlePanelColor = MaterialTheme.colorScheme.surfaceContainerLowest.copy(
+            alpha = 0.96f + titlePanelOpacity.coerceIn(0f, 1f) * 0.04f
         )
         val scaledFontSize = 12.sp * titleScale.coerceIn(0.85f, 1.3f)
         Column(
@@ -323,7 +326,7 @@ private fun BoxScope.GridCardBadges(
                 // BUG-B1: white surface background instead of Info tone gray.
                 MrComicStatusBadge(
                     text = "${(comic.displayReadingProgress() * 100).toInt()}%",
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                     contentColor = MaterialTheme.colorScheme.onSurface
                 )
             }

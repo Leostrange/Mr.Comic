@@ -184,6 +184,12 @@ class LibraryStatelessHelpersTest {
         assertEquals(2, folderA.fileCount)
         assertEquals(2, folderA.subfolderCount)
         assertEquals(500, folderA.totalSize)
+        // pageCount=0 (default) → readingProgressForPage returns 0 → fallback to stored readingProgress.
+        // f1: readingProgress=1.0, lastReadDate=1 → READING → displayReadingProgress=1.0
+        // f2: readingProgress=0.0, lastReadDate=1 → READING → displayReadingProgress=0.0
+        // f3: readingProgress=0.5, lastReadDate=1 → READING → displayReadingProgress=0.5
+        // f4: readingProgress=0.5, lastReadDate=1 → READING → displayReadingProgress=0.5
+        // Average of descendants (f1,f2,f3,f4) = (1.0+0.0+0.5+0.5)/4 = 0.5
         assertEquals(0.5f, folderA.progress, 0.001f)
         assertEquals("a", folderA.title)
     }

@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.Icon
@@ -95,6 +94,7 @@ internal fun BoxScope.ComicCoverTreatment(
     comic: Comic,
     shape: RoundedCornerShape,
     graphicCoverStyle: String = "POSTER",
+    showCompletedFold: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val normalizedGraphicStyle = normalizeLibraryGraphicCoverStyle(graphicCoverStyle)
@@ -118,7 +118,7 @@ internal fun BoxScope.ComicCoverTreatment(
                             shape = shape
                         )
                 )
-                if (comic.isReadCompleted()) {
+                if (showCompletedFold && comic.isReadCompleted()) {
                     Surface(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
@@ -185,7 +185,7 @@ internal fun BoxScope.ComicCoverTreatment(
                         )
                 )
             }
-            if (comic.isReadCompleted()) {
+            if (showCompletedFold && comic.isReadCompleted()) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -608,8 +608,22 @@ internal fun CoverArt(
     modifier: Modifier = Modifier,
     emptyGraphic: Boolean = false
 ) {
-    Box(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
+    val fallbackKind = if (emptyGraphic) {
+        LibraryFallbackCoverKind.GRAPHIC
+    } else {
+        LibraryFallbackCoverKind.BOOK
+    }
+    Box(modifier = modifier) {
         if (coverPath != null) {
+            // Crossfade is enabled globally on the shared Coil ImageLoader
+            // (ComicApplication.newImageLoader, 180ms): covers fade in instead of
+            // popping in. The fallback cover painted underneath doubles as a
+            // neutral placeholder during the fade-in so there is no white flash.
+            LibraryFallbackCover(
+                title = title,
+                kind = fallbackKind,
+                modifier = Modifier.fillMaxSize(),
+            )
             AsyncImage(
                 model = rememberCoverModel(coverPath),
                 contentDescription = title,
@@ -617,11 +631,10 @@ internal fun CoverArt(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Icon(
-                Icons.AutoMirrored.Filled.MenuBook,
-                contentDescription = title,
-                modifier = Modifier.align(Alignment.Center).size(if (emptyGraphic) 44.dp else 40.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            LibraryFallbackCover(
+                title = title,
+                kind = fallbackKind,
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }

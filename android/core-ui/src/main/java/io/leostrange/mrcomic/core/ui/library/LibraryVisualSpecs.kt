@@ -108,7 +108,7 @@ const val DEFAULT_LIBRARY_GRAPHIC_COVER_STYLE = MrComicLibraryStyleTokens.CoverM
 const val DEFAULT_LIBRARY_CARD_STYLE = "BALANCED"
 const val DEFAULT_LIBRARY_THUMBNAIL_MODE = "RECTANGLE"
 const val DEFAULT_LIBRARY_COVER_SCALE = "CROP"
-const val DEFAULT_LIBRARY_BACKDROP_STRENGTH = 0.22f
+const val DEFAULT_LIBRARY_BACKDROP_STRENGTH = 0.42f
 const val DEFAULT_LIBRARY_BACKGROUND_BLUR = 0.16f
 const val DEFAULT_LIBRARY_BACKGROUND_VEIL = 0.12f
 const val DEFAULT_LIBRARY_SHELF_DEPTH = 0.42f
@@ -124,10 +124,12 @@ private fun resolveLibraryBackdropIntensity(
     variant: LibraryBackdropVariant,
     style: String
 ): Float {
+    // STYLE-BACKDROP: raised across the board — the previous values rendered the
+    // styled backdrops nearly invisible (≈0.03 alpha), which read as flat gray.
     val variantScale = when (variant) {
-        LibraryBackdropVariant.LIGHT -> 0.72f
-        LibraryBackdropVariant.DARK -> 0.52f
-        LibraryBackdropVariant.AMOLED -> 0.28f
+        LibraryBackdropVariant.LIGHT -> 0.92f
+        LibraryBackdropVariant.DARK -> 0.66f
+        LibraryBackdropVariant.AMOLED -> 0.34f
     }
     val styleScale = when (style) {
         "CITY_LIBRARY" -> 0.74f
@@ -140,7 +142,7 @@ private fun resolveLibraryBackdropIntensity(
         "IMAGE" -> 0.64f
         else -> 0.88f
     }
-    return (0.022f + backdropStrength.coerceIn(0f, 1f) * 0.11f) * variantScale * styleScale
+    return (0.032f + backdropStrength.coerceIn(0f, 1f) * 0.17f) * variantScale * styleScale
 }
 
 internal fun resolveLibraryDetailIntensity(

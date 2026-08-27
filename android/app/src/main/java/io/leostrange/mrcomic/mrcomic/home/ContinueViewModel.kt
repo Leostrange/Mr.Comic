@@ -20,6 +20,7 @@ import io.leostrange.mrcomic.core.domain.analytics.calculateMascotProgress
 import io.leostrange.mrcomic.core.domain.analytics.resolveGamificationMetricsSnapshot
 import io.leostrange.mrcomic.core.domain.analytics.resolveMrComicMascotState
 import io.leostrange.mrcomic.core.model.Comic
+import io.leostrange.mrcomic.core.model.displayReadingProgress
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -157,7 +158,7 @@ class ContinueViewModel @Inject constructor(
                 .filterNot { it.isCompleted }
                 .mapTo(linkedSetOf()) { it.id }
             val activeReading = comics
-                .filter { !it.isCompleted && it.readingProgress > 0f }
+                .filter { !it.isCompleted && it.displayReadingProgress() > 0f }
                 .sortedByDescending { it.lastReadDate }
             val currentlyReading = activeReading.take(12)
             val mascotProgress = calculateMascotProgress(comics)
@@ -210,7 +211,7 @@ class ContinueViewModel @Inject constructor(
                 if (ws is ContinueWarmState.Ready) {
                     val comics = ws.snapshot.comics
                     val activeReading = comics
-                        .filter { !it.isCompleted && it.readingProgress > 0f }
+                        .filter { !it.isCompleted && it.displayReadingProgress() > 0f }
                         .sortedByDescending { it.lastReadDate }
                     ContinueUiState(
                         isLoading = false,

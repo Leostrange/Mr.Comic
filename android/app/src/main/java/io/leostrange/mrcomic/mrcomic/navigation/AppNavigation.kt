@@ -51,8 +51,8 @@ import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.ReaderFormatCatalog
 import io.leostrange.mrcomic.core.model.storedReaderLocator
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomNavigationBar
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomNavigationItem
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomBar
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomBarDestination
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
 import io.leostrange.mrcomic.feature.library.AudiobookPlayerScreen
@@ -411,11 +411,25 @@ fun AppNavHost(
                         onAudiobookClick = { audiobookId ->
                             navigateToFullscreen(Screen.AudiobookPlayer.create(audiobookId))
                         },
-                        onQuoteClick = { comicId, page ->
+                        onQuoteClick = { comicId, page, quote ->
+                            // BUG-CANDIDATE-01: Use structured position from quote when available.
+                            // The quote stores characterOffset and domAnchor for precise navigation;
+                            // page is the legacy fallback when no structured position exists.
+                            val quoteLocator = quote?.let { q ->
+                                val pos = q.characterOffset?.takeIf { it > 0 }
+                                val anchor = q.domAnchor?.takeIf { it.isNotBlank() }
+                                if (pos != null || anchor != null) {
+                                    io.leostrange.mrcomic.core.model.ReaderLocator(
+                                        position = pos,
+                                        fragment = anchor
+                                    )
+                                } else null
+                            }
                             navigateToFullscreen(
                                 Screen.Reader.createForComic(
                                     comicId = comicId,
-                                    page = page
+                                    page = if (quoteLocator != null) null else page,
+                                    locator = quoteLocator
                                 )
                             )
                         },
@@ -431,9 +445,6 @@ fun AppNavHost(
                             navController.navigate(Screen.ProgressProfile.route) {
                                 launchSingleTop = true
                             }
-                        },
-                        onOpdsCatalogClick = {
-                            navController.navigate(Screen.OpdsCatalog.route)
                         }
                     )
                 }
@@ -442,17 +453,6 @@ fun AppNavHost(
                     SettingsScreen(
                         onAppIconSettingsClick = { navController.navigate(Screen.AppIconSettings.route) },
                         onProgressProfileClick = { navController.navigate(Screen.ProgressProfile.route) }
-                    )
-                }
-
-                composable(Screen.OpdsCatalog.route) {
-                    val libraryVm: LibraryViewModel = hiltViewModel()
-                    io.leostrange.mrcomic.feature.library.opds.OpdsCatalogScreen(
-                        onNavigateBack = { navController.popBackStack() },
-                        onBookDownloaded = { file ->
-                            libraryVm.addComicFromUri(android.net.Uri.fromFile(file))
-                            navController.popBackStack()
-                        }
                     )
                 }
 
@@ -654,14 +654,18 @@ private fun AppBottomBar(
     menuItems: List<NavItem>,
     onNavigate: (String) -> Unit
 ) {
-    MrComicBottomNavigationBar {
-        menuItems.forEach { item ->
-            MrComicBottomNavigationItem(
-                icon = item.icon,
+    MrComicBottomBar(
+        destinations = menuItems.map { item ->
+            MrComicBottomBarDestination(
+                route = item.route,
                 label = item.label,
-                selected = currentRoute == item.route,
-                onClick = { onNavigate(item.destination) }
+                icon = item.icon,
             )
+        },
+        currentRoute = currentRoute,
+        onDestinationClick = { destination ->
+            val item = menuItems.firstOrNull { it.route == destination.route }
+            if (item != null) onNavigate(item.destination)
         }
-    }
+    )
 }

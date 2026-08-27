@@ -9,7 +9,8 @@ internal sealed interface ReaderWebViewRuntimeEffect {
 
     data class Restore(
         val generation: Long,
-        val target: ReaderWebViewRestoreTarget
+        val target: ReaderWebViewRestoreTarget,
+        val attempt: Int = 1
     ) : ReaderWebViewRuntimeEffect
 
     data class PublishReady(

@@ -44,11 +44,12 @@ class ReaderViewportGeometryTest {
             densityScale = 2.75f
         )
 
-        // VERTICAL-01/02: hidden toolbars add 8px safety margin
-        // top: (84 + 0 + 0 + 8) / 2.75 ≈ 33 CSS px
-        assertEquals(33, geo.contentTopInsetCssPx)
-        // bottom: (126 + 0 + 0 + 8) / 2.75 ≈ 49 CSS px
-        assertEquals(49, geo.contentBottomInsetCssPx)
+        // BUG-PAGED-02 / T1: System insets are NOT included in CSS insets —
+        // they are already handled by Compose WindowInsetsPadding modifier.
+        // top: round((4 safety) / 2.75) = 1 → coerced up to MIN_INSET_CSS_PX = 2
+        assertEquals(2, geo.contentTopInsetCssPx)
+        // bottom: same symmetric calculation → 2
+        assertEquals(2, geo.contentBottomInsetCssPx)
     }
 
     // ── Toolbars visible ────────────────────────────────────────────────
@@ -85,10 +86,11 @@ class ReaderViewportGeometryTest {
             densityScale = 2.75f
         )
 
-        // 252 / 2.75 ≈ 92 CSS px
-        assertEquals(92, geo.contentTopInsetCssPx)
-        // 318 / 2.75 ≈ 116 CSS px
-        assertEquals(116, geo.contentBottomInsetCssPx)
+        // BUG-PAGED-02 / T1: System insets are NOT included in CSS insets.
+        // top: (168 chrome + 0 reader padding + 0 safety) / 2.75 ≈ 61 CSS px
+        assertEquals(61, geo.contentTopInsetCssPx)
+        // bottom: (192 chrome + 0 reader padding + 0 safety) / 2.75 ≈ 70 CSS px
+        assertEquals(70, geo.contentBottomInsetCssPx)
     }
 
     // ── Display cutout ──────────────────────────────────────────────────
@@ -193,8 +195,9 @@ class ReaderViewportGeometryTest {
         )
 
         // Should not crash, densityScale clamped to 1
-        // VERTICAL-01: safety margin 8px added when toolbars hidden
-        assertEquals(92, geo.contentTopInsetCssPx)
+        // BUG-PAGED-02 / T1: System insets are NOT included in CSS insets.
+        // top: (0 chrome + 0 reader padding + 4 safety) / 1 = 4 CSS px
+        assertEquals(4, geo.contentTopInsetCssPx)
     }
     // ── Chrome-reserve-only CSS insets (LAYOUT-02) ─────────────────────
 
