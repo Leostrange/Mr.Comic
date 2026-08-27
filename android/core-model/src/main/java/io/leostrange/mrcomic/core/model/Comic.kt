@@ -115,7 +115,17 @@ fun readingProgressForPage(currentPage: Int, pageCount: Int): Float {
 }
 
 /** Progress suitable for display, including protection from legacy placeholder 100% values. */
-fun Comic.displayReadingProgress(): Float = when (readingStatus()) {
+fun Comic.displayReadingProgress(): Float {
+    // RTF files frequently arrive from legacy imports with a stale 1.0 value.
+    // Do not expose that placeholder until the reader has persisted a real
+    // position or the title was explicitly completed.
+    if (format == ComicFormat.RTF && !isCompleted &&
+        storedReaderLocator()?.progression == null && readingProgress >= 0.999f &&
+        !(pageCount > 1 && currentPage >= pageCount - 1)
+    ) {
+        return 0f
+    }
+    return when (readingStatus()) {
     ComicReadingStatus.NEW -> 0f
     ComicReadingStatus.COMPLETED -> 1f
     ComicReadingStatus.READING -> {
@@ -136,6 +146,7 @@ fun Comic.displayReadingProgress(): Float = when (readingStatus()) {
             if (stored >= 0.999f && storedReaderLocator() == null) 0f else stored
         }
     }
+}
 }
 
 fun Comic.storedReaderLocator(): ReaderLocator? {

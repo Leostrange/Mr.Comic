@@ -107,7 +107,9 @@ internal fun ReaderAutoScrollChromeControls(
     onSpeedCommit: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var expanded by rememberSaveable { mutableStateOf(true) }
+    // Keep the chrome compact on every fresh reader open. The detailed controls
+    // are still available behind the explicit expand action.
+    var expanded by rememberSaveable { mutableStateOf(false) }
     var draftSpeed by remember(speed) {
         mutableFloatStateOf(ReaderAutoScrollPrecision.normalize(speed))
     }
