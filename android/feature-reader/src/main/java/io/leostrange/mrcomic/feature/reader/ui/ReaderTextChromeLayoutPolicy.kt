@@ -7,8 +7,8 @@ internal data class ReaderTextChromeLayoutInsets(
 
 /**
  * Reader chrome is an overlay and must not change text wrapping or page
- * boundaries. The persistent text gutter is kept symmetrically in CSS; only
- * measured chrome insets are added when they are larger than that gutter.
+ * boundaries. The persistent text gutter is kept symmetrically in CSS. The
+ * measured chrome bounds are intentionally ignored because chrome is overlay.
  */
 internal fun resolveReaderTextChromeLayoutInsets(
     measuredTopCssPx: Int,
@@ -19,8 +19,7 @@ internal fun resolveReaderTextChromeLayoutInsets(
     require(measuredBottomCssPx >= 0)
     require(persistentGutterCssPx >= 0)
     val gutter = persistentGutterCssPx.coerceAtLeast(0)
-    return ReaderTextChromeLayoutInsets(
-        topCssPx = maxOf(measuredTopCssPx, gutter),
-        bottomCssPx = maxOf(measuredBottomCssPx, gutter),
-    )
+    // Keep parameters validated for the geometry contract, but never feed the
+    // panel height into reflow: opening chrome must not move the current page.
+    return ReaderTextChromeLayoutInsets(topCssPx = gutter, bottomCssPx = gutter)
 }

@@ -18,6 +18,6 @@ class ReaderTextChromeLayoutPolicyTest {
         )
 
         assertEquals(ReaderTextChromeLayoutInsets(18, 18), hidden)
-        assertEquals(ReaderTextChromeLayoutInsets(196, 236), visible)
+        assertEquals(ReaderTextChromeLayoutInsets(18, 18), visible)
     }
 }
