@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
@@ -62,23 +61,16 @@ internal fun EmptyLibraryPlaceholder(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(Modifier.height(24.dp))
-        MrComicButton(
-            onClick = onAddFile,
-            variant = MrComicButtonVariant.Filled
-        ) {
-            Icon(Icons.AutoMirrored.Filled.InsertDriveFile, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(strings.libraryOpenFile)
-        }
-        Spacer(Modifier.height(8.dp))
-        MrComicButton(
-            onClick = onAddFolder,
-            variant = MrComicButtonVariant.Outlined
-        ) {
-            Icon(Icons.Default.FolderOpen, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text(strings.libraryOpenFolder)
-        }
+        Text(
+            text = if (strings.languageCode == "en") {
+                "Use the top menu to add a file or folder."
+            } else {
+                "Файлы и папки добавляются через верхнее меню."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

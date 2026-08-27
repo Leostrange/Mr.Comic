@@ -350,16 +350,19 @@ internal fun FolderCover(
                 title = title,
                 kind = LibraryFallbackCoverKind.FOLDER,
                 shape = RoundedCornerShape(12.dp),
+                showIcon = false,
                 modifier = Modifier.fillMaxSize(),
             )
         }
-        FolderCoverTreatment(
-            title = title,
-            hasCover = hasCover,
-            fileCount = fileCount,
-            subfolderCount = subfolderCount,
-            modifier = Modifier.fillMaxSize()
-        )
+        if (hasCover) {
+            FolderCoverTreatment(
+                title = title,
+                hasCover = true,
+                fileCount = fileCount,
+                subfolderCount = subfolderCount,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         if (showTitleOverlay) {
             Box(
                 modifier = Modifier
