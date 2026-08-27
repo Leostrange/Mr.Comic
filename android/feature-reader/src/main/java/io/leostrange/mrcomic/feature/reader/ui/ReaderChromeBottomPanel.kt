@@ -38,7 +38,7 @@ fun ReaderExpandedBottomPanel(
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
-    val showReadingPresets = uiState.currentHtmlContent != null
+    val showReadingPresets = true
     val useCompactLandscapeImagePanel = isLandscape && !showReadingPresets
 
     if (useCompactLandscapeImagePanel) {
@@ -63,13 +63,23 @@ fun ReaderExpandedBottomPanel(
             modifier = Modifier.padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ReaderPanelChip(
-                selected = uiState.currentPage in uiState.bookmarkedPages,
-                onClick = onToggleBookmark,
-                label = {
-                    Text(if (uiState.currentPage in uiState.bookmarkedPages) strings.readerBookmarked else strings.readerBookmark)
-                }
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                ReaderPanelChip(
+                    selected = uiState.currentPage in uiState.bookmarkedPages,
+                    onClick = onToggleBookmark,
+                    label = { Text(if (uiState.currentPage in uiState.bookmarkedPages) strings.readerBookmarked else strings.readerBookmark) }
+                )
+                ReaderPanelChip(
+                    selected = uiState.readingMode != ReadingMode.WEBTOON,
+                    onClick = { onReadingModeChange(ReadingMode.PAGE_LTR) },
+                    label = { Text(strings.readerPages) }
+                )
+                ReaderPanelChip(
+                    selected = uiState.readingMode == ReadingMode.WEBTOON,
+                    onClick = { onReadingModeChange(ReadingMode.WEBTOON) },
+                    label = { Text(strings.readingModeWebtoon) }
+                )
+            }
             if (showReadingPresets) {
                 Text(
                     text = strings.readerReadingPresets,
@@ -113,7 +123,8 @@ fun ReaderExpandedBottomPanel(
             freeScrollProgression = uiState.freeScrollProgression,
             rasterWebtoonScrollProgression = uiState.rasterWebtoonScrollProgression,
             onReadingModeChange = onReadingModeChange,
-            onPageChange = onPageChange
+            onPageChange = onPageChange,
+            showReadingModeControls = false
         )
     }
 }

@@ -40,6 +40,7 @@ fun ReaderBottomBar(
     onReadingModeChange: (ReadingMode) -> Unit,
     onPageChange: (Int) -> Unit,
     onProgressionChange: ((Float) -> Unit)? = null,
+    showReadingModeControls: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val strings = LocalStrings.current
@@ -104,7 +105,9 @@ fun ReaderBottomBar(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
-                if (isLandscape && !isTextBook) {
+                if (!showReadingModeControls) {
+                    Spacer(Modifier.weight(1f))
+                } else if (isLandscape && !isTextBook) {
                     ReaderPanelChip(
                         selected = true,
                         onClick = {},

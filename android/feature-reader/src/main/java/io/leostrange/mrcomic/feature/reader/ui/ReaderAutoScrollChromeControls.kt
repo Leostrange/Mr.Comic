@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -25,7 +25,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,17 +107,12 @@ internal fun ReaderAutoScrollChromeControls(
     onSpeedCommit: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var expanded by rememberSaveable { mutableStateOf(true) }
     var draftSpeed by remember(speed) {
         mutableFloatStateOf(ReaderAutoScrollPrecision.normalize(speed))
     }
     val normalizedProgress = countdownProgress.coerceIn(0f, 1f)
     val canCountDown = autoScrollEnabled && !isTemporarilyPaused && readingMode != ReadingMode.WEBTOON
-    val buttonDescription = if (autoScrollEnabled) {
-        "Остановить автопрокрутку"
-    } else {
-        "Запустить автопрокрутку"
-    }
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -127,17 +124,19 @@ internal fun ReaderAutoScrollChromeControls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
-                onClick = onToggleAutoScroll,
-                modifier = Modifier.semantics { contentDescription = buttonDescription },
+                onClick = { expanded = !expanded },
+                modifier = Modifier.semantics {
+                    contentDescription = if (expanded) {
+                        "Свернуть настройки автопрокрутки"
+                    } else {
+                        "Развернуть настройки автопрокрутки"
+                    }
+                },
             ) {
                 Icon(
-                    imageVector = if (autoScrollEnabled) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    imageVector = if (expanded) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
                     contentDescription = null,
-                    tint = if (autoScrollEnabled) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
@@ -165,6 +164,8 @@ internal fun ReaderAutoScrollChromeControls(
                 color = MaterialTheme.colorScheme.primary,
             )
         }
+
+        if (expanded) {
 
         Text(
             text = if (readingMode == ReadingMode.WEBTOON) {
@@ -261,6 +262,7 @@ internal fun ReaderAutoScrollChromeControls(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
         }
     }
 }
