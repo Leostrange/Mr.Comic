@@ -5,17 +5,19 @@ import org.junit.Test
 
 class ReaderTextChromeLayoutPolicyTest {
     @Test
-    fun visibleChrome_doesNotChangeTextLayoutInsets() {
+    fun textKeepsSymmetricPersistentGutterWhenChromeIsHidden() {
         val hidden = resolveReaderTextChromeLayoutInsets(
             measuredTopCssPx = 0,
             measuredBottomCssPx = 0,
+            persistentGutterCssPx = 18,
         )
         val visible = resolveReaderTextChromeLayoutInsets(
             measuredTopCssPx = 196,
             measuredBottomCssPx = 236,
+            persistentGutterCssPx = 18,
         )
 
-        assertEquals(ReaderTextChromeLayoutInsets(0, 0), hidden)
-        assertEquals(hidden, visible)
+        assertEquals(ReaderTextChromeLayoutInsets(18, 18), hidden)
+        assertEquals(ReaderTextChromeLayoutInsets(196, 236), visible)
     }
 }

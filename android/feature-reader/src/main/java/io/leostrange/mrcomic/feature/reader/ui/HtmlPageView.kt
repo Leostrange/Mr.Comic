@@ -3,6 +3,7 @@ package io.leostrange.mrcomic.feature.reader.ui
 import android.os.Build
 import android.webkit.WebSettings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,8 +14,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebViewAssetLoader
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.core.ui.theme.style
@@ -161,6 +165,8 @@ internal fun HtmlPageView(
         FreeScrollPositionHolder(null)
     }
     val runtimeOwner = remember { ReaderWebViewRuntimeOwner() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val webViewReference = remember { mutableStateOf<ReaderWebView?>(null) }
     val loadController = runtimeOwner.loadController
     val pageSource = rememberReaderHtmlPageSource(
         controller = loadController,
@@ -193,6 +199,22 @@ internal fun HtmlPageView(
     val currentHighlightsJs = rememberUpdatedState(highlightsJs)
     val currentCharOffset = rememberUpdatedState(sectionCharacterOffset)
     val onSelectionModeChange = rememberUpdatedState(onSelectionActionModeChange)
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                webViewReference.value?.let { webView ->
+                    webView.onResume()
+                    webView.resumeTimers()
+                    webView.invalidate()
+                    webView.requestLayout()
+                    webView.postDelayed({ webView.verifyVisibleContentOrFallback() }, 120L)
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     // Auto-scroll state — must be before AndroidView so the factory can capture it.
     val autoScrollPaused = remember { mutableStateOf(false) }
@@ -230,6 +252,7 @@ internal fun HtmlPageView(
         factory = { ctx ->
             ReaderWebView(ctx).apply {
                 val readerWebView = this
+                webViewReference.value = this
                 // ARC-11 slice 2b: bridge ReaderWebView.markLoadCommitted's token
                 // into the load controller so shouldRestoreScroll() follows the
                 // WebView's own commit lifecycle.
@@ -462,6 +485,7 @@ internal fun HtmlPageView(
             webView.applyHighlightsIfChanged(highlightsJs)
         },
         onRelease = { webView ->
+            if (webViewReference.value === webView) webViewReference.value = null
             autoScrollScrollLambda.value = null
             if (!webView.pagedModeScrollLock) {
                 webView.currentFreeScrollRestoreTarget()?.let { position ->

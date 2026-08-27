@@ -327,7 +327,10 @@ internal fun readerPagedCoreJs(
       while(current<contentHeight&&guard++<2000){
         var pageTopInset=pageInsetTop;
         var pageBottomInset=pageInsetBottom;
-        var pageBudget=Math.max(lineHeight*3,clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom-Math.max(4,Math.ceil(lineHeight*0.20)));
+        // Use the same line-quantized height that is reported as usableHeight.
+        // Deriving the budget from clipHeight separately lets fractional line
+        // space accumulate and causes a one-line drift on later pages.
+        var pageBudget=Math.max(lineHeight*3,usableHeight);
         if(pages.length===0&&current<=firstPageOffset+1&&mediaFirstPageBottom>current+lineHeight*2){
           var nextStartAfterMedia=contentHeight;
           for(var frontIdx=0;frontIdx<blockStarts.length;frontIdx++){

@@ -7,14 +7,20 @@ internal data class ReaderTextChromeLayoutInsets(
 
 /**
  * Reader chrome is an overlay and must not change text wrapping or page
- * boundaries. Safe system bars and the persistent one-line text gutter are
- * handled by the Compose modifier around the WebView.
+ * boundaries. The persistent text gutter is kept symmetrically in CSS; only
+ * measured chrome insets are added when they are larger than that gutter.
  */
 internal fun resolveReaderTextChromeLayoutInsets(
     measuredTopCssPx: Int,
     measuredBottomCssPx: Int,
+    persistentGutterCssPx: Int = 0,
 ): ReaderTextChromeLayoutInsets {
     require(measuredTopCssPx >= 0)
     require(measuredBottomCssPx >= 0)
-    return ReaderTextChromeLayoutInsets(topCssPx = 0, bottomCssPx = 0)
+    require(persistentGutterCssPx >= 0)
+    val gutter = persistentGutterCssPx.coerceAtLeast(0)
+    return ReaderTextChromeLayoutInsets(
+        topCssPx = maxOf(measuredTopCssPx, gutter),
+        bottomCssPx = maxOf(measuredBottomCssPx, gutter),
+    )
 }

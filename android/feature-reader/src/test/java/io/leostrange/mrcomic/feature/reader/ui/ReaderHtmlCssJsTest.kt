@@ -378,6 +378,20 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun readerPagedLayoutJs_usesLineQuantizedUsableHeightForEveryPageBudget() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "page boundaries must use the same quantized height as the reported usable viewport",
+            js.contains("var pageBudget=Math.max(lineHeight*3,usableHeight);")
+        )
+        assertFalse(
+            "page boundaries must not use a second independently rounded clip-height formula",
+            js.contains("clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom")
+        )
+    }
+
+    @Test
     fun readerPagedLayoutJs_masksFractionalBoundaryBeforeTheNextLine() {
         val js = readerPagedLayoutJs(targetPage = 0)
 

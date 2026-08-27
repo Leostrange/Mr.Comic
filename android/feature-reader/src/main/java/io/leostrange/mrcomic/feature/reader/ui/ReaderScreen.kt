@@ -546,12 +546,10 @@ fun ReaderScreen(
                     val textReaderModifier = Modifier
                         .fillMaxSize()
                         .then(textSystemInsetsModifier)
-                        .padding(
-                            vertical = with(density) { textSentenceInsetPx.toDp() }
-                        )
                     val textChromeLayoutInsets = resolveReaderTextChromeLayoutInsets(
                         measuredTopCssPx = viewportGeometry.chromeTopInsetCssPx,
                         measuredBottomCssPx = viewportGeometry.chromeBottomInsetCssPx,
+                        persistentGutterCssPx = (textSentenceInsetPx / density.density).roundToInt(),
                     )
                     val imageReaderModifier = Modifier
                         .fillMaxSize()
