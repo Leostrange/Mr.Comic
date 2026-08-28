@@ -207,7 +207,8 @@ fun ReaderScreen(
             startSlot = left, centerSlot = center, endSlot = right,
             comicTitle = uiState.comic?.title, chapterTitle = currentChapterTitle,
             clockText = clockText, currentPage = effectiveCurrentPage,
-            totalPages = effectiveTotalPages, readingMode = uiState.readingMode
+            totalPages = effectiveTotalPages, readingMode = uiState.readingMode,
+            canonicalProgressPercent = uiState.effectiveProgressPercent
         )
     val headerOverlayLine = remember(
         uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot,
@@ -545,12 +546,24 @@ fun ReaderScreen(
                     }
                     val textReaderModifier = Modifier
                         .fillMaxSize()
-                        .then(textSystemInsetsModifier)
                     val textChromeLayoutInsets = resolveReaderTextChromeLayoutInsets(
                         measuredTopCssPx = viewportGeometry.chromeTopInsetCssPx,
                         measuredBottomCssPx = viewportGeometry.chromeBottomInsetCssPx,
-                        persistentGutterCssPx = (textSentenceInsetPx / density.density).roundToInt(),
+                        // Keep one full line of air at each edge and one equal
+                        // line-sized safety step between the text and an
+                        // overlaid chrome bar. This reserve is constant, so
+                        // opening/closing chrome cannot reflow the document.
+                        persistentGutterCssPx = (
+                            readerTextTwoLineGutterPx(textSentenceInsetPx) / density.density
+                        ).roundToInt(),
+                        persistentGutterPx = readerTextTwoLineGutterPx(textSentenceInsetPx),
                     )
+                    val stableTextReaderModifier = textReaderModifier
+                        .then(textSystemInsetsModifier)
+                        .padding(
+                            top = with(density) { textChromeLayoutInsets.outerTopPx.toDp() },
+                            bottom = with(density) { textChromeLayoutInsets.outerBottomPx.toDp() },
+                        )
                     val imageReaderModifier = Modifier
                         .fillMaxSize()
                         .then(
@@ -576,7 +589,7 @@ fun ReaderScreen(
                         effectiveMarginCropHorizontal = effectiveMarginCropHorizontal,
                         effectiveMarginCropVertical = effectiveMarginCropVertical,
                         effectivePageImageScaleMode = effectivePageImageScaleMode,
-                        textReaderModifier = textReaderModifier,
+                        textReaderModifier = stableTextReaderModifier,
                         imageReaderModifier = imageReaderModifier,
                         textChromeTopInsetCssPx = textChromeLayoutInsets.topCssPx,
                         textChromeBottomInsetCssPx = textChromeLayoutInsets.bottomCssPx,

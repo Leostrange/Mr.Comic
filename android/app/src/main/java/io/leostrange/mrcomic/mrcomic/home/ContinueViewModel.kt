@@ -69,9 +69,15 @@ internal enum class ContinueReturnSupportTone {
 internal fun resolveContinueStartupData(
     liveComics: List<Comic>,
     liveTrail: List<ReaderCheckpoint>,
-    warmState: ContinueWarmState
+    warmState: ContinueWarmState,
+    liveDataReady: Boolean = false
 ): ContinueResolvedStartupData {
     return when {
+        liveDataReady -> ContinueResolvedStartupData(
+            comics = liveComics,
+            trail = liveTrail,
+            isLoading = false
+        )
         liveComics.isNotEmpty() -> ContinueResolvedStartupData(
             comics = liveComics,
             trail = liveTrail,
@@ -146,7 +152,8 @@ class ContinueViewModel @Inject constructor(
             val startupData = resolveContinueStartupData(
                 liveComics = inputs.comics,
                 liveTrail = inputs.trail,
-                warmState = warmState
+                warmState = warmState,
+                liveDataReady = true
             )
             val comics = startupData.comics
             val trail = startupData.trail

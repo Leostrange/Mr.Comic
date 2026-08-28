@@ -1,6 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,6 +16,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -208,6 +210,13 @@ internal fun ReaderStyleTab(
                 }
             }
             if (supportsMarginCrop) {
+                item {
+                    ReaderGraphicCropPreview(
+                        horizontalCrop = uiState.imageMarginCropHorizontal,
+                        verticalCrop = uiState.imageMarginCropVertical,
+                        language = strings.languageCode
+                    )
+                }
                 item {
                     Text(
                         text = readerMarginCropHint(strings.languageCode),
@@ -526,6 +535,94 @@ internal fun ReaderStyleTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(readerText.resetDefaults)
+            }
+        }
+    }
+}
+
+/**
+ * A deliberately simple crop preview: the muted bands are the part removed
+ * from the page, so vertical cropping stays visible while its slider is being
+ * adjusted in the bottom sheet.
+ */
+@Composable
+private fun ReaderGraphicCropPreview(
+    horizontalCrop: Float,
+    verticalCrop: Float,
+    language: String
+) {
+    val horizontal = horizontalCrop.coerceIn(0f, 0.18f)
+    val vertical = verticalCrop.coerceIn(0f, 0.18f)
+    val removedLabel = when (language) {
+        "en" -> "Removed margins"
+        "ja" -> "トリミング範囲"
+        "zh" -> "已裁剪边缘"
+        "ko" -> "잘린 여백"
+        else -> "Подрезаемые поля"
+    }
+    ReaderSettingsCard {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(removedLabel, style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = "${(vertical * 100f).toInt()}% · ${(horizontal * 100f).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(112.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(
+                            horizontal = (horizontal * 90f).dp,
+                            vertical = (vertical * 90f).dp
+                        )
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        repeat(4) { index ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(if (index == 1) 0.78f else 1f)
+                                    .height(6.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                        RoundedCornerShape(50)
+                                    )
+                            )
+                        }
+                    }
+                }
+                if (vertical > 0f) {
+                    val bandHeight = (vertical * 180f).dp
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(bandHeight)
+                            .align(Alignment.TopCenter)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(bandHeight)
+                            .align(Alignment.BottomCenter)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                    )
+                }
             }
         }
     }

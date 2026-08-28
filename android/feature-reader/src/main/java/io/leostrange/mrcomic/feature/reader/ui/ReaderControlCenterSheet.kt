@@ -34,12 +34,6 @@ internal enum class ReaderChromeEditorTab {
     ORDER
 }
 
-internal data class ReaderAutoScrollActions(
-    val toggle: () -> Unit,
-    val previewSpeed: (Float) -> Unit,
-    val commitSpeed: (Float) -> Unit
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ReaderControlCenterSheet(
@@ -104,8 +98,7 @@ internal fun ReaderControlCenterSheet(
     onTtsSpeedChange: (Float) -> Unit,
     onTtsPitchChange: (Float) -> Unit,
     onTtsVolumeChange: (Float) -> Unit,
-    onTtsSleepTimerChange: (String) -> Unit,
-    autoScrollActions: ReaderAutoScrollActions
+    onTtsSleepTimerChange: (String) -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
@@ -254,10 +247,7 @@ internal fun ReaderControlCenterSheet(
                         onTtsSpeedChange = onTtsSpeedChange,
                         onTtsPitchChange = onTtsPitchChange,
                         onTtsVolumeChange = onTtsVolumeChange,
-                        onTtsSleepTimerChange = onTtsSleepTimerChange,
-                        onAutoScrollToggle = autoScrollActions.toggle,
-                        onAutoScrollSpeedPreview = autoScrollActions.previewSpeed,
-                        onAutoScrollSpeedCommit = autoScrollActions.commitSpeed
+                        onTtsSleepTimerChange = onTtsSleepTimerChange
                     )
                 }
             }

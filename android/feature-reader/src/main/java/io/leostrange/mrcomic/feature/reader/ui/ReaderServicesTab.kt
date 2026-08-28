@@ -31,10 +31,7 @@ internal fun ReaderServicesTab(
     onTtsSpeedChange: (Float) -> Unit,
     onTtsPitchChange: (Float) -> Unit,
     onTtsVolumeChange: (Float) -> Unit,
-    onTtsSleepTimerChange: (String) -> Unit,
-    onAutoScrollToggle: () -> Unit,
-    onAutoScrollSpeedPreview: (Float) -> Unit,
-    onAutoScrollSpeedCommit: (Float) -> Unit
+    onTtsSleepTimerChange: (String) -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
@@ -56,19 +53,6 @@ internal fun ReaderServicesTab(
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         item { ReaderSectionTitle(readerText.servicesQuickActionsTitle) }
-        item { ReaderSectionTitle("Авточтение") }
-        item {
-            ReaderAutoScrollChromeControls(
-                speed = uiState.autoScrollSpeed,
-                readingMode = uiState.readingMode,
-                autoScrollEnabled = uiState.autoScrollEnabled,
-                isTemporarilyPaused = uiState.isAutoScrollTemporarilyPaused,
-                countdownProgress = uiState.autoScrollCountdownProgress,
-                onToggleAutoScroll = onAutoScrollToggle,
-                onSpeedPreview = onAutoScrollSpeedPreview,
-                onSpeedCommit = onAutoScrollSpeedCommit
-            )
-        }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 item("ocr") {

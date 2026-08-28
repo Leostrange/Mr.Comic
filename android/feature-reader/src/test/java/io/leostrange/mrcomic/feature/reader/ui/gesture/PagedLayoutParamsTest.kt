@@ -15,7 +15,7 @@ class PagedLayoutParamsTest {
     // ── Usable page height ─────────────────────────────────────────────────
 
     @Test
-    fun calculateUsablePageHeight_typicalPhone_returnsLineAligned() {
+    fun calculateUsablePageHeight_typicalPhone_returnsCompleteBudget() {
         // 800px viewport, 24px top, 48px bottom, 27px line height
         val result = PagedLayoutParams.calculateUsablePageHeight(
             viewportHeightPx = 800,
@@ -24,10 +24,8 @@ class PagedLayoutParamsTest {
             lineHeightPx = 27f
         )
         // clipHeight = max(81, 800) = 800
-        // rawUsable = max(81, 800 - 24 - 48 - max(2, 3.24)) = max(81, 724.76) = 724.76
-        // usableLineCount = max(3, floor(724.76/27)) = max(3, 26) = 26
-        // usableHeight = max(81, 26*27) = max(81, 702) = 702
-        assertEquals(702, result)
+        // rawUsable = max(81, 800 - 24 - 48) = 728
+        assertEquals(728, result)
     }
 
     @Test
@@ -40,10 +38,8 @@ class PagedLayoutParamsTest {
             lineHeightPx = 27f
         )
         // clipHeight = max(81, 200) = 200
-        // rawUsable = max(81, 200 - 24 - 48 - 3.24) = max(81, 124.76) = 124.76
-        // usableLineCount = max(3, floor(124.76/27)) = max(3, 4) = 4
-        // usableHeight = max(81, 4*27) = max(81, 108) = 108
-        assertEquals(108, result)
+        // rawUsable = max(81, 200 - 24 - 48) = 128
+        assertEquals(128, result)
     }
 
     @Test
@@ -55,10 +51,8 @@ class PagedLayoutParamsTest {
             lineHeightPx = 24f
         )
         // clipHeight = max(72, 900) = 900
-        // rawUsable = max(72, 900 - 0 - 0 - max(2, 2.88)) = max(72, 897.12) = 897.12
-        // usableLineCount = max(3, floor(897.12/24)) = max(3, 37) = 37
-        // usableHeight = max(72, 37*24) = max(72, 888) = 888
-        assertEquals(888, result)
+        // rawUsable = max(72, 900 - 0 - 0) = 900
+        assertEquals(900, result)
     }
 
     @Test
@@ -71,20 +65,48 @@ class PagedLayoutParamsTest {
             lineHeightPx = 0f
         )
         // Same as typical phone test with lineHeight=27
-        assertEquals(702, result)
+        assertEquals(728, result)
     }
 
     @Test
-    fun calculateUsablePageHeight_resultIsMultipleOfLineHeight() {
-        // Result should always be a multiple of lineHeight (line-aligned)
-        val lineHeight = 30f
+    fun calculateUsablePageHeight_preservesNonLineAlignedViewportRemainder() {
+        val result = PagedLayoutParams.calculateUsablePageHeight(
+            viewportHeightPx = 997,
+            topInsetPx = 41,
+            bottomInsetPx = 42,
+            lineHeightPx = 30f,
+        )
+        assertEquals(914, result)
+    }
+
+    @Test
+    fun calculateUsablePageHeight_doesNotDropAnExtraLineForSafetyMargin() {
         val result = PagedLayoutParams.calculateUsablePageHeight(
             viewportHeightPx = 1000,
-            topInsetPx = 50,
-            bottomInsetPx = 50,
-            lineHeightPx = lineHeight
+            topInsetPx = 40,
+            bottomInsetPx = 40,
+            lineHeightPx = 40f
         )
-        assertEquals(0, result % lineHeight.toInt())
+
+        // The two 40px insets are the complete top/bottom gutter contract.
+        // A second safety subtraction would floor 850/40 to 21 lines and
+        // visibly create a third line of empty space at the bottom.
+        assertEquals(920, result)
+    }
+
+    @Test
+    fun calculateUsablePageHeight_keepsFractionalLineRemainderInsidePageBudget() {
+        val result = PagedLayoutParams.calculateUsablePageHeight(
+            viewportHeightPx = 800,
+            topInsetPx = 24,
+            bottomInsetPx = 48,
+            lineHeightPx = 27f,
+        )
+
+        // The complete viewport budget is 728px. Flooring it to 26 lines
+        // returns 702px and turns the remaining 26px into a visible third
+        // bottom gutter even though the outer container already owns two.
+        assertEquals(728, result)
     }
 
     @Test

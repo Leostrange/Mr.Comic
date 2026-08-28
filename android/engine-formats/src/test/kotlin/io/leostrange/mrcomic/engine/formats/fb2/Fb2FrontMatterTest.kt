@@ -16,6 +16,44 @@ import java.io.File
 class Fb2FrontMatterTest {
 
     @Test
+    fun untitledTopLevelFragmentsDoNotCreateAlmostEmptyPages() = runBlocking {
+        val sample = File.createTempFile("mrcomic-untitled-fragments", ".fb2")
+        sample.writeText(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0">
+              <description><title-info><book-title>Fragments</book-title><lang>ru</lang></title-info></description>
+              <body>
+                <section id="fragment-a"><p>Короткий остаток первой части.</p></section>
+                <section id="fragment-b"><p>Продолжение того же текста без заголовка.</p></section>
+                <section id="chapter-two">
+                  <title><p>Глава вторая</p></title>
+                  <p>Новая глава должна начинаться отдельно.</p>
+                </section>
+              </body>
+            </FictionBook>
+            """.trimIndent()
+        )
+
+        val reader = Fb2FormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val pages = (0 until reader.getPageCount()).mapNotNull { reader.getHtmlPage(it) }
+
+            assertEquals("Untitled fragments should share one reader page", 2, pages.size)
+            assertTrue(pages[0].contains("Короткий остаток"))
+            assertTrue(pages[0].contains("Продолжение того же текста"))
+            assertFalse(pages[0].contains("Глава вторая"))
+            assertTrue(pages[1].contains("Глава вторая"))
+            assertEquals(0, reader.resolveHrefToPage("#fragment-a"))
+            assertEquals(0, reader.resolveHrefToPage("#fragment-b"))
+            assertEquals(1, reader.resolveHrefToPage("#chapter-two"))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
+    @Test
     fun coverSynopsisTocAndFirstChapterRemainSeparateAndLinked() = runBlocking {
         val sample = File.createTempFile("mrcomic-front-matter", ".fb2")
         sample.writeText(

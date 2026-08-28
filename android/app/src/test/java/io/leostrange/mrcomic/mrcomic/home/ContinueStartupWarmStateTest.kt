@@ -64,6 +64,25 @@ class ContinueStartupWarmStateTest {
         assertEquals("live-1", resolved.trail.first().comicId)
     }
 
+    @Test
+    fun doesNotRestoreWarmSnapshotAfterLiveLibraryBecomesEmpty() {
+        val resolved = resolveContinueStartupData(
+            liveComics = emptyList(),
+            liveTrail = emptyList(),
+            warmState = ContinueWarmState.Ready(
+                ContinueWarmSnapshot(
+                    comics = listOf(sampleComic("deleted")),
+                    trail = listOf(sampleCheckpoint("deleted"))
+                )
+            ),
+            liveDataReady = true
+        )
+
+        assertFalse(resolved.isLoading)
+        assertTrue(resolved.comics.isEmpty())
+        assertTrue(resolved.trail.isEmpty())
+    }
+
     private fun sampleComic(id: String): Comic = Comic(
         id = id,
         title = "Sample",

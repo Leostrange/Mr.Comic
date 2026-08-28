@@ -119,9 +119,10 @@ fun Comic.displayReadingProgress(): Float {
     // RTF files frequently arrive from legacy imports with a stale 1.0 value.
     // Do not expose that placeholder until the reader has persisted a real
     // position or the title was explicitly completed.
-    if (format == ComicFormat.RTF && !isCompleted &&
+    if (format == ComicFormat.RTF &&
         storedReaderLocator()?.progression == null && readingProgress >= 0.999f &&
-        !(pageCount > 1 && currentPage >= pageCount - 1)
+        !(pageCount > 1 && currentPage >= pageCount - 1) &&
+        pageCount <= 1
     ) {
         return 0f
     }

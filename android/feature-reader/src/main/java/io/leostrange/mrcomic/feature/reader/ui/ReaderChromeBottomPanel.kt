@@ -187,7 +187,7 @@ private fun ReaderCompactLandscapeBottomPanel(
             Spacer(Modifier.weight(1f))
 
             Text(
-                text = "${currentPage + 1} / $totalPages",
+                text = if (totalPages > 1) "${currentPage.coerceIn(0, totalPages - 1) + 1} / $totalPages" else "1 / …",
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelMedium
             )

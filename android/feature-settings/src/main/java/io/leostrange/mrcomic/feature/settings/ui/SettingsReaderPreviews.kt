@@ -155,7 +155,7 @@ internal fun ReaderPageLayoutPreviewCard(
         MrComicCardSurface(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 172.dp),
+                .heightIn(max = 274.dp),
             shape = previewShape,
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
@@ -226,6 +226,94 @@ internal fun ReaderPageLayoutPreviewCard(
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                ReaderImageCropPreview(
+                    horizontalCrop = uiState.readerImageMarginCropHorizontal,
+                    verticalCrop = uiState.readerImageMarginCropVertical,
+                    language = strings.languageCode
+                )
+            }
+        }
+    }
+}
+
+/** Shows the removed top/bottom bands instead of hiding vertical crop in a slider. */
+@Composable
+private fun ReaderImageCropPreview(
+    horizontalCrop: Float,
+    verticalCrop: Float,
+    language: String
+) {
+    val horizontal = horizontalCrop.coerceIn(0f, 0.22f)
+    val vertical = verticalCrop.coerceIn(0f, 0.22f)
+    val title = when (language) {
+        "en" -> "PDF / DJVU crop preview"
+        "ja" -> "PDF / DJVU トリミングプレビュー"
+        "zh" -> "PDF / DJVU 裁剪预览"
+        "ko" -> "PDF / DJVU 자르기 미리보기"
+        else -> "Предпросмотр подрезки PDF / DJVU"
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(title, style = MaterialTheme.typography.labelMedium)
+            Text(
+                text = "${(vertical * 100f).toInt()}% · ${(horizontal * 100f).toInt()}%",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(92.dp)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(
+                        horizontal = (horizontal * 70f).dp,
+                        vertical = (vertical * 70f).dp
+                    )
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 10.dp, vertical = 7.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    repeat(4) { index ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(if (index == 1) 0.76f else 1f)
+                                .height(5.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+                                    MaterialTheme.shapes.small
+                                )
+                        )
+                    }
+                }
+            }
+            if (vertical > 0f) {
+                val bandHeight = (vertical * 140f).dp
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(bandHeight)
+                        .align(Alignment.TopCenter)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(bandHeight)
+                        .align(Alignment.BottomCenter)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
                 )
             }
         }

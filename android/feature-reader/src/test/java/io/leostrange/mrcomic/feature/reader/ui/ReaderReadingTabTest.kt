@@ -48,13 +48,14 @@ class ReaderReadingTabTest {
 
     private fun setTab(
         uiState: ReaderUiState = ReaderUiState(),
-        callbacks: Callbacks = Callbacks()
+        callbacks: Callbacks = Callbacks(),
+        isTextReader: Boolean = false
     ) {
         composeRule.setContent {
             CompositionLocalProvider(LocalStrings provides English) {
                 ReaderReadingTab(
                     uiState = uiState,
-                    isTextReader = false,
+                    isTextReader = isTextReader,
                     onReadingModeChange = { callbacks.readingMode = it },
                     onKeepScreenOnChange = { callbacks.keepScreenOn = it },
                     onScreenTimeoutChange = {},
@@ -143,7 +144,7 @@ class ReaderReadingTabTest {
 
     @Test
     fun `header and footer sliders render`() {
-        setTab()
+        setTab(isTextReader = true)
 
         scrollTo("Font size")
         composeRule.onNodeWithText("Font size").assertIsDisplayed()
@@ -153,6 +154,16 @@ class ReaderReadingTabTest {
         composeRule.onNodeWithText("Left inset").assertIsDisplayed()
         scrollTo("Right inset")
         composeRule.onNodeWithText("Right inset").assertIsDisplayed()
+    }
+
+    @Test
+    fun `header and footer typography sliders are hidden for graphic readers`() {
+        setTab(isTextReader = false)
+
+        composeRule.onAllNodesWithText("Font size").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Vertical padding").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Left inset").assertCountEquals(0)
+        composeRule.onAllNodesWithText("Right inset").assertCountEquals(0)
     }
 
     @Test

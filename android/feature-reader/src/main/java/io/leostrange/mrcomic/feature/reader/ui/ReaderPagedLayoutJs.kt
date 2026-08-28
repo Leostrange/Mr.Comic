@@ -118,9 +118,11 @@ internal fun readerPagedCoreJs(
     viewport.style.boxSizing='border-box';
     viewport.style.paddingTop='0px';
     viewport.style.paddingBottom='0px';
-    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom-Math.max(6,Math.ceil(lineHeight*0.25)));
-    var usableLineCount=Math.max(3,Math.floor(rawUsableHeight/lineHeight));
-    var usableHeight=Math.max(lineHeight*3,usableLineCount*lineHeight);
+    // The Compose reader container already owns the complete outer gutter.
+    // Keep the viewport remainder in the page budget. Quantizing this value
+    // down by lineHeight turns that remainder into a variable bottom gutter.
+    var rawUsableHeight=Math.max(lineHeight*3,clipHeight-pageInsetTop-pageInsetBottom);
+    var usableHeight=rawUsableHeight;
     root.style.setProperty('--mrcomic-page-visible-height',usableHeight+'px');
     root.style.setProperty('--mrcomic-page-inset-top',pageInsetTop+'px');
     root.style.setProperty('--mrcomic-page-inset-bottom',pageInsetBottom+'px');

@@ -378,16 +378,30 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
-    fun readerPagedLayoutJs_usesLineQuantizedUsableHeightForEveryPageBudget() {
+    fun readerPagedLayoutJs_usesSingleUsableHeightForEveryPageBudget() {
         val js = readerPagedLayoutJs(targetPage = 0)
 
         assertTrue(
-            "page boundaries must use the same quantized height as the reported usable viewport",
+            "page boundaries must use the same height as the reported usable viewport",
             js.contains("var pageBudget=Math.max(lineHeight*3,usableHeight);")
         )
         assertFalse(
-            "page boundaries must not use a second independently rounded clip-height formula",
+            "page boundaries must not use a second independent clip-height formula",
             js.contains("clipHeight-pageTopInset-pageBottomInset-bodyPaddingBottom")
+        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_doesNotConvertViewportRemainderIntoBottomGutter() {
+        val js = readerPagedLayoutJs(targetPage = 0)
+
+        assertTrue(
+            "the complete available viewport must be the page budget",
+            js.contains("var usableHeight=rawUsableHeight;")
+        )
+        assertFalse(
+            "flooring by line height creates a variable extra bottom gutter",
+            js.contains("Math.floor(rawUsableHeight/lineHeight)")
         )
     }
 

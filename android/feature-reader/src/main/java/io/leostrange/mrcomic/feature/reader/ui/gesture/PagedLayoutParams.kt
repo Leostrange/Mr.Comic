@@ -1,6 +1,5 @@
 package io.leostrange.mrcomic.feature.reader.ui.gesture
 
-import kotlin.math.floor
 import kotlin.math.max
 
 /**
@@ -16,16 +15,15 @@ object PagedLayoutParams {
      *
      * This mirrors the JS logic:
      * ```
-     * var rawUsableHeight = Math.max(lineHeight*3, clipHeight - pageInsetTop - pageInsetBottom - Math.max(2, lineHeight*0.12));
-     * var usableLineCount = Math.max(3, Math.floor(rawUsableHeight / lineHeight));
-     * var usableHeight = Math.max(lineHeight*3, usableLineCount * lineHeight);
+     * var rawUsableHeight = Math.max(lineHeight*3, clipHeight - pageInsetTop - pageInsetBottom);
+     * var usableHeight = rawUsableHeight;
      * ```
      *
      * @param viewportHeightPx Physical viewport height in pixels.
      * @param topInsetPx Top padding (status bar + chrome) in pixels.
      * @param bottomInsetPx Bottom padding (navigation bar + chrome) in pixels.
      * @param lineHeightPx Computed line height in pixels. If 0, defaults to 27 (18sp * 1.5).
-     * @return Usable page content height in pixels, aligned to line boundaries.
+     * @return The complete usable page content height in pixels.
      */
     fun calculateUsablePageHeight(
         viewportHeightPx: Int,
@@ -35,10 +33,10 @@ object PagedLayoutParams {
     ): Int {
         val lineHeight = if (lineHeightPx > 0f) lineHeightPx else 27f // 18sp * 1.5
         val clipHeight = max(lineHeight * 3, viewportHeightPx.toFloat())
-        val safetyMargin = max(6f, kotlin.math.ceil(lineHeight * 0.25f))
-        val rawUsableHeight = max(lineHeight * 3, clipHeight - topInsetPx - bottomInsetPx - safetyMargin)
-        val usableLineCount = max(3, floor(rawUsableHeight / lineHeight).toInt())
-        return max(lineHeight * 3, usableLineCount * lineHeight).toInt()
+        // The outer reader already owns the complete two-line gutter. Keep
+        // every remaining pixel in the page budget: rounding down to a whole
+        // number of lines turns the remainder into a variable extra gutter.
+        return max(lineHeight * 3, clipHeight - topInsetPx - bottomInsetPx).toInt()
     }
 
     /**

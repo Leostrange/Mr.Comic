@@ -52,6 +52,10 @@ class Fb2FormatReader(
             """<(?:h2|h3|p|blockquote)\b[^>]*>.*?</(?:h2|h3|p|blockquote)>|<br\s*/?(?:>|</br>)?""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
         )
+        private val SEMANTIC_PAGE_START_RE = Regex(
+            """^\s*(?:<h2\b|.*?<img\b[^>]*mrcomic-cover-image)""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+        )
         private const val FB2_READER_CSS = """
 a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{font-size:0.75em;vertical-align:super;line-height:1;
      font-weight:bold;text-decoration:none;cursor:pointer}
@@ -672,8 +676,9 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     /**
      * Groups consecutive short raw sections (e.g. individual footnotes) into reader pages
      * until the combined text reaches [CHARS_PER_PAGE], and maps every raw section index
-     * to its merged reader page. Sections flagged as explicit section starts always begin
-     * a new merged page so front-matter (cover/TOC) stays separate from chapter text.
+     * to its merged reader page. A top-level section starts a new page only when it has
+     * semantic page content (a title or cover). Untitled FB2 fragments are allowed to flow
+     * together, avoiding pages with only a few lines while preserving real chapter breaks.
      */
     private fun mergeRawSections(
         rawSections: List<String>,
@@ -686,7 +691,9 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         var pendingChars = 0
         for ((rawIdx, section) in rawSections.withIndex()) {
             val sectionChars = HTML_TAG_RE.replace(section, "").length
-            if (pendingChars > 0 && rawSectionStarts.getOrNull(rawIdx) == true) {
+            val isSemanticSectionStart = rawSectionStarts.getOrNull(rawIdx) == true &&
+                SEMANTIC_PAGE_START_RE.containsMatchIn(section)
+            if (pendingChars > 0 && isSemanticSectionStart) {
                 mergedSections.add(pendingMerge.toString())
                 pendingMerge.clear()
                 pendingChars = 0

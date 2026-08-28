@@ -112,13 +112,14 @@ internal fun resolveReaderInfoOverlayLine(
     clockText: String,
     currentPage: Int,
     totalPages: Int,
-    readingMode: ReadingMode
+    readingMode: ReadingMode,
+    canonicalProgressPercent: Int? = null
 ): ReaderInfoOverlayLine {
     val visiblePages = resolveReaderVisiblePages(currentPage, totalPages, readingMode)
     return ReaderInfoOverlayLine(
-        start = resolveReaderInfoSlotValue(startSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages),
-        center = resolveReaderInfoSlotValue(centerSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages),
-        end = resolveReaderInfoSlotValue(endSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages)
+        start = resolveReaderInfoSlotValue(startSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages, canonicalProgressPercent),
+        center = resolveReaderInfoSlotValue(centerSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages, canonicalProgressPercent),
+        end = resolveReaderInfoSlotValue(endSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages, canonicalProgressPercent)
     )
 }
 
@@ -147,13 +148,15 @@ private fun resolveReaderInfoSlotValue(
     chapterTitle: String?,
     clockText: String,
     visiblePages: List<Int>,
-    totalPages: Int
+    totalPages: Int,
+    canonicalProgressPercent: Int?
 ): String = when (ReaderInfoSlot.fromStored(slot)) {
     ReaderInfoSlot.NONE -> ""
     ReaderInfoSlot.BOOK_TITLE -> comicTitle.orEmpty()
     ReaderInfoSlot.CHAPTER_TITLE -> chapterTitle.orEmpty()
     ReaderInfoSlot.TIME -> clockText
-    ReaderInfoSlot.PROGRESS -> resolveReaderProgressLabel(visiblePages, totalPages)
+    ReaderInfoSlot.PROGRESS -> canonicalProgressPercent?.coerceIn(0, 100)?.let { "$it%" }
+        ?: resolveReaderProgressLabel(visiblePages, totalPages)
     ReaderInfoSlot.PAGE -> resolveReaderPageLabel(visiblePages, totalPages)
 }
 

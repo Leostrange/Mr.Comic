@@ -39,7 +39,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.model.ReadingMode
-import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
 import io.leostrange.mrcomic.feature.reader.ui.ReaderUiState
@@ -61,7 +60,7 @@ fun PageView(
 ) {
     val isEInk = LocalEInkMode.current
     val isDualPage = uiState.readingMode == ReadingMode.DUAL_PAGE
-    val isDjvu = uiState.comic?.format == ComicFormat.DJVU
+    val graphicPageOffset = readerGraphicPageOffset(uiState.comic?.format)
     val leftPage = uiState.currentPage
     val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
         ReaderImageCrop(
@@ -126,8 +125,8 @@ fun PageView(
                         alignment = Alignment.CenterEnd,
                         imageScaleMode = imageScaleMode,
                         crop = imageCrop,
-                        pageOffsetX = if (isDjvu) (-8).dp else 0.dp,
-                        pageOffsetY = if (isDjvu) 20.dp else 0.dp,
+                        pageOffsetX = graphicPageOffset.xDp.dp,
+                        pageOffsetY = graphicPageOffset.yDp.dp,
                         modifier = Modifier.weight(1f)
                     )
                     if (rightPage != null) {
@@ -137,8 +136,8 @@ fun PageView(
                             alignment = Alignment.CenterStart,
                             imageScaleMode = imageScaleMode,
                             crop = imageCrop,
-                            pageOffsetX = if (isDjvu) (-8).dp else 0.dp,
-                            pageOffsetY = if (isDjvu) 20.dp else 0.dp,
+                            pageOffsetX = graphicPageOffset.xDp.dp,
+                            pageOffsetY = graphicPageOffset.yDp.dp,
                             modifier = Modifier.weight(1f)
                         )
                     } else {
@@ -171,8 +170,8 @@ fun PageView(
                         contentDescription = "Page ${page + 1}",
                         imageScaleMode = imageScaleMode,
                         crop = imageCrop,
-                        pageOffsetX = if (isDjvu) (-8).dp else 0.dp,
-                        pageOffsetY = if (isDjvu) 20.dp else 0.dp,
+                        pageOffsetX = graphicPageOffset.xDp.dp,
+                        pageOffsetY = graphicPageOffset.yDp.dp,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

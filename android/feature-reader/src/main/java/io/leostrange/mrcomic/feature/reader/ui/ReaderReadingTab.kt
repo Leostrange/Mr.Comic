@@ -223,45 +223,47 @@ internal fun ReaderReadingTab(
                 )
             )
         }
-        item {
-            ReaderSliderRow(
-                title = readerHeaderFooterFontSizeTitle(strings.languageCode),
-                valueText = "${uiState.headerFooterFontSize}sp",
-                value = uiState.headerFooterFontSize.toFloat(),
-                valueRange = 10f..20f,
-                steps = 9,
-                onValueChange = { onHeaderFooterFontSizeChange(it.toInt()) }
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerHeaderFooterVerticalPaddingTitle(strings.languageCode),
-                valueText = "${uiState.headerFooterVerticalPadding}dp",
-                value = uiState.headerFooterVerticalPadding.toFloat(),
-                valueRange = 4f..20f,
-                steps = 15,
-                onValueChange = { onHeaderFooterVerticalPaddingChange(it.toInt()) }
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerHeaderFooterLeftInsetTitle(strings.languageCode),
-                valueText = "${uiState.headerFooterLeftPadding}dp",
-                value = uiState.headerFooterLeftPadding.toFloat(),
-                valueRange = 8f..32f,
-                steps = 23,
-                onValueChange = { onHeaderFooterLeftPaddingChange(it.toInt()) }
-            )
-        }
-        item {
-            ReaderSliderRow(
-                title = readerHeaderFooterRightInsetTitle(strings.languageCode),
-                valueText = "${uiState.headerFooterRightPadding}dp",
-                value = uiState.headerFooterRightPadding.toFloat(),
-                valueRange = 8f..32f,
-                steps = 23,
-                onValueChange = { onHeaderFooterRightPaddingChange(it.toInt()) }
-            )
+        if (isTextReader) {
+            item {
+                ReaderSliderRow(
+                    title = readerHeaderFooterFontSizeTitle(strings.languageCode),
+                    valueText = "${uiState.headerFooterFontSize}sp",
+                    value = uiState.headerFooterFontSize.toFloat(),
+                    valueRange = 10f..20f,
+                    steps = 9,
+                    onValueChange = { onHeaderFooterFontSizeChange(it.toInt()) }
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerHeaderFooterVerticalPaddingTitle(strings.languageCode),
+                    valueText = "${uiState.headerFooterVerticalPadding}dp",
+                    value = uiState.headerFooterVerticalPadding.toFloat(),
+                    valueRange = 4f..20f,
+                    steps = 15,
+                    onValueChange = { onHeaderFooterVerticalPaddingChange(it.toInt()) }
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerHeaderFooterLeftInsetTitle(strings.languageCode),
+                    valueText = "${uiState.headerFooterLeftPadding}dp",
+                    value = uiState.headerFooterLeftPadding.toFloat(),
+                    valueRange = 8f..32f,
+                    steps = 23,
+                    onValueChange = { onHeaderFooterLeftPaddingChange(it.toInt()) }
+                )
+            }
+            item {
+                ReaderSliderRow(
+                    title = readerHeaderFooterRightInsetTitle(strings.languageCode),
+                    valueText = "${uiState.headerFooterRightPadding}dp",
+                    value = uiState.headerFooterRightPadding.toFloat(),
+                    valueRange = 8f..32f,
+                    steps = 23,
+                    onValueChange = { onHeaderFooterRightPaddingChange(it.toInt()) }
+                )
+            }
         }
         item {
             ReaderSwitchRow(
