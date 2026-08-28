@@ -6,6 +6,17 @@ import io.leostrange.mrcomic.core.model.isArchiveFormat
 import io.leostrange.mrcomic.core.model.isGraphicReaderFormat
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
 
+/** Image margin controls are available only for raster content. */
+fun supportsImageMarginCrop(
+    containerKind: ReaderContainerKind,
+    format: ComicFormat?
+): Boolean {
+    if (containerKind.isTextContainer()) return false
+    return format == ComicFormat.PDF ||
+        format == ComicFormat.DJVU ||
+        containerKind == ReaderContainerKind.RASTER_WEBTOON
+}
+
 enum class ReaderContainerKind {
     TEXT_PAGE,
     TEXT_WEBTOON,

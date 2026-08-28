@@ -81,9 +81,9 @@ fun ReaderScreen(
     val ttsRuntimeState by ttsController.state.collectAsState()
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTextReader = uiState.readerContainerKind.isTextContainer()
-    val supportsDocumentMarginCrop = uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU
-    val effectiveMarginCropHorizontal = if (supportsDocumentMarginCrop) uiState.imageMarginCropHorizontal else 0f
-    val effectiveMarginCropVertical = if (supportsDocumentMarginCrop) uiState.imageMarginCropVertical else 0f
+    val supportsImageMarginCrop = supportsImageMarginCrop(uiState.readerContainerKind, uiState.comic?.format)
+    val effectiveMarginCropHorizontal = if (supportsImageMarginCrop) uiState.imageMarginCropHorizontal else 0f
+    val effectiveMarginCropVertical = if (supportsImageMarginCrop) uiState.imageMarginCropVertical else 0f
     val effectivePageImageScaleMode =
         if (
             uiState.comic?.format == ComicFormat.DJVU &&

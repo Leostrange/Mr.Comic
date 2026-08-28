@@ -77,8 +77,8 @@ internal fun ReaderStyleTab(
             // Text-reader controls keep the style entry in their own tab.
             .filterNot { isTextReader && it == ReaderChromeButton.STYLE }
     }
-    val supportsMarginCrop = remember(uiState.comic?.format, isTextReader) {
-        !isTextReader && (uiState.comic?.format == ComicFormat.PDF || uiState.comic?.format == ComicFormat.DJVU)
+    val supportsMarginCrop = remember(uiState.readerContainerKind, uiState.comic?.format, isTextReader) {
+        supportsImageMarginCrop(uiState.readerContainerKind, uiState.comic?.format)
     }
     val availableFonts = remember(context, fontCatalogVersion) {
         ReaderTextFontCatalog.availableFontFamilies(context)
@@ -540,11 +540,7 @@ internal fun ReaderStyleTab(
     }
 }
 
-/**
- * A deliberately simple crop preview: the muted bands are the part removed
- * from the page, so vertical cropping stays visible while its slider is being
- * adjusted in the bottom sheet.
- */
+/** Shows the retained image area and the exact horizontal/vertical crop zones. */
 @Composable
 private fun ReaderGraphicCropPreview(
     horizontalCrop: Float,
@@ -553,23 +549,23 @@ private fun ReaderGraphicCropPreview(
 ) {
     val horizontal = horizontalCrop.coerceIn(0f, 0.18f)
     val vertical = verticalCrop.coerceIn(0f, 0.18f)
-    val removedLabel = when (language) {
-        "en" -> "Removed margins"
-        "ja" -> "トリミング範囲"
-        "zh" -> "已裁剪边缘"
-        "ko" -> "잘린 여백"
-        else -> "Подрезаемые поля"
+    val previewLabel = when (language) {
+        "en" -> "Preview · retained image area"
+        "ja" -> "プレビュー・表示領域"
+        "zh" -> "预览 · 保留图像区域"
+        "ko" -> "미리보기 · 표시 영역"
+        else -> "Предпросмотр · видимая область"
     }
     ReaderSettingsCard {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(removedLabel, style = MaterialTheme.typography.labelLarge)
+                Text(previewLabel, style = MaterialTheme.typography.labelLarge)
                 Text(
-                    text = "${(vertical * 100f).toInt()}% · ${(horizontal * 100f).toInt()}%",
+                    text = "↔ ${(horizontal * 100f).toInt()}%   ↕ ${(vertical * 100f).toInt()}%",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -577,23 +573,21 @@ private fun ReaderGraphicCropPreview(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(112.dp)
+                    .height(128.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            horizontal = (horizontal * 90f).dp,
-                            vertical = (vertical * 90f).dp
-                        )
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .fillMaxHeight()
+                        .fillMaxWidth(0.72f)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        repeat(4) { index ->
+                        repeat(5) { index ->
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth(if (index == 1) 0.78f else 1f)
@@ -606,21 +600,37 @@ private fun ReaderGraphicCropPreview(
                         }
                     }
                 }
+                val overlay = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                if (horizontal > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(horizontal / 0.22f)
+                            .align(Alignment.CenterStart)
+                            .background(overlay)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(horizontal / 0.22f)
+                            .align(Alignment.CenterEnd)
+                            .background(overlay)
+                    )
+                }
                 if (vertical > 0f) {
-                    val bandHeight = (vertical * 180f).dp
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(bandHeight)
+                            .fillMaxHeight(vertical / 0.22f)
                             .align(Alignment.TopCenter)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                            .background(overlay)
                     )
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(bandHeight)
+                            .fillMaxHeight(vertical / 0.22f)
                             .align(Alignment.BottomCenter)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
+                            .background(overlay)
                     )
                 }
             }

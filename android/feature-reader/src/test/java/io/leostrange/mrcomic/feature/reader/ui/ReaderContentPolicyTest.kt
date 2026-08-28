@@ -4,9 +4,36 @@ import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderContentPolicyTest {
+
+    @Test
+    fun graphicVerticalStripSupportsImageMarginCrop() {
+        assertTrue(
+            supportsImageMarginCrop(ReaderContainerKind.RASTER_WEBTOON, ComicFormat.CBZ)
+        )
+    }
+
+    @Test
+    fun textVerticalStripDoesNotExposeImageMarginCrop() {
+        assertFalse(
+            supportsImageMarginCrop(ReaderContainerKind.TEXT_WEBTOON, ComicFormat.TXT)
+        )
+    }
+
+    @Test
+    fun documentPagesKeepPdfAndDjvuMarginCrop() {
+        assertTrue(supportsImageMarginCrop(ReaderContainerKind.RASTER_PAGE, ComicFormat.PDF))
+        assertTrue(supportsImageMarginCrop(ReaderContainerKind.RASTER_PAGE, ComicFormat.DJVU))
+    }
+
+    @Test
+    fun ordinaryRasterPagesDoNotGetDocumentMarginCropControls() {
+        assertFalse(supportsImageMarginCrop(ReaderContainerKind.RASTER_PAGE, ComicFormat.CBZ))
+    }
 
     @Test
     fun textFormatsInPageModesResolveToTextPage() {
