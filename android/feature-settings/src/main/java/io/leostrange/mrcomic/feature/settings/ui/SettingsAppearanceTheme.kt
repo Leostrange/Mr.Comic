@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPreviewBackdrop
 import io.leostrange.mrcomic.core.ui.theme.ThemeMode
 import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.previewColors
@@ -117,6 +118,7 @@ internal fun ThemePreviewCard(
     }
     val previewCardShape = RoundedCornerShape(20.dp)
 
+    MrComicPreviewBackdrop(shape = previewCardShape) {
     MrComicCardSurface(
         modifier = Modifier
             .fillMaxWidth()
@@ -241,6 +243,7 @@ internal fun ThemePreviewCard(
             }
         }
     }
+        }
 }
 
 // ──────────── Theme preset card ────────────

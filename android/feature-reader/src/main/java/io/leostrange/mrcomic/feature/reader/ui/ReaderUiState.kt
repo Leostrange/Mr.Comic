@@ -36,8 +36,7 @@ internal const val DEFAULT_TEXT_WORD_SPACING = 0f
 internal const val DEFAULT_TEXT_PARAGRAPH_SPACING = 0.2f
 internal const val DEFAULT_TEXT_ALIGNMENT = "left"
 internal const val DEFAULT_TEXT_BOLD = false
-internal const val DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL = 0f
-internal const val DEFAULT_IMAGE_MARGIN_CROP_VERTICAL = 0f
+internal const val DEFAULT_IMAGE_MARGIN_CROP = 0f
 internal const val DEFERRED_PAGE_COUNT_START_DELAY_MILLIS = 1_500L
 internal const val TAG = "ReaderViewModel"
 internal val FOOTNOTE_MARKER_RE = Regex(
@@ -93,10 +92,18 @@ data class ReaderUiState(
     val autoScrollPauseReasons: Set<ReaderAutoScrollPauseReason> = emptySet(),
     /** How graphic pages should be fitted on the reader canvas. */
     val imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
-    /** Symmetric left/right crop for document page margins. */
-    val imageMarginCropHorizontal: Float = DEFAULT_IMAGE_MARGIN_CROP_HORIZONTAL,
-    /** Symmetric top/bottom crop for document page margins. */
-    val imageMarginCropVertical: Float = DEFAULT_IMAGE_MARGIN_CROP_VERTICAL,
+    /** Per-side document margin crop ("обрезка пустых полей"). */
+    val marginCropEnabled: Boolean = false,
+    val marginCropLeft: Float = DEFAULT_IMAGE_MARGIN_CROP,
+    val marginCropTop: Float = DEFAULT_IMAGE_MARGIN_CROP,
+    val marginCropRight: Float = DEFAULT_IMAGE_MARGIN_CROP,
+    val marginCropBottom: Float = DEFAULT_IMAGE_MARGIN_CROP,
+    /** Symmetric mode keeps left == right and top == bottom while editing. */
+    val marginCropSymmetric: Boolean = true,
+    /** Show the on-page warning while crop is active. */
+    val marginCropShowWarning: Boolean = true,
+    /** Whether the margin-crop dialog is currently open. */
+    val showMarginCropDialog: Boolean = false,
     /** Number of pages to preload ahead of the current page */
     val preloadPages: Int = 3,
     /**
@@ -253,7 +260,9 @@ data class ReaderUiState(
     val chromeShowDirectionIcon: Boolean = true,
     val chromeShowTranslateIcon: Boolean = true,
     val chromeShowBrightnessIcon: Boolean = true,
-    val chromeShowAutoScrollIcon: Boolean = true
+    val chromeShowAutoScrollIcon: Boolean = true,
+    /** Whether the margin-crop button appears in the top chrome bar. */
+    val chromeShowCropIcon: Boolean = true
 ) {
     /**
      * BUG-READER-01: Unified effective total pages.

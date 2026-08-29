@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -94,11 +95,13 @@ private fun ReaderChromeIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     buttonSize: Dp = 42.dp,
+    enabled: Boolean = true,
     content: @Composable () -> Unit
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.size(buttonSize)
+        modifier = modifier.size(buttonSize),
+        enabled = enabled
     ) {
         content()
     }
@@ -145,6 +148,8 @@ fun ReaderExpandedBar(
     showTranslateIcon: Boolean = true,
     showBrightnessIcon: Boolean = true,
     showAutoScrollIcon: Boolean = true,
+    showCropIcon: Boolean = false,
+    marginCropAvailable: Boolean = false,
     autoScrollActive: Boolean = false,
     onNavigateBack: () -> Unit,
     onToggleToc: () -> Unit,
@@ -153,7 +158,8 @@ fun ReaderExpandedBar(
     onRequestOcr: () -> Unit,
     onToggleBrightness: () -> Unit,
     onToggleTtsControls: () -> Unit = {},
-    onAutoScrollToggle: () -> Unit = {}
+    onAutoScrollToggle: () -> Unit = {},
+    onToggleMarginCrop: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     val chromeIconTint = MaterialTheme.colorScheme.onSurface
@@ -200,6 +206,8 @@ fun ReaderExpandedBar(
                     showTranslateIcon = showTranslateIcon,
                     showBrightnessIcon = showBrightnessIcon,
                     showAutoScrollIcon = showAutoScrollIcon,
+                    showCropIcon = showCropIcon,
+                    marginCropAvailable = marginCropAvailable,
                     autoScrollActive = autoScrollActive,
                     chromeIconTint = chromeIconTint,
                     onToggleToc = onToggleToc,
@@ -208,7 +216,8 @@ fun ReaderExpandedBar(
                     onRequestOcr = onRequestOcr,
                     onToggleBrightness = onToggleBrightness,
                     onToggleTtsControls = onToggleTtsControls,
-                    onAutoScrollToggle = onAutoScrollToggle
+                    onAutoScrollToggle = onAutoScrollToggle,
+                    onToggleMarginCrop = onToggleMarginCrop
                 )
             }
         }
@@ -245,6 +254,8 @@ private fun ReaderExpandedActionButtons(
     showTranslateIcon: Boolean,
     showBrightnessIcon: Boolean,
     showAutoScrollIcon: Boolean = true,
+    showCropIcon: Boolean = false,
+    marginCropAvailable: Boolean = false,
     autoScrollActive: Boolean = false,
     chromeIconTint: Color,
     onToggleToc: () -> Unit,
@@ -253,7 +264,8 @@ private fun ReaderExpandedActionButtons(
     onRequestOcr: () -> Unit,
     onToggleBrightness: () -> Unit,
     onToggleTtsControls: () -> Unit = {},
-    onAutoScrollToggle: () -> Unit = {}
+    onAutoScrollToggle: () -> Unit = {},
+    onToggleMarginCrop: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
@@ -393,6 +405,39 @@ private fun ReaderExpandedActionButtons(
                             )
                         )
                     }
+
+                ReaderChromeButton.CROP ->
+                    // Visible for raster readers, locked (disabled) for comics/manga;
+                    // fully active only for document formats (PDF / DjVu).
+                    if (showCropIcon) {
+                        add(
+                            ReaderChromeActionSpec(
+                                key = action.storedValue,
+                                content = { buttonSize ->
+                                    ReaderChromeIconButton(
+                                        onClick = onToggleMarginCrop,
+                                        buttonSize = buttonSize,
+                                        enabled = marginCropAvailable
+                                    ) {
+                                        val cropHint = if (marginCropAvailable) {
+                                            readerMarginCropDialogTitle(strings.languageCode)
+                                        } else {
+                                            readerMarginCropLockedHint(strings.languageCode)
+                                        }
+                                        Icon(
+                                            Icons.Default.Crop,
+                                            contentDescription = cropHint,
+                                            tint = if (marginCropAvailable) {
+                                                chromeIconTint
+                                            } else {
+                                                chromeIconTint.copy(alpha = LockedIconAlpha)
+                                            }
+                                        )
+                                    }
+                                }
+                            )
+                        )
+                    }
             }
         }
     }
@@ -418,6 +463,9 @@ private data class ReaderChromeActionSpec(
     val key: String,
     val content: @Composable (Dp) -> Unit
 )
+
+/** Dimmed tint for chrome icons that are visible but locked. */
+private const val LockedIconAlpha = 0.38f
 
 @Composable
 fun ReaderBrightnessRow(

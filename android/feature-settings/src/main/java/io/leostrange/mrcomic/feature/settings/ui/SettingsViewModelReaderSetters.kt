@@ -92,19 +92,25 @@ internal fun SettingsSettersController.setReaderImageScaleMode(mode: String) {
 
 internal fun SettingsSettersController.setReaderImageMarginCropHorizontal(value: Float) {
     setSlider("readerImageMarginCropHorizontal") {
-        preferences.set(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
-            value.coerceIn(0f, 0.22f)
-        )
+        val safe = value.coerceIn(0f, 0.22f)
+        // Symmetric pair write: the reader stores per-side values.
+        preferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_LEFT, safe)
+        preferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_RIGHT, safe)
+        // Moving a crop slider in settings implies wanting the crop active.
+        if (safe > 0f) {
+            preferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_ENABLED, true)
+        }
     }
 }
 
 internal fun SettingsSettersController.setReaderImageMarginCropVertical(value: Float) {
     setSlider("readerImageMarginCropVertical") {
-        preferences.set(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
-            value.coerceIn(0f, 0.22f)
-        )
+        val safe = value.coerceIn(0f, 0.22f)
+        preferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_TOP, safe)
+        preferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_BOTTOM, safe)
+        if (safe > 0f) {
+            preferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_ENABLED, true)
+        }
     }
 }
 

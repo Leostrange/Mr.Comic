@@ -36,6 +36,58 @@ class ReaderContentPolicyTest {
     }
 
     @Test
+    fun cropButtonUnlocksOnlyForDocumentFormats() {
+        assertTrue(supportsDocumentMarginCropButton(ComicFormat.PDF))
+        assertTrue(supportsDocumentMarginCropButton(ComicFormat.DJVU))
+        // Comics stay locked even though they are raster too.
+        assertFalse(supportsDocumentMarginCropButton(ComicFormat.CBZ))
+        assertFalse(supportsDocumentMarginCropButton(ComicFormat.CBR))
+        assertFalse(supportsDocumentMarginCropButton(null))
+    }
+
+    @Test
+    fun effectiveMarginCropRespectsSupportAndEnableFlags() {
+        // Disabled → no crop even for PDF.
+        assertTrue(
+            resolveEffectiveImageMarginCrop(
+                containerKind = ReaderContainerKind.RASTER_PAGE,
+                format = ComicFormat.PDF,
+                enabled = false,
+                left = 0.1f, top = 0.1f, right = 0.1f, bottom = 0.1f
+            ).isZero
+        )
+        // Comics never receive crop even when values are stored.
+        assertTrue(
+            resolveEffectiveImageMarginCrop(
+                containerKind = ReaderContainerKind.RASTER_PAGE,
+                format = ComicFormat.CBZ,
+                enabled = true,
+                left = 0.1f, top = 0.1f, right = 0.1f, bottom = 0.1f
+            ).isZero
+        )
+        // Enabled PDF gets the per-side values clamped.
+        val crop = resolveEffectiveImageMarginCrop(
+            containerKind = ReaderContainerKind.RASTER_PAGE,
+            format = ComicFormat.PDF,
+            enabled = true,
+            left = 0.04f, top = 0.5f, right = 0.16f, bottom = 0.02f
+        )
+        assertEquals(0.04f, crop.normalizedLeft, 1e-6f)
+        assertEquals(0.22f, crop.normalizedTop, 1e-6f)
+        assertEquals(0.16f, crop.normalizedRight, 1e-6f)
+        assertEquals(0.02f, crop.normalizedBottom, 1e-6f)
+        // Text containers never crop.
+        assertTrue(
+            resolveEffectiveImageMarginCrop(
+                containerKind = ReaderContainerKind.TEXT_PAGE,
+                format = ComicFormat.EPUB,
+                enabled = true,
+                left = 0.1f, top = 0.1f, right = 0.1f, bottom = 0.1f
+            ).isZero
+        )
+    }
+
+    @Test
     fun textFormatsInPageModesResolveToTextPage() {
         val textFormats = listOf(
             ComicFormat.EPUB,

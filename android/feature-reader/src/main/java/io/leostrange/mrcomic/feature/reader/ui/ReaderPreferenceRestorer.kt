@@ -53,8 +53,7 @@ internal object ReaderPreferenceRestorer {
         val bottomToolbarOpacity: Float,
         val toolbarBlur: Float,
         val imageScaleMode: ReaderImageScaleMode,
-        val imageMarginCropHorizontal: Float,
-        val imageMarginCropVertical: Float,
+        val marginCrop: io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop,
         val preload: Int,
         val fontSize: Int,
         val colorScheme: String,
@@ -102,6 +101,7 @@ internal object ReaderPreferenceRestorer {
         val chromeShowTranslateIcon: Boolean,
         val chromeShowBrightnessIcon: Boolean,
         val chromeShowAutoScrollIcon: Boolean,
+        val chromeShowCropIcon: Boolean,
         val readerStylePresetEntries: List<io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry>,
         val readerStylePresetSlots: List<ReaderStylePresetSlot>,
         val savedReaderStylePresetEntries: List<io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry>,
@@ -135,12 +135,31 @@ internal object ReaderPreferenceRestorer {
         val imageScaleMode = ReaderImageScaleMode.fromStored(
             pref(PreferencesKeys.READER_IMAGE_SCALE_MODE, ReaderImageScaleMode.FIT_WIDTH.storedValue)
         )
-        val imageMarginCropHorizontal = pref(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, 0.0f
-        ).coerceIn(0f, 0.22f)
-        val imageMarginCropVertical = pref(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, 0.0f
-        ).coerceIn(0f, 0.22f)
+        // Per-side crop values; -1f marks "key absent" so the legacy symmetric
+        // H/V preferences can seed them on the first run after the upgrade.
+        val storedLeft = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_LEFT, -1f)
+        val storedTop = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_TOP, -1f)
+        val storedRight = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_RIGHT, -1f)
+        val storedBottom = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_BOTTOM, -1f)
+        val legacyHorizontal = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, 0f)
+            .coerceIn(0f, io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop.MAX_SIDE_FRACTION)
+        val legacyVertical = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, 0f)
+            .coerceIn(0f, io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop.MAX_SIDE_FRACTION)
+        val seededCrop = io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop()
+            .seededFromLegacy(legacyHorizontal, legacyVertical)
+        val marginCrop = io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop(
+            // A legacy user with non-zero H/V crop keeps it enabled after the upgrade.
+            enabled = pref(
+                PreferencesKeys.READER_PAGE_MARGIN_CROP_ENABLED,
+                legacyHorizontal > 0f || legacyVertical > 0f
+            ),
+            left = if (storedLeft >= 0f) storedLeft else seededCrop.left,
+            top = if (storedTop >= 0f) storedTop else seededCrop.top,
+            right = if (storedRight >= 0f) storedRight else seededCrop.right,
+            bottom = if (storedBottom >= 0f) storedBottom else seededCrop.bottom,
+            symmetric = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_SYMMETRIC, true),
+            showWarning = pref(PreferencesKeys.READER_PAGE_MARGIN_CROP_SHOW_WARNING, true)
+        ).withSymmetricEnforced()
         val preload = pref(PreferencesKeys.READER_PRELOAD_PAGES, renderProfile.defaultPreloadPages)
             .coerceIn(2, 8)
             .coerceAtMost(renderProfile.maxPreloadPages)
@@ -215,6 +234,7 @@ internal object ReaderPreferenceRestorer {
         val chromeShowTranslateIcon = pref(PreferencesKeys.READER_CHROME_SHOW_TRANSLATE, true)
         val chromeShowBrightnessIcon = pref(PreferencesKeys.READER_CHROME_SHOW_BRIGHTNESS, true)
         val chromeShowAutoScrollIcon = pref(PreferencesKeys.READER_CHROME_SHOW_AUTO_SCROLL, true)
+        val chromeShowCropIcon = pref(PreferencesKeys.READER_CHROME_SHOW_CROP, true)
 
         val legacyReaderStylePresetSlots = listOf(
             ReaderStylePresetSlot(1, pref(PreferencesKeys.READER_STYLE_PRESET_1, "").ifBlank { null }),
@@ -251,8 +271,7 @@ internal object ReaderPreferenceRestorer {
             bottomToolbarOpacity = bottomToolbarOpacity,
             toolbarBlur = toolbarBlur,
             imageScaleMode = imageScaleMode,
-            imageMarginCropHorizontal = imageMarginCropHorizontal,
-            imageMarginCropVertical = imageMarginCropVertical,
+            marginCrop = marginCrop,
             preload = preload,
             fontSize = fontSize,
             colorScheme = colorScheme,
@@ -300,6 +319,7 @@ internal object ReaderPreferenceRestorer {
             chromeShowTranslateIcon = chromeShowTranslateIcon,
             chromeShowBrightnessIcon = chromeShowBrightnessIcon,
             chromeShowAutoScrollIcon = chromeShowAutoScrollIcon,
+            chromeShowCropIcon = chromeShowCropIcon,
             readerStylePresetEntries = readerStylePresetEntries,
             readerStylePresetSlots = readerStylePresetSlots,
             savedReaderStylePresetEntries = savedReaderStylePresetEntries,
@@ -344,8 +364,13 @@ internal object ReaderPreferenceRestorer {
                 bottomToolbarOpacity = p.bottomToolbarOpacity,
                 toolbarBlur = p.toolbarBlur,
                 imageScaleMode = p.imageScaleMode.storedValue,
-                imageMarginCropHorizontal = p.imageMarginCropHorizontal,
-                imageMarginCropVertical = p.imageMarginCropVertical,
+                marginCropEnabled = p.marginCrop.enabled,
+                marginCropLeft = p.marginCrop.left,
+                marginCropTop = p.marginCrop.top,
+                marginCropRight = p.marginCrop.right,
+                marginCropBottom = p.marginCrop.bottom,
+                marginCropSymmetric = p.marginCrop.symmetric,
+                marginCropShowWarning = p.marginCrop.showWarning,
                 preloadPages = p.preload,
                 textFontSize = p.fontSize,
                 textColorScheme = p.colorScheme,
@@ -395,7 +420,8 @@ internal object ReaderPreferenceRestorer {
                 chromeShowDirectionIcon = p.chromeShowDirectionIcon,
                 chromeShowTranslateIcon = p.chromeShowTranslateIcon,
                 chromeShowBrightnessIcon = p.chromeShowBrightnessIcon,
-                chromeShowAutoScrollIcon = p.chromeShowAutoScrollIcon
+                chromeShowAutoScrollIcon = p.chromeShowAutoScrollIcon,
+                chromeShowCropIcon = p.chromeShowCropIcon
             )
         }
     }

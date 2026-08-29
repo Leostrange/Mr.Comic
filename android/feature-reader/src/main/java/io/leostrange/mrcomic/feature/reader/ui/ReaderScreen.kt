@@ -82,8 +82,15 @@ fun ReaderScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val isTextReader = uiState.readerContainerKind.isTextContainer()
     val supportsImageMarginCrop = supportsImageMarginCrop(uiState.readerContainerKind, uiState.comic?.format)
-    val effectiveMarginCropHorizontal = if (supportsImageMarginCrop) uiState.imageMarginCropHorizontal else 0f
-    val effectiveMarginCropVertical = if (supportsImageMarginCrop) uiState.imageMarginCropVertical else 0f
+    val effectiveMarginCrop = resolveEffectiveImageMarginCrop(
+        containerKind = uiState.readerContainerKind,
+        format = uiState.comic?.format,
+        enabled = uiState.marginCropEnabled,
+        left = uiState.marginCropLeft,
+        top = uiState.marginCropTop,
+        right = uiState.marginCropRight,
+        bottom = uiState.marginCropBottom
+    )
     val effectivePageImageScaleMode =
         if (
             uiState.comic?.format == ComicFormat.DJVU &&
@@ -483,6 +490,7 @@ fun ReaderScreen(
     // pixel-scroll cannot advance the document underneath an open dialog.
     val anyBottomSheetOpen = uiState.showTocSheet ||
         uiState.showTextSettings ||
+        uiState.showMarginCropDialog ||
         showReaderAudioSheet ||
         showTextTranslationPageSheet ||
         showRsvpOverlay ||
@@ -586,8 +594,7 @@ fun ReaderScreen(
                         readerText = readerText,
                         languageCode = strings.languageCode,
                         tapZoneLayout = tapZoneLayout,
-                        effectiveMarginCropHorizontal = effectiveMarginCropHorizontal,
-                        effectiveMarginCropVertical = effectiveMarginCropVertical,
+                        effectiveMarginCrop = effectiveMarginCrop,
                         effectivePageImageScaleMode = effectivePageImageScaleMode,
                         textReaderModifier = stableTextReaderModifier,
                         imageReaderModifier = imageReaderModifier,
@@ -654,9 +661,23 @@ fun ReaderScreen(
                     onDismissFootnote = { viewModel.footnoteController.dismissFootnote() },
                     onExpandFootnote = { viewModel.footnoteController.expandFootnote() },
                     onCollapseFootnote = { viewModel.footnoteController.collapseFootnote() },
+                    onToggleMarginCrop = {
+                        // Close the chrome panels and show the crop dialog over
+                        // the page, like the classic document readers do.
+                        viewModel.chromeController.hideChrome()
+                        viewModel.settingsController.setMarginCropDialogVisible(true)
+                    },
                 )
             }
         }
+    }
+
+    if (uiState.showMarginCropDialog && supportsImageMarginCrop) {
+        ReaderMarginCropDialog(
+            uiState = uiState,
+            viewModel = viewModel,
+            onDismiss = { viewModel.settingsController.setMarginCropDialogVisible(false) }
+        )
     }
 
     ReaderBottomSheets(

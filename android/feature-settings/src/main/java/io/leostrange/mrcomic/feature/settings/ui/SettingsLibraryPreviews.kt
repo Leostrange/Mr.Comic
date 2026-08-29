@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPreviewBackdrop
 import io.leostrange.mrcomic.core.ui.library.LibraryBackdropLayer
 import io.leostrange.mrcomic.core.ui.library.LibraryShelfBar
 import io.leostrange.mrcomic.core.ui.library.libraryCardElevation
@@ -64,6 +65,7 @@ internal fun SelectedLibraryBackgroundPreview(
             ?: imageUri
     }
 
+    MrComicPreviewBackdrop(shape = RoundedCornerShape(16.dp)) {
     MrComicCardSurface(
         modifier = modifier.fillMaxWidth(),
         cornerRadius = 16.dp,
@@ -109,6 +111,7 @@ internal fun SelectedLibraryBackgroundPreview(
                 )
             }
         }
+        }
     }
 }
 
@@ -131,6 +134,7 @@ internal fun LibraryStylePreview(
     val styleLabel = libraryBackgroundStyleLabel(uiState.libraryBackgroundStyle, uiState.appLanguage)
     val shelfLabel = libraryShelfStyleLabel(uiState.libraryShelfStyle, uiState.appLanguage)
     val shape = RoundedCornerShape(22.dp)
+    MrComicPreviewBackdrop(shape = shape) {
     MrComicCardSurface(
         modifier = modifier,
         fillMaxWidth = false,
@@ -240,6 +244,7 @@ internal fun LibraryStylePreview(
                     )
                 }
             }
+        }
         }
     }
 }

@@ -50,6 +50,7 @@ internal fun BoxScope.ReaderChromeBars(
     onDismissFootnote: () -> Unit,
     onExpandFootnote: () -> Unit,
     onCollapseFootnote: () -> Unit,
+    onToggleMarginCrop: () -> Unit = {},
 ) {
     ReaderTopChromeBar(
         uiState = uiState,
@@ -76,6 +77,7 @@ internal fun BoxScope.ReaderChromeBars(
         onBrightnessChange = onBrightnessChange,
         onAutoScrollSpeedPreview = onAutoScrollSpeedPreview,
         onAutoScrollSpeedCommit = onAutoScrollSpeedCommit,
+        onToggleMarginCrop = onToggleMarginCrop,
     )
 
     ReaderBottomChromePanel(

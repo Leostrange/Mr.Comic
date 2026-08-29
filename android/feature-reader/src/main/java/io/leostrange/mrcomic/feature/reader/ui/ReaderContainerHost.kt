@@ -13,6 +13,7 @@ import io.leostrange.mrcomic.core.model.ReaderTapZoneLayout
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.ui.components.PageView
+import io.leostrange.mrcomic.feature.reader.ui.components.ReaderImageCrop
 import io.leostrange.mrcomic.feature.reader.ui.components.ReadiumEpubView
 import io.leostrange.mrcomic.feature.reader.ui.components.TextContainer
 import io.leostrange.mrcomic.feature.reader.ui.components.WebtoonView
@@ -27,8 +28,7 @@ internal fun ReaderContainerHost(
     readerText: ReaderUiText,
     languageCode: String,
     tapZoneLayout: ReaderTapZoneLayout,
-    effectiveMarginCropHorizontal: Float,
-    effectiveMarginCropVertical: Float,
+    effectiveMarginCrop: ReaderImageCrop,
     effectivePageImageScaleMode: String,
     textReaderModifier: Modifier,
     imageReaderModifier: Modifier,
@@ -221,8 +221,10 @@ internal fun ReaderContainerHost(
                     viewModel = viewModel,
                     uiState = uiState,
                     imageScaleMode = uiState.imageScaleMode,
-                    marginCropHorizontal = effectiveMarginCropHorizontal,
-                    marginCropVertical = effectiveMarginCropVertical,
+                    marginCropLeft = effectiveMarginCrop.normalizedLeft,
+                    marginCropTop = effectiveMarginCrop.normalizedTop,
+                    marginCropRight = effectiveMarginCrop.normalizedRight,
+                    marginCropBottom = effectiveMarginCrop.normalizedBottom,
                     onLeftTap = {},
                     onRightTap = {},
                     onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
@@ -234,8 +236,10 @@ internal fun ReaderContainerHost(
                     viewModel = viewModel,
                     uiState = uiState,
                     imageScaleMode = effectivePageImageScaleMode,
-                    marginCropHorizontal = effectiveMarginCropHorizontal,
-                    marginCropVertical = effectiveMarginCropVertical,
+                    marginCropLeft = effectiveMarginCrop.normalizedLeft,
+                    marginCropTop = effectiveMarginCrop.normalizedTop,
+                    marginCropRight = effectiveMarginCrop.normalizedRight,
+                    marginCropBottom = effectiveMarginCrop.normalizedBottom,
                     onLeftTap = { handleTapZoneAction(tapZoneLayout.left) },
                     onRightTap = { handleTapZoneAction(tapZoneLayout.right) },
                     onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },

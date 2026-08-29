@@ -16,12 +16,37 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
 
+/**
+ * Per-side page crop as fractions of the page size. The legacy symmetric
+ * constructor (horizontalFraction/verticalFraction) is kept for call sites
+ * that crop both sides of an axis equally.
+ */
 internal data class ReaderImageCrop(
-    val horizontalFraction: Float = 0f,
-    val verticalFraction: Float = 0f
+    val leftFraction: Float,
+    val topFraction: Float,
+    val rightFraction: Float,
+    val bottomFraction: Float
 ) {
-    val normalizedHorizontal: Float = horizontalFraction.coerceIn(0f, 0.22f)
-    val normalizedVertical: Float = verticalFraction.coerceIn(0f, 0.22f)
+    constructor(horizontalFraction: Float = 0f, verticalFraction: Float = 0f) : this(
+        leftFraction = horizontalFraction,
+        topFraction = verticalFraction,
+        rightFraction = horizontalFraction,
+        bottomFraction = verticalFraction
+    )
+
+    val normalizedLeft: Float = leftFraction.coerceIn(0f, MAX_CROP_FRACTION)
+    val normalizedTop: Float = topFraction.coerceIn(0f, MAX_CROP_FRACTION)
+    val normalizedRight: Float = rightFraction.coerceIn(0f, MAX_CROP_FRACTION)
+    val normalizedBottom: Float = bottomFraction.coerceIn(0f, MAX_CROP_FRACTION)
+
+    val isZero: Boolean
+        get() = normalizedLeft <= 0f && normalizedTop <= 0f &&
+            normalizedRight <= 0f && normalizedBottom <= 0f
+
+    companion object {
+        const val MAX_CROP_FRACTION = 0.22f
+        val None = ReaderImageCrop(0f, 0f, 0f, 0f)
+    }
 }
 
 internal fun croppedSourceDimensions(
@@ -44,7 +69,13 @@ internal fun CroppedBitmapImage(
 ) {
     val layoutDirection = LocalLayoutDirection.current
     val imageBitmap = remember(bitmap) { bitmap.asImageBitmap() }
-    val sourceRect = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
+    val sourceRect = remember(
+        bitmap,
+        crop.normalizedLeft,
+        crop.normalizedTop,
+        crop.normalizedRight,
+        crop.normalizedBottom
+    ) {
         croppedSourceRect(bitmap, crop)
     }
     Canvas(
@@ -89,15 +120,19 @@ private fun croppedSourceRect(
     bitmap: Bitmap,
     crop: ReaderImageCrop
 ): CroppedSourceRect {
-    val horizontalInset = (bitmap.width * crop.normalizedHorizontal).roundToInt()
+    val leftInset = (bitmap.width * crop.normalizedLeft).roundToInt()
         .coerceIn(0, (bitmap.width - 1) / 2)
-    val verticalInset = (bitmap.height * crop.normalizedVertical).roundToInt()
+    val rightInset = (bitmap.width * crop.normalizedRight).roundToInt()
+        .coerceIn(0, (bitmap.width - 1) / 2)
+    val topInset = (bitmap.height * crop.normalizedTop).roundToInt()
         .coerceIn(0, (bitmap.height - 1) / 2)
-    val width = (bitmap.width - horizontalInset * 2).coerceAtLeast(1)
-    val height = (bitmap.height - verticalInset * 2).coerceAtLeast(1)
+    val bottomInset = (bitmap.height * crop.normalizedBottom).roundToInt()
+        .coerceIn(0, (bitmap.height - 1) / 2)
+    val width = (bitmap.width - leftInset - rightInset).coerceAtLeast(1)
+    val height = (bitmap.height - topInset - bottomInset).coerceAtLeast(1)
     return CroppedSourceRect(
-        left = horizontalInset,
-        top = verticalInset,
+        left = leftInset,
+        top = topInset,
         width = width,
         height = height
     )

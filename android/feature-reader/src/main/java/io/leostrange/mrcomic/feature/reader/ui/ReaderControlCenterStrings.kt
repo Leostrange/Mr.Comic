@@ -357,6 +357,13 @@ internal fun readerChromeButtonLabel(
         "ko" -> "자동 스크롤"
         else -> "Auto scroll"
     }
+    ReaderChromeButton.CROP -> when (language) {
+        "ru" -> "Обрезка полей"
+        "ja" -> "余白トリミング"
+        "zh" -> "页边裁剪"
+        "ko" -> "여백 자르기"
+        else -> "Margin crop"
+    }
 }
 
 internal fun readerChromeButtonVisible(
@@ -370,6 +377,7 @@ internal fun readerChromeButtonVisible(
     ReaderChromeButton.TRANSLATE -> uiState.chromeShowTranslateIcon
     ReaderChromeButton.BRIGHTNESS -> uiState.chromeShowBrightnessIcon
     ReaderChromeButton.AUTO_SCROLL -> uiState.chromeShowAutoScrollIcon
+    ReaderChromeButton.CROP -> uiState.chromeShowCropIcon
 }
 
 internal fun readerTtsSleepTimerLabel(mode: ReaderTtsSleepTimerMode, language: String): String = when (mode) {

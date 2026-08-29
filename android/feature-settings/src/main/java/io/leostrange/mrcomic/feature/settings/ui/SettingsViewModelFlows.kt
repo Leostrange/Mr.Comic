@@ -493,17 +493,19 @@ internal fun SettingsUiStateFlowBuilder.createCombinedSettingsUiState(): Flow<Se
     ) { state: SettingsUiState, imageScaleMode: String ->
         state.copy(readerImageScaleMode = imageScaleMode)
     }.combine(
-        preferences.get(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL,
-            0f
-        ).map { it.coerceIn(0f, 0.22f) }
+        combine(
+            preferences.get(PreferencesKeys.READER_PAGE_MARGIN_CROP_LEFT, -1f),
+            preferences.get(PreferencesKeys.READER_PAGE_MARGIN_CROP_RIGHT, -1f),
+            preferences.get(PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, 0f)
+        ) { left, right, legacy -> resolveMarginCropDisplay(left, right, legacy) }
     ) { state: SettingsUiState, horizontalCrop: Float ->
         state.copy(readerImageMarginCropHorizontal = horizontalCrop)
     }.combine(
-        preferences.get(
-            PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL,
-            0f
-        ).map { it.coerceIn(0f, 0.22f) }
+        combine(
+            preferences.get(PreferencesKeys.READER_PAGE_MARGIN_CROP_TOP, -1f),
+            preferences.get(PreferencesKeys.READER_PAGE_MARGIN_CROP_BOTTOM, -1f),
+            preferences.get(PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, 0f)
+        ) { top, bottom, legacy -> resolveMarginCropDisplay(top, bottom, legacy) }
     ) { state: SettingsUiState, verticalCrop: Float ->
         state.copy(readerImageMarginCropVertical = verticalCrop)
     }.combine(
@@ -560,5 +562,17 @@ internal fun SettingsUiStateFlowBuilder.createCombinedSettingsUiState(): Flow<Se
             translationAvailabilityPairKnown = availabilityState.pairKnown
         )
     }
+
+/**
+ * Per-side reader crop → symmetric display value for the settings sliders.
+ * -1f marks a missing per-side key; the legacy symmetric value is the
+ * migration fallback. Asymmetric values display as their axis average.
+ */
+internal fun resolveMarginCropDisplay(first: Float, second: Float, legacy: Float): Float = when {
+    first >= 0f && second >= 0f -> ((first + second) / 2f).coerceIn(0f, 0.22f)
+    first >= 0f -> first.coerceIn(0f, 0.22f)
+    second >= 0f -> second.coerceIn(0f, 0.22f)
+    else -> legacy.coerceIn(0f, 0.22f)
+}
 
 

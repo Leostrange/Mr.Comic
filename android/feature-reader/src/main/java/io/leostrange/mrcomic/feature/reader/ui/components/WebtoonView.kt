@@ -54,8 +54,10 @@ fun WebtoonView(
     onRightTap: () -> Unit,
     onCenterTap: () -> Unit,
     imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
-    marginCropHorizontal: Float = 0f,
-    marginCropVertical: Float = 0f,
+    marginCropLeft: Float = 0f,
+    marginCropTop: Float = 0f,
+    marginCropRight: Float = 0f,
+    marginCropBottom: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     val isEInk = LocalEInkMode.current
@@ -80,12 +82,12 @@ fun WebtoonView(
         onStop = { viewModel.autoScrollRuntimeController.stop() }
     )
 
-    val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
-        ReaderImageCrop(
-            horizontalFraction = marginCropHorizontal,
-            verticalFraction = marginCropVertical
-        )
-    }
+    val imageCrop = ReaderImageCrop(
+        leftFraction = marginCropLeft,
+        topFraction = marginCropTop,
+        rightFraction = marginCropRight,
+        bottomFraction = marginCropBottom
+    )
 
     val webtoonPreloadBehind = 1
     val webtoonPreloadAhead = 3
@@ -365,7 +367,13 @@ private fun ZoomableFillWidthImage(
         } else {
             Float.POSITIVE_INFINITY
         }
-        val (sourceWidthPx, sourceHeightPx) = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
+        val (sourceWidthPx, sourceHeightPx) = remember(
+            bitmap,
+            crop.normalizedLeft,
+            crop.normalizedTop,
+            crop.normalizedRight,
+            crop.normalizedBottom
+        ) {
             croppedSourceDimensions(bitmap, crop)
         }
         val imageSize = remember(

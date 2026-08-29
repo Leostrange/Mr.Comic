@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.font.FontWeight
 import io.leostrange.mrcomic.core.ui.theme.style
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPreviewBackdrop
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetEntry
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSlot
 import io.leostrange.mrcomic.feature.reader.domain.preset.ReaderStylePresetSnapshot
@@ -212,8 +213,10 @@ internal fun ReaderStyleTab(
             if (supportsMarginCrop) {
                 item {
                     ReaderGraphicCropPreview(
-                        horizontalCrop = uiState.imageMarginCropHorizontal,
-                        verticalCrop = uiState.imageMarginCropVertical,
+                        leftCrop = uiState.marginCropLeft,
+                        topCrop = uiState.marginCropTop,
+                        rightCrop = uiState.marginCropRight,
+                        bottomCrop = uiState.marginCropBottom,
                         language = strings.languageCode
                     )
                 }
@@ -225,20 +228,22 @@ internal fun ReaderStyleTab(
                     )
                 }
                 item {
+                    val horizontalCrop = (uiState.marginCropLeft + uiState.marginCropRight) / 2f
                     ReaderSliderRow(
-                        title = readerMarginCropHorizontalLabel(uiState.imageMarginCropHorizontal, strings.languageCode),
-                        valueText = "${(uiState.imageMarginCropHorizontal * 100f).toInt()}%",
-                        value = uiState.imageMarginCropHorizontal,
+                        title = readerMarginCropHorizontalLabel(horizontalCrop, strings.languageCode),
+                        valueText = "${(horizontalCrop * 100f).toInt()}%",
+                        value = horizontalCrop,
                         valueRange = 0f..0.18f,
                         steps = 17,
                         onValueChange = onImageMarginCropHorizontalChange
                     )
                 }
                 item {
+                    val verticalCrop = (uiState.marginCropTop + uiState.marginCropBottom) / 2f
                     ReaderSliderRow(
-                        title = readerMarginCropVerticalLabel(uiState.imageMarginCropVertical, strings.languageCode),
-                        valueText = "${(uiState.imageMarginCropVertical * 100f).toInt()}%",
-                        value = uiState.imageMarginCropVertical,
+                        title = readerMarginCropVerticalLabel(verticalCrop, strings.languageCode),
+                        valueText = "${(verticalCrop * 100f).toInt()}%",
+                        value = verticalCrop,
                         valueRange = 0f..0.18f,
                         steps = 17,
                         onValueChange = onImageMarginCropVerticalChange
@@ -543,12 +548,17 @@ internal fun ReaderStyleTab(
 /** Shows the retained image area and the exact horizontal/vertical crop zones. */
 @Composable
 private fun ReaderGraphicCropPreview(
-    horizontalCrop: Float,
-    verticalCrop: Float,
+    leftCrop: Float,
+    topCrop: Float,
+    rightCrop: Float,
+    bottomCrop: Float,
     language: String
 ) {
-    val horizontal = horizontalCrop.coerceIn(0f, 0.18f)
-    val vertical = verticalCrop.coerceIn(0f, 0.18f)
+    val maxFraction = 0.22f
+    val left = leftCrop.coerceIn(0f, maxFraction)
+    val top = topCrop.coerceIn(0f, maxFraction)
+    val right = rightCrop.coerceIn(0f, maxFraction)
+    val bottom = bottomCrop.coerceIn(0f, maxFraction)
     val previewLabel = when (language) {
         "en" -> "Preview · retained image area"
         "ja" -> "プレビュー・表示領域"
@@ -565,11 +575,12 @@ private fun ReaderGraphicCropPreview(
             ) {
                 Text(previewLabel, style = MaterialTheme.typography.labelLarge)
                 Text(
-                    text = "↔ ${(horizontal * 100f).toInt()}%   ↕ ${(vertical * 100f).toInt()}%",
+                    text = "←${(left * 100f).toInt()}% ↑${(top * 100f).toInt()}% ↓${(bottom * 100f).toInt()}% →${(right * 100f).toInt()}%",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+            MrComicPreviewBackdrop(shape = RoundedCornerShape(12.dp)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -601,38 +612,43 @@ private fun ReaderGraphicCropPreview(
                     }
                 }
                 val overlay = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                if (horizontal > 0f) {
+                if (left > 0f) {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(horizontal / 0.22f)
+                            .fillMaxWidth(left / maxFraction)
                             .align(Alignment.CenterStart)
                             .background(overlay)
                     )
+                }
+                if (right > 0f) {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(horizontal / 0.22f)
+                            .fillMaxWidth(right / maxFraction)
                             .align(Alignment.CenterEnd)
                             .background(overlay)
                     )
                 }
-                if (vertical > 0f) {
+                if (top > 0f) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .fillMaxHeight(vertical / 0.22f)
+                            .fillMaxHeight(top / maxFraction)
                             .align(Alignment.TopCenter)
                             .background(overlay)
                     )
+                }
+                if (bottom > 0f) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .fillMaxHeight(vertical / 0.22f)
+                            .fillMaxHeight(bottom / maxFraction)
                             .align(Alignment.BottomCenter)
                             .background(overlay)
                     )
                 }
+            }
             }
         }
     }

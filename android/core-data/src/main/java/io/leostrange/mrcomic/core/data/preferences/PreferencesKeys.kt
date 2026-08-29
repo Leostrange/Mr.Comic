@@ -27,6 +27,16 @@ object PreferencesKeys {
     val READER_IMAGE_SCALE_MODE   = stringPreferencesKey("reader_image_scale_mode")
     val READER_PAGE_MARGIN_CROP_HORIZONTAL = floatPreferencesKey("reader_page_margin_crop_horizontal")
     val READER_PAGE_MARGIN_CROP_VERTICAL = floatPreferencesKey("reader_page_margin_crop_vertical")
+    // Обрезка пустых полей документа: посекционные значения (0..0.22) + флаги.
+    // Посекционные ключи — источник истины; H/V ключи остаются для миграции
+    // старых симметричных настроек (используются только при первом чтении).
+    val READER_PAGE_MARGIN_CROP_ENABLED = booleanPreferencesKey("reader_page_margin_crop_enabled")
+    val READER_PAGE_MARGIN_CROP_LEFT = floatPreferencesKey("reader_page_margin_crop_left")
+    val READER_PAGE_MARGIN_CROP_TOP = floatPreferencesKey("reader_page_margin_crop_top")
+    val READER_PAGE_MARGIN_CROP_RIGHT = floatPreferencesKey("reader_page_margin_crop_right")
+    val READER_PAGE_MARGIN_CROP_BOTTOM = floatPreferencesKey("reader_page_margin_crop_bottom")
+    val READER_PAGE_MARGIN_CROP_SYMMETRIC = booleanPreferencesKey("reader_page_margin_crop_symmetric")
+    val READER_PAGE_MARGIN_CROP_SHOW_WARNING = booleanPreferencesKey("reader_page_margin_crop_show_warning")
     val APP_NAV_TRANSITION_STYLE  = stringPreferencesKey("app_nav_transition_style") // NONE/FADE/SLIDE/LIFT
     val READER_PAGE_ANIMATION     = stringPreferencesKey("reader_page_animation") // NONE/SLIDE/FADE
     val READER_PAGE_SOUND         = booleanPreferencesKey("reader_page_sound")    // page-flip sound
@@ -187,6 +197,7 @@ object PreferencesKeys {
     val READER_CHROME_SHOW_TRANSLATE = booleanPreferencesKey("reader_chrome_show_translate")
     val READER_CHROME_SHOW_BRIGHTNESS = booleanPreferencesKey("reader_chrome_show_brightness")
     val READER_CHROME_SHOW_AUTO_SCROLL = booleanPreferencesKey("reader_chrome_show_auto_scroll")
+    val READER_CHROME_SHOW_CROP = booleanPreferencesKey("reader_chrome_show_crop")
 
     // Последняя секция библиотеки (FILES/AUDIOBOOKS/BOOKMARKS/QUOTES/ACHIEVEMENTS)
     val LIBRARY_CONTENT_SECTION    = stringPreferencesKey("library_content_section")

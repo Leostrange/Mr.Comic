@@ -54,20 +54,22 @@ fun PageView(
     onCenterTap: () -> Unit,
     onUserTouchChange: (Boolean) -> Unit = {},
     imageScaleMode: String = ReaderImageScaleMode.FIT_WIDTH.storedValue,
-    marginCropHorizontal: Float = 0f,
-    marginCropVertical: Float = 0f,
+    marginCropLeft: Float = 0f,
+    marginCropTop: Float = 0f,
+    marginCropRight: Float = 0f,
+    marginCropBottom: Float = 0f,
     modifier: Modifier = Modifier
 ) {
     val isEInk = LocalEInkMode.current
     val isDualPage = uiState.readingMode == ReadingMode.DUAL_PAGE
     val graphicPageOffset = readerGraphicPageOffset(uiState.comic?.format)
     val leftPage = uiState.currentPage
-    val imageCrop = remember(marginCropHorizontal, marginCropVertical) {
-        ReaderImageCrop(
-            horizontalFraction = marginCropHorizontal,
-            verticalFraction = marginCropVertical
-        )
-    }
+    val imageCrop = ReaderImageCrop(
+        leftFraction = marginCropLeft,
+        topFraction = marginCropTop,
+        rightFraction = marginCropRight,
+        bottomFraction = marginCropBottom
+    )
 
     AnimatedContent(
         targetState = Pair(leftPage, isDualPage),
@@ -201,7 +203,13 @@ private fun PagePane(
         val density = LocalDensity.current
         val containerWidthPx = with(density) { maxWidth.toPx().coerceAtLeast(1f) }
         val containerHeightPx = with(density) { maxHeight.toPx().coerceAtLeast(1f) }
-        val (sourceWidthPx, sourceHeightPx) = remember(bitmap, crop.normalizedHorizontal, crop.normalizedVertical) {
+        val (sourceWidthPx, sourceHeightPx) = remember(
+            bitmap,
+            crop.normalizedLeft,
+            crop.normalizedTop,
+            crop.normalizedRight,
+            crop.normalizedBottom
+        ) {
             croppedSourceDimensions(bitmap, crop)
         }
         val (baseWidthPx, baseHeightPx) = remember(

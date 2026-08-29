@@ -4,6 +4,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
+import io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop
+import io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCropSide
 import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.feature.reader.ui.preset.toReaderStylePresetSnapshot
 import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
@@ -554,15 +556,131 @@ class ReaderSettingsController(
     }
 
     override fun setImageMarginCropHorizontal(value: Float) {
-        val safe = value.coerceIn(0f, 0.22f)
-        _uiState.update { it.copy(imageMarginCropHorizontal = safe) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_HORIZONTAL, safe) }
+        val safe = ReaderMarginCrop.coerceSide(value)
+        _uiState.update {
+            it.copy(
+                marginCropLeft = safe,
+                marginCropRight = safe,
+                marginCropEnabled = it.marginCropEnabled || safe > 0f
+            )
+        }
+        persistMarginCrop(
+            enabled = _uiState.value.marginCropEnabled,
+            left = safe,
+            top = _uiState.value.marginCropTop,
+            right = safe,
+            bottom = _uiState.value.marginCropBottom
+        )
     }
 
     override fun setImageMarginCropVertical(value: Float) {
-        val safe = value.coerceIn(0f, 0.22f)
-        _uiState.update { it.copy(imageMarginCropVertical = safe) }
-        viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_VERTICAL, safe) }
+        val safe = ReaderMarginCrop.coerceSide(value)
+        _uiState.update {
+            it.copy(
+                marginCropTop = safe,
+                marginCropBottom = safe,
+                marginCropEnabled = it.marginCropEnabled || safe > 0f
+            )
+        }
+        persistMarginCrop(
+            enabled = _uiState.value.marginCropEnabled,
+            left = _uiState.value.marginCropLeft,
+            top = safe,
+            right = _uiState.value.marginCropRight,
+            bottom = safe
+        )
+    }
+
+    override fun setMarginCropSide(side: String, value: Float) {
+        val cropSide = ReaderMarginCropSide.fromStored(side) ?: return
+        val next = currentMarginCrop().withSide(cropSide, value)
+        updateMarginCropState(next)
+    }
+
+    override fun applyMarginCropSides(left: Float, top: Float, right: Float, bottom: Float) {
+        val next = currentMarginCrop().copy(
+            left = ReaderMarginCrop.coerceSide(left),
+            top = ReaderMarginCrop.coerceSide(top),
+            right = ReaderMarginCrop.coerceSide(right),
+            bottom = ReaderMarginCrop.coerceSide(bottom),
+            enabled = true
+        )
+        updateMarginCropState(next)
+    }
+
+    override fun setMarginCropEnabled(enabled: Boolean) {
+        updateMarginCropState(currentMarginCrop().copy(enabled = enabled))
+    }
+
+    override fun setMarginCropSymmetric(symmetric: Boolean) {
+        val next = if (symmetric) {
+            currentMarginCrop().copy(symmetric = true).withPairsAveraged()
+        } else {
+            currentMarginCrop().copy(symmetric = false)
+        }
+        updateMarginCropState(next)
+    }
+
+    override fun setMarginCropShowWarning(show: Boolean) {
+        updateMarginCropState(currentMarginCrop().copy(showWarning = show))
+    }
+
+    override fun setMarginCropDialogVisible(visible: Boolean) {
+        _uiState.update { it.copy(showMarginCropDialog = visible) }
+    }
+
+    private fun currentMarginCrop(): ReaderMarginCrop = ReaderMarginCrop(
+        enabled = _uiState.value.marginCropEnabled,
+        left = _uiState.value.marginCropLeft,
+        top = _uiState.value.marginCropTop,
+        right = _uiState.value.marginCropRight,
+        bottom = _uiState.value.marginCropBottom,
+        symmetric = _uiState.value.marginCropSymmetric,
+        showWarning = _uiState.value.marginCropShowWarning
+    )
+
+    private fun updateMarginCropState(crop: ReaderMarginCrop) {
+        val normalized = crop.withSymmetricEnforced()
+        _uiState.update {
+            it.copy(
+                marginCropEnabled = normalized.enabled,
+                marginCropLeft = normalized.left,
+                marginCropTop = normalized.top,
+                marginCropRight = normalized.right,
+                marginCropBottom = normalized.bottom,
+                marginCropSymmetric = normalized.symmetric,
+                marginCropShowWarning = normalized.showWarning
+            )
+        }
+        persistMarginCrop(
+            enabled = normalized.enabled,
+            left = normalized.left,
+            top = normalized.top,
+            right = normalized.right,
+            bottom = normalized.bottom,
+            symmetric = normalized.symmetric,
+            showWarning = normalized.showWarning
+        )
+    }
+
+    private fun persistMarginCrop(
+        enabled: Boolean,
+        left: Float,
+        top: Float,
+        right: Float,
+        bottom: Float,
+        symmetric: Boolean = _uiState.value.marginCropSymmetric,
+        showWarning: Boolean = _uiState.value.marginCropShowWarning
+    ) {
+        viewModelScope.launch {
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_ENABLED, enabled)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_LEFT, left)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_TOP, top)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_RIGHT, right)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_BOTTOM, bottom)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_SYMMETRIC, symmetric)
+            readerPreferences.set(PreferencesKeys.READER_PAGE_MARGIN_CROP_SHOW_WARNING, showWarning)
+        }
     }
 
     // ── TTS settings ──────────────────────────────────────────────────────
@@ -633,6 +751,10 @@ class ReaderSettingsController(
             ReaderChromeButton.AUTO_SCROLL -> {
                 _uiState.update { it.copy(chromeShowAutoScrollIcon = visible) }
                 viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_AUTO_SCROLL, visible) }
+            }
+            ReaderChromeButton.CROP -> {
+                _uiState.update { it.copy(chromeShowCropIcon = visible) }
+                viewModelScope.launch { readerPreferences.set(PreferencesKeys.READER_CHROME_SHOW_CROP, visible) }
             }
         }
     }

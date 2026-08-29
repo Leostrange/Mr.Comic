@@ -5,6 +5,9 @@ import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.isArchiveFormat
 import io.leostrange.mrcomic.core.model.isGraphicReaderFormat
 import io.leostrange.mrcomic.core.model.isTextReadingFormat
+import io.leostrange.mrcomic.core.model.supportsDocumentMarginCrop
+import io.leostrange.mrcomic.feature.reader.domain.crop.ReaderMarginCrop
+import io.leostrange.mrcomic.feature.reader.ui.components.ReaderImageCrop
 
 /** Image margin controls are available only for raster content. */
 fun supportsImageMarginCrop(
@@ -15,6 +18,37 @@ fun supportsImageMarginCrop(
     return format == ComicFormat.PDF ||
         format == ComicFormat.DJVU ||
         containerKind == ReaderContainerKind.RASTER_WEBTOON
+}
+
+/**
+ * The margin-crop chrome button is fully active only for document formats
+ * (PDF / DjVu). Graphic formats (comics/manga) show the button locked, so
+ * document comics in PDF still get crop while CBR/CBZ do not pretend to.
+ */
+fun supportsDocumentMarginCropButton(format: ComicFormat?): Boolean =
+    format != null && format.supportsDocumentMarginCrop()
+
+/**
+ * Resolves the crop actually applied to rendered pages: zeros unless the
+ * container supports cropping and the user enabled the feature.
+ */
+internal fun resolveEffectiveImageMarginCrop(
+    containerKind: ReaderContainerKind,
+    format: ComicFormat?,
+    enabled: Boolean,
+    left: Float,
+    top: Float,
+    right: Float,
+    bottom: Float
+): ReaderImageCrop {
+    val supported = supportsImageMarginCrop(containerKind, format)
+    if (!supported || !enabled) return ReaderImageCrop.None
+    return ReaderImageCrop(
+        leftFraction = left.coerceIn(0f, ReaderMarginCrop.MAX_SIDE_FRACTION),
+        topFraction = top.coerceIn(0f, ReaderMarginCrop.MAX_SIDE_FRACTION),
+        rightFraction = right.coerceIn(0f, ReaderMarginCrop.MAX_SIDE_FRACTION),
+        bottomFraction = bottom.coerceIn(0f, ReaderMarginCrop.MAX_SIDE_FRACTION)
+    )
 }
 
 enum class ReaderContainerKind {

@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.ui.theme.style
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPreviewBackdrop
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -394,6 +395,7 @@ internal fun ReaderHeaderFooterPreview(
                 eink = false
             )
         }
+        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
@@ -426,6 +428,7 @@ internal fun ReaderHeaderFooterPreview(
                     )
                 }
             }
+        }
         }
     }
 }

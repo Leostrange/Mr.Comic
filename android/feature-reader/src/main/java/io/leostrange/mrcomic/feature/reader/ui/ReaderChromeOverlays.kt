@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.core.model.supportsDocumentMarginCrop
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderChromeState
@@ -206,7 +207,8 @@ internal fun BoxScope.ReaderTopChromeBar(
     onAutoScrollToggle: () -> Unit,
     onBrightnessChange: (Float) -> Unit,
     onAutoScrollSpeedPreview: (Float) -> Unit,
-    onAutoScrollSpeedCommit: (Float) -> Unit
+    onAutoScrollSpeedCommit: (Float) -> Unit,
+    onToggleMarginCrop: () -> Unit = {}
 ) {
     if (showHeaderFooterOverlay && headerOverlayLine.hasVisibleContent) {
         Surface(
@@ -327,6 +329,9 @@ internal fun BoxScope.ReaderTopChromeBar(
                             showTranslateIcon = uiState.chromeShowTranslateIcon,
                             showBrightnessIcon = uiState.chromeShowBrightnessIcon,
                             showAutoScrollIcon = uiState.chromeShowAutoScrollIcon,
+                            // Margin crop: raster readers only; document formats (PDF/DjVu) unlock it.
+                            showCropIcon = uiState.chromeShowCropIcon && !isTextReader,
+                            marginCropAvailable = uiState.comic?.format?.supportsDocumentMarginCrop() == true,
                             autoScrollActive = uiState.autoScrollEnabled,
                             onNavigateBack = onNavigateBack,
                             onToggleToc = onToggleToc,
@@ -335,7 +340,8 @@ internal fun BoxScope.ReaderTopChromeBar(
                             onRequestOcr = onRequestOcr,
                             onToggleBrightness = onToggleBrightness,
                             onToggleTtsControls = onToggleTtsControls,
-                            onAutoScrollToggle = onAutoScrollToggle
+                            onAutoScrollToggle = onAutoScrollToggle,
+                            onToggleMarginCrop = onToggleMarginCrop
                         )
                         if (showBrightnessRow) {
                             ReaderBrightnessRow(

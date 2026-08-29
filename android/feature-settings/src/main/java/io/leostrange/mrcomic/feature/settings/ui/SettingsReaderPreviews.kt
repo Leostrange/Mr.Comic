@@ -28,6 +28,7 @@ import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
+import io.leostrange.mrcomic.core.ui.designsystem.MrComicPreviewBackdrop
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.style
@@ -80,6 +81,7 @@ internal fun ReaderTextAppearancePreviewCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
             MrComicCardSurface(
                 modifier = Modifier.heightIn(max = 196.dp),
                 shape = MaterialTheme.shapes.large,
@@ -127,6 +129,7 @@ internal fun ReaderTextAppearancePreviewCard(
                     }
                 }
             }
+            }
             Text(
                 text = "${uiState.textFontFamily} · ${readerTextSchemeLabel(strings.languageCode, uiState.textColorScheme)} · ${readerTextLineHeightLabel((uiState.textLineHeight * 100).toInt(), strings.languageCode)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -152,6 +155,7 @@ internal fun ReaderPageLayoutPreviewCard(
         }
     ) {
         val previewShape = MaterialTheme.shapes.large
+        MrComicPreviewBackdrop(shape = previewShape) {
         MrComicCardSurface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -234,6 +238,7 @@ internal fun ReaderPageLayoutPreviewCard(
                     language = strings.languageCode
                 )
             }
+            }
         }
     }
 }
@@ -267,6 +272,7 @@ private fun ReaderImageCropPreview(
                 color = MaterialTheme.colorScheme.primary
             )
         }
+        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.medium) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -317,6 +323,7 @@ private fun ReaderImageCropPreview(
                 )
             }
         }
+        }
     }
 }
 
@@ -335,6 +342,7 @@ internal fun ReaderHeaderFooterPreviewCard(
             else -> "Компактный preview колонтитулов"
         }
     ) {
+        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
         MrComicCardSurface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -405,6 +413,7 @@ internal fun ReaderHeaderFooterPreviewCard(
                 }
             }
         }
+        }
     }
 }
 
@@ -431,6 +440,7 @@ internal fun ReaderPagingPreviewCard(
             else -> "Preview зон листания"
         }
     ) {
+        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -462,6 +472,7 @@ internal fun ReaderPagingPreviewCard(
                     VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                 }
             }
+        }
         }
     }
 }

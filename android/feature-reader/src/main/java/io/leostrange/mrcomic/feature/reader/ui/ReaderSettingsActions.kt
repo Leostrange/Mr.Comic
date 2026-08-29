@@ -72,8 +72,20 @@ interface ReaderSettingsActions {
 
     // ── Image ─────────────────────────────────────────────────────────────
     fun setImageScaleMode(value: String)
+
+    /** Symmetric pair writes kept for the style tab / settings sliders. */
     fun setImageMarginCropHorizontal(value: Float)
     fun setImageMarginCropVertical(value: Float)
+
+    /** Per-side crop write used by the margin-crop dialog. */
+    fun setMarginCropSide(side: String, value: Float)
+
+    /** Applies all four sides at once (used by the auto-detect preset). */
+    fun applyMarginCropSides(left: Float, top: Float, right: Float, bottom: Float)
+    fun setMarginCropEnabled(enabled: Boolean)
+    fun setMarginCropSymmetric(symmetric: Boolean)
+    fun setMarginCropShowWarning(show: Boolean)
+    fun setMarginCropDialogVisible(visible: Boolean)
 
     // ── TTS ───────────────────────────────────────────────────────────────
     fun setTtsSpeed(value: Float)
