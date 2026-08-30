@@ -1,6 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import android.graphics.Bitmap
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -72,6 +74,8 @@ internal fun ReaderMarginCropDialog(
     val controller = viewModel.settingsController
     val scope = rememberCoroutineScope()
     var autoRunning by remember { mutableStateOf(false) }
+    val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val layout = readerMarginCropLayout(isLandscape)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -80,13 +84,13 @@ internal fun ReaderMarginCropDialog(
         Surface(
             modifier = Modifier
                 .padding(horizontal = 20.dp)
-                .fillMaxWidth()
-                .widthIn(max = 420.dp),
+                .fillMaxWidth(layout.widthFraction)
+                .widthIn(max = if (isLandscape) 820.dp else 420.dp),
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
             tonalElevation = 3.dp
         ) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = layout.verticalPaddingDp.dp)) {
                 // ── Header ────────────────────────────────────────────────
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -175,42 +179,47 @@ internal fun ReaderMarginCropDialog(
                 }
 
                 // ── Sides ─────────────────────────────────────────────────
-                Column(
-                    modifier = Modifier.alpha(if (uiState.marginCropEnabled) 1f else DisabledAlpha)
-                ) {
-                    MarginCropSideRow(
-                        title = readerMarginCropSideTop(language),
-                        value = uiState.marginCropTop,
-                        onValueChange = { controller.setMarginCropSide(ReaderMarginCropSide.TOP.storedValue, it) }
-                    )
-                    MarginCropSideRow(
-                        title = readerMarginCropSideBottom(language),
-                        value = uiState.marginCropBottom,
-                        onValueChange = { controller.setMarginCropSide(ReaderMarginCropSide.BOTTOM.storedValue, it) }
-                    )
-                    MarginCropSideRow(
-                        title = readerMarginCropSideLeft(language),
-                        value = uiState.marginCropLeft,
-                        onValueChange = { controller.setMarginCropSide(ReaderMarginCropSide.LEFT.storedValue, it) }
-                    )
-                    MarginCropSideRow(
-                        title = readerMarginCropSideRight(language),
-                        value = uiState.marginCropRight,
-                        onValueChange = { controller.setMarginCropSide(ReaderMarginCropSide.RIGHT.storedValue, it) }
-                    )
+                val sides = listOf(
+                    Triple(readerMarginCropSideTop(language), uiState.marginCropTop, ReaderMarginCropSide.TOP),
+                    Triple(readerMarginCropSideBottom(language), uiState.marginCropBottom, ReaderMarginCropSide.BOTTOM),
+                    Triple(readerMarginCropSideLeft(language), uiState.marginCropLeft, ReaderMarginCropSide.LEFT),
+                    Triple(readerMarginCropSideRight(language), uiState.marginCropRight, ReaderMarginCropSide.RIGHT),
+                )
+                if (layout.sideColumns == 2) {
+                    Row(
+                        modifier = Modifier.alpha(if (uiState.marginCropEnabled) 1f else DisabledAlpha),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        listOf(sides.take(2), sides.drop(2)).forEach { columnSides ->
+                            Column(modifier = Modifier.weight(1f)) {
+                                columnSides.forEach { (title, value, side) ->
+                                    MarginCropSideRow(title, value, { controller.setMarginCropSide(side.storedValue, it) })
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Column(modifier = Modifier.alpha(if (uiState.marginCropEnabled) 1f else DisabledAlpha)) {
+                        sides.forEach { (title, value, side) ->
+                            MarginCropSideRow(title, value, { controller.setMarginCropSide(side.storedValue, it) })
+                        }
+                    }
                 }
 
                 // ── Options ───────────────────────────────────────────────
-                SwitchRow(
-                    title = readerMarginCropSymmetric(language),
-                    checked = uiState.marginCropSymmetric,
-                    onCheckedChange = controller::setMarginCropSymmetric
-                )
-                SwitchRow(
-                    title = readerMarginCropShowWarning(language),
-                    checked = uiState.marginCropShowWarning,
-                    onCheckedChange = controller::setMarginCropShowWarning
-                )
+                if (isLandscape) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(Modifier.weight(1f)) {
+                            SwitchRow(readerMarginCropSymmetric(language), uiState.marginCropSymmetric, controller::setMarginCropSymmetric)
+                        }
+                        Box(Modifier.weight(1f)) {
+                            SwitchRow(readerMarginCropShowWarning(language), uiState.marginCropShowWarning, controller::setMarginCropShowWarning)
+                        }
+                    }
+                } else {
+                    SwitchRow(readerMarginCropSymmetric(language), uiState.marginCropSymmetric, controller::setMarginCropSymmetric)
+                    SwitchRow(readerMarginCropShowWarning(language), uiState.marginCropShowWarning, controller::setMarginCropShowWarning)
+                }
 
                 AnimatedVisibility(visible = uiState.marginCropEnabled && uiState.marginCropShowWarning) {
                     Row(

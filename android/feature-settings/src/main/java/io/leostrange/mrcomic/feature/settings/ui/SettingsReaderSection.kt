@@ -126,11 +126,6 @@ internal fun ReaderSection(
                 }
             }
             ReaderSettingsPage.PAGE_LAYOUT -> {
-                stickyHeader(key = "reader_page_layout_preview") {
-                    Box(modifier = Modifier.padding(bottom = 10.dp)) {
-                        ReaderPageLayoutPreviewCard(uiState = uiState, strings = strings)
-                    }
-                }
                 item {
                     ReaderModeCard(uiState = uiState, strings = strings, viewModel = viewModel)
                 }

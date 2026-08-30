@@ -91,15 +91,11 @@ fun ReaderScreen(
         right = uiState.marginCropRight,
         bottom = uiState.marginCropBottom
     )
-    val effectivePageImageScaleMode =
-        if (
-            uiState.comic?.format == ComicFormat.DJVU &&
-            uiState.imageScaleMode == ReaderImageScaleMode.FIT_WIDTH.storedValue
-        ) {
-            ReaderImageScaleMode.FIT_HEIGHT.storedValue
-        } else {
-            uiState.imageScaleMode
-        }
+    val effectivePageImageScaleMode = resolvePageImageScaleMode(
+        format = uiState.comic?.format,
+        readingMode = uiState.readingMode,
+        requestedMode = uiState.imageScaleMode,
+    )
     val supportsLandscapeSpread = !isTextReader && isLandscape && configuration.screenWidthDp >= 600
     val activeReaderPreset = remember(uiState.readerPreset) {
         ReadingPreset.fromStored(uiState.readerPreset)

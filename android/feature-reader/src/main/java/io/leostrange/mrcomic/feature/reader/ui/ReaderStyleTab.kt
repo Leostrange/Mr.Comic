@@ -78,9 +78,6 @@ internal fun ReaderStyleTab(
             // Text-reader controls keep the style entry in their own tab.
             .filterNot { isTextReader && it == ReaderChromeButton.STYLE }
     }
-    val supportsMarginCrop = remember(uiState.readerContainerKind, uiState.comic?.format, isTextReader) {
-        supportsImageMarginCrop(uiState.readerContainerKind, uiState.comic?.format)
-    }
     val availableFonts = remember(context, fontCatalogVersion) {
         ReaderTextFontCatalog.availableFontFamilies(context)
     }
@@ -208,46 +205,6 @@ internal fun ReaderStyleTab(
                             label = { Text(readerImageScaleLabel(mode, strings.languageCode)) }
                         )
                     }
-                }
-            }
-            if (supportsMarginCrop) {
-                item {
-                    ReaderGraphicCropPreview(
-                        leftCrop = uiState.marginCropLeft,
-                        topCrop = uiState.marginCropTop,
-                        rightCrop = uiState.marginCropRight,
-                        bottomCrop = uiState.marginCropBottom,
-                        language = strings.languageCode
-                    )
-                }
-                item {
-                    Text(
-                        text = readerMarginCropHint(strings.languageCode),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                item {
-                    val horizontalCrop = (uiState.marginCropLeft + uiState.marginCropRight) / 2f
-                    ReaderSliderRow(
-                        title = readerMarginCropHorizontalLabel(horizontalCrop, strings.languageCode),
-                        valueText = "${(horizontalCrop * 100f).toInt()}%",
-                        value = horizontalCrop,
-                        valueRange = 0f..0.18f,
-                        steps = 17,
-                        onValueChange = onImageMarginCropHorizontalChange
-                    )
-                }
-                item {
-                    val verticalCrop = (uiState.marginCropTop + uiState.marginCropBottom) / 2f
-                    ReaderSliderRow(
-                        title = readerMarginCropVerticalLabel(verticalCrop, strings.languageCode),
-                        valueText = "${(verticalCrop * 100f).toInt()}%",
-                        value = verticalCrop,
-                        valueRange = 0f..0.18f,
-                        steps = 17,
-                        onValueChange = onImageMarginCropVerticalChange
-                    )
                 }
             }
             item { ReaderSectionTitle(readerText.colorSchemeTitle) }

@@ -473,14 +473,7 @@ internal fun ReaderImageLayoutCard(
     language: String,
     viewModel: SettingsViewModel
 ) {
-    SettingsCard(title = readerImageLayoutCardTitle(language)) {
-        Text(
-            readerImageLayoutCardHint(language),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(Modifier.height(8.dp))
-        LabelText(readerImageScaleModeTitle(language))
+    SettingsCard(title = readerImageScaleModeTitle(language)) {
         ChipRow {
             ReaderImageScaleMode.entries.forEach { mode ->
                 MrComicFilterChip(
@@ -490,24 +483,6 @@ internal fun ReaderImageLayoutCard(
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
-        SettingsSliderTile(
-            title = readerMarginCropHorizontalTitle(language),
-            valueLabel = readerMarginCropPercentLabel(uiState.readerImageMarginCropHorizontal),
-            value = uiState.readerImageMarginCropHorizontal,
-            onValueChange = viewModel::setReaderImageMarginCropHorizontal,
-            valueRange = 0f..0.22f,
-            steps = 10
-        )
-        Spacer(Modifier.height(8.dp))
-        SettingsSliderTile(
-            title = readerMarginCropVerticalTitle(language),
-            valueLabel = readerMarginCropPercentLabel(uiState.readerImageMarginCropVertical),
-            value = uiState.readerImageMarginCropVertical,
-            onValueChange = viewModel::setReaderImageMarginCropVertical,
-            valueRange = 0f..0.22f,
-            steps = 10
-        )
     }
 }
 
