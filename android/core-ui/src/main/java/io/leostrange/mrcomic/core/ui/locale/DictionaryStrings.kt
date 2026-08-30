@@ -37,11 +37,7 @@ data class DictionaryStrings(
     val dictLangChinese: String,
     /** Status chip: Bundled */
     val dictStatusBundled: String,
-    /** Status chip: Downloaded (user-fetched from the release server) */
-    val dictStatusDownloaded: String,
-    /** Status chip: Imported (user-supplied SAF file) */
-    val dictStatusImported: String,
-    /** Status chip: Installed (legacy label, kept for callers that haven't migrated) */
+    /** Status chip: Installed */
     val dictStatusInstalled: String,
     /** Status chip: Not installed */
     val dictStatusNotInstalled: String,
@@ -96,8 +92,6 @@ data class DictionaryStrings(
                 dictLangTurkish = "Turkish",
                 dictLangChinese = "Chinese",
                 dictStatusBundled = "Bundled",
-                dictStatusDownloaded = "Downloaded",
-                dictStatusImported = "Imported",
                 dictStatusInstalled = "Installed",
                 dictStatusNotInstalled = "Not installed",
                 dictBtnDownload = "Download",
@@ -133,8 +127,6 @@ data class DictionaryStrings(
                 dictLangTurkish = "トルコ語",
                 dictLangChinese = "中国語",
                 dictStatusBundled = "バンドル済み",
-                dictStatusDownloaded = "ダウンロード済み",
-                dictStatusImported = "インポート済み",
                 dictStatusInstalled = "インストール済み",
                 dictStatusNotInstalled = "未インストール",
                 dictBtnDownload = "ダウンロード",
@@ -170,8 +162,6 @@ data class DictionaryStrings(
                 dictLangTurkish = "土耳其语",
                 dictLangChinese = "中文",
                 dictStatusBundled = "内置",
-                dictStatusDownloaded = "已下载",
-                dictStatusImported = "已导入",
                 dictStatusInstalled = "已安装",
                 dictStatusNotInstalled = "未安装",
                 dictBtnDownload = "下载",
@@ -207,8 +197,6 @@ data class DictionaryStrings(
                 dictLangTurkish = "터키어",
                 dictLangChinese = "중국어",
                 dictStatusBundled = "번들 포함",
-                dictStatusDownloaded = "다운로드됨",
-                dictStatusImported = "가져옴",
                 dictStatusInstalled = "설치됨",
                 dictStatusNotInstalled = "미설치",
                 dictBtnDownload = "다운로드",
@@ -244,8 +232,6 @@ data class DictionaryStrings(
                 dictLangTurkish = "Турецкий",
                 dictLangChinese = "Китайский",
                 dictStatusBundled = "В комплекте",
-                dictStatusDownloaded = "Скачан",
-                dictStatusImported = "Импортирован",
                 dictStatusInstalled = "Установлено",
                 dictStatusNotInstalled = "Не установлено",
                 dictBtnDownload = "Скачать",

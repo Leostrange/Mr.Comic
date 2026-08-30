@@ -10,8 +10,6 @@ class DictionaryDownloaderTest {
 
     @Test
     fun `buildReleaseUrl returns correct URL for english dictionary`() {
-        // This test verifies the URL construction logic
-        // In a real test, we would mock the context and test the full flow
         val config = DictionaryAssetConfig(
             language = "en",
             assetPath = "databases/dictionary_en.dbpack",
@@ -19,15 +17,11 @@ class DictionaryDownloaderTest {
             extractedFileName = "dictionary_en_room_asset_v3.db"
         )
         
-        // Expected URL format: release assets are published as dictionary_<lang>.dbpack
-        val expectedUrl = "https://github.com/Leostrange/Mr.Comic/releases/download/v2.3.0/dictionary_en.dbpack"
-        
-        // We can't easily test the private buildReleaseUrl method without reflection
-        // But we can verify the config structure is correct
-        assertEquals("en", config.language)
-        assertNotNull(config.assetPath)
-        assertNotNull(config.databaseName)
-        assertNotNull(config.extractedFileName)
+        assertEquals(
+            "https://github.com/Leostrange/Mr.Comic/releases/download/" +
+                "dictionary-modules-v1.0.0/dictionary_en.dbpack",
+            DictionaryDownloader.dictionaryReleaseUrl(config.language)
+        )
     }
 
     @Test

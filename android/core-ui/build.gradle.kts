@@ -32,4 +32,6 @@ dependencies {
     implementation(libs.coil.compose)
     testImplementation(libs.test.junit)
     debugImplementation("androidx.compose.ui:ui-tooling")
+    androidTestImplementation(libs.test.androidx.runner)
+    androidTestImplementation(libs.test.androidx.junit)
 }

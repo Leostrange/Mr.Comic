@@ -19,6 +19,24 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
+    fun textSettingsJs_justifiesOnlyReadingParagraphsAndKeepsTheirLastLineNatural() {
+        val js = textSettingsJs(
+            fontSize = 18,
+            bg = "#fafafa",
+            fg = "#1a1a1a",
+            align = "justify",
+            pagedMode = true
+        )
+
+        assertTrue(js.contains("text-align-last:start !important"))
+        assertTrue(js.contains("hyphens:auto !important"))
+        assertFalse(
+            "headings and structural containers must retain publisher alignment",
+            js.contains("querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6')")
+        )
+    }
+
+    @Test
     fun normalizeReaderOverrideColor_validHex() {
         assertEquals("#FF0000", normalizeReaderOverrideColor("#FF0000"))
         assertEquals("#1a6f9a", normalizeReaderOverrideColor("#1a6f9a"))

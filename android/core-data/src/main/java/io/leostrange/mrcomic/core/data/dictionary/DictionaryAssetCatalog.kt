@@ -6,7 +6,7 @@ data class DictionaryAssetConfig(
     val assetPath: String,
     val databaseName: String,
     val extractedFileName: String,
-    /** Approximate download size in bytes (compressed, from v2.3.0 release). */
+    /** Approximate download size in bytes from the dictionary modules release. */
     val approxDownloadBytes: Long = 0L,
 )
 

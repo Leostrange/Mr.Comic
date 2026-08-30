@@ -1,15 +1,47 @@
+Mr.Comic Source-Available License 1.0
+
 Copyright (c) 2026 Leostrange.
 
-All rights reserved.
+1. Definitions
 
-The Mr.Comic source code is published for review, learning, issue reporting and
-project collaboration. Unless the copyright holder grants a separate written
-license, you may not sell, sublicense, redistribute, repackage, publish modified
-builds, or use the code in another product.
+“Software” means the Mr.Comic source code, documentation and project files that are included in this repository and are identified as being covered by this License. “Copyright Holder” means Leostrange or the applicable copyright owner identified in the relevant file. “You” means an individual or legal entity exercising rights under this License.
 
-You may clone the repository, inspect the source, build the app locally for
-personal testing, and submit issues or pull requests to this repository.
+2. Limited permission
 
-Third-party libraries, Android SDK components, dictionaries, fonts, media, sample
-files and other bundled assets are not relicensed by this notice. They remain
-under their own licenses and attribution requirements.
+Subject to the terms of this License, the Copyright Holder grants You a limited, non-exclusive, non-transferable, revocable permission to view and study the Software; clone and locally reproduce the Software for personal evaluation, learning, debugging and development; build and run an unmodified or privately modified copy on devices that You own or control for personal, non-commercial testing; and submit issues, documentation changes and pull requests to the original project.
+
+This permission does not transfer ownership of the Software and does not grant a patent license, trademark license or any right to use the name, branding, icons or other marks of Mr.Comic.
+
+3. Restrictions
+
+Unless You obtain separate written permission from the Copyright Holder, You may not sell, rent, lease, sublicense or otherwise monetize the Software or a product substantially based on it; redistribute, publish, mirror, repackage or make available the Software or any modified build to third parties; incorporate the Software into another product, service or commercial offering; distribute binaries, APKs, source archives or modified public builds derived from the Software; or remove or alter copyright, license, attribution, security or provenance notices.
+
+Private modifications that remain solely under Your control are permitted under Section 2. No permission is granted to publish those modifications.
+
+4. Third-party material
+
+The Software may include or depend on libraries, Android components, dictionaries, fonts, media, sample files, model assets and other material that is not owned by the Copyright Holder. Such material is not relicensed by this License and remains under its own license and attribution requirements. You are responsible for reviewing and complying with those terms before using or distributing any copy.
+
+5. Contributions
+
+Unless a contribution is expressly submitted under different written terms accepted by the Copyright Holder, a contribution submitted to the original Mr.Comic project is provided under this License. This section does not grant permission to publish or redistribute the contribution outside the original project.
+
+6. Termination
+
+The permissions in this License terminate automatically if You materially breach any term. Permissions may be reinstated only if the Copyright Holder expressly agrees in writing or, at the Copyright Holder’s discretion, if the breach is fully cured within thirty days after written notice.
+
+7. Disclaimer of warranty
+
+THE SOFTWARE IS PROVIDED “AS IS” AND WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, SECURITY, ACCURACY OR AVAILABILITY. THE COPYRIGHT HOLDER DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED.
+
+8. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, CONSEQUENTIAL OR PUNITIVE DAMAGES, OR ANY LOSS OF DATA, PROFITS, REVENUE, GOODWILL OR BUSINESS, ARISING FROM OR RELATING TO THE SOFTWARE OR THIS LICENSE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+9. Commercial and other permissions
+
+Requests for commercial use, redistribution, public modified builds, alternative licensing or other permissions must be made in writing to the Copyright Holder. Written permission must identify the intended use, scope, territory, duration and any applicable attribution requirements.
+
+10. License version
+
+This is Mr.Comic Source-Available License 1.0. Future versions apply only when explicitly identified by the Copyright Holder. If any provision is held invalid, the remaining provisions remain in effect to the fullest extent permitted by law.

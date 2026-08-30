@@ -28,7 +28,6 @@ import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.resolveReaderTapZoneLayout
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
-import io.leostrange.mrcomic.core.ui.designsystem.MrComicPreviewBackdrop
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.style
@@ -81,15 +80,13 @@ internal fun ReaderTextAppearancePreviewCard(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
             MrComicCardSurface(
-                modifier = Modifier.heightIn(max = 196.dp),
                 shape = MaterialTheme.shapes.large,
                 containerColor = previewBackground
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = strings.readerTextPreviewTitle,
@@ -103,32 +100,25 @@ internal fun ReaderTextAppearancePreviewCard(
                     )
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = align,
-                        verticalArrangement = Arrangement.spacedBy(
-                            uiState.textParagraphSpacing.coerceIn(0f, 32f).dp
-                        )
+                        horizontalAlignment = align
                     ) {
-                        repeat(2) {
-                            Text(
-                                text = strings.readerTextPreviewDescription,
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontSize = uiState.textFontSize.sp,
-                                    lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
-                                    fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal,
-                                    fontFamily = previewFontFamily,
-                                    letterSpacing = uiState.textLetterSpacing.em,
-                                    color = previewText
-                                ),
-                                color = previewText,
-                                textAlign = textAlign,
-                                modifier = Modifier.fillMaxWidth(),
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Text(
+                            text = strings.readerTextPreviewDescription,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = uiState.textFontSize.sp,
+                                lineHeight = (uiState.textFontSize * uiState.textLineHeight).sp,
+                                fontWeight = if (uiState.textBold) FontWeight.SemiBold else FontWeight.Normal,
+                                fontFamily = previewFontFamily,
+                                letterSpacing = uiState.textLetterSpacing.em,
+                                color = previewText
+                            ),
+                            color = previewText,
+                            textAlign = textAlign,
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 8
+                        )
                     }
                 }
-            }
             }
             Text(
                 text = "${uiState.textFontFamily} · ${readerTextSchemeLabel(strings.languageCode, uiState.textColorScheme)} · ${readerTextLineHeightLabel((uiState.textLineHeight * 100).toInt(), strings.languageCode)}",
@@ -155,17 +145,15 @@ internal fun ReaderPageLayoutPreviewCard(
         }
     ) {
         val previewShape = MaterialTheme.shapes.large
-        MrComicPreviewBackdrop(shape = previewShape) {
         MrComicCardSurface(
             modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 274.dp),
+                .fillMaxWidth(),
             shape = previewShape,
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -231,98 +219,7 @@ internal fun ReaderPageLayoutPreviewCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Spacer(Modifier.height(4.dp))
-                ReaderImageCropPreview(
-                    horizontalCrop = uiState.readerImageMarginCropHorizontal,
-                    verticalCrop = uiState.readerImageMarginCropVertical,
-                    language = strings.languageCode
-                )
             }
-            }
-        }
-    }
-}
-
-/** Shows the removed top/bottom bands instead of hiding vertical crop in a slider. */
-@Composable
-private fun ReaderImageCropPreview(
-    horizontalCrop: Float,
-    verticalCrop: Float,
-    language: String
-) {
-    val horizontal = horizontalCrop.coerceIn(0f, 0.22f)
-    val vertical = verticalCrop.coerceIn(0f, 0.22f)
-    val title = when (language) {
-        "en" -> "PDF / DJVU crop preview"
-        "ja" -> "PDF / DJVU トリミングプレビュー"
-        "zh" -> "PDF / DJVU 裁剪预览"
-        "ko" -> "PDF / DJVU 자르기 미리보기"
-        else -> "Предпросмотр подрезки PDF / DJVU"
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(title, style = MaterialTheme.typography.labelMedium)
-            Text(
-                text = "${(vertical * 100f).toInt()}% · ${(horizontal * 100f).toInt()}%",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.medium) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(92.dp)
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        horizontal = (horizontal * 70f).dp,
-                        vertical = (vertical * 70f).dp
-                    )
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(horizontal = 10.dp, vertical = 7.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    repeat(4) { index ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(if (index == 1) 0.76f else 1f)
-                                .height(5.dp)
-                                .background(
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                                    MaterialTheme.shapes.small
-                                )
-                        )
-                    }
-                }
-            }
-            if (vertical > 0f) {
-                val bandHeight = (vertical * 140f).dp
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(bandHeight)
-                        .align(Alignment.TopCenter)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(bandHeight)
-                        .align(Alignment.BottomCenter)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                )
-            }
-        }
         }
     }
 }
@@ -342,11 +239,8 @@ internal fun ReaderHeaderFooterPreviewCard(
             else -> "Компактный preview колонтитулов"
         }
     ) {
-        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
         MrComicCardSurface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 172.dp),
+            modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large,
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
         ) {
@@ -383,9 +277,9 @@ internal fun ReaderHeaderFooterPreviewCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(30.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(10.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
                         readerInfoSlotPreviewValue(language, uiState.readerFooterLeftSlot),
@@ -413,7 +307,6 @@ internal fun ReaderHeaderFooterPreviewCard(
                 }
             }
         }
-        }
     }
 }
 
@@ -440,7 +333,6 @@ internal fun ReaderPagingPreviewCard(
             else -> "Preview зон листания"
         }
     ) {
-        MrComicPreviewBackdrop(shape = MaterialTheme.shapes.large) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -472,7 +364,6 @@ internal fun ReaderPagingPreviewCard(
                     VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f))
                 }
             }
-        }
         }
     }
 }

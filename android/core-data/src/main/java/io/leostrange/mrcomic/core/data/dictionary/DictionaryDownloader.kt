@@ -15,51 +15,13 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Where a particular dictionary currently lives on disk.
- *
- * - [BUNDLED] — the extracted file came from the app's `assets/` folder and has
- *   not been replaced by the user. Treated as immutable: no delete, no
- *   re-import by the user.
- * - [DOWNLOADED] — the extracted file was fetched from the GitHub release
- *   assets via [DictionaryDownloader.ensureDictionary]. Removable.
- * - [IMPORTED] — the extracted file was supplied by the user through the
- *   SAF picker. Removable.
- * - [NOT_INSTALLED] — no extracted file present yet. The user can download
- *   or import one.
- */
-enum class DictionaryProvenance {
-    BUNDLED,
-    DOWNLOADED,
-    IMPORTED,
-    NOT_INSTALLED;
-
-    val isUserOwned: Boolean
-        get() = this == DOWNLOADED || this == IMPORTED
-
-    val isInstalled: Boolean
-        get() = this != NOT_INSTALLED
-}
-
-/**
  * Information about an installed dictionary.
- *
- * [provenance] tracks where the on-disk file came from so the UI can show the
- * correct status (bundled / downloaded / imported) and enable the right
- * actions (delete, import). [isBundled] is kept for backward compatibility
- * with code that still needs the legacy "shipped in assets" flag.
  */
 data class DictionaryInstallInfo(
     val language: String,
     val isBundled: Boolean,
-    val provenance: DictionaryProvenance,
     val downloadedFile: File?,
     val sizeBytes: Long,
-    val sourceName: String = when (provenance) {
-        DictionaryProvenance.BUNDLED -> "Asset"
-        DictionaryProvenance.DOWNLOADED -> "Download"
-        DictionaryProvenance.IMPORTED -> "Import"
-        DictionaryProvenance.NOT_INSTALLED -> "Catalog"
-    }
 )
 
 /**
@@ -125,10 +87,6 @@ class DictionaryDownloader @Inject constructor(
             // Clean up downloaded file
             downloadedFile.delete()
 
-            // Mark the file as user-downloaded so the UI can offer delete
-            // and surface the right status.
-            writeProvenance(config.language, DictionaryProvenance.DOWNLOADED)
-
             onProgress?.invoke(100)
             Log.i(TAG, "Successfully downloaded and extracted dictionary for ${config.language}")
             extractedFile
@@ -138,11 +96,11 @@ class DictionaryDownloader @Inject constructor(
         }
     }
 
-    private fun buildReleaseUrl(config: DictionaryAssetConfig): String {
-        // Release v2.3.0 assets are published as `dictionary_<lang>.dbpack` (plain).
+    internal fun buildReleaseUrl(config: DictionaryAssetConfig): String {
+        // Dictionary modules are published independently from application releases.
         // Keep the gzip auto-detection in extractDatabase so future .gz uploads
         // continue to work without a code change.
-        return "https://github.com/Leostrange/Mr.Comic/releases/download/$DICTIONARY_RELEASE_TAG/dictionary_${config.language}.dbpack"
+        return dictionaryReleaseUrl(config.language)
     }
 
     private fun downloadFile(
@@ -208,17 +166,7 @@ class DictionaryDownloader @Inject constructor(
 
     /**
      * Returns info about every shipped dictionary — whether it is bundled,
-     * downloaded, imported, and the size of the on-disk file (or zero for
-     * not-yet-fetched).
-     *
-     * Provenance resolution:
-     * 1. If a `.provenance` sidecar exists next to the extracted file, that
-     *    value wins (DOWNLOADED or IMPORTED).
-     * 2. Otherwise, if the extracted file is present and the same language
-     *    ships in assets, the file came from a prior asset extraction
-     *    (BUNDLED). The user could still overwrite it via download/import,
-     *    which would replace both the extracted file and the sidecar.
-     * 3. Otherwise the dictionary is not yet installed.
+     * downloaded, and the size of the on-disk file (or zero for not-yet-fetched).
      */
     fun installedDictionaries(): List<DictionaryInstallInfo> {
         return DictionaryAssetCatalog.shippedLanguages().map { lang ->
@@ -233,50 +181,17 @@ class DictionaryDownloader @Inject constructor(
                 downloadedExists -> downloadedFile.length()
                 else -> 0L
             }
-            val provenance = readProvenance(lang, isExtracted, hasBundled)
             DictionaryInstallInfo(
                 language = lang,
                 isBundled = hasBundled,
-                provenance = provenance,
                 downloadedFile = if (downloadedExists) downloadedFile else null,
                 sizeBytes = sizeBytes,
             )
         }
     }
 
-    private fun readProvenance(
-        language: String,
-        isExtracted: Boolean,
-        hasBundled: Boolean,
-    ): DictionaryProvenance {
-        if (!isExtracted) return DictionaryProvenance.NOT_INSTALLED
-        val sidecar = File(extractedDir, "$language.provenance")
-        if (sidecar.exists()) {
-            val raw = runCatching { sidecar.readText().trim() }.getOrDefault("")
-            when (raw.uppercase()) {
-                "DOWNLOADED", "DOWNLOAD" -> return DictionaryProvenance.DOWNLOADED
-                "IMPORTED", "IMPORT" -> return DictionaryProvenance.IMPORTED
-                "BUNDLED", "ASSET" -> return DictionaryProvenance.BUNDLED
-            }
-        }
-        // No sidecar → assume the file came from the bundled assets
-        // (this is the initial state of a fresh install).
-        return if (hasBundled) DictionaryProvenance.BUNDLED
-        else DictionaryProvenance.DOWNLOADED
-    }
-
-    private fun writeProvenance(language: String, provenance: DictionaryProvenance) {
-        val sidecar = File(extractedDir, "$language.provenance")
-        runCatching {
-            sidecar.parentFile?.mkdirs()
-            sidecar.writeText(provenance.name)
-        }
-    }
-
     /**
      * Deletes the extracted database and any downloaded .dbpack for the given language.
-     * The provenance sidecar is cleared so a future re-extract from the bundled
-     * asset is correctly classified as BUNDLED again.
      * Note: does NOT check if a download is currently in progress — callers should
      * guard via [DictionaryOperationState] before calling.
      *
@@ -286,11 +201,9 @@ class DictionaryDownloader @Inject constructor(
         val config = DictionaryAssetCatalog.configForLanguage(language) ?: return false
         val extractedFile = File(extractedDir, config.extractedFileName)
         val downloadedFile = File(downloadsDir, "$language.dbpack")
-        val sidecarFile = File(extractedDir, "$language.provenance")
         var deleted = false
         if (extractedFile.exists()) { extractedFile.delete(); deleted = true }
         if (downloadedFile.exists()) { downloadedFile.delete(); deleted = true }
-        if (sidecarFile.exists()) { sidecarFile.delete(); deleted = true }
         return deleted
     }
 
@@ -306,9 +219,7 @@ class DictionaryDownloader @Inject constructor(
         if (!extractedFile.exists() || extractedFile.length() == 0L) return false
         return try {
             extractedFile.inputStream().use { input ->
-                GZIPOutputStream(target).use { gzip ->
-                    input.copyTo(gzip)
-                }
+                writeGzipWithoutClosingTarget(input, target)
             }
             true
         } catch (e: Exception) {
@@ -373,11 +284,6 @@ class DictionaryDownloader @Inject constructor(
             }
             backupFile.delete()
 
-            // Mark the file as user-imported so the UI can offer delete
-            // and surface the right status (even if a bundled asset also
-            // exists for the same language).
-            writeProvenance(language, DictionaryProvenance.IMPORTED)
-
             tempFile.delete()
             Log.i(TAG, "Successfully imported dictionary for $language")
             extractedFile
@@ -408,7 +314,18 @@ class DictionaryDownloader @Inject constructor(
 
     companion object {
         private const val TAG = "DictionaryDownloader"
-        private const val DICTIONARY_RELEASE_TAG = "v2.3.0"
+        private const val DICTIONARY_RELEASE_TAG = "dictionary-modules-v1.0.0"
+
+        internal fun dictionaryReleaseUrl(language: String): String =
+            "https://github.com/Leostrange/Mr.Comic/releases/download/" +
+                "$DICTIONARY_RELEASE_TAG/dictionary_${language}.dbpack"
+
+        internal fun writeGzipWithoutClosingTarget(input: InputStream, target: OutputStream) {
+            val gzip = GZIPOutputStream(target)
+            input.copyTo(gzip)
+            gzip.finish()
+            gzip.flush()
+        }
 
         /**
          * Detects gzip magic bytes (0x1F, 0x8B) on a stream.

@@ -64,7 +64,6 @@ dependencies {
     androidTestImplementation(libs.test.androidx.junit)
     androidTestImplementation(libs.test.androidx.runner)
     androidTestImplementation(libs.test.espresso.core)
-    androidTestImplementation("androidx.test.espresso:espresso-web:3.6.1")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation(libs.kotlinx.coroutines.android)

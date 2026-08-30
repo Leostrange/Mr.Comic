@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryAssetCatalog
 import io.leostrange.mrcomic.core.data.dictionary.DictionaryInstallInfo
-import io.leostrange.mrcomic.core.data.dictionary.DictionaryProvenance
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 
@@ -222,16 +221,6 @@ private fun DictionaryLanguageCard(
         viewModel.exportDictionary(langCode, uri, context.contentResolver)
     }
 
-    // Per-card SAF import launcher (Bug #3): every language card exposes
-    // its own import affordance, so the user can drop a custom .dbpack
-    // onto any language, not just the global Import button at the top.
-    val importLauncherForLang = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        viewModel.importDictionary(langCode, uri, context.contentResolver)
-    }
-
     MrComicCardSurface(
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -307,36 +296,15 @@ private fun DictionaryLanguageCard(
                     ) {
                         Icon(Icons.Default.CloudDownload, contentDescription = strings.dictBtnDownload)
                     }
-                    // Per-language Import button (Bug #3): every card must
-                    // surface the SAF picker so the user can install a custom
-                    // file even if a bundled one already exists.
-                    IconButton(
-                        onClick = { importLauncherForLang.launch(arrayOf("application/*", "application/octet-stream")) },
-                        enabled = !isAnyOperationActive,
-                    ) {
-                        Icon(Icons.Default.FileUpload, contentDescription = strings.dictBtnImport)
-                    }
                 } else {
-                    // Delete button — only for user-owned dictionaries
-                    // (DOWNLOADED or IMPORTED). A pure BUNDLED file is
-                    // considered immutable, even if the user has never
-                    // touched it.
-                    if (info.provenance.isUserOwned) {
+                    // Delete button (not for bundled-only)
+                    if (!info.isBundled) {
                         IconButton(
                             onClick = { viewModel.deleteDictionary(info.language) },
                             enabled = !isAnyOperationActive,
                         ) {
                             Icon(Icons.Default.Delete, contentDescription = strings.dictBtnDelete, tint = MaterialTheme.colorScheme.error)
                         }
-                    }
-                    // Re-import: always available, even for bundled. Lets the
-                    // user overwrite the bundled file with their own .dbpack
-                    // (the new file is then marked IMPORTED).
-                    IconButton(
-                        onClick = { importLauncherForLang.launch(arrayOf("application/*", "application/octet-stream")) },
-                        enabled = !isAnyOperationActive,
-                    ) {
-                        Icon(Icons.Default.FileUpload, contentDescription = strings.dictBtnImport)
                     }
                     // Export button
                     IconButton(
@@ -360,21 +328,15 @@ private fun DictionaryStatusChip(
     info: DictionaryInstallInfo,
     strings: AppStrings
 ) {
-    val (label, color) = when (info.provenance) {
-        DictionaryProvenance.BUNDLED ->
-            strings.dictStatusBundled to MaterialTheme.colorScheme.tertiaryContainer
-        DictionaryProvenance.DOWNLOADED ->
-            strings.dictStatusDownloaded to MaterialTheme.colorScheme.primaryContainer
-        DictionaryProvenance.IMPORTED ->
-            strings.dictStatusImported to MaterialTheme.colorScheme.secondaryContainer
-        DictionaryProvenance.NOT_INSTALLED ->
-            strings.dictStatusNotInstalled to MaterialTheme.colorScheme.surfaceVariant
+    val (label, color) = when {
+        info.sizeBytes > 0L && info.isBundled -> strings.dictStatusBundled to MaterialTheme.colorScheme.tertiaryContainer
+        info.sizeBytes > 0L -> strings.dictStatusInstalled to MaterialTheme.colorScheme.primaryContainer
+        else -> strings.dictStatusNotInstalled to MaterialTheme.colorScheme.surfaceVariant
     }
-    val onColor = when (info.provenance) {
-        DictionaryProvenance.BUNDLED -> MaterialTheme.colorScheme.onTertiaryContainer
-        DictionaryProvenance.DOWNLOADED -> MaterialTheme.colorScheme.onPrimaryContainer
-        DictionaryProvenance.IMPORTED -> MaterialTheme.colorScheme.onSecondaryContainer
-        DictionaryProvenance.NOT_INSTALLED -> MaterialTheme.colorScheme.onSurfaceVariant
+    val onColor = when {
+        info.sizeBytes > 0L && info.isBundled -> MaterialTheme.colorScheme.onTertiaryContainer
+        info.sizeBytes > 0L -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Surface(
         shape = MaterialTheme.shapes.small,

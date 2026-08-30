@@ -42,9 +42,13 @@ dependencies {
     ksp(libs.google.hilt.compiler)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
+    // Runtime required by the offline NLLB translator implementation.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.19.2")
     implementation(project(":core-domain"))
     implementation(project(":core-model"))
     testImplementation(libs.test.junit)
     testImplementation(libs.test.mockk)
     testImplementation(libs.test.kotlinx.coroutines)
+    androidTestImplementation(libs.test.androidx.runner)
+    androidTestImplementation(libs.test.androidx.junit)
 }

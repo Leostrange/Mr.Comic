@@ -224,6 +224,24 @@ internal fun ReaderStyleTab(
                     }
                 }
             }
+            item { ReaderSectionTitle(readerText.colorSchemeTitle) }
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(
+                        listOf(
+                            "DAY" to readerText.day,
+                            "SEPIA" to readerText.sepia,
+                            "NIGHT" to readerText.night
+                        )
+                    ) { (id, label) ->
+                        ReaderChoiceChip(
+                            selected = uiState.graphicColorScheme == id,
+                            onClick = { onColorSchemeChange(id) },
+                            label = { Text(label, style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+            }
         } else {
             item { ReaderSectionTitle(readerText.quickPresetsTitle) }
             item {

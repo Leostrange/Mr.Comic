@@ -6,6 +6,8 @@ import android.graphics.Canvas
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebViewClient
 import androidx.test.platform.app.InstrumentationRegistry
 import java.util.concurrent.CountDownLatch
@@ -37,6 +39,12 @@ class WebViewTestRunner(
                 settings.javaScriptEnabled = true
                 settings.domStorageEnabled = true
                 settings.allowFileAccess = true
+                layoutParams = ViewGroup.LayoutParams(1080, 1920)
+                measure(
+                    View.MeasureSpec.makeMeasureSpec(1080, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(1920, View.MeasureSpec.EXACTLY)
+                )
+                layout(0, 0, 1080, 1920)
                 addJavascriptInterface(object {
                     @android.webkit.JavascriptInterface
                     fun onPageCountChanged(count: Int) {
