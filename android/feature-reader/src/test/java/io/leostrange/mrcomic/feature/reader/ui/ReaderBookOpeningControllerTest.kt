@@ -349,4 +349,40 @@ class ReaderBookOpeningControllerTest {
             uiState.value.currentPage
         )
     }
+
+    @Test
+    fun deferredEpubRestore_keepsSavedSectionPendingUntilAuthoritativeCount() = runTest {
+        val structuredPosition = io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition(
+            engineSectionIndex = 12,
+            visualPageIndex = 4,
+            characterOffset = 1_234,
+            mode = io.leostrange.mrcomic.core.model.ReadingMode.PAGE_LTR,
+        )
+        val comic = comic(
+            format = ComicFormat.EPUB,
+            currentPage = 37,
+        ).copy(
+            readerPositionJson = io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec.encode(
+                structuredPosition
+            )
+        )
+        val epubReader = mockk<FormatReader>(relaxed = true)
+        val deferredEpub = PreparedReaderOpen(
+            resolvedPath = "/tmp/book.epub",
+            detectedFormat = ComicFormat.EPUB,
+            contentFormat = ComicFormat.EPUB,
+            reader = epubReader,
+            pages = 1,
+            readerRendersHtmlContent = true,
+            deferPageCount = true,
+        )
+
+        createController(fetchResult = comic, preparedResult = deferredEpub)
+
+        assertTrue(
+            "A saved section beyond the provisional one-page model must keep the loading shell " +
+                "until the authoritative EPUB spine count is available",
+            uiState.value.isLoading
+        )
+    }
 }

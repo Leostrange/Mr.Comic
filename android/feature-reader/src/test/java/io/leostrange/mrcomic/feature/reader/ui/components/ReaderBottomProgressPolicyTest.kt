@@ -99,4 +99,23 @@ class ReaderBottomProgressPolicyTest {
         )
         assertEquals(true, resolved.isResolved)
     }
+
+    @Test
+    fun textBookWithoutMeasuredSection_doesNotPresentSpineCountAsResolvedPages() {
+        val progress = resolveReaderBottomProgress(
+            currentPage = 1,
+            totalPages = 2,
+            isTextBook = true,
+            sectionPageCount = 0,
+            epubAccumulatedCurrentPage = 0,
+            epubAccumulatedTotalPages = 0,
+            isTextPaginationResolved = false,
+        )
+
+        assertEquals(
+            "The raw 2-section EPUB spine must not be exposed as a resolved 2-page book",
+            false,
+            progress.isResolved,
+        )
+    }
 }

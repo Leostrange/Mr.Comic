@@ -20,7 +20,7 @@ internal fun resolveReaderBottomProgress(
         totalPages = epubAccumulatedTotalPages,
         isResolved = isTextPaginationResolved,
     )
-    isTextBook && sectionPageCount > 0 -> ReaderBottomProgress(
+    isTextBook -> ReaderBottomProgress(
         currentPage = currentPage.coerceAtLeast(0),
         totalPages = totalPages.coerceAtLeast(1),
         isResolved = isTextPaginationResolved,

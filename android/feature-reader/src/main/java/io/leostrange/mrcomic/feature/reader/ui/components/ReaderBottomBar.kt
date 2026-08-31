@@ -146,7 +146,7 @@ fun ReaderBottomBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (isTextBook && totalPages > 0) {
+                if (isTextBook && epubAccumulatedTotalPages > 0) {
                     Spacer(Modifier.height(2.dp))
                     Text(
                         text = "$bookProgress%",

@@ -281,15 +281,19 @@ internal class ReaderBookOpeningController(
             ReaderPosition(engineSectionIndex = it, mode = openingMode)
         }
         val requestedStartPage = requestedPage ?: effectivePosition?.let { pos ->
-            if (initialPages > 0) {
+            if (shouldDeferCount) {
+                // The provisional one-page model cannot validate or normalize a saved spine
+                // section. Keep the semantic section index intact until the authoritative EPUB
+                // count arrives; otherwise every resumed book is temporarily treated as page 0
+                // and the loading shell is released before its real position can be restored.
+                pos.engineSectionIndex.coerceAtLeast(0)
+            } else {
                 planReaderPositionRestore(
                     position = pos,
                     openingMode = openingMode,
                     resolvedTotalPages = initialPages,
                     normalizePage = { page, mode, total -> navigationController.normalizePageForMode(page, mode, total) }
                 )?.startPage
-            } else {
-                pos.engineSectionIndex
             }
         } ?: 0
         val startPage = navigationController.normalizePageForMode(requestedStartPage, openingMode, initialPages)

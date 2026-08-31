@@ -9,13 +9,13 @@ internal data class ReaderTextChromeLayoutInsets(
 )
 
 /**
- * Returns the stable physical reserve for paged text. Three line-height steps
- * are kept outside the WebView: 2 for the status bar / chrome area and 1 for
- * the gap between chrome and text. This prevents text from appearing under
- * the toolbar when chrome is visible.
+ * Returns the stable physical reserve for paged text. Two line-height steps
+ * are kept outside the WebView: one for the status bar / compact toolbar and
+ * one for the gap to the text. Keeping a third line here shrinks landscape
+ * pages and makes otherwise valid content fall below the viewport.
  */
 internal fun readerTextTwoLineGutterPx(lineHeightPx: Int): Int =
-    (lineHeightPx.coerceAtLeast(8) * 3).coerceAtLeast(24)
+    (lineHeightPx.coerceAtLeast(8) * 2).coerceAtLeast(16)
 
 /**
  * Reader chrome is an overlay and must not change text wrapping or page

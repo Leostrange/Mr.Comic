@@ -132,7 +132,11 @@ internal fun ReaderUiState.toTextPaginationConstraints(
     systemBottomInsetPx: Int = 0
 ): TextPaginationConstraints = TextPaginationConstraints(
     viewportWidthPx = viewportWidthPx.coerceAtLeast(320),
-    viewportHeightPx = viewportHeightPx.coerceAtLeast(480),
+    // Landscape phones can expose a valid reading viewport below 480 px. Growing the
+    // measured height here makes the format paginator create fragments taller than the
+    // WebView that renders them. Keep the real geometry; the paginator itself owns its
+    // lower safety bound for degenerate viewports.
+    viewportHeightPx = viewportHeightPx.coerceAtLeast(1),
     contentTopInsetPx = systemTopInsetPx,
     contentBottomInsetPx = systemBottomInsetPx,
     fontSizeSp = textFontSize,

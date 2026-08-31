@@ -28,4 +28,14 @@ class TextPagePaginationControllerTest {
         assertEquals(1.8f, constraints.lineHeight)
         assertEquals(true, constraints.bold)
     }
+
+    @Test
+    fun landscapeConstraintsDoNotGrowBeyondMeasuredViewport() {
+        val constraints = ReaderUiState().toTextPaginationConstraints(
+            viewportWidthPx = 800,
+            viewportHeightPx = 360,
+        )
+
+        assertEquals(360, constraints.viewportHeightPx)
+    }
 }
