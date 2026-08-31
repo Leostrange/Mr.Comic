@@ -42,8 +42,14 @@ internal fun looksLikeMarkup(text: String): Boolean {
         "<h1", "&lt;h1",
         "<h2", "&lt;h2",
         "<mbp:pagebreak", "&lt;mbp:pagebreak",
+        "<a ", "&lt;a ",
+        "filepos=",
         "<guide", "&lt;guide",
         "<metadata", "&lt;metadata"
     )
-    return markers.count { lower.contains(it) } >= 2
+    val markerCount = markers.count { lower.contains(it) }
+    // MOBI footnote references are commonly emitted as a lone <a filepos=...>
+    // without an html/body/p block. Treat that native anchor as markup so the
+    // downstream sanitizer can preserve its clickable file-position target.
+    return markerCount >= 2 || lower.contains("<a ") && lower.contains("filepos=")
 }

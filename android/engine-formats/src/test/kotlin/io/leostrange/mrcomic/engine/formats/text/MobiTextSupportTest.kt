@@ -48,6 +48,23 @@ class MobiTextSupportTest {
         assertTrue(!result.isMarkup)
     }
 
+    @Test
+    fun keepsMobiFileposFootnoteAsMarkupWhenDocumentHasNoBlockTags() {
+        val record = "<a filepos=\"00000042\">[1]</a> текст сноски".encodeToByteArray()
+        val bytes = buildMinimalMobi(
+            compression = 1,
+            textEncoding = 65001,
+            textRecord = record
+        )
+
+        val result = MobiTextSupport.extract(bytes)
+
+        assertTrue(result is MobiExtractionResult.Success)
+        result as MobiExtractionResult.Success
+        assertTrue("MOBI filepos anchor must remain HTML", result.isMarkup)
+        assertTrue(result.content.contains("filepos=\"00000042\""))
+    }
+
     private fun buildMinimalMobi(
         compression: Int,
         textEncoding: Int,
