@@ -6,17 +6,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,9 +29,11 @@ fun ReaderExpandedBottomPanel(
     onPageChange: (Int) -> Unit
 ) {
     val strings = LocalStrings.current
-    val readerText = readerUiText(strings.languageCode)
     val showReadingPresets = true
-    val useCompactLandscapeImagePanel = isLandscape && !showReadingPresets
+    val useCompactLandscapeImagePanel = shouldUseCompactLandscapeBottomPanel(
+        isLandscape = isLandscape,
+        isTextBook = uiState.currentHtmlContent != null
+    )
 
     if (useCompactLandscapeImagePanel) {
         ReaderCompactLandscapeBottomPanel(
@@ -49,6 +43,8 @@ fun ReaderExpandedBottomPanel(
             readingMode = uiState.readingMode,
             bookmarked = uiState.currentPage in uiState.bookmarkedPages,
             onToggleBookmark = onToggleBookmark,
+            onApplyPreset = onApplyPreset,
+            onReadingModeChange = onReadingModeChange,
             onPageChange = onPageChange
         )
         return
@@ -138,14 +134,11 @@ private fun ReaderCompactLandscapeBottomPanel(
     readingMode: ReadingMode,
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
+    onApplyPreset: (ReadingPreset) -> Unit,
+    onReadingModeChange: (ReadingMode) -> Unit,
     onPageChange: (Int) -> Unit
 ) {
     val strings = LocalStrings.current
-    val modeLabel = if (readingMode == ReadingMode.WEBTOON) {
-        strings.readingModeWebtoon
-    } else {
-        strings.readingModeDual
-    }
 
     Column(
         modifier = Modifier
@@ -158,35 +151,42 @@ private fun ReaderCompactLandscapeBottomPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Surface(
-                shape = RoundedCornerShape(999.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.98f)
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.padding(start = 4.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
+                item {
+                    ReaderPanelChip(
+                        selected = bookmarked,
                         onClick = onToggleBookmark,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = if (bookmarked) strings.readerBookmarked else strings.readerBookmark,
-                            tint = if (bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    Text(
-                        text = modeLabel,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        style = MaterialTheme.typography.labelMedium
+                        label = { Text(if (bookmarked) strings.readerBookmarked else strings.readerBookmark) }
                     )
                 }
+                item {
+                    ReaderPanelChip(
+                        selected = readingMode != ReadingMode.WEBTOON,
+                        onClick = { onReadingModeChange(ReadingMode.PAGE_LTR) },
+                        label = { Text(strings.readerPages) }
+                    )
+                }
+                item {
+                    ReaderPanelChip(
+                        selected = readingMode == ReadingMode.WEBTOON,
+                        onClick = { onReadingModeChange(ReadingMode.WEBTOON) },
+                        label = { Text(strings.readingModeWebtoon) }
+                    )
+                }
+                io.leostrange.mrcomic.core.ui.theme.readingPresetQuickChoices().forEach { preset ->
+                    item {
+                        ReaderPanelChip(
+                            selected = false,
+                            onClick = { onApplyPreset(preset) },
+                            label = { Text(readerPresetLabel(preset, strings.languageCode)) }
+                        )
+                    }
+                }
             }
-
-            Spacer(Modifier.weight(1f))
 
             Text(
                 text = if (!isResolved) {
@@ -217,3 +217,8 @@ private fun ReaderCompactLandscapeBottomPanel(
         }
     }
 }
+
+internal fun shouldUseCompactLandscapeBottomPanel(
+    isLandscape: Boolean,
+    isTextBook: Boolean
+): Boolean = isLandscape && !isTextBook
