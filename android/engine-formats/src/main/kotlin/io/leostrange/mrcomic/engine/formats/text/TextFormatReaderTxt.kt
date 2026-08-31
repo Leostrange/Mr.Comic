@@ -63,10 +63,25 @@ internal fun TextFormatReader.textBlocksWithChapterAnchorsAndFootnotes(
     raw: String
 ): Triple<List<String>, List<TxtChapterAnchor>, Map<String, String>> {
     val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
-    val paragraphs = normalized.split(Regex("\n\\s*\n"))
     val blocks = mutableListOf<String>()
     val chapterAnchors = mutableListOf<TxtChapterAnchor>()
     val footnoteMap = linkedMapOf<String, String>()
+    val bodyText = normalized.lines().mapNotNull { line ->
+        val definition = TXT_FOOTNOTE_LINE_RE.matchEntire(line.trim())
+        if (definition == null) {
+            line
+        } else {
+            val number = definition.groupValues[1]
+            val text = definition.groupValues[2].trim()
+            if (text.isNotBlank()) {
+                footnoteMap["note_$number"] = escapeHtml(text)
+                null
+            } else {
+                line
+            }
+        }
+    }.joinToString("\n")
+    val paragraphs = bodyText.split(Regex("\n\\s*\n"))
 
     paragraphs.forEach { paragraph ->
         val trimmed = paragraph.trim()
@@ -103,6 +118,7 @@ internal fun TextFormatReader.textBlocksWithChapterAnchorsAndFootnotes(
 
 /** Matches footnote blocks: "[1] Text...", "1. Text...", "[12] Text..." */
 private val TXT_FOOTNOTE_BLOCK_RE = Regex("""^\[(\d{1,4})]\s*""")
+private val TXT_FOOTNOTE_LINE_RE = Regex("""^\[(\d{1,4})]\s+(.+)$""")
 
 internal fun TextFormatReader.renderTxtParagraphBlock(paragraph: String): String? {
     val lines = paragraph.lines()

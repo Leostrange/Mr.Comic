@@ -12,6 +12,33 @@ import java.io.File
 class TextChapterDetectionTest {
 
     @Test
+    fun txtReaderExtractsFootnoteDefinitionWithoutBlankParagraphSeparator() = runBlocking {
+        val sample = File.createTempFile("mrcomic-inline-footnote-block", ".txt")
+        sample.writeText(
+            """
+            Основной текст со ссылкой [1], которая должна открывать примечание.
+            Продолжение основного текста.
+            [1] Текст сноски начинается с новой строки, но без пустой строки перед ней.
+            """.trimIndent()
+        )
+
+        val reader = TextFormatReader(ContextWrapper(null), sample.absolutePath, ComicFormat.TXT)
+        try {
+            val html = reader.getHtmlPage(0).orEmpty()
+
+            assertTrue(html.contains("href=\"fbanchor://note_1\""))
+            assertEquals(
+                "Текст сноски начинается с новой строки, но без пустой строки перед ней.",
+                reader.getFootnoteText("noteref://note_1")
+            )
+            assertFalse(html.contains("Текст сноски начинается"))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
+    @Test
     fun txtReaderBuildsTableOfContentsFromChapterHeadings() = runBlocking {
         val sample = File.createTempFile("mrcomic-chapters", ".txt")
         sample.writeText(
