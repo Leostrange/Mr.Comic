@@ -22,8 +22,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.webkit.WebViewAssetLoader
-import io.leostrange.mrcomic.core.model.ComicFormat
-import io.leostrange.mrcomic.core.model.ReaderImageScaleMode
 import io.leostrange.mrcomic.core.model.ReaderTapZoneAction
 import io.leostrange.mrcomic.core.model.ReaderTapZoneMode
 import io.leostrange.mrcomic.core.model.resolveReaderSimpleTapZoneLayout
