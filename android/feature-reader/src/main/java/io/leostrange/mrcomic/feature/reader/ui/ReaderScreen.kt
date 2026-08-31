@@ -229,21 +229,23 @@ fun ReaderScreen(
     var measuredFooterOverlayPx by remember { mutableIntStateOf(0) }
     var measuredTopChromePx by remember { mutableIntStateOf(0) }
     var measuredBottomChromePx by remember { mutableIntStateOf(0) }
-    // Stable chrome reserve: keyed on chromeAutoHideEnabled only (not comic id) to prevent
-    // viewport height jump on every book open. Defaults ~56dp/48dp to avoid first-frame miscalc.
+    // Chrome geometry differs materially between portrait and landscape. Keeping the
+    // portrait maximum after rotation made the landscape viewport permanently too short.
+    // Preserve measurements across books, but reset them when orientation or auto-hide
+    // policy changes so the new chrome can establish its own stable reserve.
     val defaultTopChromeReservePx = with(density) { 56.dp.roundToPx() }
     val defaultBottomChromeReservePx = with(density) { 48.dp.roundToPx() }
-    var stableTopChromeReservePx by remember {
+    var stableTopChromeReservePx by remember(uiState.isLandscape, uiState.chromeAutoHideEnabled) {
         mutableIntStateOf(defaultTopChromeReservePx)
     }
-    var stableBottomChromeReservePx by remember {
+    var stableBottomChromeReservePx by remember(uiState.isLandscape, uiState.chromeAutoHideEnabled) {
         mutableIntStateOf(defaultBottomChromeReservePx)
     }
     // Baseline reserves persist regardless of auto-hide mode (WEBTOON text mode needs them).
-    var baselineTopChromeReservePx by remember {
+    var baselineTopChromeReservePx by remember(uiState.isLandscape) {
         mutableIntStateOf(0)
     }
-    var baselineBottomChromeReservePx by remember {
+    var baselineBottomChromeReservePx by remember(uiState.isLandscape) {
         mutableIntStateOf(0)
     }
     // BUG-PAGED-02: Use symmetric system inset calculation for top and bottom.
