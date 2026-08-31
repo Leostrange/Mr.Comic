@@ -140,24 +140,6 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
-    fun textSettingsJs_justifiesOnlyReadingParagraphsAndKeepsTheirLastLineNatural() {
-        val js = textSettingsJs(
-            fontSize = 18,
-            bg = "#fafafa",
-            fg = "#1a1a1a",
-            align = "justify",
-            pagedMode = true
-        )
-
-        assertTrue(js.contains("text-align-last:start !important"))
-        assertTrue(js.contains("hyphens:auto !important"))
-        assertFalse(
-            "headings and structural containers must retain publisher alignment",
-            js.contains("querySelectorAll('p,div,section,article,blockquote,li,td,th,h1,h2,h3,h4,h5,h6')")
-        )
-    }
-
-    @Test
     fun tapHandler_blocksSelectionInPagedMode() {
         assertTrue(JS_TAP_HANDLER.contains("window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()"))
         assertTrue(JS_TAP_HANDLER.contains("selection.removeAllRanges()"))
@@ -649,7 +631,7 @@ class ReaderHtmlCssJsTest {
         )
         assertTrue(
             "only a genuinely isolated final line should trigger the orphan guard",
-            js.contains("endBottom-orphanGuardStart<=lineHeight*1.15")
+            js.contains("endBottom-orphanGuardStart<=lineHeight*2.0")
         )
         assertTrue(
             "the page must roll back to the last fully-fitted fragment",

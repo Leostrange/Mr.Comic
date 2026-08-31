@@ -10,7 +10,7 @@ class ReaderMarginCropLayoutPolicyTest {
 
         assertEquals(2, layout.sideColumns)
         assertEquals(0.66f, layout.widthFraction, 0.001f)
-        assertEquals(8f, layout.verticalPaddingDp, 0.001f)
+        assertEquals(6f, layout.verticalPaddingDp, 0.001f)
     }
 
     @Test

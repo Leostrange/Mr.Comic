@@ -6,8 +6,8 @@ import org.junit.Test
 class ReaderTextChromeLayoutPolicyTest {
     @Test
     fun twoLineGutterIsTheSingleSymmetricReserve() {
-        assertEquals(108, readerTextTwoLineGutterPx(54))
-        assertEquals(16, readerTextTwoLineGutterPx(1))
+        assertEquals(162, readerTextTwoLineGutterPx(54))
+        assertEquals(24, readerTextTwoLineGutterPx(1))
     }
 
     @Test

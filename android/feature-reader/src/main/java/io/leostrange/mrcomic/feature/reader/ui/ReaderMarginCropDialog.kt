@@ -44,8 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import io.leostrange.mrcomic.core.ui.locale.LocalStrings
@@ -81,16 +83,24 @@ internal fun ReaderMarginCropDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        val maxHeightDp = (LocalConfiguration.current.screenHeightDp * 0.82f).dp
+        val scrollState = rememberScrollState()
+
         Surface(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 20.dp, vertical = 12.dp)
                 .fillMaxWidth(layout.widthFraction)
-                .widthIn(max = if (isLandscape) 820.dp else 420.dp),
+                .widthIn(max = if (isLandscape) 720.dp else 400.dp)
+                .heightIn(max = maxHeightDp),
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
             tonalElevation = 3.dp
         ) {
-            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = layout.verticalPaddingDp.dp)) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = 18.dp, vertical = layout.verticalPaddingDp.dp)
+            ) {
                 // ── Header ────────────────────────────────────────────────
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -124,7 +134,7 @@ internal fun ReaderMarginCropDialog(
                     }
                 }
 
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
 
                 // ── Enable ────────────────────────────────────────────────
                 SwitchRow(
@@ -243,7 +253,7 @@ internal fun ReaderMarginCropDialog(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(6.dp))
 
                 // ── Footer ────────────────────────────────────────────────
                 Row(

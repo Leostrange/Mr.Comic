@@ -45,6 +45,7 @@ fun ReaderExpandedBottomPanel(
         ReaderCompactLandscapeBottomPanel(
             currentPage = uiState.effectiveCurrentPage,
             totalPages = uiState.effectiveTotalPages,
+            isResolved = uiState.isTextPaginationResolved || uiState.epubAccumulatedTotalPages > 0,
             readingMode = uiState.readingMode,
             bookmarked = uiState.currentPage in uiState.bookmarkedPages,
             onToggleBookmark = onToggleBookmark,
@@ -133,6 +134,7 @@ fun ReaderExpandedBottomPanel(
 private fun ReaderCompactLandscapeBottomPanel(
     currentPage: Int,
     totalPages: Int,
+    isResolved: Boolean = true,
     readingMode: ReadingMode,
     bookmarked: Boolean,
     onToggleBookmark: () -> Unit,
@@ -187,7 +189,11 @@ private fun ReaderCompactLandscapeBottomPanel(
             Spacer(Modifier.weight(1f))
 
             Text(
-                text = if (totalPages > 1) "${currentPage.coerceIn(0, totalPages - 1) + 1} / $totalPages" else "1 / …",
+                text = if (!isResolved) {
+                    "${currentPage.coerceAtLeast(0) + 1} / …"
+                } else if (totalPages > 1) {
+                    "${currentPage.coerceIn(0, totalPages - 1) + 1} / $totalPages"
+                } else "1 / …",
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.labelMedium
             )

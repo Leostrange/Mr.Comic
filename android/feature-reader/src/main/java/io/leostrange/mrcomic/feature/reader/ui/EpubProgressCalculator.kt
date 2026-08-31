@@ -32,8 +32,14 @@ internal object EpubProgressCalculator {
         val visitedSections = orderedCounts.size
         if (totalSections <= visitedSections) return visitedPages
         val estimate = stableEstimateOverride?.coerceAtLeast(1)
-        if (estimate != null) return estimate * totalSections
-        return visitedPages + stableEstimate(orderedCounts) * (totalSections - visitedSections)
+            ?: stableEstimate(orderedCounts)
+        // BUG-RDR-013: Always use estimate-based total when totalSections is
+        // provisional (< actual section count). This prevents "2/2" display
+        // when only a few sections have been paginated.
+        if (totalSections < orderedCounts.size + 3) {
+            return (estimate * totalSections).coerceAtLeast(visitedPages)
+        }
+        return visitedPages + estimate * (totalSections - visitedSections)
     }
 
     /**

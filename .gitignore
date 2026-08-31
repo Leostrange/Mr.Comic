@@ -146,3 +146,4 @@ mimo.exe
 # Dictionary .dbpack files (downloaded on demand from GitHub Releases)
 android/app/src/main/assets/databases/*.dbpack
 android/app/src/main/assets/databases/*.dbpack.gz
+Mr.Comic-debug.apk

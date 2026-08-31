@@ -63,7 +63,9 @@ internal data class ReaderHtmlTextStyle(
             if (pagedMode) 0 else bottomPaddingPx,
             horizontalPaddingPx,
             maxWidthPx,
-            pagedMode,
+            // BUG-RDR-012: pagedMode removed from visual signature — it only affects
+            // layout (page columns), not theme colors. Including it caused unnecessary
+            // full CSS re-application when switching PAGE ↔ WEBTOON.
             viewportWidthPx ?: -1,
             viewportHeightPx ?: -1,
             isRtl

@@ -326,11 +326,18 @@ fun ReaderScreen(
         } else if (chromeIsVisible) {
             // Only grow the stable reserve when the chrome is actually visible;
             // never let a stale EXPANDED measurement inflate the HIDDEN viewport.
+            // UNIFIED-CHROME: in landscape, use the max of top/bottom for both
+            // to prevent visual inconsistency between panels.
             if (plan.measuredTopReservePx > stableTopChromeReservePx) {
                 stableTopChromeReservePx = plan.measuredTopReservePx
             }
             if (plan.measuredBottomReservePx > stableBottomChromeReservePx) {
                 stableBottomChromeReservePx = plan.measuredBottomReservePx
+            }
+            if (uiState.isLandscape) {
+                val unifiedHeight = maxOf(stableTopChromeReservePx, stableBottomChromeReservePx)
+                stableTopChromeReservePx = unifiedHeight
+                stableBottomChromeReservePx = unifiedHeight
             }
         }
     }

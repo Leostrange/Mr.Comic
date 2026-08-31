@@ -566,9 +566,16 @@ private fun sanitizeMobiInlineOpeningTag(tagName: String, rawTag: String): Strin
             attrs["href"] = "#$namedAnchor"
         }
     }
-    if (filepos.isNotBlank()) {
-        attrs["class"] = listOf(attrs["class"], "fn")
-            .filter { it?.isNotBlank() == true }
+    // Mark all footnote-like links with the "fn" class so the reader CSS
+    // (a.fn { color: blue; vertical-align: super }) styles them consistently.
+    val existingClass = attrs["class"].orEmpty()
+    val alreadyHasFn = existingClass.contains("fn", ignoreCase = true)
+    val looksLikeFootnote = filepos.isNotBlank() ||
+        existingClass.contains("note", ignoreCase = true) ||
+        (attrs["title"] ?: "").isNotBlank()
+    if (looksLikeFootnote && !alreadyHasFn) {
+        attrs["class"] = listOf(existingClass, "fn")
+            .filter { it.isNotBlank() }
             .joinToString(" ")
     }
     val serialized = attrs.entries.joinToString(separator = "") { (name, value) ->

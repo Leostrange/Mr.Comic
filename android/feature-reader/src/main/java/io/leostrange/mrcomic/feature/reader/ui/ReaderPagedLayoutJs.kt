@@ -58,6 +58,10 @@ internal fun readerPagedCoreJs(
     var pageWidth=Math.max(1,nativeWidth||root.clientWidth||window.innerWidth||360);
     var fallbackPageHeight=windowInnerHeight||rootClientHeight||visualViewportHeight||0;
     var pageHeight=Math.max(320,nativeHeight||fallbackPageHeight||640);
+    // BUG-RDR-010: in landscape, ensure pageHeight doesn't exceed viewport
+    // to prevent text overflow at the bottom edge.
+    var maxAllowedHeight=Math.max(320,(windowInnerHeight||rootClientHeight||visualViewportHeight||640));
+    pageHeight=Math.min(pageHeight,maxAllowedHeight);
     root.style.setProperty('width',pageWidth+'px','important');
     root.style.setProperty('max-width',pageWidth+'px','important');
     root.style.setProperty('height',pageHeight+'px','important');
@@ -401,7 +405,7 @@ internal fun readerPagedCoreJs(
         // Avoid only a genuinely isolated final line. Moving a whole short paragraph
         // after a merely 65%-filled page created conspicuous empty bands, especially
         // in landscape. Normal paragraphs should split and use the available viewport.
-        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*1.15){
+        if(orphanGuardStart>current+lineHeight*1.1&&endBottom-orphanGuardStart<=lineHeight*2.0){
           var backupBottom=0;
           for(var p=0;p<=lastFitIndex;p++){
             var fitted=unique[p];

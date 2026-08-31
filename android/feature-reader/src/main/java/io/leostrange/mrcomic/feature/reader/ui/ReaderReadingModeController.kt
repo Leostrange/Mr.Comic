@@ -51,13 +51,13 @@ internal class ReaderReadingModeController(
             return
         }
         rememberPortraitMode(mode)
+        // BUG-RDR-007: Save position BEFORE applying the new mode, so the
+        // structured position captures the current scroll/page state.
+        savePositionImmediate()
         applyReadingMode(mode)
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
         }
-        // BUG-READER-02: Flush the structured position immediately so the new mode
-        // survives a rapid close (the normal 220 ms debounce could lose it).
-        savePositionImmediate()
     }
 
     fun onOrientationChanged(

@@ -309,7 +309,7 @@ internal fun BoxScope.ReaderTopChromeBar(
                 when (uiState.chromeState) {
                     ReaderChromeState.EXPANDED -> {
                         ReaderExpandedBar(
-                            title = uiState.comic?.title.orEmpty(),
+                            title = cleanReaderDisplayTitle(uiState.comic?.title.orEmpty()),
                             canShowToc = isTextReader,
                             showTextSettings = true,
                             showOcrAction = true,
@@ -365,4 +365,20 @@ internal fun BoxScope.ReaderTopChromeBar(
             }
         }
     }
+}
+
+/**
+ * Cleans a raw book title/filename for display in chrome bars.
+ * Removes file extensions, path separators, underscores, and common noise.
+ */
+private fun cleanReaderDisplayTitle(raw: String): String {
+    if (raw.isBlank()) return ""
+    return raw
+        .replace(Regex("""\\/"""), "/") // normalize path separators
+        .substringAfterLast('/')        // remove directory path
+        .replace(Regex("""\.(epub|fb2|mobi|pdf|djvu|cbz|cbr|rtf|txt|html|docx|odt|md)$""", RegexOption.IGNORE_CASE), "")
+        .replace('_', ' ')
+        .replace(Regex("""\s+"""), " ")
+        .trim()
+        .take(80)
 }

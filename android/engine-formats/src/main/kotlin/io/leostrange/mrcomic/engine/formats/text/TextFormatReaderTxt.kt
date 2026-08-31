@@ -19,11 +19,12 @@ internal fun TextFormatReader.textBlocks(raw: String): List<String> {
 }
 
 internal fun TextFormatReader.sectionTxtDocument(raw: String): TextDocumentData {
-    val (blocks, chapterAnchors) = textBlocksWithChapterAnchors(raw)
+    val (blocks, chapterAnchors, footnoteMap) = textBlocksWithChapterAnchorsAndFootnotes(raw)
     return TextDocumentData(
         sections = ReflowableDocumentBuilder.sectionsFromHtmlBlocks(blocks)
             .withSequentialIndices(),
-        chapterAnchors = chapterAnchors
+        chapterAnchors = chapterAnchors,
+        footnoteMap = footnoteMap
     )
 }
 
@@ -52,6 +53,56 @@ internal fun TextFormatReader.textBlocksWithChapterAnchors(raw: String): Pair<Li
     val safeBlocks = blocks.ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
     return safeBlocks to chapterAnchors
 }
+
+/**
+ * Like [textBlocksWithChapterAnchors] but also extracts footnote blocks
+ * (paragraphs starting with `[N]` or `NN.`) into a [footnoteMap] keyed
+ * as `"note_N"`, matching the keys produced by [renderPlainTextInlineMarkup].
+ */
+internal fun TextFormatReader.textBlocksWithChapterAnchorsAndFootnotes(
+    raw: String
+): Triple<List<String>, List<TxtChapterAnchor>, Map<String, String>> {
+    val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
+    val paragraphs = normalized.split(Regex("\n\\s*\n"))
+    val blocks = mutableListOf<String>()
+    val chapterAnchors = mutableListOf<TxtChapterAnchor>()
+    val footnoteMap = linkedMapOf<String, String>()
+
+    paragraphs.forEach { paragraph ->
+        val trimmed = paragraph.trim()
+        if (trimmed.isBlank()) return@forEach
+
+        // ── Footnote extraction ──────────────────────────────────────
+        // Patterns: "[1] Text...", "1. Text...", "[12] Text..."
+        val fnMatch = TXT_FOOTNOTE_BLOCK_RE.find(trimmed)
+        if (fnMatch != null) {
+            val num = fnMatch.groupValues[1]
+            val text = trimmed.substring(fnMatch.range.last + 1).trim()
+            if (text.isNotBlank()) {
+                footnoteMap["note_$num"] = escapeHtml(text)
+            }
+            return@forEach // Don't add footnote blocks to the body
+        }
+
+        val chapterTitle = detectTxtChapterHeading(trimmed)
+        if (chapterTitle != null) {
+            val anchor = TxtChapterAnchor(
+                id = "txt-chapter-${chapterAnchors.size + 1}",
+                title = chapterTitle
+            )
+            chapterAnchors += anchor
+            blocks += """<h2 id="${anchor.id}" class="chapter">${escapeHtml(anchor.title)}</h2>"""
+        } else {
+            renderTxtParagraphBlock(trimmed)?.let(blocks::add)
+        }
+    }
+
+    val safeBlocks = blocks.ifEmpty { listOf("<p>${escapeHtml(raw.trim())}</p>") }
+    return Triple(safeBlocks, chapterAnchors, footnoteMap)
+}
+
+/** Matches footnote blocks: "[1] Text...", "1. Text...", "[12] Text..." */
+private val TXT_FOOTNOTE_BLOCK_RE = Regex("""^\[(\d{1,4})]\s*""")
 
 internal fun TextFormatReader.renderTxtParagraphBlock(paragraph: String): String? {
     val lines = paragraph.lines()
