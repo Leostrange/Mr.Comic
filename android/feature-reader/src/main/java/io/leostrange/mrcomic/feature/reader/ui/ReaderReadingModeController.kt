@@ -51,10 +51,11 @@ internal class ReaderReadingModeController(
             return
         }
         rememberPortraitMode(mode)
-        // BUG-RDR-007: Save position BEFORE applying the new mode, so the
-        // structured position captures the current scroll/page state.
-        savePositionImmediate()
         applyReadingMode(mode)
+        // Persist only after applyReadingMode has translated the old page/scroll
+        // cursor into the new container. Otherwise a rapid close restores the
+        // previous mode even though the UI has already switched.
+        savePositionImmediate()
         viewModelScope.launch {
             readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
         }
