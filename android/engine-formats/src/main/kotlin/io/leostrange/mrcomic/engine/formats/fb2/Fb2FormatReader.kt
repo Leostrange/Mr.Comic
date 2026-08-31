@@ -540,11 +540,8 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 "section" -> {
                                     notesSectionDepth--
                                     if (notesSectionDepth == 0 && currentNoteId.isNotEmpty()) {
-                                        // Store both id and fbanchor://-prefixed key for footnote lookup (P1 #9)
+                                        // Store one canonical id. getFootnoteText() normalizes reader schemes.
                                         footnoteMap[currentNoteId] = notesBuf.toString().trim()
-                                        if (currentNoteId.isNotEmpty()) {
-                                            footnoteMap["fbanchor://$currentNoteId"] = notesBuf.toString().trim()
-                                        }
                                         currentNoteId = ""
                                         notesBuf.clear()
                                     }
@@ -601,8 +598,17 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         // text nodes (< → &lt;), while parser-generated tags (<h2>, <p>, etc.)
         // must remain as real HTML markup for WebView rendering.
         val fb2Lang = metadata["language"]
-        val mainPages = mergedSections.map {
-            buildHtmlPage(it, binaries, fb2Lang)
+        val fragmentLinkRegex = Regex("""href="#([^"]+)"""")
+        val mainPages = mergedSections.map { section ->
+            val resolvedFootnoteLinks = fragmentLinkRegex.replace(section) { match ->
+                val target = match.groupValues[1]
+                if (footnoteMap.containsKey(target)) {
+                    "href=\"fbanchor://${target.escapeAttr()}\""
+                } else {
+                    match.value
+                }
+            }
+            buildHtmlPage(resolvedFootnoteLinks, binaries, fb2Lang)
         }
 
         // Build final TOC: map rawSectionIdx → mergedPage index

@@ -16,6 +16,43 @@ import java.io.File
 class Fb2FrontMatterTest {
 
     @Test
+    fun arbitraryNotesBodyIdIsRenderedAsFootnoteWhileChapterLinkStaysNavigable() = runBlocking {
+        val sample = File.createTempFile("mrcomic-arbitrary-footnote", ".fb2")
+        sample.writeText(
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0"
+                         xmlns:l="http://www.w3.org/1999/xlink">
+              <description><title-info><book-title>Footnotes</book-title><lang>ru</lang></title-info></description>
+              <body>
+                <section id="chapter-one">
+                  <title><p>Глава</p></title>
+                  <p><a l:href="#chapter-two">Следующая глава</a></p>
+                  <p>Текст со <a l:href="#remark-alpha">сноской</a>.</p>
+                </section>
+                <section id="chapter-two"><title><p>Дальше</p></title><p>Продолжение.</p></section>
+              </body>
+              <body name="notes">
+                <section id="remark-alpha"><title><p>*</p></title><p>Текст примечания.</p></section>
+              </body>
+            </FictionBook>
+            """.trimIndent()
+        )
+
+        val reader = Fb2FormatReader(ContextWrapper(null), sample.absolutePath)
+        try {
+            val firstPage = reader.getHtmlPage(0).orEmpty()
+
+            assertTrue(firstPage.contains("href=\"#chapter-two\""))
+            assertTrue(firstPage.contains("href=\"fbanchor://remark-alpha\""))
+            assertTrue(reader.getFootnoteText("remark-alpha").orEmpty().contains("Текст примечания"))
+        } finally {
+            reader.close()
+            sample.delete()
+        }
+    }
+
+    @Test
     fun untitledTopLevelFragmentsDoNotCreateAlmostEmptyPages() = runBlocking {
         val sample = File.createTempFile("mrcomic-untitled-fragments", ".fb2")
         sample.writeText(
