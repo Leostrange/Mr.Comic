@@ -4,11 +4,22 @@ internal data class ReaderMarginCropLayout(
     val sideColumns: Int,
     val widthFraction: Float,
     val verticalPaddingDp: Float,
+    val surfaceAlpha: Float,
 )
 
 internal fun readerMarginCropLayout(isLandscape: Boolean): ReaderMarginCropLayout =
     if (isLandscape) {
-        ReaderMarginCropLayout(sideColumns = 2, widthFraction = 0.66f, verticalPaddingDp = 6f)
+        ReaderMarginCropLayout(
+            sideColumns = 2,
+            widthFraction = 0.66f,
+            verticalPaddingDp = 6f,
+            surfaceAlpha = 0.84f
+        )
     } else {
-        ReaderMarginCropLayout(sideColumns = 1, widthFraction = 0.86f, verticalPaddingDp = 12f)
+        ReaderMarginCropLayout(
+            sideColumns = 1,
+            widthFraction = 0.86f,
+            verticalPaddingDp = 12f,
+            surfaceAlpha = 0.88f
+        )
     }

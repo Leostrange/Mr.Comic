@@ -93,7 +93,7 @@ internal fun ReaderMarginCropDialog(
                 .widthIn(max = if (isLandscape) 720.dp else 400.dp)
                 .heightIn(max = maxHeightDp),
             shape = RoundedCornerShape(28.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = layout.surfaceAlpha),
             tonalElevation = 3.dp
         ) {
             Column(

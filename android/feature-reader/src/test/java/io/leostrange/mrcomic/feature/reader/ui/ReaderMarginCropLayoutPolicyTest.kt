@@ -1,6 +1,7 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderMarginCropLayoutPolicyTest {
@@ -11,6 +12,7 @@ class ReaderMarginCropLayoutPolicyTest {
         assertEquals(2, layout.sideColumns)
         assertEquals(0.66f, layout.widthFraction, 0.001f)
         assertEquals(6f, layout.verticalPaddingDp, 0.001f)
+        assertTrue(layout.surfaceAlpha < 0.9f)
     }
 
     @Test
@@ -20,5 +22,6 @@ class ReaderMarginCropLayoutPolicyTest {
         assertEquals(1, layout.sideColumns)
         assertEquals(0.86f, layout.widthFraction, 0.001f)
         assertEquals(12f, layout.verticalPaddingDp, 0.001f)
+        assertTrue(layout.surfaceAlpha < 0.9f)
     }
 }
