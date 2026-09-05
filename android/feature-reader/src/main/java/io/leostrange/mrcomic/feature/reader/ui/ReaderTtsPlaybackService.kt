@@ -14,7 +14,11 @@ class ReaderTtsPlaybackService : Service() {
     override fun onCreate() {
         super.onCreate()
         ensureNotificationChannel()
-        startForegroundCompat(buildFallbackNotification())
+        try {
+            startForegroundCompat(buildFallbackNotification())
+        } catch (_: android.app.ForegroundServiceStartNotAllowedException) {
+            stopSelf()
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -30,7 +34,11 @@ class ReaderTtsPlaybackService : Service() {
 
         val notification = ReaderTextToSpeechControllerStore.peek()?.currentNotificationOrNull()
         if (notification != null) {
-            startForegroundCompat(notification)
+            try {
+                startForegroundCompat(notification)
+            } catch (_: android.app.ForegroundServiceStartNotAllowedException) {
+                stopSelf()
+            }
         }
         return START_NOT_STICKY
     }

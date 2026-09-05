@@ -654,7 +654,13 @@ internal class ReaderTextToSpeechController(
     private fun startOrUpdatePlaybackService() {
         val intent = Intent(appContext, ReaderTtsPlaybackService::class.java)
             .setAction(ReaderTtsPlaybackService.ACTION_START_OR_UPDATE)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            try {
+                appContext.startForegroundService(intent)
+            } catch (_: android.app.ForegroundServiceStartNotAllowedException) {
+                // App in background — will retry when activity resumes
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             appContext.startForegroundService(intent)
         } else {
             appContext.startService(intent)

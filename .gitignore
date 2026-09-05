@@ -147,3 +147,4 @@ mimo.exe
 android/app/src/main/assets/databases/*.dbpack
 android/app/src/main/assets/databases/*.dbpack.gz
 Mr.Comic-debug.apk
+android/dictionaries-offline-store/
