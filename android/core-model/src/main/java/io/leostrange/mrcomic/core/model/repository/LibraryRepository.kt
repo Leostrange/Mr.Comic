@@ -20,6 +20,18 @@ interface LibraryRepository {
     suspend fun updateProgress(comicId: String, currentPage: Int, totalPages: Int, characterOffset: Int? = null)
 
     /**
+     * Reflowable text: stores the section cursor and the reader-computed book progress (0..1)
+     * verbatim, so the library shows exactly what the reader shows.
+     */
+    suspend fun updateTextProgress(
+        comicId: String,
+        sectionIndex: Int,
+        sectionCount: Int,
+        progress: Float,
+        characterOffset: Int? = null
+    )
+
+    /**
      * Persists the structured reading position (TEXT-01) as an opaque JSON blob.
      * Null clears the structured position (falls back to legacy fields). The blob format is
      * owned by feature-reader's ReaderPositionCodec; core-data stores it verbatim.

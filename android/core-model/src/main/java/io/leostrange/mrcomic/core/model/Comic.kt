@@ -93,14 +93,19 @@ fun readingProgressForPage(currentPage: Int, pageCount: Int): Float {
     return currentPage.coerceIn(0, lastPage).toFloat() / lastPage.toFloat()
 }
 
-/** Progress suitable for display, including protection from legacy placeholder 100% values. */
+/**
+ * Progress suitable for display, including protection from legacy placeholder 100% values.
+ * Records written by the current reader carry a structured position; their stored progress is
+ * authoritative (for text books `currentPage` is a section index, not a page).
+ */
 fun Comic.displayReadingProgress(): Float = when (readingStatus()) {
     ComicReadingStatus.NEW -> 0f
     ComicReadingStatus.COMPLETED -> 1f
-    ComicReadingStatus.READING -> maxOf(
-        readingProgress.coerceIn(0f, 1f),
-        readingProgressForPage(currentPage, pageCount)
-    )
+    ComicReadingStatus.READING -> if (readerPositionJson != null) {
+        readingProgress.coerceIn(0f, 1f)
+    } else {
+        maxOf(readingProgress.coerceIn(0f, 1f), readingProgressForPage(currentPage, pageCount))
+    }
 }
 
 fun Comic.storedReaderLocator(): ReaderLocator? {
