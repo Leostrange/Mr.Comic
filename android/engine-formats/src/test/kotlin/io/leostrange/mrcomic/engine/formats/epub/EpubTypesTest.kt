@@ -33,6 +33,20 @@ class EpubTypesTest {
     }
 
     @Test
+    fun syntheticNoteChunksMergeIntoOneDocumentInChunkOrder() {
+        fun chunk(index: Int, body: String) = EpubPage.SyntheticHtml(
+            entry = "notes.xhtml",
+            html = "<html><head><style>p{}</style></head><body>$body</body></html>",
+            chunkIndex = index,
+            totalChunks = 3
+        )
+
+        val merged = mergeSyntheticNoteChunks(listOf(chunk(2, "<p>c</p>"), chunk(0, "<h1>Notes</h1><p>a</p>"), chunk(1, "<p>b</p>")))
+
+        assertEquals("<html><head><style>p{}</style></head><body><h1>Notes</h1><p>a</p><p>b</p><p>c</p></body></html>", merged)
+    }
+
+    @Test
     fun invalidCachedPageIsDiscarded() {
         assertNull(CachedPage(type = "html", entry = "").toEpubPage())
         assertNull(CachedPage(type = "synthetic", entry = "notes.xhtml").toEpubPage())

@@ -344,8 +344,9 @@ class EpubFormatReader(
         val sectionPage = textSectionPages.getOrNull(index)
         when (sectionPage) {
             is EpubPage.SyntheticHtml -> {
-                synchronized(pageHtmlCache) { pageHtmlCache[index] = sectionPage.html }
-                return@withContext sectionPage.html
+                val html = syntheticSectionHtml(sectionPage)
+                synchronized(pageHtmlCache) { pageHtmlCache[index] = html }
+                return@withContext html
             }
             is EpubPage.Image, is EpubPage.Html -> Unit // handled below
             else -> return@withContext null
@@ -377,19 +378,8 @@ class EpubFormatReader(
 
             val firstHtml = buildHtml(page.entry) ?: return@withContext null
 
-            val pageHtml = if (page.extraEntries.isEmpty() && page.totalChunks > 1) {
-                // Chunked: re-read raw HTML and extract the chunk before CSS injection.
-                val rawChunk = findHeader(zip, page.entry)?.let { header ->
-                    zip.getInputStream(header).use { stream ->
-                        val bytes = stream.readBytes()
-                        extractChunk(bytes.toString(detectEpubTextCharset(bytes)), page.chunkIndex, page.totalChunks)
-                    }
-                } ?: extractChunk(firstHtml, page.chunkIndex, page.totalChunks)
-                prepareAssetBackedEpubDocument(
-                    html = rawChunk, readerCss = CSS_INJECT, xhtmlEntryPath = page.entry,
-                    assetExists = { candidate -> findHeader(zip, candidate) != null }
-                )
-            } else if (page.extraEntries.isNotEmpty()) {
+            // A reader section is a whole spine item (see textSectionPages): serve all of it, never one chunk.
+            val pageHtml = if (page.extraEntries.isNotEmpty()) {
                 // Merged path: append body content from extra entries before </body>.
                 val extraBodies = page.extraEntries.mapNotNull { entry ->
                     buildHtml(entry)?.let { extractWrappedBodyContent(it) }
@@ -429,9 +419,19 @@ class EpubFormatReader(
         }
     }
 
-    private val textDocumentSections: List<TextDocumentSection> by lazy(LazyThreadSafetyMode.NONE) {
+    // Synchronized: the reader's progress weights and TOC warmup may request it concurrently.
+    private val textDocumentSections: List<TextDocumentSection> by lazy {
         perfPhase("buildTextDocumentSections") { buildTextDocumentSections() }
     }
+
+    /** Synthetic notes are a whole section too, served and measured as one document. */
+    private fun syntheticSectionHtml(page: EpubPage.SyntheticHtml): String =
+        if (page.totalChunks <= 1) {
+            page.html
+        } else {
+            mergeSyntheticNoteChunks(pages.filterIsInstance<EpubPage.SyntheticHtml>().filter { it.entry == page.entry })
+                ?: page.html
+        }
 
     override suspend fun getTextDocumentSections(): List<TextDocumentSection> = withContext(Dispatchers.IO) {
         textDocumentSections
@@ -449,15 +449,7 @@ class EpubFormatReader(
             val html: String? = when (page) {
                 is EpubPage.Image -> htmlRenderer.renderImageSpineItemHtml(page.entry, zip)
                 is EpubPage.Html -> htmlRenderer.renderSpineSectionHtml(page, zip)
-                is EpubPage.SyntheticHtml -> {
-                    if (page.totalChunks <= 1) page.html
-                    else pages.asSequence()
-                        .filterIsInstance<EpubPage.SyntheticHtml>()
-                        .filter { it.entry == page.entry }
-                        .sortedBy { it.chunkIndex }
-                        .joinToString(separator = "") { extractBodyContent(it.html) }
-                        .let { contentAnalyzer.buildSyntheticHtml(it, includeTitle = true) }
-                }
+                is EpubPage.SyntheticHtml -> syntheticSectionHtml(page)
             }
             if (html != null) {
                 val id = when (page) {
