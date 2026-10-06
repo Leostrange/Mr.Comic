@@ -82,6 +82,7 @@ internal class ReaderPageLoader(
                         _uiState.update {
                             it.copy(
                                 currentHtmlContent = cachedHtmlPage.html,
+                                currentHtmlSectionIndex = index,
                                 htmlAssetBasePath = cachedHtmlPage.assetBasePath,
                                 textWebtoonHtmlContent = if (it.readingMode == ReadingMode.WEBTOON) {
                                     it.textWebtoonHtmlContent
@@ -109,6 +110,7 @@ internal class ReaderPageLoader(
                     Log.w("ReaderViewModel", "Empty HTML for page $index; showing error surface")
                     _uiState.update {
                         it.copy(
+                            currentHtmlSectionIndex = index,
                             currentHtmlContent = textReaderOrchestrator.loadErrorHtml(
                                 index,
                                 IllegalStateException("Empty HTML page")
@@ -125,6 +127,7 @@ internal class ReaderPageLoader(
                     _uiState.update {
                         it.copy(
                             currentHtmlContent = null,
+                            currentHtmlSectionIndex = -1,
                             htmlAssetBasePath = null,
                             previousHtmlContent = null,
                             previousHtmlAssetBasePath = null,

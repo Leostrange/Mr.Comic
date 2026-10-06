@@ -313,4 +313,13 @@ class ReaderStylePresetReducerTest {
         assertEquals(0.65f, step3.brightness, 0.001f)
         assertEquals(setOf(3, 7), step3.bookmarkedPages)
     }
+
+    @Test
+    fun setGraphicColorScheme_leavesTheTextPresetUntouched() {
+        val state = ReaderUiState(readerPreset = ReadingPreset.SEPIA_BOOK.name, textColorScheme = "SEPIA")
+        val updated = ReaderStylePresetReducer.setGraphicColorScheme(state, "DAY")
+        assertEquals("DAY", updated.graphicColorScheme)
+        assertEquals(ReadingPreset.SEPIA_BOOK.name, updated.readerPreset)
+        assertEquals("SEPIA", updated.textColorScheme)
+    }
 }

@@ -6,6 +6,7 @@ import androidx.webkit.WebViewAssetLoader
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
 import io.leostrange.mrcomic.feature.reader.ui.HtmlPageView
+import io.leostrange.mrcomic.feature.reader.ui.ReaderTextSeek
 import io.leostrange.mrcomic.feature.reader.ui.ReaderWebViewRestoreTarget
 import io.leostrange.mrcomic.feature.reader.ui.ReaderTextSelection
 
@@ -24,7 +25,7 @@ internal fun TextContainer(
     onTranslateSelection: (String) -> Unit,
     onDictionarySelection: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
-    onSaveQuoteSelection: (String) -> Unit,
+    onSaveQuoteSelection: (ReaderTextSelection) -> Unit,
     onHighlightSelection: (ReaderTextSelection) -> Unit = {},
     onTranslateChapter: () -> Unit = {},
     onCompareTranslations: (String) -> Unit = {},
@@ -32,7 +33,9 @@ internal fun TextContainer(
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
     onVerticalBoundaryNavigation: (Int) -> Unit = {},
-    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int, characterOffset: Int) -> Unit = { _, _, _ -> },
+    documentSectionIndex: Int = -1,
+    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int, characterOffset: Int, documentSection: Int) -> Unit =
+        { _, _, _, _ -> },
     sectionCharacterOffset: Int = 0,
     pendingScrollToAnchor: String? = null,
     onConsumeScrollToAnchor: () -> Unit = {},
@@ -41,6 +44,9 @@ internal fun TextContainer(
     onTextWebtoonVisibleSectionChanged: (Int) -> Unit = {},
     freeScrollRestoreTarget: ReaderWebViewRestoreTarget? = null,
     onFreeScrollPositionUpdate: (ReaderWebViewRestoreTarget) -> Unit = {},
+    onRuntimeSettledChanged: (Boolean) -> Unit = {},
+    pendingTextSeek: ReaderTextSeek? = null,
+    onConsumeTextSeek: (Long) -> Unit = {},
     fontSize: Int = 18,
     colorScheme: String = "DAY",
     readerPreset: ReadingPreset = ReadingPreset.CUSTOM,
@@ -86,6 +92,7 @@ internal fun TextContainer(
         onAnchorClick = onAnchorClick,
         onInlineFootnote = onInlineFootnote,
         onVerticalBoundaryNavigation = onVerticalBoundaryNavigation,
+        documentSectionIndex = documentSectionIndex,
         onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged,
         sectionCharacterOffset = sectionCharacterOffset,
         pendingScrollToAnchor = pendingScrollToAnchor,
@@ -95,6 +102,9 @@ internal fun TextContainer(
         onTextWebtoonVisibleSectionChanged = onTextWebtoonVisibleSectionChanged,
         freeScrollRestoreTarget = freeScrollRestoreTarget,
         onFreeScrollPositionUpdate = onFreeScrollPositionUpdate,
+        onRuntimeSettledChanged = onRuntimeSettledChanged,
+        pendingTextSeek = pendingTextSeek,
+        onConsumeTextSeek = onConsumeTextSeek,
         readingMode = readingMode,
         autoScrollSpeed = autoScrollSpeed,
         fontSize = fontSize,

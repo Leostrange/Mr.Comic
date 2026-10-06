@@ -58,6 +58,7 @@ internal object ReaderPreferenceRestorer {
         val preload: Int,
         val fontSize: Int,
         val colorScheme: String,
+        val graphicColorScheme: String,
         val customTextColor: Long?,
         val customBackgroundColor: Long?,
         val customAccentColor: Long?,
@@ -147,6 +148,7 @@ internal object ReaderPreferenceRestorer {
         // Text reader settings
         val fontSize = pref(PreferencesKeys.TEXT_FONT_SIZE, 18).coerceIn(12, 32)
         val colorScheme = pref(PreferencesKeys.TEXT_COLOR_SCHEME, "DAY")
+        val graphicColorScheme = pref(PreferencesKeys.GRAPHIC_COLOR_SCHEME, DEFAULT_GRAPHIC_COLOR_SCHEME)
         val customTextColor = pref(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, Long.MIN_VALUE)
             .takeUnless { it == Long.MIN_VALUE }
         val customBackgroundColor = pref(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, Long.MIN_VALUE)
@@ -254,6 +256,7 @@ internal object ReaderPreferenceRestorer {
             preload = preload,
             fontSize = fontSize,
             colorScheme = colorScheme,
+            graphicColorScheme = graphicColorScheme,
             customTextColor = customTextColor,
             customBackgroundColor = customBackgroundColor,
             customAccentColor = customAccentColor,
@@ -346,6 +349,7 @@ internal object ReaderPreferenceRestorer {
                 preloadPages = p.preload,
                 textFontSize = p.fontSize,
                 textColorScheme = p.colorScheme,
+                graphicColorScheme = p.graphicColorScheme,
                 textCustomTextColor = p.customTextColor,
                 textCustomBackgroundColor = p.customBackgroundColor,
                 textCustomAccentColor = p.customAccentColor,

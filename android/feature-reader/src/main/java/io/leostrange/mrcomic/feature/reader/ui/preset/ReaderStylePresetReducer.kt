@@ -123,6 +123,10 @@ object ReaderStylePresetReducer {
     fun setColorScheme(state: ReaderUiState, scheme: String): ReaderUiState =
         state.copy(readerPreset = ReadingPreset.CUSTOM.name, textColorScheme = scheme)
 
+    /** Graphic Day/Sepia/Night is independent of the text preset. */
+    fun setGraphicColorScheme(state: ReaderUiState, scheme: String): ReaderUiState =
+        state.copy(graphicColorScheme = scheme)
+
     fun setFontFamily(state: ReaderUiState, family: String): ReaderUiState =
         state.copy(readerPreset = ReadingPreset.CUSTOM.name, textFontFamily = family)
 

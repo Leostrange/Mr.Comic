@@ -18,7 +18,9 @@ internal class ReaderWebViewTouchController(
     private val clearSelection: () -> Unit,
     private val setSelectionEnabled: (Boolean) -> Unit,
     private val onFreeScrollGestureFinished: () -> Unit,
-    private val setUserSelectNone: ((Boolean) -> Unit)? = null
+    private val setUserSelectNone: ((Boolean) -> Unit)? = null,
+    /** Platform `scaledTouchSlop`; movement below it is still a tap. */
+    private val touchSlopPx: Float = 12f
 ) {
     private var touchStartX: Float = 0f
     private var touchStartY: Float = 0f
@@ -30,6 +32,7 @@ internal class ReaderWebViewTouchController(
     @Volatile var nativeTapConsumed: Boolean = false
         private set
     @Volatile var touchStartedOnLink: Boolean = false
+    private var webViewGestureCancelled: Boolean = false
     private var touchStartedAtTopBoundary: Boolean = false
     private var touchStartedAtBottomBoundary: Boolean = false
 
@@ -49,24 +52,27 @@ internal class ReaderWebViewTouchController(
     ): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                // Selection stays suppressed after a drag until the next gesture begins.
+                restorePagedDragSelection()
                 touchStartX = event.x
                 touchStartY = event.y
                 touchStartTimeMs = SystemClock.uptimeMillis()
                 nativePagedGestureMoved = false
                 selectionWasActiveAtDown = hasActiveSelection
-                pagedDragSuppressesSelection = false
                 touchStartedOnLink = false
+                webViewGestureCancelled = false
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = event.x - touchStartX
                 val dy = event.y - touchStartY
-                val moved = PagedGesturePolicy.hasMoved(dx, dy)
+                val moved = PagedGesturePolicy.hasMoved(dx, dy, touchSlopPx)
                 if (moved) {
                     nativePagedGestureMoved = true
                     if (!selectionWasActiveAtDown) suppressPagedDragSelection()
                     suppressNextClick()
                 }
-                if (PagedGesturePolicy.shouldInterceptMove(dx, dy, selectionWasActiveAtDown)) {
+                if (PagedGesturePolicy.shouldInterceptMove(dx, dy, selectionWasActiveAtDown, touchSlopPx)) {
+                    cancelWebViewGesture(event, superOnTouchEvent)
                     return true
                 }
             }
@@ -79,7 +85,7 @@ internal class ReaderWebViewTouchController(
                 // resolves links and footnotes at the exact tap point before routing an
                 // ordinary tap to page navigation. Native interception is only needed
                 // for real swipes after the movement threshold.
-                if (!nativePagedGestureMoved && !PagedGesturePolicy.hasMoved(dx, dy)) {
+                if (!nativePagedGestureMoved && !PagedGesturePolicy.hasMoved(dx, dy, touchSlopPx)) {
                     touchStartedOnLink = false
                     selectionWasActiveAtDown = false
                     restorePagedDragSelection()
@@ -101,18 +107,19 @@ internal class ReaderWebViewTouchController(
                     PagedGestureAction.PASS_THROUGH -> {
                         touchStartedOnLink = false
                         selectionWasActiveAtDown = false
-                        restorePagedDragSelection()
+                        // Chromium already saw this gesture end with the CANCEL sent at interception.
+                        if (webViewGestureCancelled) return true
                     }
                     PagedGestureAction.RESOLVED -> {
                         suppressNextClick()
                         nativePagedGestureMoved = false
                         selectionWasActiveAtDown = false
-                        restorePagedDragSelection()
+                        cancelWebViewGesture(event, superOnTouchEvent)
                         return true
                     }
                     PagedGestureAction.TAP_LEFT -> {
                         clearSelection()
-                        restorePagedDragSelection()
+                        cancelWebViewGesture(event, superOnTouchEvent)
                         suppressNextClick()
                         nativeTapConsumed = true
                         nativePagedGestureMoved = false
@@ -122,7 +129,7 @@ internal class ReaderWebViewTouchController(
                     }
                     PagedGestureAction.TAP_RIGHT -> {
                         clearSelection()
-                        restorePagedDragSelection()
+                        cancelWebViewGesture(event, superOnTouchEvent)
                         suppressNextClick()
                         nativeTapConsumed = true
                         nativePagedGestureMoved = false
@@ -186,6 +193,21 @@ internal class ReaderWebViewTouchController(
             }
         }
         return superOnTouchEvent(event)
+    }
+
+    /**
+     * BUG-PAGED-01: once native code owns a gesture, Chromium must see it end. Without a CANCEL
+     * its long-press timer fires after the page turn and selects a word on the new page.
+     */
+    private fun cancelWebViewGesture(event: MotionEvent, superOnTouchEvent: (MotionEvent) -> Boolean) {
+        if (webViewGestureCancelled) return
+        webViewGestureCancelled = true
+        val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+        try {
+            superOnTouchEvent(cancel)
+        } finally {
+            cancel.recycle()
+        }
     }
 
     private fun suppressPagedDragSelection() {

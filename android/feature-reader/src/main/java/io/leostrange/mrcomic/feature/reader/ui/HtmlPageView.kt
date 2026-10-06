@@ -22,19 +22,23 @@ import kotlin.math.roundToInt
 
 private class FreeScrollPositionHolder(var value: ReaderWebViewRestoreTarget?)
 
+private class AppliedSeekHolder(var token: Long = 0L)
+
 private val FreeScrollPositionHolderSaver = Saver<FreeScrollPositionHolder, String>(
     save = { holder ->
         holder.value?.let { target ->
-            "${target.characterOffset ?: -1}|${target.progression ?: -1.0}"
+            "${target.characterOffset ?: -1}|${target.progression ?: -1.0}|${target.sectionIndex ?: -1}"
         }
     },
     restore = { encoded ->
         val parts = encoded.split('|')
         val characterOffset = parts.getOrNull(0)?.toIntOrNull()?.takeIf { it >= 0 }
         val progression = parts.getOrNull(1)?.toDoubleOrNull()?.takeIf { it in 0.0..1.0 }
+        val sectionIndex = parts.getOrNull(2)?.toIntOrNull()?.takeIf { it >= 0 && characterOffset != null }
         FreeScrollPositionHolder(
             if (characterOffset != null || progression != null) {
                 ReaderWebViewRestoreTarget(
+                    sectionIndex = sectionIndex,
                     characterOffset = characterOffset,
                     progression = progression
                 )
@@ -69,14 +73,17 @@ internal fun HtmlPageView(
     onTranslateSelection: (String) -> Unit,
     onDictionarySelection: (String) -> Unit,
     onExplainSelection: (String) -> Unit,
-    onSaveQuoteSelection: (String) -> Unit,
+    onSaveQuoteSelection: (ReaderTextSelection) -> Unit,
     onHighlightSelection: (ReaderTextSelection) -> Unit = {},
     onTranslateChapter: () -> Unit = {},
     onCompareTranslations: (String) -> Unit = {},
     onAnchorClick: (String) -> Unit = {},
     onInlineFootnote: (String) -> Unit = {},
     onVerticalBoundaryNavigation: (Int) -> Unit = {},
-    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int, characterOffset: Int) -> Unit = { _, _, _ -> },
+    /** Section of [html]; reported with paged metrics so late callbacks can't land on another section. */
+    documentSectionIndex: Int = -1,
+    onPagedLayoutPageCountChanged: (pageCount: Int, pageIndex: Int, characterOffset: Int, documentSection: Int) -> Unit =
+        { _, _, _, _ -> },
     pendingScrollToAnchor: String? = null,
     onConsumeScrollToAnchor: () -> Unit = {},
     pendingWebtoonSectionIndex: Int? = null,
@@ -84,6 +91,9 @@ internal fun HtmlPageView(
     onTextWebtoonVisibleSectionChanged: (Int) -> Unit = {},
     freeScrollRestoreTarget: ReaderWebViewRestoreTarget? = null,
     onFreeScrollPositionUpdate: (ReaderWebViewRestoreTarget) -> Unit = {},
+    onRuntimeSettledChanged: (Boolean) -> Unit = {},
+    pendingTextSeek: ReaderTextSeek? = null,
+    onConsumeTextSeek: (Long) -> Unit = {},
     sectionCharacterOffset: Int = 0,
     readingMode: ReadingMode,
     autoScrollSpeed: Float = 0f,
@@ -160,7 +170,15 @@ internal fun HtmlPageView(
     ) {
         FreeScrollPositionHolder(null)
     }
-    val runtimeOwner = remember { ReaderWebViewRuntimeOwner() }
+    val onSettledChanged = rememberUpdatedState(onRuntimeSettledChanged)
+    val currentPendingSeek = rememberUpdatedState(pendingTextSeek)
+    val onConsumeSeek = rememberUpdatedState(onConsumeTextSeek)
+    val appliedSeek = remember { AppliedSeekHolder() }
+    val runtimeOwner = remember {
+        ReaderWebViewRuntimeOwner().apply {
+            this.onSettledChanged = { settled -> onSettledChanged.value(settled) }
+        }
+    }
     val loadController = runtimeOwner.loadController
     val pageSource = rememberReaderHtmlPageSource(
         controller = loadController,
@@ -169,6 +187,18 @@ internal fun HtmlPageView(
         fg = resolvedFg,
         resolvedBaseUrl = resolvedBaseUrl
     )
+    val requestedLoadToken = rememberUpdatedState(pageSource?.loadToken)
+    // The source is built asynchronously and a newer html cancels an older build, so the section
+    // current when a source is published is the section that source was built from.
+    val sourceSection = rememberUpdatedState(remember(pageSource) { documentSectionIndex })
+    val onPageMetrics = rememberUpdatedState(onPagedLayoutPageCountChanged)
+
+    // Metrics describe the document the WebView is showing, tagged with that document's section.
+    fun documentMetrics(view: ReaderWebView): (Int, Int, Int) -> Unit = { count, index, offset ->
+        if (view.activeLoadToken == requestedLoadToken.value) {
+            onPageMetrics.value(count, index, offset, sourceSection.value)
+        }
+    }
 
     // rememberUpdatedState keeps the lambdas current without recreating the WebView
     val onLeft           = rememberUpdatedState(onLeftTap)
@@ -289,7 +319,7 @@ internal fun HtmlPageView(
                     onAnchor = { onAnchor.value(it) },
                     onInlineNote = { onInlineNote.value(it) },
                     onVisibleSectionChanged = { onVisibleSectionChanged.value(it) },
-                    onPageMetricsChanged = onPagedLayoutPageCountChanged
+                    onPageMetricsChanged = documentMetrics(readerWebView)
                 )
                 onNativePagedTapRequest = { xPercent ->
                     post { nativeBridge.dispatchTap(xPercent) }
@@ -308,7 +338,7 @@ internal fun HtmlPageView(
                         ReaderSelectionAction.TRANSLATE -> onTranslate.value(selectedText.trim())
                         ReaderSelectionAction.DICTIONARY -> onDictionary.value(selectedText.trim())
                         ReaderSelectionAction.EXPLAIN -> onExplain.value(selectedText.trim())
-                        ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selectedText.trim())
+                        ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selection)
                         ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selection)
                         ReaderSelectionAction.TRANSLATE_CHAPTER -> onTranslateChapter.value()
                         ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
@@ -350,7 +380,7 @@ internal fun HtmlPageView(
                 webView.settings.loadWithOverviewMode = !pagedMode
             }
             webView.onVerticalBoundaryNavigationRequest = onVerticalBoundaryNavigation
-            webView.onPagedLayoutPageCountChanged = onPagedLayoutPageCountChanged
+            webView.onPagedLayoutPageCountChanged = documentMetrics(webView)
             // Register page turner for hardware volume buttons in text paged mode.
             // The lambda turns a visual page column; on boundary it calls
             // onVerticalBoundaryNavigation which navigates to the next/prev section.
@@ -358,9 +388,7 @@ internal fun HtmlPageView(
                 onRegisterPageTurner { step ->
                     webView.turnPagedColumn(step, {
                         onVerticalBoundaryNavigation(step)
-                    }, { pageCount, pageIndex, characterOffset ->
-                        onPagedLayoutPageCountChanged(pageCount, pageIndex, characterOffset)
-                    })
+                    }, documentMetrics(webView))
                 }
             }
             webView.translateSelectionLabel = translateActionLabel
@@ -374,13 +402,14 @@ internal fun HtmlPageView(
                     ReaderSelectionAction.TRANSLATE -> onTranslate.value(selectedText.trim())
                     ReaderSelectionAction.DICTIONARY -> onDictionary.value(selectedText.trim())
                     ReaderSelectionAction.EXPLAIN -> onExplain.value(selectedText.trim())
-                    ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selectedText.trim())
+                    ReaderSelectionAction.SAVE_QUOTE -> onSaveQuote.value(selection)
                     ReaderSelectionAction.HIGHLIGHT -> onHighlight.value(selection)
                     ReaderSelectionAction.TRANSLATE_CHAPTER -> onTranslateChapter.value()
                     ReaderSelectionAction.COMPARE_TRANSLATIONS -> onCompareTranslations.value(selectedText.trim())
                 }
             }
             val currentSource = pageSource ?: return@AndroidView
+            val pendingSeek = currentPendingSeek.value?.takeIf { it.token != appliedSeek.token }
             if (loadReaderHtmlSourceIfChanged(
                     webView = webView,
                     runtimeOwner = runtimeOwner,
@@ -402,7 +431,20 @@ internal fun HtmlPageView(
                         }
                     )
                 )) {
+                // A new document restores from state; an older in-place seek must not replay later.
+                pendingSeek?.let { seek ->
+                    appliedSeek.token = seek.token
+                    onConsumeSeek.value(seek.token)
+                }
                 return@AndroidView
+            }
+            if (pendingSeek != null) {
+                appliedSeek.token = pendingSeek.token
+                webView.seekToTextPosition(
+                    sectionIndex = pendingSeek.sectionIndex.takeIf { !pagedMode },
+                    characterOffset = pendingSeek.characterOffset,
+                    fragment = pendingSeek.fragment
+                ) { onConsumeSeek.value(pendingSeek.token) }
             }
             val pendingAnchor = currentPendingAnchor.value?.takeIf { it.isNotBlank() }
             if (pendingAnchor != null) {
@@ -418,8 +460,10 @@ internal fun HtmlPageView(
                         return false;
                     })();
                 """.trimIndent()
-                webView.evaluateJavascript(script) { _ ->
-                    onConsumeAnchor.value()
+                // The WebView may still show the previous document for a frame; keep the anchor
+                // pending until it is found so the target document's load can restore it.
+                webView.evaluateJavascript(script) { found ->
+                    if (found == "true") onConsumeAnchor.value()
                 }
             }
             val pendingWebtoonSection = currentPendingWebtoonSection.value?.takeIf { !pagedMode }
@@ -434,8 +478,8 @@ internal fun HtmlPageView(
                         return false;
                     })();
                 """.trimIndent()
-                webView.evaluateJavascript(script) { _ ->
-                    onConsumeWebtoonSectionState.value()
+                webView.evaluateJavascript(script) { found ->
+                    if (found == "true") onConsumeWebtoonSectionState.value()
                 }
             }
             val viewportWidthPx = webView.readerCssViewportWidthPxOrNull()

@@ -52,6 +52,10 @@ internal data class ReaderPositionRestorePlan(
     }
 }
 
+/** True when the position points inside its first section, so section 0 still needs a restore. */
+internal fun ReaderPosition?.hasInSectionCursor(): Boolean = this != null &&
+    ((characterOffset ?: 0) > 0 || visualPageIndex > 0 || (webtoonScrollFraction ?: 0f) > 0f)
+
 /**
  * Builds the restore plan for [position] against [resolvedTotalPages].
  *

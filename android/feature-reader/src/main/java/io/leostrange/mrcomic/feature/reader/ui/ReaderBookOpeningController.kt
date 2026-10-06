@@ -14,6 +14,7 @@ import io.leostrange.mrcomic.feature.reader.domain.enums.FootnotePresentation
 import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition
 import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec
 import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionRestorePlan
+import io.leostrange.mrcomic.feature.reader.domain.progress.hasInSectionCursor
 import io.leostrange.mrcomic.feature.reader.domain.progress.planReaderPositionRestore
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderOpenGuard
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
@@ -66,14 +67,13 @@ internal class ReaderBookOpeningController(
     private val schedulePageTranslationNote: (page: Int) -> Unit,
 ) {
     private var loadComicJob: Job? = null
-    private var pendingRequestedPage: Int?
+    private var pendingRequestedPage: Int? = null
+    private var pendingRequestedOffset: Int? = null
 
-    init {
-        pendingRequestedPage = null
-    }
-
-    fun seedPendingRequestedPage(page: Int?) {
+    /** Explicit open target (quote, bookmark): a section/page plus an optional text offset. */
+    fun seedPendingRequestedPage(page: Int?, characterOffset: Int? = null) {
         pendingRequestedPage = page?.takeIf { it >= 0 }
+        pendingRequestedOffset = characterOffset?.takeIf { pendingRequestedPage != null && it > 0 }
     }
 
     fun cancelPendingOpen() {
@@ -165,6 +165,7 @@ internal class ReaderBookOpeningController(
     private suspend fun resetForBookOpen(requestToken: Long) {
         progressController.flushPendingProgressSave()
         progressController.progressSaveJob?.cancel()
+        progressController.resetForOpen()
         deferredTasks.cancelAll()
         if (!openGuard.isCurrent(requestToken)) return
         _uiState.update {
@@ -172,6 +173,7 @@ internal class ReaderBookOpeningController(
                 isLoading = true,
                 error = null,
                 currentHtmlContent = null,
+                currentHtmlSectionIndex = -1,
                 readerRendersHtmlContent = false,
                 readerContainerKind = ReaderContainerKind.RASTER_PAGE,
                 previousHtmlContent = null,
@@ -193,7 +195,9 @@ internal class ReaderBookOpeningController(
                 sectionCurrentPage = 0,
                 sectionCharacterOffset = 0,
                 freeScrollCharacterOffset = -1,
-                freeScrollProgression = -1.0
+                freeScrollProgression = -1.0,
+                bookProgress = null,
+                pendingTextSeek = null
             )
         }
         navigationController.clearTextWebtoonCursor()
@@ -256,17 +260,28 @@ internal class ReaderBookOpeningController(
         val readerRendersHtmlContent = prepared.readerRendersHtmlContent
         // TEXT-03: prefer the structured position (section index) over the legacy raw page;
         // the legacy value remains the fallback for records that predate the structured schema.
-        val restoredPosition = ReaderPositionCodec.decode(comic.readerPositionJson)
-        val configuredOpeningMode = readingModeController.effectiveOpeningModeFor(
-            prepared.detectedFormat,
-            readerRendersHtmlContent
-        )
-        // A structured position records the mode that owns its cursor. Reopen in that mode when
-        // it is compatible with the current renderer; DUAL_PAGE is never valid for reflowable HTML.
-        val openingMode = restoredPosition?.mode?.takeIf { mode ->
-            !readerRendersHtmlContent || mode != ReadingMode.DUAL_PAGE
-        } ?: configuredOpeningMode
+        val savedPosition = ReaderPositionCodec.decode(comic.readerPositionJson)
+        // Each book owns its mode; the Settings default applies only to books never opened.
+        // Landscape spread is derived from orientation, never restored.
+        val bookMode = ReaderOpeningModePolicy.bookBaseMode(savedPosition?.mode, readingModeController.defaultReadingMode)
+        readingModeController.rememberPortraitMode(bookMode)
         val requestedPage = pendingRequestedPage
+        // An explicit target replaces the saved position for this open, so the whole restore
+        // pipeline lands on it instead of on the last-read place.
+        val restoredPosition = requestedPage?.let { page ->
+            ReaderPosition(
+                engineSectionIndex = page,
+                visualPageIndex = if (readerRendersHtmlContent) 0 else page,
+                characterOffset = pendingRequestedOffset,
+                mode = bookMode
+            )
+        } ?: savedPosition
+        pendingRequestedOffset = null
+        val openingMode = readingModeController.effectiveOpeningModeFor(
+            prepared.detectedFormat,
+            readerRendersHtmlContent,
+            currentMode = readingModeController.portraitReadingMode
+        )
         val shouldDeferCount = prepared.deferPageCount
         val initialPages = if (shouldDeferCount) 1 else prepared.pages.coerceAtLeast(1)
         val requestedStartPage = requestedPage ?: restoredPosition?.engineSectionIndex ?: comic.currentPage
@@ -302,7 +317,8 @@ internal class ReaderBookOpeningController(
         // one-page model briefly renders the cover and then jumps to the saved page.
         val holdLoadingForDeferredRestore = shouldHoldLoadingForDeferredRestore(
             shouldDeferCount = config.shouldDeferCount,
-            requestedStartPage = config.requestedStartPage
+            requestedStartPage = config.requestedStartPage,
+            hasInSectionCursor = config.restoredPosition.hasInSectionCursor()
         )
         val restorePlan = restoreCursorState(config)
         val restoresWebtoon = config.openingMode == ReadingMode.WEBTOON
@@ -467,6 +483,11 @@ internal class ReaderBookOpeningController(
                     // Deferred count failed or was not applicable. Release the loading shell
                     // so the provisional single-page model is at least interactive.
                     _uiState.update { it.copy(isLoading = false) }
+                    if (config.readerRendersHtmlContent) {
+                        progressController.loadSectionWeights(comic, _uiState.value.totalPages)
+                    } else {
+                        progressController.markPositionSettled()
+                    }
                 }
             )
         }
@@ -495,10 +516,15 @@ internal class ReaderBookOpeningController(
         val resolvedStartPage = restorePlan?.startPage ?: normalizedStartPage
         val restoresWebtoon = openingMode == ReadingMode.WEBTOON
         _uiState.update {
+            // The provisional page's html belongs to another section; showing it would load a
+            // throwaway document right before the real one.
+            val keepsHtml = it.currentHtmlSectionIndex == resolvedStartPage
             it.copy(
                 totalPages = realPages,
                 currentPage = resolvedStartPage,
                 isLoading = false,
+                currentHtmlContent = if (keepsHtml) it.currentHtmlContent else null,
+                currentHtmlSectionIndex = if (keepsHtml) it.currentHtmlSectionIndex else -1,
                 sectionCurrentPage = if (restoresWebtoon) {
                     0
                 } else {
@@ -528,6 +554,11 @@ internal class ReaderBookOpeningController(
             )
         }
         readerSessionCoordinator.updateTotalPages(realPages)
+        if (_uiState.value.readerRendersHtmlContent) {
+            progressController.loadSectionWeights(comic, realPages)
+        } else {
+            progressController.markPositionSettled()
+        }
         val visiblePages = navigationController.visiblePagesFor(resolvedStartPage, openingMode)
         reader.takeUnless { _uiState.value.readerRendersHtmlContent }?.let { r ->
             pagePreloader.preloadAround(r, visiblePages, realPages, _uiState.value.preloadPages)

@@ -1,7 +1,10 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.ReadingMode
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPosition
+import io.leostrange.mrcomic.feature.reader.domain.progress.hasInSectionCursor
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlinx.coroutines.CancellationException
@@ -187,5 +190,14 @@ class DeferredPageCountPolicyTest {
                 requestedStartPage = 14
             )
         )
+    }
+
+    @Test
+    fun holdsLoadingForAnInSectionCursorEvenInTheFirstSection() {
+        val cursor = ReaderPosition(engineSectionIndex = 0, visualPageIndex = 3, characterOffset = 1200)
+        assertTrue(shouldHoldLoadingForDeferredRestore(true, requestedStartPage = 0, hasInSectionCursor = cursor.hasInSectionCursor()))
+        assertFalse(shouldHoldLoadingForDeferredRestore(true, requestedStartPage = 0, hasInSectionCursor = false))
+        assertFalse(ReaderPosition(engineSectionIndex = 0).hasInSectionCursor())
+        assertFalse((null as ReaderPosition?).hasInSectionCursor())
     }
 }

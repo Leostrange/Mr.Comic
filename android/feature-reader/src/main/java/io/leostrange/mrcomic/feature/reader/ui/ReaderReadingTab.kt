@@ -329,6 +329,7 @@ internal fun ReaderHeaderFooterPreview(
     val chapterTitle = remember(uiState.tableOfContents, uiState.currentPage) {
         resolveReaderCurrentChapterTitle(uiState.tableOfContents, uiState.currentPage)
     }
+    val progressDisplay = uiState.progressDisplay()
     val headerLine = remember(
         uiState.headerLeftSlot,
         uiState.headerCenterSlot,
@@ -338,7 +339,8 @@ internal fun ReaderHeaderFooterPreview(
         clockText,
         uiState.currentPage,
         uiState.totalPages,
-        uiState.readingMode
+        uiState.readingMode,
+        progressDisplay
     ) {
         resolveReaderInfoOverlayLine(
             startSlot = uiState.headerLeftSlot,
@@ -349,7 +351,9 @@ internal fun ReaderHeaderFooterPreview(
             clockText = clockText,
             currentPage = uiState.currentPage,
             totalPages = uiState.totalPages,
-            readingMode = uiState.readingMode
+            readingMode = uiState.readingMode,
+            progressDisplay = progressDisplay,
+            isTextBook = uiState.readerRendersHtmlContent
         )
     }
     val footerLine = remember(
@@ -361,7 +365,8 @@ internal fun ReaderHeaderFooterPreview(
         clockText,
         uiState.currentPage,
         uiState.totalPages,
-        uiState.readingMode
+        uiState.readingMode,
+        progressDisplay
     ) {
         resolveReaderInfoOverlayLine(
             startSlot = uiState.footerLeftSlot,
@@ -372,7 +377,9 @@ internal fun ReaderHeaderFooterPreview(
             clockText = clockText,
             currentPage = uiState.currentPage,
             totalPages = uiState.totalPages,
-            readingMode = uiState.readingMode
+            readingMode = uiState.readingMode,
+            progressDisplay = progressDisplay,
+            isTextBook = uiState.readerRendersHtmlContent
         )
     }
 

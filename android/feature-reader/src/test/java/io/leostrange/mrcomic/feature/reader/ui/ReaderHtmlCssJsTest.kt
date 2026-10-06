@@ -155,9 +155,30 @@ class ReaderHtmlCssJsTest {
     @Test
     fun tapHandler_resolvesFootnoteAtTapPointBeforePagedEdgeFallback() {
         assertTrue(JS_TAP_HANDLER.contains("function footnoteLinkAtEvent(e)"))
-        assertTrue(JS_TAP_HANDLER.contains("document.elementFromPoint(e.clientX,e.clientY)"))
         assertTrue(JS_TAP_HANDLER.contains("var t=footnoteLinkAtEvent(e)||e.target;"))
         assertTrue(JS_TAP_HANDLER.contains("isFootnoteTarget(probe,probe)"))
+    }
+
+    @Test
+    fun tapHandler_footnoteHitTestTriesExactPointThenFingerSizedRing() {
+        assertTrue(JS_TAP_HANDLER.contains("var offsets=[[0,0],[slop,0],[-slop,0],[0,slop],[0,-slop]"))
+        assertTrue(JS_TAP_HANDLER.contains("document.elementFromPoint(e.clientX+offsets[o][0],e.clientY+offsets[o][1])"))
+    }
+
+    @Test
+    fun tapHandler_neverRoutesFootnoteLinksAsPageTurns() {
+        val capture = JS_TAP_HANDLER.substringBefore("function shouldRouteLinkAsPagedTap").length
+        val guard = JS_TAP_HANDLER.indexOf("if(isFootnoteTarget(e.target,t))break;")
+        val routing = JS_TAP_HANDLER.indexOf("if(shouldRouteLinkAsPagedTap(href,t)){")
+        assertTrue("footnote guard must exist", guard > capture)
+        assertTrue("footnote guard must run before page routing", guard < routing)
+    }
+
+    @Test
+    fun tapHandler_selectionFollowsPlatformLongPressTimeout() {
+        assertTrue(JS_TAP_HANDLER.contains("(Number(window.__readerLongPressMs)||500)-80"))
+        assertFalse(JS_TAP_HANDLER.contains("if(holdDuration>500)return;"))
+        assertFalse("swipes starting on links must not bypass the gate", JS_TAP_HANDLER.contains("if(e.target.closest('a'))return;"))
     }
 
     @Test
@@ -668,26 +689,30 @@ class ReaderHtmlCssJsTest {
     }
 
     @Test
-    fun readerScrollToCharacterOffsetJs_estimatesPageFromCharacterRatio() {
-        val offset = 1234
-        val js = readerScrollToCharacterOffsetJs(characterOffset = offset)
+    fun readerPagedLayoutJs_resolvesTheExactCharacterPage() {
+        val js = readerPagedLayoutJs(targetPage = -1, targetCharacterOffset = 1234)
 
         assertTrue(
-            "offset must be clamped into the document",
-            js.contains("Math.max(0,Math.min(fullText.length,$offset||0))")
+            "offset must use the shared rendered-character walk of the captures and restores",
+            js.contains("var rect=__mrcomicRenderedCharRect(content,target);")
         )
         assertTrue(
-            "page estimate must use the character ratio",
-            js.contains("var ratio=safeOffset/fullText.length")
+            "collapsed whitespace must be skipped to the first rendered character",
+            js.contains("if(rect&&(rect.height>0||rect.width>0)){range.detach&&range.detach();return rect;}")
         )
         assertTrue(
-            "ratio must map onto content height",
-            js.contains("var estimatedY=Math.round(ratio*contentHeight)")
+            "page must be the last one starting above the character's bottom edge",
+            js.contains("if((Number(pages[i].start)||0)+1<charBottom)bestPage=i;")
         )
-        assertTrue(
-            "nearest page before the estimated Y must be chosen",
-            js.contains("if((pages[i].start||0)<=estimatedY)bestPage=i")
-        )
+    }
+
+    @Test
+    fun readerPagedLayoutJs_resolvesTheRestoreOffsetAgainstTheLayoutItBuilds() {
+        val js = readerPagedLayoutJs(targetPage = -1, targetCharacterOffset = 900)
+        val built = js.indexOf("var pages=buildPages();")
+        val resolved = js.indexOf("var target=__mrcomicPageForOffset(pages,content,Math.max(0,900));")
+        assertTrue("offset must be resolved after the pages are built", built in 0 until resolved)
+        assertFalse(readerPagedLayoutJs(targetPage = 2).contains("__mrcomicPageForOffset"))
     }
 
     @Test

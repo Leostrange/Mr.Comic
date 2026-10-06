@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.sp
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.ReaderInfoSlot
 import io.leostrange.mrcomic.engine.api.TocEntry
+import io.leostrange.mrcomic.feature.reader.ui.components.ReaderProgressDisplay
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
 internal data class ReaderInfoOverlayLine(
@@ -112,13 +112,21 @@ internal fun resolveReaderInfoOverlayLine(
     clockText: String,
     currentPage: Int,
     totalPages: Int,
-    readingMode: ReadingMode
+    readingMode: ReadingMode,
+    progressDisplay: ReaderProgressDisplay,
+    /** Text books show chapter pages (none in vertical mode); raster books their visible pages. */
+    isTextBook: Boolean
 ): ReaderInfoOverlayLine {
-    val visiblePages = resolveReaderVisiblePages(currentPage, totalPages, readingMode)
+    val pageLabel = if (isTextBook) {
+        progressDisplay.pageLabel.orEmpty()
+    } else {
+        resolveReaderPageLabel(resolveReaderVisiblePages(currentPage, totalPages, readingMode), totalPages)
+    }
+    val progressLabel = "${progressDisplay.percent}%"
     return ReaderInfoOverlayLine(
-        start = resolveReaderInfoSlotValue(startSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages),
-        center = resolveReaderInfoSlotValue(centerSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages),
-        end = resolveReaderInfoSlotValue(endSlot, comicTitle, chapterTitle, clockText, visiblePages, totalPages)
+        start = resolveReaderInfoSlotValue(startSlot, comicTitle, chapterTitle, clockText, pageLabel, progressLabel),
+        center = resolveReaderInfoSlotValue(centerSlot, comicTitle, chapterTitle, clockText, pageLabel, progressLabel),
+        end = resolveReaderInfoSlotValue(endSlot, comicTitle, chapterTitle, clockText, pageLabel, progressLabel)
     )
 }
 
@@ -146,26 +154,15 @@ private fun resolveReaderInfoSlotValue(
     comicTitle: String?,
     chapterTitle: String?,
     clockText: String,
-    visiblePages: List<Int>,
-    totalPages: Int
+    pageLabel: String,
+    progressLabel: String
 ): String = when (ReaderInfoSlot.fromStored(slot)) {
     ReaderInfoSlot.NONE -> ""
     ReaderInfoSlot.BOOK_TITLE -> comicTitle.orEmpty()
     ReaderInfoSlot.CHAPTER_TITLE -> chapterTitle.orEmpty()
     ReaderInfoSlot.TIME -> clockText
-    ReaderInfoSlot.PROGRESS -> resolveReaderProgressLabel(visiblePages, totalPages)
-    ReaderInfoSlot.PAGE -> resolveReaderPageLabel(visiblePages, totalPages)
-}
-
-private fun resolveReaderProgressLabel(
-    visiblePages: List<Int>,
-    totalPages: Int
-): String {
-    if (totalPages <= 0 || visiblePages.isEmpty()) return ""
-    val progress = (((visiblePages.last() + 1).toFloat() / totalPages.toFloat()) * 100f)
-        .roundToInt()
-        .coerceIn(0, 100)
-    return "$progress%"
+    ReaderInfoSlot.PROGRESS -> progressLabel
+    ReaderInfoSlot.PAGE -> pageLabel
 }
 
 private fun resolveReaderPageLabel(

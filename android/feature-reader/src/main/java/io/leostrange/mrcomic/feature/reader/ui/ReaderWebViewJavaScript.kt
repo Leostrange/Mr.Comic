@@ -78,6 +78,8 @@ internal const val JS_TAP_HANDLER = """(function(){
     while(t&&t.tagName){
       if(t.tagName==='A'){
         var href=t.getAttribute('href')||'';
+        // Footnote references must reach the footnote handler, never the page turn.
+        if(isFootnoteTarget(e.target,t))break;
         if(shouldRouteLinkAsPagedTap(href,t)){
           routePagedTapFromLink(e,true);
           return;
@@ -87,6 +89,9 @@ internal const val JS_TAP_HANDLER = """(function(){
       t=t.parentNode;
     }
   },true);
+  function __readerLongPressThreshold(){
+    return Math.max(250,(Number(window.__readerLongPressMs)||500)-80);
+  }
   window.__readerTouchStartTs=0;
   window.__readerTouchStartX=0;
   window.__readerTouchStartY=0;
@@ -237,14 +242,12 @@ internal const val JS_TAP_HANDLER = """(function(){
     }
   },{passive:true});
   // BUG-PAGED-01: Prevent ALL text selection in paged mode. Selection is only
-  // allowed after a deliberate long-press (>500ms) or inside links.
+  // allowed after a deliberate long-press (platform long-press timeout).
   // The previous approach relied on __mrcomicPagedModeScrollLock which may not
   // be set when the WebView first loads. Now we also check the CSS user-select
   // property and a global flag set by the Kotlin side.
   document.addEventListener('selectstart',function(e){
     if(!e.target||!e.target.closest)return;
-    // Always allow selection inside links (for footnote/dictionary interaction)
-    if(e.target.closest('a'))return;
     // BUG-T5: If the finger has already moved, suppress selection immediately.
     // This prevents accidental selection during a slow swipe that hasn't yet
     // reached the native MOVE_THRESHOLD but has moved enough in JS coordinates.
@@ -256,29 +259,29 @@ internal const val JS_TAP_HANDLER = """(function(){
     var isPaged=window.__mrcomicPagedModeScrollLock||hasActivePagedLayout()||
                 window.__readerPagedSelectionDisabled;
     if(isPaged||window.__readerTouchEdgeZone){
-      // Allow only after 500ms hold (deliberate long-press for dictionary/quote)
+      // Allow only after a deliberate long-press (dictionary/quote)
       var holdDuration=window.__readerTouchStartTs?(Date.now()-window.__readerTouchStartTs):0;
-      if(holdDuration>500)return;
+      if(holdDuration>__readerLongPressThreshold())return;
       // Allow extending an existing selection
       if(window.__readerSelectionTs&&((Date.now()-window.__readerSelectionTs)<2000))return;
       e.preventDefault();
       return;
     }
-    // Non-paged mode: allow selection only after 500ms hold
+    // Non-paged mode: allow selection only after a long-press
     var holdDuration=window.__readerTouchStartTs?(Date.now()-window.__readerTouchStartTs):0;
-    if(holdDuration>500)return;
+    if(holdDuration>__readerLongPressThreshold())return;
     if(window.__readerSelectionTs&&((Date.now()-window.__readerSelectionTs)<2000))return;
     e.preventDefault();
   });
   document.addEventListener('touchmove',function(e){
     // BUG-T5: Only set __readerTouchMoved when movement exceeds a small
-    // pixel threshold (4px) to avoid false positives from sub-pixel jitter.
+    // pixel threshold (10px) to avoid false positives from finger jitter.
     // Once set, it stays true for the rest of this touch sequence.
     if(window.__readerTouchMoved)return;
     if(!e.touches||!e.touches.length)return;
     var dx=e.touches[0].clientX-window.__readerTouchStartX;
     var dy=e.touches[0].clientY-window.__readerTouchStartY;
-    if(Math.abs(dx)>4||Math.abs(dy)>4){
+    if(Math.abs(dx)>10||Math.abs(dy)>10){
       window.__readerTouchMoved=true;
       // BUG-T5: Actively suppress any in-progress selection caused by a
       // long-press that turned into a drag.  Without this, the browser may
@@ -351,7 +354,14 @@ internal const val JS_TAP_HANDLER = """(function(){
     try{
       var candidates=[e.target];
       if(document.elementFromPoint&&isFinite(e.clientX)&&isFinite(e.clientY)){
-        candidates.push(document.elementFromPoint(e.clientX,e.clientY));
+        // Exact point first, then a finger-sized ring: small markers near the edge must win
+        // over the page-turn zone (Footnote/Link -> content -> selection -> navigation).
+        var slop=14;
+        var offsets=[[0,0],[slop,0],[-slop,0],[0,slop],[0,-slop],[slop,slop],[-slop,slop],[slop,-slop],[-slop,-slop]];
+        for(var o=0;o<offsets.length;o++){
+          var hit=document.elementFromPoint(e.clientX+offsets[o][0],e.clientY+offsets[o][1]);
+          if(hit)candidates.push(hit);
+        }
       }
       for(var i=0;i<candidates.length;i++){
         var probe=candidates[i];
@@ -384,7 +394,7 @@ internal const val JS_TAP_HANDLER = """(function(){
       selected=(window.getSelection&&window.getSelection().toString())||'';
       selected=(selected||'').trim();
     }catch(err){}
-    var isLongPress=window.__readerTouchStartTs&&((now-window.__readerTouchStartTs)>380);
+    var isLongPress=window.__readerTouchStartTs&&((now-window.__readerTouchStartTs)>__readerLongPressThreshold());
     var hasRecentSelection=window.__readerSelectionTs&&((now-window.__readerSelectionTs)<1200);
     if(selected.length>0||window.__readerTouchMoved||isLongPress||hasRecentSelection){
       return;

@@ -1,32 +1,13 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
-import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderPositionCodec
 
 /** Guards persistence and completion until a reader position is meaningful. */
 internal object ReaderProgressPolicy {
 
-    /**
-     * EPUB stores an absolute visual page accumulated across spine sections. Every other
-     * format already reports a reader-global page and must retain that exact coordinate.
-     */
-    fun pageForPersistence(
-        format: ComicFormat,
-        readerPage: Int,
-        epubAbsolutePage: Int
-    ): Int = if (format == ComicFormat.EPUB) epubAbsolutePage else readerPage
-
-    fun shouldPersist(
-        totalPages: Int,
-        isHeavyReflowable: Boolean,
-        isEpub: Boolean,
-        epubAccumulatedPages: Int,
-        paginatedSectionCount: Int
-    ): Boolean {
-        if (totalPages <= 1 && isHeavyReflowable) return false
-        if (!isEpub) return true
-        return epubAccumulatedPages > 0 && paginatedSectionCount >= 2
-    }
+    /** Page progress of a heavy reflowable book waits for an authoritative page count. */
+    fun shouldPersist(totalPages: Int, isHeavyReflowable: Boolean): Boolean =
+        !(totalPages <= 1 && isHeavyReflowable)
 
     fun shouldComplete(
         reachedLastPage: Boolean,
@@ -74,6 +55,7 @@ internal fun persistedPageMarkerAfterFlush(
     PersistedProgressMarker(
         comicId = pending.comicId,
         page = pending.page,
-        positionJson = pending.positionJson
+        positionJson = pending.positionJson,
+        progress = pending.progress
     )
 }

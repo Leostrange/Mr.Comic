@@ -215,18 +215,30 @@ class PagedGesturePolicyTest {
     }
 
     @Test
-    fun classifyPagedGesture_nearEdgeTap_tapRight() {
-        // Tap near right edge (0.84 < xPercent < 0.88, not isEdgeTap but still triggers)
+    fun classifyPagedGesture_nearEdgeTap_passesThroughToDomHitTest() {
+        // BUG-PAGED-03: a near-edge tap may be a footnote; the DOM decides before page navigation.
         val result = PagedGesturePolicy.classifyPagedGesture(
-            dx = 2f, dy = 2f,
+            dx = 14f, dy = 3f,
             elapsed = 200L,
             xPercent = 0.85f,
-            isEdgeTap = false, // not in 0.88+ zone
-            hasMoved = false,
+            isEdgeTap = false,
+            hasMoved = true,
             hasActiveSelection = false,
             touchStartedOnLink = false
         )
-        assertEquals(PagedGestureAction.TAP_RIGHT, result)
+        assertEquals(PagedGestureAction.PASS_THROUGH, result)
+    }
+
+    @Test
+    fun hasMoved_respectsPlatformTouchSlop() {
+        assertFalse(PagedGesturePolicy.hasMoved(dx = 18f, dy = 4f, slopPx = 21f))
+        assertTrue(PagedGesturePolicy.hasMoved(dx = 22f, dy = 0f, slopPx = 21f))
+    }
+
+    @Test
+    fun shouldInterceptMove_ignoresVerticalJitterBelowSlop() {
+        assertFalse(PagedGesturePolicy.shouldInterceptMove(dx = 0f, dy = 12f, hasActiveSelection = false, verticalSlopPx = 21f))
+        assertTrue(PagedGesturePolicy.shouldInterceptMove(dx = 0f, dy = 30f, hasActiveSelection = false, verticalSlopPx = 21f))
     }
 
     // ── Selection suppression during MOVE ──────────────────────────────────

@@ -10,6 +10,5 @@ data class TocEntry(
     val title: String,
     val pageIndex: Int,
     val anchorId: String? = null,
-    val sectionIndex: Int = -1,
-    val charOffset: Int = -1
+    val sectionIndex: Int = -1
 )

@@ -33,6 +33,19 @@ internal class ReaderSaveQuoteController(
         )
     }
 
+    /** Saves the quote at the selection's own section and text offset. */
+    fun saveQuoteFromSelection(selection: ReaderTextSelection) {
+        val state = _uiState.value
+        saveQuote(
+            text = selection.text.trim(),
+            translatedText = null,
+            sourceLanguage = null,
+            targetLanguage = null,
+            page = selection.sectionIndex.takeIf { it in 0 until state.totalPages } ?: state.currentPage,
+            characterOffset = selection.anchorOffset.takeIf { it >= 0 }
+        )
+    }
+
     fun saveQuoteDirectly(selectedText: String) {
         saveQuote(
             text = selectedText,
@@ -57,10 +70,12 @@ internal class ReaderSaveQuoteController(
         text: String,
         translatedText: String?,
         sourceLanguage: String?,
-        targetLanguage: String?
+        targetLanguage: String?,
+        page: Int = _uiState.value.currentPage,
+        // Without a selection offset, the visible page/scroll position is the best location.
+        characterOffset: Int? = _uiState.value.textCursorOffset()
     ) {
         val comic = _uiState.value.comic ?: return
-        val page = _uiState.value.currentPage
         viewModelScope.launch {
             runCatching {
                 quoteRepository.saveQuote(
@@ -69,7 +84,8 @@ internal class ReaderSaveQuoteController(
                     text = text,
                     translatedText = translatedText,
                     sourceLanguage = sourceLanguage,
-                    targetLanguage = targetLanguage
+                    targetLanguage = targetLanguage,
+                    characterOffset = characterOffset
                 )
             }.onSuccess { result ->
                 val readerText = localizedReaderText()

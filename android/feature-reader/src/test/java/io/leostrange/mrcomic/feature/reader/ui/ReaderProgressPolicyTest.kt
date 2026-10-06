@@ -2,7 +2,6 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
-import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionSnapshot
@@ -17,34 +16,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ReaderProgressPolicyTest {
-
-    @Test
-    fun pageForPersistence_usesEpubVisualPageOnlyForEpub() {
-        assertEquals(
-            37,
-            ReaderProgressPolicy.pageForPersistence(
-                format = ComicFormat.EPUB,
-                readerPage = 2,
-                epubAbsolutePage = 37
-            )
-        )
-        assertEquals(
-            12,
-            ReaderProgressPolicy.pageForPersistence(
-                format = ComicFormat.CBZ,
-                readerPage = 12,
-                epubAbsolutePage = 0
-            )
-        )
-        assertEquals(
-            8,
-            ReaderProgressPolicy.pageForPersistence(
-                format = ComicFormat.TXT,
-                readerPage = 8,
-                epubAbsolutePage = 0
-            )
-        )
-    }
 
     private fun resolveReaderClosedPayloadForScenario(
         countsTowardReadingProgress: Boolean,

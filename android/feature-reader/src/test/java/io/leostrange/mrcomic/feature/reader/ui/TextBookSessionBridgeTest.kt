@@ -2,10 +2,12 @@ package io.leostrange.mrcomic.feature.reader.ui
 
 import io.leostrange.mrcomic.core.model.BookTocItem
 import io.leostrange.mrcomic.core.model.ReaderLocator
+import io.leostrange.mrcomic.engine.api.TextDocumentSection
 import io.leostrange.mrcomic.engine.formats.base.FormatReader
 import io.leostrange.mrcomic.engine.formats.text.ReflowableTextFormatReader
-import io.leostrange.mrcomic.engine.api.TextDocumentSection
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TextBookSessionBridgeTest {
@@ -71,5 +73,13 @@ class TextBookSessionBridgeTest {
         override fun resolveHrefToPage(href: String): Int? = null
         override fun close() = Unit
         override suspend fun getTextDocumentSections(): List<TextDocumentSection> = sections
+    }
+
+    @Test
+    fun hrefMatchesSpineEntry_decodesAndRespectsPathBoundaries() {
+        assertTrue(TextBookSessionBridge.hrefMatchesSpineEntry("Text/%D0%93%D0%BB%D0%B0%D0%B2%D0%B0%201.xhtml#p2", "OEBPS/Text/Глава 1.xhtml"))
+        assertTrue(TextBookSessionBridge.hrefMatchesSpineEntry("../Text/ch2.xhtml", "OEBPS/Text/ch2.xhtml"))
+        assertFalse(TextBookSessionBridge.hrefMatchesSpineEntry("1.xhtml", "OEBPS/chapter11.xhtml"))
+        assertFalse(TextBookSessionBridge.hrefMatchesSpineEntry("#note", "ch1.xhtml"))
     }
 }

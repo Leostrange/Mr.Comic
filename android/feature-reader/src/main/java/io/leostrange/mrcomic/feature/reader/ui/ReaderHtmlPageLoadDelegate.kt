@@ -1,5 +1,6 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
+import android.view.ViewConfiguration
 import android.webkit.WebView
 
 internal class ReaderHtmlPageLoadDelegate(
@@ -14,9 +15,20 @@ internal class ReaderHtmlPageLoadDelegate(
         readerView?.activeRuntimeGeneration
             ?.takeIf { it > 0L }
             ?.let { view.evaluateJavascript(readerWebViewProtocolBootstrapJs(it), null) }
+        // JS selection gating follows the platform long-press timeout.
+        view.evaluateJavascript("window.__readerLongPressMs=${ViewConfiguration.getLongPressTimeout()};", null)
         view.evaluateJavascript(JS_TAP_HANDLER, null)
+        val style = textStyle()
+        val widthPx = view.readerCssViewportWidthPxOrNull()
+        val heightPx = view.readerCssViewportHeightPxOrNull()
+        // This load applies the current settings; recording them keeps the next Compose update
+        // from re-running them as a layout change that would race the first page turn.
+        readerView?.markReaderTextSettingsApplied(
+            style.signature(pagedMode(), widthPx, heightPx, isRtl()),
+            style.layoutSignature(pagedMode(), widthPx, heightPx, isRtl())
+        )
         view.evaluateJavascript(
-            textStyle().settingsScript(view, pagedMode(), isRtl())
+            style.settingsScript(view, pagedMode(), isRtl())
         ) {
             readerView?.applyPagedLayout()
             readerView?.schedulePagedLayoutSettle()
@@ -34,7 +46,8 @@ internal class ReaderHtmlPageLoadDelegate(
             view.requestLayout()
             view.invalidate()
         }
-        readerView?.post { readerView.verifyVisibleContentOrFallback() }
+        val loadToken = readerView?.activeLoadToken
+        readerView?.post { readerView.verifyVisibleContentOrFallback(loadToken) }
     }
 }
 

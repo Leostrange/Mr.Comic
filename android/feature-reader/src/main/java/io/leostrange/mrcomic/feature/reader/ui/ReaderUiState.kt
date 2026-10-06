@@ -6,6 +6,7 @@ import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.api.TocEntry
 import io.leostrange.mrcomic.feature.reader.domain.enums.*
 import io.leostrange.mrcomic.feature.reader.domain.preset.*
+import io.leostrange.mrcomic.feature.reader.ui.components.resolveReaderProgressDisplay
 
 /**
  * Reader UI state data classes.
@@ -104,6 +105,8 @@ data class ReaderUiState(
      * Null when the page is a Bitmap (image-based formats).
      */
     val currentHtmlContent: String? = null,
+    /** Engine section [currentHtmlContent] was loaded for; lags [currentPage] while it loads. */
+    val currentHtmlSectionIndex: Int = -1,
     /** True when the active reader is routed through text/HTML containers. */
     val readerRendersHtmlContent: Boolean = false,
     /** Resolved visual container for the active format + reading mode pair. */
@@ -185,10 +188,10 @@ data class ReaderUiState(
     val freeScrollProgression: Double = -1.0,
     /** BUG-VERTICAL-01: Scroll progression (0..1) for raster webtoon seekbar sync. */
     val rasterWebtoonScrollProgression: Double = -1.0,
-    /** Accumulated total visual pages across all visited EPUB sections (0 when not EPUB or no data). */
-    val epubAccumulatedTotalPages: Int = 0,
-    /** Accumulated current visual page position across all visited EPUB sections. */
-    val epubAccumulatedCurrentPage: Int = 0,
+    /** Canonical book progress (0..1) of the last settled position; null until first known. */
+    val bookProgress: Float? = null,
+    /** One-shot in-document seek (slider, TOC, quote) applied by the active text WebView. */
+    val pendingTextSeek: ReaderTextSeek? = null,
     /** Whether hardware volume buttons should turn pages inside the reader. */
     val volumeKeysPagingEnabled: Boolean = false,
     /** System TTS defaults used by the reader services tab. */
@@ -254,31 +257,47 @@ data class ReaderUiState(
     val chromeShowAutoScrollIcon: Boolean = true
 ) {
     /**
-     * BUG-READER-01: Unified effective total pages.
-     * Returns accumulated visual pages for EPUB when available, otherwise raw totalPages.
-     * All UI components should use this instead of accessing totalPages directly.
+     * The progress every reader surface shows: the settled canonical progress, else the value
+     * the library card shows, so the reader never disagrees with the library.
      */
-    val effectiveTotalPages: Int
-        get() = if (epubAccumulatedTotalPages > 0) epubAccumulatedTotalPages else totalPages.coerceAtLeast(1)
-
-    /**
-     * BUG-READER-01: Unified effective current page.
-     * Returns accumulated current page for EPUB when available, otherwise raw currentPage.
-     */
-    val effectiveCurrentPage: Int
-        get() = if (epubAccumulatedTotalPages > 0) epubAccumulatedCurrentPage else currentPage.coerceAtLeast(0)
-
-    /**
-     * BUG-READER-01: Unified reading progress (0..100).
-     * All UI components should use this for consistent progress display.
-     */
-    val effectiveProgressPercent: Int
-        get() {
-            val total = effectiveTotalPages
-            val current = effectiveCurrentPage
-            return if (total > 1) (current.toFloat() / (total - 1) * 100f).toInt().coerceIn(0, 100) else 0
-        }
+    val displayBookProgress: Float
+        get() = (bookProgress ?: comic?.displayReadingProgress() ?: 0f).coerceIn(0f, 1f)
 }
+
+/** True when the paged WebView document belongs to [ReaderUiState.currentPage] (always for other containers). */
+internal fun ReaderUiState.pagedHtmlMatchesSection(): Boolean =
+    readerContainerKind != ReaderContainerKind.TEXT_PAGE || currentHtmlSectionIndex == currentPage
+
+/**
+ * Text cursor inside the current section for legacy columns and quotes; null when there is none.
+ * WEBTOON offset 0 is a real position, while a paged offset of 0 only means the section start.
+ */
+internal fun ReaderUiState.textCursorOffset(): Int? =
+    if (readingMode == ReadingMode.WEBTOON) {
+        freeScrollCharacterOffset.takeIf { it >= 0 }
+    } else {
+        sectionCharacterOffset.takeIf { it > 0 }
+    }
+
+/** Page counter + percent shared by the bottom bar and the header/footer overlay. */
+internal fun ReaderUiState.progressDisplay() = resolveReaderProgressDisplay(
+    isTextBook = readerRendersHtmlContent,
+    readingMode = readingMode,
+    currentPage = currentPage,
+    totalPages = totalPages,
+    sectionCurrentPage = sectionCurrentPage,
+    sectionPageCount = sectionPageCount,
+    bookProgress = displayBookProgress,
+)
+
+/** Seek target inside an already loaded text document; [token] makes repeated seeks distinct. */
+data class ReaderTextSeek(
+    val sectionIndex: Int,
+    val characterOffset: Int,
+    /** Element id to land on; preferred over [characterOffset] when it resolves. */
+    val fragment: String? = null,
+    val token: Long = System.nanoTime()
+)
 
 data class SelectedTextTranslationState(
     val originalText: String,
@@ -344,11 +363,16 @@ internal data class PendingProgressSave(
     /** Structured position (TEXT-01) captured with the save; serialized on flush. */
     val positionJson: String? = null,
     /** Position-only snapshots must not advance page progress or completion state. */
-    val positionOnly: Boolean = false
+    val positionOnly: Boolean = false,
+    /** Canonical book progress for reflowable text; null for raster page progress. */
+    val progress: Float? = null,
+    /** Reading-goal pages earned by the moves this save covers. */
+    val goalPagesDelta: Int = 0
 )
 
 internal data class PersistedProgressMarker(
     val comicId: String,
     val page: Int,
-    val positionJson: String? = null
+    val positionJson: String? = null,
+    val progress: Float? = null
 )

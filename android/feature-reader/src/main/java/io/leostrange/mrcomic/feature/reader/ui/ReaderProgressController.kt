@@ -21,6 +21,7 @@ import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsEvent
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
+import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.ComicFormat
 import io.leostrange.mrcomic.core.model.ReadingMode
 import io.leostrange.mrcomic.core.model.isHeavyReflowableFormat
@@ -31,10 +32,12 @@ import io.leostrange.mrcomic.core.model.repository.LibraryRepository
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderProgressRecapType
 import io.leostrange.mrcomic.feature.reader.domain.progress.EpubSectionPageCountStore
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderBookProgress
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.domain.session.buildReaderClosedAnalyticsEvent
 import io.leostrange.mrcomic.feature.reader.domain.session.shouldRecordReaderSessionMinutes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -59,6 +62,9 @@ internal class ReaderProgressController(
     private val analyticsTracker: ReadingAnalyticsTracker,
     private val readerSessionCoordinator: ReaderSessionCoordinator,
     private val _readerProgressRecap: MutableSharedFlow<ReaderProgressRecap>,
+    /** Mode a book owns; DUAL_PAGE is a transient landscape layout and is never persisted. */
+    private val baseReadingMode: () -> ReadingMode = { ReadingMode.PAGE_LTR },
+    private val sectionWeightsLoader: suspend (Comic, Int) -> List<Int>? = { _, _ -> null },
 ) {
 
     internal var pendingProgressSave: PendingProgressSave? = null
@@ -70,15 +76,134 @@ internal class ReaderProgressController(
     /** Measured visual page counts per EPUB spine section. */
     internal val sectionPageCounts = EpubSectionPageCountStore()
 
-    /**
-     * Total number of sections (spine items) in the book. Set once when the book opens.
-     * Used by [accumulatedTotalPagesForEpub] to estimate total visual pages including
-     * unvisited sections, preventing premature 100% progress display.
-     */
+    /** Total number of sections (spine items) in the book. Set once when the book opens. */
     internal var totalBookSections: Int = 0
+
+    /**
+     * False from open until the saved position is restored, and while a text WebView load or
+     * restore is in flight. Nothing is persisted meanwhile, so a provisional cursor (cover,
+     * section start, top of a reloading document) can never overwrite the saved position.
+     */
+    internal var positionSettled: Boolean = false
+        private set
+
+    private var sectionWeights: List<Int>? = null
+    private var sectionWeightsResolved = false
+    private var sectionWeightsJob: Job? = null
+
+    /** Last settled progress counted for reading goals; null until this open's first settled save. */
+    private var goalCursor: Float? = null
+    private var goalPageCarry = 0.0
+    /**
+     * Source of a move whose progress is not known yet (a section loading, an in-place seek);
+     * the next resolved save inherits it, so a reading turn into a new section still counts.
+     */
+    private var pendingGoalSource: ReaderNavigationProgressSource? = null
 
     /** Returns a stable, section-ordered snapshot for EPUB progress accumulation. */
     internal fun snapshotSectionPageCounts(): Map<Int, Int> = sectionPageCounts.snapshot()
+
+    // ── Position lifecycle ─────────────────────────────────────────────────
+
+    fun resetForOpen() {
+        positionSettled = false
+        sectionWeights = null
+        sectionWeightsResolved = false
+        sectionWeightsJob?.cancel()
+        sectionWeightsJob = null
+        goalCursor = null
+        goalPageCarry = 0.0
+        pendingGoalSource = null
+    }
+
+    /** Raster readers restore synchronously; their position is settled once the count is known. */
+    fun markPositionSettled() {
+        positionSettled = true
+        goalCursor = refreshBookProgress()
+    }
+
+    fun onTextRuntimeSettledChanged(settled: Boolean) {
+        positionSettled = settled
+        if (settled && !_uiState.value.isLoading) {
+            saveProgress(_uiState.value.currentPage, ReaderNavigationProgressSource.JUMP)
+        }
+    }
+
+    /** An in-place seek (slider, TOC, quote) is a jump: its resulting position earns no goal pages. */
+    fun markGoalJump() {
+        pendingGoalSource = ReaderNavigationProgressSource.JUMP
+    }
+
+    fun loadSectionWeights(comic: Comic, sectionCount: Int) {
+        sectionWeightsJob?.cancel()
+        sectionWeightsJob = viewModelScope.launch {
+            val weights = try {
+                sectionWeightsLoader(comic, sectionCount)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("ReaderProgressController", "Section weights unavailable", e)
+                null
+            }
+            if (_uiState.value.comic?.id != comic.id) return@launch
+            sectionWeights = weights
+            sectionWeightsResolved = true
+            saveProgress(_uiState.value.currentPage, ReaderNavigationProgressSource.JUMP)
+        }
+    }
+
+    /**
+     * Recomputes [ReaderUiState.bookProgress] from the current canonical position and returns it.
+     * While the position is unresolved (a section still loading) the last value stays shown.
+     */
+    fun refreshBookProgress(): Float? {
+        val progress = computeBookProgress(_uiState.value) ?: return null
+        if (_uiState.value.bookProgress != progress) {
+            _uiState.update { it.copy(bookProgress = progress) }
+        }
+        return progress
+    }
+
+    /** Progress fraction for a seek inside the book: (section, character offset). */
+    fun locateProgress(progress: Float): Pair<Int, Int> {
+        val state = _uiState.value
+        val target = ReaderBookProgress.locate(progress, state.totalPages, sectionWeights)
+        val weight = sectionWeights?.getOrNull(target.sectionIndex) ?: 0
+        return target.sectionIndex to (weight * target.sectionFraction).toInt()
+    }
+
+    private fun computeBookProgress(state: ReaderUiState): Float? {
+        if (state.comic == null || state.isLoading || state.totalPages <= 0) return null
+        if (!state.readerRendersHtmlContent) {
+            return ReaderBookProgress.raster(state.currentPage, state.totalPages)
+                .takeIf { state.totalPages > 1 }
+        }
+        // Weights load only after the authoritative section count is known.
+        if (!sectionWeightsResolved || !state.pagedHtmlMatchesSection()) return null
+        val sections = state.totalPages
+        val section = state.currentPage.coerceIn(0, sections - 1)
+        return if (state.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
+            val weight = sectionWeights?.getOrNull(section) ?: 0
+            val offset = state.freeScrollCharacterOffset
+            ReaderBookProgress.text(
+                sectionIndex = section,
+                sectionFraction = if (offset >= 0 && weight > 0) offset.toDouble() / weight else 0.0,
+                sectionCount = sections,
+                sectionWeights = sectionWeights,
+                // The stitched document may still be a preview of the first sections.
+                atEnd = section == sections - 1 && state.freeScrollProgression >= WEBTOON_END_PROGRESSION
+            )
+        } else {
+            val pages = state.sectionPageCount
+            ReaderBookProgress.text(
+                sectionIndex = section,
+                sectionFraction = if (pages > 0) state.sectionCurrentPage.toDouble() / pages else 0.0,
+                sectionCount = sections,
+                sectionWeights = sectionWeights,
+                atEnd = section == sections - 1 && pages > 0 && state.sectionCurrentPage >= pages - 1
+            )
+        }
+    }
 
     // ── Progress persistence ───────────────────────────────────────────────
 
@@ -87,114 +212,174 @@ internal class ReaderProgressController(
         progressSource: ReaderNavigationProgressSource,
     ) {
         val comic = _uiState.value.comic ?: return
-        val epubAccumulatedPages = accumulatedTotalPagesForEpub()
-        val sectionSnapshot = sectionPageCounts.snapshot()
-        val totalPages = if (epubAccumulatedPages > 0) epubAccumulatedPages else _uiState.value.totalPages
-        val positionJson = buildPositionJson(_uiState.value, comic.format, page)
-        if (!ReaderProgressPolicy.shouldPersist(
-                totalPages = totalPages,
-                isHeavyReflowable = comic.format.isHeavyReflowableFormat(),
-                isEpub = comic.format == ComicFormat.EPUB,
-                epubAccumulatedPages = epubAccumulatedPages,
-                paginatedSectionCount = sectionSnapshot.size
-            )
-        ) {
-            // Keep exact text position even while page-count/progress metrics are provisional.
-            positionJson?.let { enqueuePositionOnlySave(comic, page, it) }
+        if (!positionSettled) return
+        val progress = refreshBookProgress()
+        val state = _uiState.value
+        val positionJson = buildPositionJson(state, comic.format, page)
+        if (state.readerRendersHtmlContent) {
+            saveTextProgress(state, comic, progress, progressSource, positionJson)
             return
         }
-        val accuratePage = ReaderProgressPolicy.pageForPersistence(
-            format = comic.format,
-            readerPage = page,
-            epubAbsolutePage = calculateAccuratePage(page)
-        )
-        val state = _uiState.value
-        val pending = PendingProgressSave(
-            comicId = comic.id,
-            page = accuratePage,
-            totalPages = totalPages,
-            countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING,
-            characterOffset = if (state.readingMode == ReadingMode.WEBTOON) {
-                state.freeScrollCharacterOffset.takeIf { it >= 0 }
-            } else {
-                state.sectionCharacterOffset.takeIf { it > 0 }
-            },
-            positionJson = positionJson
-        )
-        if (
-            pending == pendingProgressSave ||
-            (
-                isProgressAlreadyPersisted(comic.id, accuratePage) &&
-                    isSamePersistedPosition(lastPersistedPositionJson, positionJson)
-                )
-        ) return
-        pendingProgressSave = pending
-        progressSaveJob?.cancel()
-        progressSaveJob = viewModelScope.launch {
-            delay(220)
-            flushPendingProgressSave()
+        val totalPages = state.totalPages
+        if (!ReaderProgressPolicy.shouldPersist(totalPages, comic.format.isHeavyReflowableFormat())) {
+            positionJson?.let { enqueue(positionOnlySave(comic, page, it)) }
+            return
         }
+        enqueue(
+            PendingProgressSave(
+                comicId = comic.id,
+                page = page,
+                totalPages = totalPages,
+                countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING,
+                positionJson = positionJson,
+                goalPagesDelta = accrueGoalPages(
+                    progress = ReaderBookProgress.raster(page, totalPages),
+                    bookPages = (totalPages - 1).toDouble(),
+                    source = progressSource
+                )
+            )
+        )
+    }
+
+    private fun saveTextProgress(
+        state: ReaderUiState,
+        comic: Comic,
+        progress: Float?,
+        progressSource: ReaderNavigationProgressSource,
+        positionJson: String?
+    ) {
+        if (progress == null) {
+            pendingGoalSource = progressSource
+            positionJson?.let { enqueue(positionOnlySave(comic, state.currentPage, it)) }
+            return
+        }
+        val goalSource = pendingGoalSource ?: progressSource
+        pendingGoalSource = null
+        enqueue(
+            PendingProgressSave(
+                comicId = comic.id,
+                page = state.currentPage.coerceAtLeast(0),
+                totalPages = state.totalPages.coerceAtLeast(1),
+                countsTowardReadingProgress = progressSource == ReaderNavigationProgressSource.READING,
+                characterOffset = state.textCursorOffset(),
+                positionJson = positionJson,
+                progress = progress,
+                goalPagesDelta = accrueGoalPages(progress, textBookPages(state.totalPages), goalSource)
+            )
+        )
     }
 
     /**
-     * Debounced structured-position snapshot used by free-scroll Webtoon updates and close.
-     * It intentionally bypasses page-progress/completion rules: a one-section EPUB can still
-     * have a meaningful character cursor even when its global page metrics are provisional.
+     * Reading-goal pages earned by moving to [progress] in a book [bookPages] long. Only reading
+     * advances earn pages; jumps (TOC, slider, quotes, restores) just move the cursor.
      */
-    fun savePositionSnapshot() {
-        val comic = _uiState.value.comic ?: return
-        val positionJson = buildPositionJson(_uiState.value, comic.format, _uiState.value.currentPage)
-            ?: return
-        enqueuePositionOnlySave(comic, _uiState.value.currentPage, positionJson)
+    private fun accrueGoalPages(progress: Float, bookPages: Double, source: ReaderNavigationProgressSource): Int {
+        val previous = goalCursor
+        goalCursor = progress
+        if (previous == null || source != ReaderNavigationProgressSource.READING) return 0
+        goalPageCarry += ((progress - previous) * bookPages).coerceIn(0.0, MAX_GOAL_PAGES_PER_STEP)
+        val pages = (goalPageCarry + GOAL_PAGE_EPSILON).toInt()
+        goalPageCarry = (goalPageCarry - pages).coerceAtLeast(0.0)
+        return pages
     }
 
-    private fun enqueuePositionOnlySave(
-        comic: io.leostrange.mrcomic.core.model.Comic,
-        page: Int,
-        positionJson: String
-    ) {
-        val normalizedPage = page.coerceAtLeast(0)
-        val pending = PendingProgressSave(
-            comicId = comic.id,
-            page = normalizedPage,
-            totalPages = _uiState.value.totalPages.coerceAtLeast(1),
-            countsTowardReadingProgress = false,
-            characterOffset = if (_uiState.value.readingMode == ReadingMode.WEBTOON) {
-                _uiState.value.freeScrollCharacterOffset.takeIf { it >= 0 }
-            } else {
-                _uiState.value.sectionCharacterOffset.takeIf { it > 0 }
-            },
-            positionJson = positionJson,
-            positionOnly = true
-        )
-        if (
-            pending == pendingProgressSave ||
-            isSamePersistedPosition(lastPersistedPositionJson, positionJson)
-        ) return
-        pendingProgressSave = pending
+    /**
+     * Text length in reading-goal pages: text per turned screen page as measured by the paged
+     * layout, else a standard page of [STANDARD_PAGE_CHARS] characters. One-page sections (title
+     * pages, illustrations) say little about how much text a page holds, so they are skipped.
+     */
+    private fun textBookPages(sectionCount: Int): Double {
+        val charWeights = sectionWeights?.takeIf { weights -> weights.size == sectionCount && weights.any { it > 0 } }
+        val weights = charWeights ?: List(sectionCount) { 1 }
+        val measured = sectionPageCounts.snapshot().filter { (section, pages) -> section in weights.indices && pages > 1 }
+        val measuredUnits = measured.keys.sumOf { weights[it].toLong() }
+        val measuredPages = measured.values.sum()
+        val unitsPerPage = when {
+            measuredUnits <= 0 || measuredPages <= 0 -> if (charWeights != null) STANDARD_PAGE_CHARS else 1.0
+            charWeights != null -> (measuredUnits.toDouble() / measuredPages).coerceAtLeast(MIN_SCREEN_PAGE_CHARS)
+            else -> measuredUnits.toDouble() / measuredPages
+        }
+        return weights.sumOf { it.toLong() } / unitsPerPage
+    }
+
+    /** Persists the latest settled position immediately (app backgrounded or reader closing). */
+    fun flushNow(appScope: CoroutineScope) {
+        if (_uiState.value.comic != null) {
+            saveProgress(_uiState.value.currentPage, ReaderNavigationProgressSource.JUMP)
+        }
+        progressSaveJob?.cancel()
+        if (pendingProgressSave == null) return
+        appScope.launch { flushPendingProgressSave() }
+    }
+
+    private fun positionOnlySave(comic: Comic, page: Int, positionJson: String) = PendingProgressSave(
+        comicId = comic.id,
+        page = page.coerceAtLeast(0),
+        totalPages = _uiState.value.totalPages.coerceAtLeast(1),
+        countsTowardReadingProgress = false,
+        characterOffset = _uiState.value.textCursorOffset(),
+        positionJson = positionJson,
+        positionOnly = true
+    )
+
+    /**
+     * One debounced slot. A position-only save (progress still unknown) only refreshes the
+     * cursor of a pending progress save; a superseded save keeps its goal pages and reading flag.
+     */
+    private fun enqueue(next: PendingProgressSave) {
+        val pending = pendingProgressSave
+        val merged = when {
+            pending == null || pending.comicId != next.comicId -> next
+            next.positionOnly && !pending.positionOnly -> pending.copy(
+                positionJson = next.positionJson ?: pending.positionJson
+            )
+            else -> next.copy(
+                countsTowardReadingProgress = next.countsTowardReadingProgress ||
+                    (!pending.positionOnly && pending.countsTowardReadingProgress),
+                goalPagesDelta = pending.goalPagesDelta + next.goalPagesDelta
+            )
+        }
+        if (merged == pending) return
+        if (pending == null && isAlreadyPersisted(merged)) return
+        pendingProgressSave = merged
         progressSaveJob?.cancel()
         progressSaveJob = viewModelScope.launch {
-            delay(220)
+            delay(PROGRESS_SAVE_DEBOUNCE_MS)
             flushPendingProgressSave()
         }
+    }
+
+    private fun isAlreadyPersisted(save: PendingProgressSave): Boolean {
+        val samePosition = isSamePersistedPosition(lastPersistedPositionJson, save.positionJson)
+        if (save.positionOnly) return samePosition
+        val marker = lastPersistedProgress ?: return false
+        return samePosition && marker.comicId == save.comicId && marker.page == save.page &&
+            marker.progress == save.progress
     }
 
     suspend fun flushPendingProgressSave() {
         val pending = pendingProgressSave ?: return
         pendingProgressSave = null
         try {
-            val previousPersistedPage = lastPersistedProgress
-                ?.takeIf { it.comicId == pending.comicId }
-                ?.page
             val storedPageCount = libraryRepository.getComicById(pending.comicId)?.pageCount ?: 0
             val safeTotalPages = maxOf(pending.totalPages, storedPageCount).coerceAtLeast(1)
             if (!pending.positionOnly) {
-                libraryRepository.updateProgress(
-                    comicId = pending.comicId,
-                    currentPage = pending.page,
-                    totalPages = safeTotalPages,
-                    characterOffset = pending.characterOffset
-                )
+                if (pending.progress != null) {
+                    libraryRepository.updateTextProgress(
+                        comicId = pending.comicId,
+                        sectionIndex = pending.page,
+                        sectionCount = pending.totalPages,
+                        progress = pending.progress,
+                        characterOffset = pending.characterOffset
+                    )
+                } else {
+                    libraryRepository.updateProgress(
+                        comicId = pending.comicId,
+                        currentPage = pending.page,
+                        totalPages = safeTotalPages,
+                        characterOffset = pending.characterOffset
+                    )
+                }
             }
             // TEXT-01: persist the structured position alongside the legacy fields. Null keeps
             // the stored record untouched (legacy-only) — never overwrite with a coarse fallback.
@@ -204,11 +389,7 @@ internal class ReaderProgressController(
             lastPersistedPositionJson = pending.positionJson
             if (pending.positionOnly) return
             val goalStateBeforeProgress = dailyReadingGoalStore.goalState.first()
-            val goalProgressDelta = navigationProgressDelta(
-                previousPersistedPage = previousPersistedPage,
-                newPage = pending.page,
-                countsTowardReadingProgress = pending.countsTowardReadingProgress
-            )
+            val goalProgressDelta = pending.goalPagesDelta
             if (goalProgressDelta > 0) {
                 dailyReadingGoalStore.recordProgressDelta(goalProgressDelta)
                 dailyReadingGoalStore.recordXpDelta(goalProgressDelta)
@@ -236,8 +417,11 @@ internal class ReaderProgressController(
             lastPersistedPositionJson = pending.positionJson
             val currentComic = _uiState.value.comic ?: return
             val authoritativeTotal = maxOf(pending.totalPages, storedPageCount)
-            val reachedLastPageSafe = authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1
-            val isHeavy = currentComic.format.isHeavyReflowableFormat() || currentComic.format.isTextReadingFormat()
+            // Text completes only when the canonical progress reaches the actual end.
+            val reachedLastPageSafe = pending.progress?.let { it >= 1f }
+                ?: (authoritativeTotal > 0 && pending.page >= authoritativeTotal - 1)
+            val isHeavy = pending.progress == null &&
+                (currentComic.format.isHeavyReflowableFormat() || currentComic.format.isTextReadingFormat())
             val titleCompletionPolicy = resolveTitleCompletionPolicy(
                 reachedLastPage = reachedLastPageSafe,
                 currentComicIdMatches = currentComic.id == pending.comicId,
@@ -406,37 +590,12 @@ internal class ReaderProgressController(
         )
     }
 
-    // ── Epub page calculation ──────────────────────────────────────────────
-
-    fun calculateAccuratePage(sectionIndex: Int): Int {
-        val state = _uiState.value
-        val snapshot = sectionPageCounts.snapshot()
-        if (snapshot.isNotEmpty()) {
-            return EpubProgressCalculator.absolutePage(
-                sectionPageCounts = snapshot,
-                sectionIndex = sectionIndex,
-                sectionPageIndex = state.sectionCurrentPage,
-                totalSections = totalBookSections
-            )
-        }
-        // No paginated data yet — return 0 to avoid storing a raw spine index
-        // that would be misinterpreted as a visual page on reopen.
-        return 0
-    }
-
-    fun accumulatedTotalPagesForEpub(): Int {
-        return EpubProgressCalculator.estimatedTotalPages(
-            sectionPageCounts = sectionPageCounts.snapshot(),
-            totalSections = totalBookSections
-        )
-    }
-
     // ── Session lifecycle ──────────────────────────────────────────────────
 
     fun emitReaderClosed(appScope: io.leostrange.mrcomic.core.domain.coroutines.AppCoroutineScope) {
-        // Close can happen between scroll callbacks; enqueue one final semantic snapshot before
-        // the ViewModel cancels its local debounce job.
-        savePositionSnapshot()
+        // Close can happen between scroll callbacks; enqueue one final settled save before the
+        // ViewModel cancels its local debounce job. Unsettled positions are never written.
+        saveProgress(_uiState.value.currentPage, ReaderNavigationProgressSource.JUMP)
         val state = _uiState.value
         val currentComic = state.comic
         val closedSession = readerSessionCoordinator.close(
@@ -486,8 +645,8 @@ internal class ReaderProgressController(
         format: ComicFormat,
         page: Int,
     ): String? {
-        val mode = state.readingMode
-        val isText = format.isTextReadingFormat()
+        val mode = state.readingMode.takeUnless { it == ReadingMode.DUAL_PAGE } ?: baseReadingMode()
+        val isText = state.readerRendersHtmlContent || format.isTextReadingFormat()
         val webtoonFraction = if (mode == ReadingMode.WEBTOON) {
             state.freeScrollProgression.takeIf { it in 0.0..1.0 }?.toFloat()
         } else {
@@ -502,7 +661,8 @@ internal class ReaderProgressController(
             } else {
                 state.sectionCharacterOffset.takeIf { it > 0 }
             },
-            domAnchor = state.pendingScrollToAnchor,
+            // A pending TOC anchor is a one-shot command; the settled character offset is the cursor.
+            domAnchor = null,
             mode = mode,
             webtoonScrollFraction = webtoonFraction,
             updatedAtMillis = System.currentTimeMillis(),
@@ -511,5 +671,15 @@ internal class ReaderProgressController(
         return ReaderPositionCodec.encode(position)
     }
 
-    // ── Internal helpers ───────────────────────────────────────────────────
+    private companion object {
+        const val PROGRESS_SAVE_DEBOUNCE_MS = 220L
+        const val WEBTOON_END_PROGRESSION = 0.995
+        /** Characters in a standard printed page. */
+        const val STANDARD_PAGE_CHARS = 1800.0
+        /** Sanity floor: a screen page of text never holds fewer characters. */
+        const val MIN_SCREEN_PAGE_CHARS = 200.0
+        /** Sanity bound for one save; reading never advances further between two saves. */
+        const val MAX_GOAL_PAGES_PER_STEP = 10.0
+        const val GOAL_PAGE_EPSILON = 1e-3
+    }
 }

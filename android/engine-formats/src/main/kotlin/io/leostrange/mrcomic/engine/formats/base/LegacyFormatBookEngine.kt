@@ -97,8 +97,10 @@ class LegacyFormatBookSession(
                 title = entry.title,
                 locator = ReaderLocator(
                     title = entry.title,
+                    fragment = entry.anchorId?.takeIf { it.isNotBlank() },
                     pageIndex = entry.pageIndex,
-                    position = entry.pageIndex
+                    position = entry.pageIndex,
+                    sectionIndex = entry.sectionIndex.takeIf { it >= 0 }
                 )
             )
         }

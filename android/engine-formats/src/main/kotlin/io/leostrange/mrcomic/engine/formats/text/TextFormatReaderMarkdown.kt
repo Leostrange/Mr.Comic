@@ -59,6 +59,8 @@ internal fun TextFormatReader.addHeadingAnchors(blocks: List<String>): MarkdownD
 internal fun TextFormatReader.addHtmlHeadingAnchorsToPages(pages: List<String>): HtmlPageAnchorResult {
     val usedIds = linkedSetOf<String>()
     val anchors = mutableListOf<TxtChapterAnchor>()
+    // Plain id/name targets (footnotes, paragraphs) are TOC entries only when there are no headings.
+    val idAnchors = mutableListOf<TxtChapterAnchor>()
     val updatedPages = pages.map { page ->
         runCatching {
             val document = Jsoup.parse(page)
@@ -84,14 +86,14 @@ internal fun TextFormatReader.addHtmlHeadingAnchorsToPages(pages: List<String>):
                     .replace(Regex("\\s+"), " ")
                     .trim()
                     .ifBlank { id }
-                anchors += TxtChapterAnchor(id = id, title = title)
+                idAnchors += TxtChapterAnchor(id = id, title = title)
             }
             document.outerHtml()
         }.getOrElse { page }
     }
     return HtmlPageAnchorResult(
         pages = updatedPages.ifEmpty { pages },
-        anchors = anchors
+        anchors = anchors.ifEmpty { idAnchors }
     )
 }
 
@@ -110,7 +112,8 @@ internal fun TextFormatReader.injectHeadingIdsFromAnchoredPages(
     sections: List<TextDocumentSection>,
     anchoredPages: List<String>
 ): List<TextDocumentSection> {
-    val headingIdMap = linkedMapOf<String, String>()
+    // Ids per title in document order: repeated titles ("Chapter", "Notes") keep distinct targets.
+    val headingIds = linkedMapOf<String, ArrayDeque<String>>()
     for (page in anchoredPages) {
         runCatching {
             val doc = Jsoup.parse(page)
@@ -118,20 +121,19 @@ internal fun TextFormatReader.injectHeadingIdsFromAnchoredPages(
                 val id = heading.id().trim()
                 if (id.isNotBlank()) {
                     val title = heading.text().replace(Regex("\\s+"), " ").trim()
-                    if (title.isNotBlank()) headingIdMap[title] = id
+                    if (title.isNotBlank()) headingIds.getOrPut(title) { ArrayDeque() }.addLast(id)
                 }
             }
         }
     }
-    if (headingIdMap.isEmpty()) return sections
+    if (headingIds.isEmpty()) return sections
     return sections.map { section ->
         runCatching {
             val doc = Jsoup.parse(section.html)
             doc.select("h1, h2, h3, h4, h5, h6").forEach { heading ->
-                if (heading.id().isBlank()) {
-                    val title = heading.text().replace(Regex("\\s+"), " ").trim()
-                    headingIdMap[title]?.let { heading.attr("id", it) }
-                }
+                val title = heading.text().replace(Regex("\\s+"), " ").trim()
+                val id = headingIds[title]?.removeFirstOrNull()
+                if (heading.id().isBlank() && id != null) heading.attr("id", id)
             }
             section.copy(html = doc.outerHtml())
         }.getOrElse { section }

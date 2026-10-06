@@ -75,7 +75,7 @@ private fun restoreTarget(
     }
     return ReaderWebViewRestoreTarget(
         fragment = request.fragment,
-        sectionIndex = request.sectionIndex,
+        sectionIndex = request.sectionIndex ?: freeScrollTarget?.sectionIndex,
         characterOffset = request.characterOffset ?: freeScrollTarget?.characterOffset,
         progression = freeScrollTarget?.progression
     )

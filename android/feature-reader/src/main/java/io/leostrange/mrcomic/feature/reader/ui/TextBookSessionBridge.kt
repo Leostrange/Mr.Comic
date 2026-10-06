@@ -40,7 +40,12 @@ internal object TextBookSessionBridge {
                 val title = item.title.trim()
                 if (title.isNotBlank()) {
                     resolveBookTocPageIndex(item, reader)?.let { pageIndex ->
-                        entries += TocEntry(title = title, pageIndex = pageIndex)
+                        entries += TocEntry(
+                            title = title,
+                            pageIndex = pageIndex,
+                            anchorId = tocFragment(item),
+                            sectionIndex = pageIndex
+                        )
                     }
                 }
                 if (item.children.isNotEmpty()) {
@@ -66,16 +71,17 @@ internal object TextBookSessionBridge {
             // global pageIndex. Resolve href → section first; only fall back to pageIndex/position
             // when href resolution fails, otherwise TOC jumps land in the wrong chapter.
             if (href.isNotBlank()) {
-                reader.getTextDocumentSections().indexOfFirst { section ->
+                reader.getTextDocumentSections().firstOrNull { section ->
                     val sectionId = section.id
                     sectionId != null && hrefMatchesSpineEntry(href, sectionId)
-                }.takeIf { it >= 0 }?.let { return it }
+                }?.let { return it.index }
                 reader.resolveHrefToPage(href)?.let { legacyPage ->
                     return mapLegacyPageToSectionIndex(reader, legacyPage, href)
                 }
             }
             // href unusable: fall back to locator hints, clamped into the section range.
-            val sectionCount = reader.getTextDocumentSections().size
+            val sectionCount = reader.getTextDocumentSections().maxOfOrNull { it.index + 1 } ?: 0
+            locator.sectionIndex?.let { return it.coerceIn(0, (sectionCount - 1).coerceAtLeast(0)) }
             locator.pageIndex?.let { return it.coerceIn(0, (sectionCount - 1).coerceAtLeast(0)) }
             locator.position?.let { return it.coerceIn(0, (sectionCount - 1).coerceAtLeast(0)) }
             return null
@@ -99,21 +105,37 @@ internal object TextBookSessionBridge {
         if (sections.isEmpty()) return legacyPage
         val filePart = href.substringBefore('#').trim().trimStart('/')
         if (filePart.isNotBlank()) {
-            val matched = sections.indexOfFirst { section ->
-                val sectionId = section.id ?: return@indexOfFirst false
+            sections.firstOrNull { section ->
+                val sectionId = section.id ?: return@firstOrNull false
                 hrefMatchesSpineEntry(filePart, sectionId)
-            }
-            if (matched >= 0) return matched
+            }?.let { return it.index }
         }
-        return legacyPage.coerceIn(0, sections.lastIndex)
+        return legacyPage.coerceIn(0, sections.maxOf { it.index })
     }
 
-    private fun hrefMatchesSpineEntry(href: String, spineEntry: String): Boolean {
-        val normalizedHref = href.substringBefore('#').trim().trim('/')
-        val normalizedEntry = spineEntry.trim().trim('/')
+    /** Fragment of a TOC target, from the locator or the href (`ch2.xhtml#part-3`). */
+    private fun tocFragment(item: BookTocItem): String? {
+        val locator = item.locator ?: return null
+        return locator.fragment?.takeIf { it.isNotBlank() }
+            ?: locator.href?.substringAfter('#', "")?.let(::decodeHrefComponent)?.takeIf { it.isNotBlank() }
+    }
+
+    /** Same file regardless of URL encoding, `./`/`../` prefixes or the OPF directory prefix. */
+    internal fun hrefMatchesSpineEntry(href: String, spineEntry: String): Boolean {
+        val normalizedHref = normalizeHrefPath(href)
+        val normalizedEntry = normalizeHrefPath(spineEntry)
         if (normalizedHref.isEmpty() || normalizedEntry.isEmpty()) return false
         return normalizedHref == normalizedEntry ||
-            normalizedHref.endsWith(normalizedEntry) ||
-            normalizedEntry.endsWith(normalizedHref)
+            normalizedHref.endsWith("/$normalizedEntry") ||
+            normalizedEntry.endsWith("/$normalizedHref")
     }
+
+    private fun normalizeHrefPath(value: String): String {
+        var path = decodeHrefComponent(value.substringBefore('#')).trim().replace('\\', '/').trim('/')
+        while (path.startsWith("./") || path.startsWith("../")) path = path.substringAfter('/')
+        return path
+    }
+
+    private fun decodeHrefComponent(value: String): String =
+        runCatching { java.net.URLDecoder.decode(value.replace("+", "%2B"), "UTF-8") }.getOrDefault(value)
 }
