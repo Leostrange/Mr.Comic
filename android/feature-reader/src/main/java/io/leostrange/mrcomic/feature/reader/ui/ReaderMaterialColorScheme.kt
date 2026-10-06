@@ -21,26 +21,7 @@ internal fun readerMaterialColorScheme(
 ): ColorScheme {
     val surfaceAlpha = fallback.surface.alpha
     val baseScheme = if (!isTextReader) {
-        darkColorScheme(
-            primary = Color(0xFF7DB7E8),
-            onPrimary = Color(0xFF0F1C29),
-            primaryContainer = Color(0xFF243748),
-            onPrimaryContainer = Color(0xFFE3F1FE),
-            secondary = Color(0xFFD9B982),
-            onSecondary = Color(0xFF36250D),
-            secondaryContainer = Color(0xFF544122),
-            onSecondaryContainer = Color(0xFFF7E7CA),
-            background = Color(0xFF090B0E),
-            onBackground = Color(0xFFF2F2F2),
-            surface = Color(0xFF14181D),
-            onSurface = Color(0xFFF2F2F2),
-            surfaceVariant = Color(0xFF232A31),
-            onSurfaceVariant = Color(0xFFC5CBD2),
-            outline = Color(0xFF5B6772),
-            outlineVariant = Color(0xFF313A44),
-            error = fallback.error,
-            onError = fallback.onError
-        )
+        graphicReaderColorScheme(textColorScheme, fallback)
     } else {
         when {
             readerPreset == ReadingPreset.OLED_BLACK -> darkColorScheme(
@@ -207,6 +188,74 @@ internal fun readerMaterialColorScheme(
         onSurfaceVariant = ensureContrast(withAlpha.onSurfaceVariant, withAlpha.surfaceVariant)
     )
 }
+
+/**
+ * Graphic reader Day/Sepia/Night: independent background, surface and text colors for the
+ * page area. Unknown values fall back to Night, the historical default.
+ */
+internal fun graphicReaderColorScheme(scheme: String, fallback: ColorScheme): ColorScheme =
+    when (scheme.uppercase()) {
+        "DAY" -> lightColorScheme(
+            primary = Color(0xFF2F5F8F),
+            onPrimary = Color(0xFFFFFFFF),
+            primaryContainer = Color(0xFFD6E4F3),
+            onPrimaryContainer = Color(0xFF0E2338),
+            secondary = Color(0xFF5E6470),
+            onSecondary = Color(0xFFFFFFFF),
+            secondaryContainer = Color(0xFFE1E4EA),
+            onSecondaryContainer = Color(0xFF1C2028),
+            background = Color(0xFFF5F5F2),
+            onBackground = Color(0xFF15171A),
+            surface = Color(0xFFFFFFFF),
+            onSurface = Color(0xFF15171A),
+            surfaceVariant = Color(0xFFE7E8EA),
+            onSurfaceVariant = Color(0xFF44484E),
+            outline = Color(0xFF767B82),
+            outlineVariant = Color(0xFFC6CAD0),
+            error = fallback.error,
+            onError = fallback.onError
+        )
+        "SEPIA" -> lightColorScheme(
+            primary = Color(0xFF7A5428),
+            onPrimary = Color(0xFFFFF7EA),
+            primaryContainer = Color(0xFFEBD8B8),
+            onPrimaryContainer = Color(0xFF3A2408),
+            secondary = Color(0xFF8A6A42),
+            onSecondary = Color(0xFFFFF7EA),
+            secondaryContainer = Color(0xFFF0E1C6),
+            onSecondaryContainer = Color(0xFF3E2A10),
+            background = Color(0xFFEFE3C8),
+            onBackground = Color(0xFF33261A),
+            surface = Color(0xFFF6ECD6),
+            onSurface = Color(0xFF33261A),
+            surfaceVariant = Color(0xFFE4D5B5),
+            onSurfaceVariant = Color(0xFF5A4A35),
+            outline = Color(0xFF8C7A5E),
+            outlineVariant = Color(0xFFD2C1A0),
+            error = fallback.error,
+            onError = fallback.onError
+        )
+        else -> darkColorScheme(
+            primary = Color(0xFF7DB7E8),
+            onPrimary = Color(0xFF0F1C29),
+            primaryContainer = Color(0xFF243748),
+            onPrimaryContainer = Color(0xFFE3F1FE),
+            secondary = Color(0xFFD9B982),
+            onSecondary = Color(0xFF36250D),
+            secondaryContainer = Color(0xFF544122),
+            onSecondaryContainer = Color(0xFFF7E7CA),
+            background = Color(0xFF090B0E),
+            onBackground = Color(0xFFF2F2F2),
+            surface = Color(0xFF14181D),
+            onSurface = Color(0xFFF2F2F2),
+            surfaceVariant = Color(0xFF232A31),
+            onSurfaceVariant = Color(0xFFC5CBD2),
+            outline = Color(0xFF5B6772),
+            outlineVariant = Color(0xFF313A44),
+            error = fallback.error,
+            onError = fallback.onError
+        )
+    }
 
 /**
  * Returns [foreground] if it has sufficient contrast against [background];

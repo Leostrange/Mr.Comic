@@ -24,5 +24,7 @@ data class SavedQuote(
     val targetLanguage: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
-    val contentHash: String
+    val contentHash: String,
+    /** Start of the quote inside section [page] (reader text-node offset); null = legacy quote. */
+    val characterOffset: Int? = null
 )

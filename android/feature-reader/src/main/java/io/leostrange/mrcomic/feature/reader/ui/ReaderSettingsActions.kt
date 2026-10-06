@@ -12,6 +12,7 @@ interface ReaderSettingsActions {
     // ── Typography ────────────────────────────────────────────────────────
     fun setTextFontSize(size: Int)
     fun setTextColorScheme(scheme: String)
+    fun setGraphicColorScheme(scheme: String)
     fun setTextCustomTextColor(color: Long?)
     fun setTextCustomBackgroundColor(color: Long?)
     fun setTextCustomAccentColor(color: Long?)

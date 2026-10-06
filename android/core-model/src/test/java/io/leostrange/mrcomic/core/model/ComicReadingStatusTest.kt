@@ -28,6 +28,19 @@ class ComicReadingStatusTest {
     }
 
     @Test
+    fun displayReadingProgress_trustsStoredProgressForStructuredPositions() {
+        // Text book on section 4 of 5: the section ratio (100%) must not override reader progress.
+        val textBook = Comic(
+            pageCount = 5,
+            currentPage = 4,
+            readingProgress = 0.62f,
+            lastReadDate = 123L,
+            readerPositionJson = "{\"v\":1,\"s\":4}"
+        )
+        assertEquals(0.62f, textBook.displayReadingProgress())
+    }
+
+    @Test
     fun unreadSinglePageBookStaysNew() {
         val comic = Comic(pageCount = 1, currentPage = 0, readingProgress = 0f, lastReadDate = null)
 

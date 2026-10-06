@@ -1,6 +1,8 @@
 package io.leostrange.mrcomic.feature.reader.ui
 
+import android.os.SystemClock
 import android.view.MotionEvent
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -97,11 +99,74 @@ class ReaderWebViewTouchControllerTest {
         assertTrue(superCalls >= 2)
     }
 
+    @Test
+    fun nativeSwipeSendsChromiumExactlyOneCancelSoNoGhostLongPressSelects() {
+        val webViewActions = mutableListOf<Int>()
+        val controller = controller(touchSlopPx = 21f)
+        val toWebView: (MotionEvent) -> Boolean = { webViewActions += it.actionMasked; true }
+
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_DOWN, 900f, 800f), 1_000, false, toWebView)
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_MOVE, 830f, 802f), 1_000, false, toWebView)
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_MOVE, 700f, 804f), 1_000, false, toWebView)
+        val consumed = controller.handlePagedTouchEvent(event(MotionEvent.ACTION_UP, 600f, 806f), 1_000, false, toWebView)
+
+        assertTrue(consumed)
+        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL), webViewActions)
+    }
+
+    @Test
+    fun slowInterceptedDragNeverSendsChromiumAnUpAfterItsCancel() {
+        val webViewActions = mutableListOf<Int>()
+        val controller = controller(touchSlopPx = 21f)
+        val toWebView: (MotionEvent) -> Boolean = { webViewActions += it.actionMasked; true }
+
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_DOWN, 900f, 800f), 1_000, false, toWebView)
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_MOVE, 830f, 802f), 1_000, false, toWebView)
+        SystemClock.sleep(1_000) // too slow for a page-turn swipe
+        val consumed = controller.handlePagedTouchEvent(event(MotionEvent.ACTION_UP, 820f, 802f), 1_000, false, toWebView)
+
+        assertTrue(consumed)
+        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_CANCEL), webViewActions)
+        assertTrue("selection stays suppressed until the next touch down", controller.pagedDragSuppressesSelection)
+    }
+
+    @Test
+    fun dragSuppressionOutlivesTheGestureUntilTheNextTouchDown() {
+        val selectionEnabled = mutableListOf<Boolean>()
+        val controller = controller(setSelectionEnabled = selectionEnabled::add, touchSlopPx = 21f)
+
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_DOWN, 900f, 800f), 1_000, false) { true }
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_MOVE, 700f, 800f), 1_000, false) { true }
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_UP, 600f, 800f), 1_000, false) { true }
+        assertTrue(controller.pagedDragSuppressesSelection)
+
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_DOWN, 500f, 800f), 1_000, false) { true }
+        assertFalse(controller.pagedDragSuppressesSelection)
+        assertEquals(listOf(false, true), selectionEnabled)
+    }
+
+    @Test
+    fun jitterBelowTouchSlopIsStillATapForTheDom() {
+        val nativeTaps = mutableListOf<Float>()
+        val webViewActions = mutableListOf<Int>()
+        val controller = controller(onNativePagedTap = nativeTaps::add, touchSlopPx = 21f)
+        val toWebView: (MotionEvent) -> Boolean = { webViewActions += it.actionMasked; true }
+
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_DOWN, 960f, 800f), 1_000, false, toWebView)
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_MOVE, 975f, 810f), 1_000, false, toWebView)
+        controller.handlePagedTouchEvent(event(MotionEvent.ACTION_UP, 975f, 810f), 1_000, false, toWebView)
+
+        assertTrue(nativeTaps.isEmpty())
+        assertFalse(controller.pagedDragSuppressesSelection)
+        assertEquals(listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE, MotionEvent.ACTION_UP), webViewActions)
+    }
+
     private fun controller(
         onNativePagedTap: (Float) -> Unit = {},
         clearSelection: () -> Unit = {},
         setSelectionEnabled: (Boolean) -> Unit = {},
-        setUserSelectNone: (Boolean) -> Unit = {}
+        setUserSelectNone: (Boolean) -> Unit = {},
+        touchSlopPx: Float = 12f
     ) = ReaderWebViewTouchController(
         onNativePagedTap = onNativePagedTap,
         onVerticalBoundaryNavigation = {},
@@ -109,7 +174,8 @@ class ReaderWebViewTouchControllerTest {
         clearSelection = clearSelection,
         setSelectionEnabled = setSelectionEnabled,
         onFreeScrollGestureFinished = {},
-        setUserSelectNone = setUserSelectNone
+        setUserSelectNone = setUserSelectNone,
+        touchSlopPx = touchSlopPx
     )
 
     private fun event(action: Int, x: Float, y: Float): MotionEvent =

@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.leostrange.mrcomic.feature.reader.domain.enums.ReaderNavigationProgressSource
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderSectionWeights
+import io.leostrange.mrcomic.feature.reader.domain.progress.ReaderSectionWeightsCache
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderProgressRecap
 import io.leostrange.mrcomic.feature.reader.domain.session.ReaderSessionCoordinator
 import io.leostrange.mrcomic.feature.reader.ui.ReaderSessionCoordinator as SessionLifecycleCoordinator
@@ -26,17 +28,22 @@ import io.leostrange.mrcomic.core.domain.analytics.DailyReadingGoalStore
 import io.leostrange.mrcomic.core.domain.analytics.ReadingAnalyticsTracker
 import io.leostrange.mrcomic.core.ui.locale.normalizeAppLanguageCode
 import io.leostrange.mrcomic.core.interfaces.analytics.ReaderCheckpointRepository
+import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.engine.api.BookSession
 import io.leostrange.mrcomic.engine.api.FormatReader
 import io.leostrange.mrcomic.engine.api.ReaderFactory
+import io.leostrange.mrcomic.engine.api.ReflowableTextFormatReader
 import io.leostrange.mrcomic.engine.api.SectionPaginator
 import io.leostrange.mrcomic.engine.api.resolveRenderDeviceProfile
 import io.leostrange.mrcomic.engine.registry.BookEngineRegistry
 import io.leostrange.mrcomic.engine.rendering.preload.PagePreloader
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
 import javax.inject.Inject
 
 
@@ -241,9 +248,11 @@ class ReaderViewModel @Inject constructor(
                     style = PageSoundStyle.fromStored(_uiState.value.pageSoundStyle)
                 )
             }
-        }
+        },
+        markGoalJump = { progressController.markGoalJump() }
     )
-    private val progressController = ReaderProgressController(
+    private val sectionWeightsCache = ReaderSectionWeightsCache(File(context.cacheDir, "reader-section-weights"))
+    private val progressController: ReaderProgressController = ReaderProgressController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         libraryRepository = libraryRepository,
@@ -251,9 +260,11 @@ class ReaderViewModel @Inject constructor(
         readerCheckpointStore = readerCheckpointStore,
         analyticsTracker = analyticsTracker,
         readerSessionCoordinator = readerSessionCoordinator,
-        _readerProgressRecap = _readerProgressRecap
+        _readerProgressRecap = _readerProgressRecap,
+        baseReadingMode = { readingModeController.portraitReadingMode },
+        sectionWeightsLoader = ::loadSectionWeights
     )
-    internal val readingModeController = ReaderReadingModeController(
+    internal val readingModeController: ReaderReadingModeController = ReaderReadingModeController(
         _uiState = _uiState,
         viewModelScope = viewModelScope,
         readerPreferences = readerPreferences,
@@ -265,7 +276,6 @@ class ReaderViewModel @Inject constructor(
         isProgressAlreadyPersisted = { comicId, page -> progressController.isProgressAlreadyPersisted(comicId, page) },
         prewarmHtmlPagesAround = { pageCacheController.prewarmHtmlPagesAround(it) },
         activeComicSupportsBitmapPreload = { !_uiState.value.readerRendersHtmlContent },
-        markReaderPresetCustom = { settingsController.markReaderPresetCustom() },
         getLastTextWebtoonCursor = { navigationController.lastTextWebtoonCursor },
         seedTextWebtoonCursor = { navigationController.seedTextWebtoonCursor(it) },
         onAutoScrollModeChanged = { mode -> autoScrollSettingsController.switchMode(mode) }
@@ -324,7 +334,10 @@ class ReaderViewModel @Inject constructor(
     private val encodedComicId: String? = savedStateHandle["comicId"]
 
     init {
-        openingController.seedPendingRequestedPage(savedStateHandle.get<Int>("page"))
+        openingController.seedPendingRequestedPage(
+            page = savedStateHandle.get<Int>("page"),
+            characterOffset = savedStateHandle.get<Int>("locatorPosition")
+        )
         viewModelScope.launch {
             restoreReaderPreferences()
             when {
@@ -356,39 +369,46 @@ class ReaderViewModel @Inject constructor(
 
     fun onPagedLayoutPageCountChanged(
         pageCount: Int,
-        pageIndex: Int = 0,
-        characterOffset: Int = 0
+        pageIndex: Int,
+        characterOffset: Int,
+        /** Section of the document that produced the metrics. */
+        documentSection: Int
     ) {
         // This callback reports visual subpages inside the currently loaded HTML
         // section as calculated by the WebView JS pagination engine.
         if (pageCount <= 0) return
+        // Late layout callbacks from the previous section's document must not land on the new one.
+        if (documentSection != _uiState.value.currentPage || !_uiState.value.pagedHtmlMatchesSection()) return
         val sectionIndex = _uiState.value.currentPage
         val safePageIndex = pageIndex.coerceIn(0, pageCount - 1)
         val safeCharacterOffset = characterOffset.coerceAtLeast(0)
-        val sectionPageCountSnapshot = progressController.sectionPageCounts.recordAndSnapshot(sectionIndex, pageCount)
-        val progress = EpubProgressCalculator.accumulate(
-            sectionPageCounts = sectionPageCountSnapshot,
-            sectionIndex = sectionIndex,
-            sectionPageIndex = safePageIndex,
-            totalSections = progressController.totalBookSections
-        )
+        progressController.sectionPageCounts.recordAndSnapshot(sectionIndex, pageCount)
         _uiState.update {
             it.copy(
                 sectionPageCount = pageCount,
                 sectionCurrentPage = safePageIndex,
-                sectionCharacterOffset = safeCharacterOffset,
-                epubAccumulatedTotalPages = progress.accumulatedTotalPages,
-                epubAccumulatedCurrentPage = progress.accumulatedCurrentPage
+                sectionCharacterOffset = safeCharacterOffset
             )
         }
+        progressController.saveProgress(sectionIndex, ReaderNavigationProgressSource.READING)
     }
 
     internal fun onFreeScrollPositionChanged(position: ReaderWebViewRestoreTarget) {
-        position.sectionIndex?.takeIf { it >= 0 }?.let {
-            navigationController.updateTextWebtoonVisibleSection(it)
-        }
+        // Scroll reports from a document that is still loading/restoring describe its top, not
+        // the reader's position.
+        if (!progressController.positionSettled) return
+        val state = _uiState.value
+        val visibleSection = position.sectionIndex?.takeIf { it in 0 until state.totalPages }
+        visibleSection?.let { navigationController.updateTextWebtoonVisibleSection(it) }
         _uiState.update {
             it.copy(
+                // The stitched document follows the visible chapter, so every surface (chapter
+                // title, progress, quotes, TOC) reads the same section the offset belongs to.
+                currentPage = if (it.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
+                    visibleSection ?: it.currentPage
+                } else {
+                    it.currentPage
+                },
                 freeScrollCharacterOffset = position.characterOffset ?: -1,
                 freeScrollProgression = position.progression ?: -1.0
             )
@@ -398,12 +418,32 @@ class ReaderViewModel @Inject constructor(
                 characterOffset = position.characterOffset,
                 progression = position.progression
             )
-            // A Webtoon scroll changes the semantic position without changing the engine page.
-            // Persist the structured cursor through the position-only path so single-spine books
-            // are restorable even when the normal EPUB page-progress guard is still provisional.
-            progressController.savePositionSnapshot()
+            progressController.saveProgress(_uiState.value.currentPage, ReaderNavigationProgressSource.READING)
         }
     }
+
+    internal fun onTextRuntimeSettledChanged(settled: Boolean) =
+        progressController.onTextRuntimeSettledChanged(settled)
+
+    /** App backgrounded: persist the settled position now; the process may not come back. */
+    fun onReaderStopped() = progressController.flushNow(appScope)
+
+    /** Text slider seek in book progress (0..1); raster books seek by page. */
+    fun seekToProgress(progress: Float) {
+        if (!_uiState.value.readerRendersHtmlContent) return
+        val (section, offset) = progressController.locateProgress(progress)
+        navigationController.seekText(section, offset)
+    }
+
+    private suspend fun loadSectionWeights(comic: Comic, sectionCount: Int): List<Int>? =
+        withContext(Dispatchers.IO) {
+            val key = ReaderSectionWeightsCache.key(comic.path, comic.fileSize, sectionCount)
+            sectionWeightsCache.read(comic.id, key)?.takeIf { it.size == sectionCount }
+                ?: (formatReader as? ReflowableTextFormatReader)
+                    ?.getTextDocumentSections()
+                    ?.let { ReaderSectionWeights.fromSections(it, sectionCount) }
+                    ?.also { sectionWeightsCache.write(comic.id, key, it) }
+        }
 
     fun tocDisplayPage(enginePageIndex: Int): Int =
         pageCacheController.tocDisplayPage(enginePageIndex)
@@ -473,6 +513,7 @@ class ReaderViewModel @Inject constructor(
 
     private suspend fun restoreReaderPreferences() {
         val p = ReaderPreferenceRestorer.restore(context, renderProfile)
+        readingModeController.defaultReadingMode = p.mode
         readingModeController.rememberPortraitMode(p.mode)
         ReaderPreferenceRestorer.applyTo(
             p = p,

@@ -8,10 +8,14 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 /**
- * Window-level side effects for the reader: brightness, keep-screen-on,
- * and immersive mode management.
+ * Window and lifecycle side effects for the reader: brightness, keep-screen-on,
+ * immersive mode management and the position flush on stop.
  *
  * Extracted from [ReaderScreen] to reduce its composable size.
  */
@@ -113,5 +117,19 @@ internal fun ReaderImmersiveModeRehideEffect(
                 window?.insetsController?.hide(android.view.WindowInsets.Type.systemBars())
             }
         }
+    }
+}
+
+/** Persists the reading position when the app leaves the foreground (process may be killed). */
+@Composable
+internal fun ReaderStopFlushEffect(onStop: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnStop = rememberUpdatedState(onStop)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) currentOnStop.value()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 }

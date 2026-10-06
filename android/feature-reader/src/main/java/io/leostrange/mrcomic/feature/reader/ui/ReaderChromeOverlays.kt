@@ -66,6 +66,7 @@ internal fun BoxScope.ReaderBottomChromePanel(
     onApplyPreset: (ReadingPreset) -> Unit,
     onReadingModeChange: (ReadingMode) -> Unit,
     onPageChange: (Int) -> Unit,
+    onSeekProgress: (Float) -> Unit,
     onDismissFootnote: () -> Unit,
     onExpandFootnote: () -> Unit,
     onCollapseFootnote: () -> Unit
@@ -145,7 +146,8 @@ internal fun BoxScope.ReaderBottomChromePanel(
                         onToggleBookmark = onToggleBookmark,
                         onApplyPreset = onApplyPreset,
                         onReadingModeChange = onReadingModeChange,
-                        onPageChange = onPageChange
+                        onPageChange = onPageChange,
+                        onSeekProgress = onSeekProgress
                     )
                     else -> Unit
                 }

@@ -126,7 +126,7 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
     isBookmarkSection: Boolean,
     isAchievementSection: Boolean,
     strings: AppStrings,
-    onQuoteClick: (String, Int) -> Unit,
+    onQuoteClick: (comicId: String, page: Int, characterOffset: Int?) -> Unit,
     onComicClick: (String) -> Unit,
     onAudiobookClick: (String) -> Unit,
     onSelectComicId: (String) -> Unit,
@@ -146,7 +146,7 @@ internal fun LazyGridScope.libraryDisplayItemsGridContent(
                 QuoteCard(
                     quote = quote,
                     sourceAvailable = quote.comicId in uiState.availableQuoteComicIds,
-                    onClick = { onQuoteClick(quote.comicId, quote.page) },
+                    onClick = { onQuoteClick(quote.comicId, quote.page, quote.characterOffset) },
                     onLongClick = { onSetQuoteToDelete(quote) },
                     onUnavailableSourceClick = onShowMissingSourceSnackbar
                 )

@@ -5,8 +5,12 @@ import android.util.Log
 internal class ReaderWebViewRuntimeOwner(
     val loadController: ReaderWebViewLoadController = ReaderWebViewLoadController()
 ) {
+    /** False while a load/restore is in flight; true once its position is settled. */
+    var onSettledChanged: ((Boolean) -> Unit)? = null
+
     fun beginLoad(documentIdentity: String, restoreTarget: ReaderWebViewRestoreTarget?): Long {
         val generation = loadController.runtimeState.generation + 1L
+        onSettledChanged?.invoke(false)
         loadController.dispatch(
             ReaderWebViewRuntimeEvent.LoadRequested(
                 documentIdentity = documentIdentity,
@@ -70,10 +74,10 @@ internal class ReaderWebViewRuntimeOwner(
                 ) { restored ->
                     if (!restored) {
                         Log.w(HTML_READER_TAG, "Restore target was not found for generation=${effect.generation}")
-                    } else {
-                        if (!effect.target.fragment.isNullOrBlank()) onConsumeAnchor()
-                        if (effect.target.sectionIndex != null) onConsumeSection()
                     }
+                    // The target document has had its one restore attempt; never replay it later.
+                    if (!effect.target.fragment.isNullOrBlank()) onConsumeAnchor()
+                    if (effect.target.sectionIndex != null) onConsumeSection()
                     executeEffects(
                         webView = webView,
                         effects = loadController.dispatch(
@@ -83,10 +87,11 @@ internal class ReaderWebViewRuntimeOwner(
                         onConsumeSection = onConsumeSection
                     )
                 }
-                is ReaderWebViewRuntimeEffect.PublishReady -> Unit
+                is ReaderWebViewRuntimeEffect.PublishReady -> onSettledChanged?.invoke(true)
                 is ReaderWebViewRuntimeEffect.ShowTerminalError -> {
                     Log.e(HTML_READER_TAG, "Reader runtime failed: ${effect.reason}")
                     webView.alpha = 1f
+                    onSettledChanged?.invoke(true)
                 }
             }
         }

@@ -12,13 +12,27 @@ package io.leostrange.mrcomic.feature.reader.ui
  * with no side effects or Android dependencies.
  */
 
-internal fun readerPagedLayoutJs(targetPage: Int, generation: Long? = null): String {
-    val legacyScript = readerPagedCoreJs(
+/**
+ * [targetCharacterOffset] resolves the page inside the same pass that builds the pages, so a
+ * restore can never apply a page index computed against an older layout.
+ */
+internal fun readerPagedLayoutJs(
+    targetPage: Int,
+    generation: Long? = null,
+    targetCharacterOffset: Int? = null
+): String {
+    val targetJs = if (targetCharacterOffset != null) {
+        """
+        $PAGE_FOR_CHARACTER_OFFSET_FN
+        var target=__mrcomicPageForOffset(pages,content,Math.max(0,$targetCharacterOffset));
+        """.trimIndent()
+    } else {
         """
         var requested=$targetPage;
         var target=(requested<0)?current:((requested>=2147483647)?(pageCount-1):Math.max(0,Math.min(pageCount-1,requested||0)));
         """.trimIndent()
-    )
+    }
+    val legacyScript = readerPagedCoreJs(targetJs)
     return generation?.let {
         readerWebViewProtocolEnvelopeJs(it, eventType = "layoutReady", payloadScript = legacyScript)
     } ?: legacyScript
@@ -50,6 +64,11 @@ internal fun readerPagedCoreJs(
     var root=document.documentElement;
     var body=document.body;
     if(!root||!body)return JSON.stringify({handled:$failureHandled,pageIndex:0,pageCount:1});
+    // The text-settings script creates the paged wrapper; before it runs the document is
+    // unstyled, and paging the body itself would leave a transform that stacks on later pages.
+    if(!document.getElementById('__mrcomic_paged_content'))return JSON.stringify({handled:false,pageIndex:0,pageCount:1});
+    body.style.transform='';
+    body.style.webkitTransform='';
     var nativeWidth=Math.round(Number(window.__mrcomicNativeViewportWidth||0));
     var nativeHeight=Math.round(Number(window.__mrcomicNativeViewportHeight||0));
     var visualViewportHeight=Math.round((window.visualViewport&&window.visualViewport.height)||0);
@@ -711,31 +730,52 @@ internal fun readerPagedCoreJs(
 """.trimIndent()
 
 /**
- * Find the page that contains the given character offset.
- *
- * Uses a proportional estimate (ratio of characterOffset to total text length)
- * to find the approximate Y position, then selects the nearest page boundary.
- * Returns the page index; the caller applies the page via applyPagedLayout.
+ * Rect of the first rendered character at or after a text-node offset inside a root (same
+ * coordinates as the captures). Collapsed whitespace has no box, so it is skipped; null when
+ * nothing renders after the offset.
  */
-internal fun readerScrollToCharacterOffsetJs(characterOffset: Int): String = """
-(function(){
-  try{
-    var pages=window.__mrcomicPageLayouts;
-    if(!pages||!pages.length)return 0;
-    var content=document.getElementById('__mrcomic_paged_content')||document.body;
-    var fullText=(content.innerText||document.body.innerText||'');
-    if(!fullText.length)return 0;
-    var safeOffset=Math.max(0,Math.min(fullText.length,${characterOffset}||0));
-    var ratio=safeOffset/fullText.length;
-    var contentHeight=window.__mrcomicPagedContentHeight||Math.ceil(content.scrollHeight||content.offsetHeight||0);
-    if(contentHeight<=0)return 0;
-    var estimatedY=Math.round(ratio*contentHeight);
-    var bestPage=0;
-    for(var i=0;i<pages.length;i++){
-      if((pages[i].start||0)<=estimatedY)bestPage=i;
-      else break;
+internal const val RENDERED_CHAR_RECT_FN = """
+var __mrcomicRenderedCharRect=function(root,offset){
+  var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);
+  var remaining=Math.max(0,offset),node;
+  while((node=walker.nextNode())){
+    var length=(node.nodeValue||'').length;
+    if(remaining<length)break;
+    remaining-=length;
+  }
+  var range=document.createRange(),guard=0;
+  while(node&&guard<4000){
+    var value=node.nodeValue||'';
+    for(;remaining<value.length&&guard<4000;remaining++,guard++){
+      range.setStart(node,remaining);
+      range.setEnd(node,remaining+1);
+      var rect=range.getBoundingClientRect();
+      if(rect&&(rect.height>0||rect.width>0)){range.detach&&range.detach();return rect;}
     }
-    return bestPage;
-  }catch(e){return -1;}
-})();
-""".trimIndent()
+    node=walker.nextNode();
+    remaining=0;
+  }
+  range.detach&&range.detach();
+  return null;
+};
+"""
+
+/**
+ * Page that shows a character offset: the inverse of the page-start offset reported by
+ * [readerPagedCoreJs]. The page is the last one whose start lies above the bottom of the first
+ * rendered character at the offset.
+ */
+private const val PAGE_FOR_CHARACTER_OFFSET_FN = """
+$RENDERED_CHAR_RECT_FN
+var __mrcomicPageForOffset=function(pages,content,target){
+  var rect=__mrcomicRenderedCharRect(content,target);
+  if(!rect)return pages.length-1;
+  var charBottom=(rect.bottom||0)-content.getBoundingClientRect().top;
+  var bestPage=0;
+  for(var i=0;i<pages.length;i++){
+    if((Number(pages[i].start)||0)+1<charBottom)bestPage=i;
+    else break;
+  }
+  return bestPage;
+};
+"""

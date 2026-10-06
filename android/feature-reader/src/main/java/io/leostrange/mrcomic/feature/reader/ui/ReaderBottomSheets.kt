@@ -84,8 +84,7 @@ internal fun ReaderBottomSheets(
                 viewModel.navigationController.navigateToTocEntry(
                     page = entry.pageIndex,
                     anchorId = entry.anchorId ?: "",
-                    sectionIndex = entry.sectionIndex,
-                    charOffset = entry.charOffset
+                    sectionIndex = entry.sectionIndex
                 )
                 viewModel.toggleTocSheet()
             },
@@ -177,7 +176,11 @@ internal fun ReaderBottomSheets(
             },
             onApplyReadingPreset = viewModel.settingsController::applyReadingPreset,
             onFontSizeChange = viewModel.settingsController::setTextFontSize,
-            onColorSchemeChange = viewModel.settingsController::setTextColorScheme,
+            onColorSchemeChange = if (isTextReader) {
+                viewModel.settingsController::setTextColorScheme
+            } else {
+                viewModel.settingsController::setGraphicColorScheme
+            },
             onFontFamilyChange = viewModel.settingsController::setTextFontFamily,
             onLineHeightChange = viewModel.settingsController::setTextLineHeight,
             onLetterSpacingChange = viewModel.settingsController::setTextLetterSpacing,

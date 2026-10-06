@@ -29,13 +29,11 @@ internal fun TextFormatReader.buildTableOfContents(): List<TocEntry> {
     // Primary: use detected chapter anchors (h1-h6 headings).
     val fromAnchors = documentData.chapterAnchors.mapNotNull { anchor ->
         val pageIndex = anchorPageIndex[anchor.id] ?: return@mapNotNull null
-        val charOffset = findAnchorCharOffset(htmlPages.getOrNull(pageIndex), anchor.id)
         TocEntry(
             title = anchor.title,
             pageIndex = pageIndex,
             anchorId = anchor.id,
-            sectionIndex = pageIndex,
-            charOffset = charOffset
+            sectionIndex = pageIndex
         )
     }
     if (fromAnchors.isNotEmpty()) return fromAnchors
@@ -51,8 +49,7 @@ internal fun TextFormatReader.buildTableOfContents(): List<TocEntry> {
             title = title,
             pageIndex = pageIndex,
             anchorId = id,
-            sectionIndex = pageIndex,
-            charOffset = -1
+            sectionIndex = pageIndex
         )
     }
 }
@@ -67,13 +64,4 @@ internal fun TextFormatReader.findAnchorTitle(html: String?, anchorId: String): 
         val text = el.text().trim()
         text.takeIf { it.length in 2..120 }
     }.getOrNull()
-}
-
-internal fun TextFormatReader.findAnchorCharOffset(html: String?, anchorId: String): Int {
-    if (html.isNullOrBlank() || anchorId.isBlank()) return -1
-    return runCatching {
-        val doc = Jsoup.parse(html)
-        val element = doc.select("#${anchorId}, [name=$anchorId]").firstOrNull()
-        element?.let { html.indexOf("<${it.tagName()}") } ?: -1
-    }.getOrDefault(-1)
 }

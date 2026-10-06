@@ -287,6 +287,24 @@ class ComicRepository @Inject constructor(
         )
     }
 
+    override suspend fun updateTextProgress(
+        comicId: String,
+        sectionIndex: Int,
+        sectionCount: Int,
+        progress: Float,
+        characterOffset: Int?
+    ) {
+        if (sectionCount <= 0) return
+        comicDao.updateTextProgress(
+            id = comicId,
+            sectionIndex = sectionIndex.coerceIn(0, sectionCount - 1),
+            sectionCount = sectionCount,
+            progress = progress.coerceIn(0f, 1f),
+            lastReadDate = System.currentTimeMillis(),
+            characterOffset = characterOffset
+        )
+    }
+
     override suspend fun updateReaderPosition(comicId: String, positionJson: String?) {
         comicDao.updateReaderPosition(comicId, positionJson, System.currentTimeMillis())
     }

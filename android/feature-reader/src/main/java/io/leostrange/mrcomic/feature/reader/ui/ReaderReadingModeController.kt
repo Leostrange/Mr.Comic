@@ -29,7 +29,6 @@ internal class ReaderReadingModeController(
     private val isProgressAlreadyPersisted: (String?, Int) -> Boolean,
     private val prewarmHtmlPagesAround: (Int) -> Unit,
     private val activeComicSupportsBitmapPreload: () -> Boolean,
-    private val markReaderPresetCustom: () -> Unit,
     private val getLastTextWebtoonCursor: () -> ReaderTextWebtoonCursor? = { null },
     private val seedTextWebtoonCursor: (ReaderTextWebtoonCursor?) -> Unit = {},
     private val onAutoScrollModeChanged: (ReadingMode) -> Unit = {}
@@ -37,23 +36,29 @@ internal class ReaderReadingModeController(
     var portraitReadingMode: ReadingMode = ReadingMode.PAGE_LTR
     var portraitPagedReadingMode: ReadingMode = ReadingMode.PAGE_LTR
 
-    fun setReadingMode(mode: ReadingMode) {
+    /** Settings default used only for books that have never been opened. */
+    var defaultReadingMode: ReadingMode = ReadingMode.PAGE_LTR
+
+    /**
+     * In-reader mode switch. The mode is persisted per book with the position; it changes
+     * neither the Settings default nor the theme preset.
+     */
+    fun setReadingMode(requestedMode: ReadingMode) {
         val currentState = _uiState.value
+        // The "Pages" chip carries no direction: coming back from WEBTOON keeps the book's RTL/LTR.
+        val mode = if (requestedMode == ReadingMode.PAGE_LTR && currentState.readingMode == ReadingMode.WEBTOON) {
+            portraitPagedReadingMode
+        } else {
+            requestedMode
+        }
         val alignedPage = normalizePageForMode(
             currentState.currentPage,
             mode,
             currentState.totalPages
         )
-        if (currentState.readingMode == mode && currentState.currentPage == alignedPage) {
-            rememberPortraitMode(mode)
-            return
-        }
         rememberPortraitMode(mode)
-        markReaderPresetCustom()
+        if (currentState.readingMode == mode && currentState.currentPage == alignedPage) return
         applyReadingMode(mode)
-        viewModelScope.launch {
-            readerPreferences.set(PreferencesKeys.READING_MODE, mode.name)
-        }
     }
 
     fun onOrientationChanged(
@@ -70,7 +75,10 @@ internal class ReaderReadingModeController(
             }
             return
         }
-        if (useLandscapeSpread && canAutoLandscapeSpread && currentMode != ReadingMode.DUAL_PAGE) {
+        if (
+            useLandscapeSpread && canAutoLandscapeSpread &&
+            currentMode != ReadingMode.DUAL_PAGE && currentMode != ReadingMode.WEBTOON
+        ) {
             applyReadingMode(ReadingMode.DUAL_PAGE)
         } else if (!useLandscapeSpread && currentMode == ReadingMode.DUAL_PAGE) {
             applyReadingMode(portraitReadingMode)
@@ -257,10 +265,11 @@ internal class ReaderReadingModeController(
 
     fun effectiveOpeningModeFor(
         format: ComicFormat,
-        readerRendersHtmlContent: Boolean = format.isTextReadingFormat()
+        readerRendersHtmlContent: Boolean = format.isTextReadingFormat(),
+        currentMode: ReadingMode = _uiState.value.readingMode
     ): ReadingMode = ReaderOpeningModePolicy.resolve(
         readerRendersHtmlContent = readerRendersHtmlContent,
-        currentMode = _uiState.value.readingMode,
+        currentMode = currentMode,
         portraitMode = portraitReadingMode,
         portraitPagedMode = portraitPagedReadingMode,
         isLandscape = _uiState.value.isLandscape,

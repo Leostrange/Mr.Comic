@@ -31,7 +31,8 @@ internal class ReaderNavigationController(
     private val scheduleHighQualityWarmup: (Int) -> Unit,
     private val applyHighQualityRetention: (Set<Int>) -> Unit,
     private val activeComicSupportsBitmapPreload: () -> Boolean,
-    private val playPageSound: () -> Unit
+    private val playPageSound: () -> Unit,
+    private val markGoalJump: () -> Unit = {}
 ) {
     fun navigateTo(
         page: Int,
@@ -82,26 +83,57 @@ internal class ReaderNavigationController(
         )
     }
 
-    fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1, charOffset: Int = -1) {
-        val current = _uiState.value.currentPage
-        val targetSection = if (sectionIndex >= 0) sectionIndex else page
-        // BUG-READER-07: Normalize anchor — empty string should be treated as null
-        // to avoid setting pendingScrollToAnchor to a blank value that gets filtered out.
-        val normalizedAnchor = anchorId.takeIf { it.isNotBlank() }
-        if (targetSection != current) {
-            _uiState.update { it.copy(pendingScrollToAnchor = normalizedAnchor) }
+    /**
+     * BUG-READER-07: lands on the entry's anchor inside its section, or on the section start.
+     * A new PAGE section restores the anchor through its load; the current section and the
+     * stitched WEBTOON document seek in place, scoped to the target section.
+     */
+    fun navigateToTocEntry(page: Int, anchorId: String, sectionIndex: Int = -1) {
+        val state = _uiState.value
+        val targetSection = (if (sectionIndex >= 0) sectionIndex else page)
+            .coerceIn(0, (state.totalPages - 1).coerceAtLeast(0))
+        val anchor = anchorId.trim().removePrefix("#").takeIf { it.isNotBlank() }
+        if (state.readerContainerKind != ReaderContainerKind.TEXT_WEBTOON && targetSection != state.currentPage) {
+            _uiState.update { it.copy(pendingScrollToAnchor = anchor) }
             navigateTo(targetSection, progressSource = ReaderNavigationProgressSource.JUMP)
             return
         }
-        // Same section: reset sub-page to start and apply anchor scroll.
-        // This handles the case where the user is mid-section and taps a TOC entry
-        // that points to the same section — we still need to scroll to the anchor.
-        _uiState.update {
-            it.copy(
-                pendingScrollToAnchor = normalizedAnchor,
-                sectionCurrentPage = 0,
-                sectionCharacterOffset = if (charOffset >= 0) charOffset else 0
-            )
+        seekText(targetSection, characterOffset = 0, fragment = anchor)
+    }
+
+    /**
+     * Seeks to a character offset inside [sectionIndex]. PAGE mode restores through the next
+     * section load or seeks in place; WEBTOON scrolls the stitched document and records the
+     * target so a later document reload lands on it too.
+     */
+    fun seekText(sectionIndex: Int, characterOffset: Int, fragment: String? = null) {
+        val state = _uiState.value
+        val section = sectionIndex.coerceIn(0, (state.totalPages - 1).coerceAtLeast(0))
+        val offset = characterOffset.coerceAtLeast(0)
+        val seek = ReaderTextSeek(section, offset, fragment)
+        markGoalJump()
+        if (state.readerContainerKind == ReaderContainerKind.TEXT_WEBTOON) {
+            _uiState.update {
+                it.copy(
+                    currentPage = section,
+                    freeScrollCharacterOffset = offset,
+                    pendingTextSeek = seek
+                )
+            }
+            syncReaderPosition(section, state.readingMode, persistProgress = false)
+            return
+        }
+        if (section != state.currentPage) {
+            navigateTo(section, progressSource = ReaderNavigationProgressSource.JUMP)
+            _uiState.update { it.copy(sectionCharacterOffset = offset, pendingScrollToAnchor = fragment) }
+        } else {
+            _uiState.update { it.copy(pendingTextSeek = seek) }
+        }
+    }
+
+    fun consumePendingTextSeek(token: Long) {
+        _uiState.update { state ->
+            if (state.pendingTextSeek?.token == token) state.copy(pendingTextSeek = null) else state
         }
     }
 

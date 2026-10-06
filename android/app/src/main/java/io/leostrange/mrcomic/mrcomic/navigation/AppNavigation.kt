@@ -50,6 +50,7 @@ import io.leostrange.mrcomic.core.data.preferences.PreferencesKeys
 import io.leostrange.mrcomic.core.data.preferences.UserPreferences
 import io.leostrange.mrcomic.core.data.preferences.dataStore
 import io.leostrange.mrcomic.core.model.ReaderFormatCatalog
+import io.leostrange.mrcomic.core.model.ReaderLocator
 import io.leostrange.mrcomic.core.model.storedReaderLocator
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomNavigationBar
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicBottomNavigationItem
@@ -411,11 +412,12 @@ fun AppNavHost(
                         onAudiobookClick = { audiobookId ->
                             navigateToFullscreen(Screen.AudiobookPlayer.create(audiobookId))
                         },
-                        onQuoteClick = { comicId, page ->
+                        onQuoteClick = { comicId, page, characterOffset ->
                             navigateToFullscreen(
                                 Screen.Reader.createForComic(
                                     comicId = comicId,
-                                    page = page
+                                    page = page,
+                                    locator = characterOffset?.let { ReaderLocator(position = it) }
                                 )
                             )
                         },

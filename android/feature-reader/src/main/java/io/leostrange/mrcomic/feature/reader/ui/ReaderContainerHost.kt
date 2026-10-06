@@ -46,87 +46,101 @@ internal fun ReaderContainerHost(
 
         when (uiState.readerContainerKind) {
             ReaderContainerKind.TEXT_WEBTOON -> {
-                TextContainer(
-                    html = textWebtoonHtmlContent ?: htmlContent.orEmpty(),
-                    baseUrl = uiState.htmlBaseUrl,
-                    assetDocumentPath = textWebtoonAssetBasePath,
-                    documentIdentity = uiState.comic?.id,
-                    assetLoader = readerAssetLoader,
-                    readingMode = ReadingMode.WEBTOON,
-                    autoScrollSpeed = readerTextWebtoonPixelsPerSecond(
-                        containerKind = uiState.readerContainerKind,
-                        enabled = uiState.autoScrollEnabled,
-                        paused = uiState.isAutoScrollTemporarilyPaused,
-                        speed = uiState.autoScrollSpeed,
-                    ),
-                    onSelectionActionModeChange = { active ->
-                        if (active) {
-                            viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
-                        } else {
-                            viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
-                        }
-                    },
-                    onLeftTap = {},
-                    onRightTap = {},
-                    onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
-                    onAnchorClick = { viewModel.footnoteController.onAnchorClick(it) },
-                    onInlineFootnote = { viewModel.footnoteController.showInlineFootnote(it) },
-                    onVerticalBoundaryNavigation = { pageStep ->
-                        when {
-                            pageStep < 0 -> viewModel.navigationController.prevPage()
-                            pageStep > 0 -> viewModel.navigationController.nextPage()
-                        }
-                    },
-                    onTranslateSelection = { selectedText ->
-                        viewModel.translationController.translateSelectedText(
-                            selectedText = selectedText,
-                            preferDictionary = false
-                        )
-                    },
-                    onDictionarySelection = { selectedText ->
-                        viewModel.translationController.translateSelectedText(
-                            selectedText = selectedText,
-                            preferDictionary = true
-                        )
-                    },
-                    onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
-                    onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
-                    onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
-                    onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
-                    onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
-                    highlightsJs = viewModel.highlightController.injectHighlightsJs(),
-                    fontSize = uiState.textFontSize,
-                    readerPreset = activeReaderPreset,
-                    fontFamily = resolvedTextFont.familyName,
-                    fontSourceUrl = resolvedTextFont.sourceUrl,
-                    lineHeight = uiState.textLineHeight,
-                    letterSpacing = uiState.textLetterSpacing,
-                    wordSpacing = uiState.textWordSpacing,
-                    paragraphSpacing = uiState.textParagraphSpacing,
-                    textAlign = uiState.textAlignment,
-                    bold = uiState.textBold,
-                    overrideTextColor = readerColorOverrideHex(uiState.textCustomTextColor),
-                    overrideBackgroundColor = readerColorOverrideHex(uiState.textCustomBackgroundColor),
-                    overrideAccentColor = readerColorOverrideHex(uiState.textCustomAccentColor),
-                    translateActionLabel = readerText.selectionTranslateAction,
-                    dictionaryActionLabel = readerText.openDictionary,
-                    explainActionLabel = readerText.selectionExplainAction,
-                    saveQuoteActionLabel = readerText.saveQuote,
-                    selectionMenuLanguageCode = languageCode,
-                    contentTopInsetPx = textChromeTopInsetCssPx,
-                    contentBottomInsetPx = textChromeBottomInsetCssPx,
-                    pendingScrollToAnchor = uiState.pendingScrollToAnchor,
-                    onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
-                    pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
-                    onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
-                    onTextWebtoonVisibleSectionChanged = { viewModel.navigationController.updateTextWebtoonVisibleSection(it) },
-                    freeScrollRestoreTarget = freeScrollRestoreTarget,
-                    onFreeScrollPositionUpdate = viewModel::onFreeScrollPositionChanged,
-                    sectionCharacterOffset = uiState.sectionCharacterOffset,
-                    modifier = textReaderModifier
-                )
+                if (textWebtoonHtmlContent == null) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                } else {
+                    TextContainer(
+                        html = textWebtoonHtmlContent,
+                        baseUrl = uiState.htmlBaseUrl,
+                        assetDocumentPath = textWebtoonAssetBasePath,
+                        documentIdentity = uiState.comic?.id,
+                        assetLoader = readerAssetLoader,
+                        readingMode = ReadingMode.WEBTOON,
+                        autoScrollSpeed = readerTextWebtoonPixelsPerSecond(
+                            containerKind = uiState.readerContainerKind,
+                            enabled = uiState.autoScrollEnabled,
+                            paused = uiState.isAutoScrollTemporarilyPaused,
+                            speed = uiState.autoScrollSpeed,
+                        ),
+                        onSelectionActionModeChange = { active ->
+                            if (active) {
+                                viewModel.autoScrollRuntimeController.pause(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
+                            } else {
+                                viewModel.autoScrollRuntimeController.resume(ReaderAutoScrollPauseReason.TEXT_SELECTION_ACTION_MODE)
+                            }
+                        },
+                        onLeftTap = {},
+                        onRightTap = {},
+                        onCenterTap = { handleTapZoneAction(tapZoneLayout.center) },
+                        onAnchorClick = { viewModel.footnoteController.onAnchorClick(it) },
+                        onInlineFootnote = { viewModel.footnoteController.showInlineFootnote(it) },
+                        onVerticalBoundaryNavigation = { pageStep ->
+                            when {
+                                pageStep < 0 -> viewModel.navigationController.prevPage()
+                                pageStep > 0 -> viewModel.navigationController.nextPage()
+                            }
+                        },
+                        onTranslateSelection = { selectedText ->
+                            viewModel.translationController.translateSelectedText(
+                                selectedText = selectedText,
+                                preferDictionary = false
+                            )
+                        },
+                        onDictionarySelection = { selectedText ->
+                            viewModel.translationController.translateSelectedText(
+                                selectedText = selectedText,
+                                preferDictionary = true
+                            )
+                        },
+                        onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
+                        onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteFromSelection,
+                        onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
+                        onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
+                        onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
+                        highlightsJs = viewModel.highlightController.injectHighlightsJs(),
+                        fontSize = uiState.textFontSize,
+                        colorScheme = uiState.textColorScheme,
+                        readerPreset = activeReaderPreset,
+                        fontFamily = resolvedTextFont.familyName,
+                        fontSourceUrl = resolvedTextFont.sourceUrl,
+                        lineHeight = uiState.textLineHeight,
+                        letterSpacing = uiState.textLetterSpacing,
+                        wordSpacing = uiState.textWordSpacing,
+                        paragraphSpacing = uiState.textParagraphSpacing,
+                        textAlign = uiState.textAlignment,
+                        bold = uiState.textBold,
+                        overrideTextColor = readerColorOverrideHex(uiState.textCustomTextColor),
+                        overrideBackgroundColor = readerColorOverrideHex(uiState.textCustomBackgroundColor),
+                        overrideAccentColor = readerColorOverrideHex(uiState.textCustomAccentColor),
+                        translateActionLabel = readerText.selectionTranslateAction,
+                        dictionaryActionLabel = readerText.openDictionary,
+                        explainActionLabel = readerText.selectionExplainAction,
+                        saveQuoteActionLabel = readerText.saveQuote,
+                        selectionMenuLanguageCode = languageCode,
+                        contentTopInsetPx = textChromeTopInsetCssPx,
+                        contentBottomInsetPx = textChromeBottomInsetCssPx,
+                        pendingScrollToAnchor = uiState.pendingScrollToAnchor,
+                        onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
+                        pendingWebtoonSectionIndex = uiState.pendingWebtoonSectionIndex,
+                        onConsumeWebtoonSection = { viewModel.navigationController.consumePendingWebtoonSection() },
+                        onTextWebtoonVisibleSectionChanged = { viewModel.navigationController.updateTextWebtoonVisibleSection(it) },
+                        freeScrollRestoreTarget = freeScrollRestoreTarget,
+                        onFreeScrollPositionUpdate = viewModel::onFreeScrollPositionChanged,
+                        onRuntimeSettledChanged = viewModel::onTextRuntimeSettledChanged,
+                        pendingTextSeek = uiState.pendingTextSeek,
+                        onConsumeTextSeek = viewModel.navigationController::consumePendingTextSeek,
+                        sectionCharacterOffset = uiState.sectionCharacterOffset,
+                        modifier = textReaderModifier
+                    )
+                }
             }
             ReaderContainerKind.TEXT_PAGE -> {
+                // While the next section loads, the WebView still shows the previous one; the
+                // cursor, anchor and seek of the new section must not be applied to it.
+                val htmlMatchesSection = uiState.pagedHtmlMatchesSection()
                 if (htmlContent == null) {
                     CircularProgressIndicator(
                         modifier = Modifier.align(Alignment.Center),
@@ -166,9 +180,11 @@ internal fun ReaderContainerHost(
                                 pageStep > 0 -> viewModel.navigationController.nextPage()
                             }
                         },
-                        onPagedLayoutPageCountChanged = { pageCount, pageIndex, charOffset ->
-                            viewModel.onPagedLayoutPageCountChanged(pageCount, pageIndex, charOffset)
-                        },
+                        documentSectionIndex = uiState.currentHtmlSectionIndex,
+                        onPagedLayoutPageCountChanged = viewModel::onPagedLayoutPageCountChanged,
+                        onRuntimeSettledChanged = viewModel::onTextRuntimeSettledChanged,
+                        pendingTextSeek = uiState.pendingTextSeek.takeIf { htmlMatchesSection },
+                        onConsumeTextSeek = viewModel.navigationController::consumePendingTextSeek,
                         onTranslateSelection = { selectedText ->
                             viewModel.translationController.translateSelectedText(
                                 selectedText = selectedText,
@@ -182,7 +198,7 @@ internal fun ReaderContainerHost(
                             )
                         },
                         onExplainSelection = viewModel.translationController::explainSelectedTextDirect,
-                        onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteDirectly,
+                        onSaveQuoteSelection = viewModel.saveQuoteController::saveQuoteFromSelection,
                         onHighlightSelection = { selectedText -> viewModel.highlightController.highlightSelectedText(selectedText) },
                         onTranslateChapter = { viewModel.translationController.translateCurrentChapter() },
                         onCompareTranslations = { text -> viewModel.translationController.compareTranslations(text) },
@@ -208,10 +224,10 @@ internal fun ReaderContainerHost(
                         selectionMenuLanguageCode = languageCode,
                         contentTopInsetPx = textChromeTopInsetCssPx,
                         contentBottomInsetPx = textChromeBottomInsetCssPx,
-                        pendingScrollToAnchor = uiState.pendingScrollToAnchor,
+                        pendingScrollToAnchor = uiState.pendingScrollToAnchor.takeIf { htmlMatchesSection },
                         onConsumeScrollToAnchor = { viewModel.navigationController.consumePendingScrollToAnchor() },
                         onRegisterPageTurner = onRegisterPagedColumnTurner,
-                        sectionCharacterOffset = uiState.sectionCharacterOffset,
+                        sectionCharacterOffset = if (htmlMatchesSection) uiState.sectionCharacterOffset else 0,
                         modifier = textReaderModifier
                     )
                 }

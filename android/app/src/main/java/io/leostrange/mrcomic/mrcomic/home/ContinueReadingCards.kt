@@ -33,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.model.Comic
+import io.leostrange.mrcomic.core.model.displayReadingProgress
+import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicButtonVariant
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicCardSurface
@@ -329,8 +331,13 @@ internal fun ContinueReadingCard(
                     containerColor = rootChromePanelColor(MaterialTheme.colorScheme, RootChromeTone.SOFT),
                     contentColor = MaterialTheme.colorScheme.onSurface
                 ) {
+                    val percent = (comic.displayReadingProgress() * 100).toInt()
                     Text(
-                        text = text.pageProgress(comic.currentPage + 1, (comic.readingProgress * 100).toInt()),
+                        text = if (comic.format.isTextReadingFormat()) {
+                            text.progressRead(percent)
+                        } else {
+                            text.pageProgress(comic.currentPage + 1, percent)
+                        },
                         style = MaterialTheme.typography.labelMedium
                     )
                 }
@@ -371,9 +378,9 @@ internal fun ContinueComicCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
-        if (comic.readingProgress > 0f) {
+        if (comic.displayReadingProgress() > 0f) {
             Text(
-                text = text.progressRead((comic.readingProgress * 100).toInt()),
+                text = text.progressRead((comic.displayReadingProgress() * 100).toInt()),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

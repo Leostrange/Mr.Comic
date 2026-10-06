@@ -110,5 +110,6 @@ internal fun deferredResolvedStartPage(
  */
 internal fun shouldHoldLoadingForDeferredRestore(
     shouldDeferCount: Boolean,
-    requestedStartPage: Int
-): Boolean = shouldDeferCount && requestedStartPage > 0
+    requestedStartPage: Int,
+    hasInSectionCursor: Boolean = false
+): Boolean = shouldDeferCount && (requestedStartPage > 0 || hasInSectionCursor)

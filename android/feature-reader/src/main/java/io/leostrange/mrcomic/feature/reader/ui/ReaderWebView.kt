@@ -20,7 +20,15 @@ internal const val JS_SELECTED_TEXT_HANDLER = """(function(){
     var suffix=document.createRange();
     suffix.selectNodeContents(body);
     suffix.setEnd(range.endContainer,range.endOffset);
-    return JSON.stringify({text:text,startOffset:prefix.toString().length,endOffset:suffix.toString().length});
+    var startEl=range.startContainer.nodeType===1?range.startContainer:range.startContainer.parentElement;
+    var section=startEl&&startEl.closest?startEl.closest('.mrcomic-text-webtoon-section'):null;
+    var root=section||document.getElementById('__mrcomic_paged_content')||body;
+    var anchor=document.createRange();
+    anchor.selectNodeContents(root);
+    anchor.setEnd(range.startContainer,range.startOffset);
+    var sectionIndex=section?parseInt(section.getAttribute('data-mrcomic-page-index'),10):-1;
+    return JSON.stringify({text:text,startOffset:prefix.toString().length,endOffset:suffix.toString().length,
+      anchorOffset:anchor.toString().length,sectionIndex:isNaN(sectionIndex)?-1:sectionIndex});
   }catch(e){}
   return '';
 })();"""
@@ -29,6 +37,10 @@ internal data class ReaderTextSelection(
     val text: String,
     val startOffset: Int,
     val endOffset: Int,
+    /** Selection start in the reader's section text coordinates (restore/seek offsets). */
+    val anchorOffset: Int = -1,
+    /** Stitched WEBTOON section containing the selection; -1 in PAGE mode. */
+    val sectionIndex: Int = -1,
 )
 
 internal const val TRANSLATE_SELECTION_MENU_ID = 0x6F4352
@@ -167,7 +179,8 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
             if (pendingFreeScrollRestoreTarget == null) {
                 scheduleFreeScrollPositionCapture()
             }
-        }
+        },
+        touchSlopPx = android.view.ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     )
 
     var pendingPagedLayoutTarget: Int?
@@ -419,8 +432,10 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         inlineFallbackRunnable = null
     }
 
-    fun verifyVisibleContentOrFallback() {
+    fun verifyVisibleContentOrFallback(scheduledForToken: String? = activeLoadToken) {
         val expectedToken = activeLoadToken ?: return
+        // A probe scheduled by an earlier document must not judge the next one (often still empty).
+        if (scheduledForToken != expectedToken) return
         val generation = activeRuntimeGeneration
         val probeScript = if (generation > 0L) {
             readerWebViewContentProbeJs(generation)
@@ -500,14 +515,18 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         evaluateJavascript(script) {
             if (pagedModeScrollLock && layoutChanged) {
                 if (characterOffsetToRestore != null && characterOffsetToRestore > 0) {
-                    applyPagedLayout(targetPage = 0) {
-                        scrollToCharacterOffset(characterOffsetToRestore)
-                    }
+                    scrollToCharacterOffset(characterOffsetToRestore)
                 } else {
                     applyPagedLayout()
                 }
             }
         }
+    }
+
+    /** A new load applies the current text settings in onPageFinished; don't re-run them on the next update. */
+    fun markReaderTextSettingsApplied(signature: String, layoutAffectingSignature: String) {
+        lastReaderTextSettingsSignature = signature
+        lastLayoutAffectingSignature = layoutAffectingSignature
     }
 
     fun schedulePagedLayoutSettle() {
@@ -520,7 +539,7 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
 
     fun applyPagedLayout(
         targetPage: Int? = pendingPagedLayoutTarget,
-        onLayoutApplied: (() -> Unit)? = null
+        onLayoutApplied: ((applied: Boolean) -> Unit)? = null
     ) {
         pagedLayoutController.applyPagedLayout(
             isPagedMode = pagedModeScrollLock,
@@ -548,9 +567,21 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
         pagedLayoutController.scrollToCharacterOffset(
             isPagedMode = pagedModeScrollLock,
             offset = offset,
+            runtimeGeneration = activeRuntimeGeneration,
             onRestored = onRestored
         )
     }
+
+    /** Seeks inside the loaded document without a reload (slider, TOC, quote targets). */
+    fun seekToTextPosition(
+        sectionIndex: Int?,
+        characterOffset: Int,
+        fragment: String? = null,
+        onDone: (Boolean) -> Unit
+    ) = applyTextTarget(
+        ReaderWebViewRestoreTarget(fragment = fragment, sectionIndex = sectionIndex, characterOffset = characterOffset),
+        onDone
+    )
 
     fun reportRuntimeLoadFailure(reason: String) {
         val generation = activeRuntimeGeneration
@@ -577,86 +608,91 @@ internal class ReaderWebView(context: android.content.Context) : WebView(context
             onRestored(false)
             return
         }
+        applyTextTarget(target, onRestored)
+    }
+
+    private fun applyTextTarget(target: ReaderWebViewRestoreTarget, onDone: (Boolean) -> Unit) {
         val offset = target.characterOffset
-        if (pagedModeScrollLock && offset != null) {
-            scrollToCharacterOffset(offset, onRestored)
+        if (pagedModeScrollLock && offset != null && target.fragment.isNullOrBlank()) {
+            scrollToCharacterOffset(offset, onDone)
             return
         }
-        val fragmentSelector = target.fragment
-            ?.takeIf { it.isNotBlank() }
-            ?.let(::readerJavaScriptStringLiteral)
-            ?: "null"
-        val sectionIndex = target.sectionIndex ?: -1
-        val characterOffset = if (pagedModeScrollLock) -1 else target.characterOffset ?: -1
-        val progression = target.progression ?: -1.0
-        val characterScopeSelector = readerJavaScriptStringLiteral(
-            readerFreeScrollCharacterScopeSelector(sectionIndex)
-        )
-        val script = """
-            (function(){
-              try{
-                var fragment=$fragmentSelector;
-                var target=null;
-                if(fragment){
-                  target=document.getElementById(fragment)||document.querySelector('[name="'+fragment.replace(/["\\]/g,'\\$&')+'"]');
-                }
-                if(target){
-                  if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(target);}
-                  else{target.scrollIntoView({block:'start',inline:'nearest'});}
-                  return true;
-                }
-                if($characterOffset>=0){
-                  var content=document.querySelector($characterScopeSelector)||
-                    document.querySelector('[data-mrcomic-text-webtoon-document]')||document.body;
-                  var walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT,null);
-                  var remaining=$characterOffset;
-                  var node=null;
-                  while((node=walker.nextNode())){
-                    var length=(node.nodeValue||'').length;
-                    if(remaining<=length)break;
-                    remaining-=length;
-                  }
-                  if(node){
-                    var range=document.createRange();
-                    var start=Math.max(0,Math.min((node.nodeValue||'').length,remaining));
-                    range.setStart(node,start);
-                    range.setEnd(node,Math.min((node.nodeValue||'').length,start+1));
-                    var rect=range.getBoundingClientRect();
-                    if(rect&&isFinite(rect.top)){
-                      window.scrollBy(0,Math.round(rect.top-16));
-                      range.detach&&range.detach();
-                      return true;
-                    }
-                    range.detach&&range.detach();
-                  }
-                }
-                if($progression>=0){
-                  var root=document.scrollingElement||document.documentElement||document.body;
-                  var max=Math.max(0,(root.scrollHeight||0)-(window.innerHeight||0));
-                  window.scrollTo(0,Math.round(max*$progression));
-                  return true;
-                }
-                if($sectionIndex>=0){
-                  target=document.querySelector('.mrcomic-text-webtoon-section[data-mrcomic-page-index="'+$sectionIndex+'"]');
-                }
-                if(target){
-                  if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(target);}
-                  else{target.scrollIntoView({block:'start',inline:'nearest'});}
-                  return true;
-                }
-                return false;
-              }catch(e){return false;}
-            })()
-        """.trimIndent()
-        evaluateJavascript(script) { rawValue ->
+        evaluateJavascript(readerRestoreTargetJs(target, pagedMode = pagedModeScrollLock)) { rawValue ->
             val restored = rawValue?.trim('"') == "true"
-            if (restored && (target.characterOffset != null || target.progression != null)) {
-                freeScrollController.markRestoreCompleted()
-                scheduleFreeScrollPositionCapture()
+            when {
+                // Anchor jumps move the page in JS; re-report metrics so position/progress follow.
+                pagedModeScrollLock && restored -> applyPagedLayout(targetPage = -1, onLayoutApplied = onDone)
+                pagedModeScrollLock && offset != null -> scrollToCharacterOffset(offset, onDone)
+                else -> {
+                    if (restored && (offset != null || target.progression != null)) {
+                        freeScrollController.markRestoreCompleted(target)
+                        scheduleFreeScrollPositionCapture()
+                    }
+                    onDone(restored)
+                }
             }
-            onRestored(restored)
         }
     }
+}
+
+/** Restore JS: fragment, then section-scoped character offset, then progression, then section. */
+internal fun readerRestoreTargetJs(target: ReaderWebViewRestoreTarget, pagedMode: Boolean): String {
+    val fragmentSelector = target.fragment
+        ?.takeIf { it.isNotBlank() }
+        ?.let(::readerJavaScriptStringLiteral)
+        ?: "null"
+    val sectionIndex = target.sectionIndex ?: -1
+    val characterOffset = if (pagedMode) -1 else target.characterOffset ?: -1
+    val progression = target.progression ?: -1.0
+    val characterScopeSelector = readerJavaScriptStringLiteral(
+        readerFreeScrollCharacterScopeSelector(sectionIndex)
+    )
+    return """
+        (function(){
+          try{
+            $RENDERED_CHAR_RECT_FN
+            var fragment=$fragmentSelector;
+            var target=null;
+            if(fragment){
+              var scope=($sectionIndex>=0&&document.querySelector($characterScopeSelector))||document;
+              var named=scope.querySelectorAll('[id],a[name]');
+              for(var n=0;n<named.length&&!target;n++){
+                if(named[n].id===fragment||named[n].getAttribute('name')===fragment)target=named[n];
+              }
+              if(!target)target=document.getElementById(fragment);
+            }
+            if(target){
+              if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(target);}
+              else{target.scrollIntoView({block:'start',inline:'nearest'});}
+              return true;
+            }
+            if($characterOffset>=0){
+              var content=document.querySelector($characterScopeSelector)||
+                document.querySelector('[data-mrcomic-text-webtoon-document]')||document.body;
+              var rect=__mrcomicRenderedCharRect(content,$characterOffset);
+              if(rect){
+                window.scrollBy(0,Math.round(rect.top-16));
+                return true;
+              }
+            }
+            if($progression>=0){
+              var root=document.scrollingElement||document.documentElement||document.body;
+              var max=Math.max(0,(root.scrollHeight||0)-(window.innerHeight||0));
+              window.scrollTo(0,Math.round(max*$progression));
+              return true;
+            }
+            if($sectionIndex>=0){
+              target=document.querySelector('.mrcomic-text-webtoon-section[data-mrcomic-page-index="'+$sectionIndex+'"]');
+            }
+            if(target){
+              if(window.__mrcomicScrollToAnchor){window.__mrcomicScrollToAnchor(target);}
+              else{target.scrollIntoView({block:'start',inline:'nearest'});}
+              return true;
+            }
+            return false;
+          }catch(e){return false;}
+        })()
+    """.trimIndent()
 }
 
 internal fun ReaderWebViewRestoreTarget.normalizedFreeScrollTarget(): ReaderWebViewRestoreTarget? {
@@ -666,6 +702,8 @@ internal fun ReaderWebViewRestoreTarget.normalizedFreeScrollTarget(): ReaderWebV
         ?.coerceIn(0.0, 1.0)
     if (normalizedOffset == null && normalizedProgression == null) return null
     return ReaderWebViewRestoreTarget(
+        // The offset is relative to this stitched section; dropping it lands in the wrong chapter.
+        sectionIndex = sectionIndex?.takeIf { normalizedOffset != null },
         characterOffset = normalizedOffset,
         progression = normalizedProgression
     )
@@ -678,14 +716,20 @@ internal fun readerFreeScrollCharacterScopeSelector(sectionIndex: Int): String =
         "[data-mrcomic-text-webtoon-document]"
     }
 
-internal fun readerCaptureFreeScrollPositionJs(progression: Double?): String {
+internal fun readerCaptureFreeScrollPositionJs(
+    progression: Double?,
+    anchor: ReaderWebViewRestoreTarget? = null
+): String {
     val normalizedProgression = progression
         ?.takeIf { it.isFinite() }
         ?.coerceIn(0.0, 1.0)
         ?: -1.0
+    val anchorSection = anchor?.sectionIndex ?: -1
+    val anchorOffset = anchor?.characterOffset ?: -1
     return """
 (function(){
   try{
+    $RENDERED_CHAR_RECT_FN
     var viewportY=Math.min(16,Math.max(0,(window.innerHeight||0)-1));
     var viewportWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
     var root=document.querySelector('[data-mrcomic-text-webtoon-document]')||document.body;
@@ -700,6 +744,18 @@ internal fun readerCaptureFreeScrollPositionJs(progression: Double?): String {
     }
     var content=section||root;
     var sectionIndex=section?parseInt(section.getAttribute('data-mrcomic-page-index'),10):-1;
+    // A restore lands mid-line when the paged and stitched layouts wrap differently; while the
+    // restored character is still on the first visible line it is the cursor, not the line start.
+    var stitched=!!document.querySelector('.mrcomic-text-webtoon-section');
+    if($anchorOffset>=0&&(sectionIndex===$anchorSection||!stitched)){
+      var anchorRect=__mrcomicRenderedCharRect(content,$anchorOffset);
+      if(anchorRect){
+        var anchorLine=Math.max(1,anchorRect.height||0);
+        if(anchorRect.top>=viewportY-anchorLine&&anchorRect.top<viewportY+anchorLine){
+          return JSON.stringify({sectionIndex:$anchorSection,characterOffset:$anchorOffset,progression:$normalizedProgression});
+        }
+      }
+    }
     var walker=document.createTreeWalker(content,NodeFilter.SHOW_TEXT,null);
     var cursor=0;
     var node;
@@ -709,10 +765,12 @@ internal fun readerCaptureFreeScrollPositionJs(progression: Double?): String {
       if(!value.length)continue;
       range.selectNodeContents(node);
       var rects=range.getClientRects();
+      // The cursor is the first fully visible line: a line clipped by the top edge belongs to
+      // the text already read, and counting it would drift one line back on every restore.
       var visible=false;
       for(var i=0;i<rects.length;i++){
         var rect=rects[i];
-        if(rect.bottom>viewportY&&rect.top<(window.innerHeight||0)&&rect.right>0&&rect.left<viewportWidth){
+        if(rect.top>=viewportY-1&&rect.top<(window.innerHeight||0)&&rect.right>0&&rect.left<viewportWidth){
           visible=true;
           break;
         }
@@ -728,7 +786,7 @@ internal fun readerCaptureFreeScrollPositionJs(progression: Double?): String {
         range.setStart(node,mid);
         range.setEnd(node,Math.min(value.length,mid+1));
         var charRect=range.getBoundingClientRect();
-        if(charRect.bottom>viewportY)high=mid;
+        if(charRect.top>=viewportY-1)high=mid;
         else low=mid+1;
       }
       range.detach&&range.detach();

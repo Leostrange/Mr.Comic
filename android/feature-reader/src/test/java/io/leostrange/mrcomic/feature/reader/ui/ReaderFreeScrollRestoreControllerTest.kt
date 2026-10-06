@@ -75,4 +75,11 @@ class ReaderFreeScrollRestoreControllerTest {
         assertNull(controller.pendingRestoreTarget)
         assertEquals(target, controller.latestRestoreTarget)
     }
+
+    @Test
+    fun normalizedTarget_keepsTheSectionItsOffsetBelongsTo() {
+        val target = ReaderWebViewRestoreTarget(sectionIndex = 4, characterOffset = 120, progression = 0.6)
+        assertEquals(4, target.normalizedFreeScrollTarget()?.sectionIndex)
+        assertEquals(null, ReaderWebViewRestoreTarget(sectionIndex = 4, progression = 0.6).normalizedFreeScrollTarget()?.sectionIndex)
+    }
 }

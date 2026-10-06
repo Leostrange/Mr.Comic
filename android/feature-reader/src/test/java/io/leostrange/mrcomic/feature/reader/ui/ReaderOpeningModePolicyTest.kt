@@ -76,4 +76,16 @@ class ReaderOpeningModePolicyTest {
             )
         )
     }
+
+    @Test
+    fun bookBaseMode_prefersTheBooksOwnModeOverTheSettingsDefault() {
+        assertEquals(ReadingMode.WEBTOON, ReaderOpeningModePolicy.bookBaseMode(ReadingMode.WEBTOON, ReadingMode.PAGE_LTR))
+        assertEquals(ReadingMode.PAGE_RTL, ReaderOpeningModePolicy.bookBaseMode(null, ReadingMode.PAGE_RTL))
+    }
+
+    @Test
+    fun bookBaseMode_neverRestoresTheTransientSpread() {
+        assertEquals(ReadingMode.PAGE_RTL, ReaderOpeningModePolicy.bookBaseMode(ReadingMode.DUAL_PAGE, ReadingMode.PAGE_RTL))
+        assertEquals(ReadingMode.PAGE_LTR, ReaderOpeningModePolicy.bookBaseMode(ReadingMode.DUAL_PAGE, ReadingMode.WEBTOON))
+    }
 }

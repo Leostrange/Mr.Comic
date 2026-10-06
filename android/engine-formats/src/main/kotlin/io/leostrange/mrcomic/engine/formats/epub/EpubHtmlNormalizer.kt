@@ -154,6 +154,15 @@ internal fun prepareAssetBackedEpubDocument(
     rebuildNormalizedInlinedEpubDocument(html, readerCss)
 )
 
+/** One synthetic notes document from its chunks; the first chunk keeps its head and title. */
+internal fun mergeSyntheticNoteChunks(chunks: List<EpubPage.SyntheticHtml>): String? {
+    val ordered = chunks.sortedBy { it.chunkIndex }
+    val first = ordered.firstOrNull()?.html ?: return null
+    val rest = ordered.drop(1).joinToString(separator = "") { extractBodyContent(it.html) }
+    val end = first.lastIndexOf("</body>", ignoreCase = true).takeIf { it >= 0 } ?: first.length
+    return first.substring(0, end) + rest + first.substring(end)
+}
+
 /** Extracts the content between <body> and </body> tags. */
 internal fun extractBodyContent(html: String): String = runCatching {
     val bodyStart = Regex("<body[^>]*>", RegexOption.IGNORE_CASE).find(html)

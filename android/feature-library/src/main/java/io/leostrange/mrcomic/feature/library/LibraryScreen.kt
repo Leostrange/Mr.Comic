@@ -53,7 +53,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LibraryScreen(
     onComicClick: (String) -> Unit,
-    onQuoteClick: (String, Int) -> Unit,
+    onQuoteClick: (comicId: String, page: Int, characterOffset: Int?) -> Unit,
     onAddFileClick: () -> Unit,
     onAddFolderClick: () -> Unit,
     onSettingsClick: () -> Unit,

@@ -20,6 +20,9 @@ internal class ReaderFreeScrollRestoreController(
 
     private var captureRunnable: Runnable? = null
 
+    /** Last restored target; reported verbatim while its line is still the first visible one. */
+    private var restoreAnchor: ReaderWebViewRestoreTarget? = null
+
     fun primeRestoreTarget(target: ReaderWebViewRestoreTarget?, isPagedMode: Boolean) {
         if (isPagedMode) return
         pendingRestoreTarget = target?.normalizedFreeScrollTarget()
@@ -40,6 +43,7 @@ internal class ReaderFreeScrollRestoreController(
         val characterOffset = latestRestoreTarget?.characterOffset
         if (characterOffset == null && currentProgression == null) return null
         return ReaderWebViewRestoreTarget(
+            sectionIndex = latestRestoreTarget?.sectionIndex?.takeIf { characterOffset != null },
             characterOffset = characterOffset,
             progression = currentProgression
         )
@@ -60,22 +64,26 @@ internal class ReaderFreeScrollRestoreController(
 
     fun executeCapture(currentProgression: Double? = null) {
         if (pendingRestoreTarget != null) return
-        evaluateJavascript(readerCaptureFreeScrollPositionJs(currentProgression)) { rawValue ->
+        val anchor = restoreAnchor
+        evaluateJavascript(readerCaptureFreeScrollPositionJs(currentProgression, anchor)) { rawValue ->
             val target = ReaderWebViewProtocolCodec.decodeRestoreTarget(rawValue)
                 ?.normalizedFreeScrollTarget()
                 ?: currentProgression?.let { ReaderWebViewRestoreTarget(progression = it) }
                 ?: return@evaluateJavascript
+            if (anchor != null && target.characterOffset != anchor.characterOffset) restoreAnchor = null
             latestRestoreTarget = target
             onPositionChanged(target)
         }
     }
 
-    fun markRestoreCompleted() {
+    fun markRestoreCompleted(target: ReaderWebViewRestoreTarget? = null) {
         pendingRestoreTarget = null
+        restoreAnchor = target?.takeIf { it.characterOffset != null && it.sectionIndex != null }
     }
 
     fun reset() {
         pendingRestoreTarget = null
+        restoreAnchor = null
         captureRunnable?.let(removeCallbacks)
         captureRunnable = null
     }

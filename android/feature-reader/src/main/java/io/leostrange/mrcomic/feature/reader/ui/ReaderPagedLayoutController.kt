@@ -23,11 +23,16 @@ internal class ReaderPagedLayoutController(
 
     var pendingPagedLayoutTarget: Int? = null
 
+    /** Bumped per document load; JS results issued against an older document are dropped. */
+    private var documentEpoch: Long = 0L
     private var pagedLayoutRetryCount: Int = 0
     private var pagedLayoutRetryRunnable: Runnable? = null
+    /** Result callback of the request the pending retry will repeat. */
+    private var pendingRetryResult: ((Boolean) -> Unit)? = null
     private val pagedLayoutSettleRunnables = mutableListOf<Runnable>()
 
     fun resetForNewLoad(isPagedMode: Boolean) {
+        documentEpoch++
         pagedLayoutReady = !isPagedMode
         pagedLayoutRetryCount = 0
         cancelPagedLayoutRetry()
@@ -62,7 +67,8 @@ internal class ReaderPagedLayoutController(
         isPagedMode: Boolean,
         runtimeGeneration: Long,
         targetPage: Int? = pendingPagedLayoutTarget,
-        onLayoutApplied: (() -> Unit)? = null
+        targetCharacterOffset: Int? = null,
+        onLayoutApplied: ((applied: Boolean) -> Unit)? = null
     ) {
         if (!isPagedMode) {
             pagedLayoutReady = true
@@ -71,21 +77,26 @@ internal class ReaderPagedLayoutController(
         }
         val cssHeight = getViewportHeightCss()
         val cssWidth = getViewportWidthCss()
+        pendingPagedLayoutTarget = null
+        // A retry repeats the whole request, so a restore keeps its target and its result callback.
+        val retry = { applyPagedLayout(isPagedMode, runtimeGeneration, targetPage, targetCharacterOffset, onLayoutApplied) }
         if (!readerPagedViewportIsReady(cssWidth, cssHeight)) {
-            schedulePagedLayoutRetry(isPagedMode, runtimeGeneration, "viewport not ready (${cssWidth}x$cssHeight)")
+            schedulePagedLayoutRetry(isPagedMode, runtimeGeneration, "viewport not ready (${cssWidth}x$cssHeight)", retry, onLayoutApplied)
             return
         }
         val target = targetPage ?: -1
-        pendingPagedLayoutTarget = null
         val generation = runtimeGeneration.takeIf { it > 0L }
-        evaluateJavascript(readerPagedLayoutJs(target, generation)) { rawValue ->
+        val epoch = documentEpoch
+        evaluateJavascript(readerPagedLayoutJs(target, generation, targetCharacterOffset)) { rawValue ->
+            if (epoch != documentEpoch) return@evaluateJavascript
             val metrics = decodeReaderPagedLayoutMetrics(rawValue)
             if (metrics == null || !metrics.isUsable()) {
                 logWarn("Paged layout not ready yet: raw=$rawValue metrics=$metrics")
-                schedulePagedLayoutRetry(isPagedMode, runtimeGeneration, "invalid metrics")
+                schedulePagedLayoutRetry(isPagedMode, runtimeGeneration, "invalid metrics", retry, onLayoutApplied)
                 return@evaluateJavascript
             }
-            cancelPagedLayoutRetry()
+            // A pending retry of another request still has its own target to apply.
+            if (pendingRetryResult == null) cancelPagedLayoutRetry()
             pagedLayoutRetryCount = 0
             logDebug(
                 "Paged layout ready: page=${metrics.pageIndex + 1}/${metrics.pageCount} " +
@@ -97,15 +108,27 @@ internal class ReaderPagedLayoutController(
             generation?.let { activeGen ->
                 onRuntimeEvent?.invoke(ReaderWebViewEvent.LayoutReady(activeGen, metrics))
             }
-            onLayoutApplied?.invoke()
+            onLayoutApplied?.invoke(true)
         }
     }
 
-    fun schedulePagedLayoutRetry(isPagedMode: Boolean, runtimeGeneration: Long, reason: String) {
-        if (!isPagedMode || pagedLayoutReady) return
+    /**
+     * Retries a failed layout. Once a layout is on screen only requests awaiting a result (restores,
+     * seeks) keep retrying; a plain pass never cancels such a request, and a newer one supersedes it.
+     */
+    fun schedulePagedLayoutRetry(
+        isPagedMode: Boolean,
+        runtimeGeneration: Long,
+        reason: String,
+        retry: () -> Unit = { applyPagedLayout(isPagedMode, runtimeGeneration) },
+        onLayoutApplied: ((applied: Boolean) -> Unit)? = null
+    ) {
+        if (!isPagedMode) return
+        if (onLayoutApplied == null && (pagedLayoutReady || pendingRetryResult != null)) return
         if (pagedLayoutRetryCount >= 10) {
             logError("Paged layout retries exhausted ($reason)")
             revealPagedContentFallback("retries exhausted: $reason")
+            onLayoutApplied?.invoke(false)
             return
         }
         pagedLayoutRetryCount++
@@ -115,10 +138,14 @@ internal class ReaderPagedLayoutController(
             3 -> 240L
             else -> 320L
         }
+        pendingRetryResult?.takeIf { it !== onLayoutApplied }?.invoke(false)
         cancelPagedLayoutRetry()
+        pendingRetryResult = onLayoutApplied
         val runnable = Runnable {
-            if (!isPagedMode || pagedLayoutReady) return@Runnable
-            applyPagedLayout(isPagedMode, runtimeGeneration)
+            pagedLayoutRetryRunnable = null
+            pendingRetryResult = null
+            if (onLayoutApplied == null && pagedLayoutReady) return@Runnable
+            retry()
         }
         pagedLayoutRetryRunnable = runnable
         postDelayed(runnable, delayMs)
@@ -127,6 +154,7 @@ internal class ReaderPagedLayoutController(
     fun cancelPagedLayoutRetry() {
         pagedLayoutRetryRunnable?.let(removeCallbacks)
         pagedLayoutRetryRunnable = null
+        pendingRetryResult = null
     }
 
     fun revealPagedContentFallback(reason: String) {
@@ -160,7 +188,9 @@ internal class ReaderPagedLayoutController(
             onBoundary()
             return
         }
+        val epoch = documentEpoch
         evaluateJavascript(readerPagedTurnJs(delta, runtimeGeneration.takeIf { it > 0L })) { rawValue ->
+            if (epoch != documentEpoch) return@evaluateJavascript
             val metrics = decodeReaderPagedLayoutMetrics(rawValue)
             if (metrics == null || !metrics.handled) {
                 pendingPagedLayoutTarget = if (delta < 0) Int.MAX_VALUE else 0
@@ -171,22 +201,20 @@ internal class ReaderPagedLayoutController(
         }
     }
 
+    /** Rebuilds the layout and lands on the page that shows [offset], in one JS pass. */
     fun scrollToCharacterOffset(
         isPagedMode: Boolean,
         offset: Int,
+        runtimeGeneration: Long,
         onRestored: ((Boolean) -> Unit)? = null
     ) {
         if (!isPagedMode || offset < 0) {
             onRestored?.invoke(false)
             return
         }
-        evaluateJavascript(readerScrollToCharacterOffsetJs(offset)) { rawValue ->
-            val pageIndex = rawValue?.trim('"')?.toIntOrNull()
-            if (pageIndex == null || pageIndex < 0) {
-                onRestored?.invoke(false)
-                return@evaluateJavascript
-            }
-            onRestored?.invoke(true)
+        // Always awaits a result, so a transient layout failure retries instead of losing the target.
+        applyPagedLayout(isPagedMode, runtimeGeneration, targetPage = null, targetCharacterOffset = offset) { applied ->
+            onRestored?.invoke(applied)
         }
     }
 }

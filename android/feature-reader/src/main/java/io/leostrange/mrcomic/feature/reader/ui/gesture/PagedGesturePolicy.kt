@@ -22,11 +22,12 @@ object PagedGesturePolicy {
 
     // ── Move detection ─────────────────────────────────────────────────────
 
-    /** Minimum displacement (px) to consider the touch as "moved". */
+    /** Fallback displacement (px) when the platform touch slop is unknown. */
     private const val MOVE_THRESHOLD = 12f
 
-    fun hasMoved(dx: Float, dy: Float): Boolean =
-        abs(dx) > MOVE_THRESHOLD || abs(dy) > MOVE_THRESHOLD
+    /** [slopPx] should be `ViewConfiguration.scaledTouchSlop`: jitter below it is still a tap. */
+    fun hasMoved(dx: Float, dy: Float, slopPx: Float = MOVE_THRESHOLD): Boolean =
+        abs(dx) > slopPx || abs(dy) > slopPx
 
     // ── Selection suppression ──────────────────────────────────────────────
 
@@ -51,10 +52,11 @@ object PagedGesturePolicy {
     fun shouldInterceptMove(
         dx: Float,
         dy: Float,
-        hasActiveSelection: Boolean
+        hasActiveSelection: Boolean,
+        verticalSlopPx: Float = 8f
     ): Boolean {
         if (hasActiveSelection) return false
-        if (abs(dy) > 8f && abs(dy) > abs(dx) * 1.15f) return true
+        if (abs(dy) > verticalSlopPx && abs(dy) > abs(dx) * 1.15f) return true
         if (abs(dx) > 48f && abs(dx) > abs(dy) * 1.35f) return true
         return false
     }
@@ -71,8 +73,10 @@ object PagedGesturePolicy {
      * 4. Bare vertical swipe → RESOLVED
      * 5. Edge tap (quick, small movement) → TAP_LEFT / TAP_RIGHT
      * 6. Fast horizontal swipe → TAP_LEFT / TAP_RIGHT
-     * 7. Near-edge quick tap → TAP_LEFT / TAP_RIGHT
-     * 8. Otherwise → PASS_THROUGH (center tap → chrome toggle)
+     * 7. Otherwise → PASS_THROUGH (center tap → chrome toggle)
+     *
+     * Taps within the touch slop never get here: the DOM resolves footnotes and links first and
+     * only then routes the tap to page navigation.
      */
     fun classifyPagedGesture(
         dx: Float,
@@ -109,14 +113,6 @@ object PagedGesturePolicy {
         // Fast horizontal swipe → page turn
         if (elapsed < 900L && abs(dx) > 64f && abs(dx) > abs(dy) * 1.35f) {
             return if (dx < 0f) PagedGestureAction.TAP_LEFT
-            else PagedGestureAction.TAP_RIGHT
-        }
-
-        // Near-edge quick tap (center tap zone but close to edge)
-        if (elapsed <= 320L && abs(dx) < 18f && abs(dy) < 18f &&
-            (xPercent < 0.16f || xPercent > 0.84f)
-        ) {
-            return if (xPercent < 0.5f) PagedGestureAction.TAP_LEFT
             else PagedGestureAction.TAP_RIGHT
         }
 

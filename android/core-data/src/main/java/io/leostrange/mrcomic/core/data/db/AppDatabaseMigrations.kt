@@ -55,6 +55,20 @@ object AppDatabaseMigrations {
         "format" to "TEXT NOT NULL DEFAULT 'UNKNOWN'"
     )
 
+    /** Quote location inside its section, so a quote reopens at its exact place. */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            var hasColumn = false
+            db.query("PRAGMA table_info(`saved_quotes`)").use { cursor ->
+                val nameIndex = cursor.getColumnIndex("name")
+                while (nameIndex >= 0 && cursor.moveToNext()) {
+                    if (cursor.getString(nameIndex) == "characterOffset") hasColumn = true
+                }
+            }
+            if (!hasColumn) db.execSQL("ALTER TABLE `saved_quotes` ADD COLUMN `characterOffset` INTEGER")
+        }
+    }
+
     val MIGRATION_9_10 = object : Migration(9, 10) {
         override fun migrate(db: SupportSQLiteDatabase) {
             val existing = HashSet<String>()

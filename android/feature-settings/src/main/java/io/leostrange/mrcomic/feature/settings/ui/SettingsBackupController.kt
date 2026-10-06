@@ -406,6 +406,7 @@ internal class SettingsBackupController(
                 put("createdAt", quote.createdAt)
                 put("updatedAt", quote.updatedAt)
                 put("contentHash", quote.contentHash)
+                quote.characterOffset?.let { put("characterOffset", it) }
             })
         }
         root.put("quotes", quoteEntries)
@@ -599,7 +600,8 @@ internal class SettingsBackupController(
             targetLanguage = entry.optString("targetLanguage").ifBlank { null },
             createdAt = createdAt,
             updatedAt = entry.optLong("updatedAt", createdAt),
-            contentHash = contentHash
+            contentHash = contentHash,
+            characterOffset = entry.optInt("characterOffset", -1).takeIf { it >= 0 }
         )
     }
 

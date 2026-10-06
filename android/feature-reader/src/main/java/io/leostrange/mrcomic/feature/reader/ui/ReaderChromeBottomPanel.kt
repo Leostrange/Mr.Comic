@@ -34,7 +34,8 @@ fun ReaderExpandedBottomPanel(
     onToggleBookmark: () -> Unit,
     onApplyPreset: (ReadingPreset) -> Unit,
     onReadingModeChange: (ReadingMode) -> Unit,
-    onPageChange: (Int) -> Unit
+    onPageChange: (Int) -> Unit,
+    onSeekProgress: (Float) -> Unit
 ) {
     val strings = LocalStrings.current
     val readerText = readerUiText(strings.languageCode)
@@ -99,17 +100,13 @@ fun ReaderExpandedBottomPanel(
             totalPages = uiState.totalPages,
             readingMode = uiState.readingMode,
             isLandscape = isLandscape,
-            isTextBook = uiState.currentHtmlContent != null,
-            sectionPageCount = uiState.sectionPageCount,
-            sectionCurrentPage = uiState.sectionCurrentPage,
-            chapterTitle = uiState.tableOfContents
-                .sortedBy { it.pageIndex }
-                .lastOrNull { it.pageIndex <= uiState.currentPage }
-                ?.title,
-            epubAccumulatedTotalPages = uiState.epubAccumulatedTotalPages,
-            epubAccumulatedCurrentPage = uiState.epubAccumulatedCurrentPage,
+            progressDisplay = uiState.progressDisplay(),
+            bookProgress = uiState.displayBookProgress,
+            isTextBook = uiState.readerRendersHtmlContent,
+            chapterTitle = resolveReaderCurrentChapterTitle(uiState.tableOfContents, uiState.currentPage),
             onReadingModeChange = onReadingModeChange,
-            onPageChange = onPageChange
+            onPageChange = onPageChange,
+            onSeekProgress = onSeekProgress
         )
     }
 }

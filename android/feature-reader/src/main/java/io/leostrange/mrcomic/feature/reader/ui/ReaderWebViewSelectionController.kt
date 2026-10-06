@@ -199,7 +199,13 @@ internal class ReaderWebViewSelectionController(
         val text = json.optString("text").trim()
         val start = json.optInt("startOffset", 0).coerceAtLeast(0)
         val end = json.optInt("endOffset", start + text.length).coerceAtLeast(start)
-        return ReaderTextSelection(text, start, end)
+        return ReaderTextSelection(
+            text = text,
+            startOffset = start,
+            endOffset = end,
+            anchorOffset = json.optInt("anchorOffset", -1),
+            sectionIndex = json.optInt("sectionIndex", -1)
+        )
     }
 
     /**

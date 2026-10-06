@@ -4,6 +4,7 @@ import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingCalendarDay
 import io.leostrange.mrcomic.core.interfaces.analytics.DailyReadingGoalState
 import io.leostrange.mrcomic.core.model.Comic
 import io.leostrange.mrcomic.core.model.displayReadingProgress
+import io.leostrange.mrcomic.core.model.isTextReadingFormat
 import java.text.SimpleDateFormat
 import java.util.GregorianCalendar
 import java.util.Locale
@@ -366,6 +367,8 @@ internal fun mrComicProgressText(language: String): MrComicProgressText = when (
 
 internal fun mrComicRecentProgressText(language: String, comic: Comic): String {
     val percent = (comic.displayReadingProgress() * 100).toInt()
+    // Text books store a section index in currentPage; only the percent is meaningful.
+    if (comic.format.isTextReadingFormat()) return "$percent%"
     return when (language) {
         "en" -> "Page ${comic.currentPage + 1} · $percent%"
         "ja" -> "${comic.currentPage + 1} ページ ・ $percent%"

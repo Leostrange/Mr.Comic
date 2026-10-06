@@ -278,7 +278,6 @@ internal class SettingsPresetsController(
         preferences.set(PreferencesKeys.READER_PRESET, snapshot.readerPreset)
         preferences.set(PreferencesKeys.TEXT_FONT_SIZE, snapshot.textFontSize)
         preferences.set(PreferencesKeys.TEXT_COLOR_SCHEME, snapshot.textColorScheme)
-        preferences.set(PreferencesKeys.GRAPHIC_COLOR_SCHEME, snapshot.textColorScheme)
         persistNullableColor(PreferencesKeys.TEXT_CUSTOM_TEXT_COLOR, snapshot.textCustomTextColor)
         persistNullableColor(PreferencesKeys.TEXT_CUSTOM_BACKGROUND_COLOR, snapshot.textCustomBackgroundColor)
         persistNullableColor(PreferencesKeys.TEXT_CUSTOM_ACCENT_COLOR, snapshot.textCustomAccentColor)

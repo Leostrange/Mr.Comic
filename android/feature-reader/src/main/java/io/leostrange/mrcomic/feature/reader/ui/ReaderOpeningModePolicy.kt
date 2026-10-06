@@ -29,6 +29,17 @@ internal object ReaderOpeningModePolicy {
         else -> currentMode
     }
 
+    /**
+     * The mode a book owns: its saved mode, else the Settings default. DUAL_PAGE is a transient
+     * landscape layout, so a legacy DUAL_PAGE record maps back to a paged mode.
+     */
+    fun bookBaseMode(savedMode: ReadingMode?, defaultMode: ReadingMode): ReadingMode {
+        val mode = savedMode ?: defaultMode
+        if (mode != ReadingMode.DUAL_PAGE) return mode
+        return defaultMode.takeIf { it == ReadingMode.PAGE_LTR || it == ReadingMode.PAGE_RTL }
+            ?: ReadingMode.PAGE_LTR
+    }
+
     fun supportsAutomaticLandscapeSpread(mode: ReadingMode): Boolean =
         mode == ReadingMode.PAGE_LTR || mode == ReadingMode.PAGE_RTL
 }
