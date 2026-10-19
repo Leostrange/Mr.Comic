@@ -66,7 +66,9 @@ fun MrComicPill(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(MrComicRadiusTokens.pill),
+        // UI-01: badge shape follows the user's corner-radius setting via
+        // MaterialTheme.shapes instead of a hardcoded pill radius.
+        shape = MaterialTheme.shapes.large,
         color = containerColor,
         contentColor = contentColor,
         border = border
@@ -82,11 +84,14 @@ fun MrComicPill(
 
 @Composable
 fun MrComicFormatBadge(label: String, isGraphic: Boolean, modifier: Modifier = Modifier) {
-    val container = MaterialTheme.colorScheme.surface.copy(alpha = if (isGraphic) 0.9f else 0.92f)
+    // UI-01: opaque container guarantees the designed onSurface contrast over
+    // any cover artwork (a translucent surface lets the art bleed through);
+    // shape follows the user's corner-radius setting.
+    val container = MaterialTheme.colorScheme.surface
     val borderAlpha = if (isGraphic) 0.3f else 0.26f
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(MrComicRadiusTokens.sm),
+        shape = MaterialTheme.shapes.small,
         color = container,
         border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = borderAlpha))
     ) {
@@ -112,12 +117,15 @@ fun MrComicStatusBadge(
     contentColor: Color? = null
 ) {
     val colorScheme = MaterialTheme.colorScheme
+    // UI-01: tone-on-tone pairs (e.g. primary@14% + primary text) cannot
+    // guarantee contrast. Use the Material3 container/onContainer roles,
+    // which are designed as accessible pairs.
     val (toneContainerColor, toneContentColor) = when (tone) {
-        MrComicStatusTone.Neutral -> colorScheme.surface.copy(alpha = 0.9f) to colorScheme.onSurface
-        MrComicStatusTone.Info -> colorScheme.primary.copy(alpha = 0.14f) to colorScheme.primary
-        MrComicStatusTone.Success -> colorScheme.tertiary.copy(alpha = 0.16f) to colorScheme.tertiary
-        MrComicStatusTone.Warning -> colorScheme.secondary.copy(alpha = 0.18f) to colorScheme.secondary
-        MrComicStatusTone.Error -> colorScheme.error.copy(alpha = 0.14f) to colorScheme.error
+        MrComicStatusTone.Neutral -> colorScheme.surfaceContainerHighest to colorScheme.onSurface
+        MrComicStatusTone.Info -> colorScheme.primaryContainer to colorScheme.onPrimaryContainer
+        MrComicStatusTone.Success -> colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer
+        MrComicStatusTone.Warning -> colorScheme.secondaryContainer to colorScheme.onSecondaryContainer
+        MrComicStatusTone.Error -> colorScheme.errorContainer to colorScheme.onErrorContainer
     }
     val resolvedContainerColor = containerColor ?: toneContainerColor
     val resolvedContentColor = contentColor ?: toneContentColor

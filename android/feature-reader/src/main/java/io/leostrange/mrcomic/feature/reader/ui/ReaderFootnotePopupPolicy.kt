@@ -8,7 +8,7 @@ internal object ReaderFootnotePopupPolicy {
     private val htmlTag = Regex("<[^>]+>")
     private val collapsedLineBreaks = Regex("""\s*\n\s*""")
     private val collapsedSpaces = Regex(" {2,}")
-    private val leadingNumber = Regex("""^\d+[\s\u00A0]+""")
+    private val leadingNumber = Regex("""^\d+(?:[\s\u00A0]+|$)""")
 
     fun toPopupText(source: String): String? = source
         .replace("&nbsp;", "\u00A0", ignoreCase = true)

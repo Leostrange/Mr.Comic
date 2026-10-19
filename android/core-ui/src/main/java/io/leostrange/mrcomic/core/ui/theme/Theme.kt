@@ -1,5 +1,8 @@
 package io.leostrange.mrcomic.core.ui.theme
 
+import android.app.Activity
+import androidx.compose.runtime.SideEffect
+
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
@@ -16,6 +19,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicColorTokens
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicRadiusTokens
 import io.leostrange.mrcomic.core.ui.eink.LocalEInkMode
@@ -44,7 +48,7 @@ data class ThemeConfig(
  * At luminance ≈ 0.18 both black and white give ~4.5:1 contrast ratio (WCAG AA).
  * Above 0.18 → dark text is preferred; below → light text.
  */
-private fun Color.contrastingOnColor(): Color =
+internal fun Color.contrastingOnColor(): Color =
     if (luminance() > 0.18f) Color(0xFF000000) else Color(0xFFFFFFFF)
 
 private fun deriveContainerColor(base: Color, background: Color, isDark: Boolean): Color =
@@ -289,6 +293,20 @@ fun MrComicTheme(
         large       = RoundedCornerShape(r * 1.33f),
         extraLarge  = RoundedCornerShape(r * 2f)
     )
+
+    // UI-04: the app draws edge-to-edge, so system-bar icon appearance must
+    // follow the resolved theme instead of the hardcoded
+    // android:windowLightStatusBar=false (which left white icons invisible
+    // on light themes). isAppearanceLightStatusBars=true means "light bar",
+    // i.e. dark icons.
+    val useDarkSystemIcons = colorScheme.background.luminance() > 0.5f
+    SideEffect {
+        val window = (context as? Activity)?.window ?: return@SideEffect
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = useDarkSystemIcons
+            isAppearanceLightNavigationBars = useDarkSystemIcons
+        }
+    }
 
     MaterialTheme(
         colorScheme = colorScheme,
