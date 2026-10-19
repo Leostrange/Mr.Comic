@@ -32,6 +32,7 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicStatusBadge
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicStatusTone
 import io.leostrange.mrcomic.core.ui.designsystem.mrComicCompletedColor
+import io.leostrange.mrcomic.core.ui.theme.contrastingOnColor
 import io.leostrange.mrcomic.core.ui.library.LibraryShelfBar
 import io.leostrange.mrcomic.core.ui.library.libraryCardElevation
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
@@ -310,20 +311,22 @@ private fun BoxScope.GridCardBadges(
         ) {
             if (showCompletedChip) {
                 val completedColor = mrComicCompletedColor()
+                // UI-01: solid container + contrasting text instead of the
+                // tone-on-tone pair, which could not guarantee contrast.
                 MrComicStatusBadge(
                     text = "100%",
                     tone = MrComicStatusTone.Success,
                     leadingIcon = Icons.Filled.CheckCircle,
                     contentDescription = strings.libraryStatusCompleted,
-                    containerColor = completedColor.copy(alpha = 0.18f),
-                    contentColor = completedColor
+                    containerColor = completedColor,
+                    contentColor = completedColor.contrastingOnColor()
                 )
             } else if (showProgressChip) {
-                // BUG-B1: white surface background instead of Info tone gray.
+                // UI-01: neutral tone (opaque surfaceContainerHighest) instead
+                // of a translucent surface that lets the cover bleed through.
                 MrComicStatusBadge(
                     text = "${(comic.displayReadingProgress() * 100).toInt()}%",
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    tone = MrComicStatusTone.Neutral
                 )
             }
         }

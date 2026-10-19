@@ -8,10 +8,14 @@ import android.view.WindowInsetsController
 import android.view.WindowManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 /**
- * Window-level side effects for the reader: brightness, keep-screen-on,
- * and immersive mode management.
+ * Window and lifecycle side effects for the reader: brightness, keep-screen-on,
+ * immersive mode management and the position flush on stop.
  *
  * Extracted from [ReaderScreen] to reduce its composable size.
  */
@@ -112,6 +116,45 @@ internal fun ReaderImmersiveModeRehideEffect(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 window?.insetsController?.hide(android.view.WindowInsets.Type.systemBars())
             }
+        }
+    }
+}
+
+/** Persists the reading position when the app leaves the foreground (process may be killed). */
+@Composable
+internal fun ReaderStopFlushEffect(onStop: () -> Unit) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnStop = rememberUpdatedState(onStop)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) currentOnStop.value()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+}
+
+/**
+ * UI-04: while the reader is on screen, system-bar icons follow the *reading*
+ * color scheme (e.g. a dark NIGHT page needs light icons even when the app
+ * theme is light). On dispose the app-theme appearance is restored.
+ */
+@Composable
+internal fun ReaderSystemBarAppearanceEffect(
+    readerBackground: androidx.compose.ui.graphics.Color,
+    appBackground: androidx.compose.ui.graphics.Color,
+    context: Context
+) {
+    androidx.compose.runtime.DisposableEffect(readerBackground, appBackground) {
+        val window = (context as? Activity)?.window
+        val controller = window?.let { androidx.core.view.WindowCompat.getInsetsController(it, it.decorView) }
+        val readerDarkIcons = readerBackground.luminance() > 0.5f
+        controller?.isAppearanceLightStatusBars = readerDarkIcons
+        controller?.isAppearanceLightNavigationBars = readerDarkIcons
+        onDispose {
+            val appDarkIcons = appBackground.luminance() > 0.5f
+            controller?.isAppearanceLightStatusBars = appDarkIcons
+            controller?.isAppearanceLightNavigationBars = appDarkIcons
         }
     }
 }

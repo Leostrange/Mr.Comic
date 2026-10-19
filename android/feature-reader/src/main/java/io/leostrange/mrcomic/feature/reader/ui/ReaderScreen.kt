@@ -199,23 +199,25 @@ fun ReaderScreen(
             currentPage = uiState.currentPage
         )
     }
-    // BUG-READER-01: Use unified page count from ReaderUiState.
-    val effectiveTotalPages = uiState.effectiveTotalPages
-    val effectiveCurrentPage = uiState.effectiveCurrentPage
+    // BUG-READER-01/04: one display model (chapter pages + canonical book percent) for all chrome.
+    val progressDisplay = uiState.progressDisplay()
     fun resolveOverlayLine(left: String, center: String, right: String) =
         resolveReaderInfoOverlayLine(
             startSlot = left, centerSlot = center, endSlot = right,
             comicTitle = uiState.comic?.title, chapterTitle = currentChapterTitle,
-            clockText = clockText, currentPage = effectiveCurrentPage,
-            totalPages = effectiveTotalPages, readingMode = uiState.readingMode
+            clockText = clockText, currentPage = uiState.currentPage,
+            totalPages = uiState.totalPages, readingMode = uiState.readingMode,
+            progressDisplay = progressDisplay, isTextBook = uiState.readerRendersHtmlContent
         )
     val headerOverlayLine = remember(
         uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot,
-        uiState.comic?.title, currentChapterTitle, clockText, effectiveCurrentPage, effectiveTotalPages, uiState.readingMode
+        uiState.comic?.title, currentChapterTitle, clockText, uiState.currentPage, uiState.totalPages,
+        uiState.readingMode, progressDisplay
     ) { resolveOverlayLine(uiState.headerLeftSlot, uiState.headerCenterSlot, uiState.headerRightSlot) }
     val footerOverlayLine = remember(
         uiState.footerLeftSlot, uiState.footerCenterSlot, uiState.footerRightSlot,
-        uiState.comic?.title, currentChapterTitle, clockText, effectiveCurrentPage, effectiveTotalPages, uiState.readingMode
+        uiState.comic?.title, currentChapterTitle, clockText, uiState.currentPage, uiState.totalPages,
+        uiState.readingMode, progressDisplay
     ) { resolveOverlayLine(uiState.footerLeftSlot, uiState.footerCenterSlot, uiState.footerRightSlot) }
     val showHeaderFooterOverlay = !uiState.chromeAutoHideEnabled &&
         uiState.chromeState == ReaderChromeState.HIDDEN &&
@@ -256,9 +258,14 @@ fun ReaderScreen(
             .roundToInt()
             .coerceAtLeast(8)
     }
-    val freeScrollRestoreTarget = remember(uiState.freeScrollCharacterOffset, uiState.freeScrollProgression) {
+    val freeScrollRestoreTarget = remember(
+        uiState.freeScrollCharacterOffset,
+        uiState.freeScrollProgression,
+        uiState.currentPage
+    ) {
         if (uiState.freeScrollCharacterOffset >= 0 || uiState.freeScrollProgression in 0.0..1.0) {
             ReaderWebViewRestoreTarget(
+                sectionIndex = uiState.currentPage.takeIf { it >= 0 && uiState.freeScrollCharacterOffset >= 0 },
                 characterOffset = uiState.freeScrollCharacterOffset.takeIf { it >= 0 },
                 progression = uiState.freeScrollProgression.takeIf { it in 0.0..1.0 }
             )
@@ -443,6 +450,12 @@ fun ReaderScreen(
     ReaderBrightnessEffect(brightness = uiState.brightness, context = context)
     ReaderKeepScreenOnEffect(keepScreenOn = uiState.keepScreenOn, context = context)
     ReaderImmersiveModeEffect(immersiveMode = uiState.immersiveMode, context = context)
+    // UI-04: system-bar icons follow the reading scheme while the reader is open.
+    ReaderSystemBarAppearanceEffect(
+        readerBackground = readerColorScheme.background,
+        appBackground = inheritedColorScheme.background,
+        context = context
+    )
 
     // Re-hide system bars after ModalBottomSheet dismisses in immersive mode.
     ReaderImmersiveModeRehideEffect(
@@ -455,6 +468,7 @@ fun ReaderScreen(
     // Auto-scroll: pauses when the app is backgrounded and drives visual page
     // turns for both raster and text PAGE containers. WEBTOON scrolls in pixels.
     ReaderAutoScrollLifecyclePauseEffect(controller = viewModel.autoScrollRuntimeController)
+    ReaderStopFlushEffect(onStop = viewModel::onReaderStopped)
     ReaderAutoPageCountdownEffect(
         enabled = uiState.autoScrollEnabled &&
             readerUsesAutoPageCountdown(uiState.readerContainerKind),
@@ -640,6 +654,7 @@ fun ReaderScreen(
                     onApplyPreset = { viewModel.settingsController.applyReadingPreset(it) },
                     onReadingModeChange = { viewModel.readingModeController.setReadingMode(it) },
                     onPageChange = { viewModel.navigationController.navigateTo(it) },
+                    onSeekProgress = viewModel::seekToProgress,
                     onDismissFootnote = { viewModel.footnoteController.dismissFootnote() },
                     onExpandFootnote = { viewModel.footnoteController.expandFootnote() },
                     onCollapseFootnote = { viewModel.footnoteController.collapseFootnote() },

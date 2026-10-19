@@ -1,5 +1,6 @@
 package io.leostrange.mrcomic.engine.formats.rar
 
+import io.leostrange.mrcomic.engine.formats.SevenZipInitializer
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -128,7 +129,7 @@ class RarFormatReader(
 
                 randomAccessFile = RandomAccessFile(archiveFile, "r")
                 inputStream = RandomAccessFileInStream(randomAccessFile)
-                runCatching { SevenZip.initSevenZipFromPlatformJAR(context.cacheDir) }
+                SevenZipInitializer.ensureInitialized(context)
                 SevenZip.openInArchive(null, inputStream).also { archive = it }
             } catch (error: Throwable) {
                 Log.e(TAG, "Failed to open RAR: $path", error)

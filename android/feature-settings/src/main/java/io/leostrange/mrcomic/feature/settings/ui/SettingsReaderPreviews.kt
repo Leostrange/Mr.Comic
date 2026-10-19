@@ -31,6 +31,8 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicPill
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicProgressLine
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.style
+import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
+import io.leostrange.mrcomic.core.ui.theme.resolveReaderContentColors
 import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 
 /**
@@ -56,11 +58,14 @@ internal fun ReaderTextAppearancePreviewCard(
         "center" -> TextAlign.Center
         else -> if (uiState.textAlignment == "justify") TextAlign.Justify else TextAlign.Start
     }
-    val schemeColors = when (uiState.textColorScheme.uppercase()) {
-        "SEPIA" -> Color(0xFFF4ECD8) to Color(0xFF4B3822)
-        "NIGHT" -> Color(0xFF101216) to Color(0xFFE8E1D4)
-        else -> Color(0xFFF6F1E7) to Color(0xFF2B2118)
-    }
+    // UI-05: preview colors come from the same resolver as the reader,
+    // so the preview always matches the real reading colors (including
+    // the active preset, which the old hardcoded map ignored).
+    val schemeColors = resolveReaderContentColors(
+        isTextReader = true,
+        readerPreset = ReadingPreset.fromStored(uiState.readerPreset),
+        textColorScheme = uiState.textColorScheme,
+    )
     val previewBackground = uiState.textCustomBackgroundColor
         ?.let(::argbLongToThemeColor)
         ?: schemeColors.first

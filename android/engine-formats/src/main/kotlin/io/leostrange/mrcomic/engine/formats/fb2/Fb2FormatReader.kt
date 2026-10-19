@@ -48,10 +48,6 @@ class Fb2FormatReader(
         private const val CHARS_PER_PAGE = 4000
         /** Regex for stripping HTML tags when counting content characters. */
         private val HTML_TAG_RE = Regex("<[^>]+>")
-        private val GENERATED_BLOCK_RE = Regex(
-            """<(?:h2|h3|p|blockquote)\b[^>]*>.*?</(?:h2|h3|p|blockquote)>|<br\s*/?(?:>|</br>)?""",
-            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
-        )
         private const val FB2_READER_CSS = """
 a.fn,a[href*="FbAutId_"],a[href^="fbanchor://"]{font-size:0.75em;vertical-align:super;line-height:1;
      font-weight:bold;text-decoration:none;cursor:pointer}
@@ -298,53 +294,30 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
         var notesSectionDepth = 0
         var inLink = false
 
-        fun extractPageBlocks(content: String): List<String> {
-            val blocks = mutableListOf<String>()
-            var cursor = 0
-            for (match in GENERATED_BLOCK_RE.findAll(content)) {
-                if (match.range.first > cursor) {
-                    content.substring(cursor, match.range.first)
-                        .trim()
-                        .takeIf { it.isNotEmpty() }
-                        ?.let(blocks::add)
+        /** Stores the accumulated note text under the current id, if any. */
+        fun flushCurrentNote() {
+            if (currentNoteId.isNotEmpty()) {
+                val text = notesBuf.toString().trim()
+                if (text.isNotEmpty()) {
+                    // Store both id and fbanchor://-prefixed key for footnote lookup (P1 #9)
+                    footnoteMap[currentNoteId] = text
+                    footnoteMap["fbanchor://$currentNoteId"] = text
                 }
-                match.value.trim().takeIf { it.isNotEmpty() }?.let(blocks::add)
-                cursor = match.range.last + 1
+                currentNoteId = ""
+                notesBuf.clear()
             }
-            if (cursor < content.length) {
-                content.substring(cursor)
-                    .trim()
-                    .takeIf { it.isNotEmpty() }
-                    ?.let(blocks::add)
-            }
-            return blocks
         }
 
         fun flushPage() {
             if (sectionBuf.isEmpty()) return
             val content = sectionBuf.toString()
             sectionBuf.clear()
-
-            val parts = extractPageBlocks(content)
-
-            if (parts.isEmpty()) {
-                addRawSection(content)
-                return
-            }
-
-            var currentChunk = StringBuilder()
-            var currentChars = 0
-            for (part in parts) {
-                val partChars = HTML_TAG_RE.replace(part, "").length
-                if (currentChars + partChars > CHARS_PER_PAGE && currentChars > 0) {
-                    addRawSection(currentChunk.toString())
-                    currentChunk = StringBuilder()
-                    currentChars = 0
-                }
-                currentChunk.append(part)
-                currentChars += partChars
-            }
-            if (currentChunk.isNotEmpty()) addRawSection(currentChunk.toString())
+            // Serve the whole top-level section as one HTML page; the JS
+            // paginator slices it into visual columns greedily. Pre-chunking
+            // into fixed 4000-char pieces produced half-empty trailing
+            // columns in the middle of a chapter (then a full column from
+            // the next chunk), which readers perceive as broken pagination.
+            addRawSection(content)
         }
 
         val reader = Fb2Preprocessor.createStreamingReader(bufferedStream, charset)
@@ -467,11 +440,31 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 "section" -> {
                                     notesSectionDepth++
                                     if (notesSectionDepth == 1) {
-                                        currentNoteId = parser.getAttributeValue(null, "id") ?: ""
-                                        notesBuf.clear()
+                                        val newId = parser.getAttributeValue(null, "id") ?: ""
+                                        if (newId.isNotEmpty()) {
+                                            // A new id-section starts a new note. If the
+                                            // previous note never closed properly, flush it.
+                                            flushCurrentNote()
+                                            currentNoteId = newId
+                                            notesBuf.clear()
+                                        }
+                                        // Sections without id are wrappers: keep
+                                        // accumulating into the current note.
                                     }
                                 }
-                                "p", "v"   -> notesBuf.append("<p>")
+                                "p", "v"   -> {
+                                    // A top-level element carrying an id outside any
+                                    // section also opens a note (non-standard FB2).
+                                    if (notesSectionDepth == 0) {
+                                        val elemId = parser.getAttributeValue(null, "id") ?: ""
+                                        if (elemId.isNotEmpty() && elemId != currentNoteId) {
+                                            flushCurrentNote()
+                                            currentNoteId = elemId
+                                            notesBuf.clear()
+                                        }
+                                    }
+                                    notesBuf.append("<p>")
+                                }
                                 "title"    -> notesBuf.append("<strong>")
                                 "emphasis" -> notesBuf.append("<em>")
                                 "strong"   -> notesBuf.append("<strong>")
@@ -499,6 +492,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                                 isMainBody = true  // ignore any subsequent <body> as main body
                             }
                             name == "body" && depth == notesBodyDepth -> {
+                                flushCurrentNote()
                                 notesBodyDepth = -1
                             }
                             bodyDepth > 0 && depth > bodyDepth -> when (name) {
@@ -535,15 +529,10 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
                             notesBodyDepth > 0 && depth > notesBodyDepth -> when (name) {
                                 "section" -> {
                                     notesSectionDepth--
-                                    if (notesSectionDepth == 0 && currentNoteId.isNotEmpty()) {
-                                        // Store both id and fbanchor://-prefixed key for footnote lookup (P1 #9)
-                                        footnoteMap[currentNoteId] = notesBuf.toString().trim()
-                                        if (currentNoteId.isNotEmpty()) {
-                                            footnoteMap["fbanchor://$currentNoteId"] = notesBuf.toString().trim()
-                                        }
-                                        currentNoteId = ""
-                                        notesBuf.clear()
-                                    }
+                                    // Do NOT flush here: the note text may continue
+                                    // after the section (non-standard FB2). The note
+                                    // is flushed when the next id-section starts or
+                                    // when the notes body closes.
                                 }
                                 "p", "v"   -> notesBuf.append("</p>")
                                 "title"    -> notesBuf.append("</strong> ")
@@ -670,10 +659,12 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     }
 
     /**
-     * Groups consecutive short raw sections (e.g. individual footnotes) into reader pages
-     * until the combined text reaches [CHARS_PER_PAGE], and maps every raw section index
-     * to its merged reader page. Sections flagged as explicit section starts always begin
-     * a new merged page so front-matter (cover/TOC) stays separate from chapter text.
+     * Maps every raw (top-level) section to its reader page. Each top-level
+     * section becomes exactly one HTML page; the JS paginator slices it into
+     * visual columns. Sections flagged as explicit section starts always begin
+     * a new page so front-matter (cover/TOC) stays separate from chapter text.
+     * Fixed-size pre-chunking was removed: it produced half-empty trailing
+     * columns mid-chapter.
      */
     private fun mergeRawSections(
         rawSections: List<String>,
@@ -681,28 +672,19 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     ): Pair<List<String>, Map<Int, Int>> {
         val mergedSections = mutableListOf<String>()
         val rawToMergedPage = mutableMapOf<Int, Int>()
-        var currentMergedIdx = 0
-        val pendingMerge = StringBuilder()
-        var pendingChars = 0
+        var currentMergedIdx = -1
         for ((rawIdx, section) in rawSections.withIndex()) {
-            val sectionChars = HTML_TAG_RE.replace(section, "").length
-            if (pendingChars > 0 && rawSectionStarts.getOrNull(rawIdx) == true) {
-                mergedSections.add(pendingMerge.toString())
-                pendingMerge.clear()
-                pendingChars = 0
+            val startsNewPage = rawIdx == 0 || rawSectionStarts.getOrNull(rawIdx) == true
+            if (startsNewPage) {
+                mergedSections.add(section)
                 currentMergedIdx++
-            }
-            if (pendingChars + sectionChars > CHARS_PER_PAGE && pendingChars > 0) {
-                mergedSections.add(pendingMerge.toString())
-                pendingMerge.clear()
-                pendingChars = 0
-                currentMergedIdx++
+            } else {
+                // Continuation chunk of the previous section (no pre-chunking
+                // is produced anymore, but keep the merge for safety).
+                mergedSections[currentMergedIdx] = mergedSections[currentMergedIdx] + section
             }
             rawToMergedPage[rawIdx] = currentMergedIdx
-            pendingMerge.append(section)
-            pendingChars += sectionChars
         }
-        if (pendingMerge.isNotEmpty()) mergedSections.add(pendingMerge.toString())
         return mergedSections to rawToMergedPage
     }
 
@@ -748,7 +730,7 @@ p.note-item{margin:0.6em 0;padding-left:2.8em;text-indent:-2.8em;text-align:left
     private fun String.escapeAttr() = replace("\"", "&quot;")
 
     private fun isLikelyFb2FootnoteTarget(href: String): Boolean =
-        Regex("(?i)(?:^|[-_])(fn|footnote|note|endnote|ref)(?:[-_]|$)|^\\d+$").containsMatchIn(href)
+        Regex("(?i)(?:^|[-_])(fn|footnote|note|endnote|ref)(?:[-_\\d]|$)|^n[-_]?\\d+$|^\\d+$").containsMatchIn(href)
 
     private fun isTocSectionId(id: String?): Boolean =
         id?.trim()?.lowercase() in setOf("toc", "contents", "table-of-contents", "table_of_contents")

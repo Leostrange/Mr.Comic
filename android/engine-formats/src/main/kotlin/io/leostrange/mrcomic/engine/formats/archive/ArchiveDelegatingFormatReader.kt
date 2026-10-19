@@ -1,5 +1,6 @@
 package io.leostrange.mrcomic.engine.formats.archive
 
+import io.leostrange.mrcomic.engine.formats.SevenZipInitializer
 import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
@@ -136,12 +137,18 @@ class ArchiveDelegatingFormatReader(
         else -> errorTextReader("Unsupported archived text format: $format")
     }
 
-    private fun createRasterDelegate(): FormatReader = when (archiveFormat) {
-        ComicFormat.CBZ, ComicFormat.ZIP -> ZipFormatReader(context, path, deviceProfile, bitmapAllocator)
-        ComicFormat.CBR, ComicFormat.RAR -> RarFormatReader(context, path, deviceProfile, bitmapAllocator)
-        ComicFormat.SEVENZ -> SevenZFormatReader(context, path, deviceProfile, bitmapAllocator)
-        ComicFormat.TAR -> TarFormatReader(context, path, deviceProfile, bitmapAllocator)
-        else -> errorTextReader("Unsupported archive format: $archiveFormat")
+    private fun createRasterDelegate(): FormatReader {
+        // Use the already-cached archive file instead of the raw path: for
+        // content:// URIs this avoids a second full copy (Zip/Rar/7z readers
+        // copy content URIs to timestamped temp files on every open).
+        val cachedPath = archiveSourceFile().absolutePath
+        return when (archiveFormat) {
+            ComicFormat.CBZ, ComicFormat.ZIP -> ZipFormatReader(context, cachedPath, deviceProfile, bitmapAllocator)
+            ComicFormat.CBR, ComicFormat.RAR -> RarFormatReader(context, cachedPath, deviceProfile, bitmapAllocator)
+            ComicFormat.SEVENZ -> SevenZFormatReader(context, cachedPath, deviceProfile, bitmapAllocator)
+            ComicFormat.TAR -> TarFormatReader(context, cachedPath, deviceProfile, bitmapAllocator)
+            else -> errorTextReader("Unsupported archive format: $archiveFormat")
+        }
     }
 
     private fun errorTextReader(message: String): FormatReader = object : FormatReader {
@@ -259,7 +266,7 @@ class ArchiveDelegatingFormatReader(
     private fun <T> withRarArchive(block: (IInArchive) -> T): T? = runCatching {
         RandomAccessFile(archiveSourceFile(), "r").use { raf ->
             RandomAccessFileInStream(raf).use { stream ->
-                runCatching { SevenZip.initSevenZipFromPlatformJAR(context.cacheDir) }
+                SevenZipInitializer.ensureInitialized(context)
                 SevenZip.openInArchive(null, stream).use(block)
             }
         }

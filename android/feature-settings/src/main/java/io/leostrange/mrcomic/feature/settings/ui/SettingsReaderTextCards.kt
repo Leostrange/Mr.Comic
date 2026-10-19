@@ -36,6 +36,7 @@ import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButton
 import io.leostrange.mrcomic.core.ui.designsystem.MrComicIconButtonVariant
 import io.leostrange.mrcomic.core.ui.locale.AppStrings
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
+import io.leostrange.mrcomic.core.ui.theme.resolveReaderContentColors
 import io.leostrange.mrcomic.core.ui.theme.argbLongToThemeColor
 import io.leostrange.mrcomic.core.ui.theme.style
 import io.leostrange.mrcomic.core.ui.fonts.ReaderTextFontCatalog
@@ -425,14 +426,18 @@ internal fun ReaderStylePresetCard(
     }
     val (backgroundColor, lineColor) = remember(
         snapshot?.textColorScheme,
+        snapshot?.readerPreset,
         snapshot?.textCustomBackgroundColor,
         snapshot?.textCustomTextColor
     ) {
-        val base = when (snapshot?.textColorScheme) {
-            "SEPIA" -> Color(0xFFF4ECD8) to Color(0xFF7B5C34)
-            "NIGHT" -> Color(0xFF000000) to Color(0xFFF2F5F7)
-            else -> Color(0xFFF6F1E7) to Color(0xFF2B2118)
-        }
+        // UI-05: same resolver as the reader, so the slot preview matches
+        // the colors applying that style would produce.
+        val base = resolveReaderContentColors(
+            isTextReader = true,
+            readerPreset = snapshot?.readerPreset?.let(ReadingPreset::fromStored)
+                ?: ReadingPreset.CUSTOM,
+            textColorScheme = snapshot?.textColorScheme ?: "DAY",
+        )
         (snapshot?.textCustomBackgroundColor?.let(::argbLongToThemeColor) ?: base.first) to
             (snapshot?.textCustomTextColor?.let(::argbLongToThemeColor) ?: base.second)
     }

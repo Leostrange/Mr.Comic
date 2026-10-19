@@ -5,6 +5,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import io.leostrange.mrcomic.core.ui.theme.ReadingPreset
+import io.leostrange.mrcomic.core.ui.theme.resolveReaderContentColors
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -89,5 +91,45 @@ class ReaderMaterialColorSchemeTest {
         val surfaceRatio = contrastRatio(scheme.onSurface, scheme.surface)
         assertTrue("Background contrast ≥ 4.5:1, got $bgRatio", bgRatio >= 4.5f)
         assertTrue("Surface contrast ≥ 4.5:1, got $surfaceRatio", surfaceRatio >= 4.5f)
+    }
+
+    @Test
+    fun `graphic Day Sepia and Night are distinct and readable`() {
+        val fallback = darkColorScheme()
+        val schemes = listOf("DAY", "SEPIA", "NIGHT").map {
+            readerMaterialColorScheme(isTextReader = false, readerPreset = ReadingPreset.CUSTOM, textColorScheme = it, fallback = fallback)
+        }
+        assertEquals(3, schemes.map { it.background }.toSet().size)
+        assertTrue("Day must be light", schemes[0].background.luminance() > 0.8f)
+        assertTrue("Night must be dark", schemes[2].background.luminance() < 0.05f)
+        schemes.forEach { assertTrue(contrastRatio(it.onBackground, it.background) >= 7f) }
+    }
+
+    @Test
+    fun `shared content color resolver matches reader scheme for every preset and scheme`() {
+        // UI-05 regression guard: the settings preview uses
+        // resolveReaderContentColors, so it must return exactly the
+        // background/onBackground the real reader scheme produces.
+        val fallback = lightColorScheme()
+        for (preset in ReadingPreset.entries) {
+            for (schemeName in listOf("DAY", "SEPIA", "NIGHT")) {
+                for (isTextReader in listOf(true, false)) {
+                    val (bg, onBg) = resolveReaderContentColors(
+                        isTextReader = isTextReader,
+                        readerPreset = preset,
+                        textColorScheme = schemeName
+                    )
+                    val scheme = readerMaterialColorScheme(
+                        isTextReader = isTextReader,
+                        readerPreset = preset,
+                        textColorScheme = schemeName,
+                        fallback = fallback
+                    )
+                    val where = "preset=$preset scheme=$schemeName isTextReader=$isTextReader"
+                    assertEquals("background mismatch ($where)", bg, scheme.background)
+                    assertEquals("onBackground mismatch ($where)", onBg, scheme.onBackground)
+                }
+            }
+        }
     }
 }
